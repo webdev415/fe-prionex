@@ -100,6 +100,8 @@ import {
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
   useDisconnectRR,
+  useActivateRR,
+  useDeleteRRDraft,
   useRecordRROverpayment,
   useRRStatusHistory,
   useRROverpayments,
@@ -129,6 +131,7 @@ import {
 } from '@/features/clients/utils/contactBlocking'
 import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import { RR_STATUS, rrBadgeClass } from '@/features/clients/constants/rrStatus'
 import {
   generateSchedule,
   PERIODICITY_EVERY_N_DAYS,
@@ -361,6 +364,7 @@ export function ClientDetailPage() {
       return next
     })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  const [deleteDraftConfirm, setDeleteDraftConfirm] = useState<number | null>(null)
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
   const [disconnectRrConfirm, setDisconnectRrConfirm] = useState<{
@@ -518,6 +522,116 @@ export function ClientDetailPage() {
     !!selectedRaId
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+
+  const submitConnectRr = (saveMode: 'draft' | 'active') => {
+    const d = 'pages.clients.detail'
+    setConnectRrError(null)
+    if (!connectRrForm.debtId) {
+      setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+      return
+    }
+    if (!connectRrForm.connectionDate) {
+      setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+      return
+    }
+    if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+      setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+      return
+    }
+    for (let i = 0; i < connectRrForm.payments.length; i++) {
+      if (!connectRrForm.payments[i].date) {
+        setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+        return
+      }
+      if (!connectRrForm.payments[i].amount || parseFloat(connectRrForm.payments[i].amount) <= 0) {
+        setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+        return
+      }
+    }
+    const totalAmount = parseFloat(connectRrForm.totalAmount)
+    const paymentsSum = connectRrForm.payments.reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0),
+      0
+    )
+    if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+      setConnectRrError(
+        t(`${d}.rrValidationSumMismatch`, {
+          sum: paymentsSum.toFixed(2),
+          total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    const formatDate = (dt: Date | null) => {
+      if (!dt) return null
+      const y = dt.getFullYear()
+      const m = String(dt.getMonth() + 1).padStart(2, '0')
+      const day = String(dt.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+    createRr(
+      {
+        clientId,
+        data: {
+          debt_id: parseInt(connectRrForm.debtId),
+          connection_date: formatDate(connectRrForm.connectionDate),
+          restructuring_amount: totalAmount,
+          num_payments: connectRrForm.numPayments,
+          save_mode: saveMode,
+          payments: connectRrForm.payments.map((p) => ({
+            payment_date: formatDate(p.date),
+            payment_amount: parseFloat(p.amount),
+          })),
+          penalty_amount:
+            connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+              ? parseFloat(connectRrForm.penaltyAmount)
+              : null,
+          periodicity: connectRrForm.frequency
+            ? {
+                frequency: connectRrForm.frequency,
+                interval_days: connectRrForm.intervalDays
+                  ? parseInt(connectRrForm.intervalDays, 10)
+                  : null,
+                day_of_month: connectRrForm.dayOfMonth || null,
+              }
+            : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (saveMode === 'draft') {
+            toast.success(t(`${d}.saveDraftRRSuccess`, 'Draft saved'))
+          } else {
+            toast.success(t(`${d}.connectRRSuccess`))
+          }
+          setIsConnectRrOpen(false)
+        },
+        onError: (error) => {
+          const detail = (
+            error as import('axios').AxiosError<{
+              detail?: string | Array<{ msg?: string }>
+            }>
+          )?.response?.data?.detail
+          let message = t(
+            `${d}.connectRRError`,
+            t('errors.somethingWentWrong', 'Something went wrong')
+          )
+          if (typeof detail === 'string') {
+            message = detail
+          } else if (Array.isArray(detail) && detail.length > 0) {
+            message = detail
+              .map((e) => e.msg || '')
+              .filter(Boolean)
+              .join('; ')
+          }
+          setConnectRrError(message)
+          toast.error(message)
+        },
+      }
+    )
+  }
+
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
@@ -556,6 +670,8 @@ export function ClientDetailPage() {
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
+  const { mutate: activateRr, isPending: isActivatingRr } = useActivateRR()
+  const { mutate: deleteRrDraft, isPending: isDeletingRrDraft } = useDeleteRRDraft()
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
@@ -769,6 +885,8 @@ export function ClientDetailPage() {
   )
   const canDisconnectRR = useHasPermission(PERMISSIONS.RESTRUCTURING.DISCONNECT)
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
+  const canActivateRR = useHasPermission(PERMISSIONS.RESTRUCTURING.ACTIVATE)
+  const canDeleteRRDraft = useHasPermission(PERMISSIONS.RESTRUCTURING.DELETE_DRAFT)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real) — async; does not block profile render
@@ -1813,12 +1931,17 @@ export function ClientDetailPage() {
   const rrDebtIds = new Set<number>()
   const connectedRrDebtIds = new Set<number>()
   const activeRrDebtIds = new Set<number>()
+  const draftRrDebtIds = new Set<number>()
   for (const ra of restructuringAgreements) {
     if (ra.debt_id == null) continue
     rrDebtIds.add(ra.debt_id)
     if (ra.status_id === 1) connectedRrDebtIds.add(ra.debt_id)
     if (ra.status_id === 1 || ra.status_id === 2) activeRrDebtIds.add(ra.debt_id)
+    if (ra.status_id === RR_STATUS.Draft) draftRrDebtIds.add(ra.debt_id)
   }
+  const selectedDebtHasDraft = connectRrForm.debtId
+    ? draftRrDebtIds.has(parseInt(connectRrForm.debtId))
+    : false
 
   // The single loan row currently selected in the grid (drives the bottom
   // action panel). Null if nothing is selected or the id is no longer present.
@@ -2033,25 +2156,12 @@ export function ClientDetailPage() {
   // helpers were lifted verbatim out of the old rrColumns so the RR status
   // badge and lifecycle actions behave exactly as they did in the grid.
   const renderRrStatusBadge = (row: RrRow) => {
-    // restructuring_statuses lookup ids:
-    //   1 Connected, 2 Violated, 3 Cancelled, 4 Completed, 5 Completed Early
-    const sid = row.status_id
     const label = row.status_name ?? '-'
-    const cls =
-      sid === 1
-        ? 'bg-blue-100 text-blue-800' // Connected — paying on time
-        : sid === 2
-          ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
-          : sid === 3
-            ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
-            : sid === 4
-              ? 'bg-green-100 text-green-800' // Completed
-              : sid === 5
-                ? 'bg-emerald-100 text-emerald-800' // Completed Early
-                : 'bg-muted text-muted-foreground'
     return (
       <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${rrBadgeClass(
+          row.status_id
+        )}`}
       >
         {label}
       </span>
@@ -2069,6 +2179,8 @@ export function ClientDetailPage() {
     const sid = row.status_id
     const isTerminal = sid === 3 || sid === 4 || sid === 5
     const isCompleted = sid === 4 || sid === 5
+    const isDraft = sid === RR_STATUS.Draft
+    const draftBusy = isActivatingRr || isDeletingRrDraft
     const showMarkViolated = sid === 1
     const showRestore = sid === 2 || sid === 3
     const canRestoreFromHere =
@@ -2087,6 +2199,30 @@ export function ClientDetailPage() {
         >
           <Icons.Eye size={18} />
         </button>
+        {isDraft && (
+          <>
+            <button
+              onClick={() => activateRr({ clientId, raId: row.id })}
+              disabled={draftBusy || !canActivateRR}
+              className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={canActivateRR ? t('pages.clients.detail.activateRR', 'Activate') : noPermTip}
+            >
+              <Icons.Checkmark size={18} />
+            </button>
+            <button
+              onClick={() => setDeleteDraftConfirm(row.id)}
+              disabled={draftBusy || !canDeleteRRDraft}
+              className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={
+                canDeleteRRDraft
+                  ? t('pages.clients.detail.deleteDraftRR', 'Delete draft')
+                  : noPermTip
+              }
+            >
+              <Icons.Delete size={18} />
+            </button>
+          </>
+        )}
         {showMarkViolated && (
           <button
             onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
@@ -2115,7 +2251,7 @@ export function ClientDetailPage() {
             <Icons.Reload size={18} />
           </button>
         )}
-        {!isTerminal && (
+        {!isTerminal && !isDraft && (
           <button
             onClick={() => setCompleteRrConfirm(row.id)}
             disabled={isCompletingRa || transitionBusy || !canCompleteRR}
@@ -2125,7 +2261,7 @@ export function ClientDetailPage() {
             <Icons.Success size={18} />
           </button>
         )}
-        {!isTerminal && (
+        {!isTerminal && !isDraft && (
           <button
             onClick={() =>
               setOverpaymentModal({
@@ -2142,7 +2278,7 @@ export function ClientDetailPage() {
             <Icons.MoneyReceive01 size={18} />
           </button>
         )}
-        {!isCompleted && sid !== 3 && (
+        {!isCompleted && sid !== 3 && !isDraft && (
           <button
             onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
             disabled={transitionBusy || !canDisconnectRR}
@@ -6492,6 +6628,59 @@ export function ClientDetailPage() {
           </ModalFooter>
         </Modal>
 
+        {/* Delete Draft RR Confirmation Modal */}
+        <Modal
+          open={deleteDraftConfirm !== null}
+          onClose={() => setDeleteDraftConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <Icons.Delete size={20} className="text-red-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmDeleteDraftRR',
+                'Are you sure you want to delete this draft restructuring agreement? This cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setDeleteDraftConfirm(null)}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (deleteDraftConfirm !== null) {
+                  deleteRrDraft(
+                    { clientId, raId: deleteDraftConfirm },
+                    { onSettled: () => setDeleteDraftConfirm(null) }
+                  )
+                }
+              }}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isDeletingRrDraft
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
         {/* Disconnect RR Confirmation Modal — reason required */}
         <Modal
           open={disconnectRrConfirm !== null}
@@ -7040,6 +7229,14 @@ export function ClientDetailPage() {
                 {connectRrError}
               </div>
             )}
+            {selectedDebtHasDraft && (
+              <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                {t(
+                  'pages.clients.detail.rrDraftAlreadyExists',
+                  'This credit already has a draft restructuring agreement.'
+                )}
+              </div>
+            )}
           </ModalContent>
           <ModalFooter>
             <Button
@@ -7051,120 +7248,22 @@ export function ClientDetailPage() {
               {t('actions.cancel')}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              disabled={isCreatingRr || !hasEligibleLoansForRr || selectedDebtHasDraft}
+              onClick={() => submitConnectRr('draft')}
+              className="w-full rounded-md"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveDraftRR', 'Save draft')}
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               disabled={isCreatingRr || !hasEligibleLoansForRr}
-              onClick={() => {
-                const d = 'pages.clients.detail'
-                setConnectRrError(null)
-                // Validation
-                if (!connectRrForm.debtId) {
-                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
-                  return
-                }
-                if (!connectRrForm.connectionDate) {
-                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
-                  return
-                }
-                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
-                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
-                  return
-                }
-                for (let i = 0; i < connectRrForm.payments.length; i++) {
-                  if (!connectRrForm.payments[i].date) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
-                    return
-                  }
-                  if (
-                    !connectRrForm.payments[i].amount ||
-                    parseFloat(connectRrForm.payments[i].amount) <= 0
-                  ) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
-                    return
-                  }
-                }
-                const totalAmount = parseFloat(connectRrForm.totalAmount)
-                const paymentsSum = connectRrForm.payments.reduce(
-                  (sum, p) => sum + (parseFloat(p.amount) || 0),
-                  0
-                )
-                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-                  setConnectRrError(
-                    t(`${d}.rrValidationSumMismatch`, {
-                      sum: paymentsSum.toFixed(2),
-                      total: totalAmount.toFixed(2),
-                    })
-                  )
-                  return
-                }
-
-                const formatDate = (dt: Date | null) => {
-                  if (!dt) return null
-                  const y = dt.getFullYear()
-                  const m = String(dt.getMonth() + 1).padStart(2, '0')
-                  const day = String(dt.getDate()).padStart(2, '0')
-                  return `${y}-${m}-${day}`
-                }
-                createRr(
-                  {
-                    clientId,
-                    data: {
-                      debt_id: parseInt(connectRrForm.debtId),
-                      connection_date: formatDate(connectRrForm.connectionDate),
-                      restructuring_amount: totalAmount,
-                      num_payments: connectRrForm.numPayments,
-                      payments: connectRrForm.payments.map((p) => ({
-                        payment_date: formatDate(p.date),
-                        payment_amount: parseFloat(p.amount),
-                      })),
-                      // KAN-785 Part 2 — optional penalty + persisted periodicity
-                      // (so the backend can date the penalty by this RR's cadence).
-                      penalty_amount:
-                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
-                          ? parseFloat(connectRrForm.penaltyAmount)
-                          : null,
-                      periodicity: connectRrForm.frequency
-                        ? {
-                            frequency: connectRrForm.frequency,
-                            interval_days: connectRrForm.intervalDays
-                              ? parseInt(connectRrForm.intervalDays, 10)
-                              : null,
-                            day_of_month: connectRrForm.dayOfMonth || null,
-                          }
-                        : null,
-                    },
-                  },
-                  {
-                    onSuccess: () => {
-                      toast.success(t(`${d}.connectRRSuccess`))
-                      setIsConnectRrOpen(false)
-                    },
-                    onError: (error) => {
-                      const detail = (
-                        error as import('axios').AxiosError<{
-                          detail?: string | Array<{ msg?: string }>
-                        }>
-                      )?.response?.data?.detail
-                      let message = t(
-                        `${d}.connectRRError`,
-                        t('errors.somethingWentWrong', 'Something went wrong')
-                      )
-                      if (typeof detail === 'string') {
-                        message = detail
-                      } else if (Array.isArray(detail) && detail.length > 0) {
-                        message = detail
-                          .map((e) => e.msg || '')
-                          .filter(Boolean)
-                          .join('; ')
-                      }
-                      setConnectRrError(message)
-                    },
-                  }
-                )
-              }}
+              onClick={() => submitConnectRr('active')}
               className="w-full rounded-md"
             >
-              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveActivateRR', 'Save & activate')}
             </Button>
           </ModalFooter>
         </Modal>
