@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getAccessToken } from '@/lib/api'
+import { CALL_STATE_CHANGED_EVENT } from '../types'
 import type { CallStateEvent, ConnectionStatus } from '../types'
 import {
   getClientIdFromCallEventData,
@@ -99,19 +100,18 @@ export function useCallWebSocket(agentExtension: string | null) {
       }
     })
 
-    // Listen for call state updates.
-    // NOTE: the call-service socket.io server emits "call.state_changed"
-    // (underscore) — see services/call/app/services/event_listener.py.
-    // Listening on the dotted "call.state.changed" silently dropped every
-    // call-completion event, so the call modal/minimized bubble never cleared
-    // and isCallActive() stayed true — blocking the next call until reload.
-    socket.on('call.state_changed', (event: CallStateEvent) => {
-      // Invalidate call details query to trigger refetch
-      queryClient.invalidateQueries({
-        queryKey: ['callDetails', event.call_id],
-      })
+    socket.on(CALL_STATE_CHANGED_EVENT, (event: CallStateEvent) => {
+      const eventData = event.data
 
-      invalidateCallRelatedQueries(queryClient, getClientIdFromCallEventData(event.data))
+      // An absent id would invalidate ['callDetails', undefined], which matches
+      // no query.
+      if (eventData?.call_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['callDetails', eventData.call_id],
+        })
+      }
+
+      invalidateCallRelatedQueries(queryClient, getClientIdFromCallEventData(eventData))
     })
 
     // Handle disconnection
