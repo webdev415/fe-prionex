@@ -8,9 +8,28 @@
  */
 
 import api from '@/lib/api'
-import type { GetV3ScoreParams, V3MonitoringResponse, V3ScoreListResponse } from './types'
+import type {
+  GetV3ScoreParams,
+  V3ClientOrderResponse,
+  V3ClientRollup,
+  V3MonitoringResponse,
+  V3ScoreListResponse,
+} from './types'
 
 const BASE_URL = '/api/v1/v3-score'
+
+/** Per-client v3 bucket rollup for a page of clients (client card/list). */
+export async function getV3ClientRollup(
+  projectId: number,
+  clientIds: number[],
+  monthStart?: string
+): Promise<V3ClientRollup[]> {
+  const res = await api.get<V3ClientRollup[]>(`${BASE_URL}/${projectId}/client-rollup`, {
+    params: { client_ids: clientIds, ...(monthStart ? { month_start: monthStart } : {}) },
+    paramsSerializer: { indexes: null }, // client_ids=1&client_ids=2 (repeated, no brackets)
+  })
+  return res.data
+}
 
 export async function getV3Scores(
   projectId: number,
@@ -41,4 +60,23 @@ export async function triggerV3Scoring(
   return res.data
 }
 
-export const scoringApi = { getV3Scores, getV3Monitoring, triggerV3Scoring }
+/** A page of clients ranked by v3 priority (bucket → priority_dollar). */
+export async function getV3ClientOrder(
+  projectId: number,
+  monthStart: string,
+  limit: number,
+  offset: number
+): Promise<V3ClientOrderResponse> {
+  const res = await api.get<V3ClientOrderResponse>(`${BASE_URL}/${projectId}/client-order`, {
+    params: { month_start: monthStart, limit, offset },
+  })
+  return res.data
+}
+
+export const scoringApi = {
+  getV3Scores,
+  getV3Monitoring,
+  triggerV3Scoring,
+  getV3ClientRollup,
+  getV3ClientOrder,
+}

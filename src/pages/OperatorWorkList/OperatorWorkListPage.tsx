@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -21,8 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { useTriggerV3Scoring, useV3Scores } from '@/features/scoring/hooks/useV3Scores'
-import type { V3Bucket, V3ScoreResult } from '@/features/scoring/api/types'
+import {
+  useTriggerV3Scoring,
+  useV3ClientOrder,
+  useV3Scores,
+} from '@/features/scoring/hooks/useV3Scores'
+import type { V3Bucket, V3ClientRollup, V3ScoreResult } from '@/features/scoring/api/types'
 import { V3BucketBadge } from './components/V3BucketBadge'
 
 const PAGE_SIZE = 50
@@ -64,6 +69,7 @@ export function OperatorWorkListPage() {
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectId = activeProjectId ? Number(activeProjectId) : undefined
 
+  const [view, setView] = useState<'debt' | 'client'>('debt')
   const [month, setMonth] = useState<string>(currentMonth)
   const [bucket, setBucket] = useState<'ALL' | V3Bucket>('ALL')
   const [debtId, setDebtId] = useState('')
@@ -76,23 +82,40 @@ export function OperatorWorkListPage() {
   const dMinPct = useDebounced(minPct)
   const debtIdNum = dDebtId.trim() && !isNaN(Number(dDebtId)) ? Number(dDebtId) : undefined
   const minHazard = dMinPct.trim() && !isNaN(Number(dMinPct)) ? Number(dMinPct) / 100 : undefined
-  const { data, isLoading, isError } = useV3Scores(projectId, {
-    month_start: monthStart,
-    ...(debtIdNum
-      ? { debt_id: debtIdNum }
-      : bucket === 'ALL'
-        ? { include_exit: false }
-        : { bucket }),
-    ...(minHazard !== undefined && !debtIdNum ? { min_hazard: minHazard } : {}),
-    limit: PAGE_SIZE,
-    offset: page * PAGE_SIZE,
+
+  // "By debt" (default) and "By client" share the month + pagination.
+  const debtQuery = useV3Scores(
+    projectId,
+    {
+      month_start: monthStart,
+      ...(debtIdNum
+        ? { debt_id: debtIdNum }
+        : bucket === 'ALL'
+          ? { include_exit: false }
+          : { bucket }),
+      ...(minHazard !== undefined && !debtIdNum ? { min_hazard: minHazard } : {}),
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
+    },
+    { enabled: view === 'debt' }
+  )
+  const clientQuery = useV3ClientOrder(projectId, monthStart, page, PAGE_SIZE, {
+    enabled: view === 'client',
   })
+
+  const data = debtQuery.data
+  const isLoading = view === 'client' ? clientQuery.isLoading : debtQuery.isLoading
+  const isError = view === 'client' ? clientQuery.isError : debtQuery.isError
 
   const rows: Row[] = useMemo(
     () => (data?.results ?? []).map((r) => ({ ...r, id: r.debt_id })),
     [data]
   )
-  const total = data?.total ?? 0
+  const clientRows: (V3ClientRollup & { id: number })[] = useMemo(
+    () => (clientQuery.data?.results ?? []).map((r) => ({ ...r, id: r.client_id })),
+    [clientQuery.data]
+  )
+  const total = view === 'client' ? (clientQuery.data?.total ?? 0) : (data?.total ?? 0)
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const columns: Column<Row>[] = [
@@ -121,6 +144,32 @@ export function OperatorWorkListPage() {
     },
   ]
 
+  const clientColumns: Column<V3ClientRollup & { id: number }>[] = [
+    {
+      key: 'bucket_v3',
+      header: 'Priority',
+      render: (r) => <V3BucketBadge bucket={r.bucket_v3} />,
+    },
+    {
+      key: 'client_id',
+      header: 'Client',
+      render: (r) => (
+        <Link
+          to={`/dashboard/clients/${r.client_id}`}
+          className="text-information-600 hover:underline"
+        >
+          Client {r.client_id}
+        </Link>
+      ),
+    },
+    {
+      key: 'priority_dollar',
+      header: 'Priority value',
+      align: 'right',
+      render: (r) => fmtMoney(r.priority_dollar),
+    },
+  ]
+
   const resetPage = () => setPage(0)
 
   return (
@@ -129,7 +178,8 @@ export function OperatorWorkListPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-lg font-semibold text-[#05040D]">Priority Work List</h1>
           <p className="text-xs text-gray-500">
-            Debts ranked by the v3 model — call the top of the list first. Shadow-run preview.
+            {view === 'client' ? 'Clients' : 'Debts'} ranked by the v3 model — call the top of the
+            list first. Shadow-run preview.
           </p>
         </div>
         <button
@@ -144,6 +194,25 @@ export function OperatorWorkListPage() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-0.5 rounded-lg border border-gray-300 p-0.5 text-xs font-medium">
+          {(['debt', 'client'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                setView(v)
+                resetPage()
+              }}
+              className={
+                view === v
+                  ? 'bg-primary-600 rounded-md px-3 py-1.5 text-white'
+                  : 'rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-100'
+              }
+            >
+              {v === 'debt' ? 'By debt' : 'By client'}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
           Month
           <div className="w-[190px]">
@@ -160,82 +229,94 @@ export function OperatorWorkListPage() {
             />
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-          Priority
-          <div className="w-[160px]">
-            <Select
-              value={bucket}
-              onValueChange={(v) => {
-                setBucket(v as 'ALL' | V3Bucket)
-                resetPage()
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BUCKET_FILTERS.map((b) => (
-                  <SelectItem key={b.value} value={b.value}>
-                    {b.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        {view === 'debt' && (
+          <>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+              Priority
+              <div className="w-[160px]">
+                <Select
+                  value={bucket}
+                  onValueChange={(v) => {
+                    setBucket(v as 'ALL' | V3Bucket)
+                    resetPage()
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUCKET_FILTERS.map((b) => (
+                      <SelectItem key={b.value} value={b.value}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-          Debt ID
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Search…"
-            value={debtId}
-            onChange={(e) => {
-              setDebtId(e.target.value.replace(/[^0-9]/g, ''))
-              resetPage()
-            }}
-            className="h-[45px] w-[140px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
-          />
-          {debtId && (
-            <button
-              type="button"
-              onClick={() => {
-                setDebtId('')
-                resetPage()
-              }}
-              className="text-gray-400 hover:text-gray-600"
-              aria-label="Clear debt ID"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+              Debt ID
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Search…"
+                value={debtId}
+                onChange={(e) => {
+                  setDebtId(e.target.value.replace(/[^0-9]/g, ''))
+                  resetPage()
+                }}
+                className="h-[45px] w-[140px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+              />
+              {debtId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDebtId('')
+                    resetPage()
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Clear debt ID"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-          Min pay-chance
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0"
-              value={minPct}
-              onChange={(e) => {
-                setMinPct(e.target.value.replace(/[^0-9.]/g, ''))
-                resetPage()
-              }}
-              className="h-[45px] w-[80px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
-            />
-            <span className="text-gray-500">%</span>
-          </div>
-        </div>
-        <span className="ml-auto text-xs text-gray-500">{total.toLocaleString()} debts</span>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+              Min pay-chance
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={minPct}
+                  onChange={(e) => {
+                    setMinPct(e.target.value.replace(/[^0-9.]/g, ''))
+                    resetPage()
+                  }}
+                  className="h-[45px] w-[80px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+                />
+                <span className="text-gray-500">%</span>
+              </div>
+            </div>
+          </>
+        )}
+        <span className="ml-auto text-xs text-gray-500">
+          {total.toLocaleString()} {view === 'client' ? 'clients' : 'debts'}
+        </span>
       </div>
 
       {isError ? (
         <div className="border-error-600 text-error-600 rounded-xl border bg-[#FCEAEA] px-4 py-3 text-xs">
           Could not load the work list. The scoring service may be unavailable.
         </div>
+      ) : view === 'client' ? (
+        <DataTable
+          columns={clientColumns}
+          data={clientRows}
+          emptyMessage={isLoading ? 'Loading…' : 'No scored clients for this month yet.'}
+        />
       ) : (
         <DataTable
           columns={columns}

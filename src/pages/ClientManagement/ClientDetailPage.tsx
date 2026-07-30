@@ -43,6 +43,7 @@ import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPayment
 import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
 import { PriorityBadge } from './components/PriorityBadge'
+import { V3ClientPriorityPanel } from '@/features/scoring/components/V3ClientPriorityPanel'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
@@ -2629,6 +2630,11 @@ export function ClientDetailPage() {
           )} */}
           </div>
         </div>
+        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag */}
+        <V3ClientPriorityPanel
+          projectId={activeProjectId ? Number(activeProjectId) : undefined}
+          clientId={clientId}
+        />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
           <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">

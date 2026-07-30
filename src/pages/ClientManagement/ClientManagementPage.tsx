@@ -13,6 +13,12 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
 import { PriorityBadge } from './components/PriorityBadge'
+import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
+import {
+  currentMonthStart,
+  useV3ClientRollup,
+  V3_WORKLIST_ENABLED,
+} from '@/features/scoring/hooks/useV3Scores'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
@@ -983,6 +989,16 @@ export function ClientManagementPage() {
   // Fetch active users for resolving employee/searcher IDs to names (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const activeProjectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // v3 priority rollup for the visible clients (KAN-791) — behind the flag; shows
+  // the v3 bucket in place of the old priority badge once the shadow-run is on.
+  const v3ClientIds = useMemo(() => apiClients.map((c) => c.id), [apiClients])
+  const { data: v3Rollup } = useV3ClientRollup(
+    activeProjectIdNum,
+    v3ClientIds,
+    currentMonthStart(),
+    { enabled: V3_WORKLIST_ENABLED }
+  )
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
   const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
@@ -1646,7 +1662,14 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'priority',
-      render: (client) => <PriorityBadge priority={client.priority} variant="compact" />,
+      render: (client) => {
+        const v3 = V3_WORKLIST_ENABLED ? v3Rollup?.get(client.id) : undefined
+        return v3 ? (
+          <V3BucketBadge bucket={v3.bucket_v3} />
+        ) : (
+          <PriorityBadge priority={client.priority} variant="compact" />
+        )
+      },
     },
     {
       key: 'score',

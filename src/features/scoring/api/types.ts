@@ -30,9 +30,23 @@ export interface GetV3ScoreParams {
   bucket?: V3Bucket
   include_exit?: boolean
   debt_id?: number
+  client_id?: number
   min_hazard?: number
   limit?: number
   offset?: number
+}
+
+export interface V3ClientRollup {
+  client_id: number
+  bucket_v3: V3Bucket
+  priority_dollar: number
+}
+
+export interface V3ClientOrderResponse {
+  project_id: number
+  month_start: string | null
+  total: number
+  results: V3ClientRollup[]
 }
 
 export interface V3MonitoringResponse {
