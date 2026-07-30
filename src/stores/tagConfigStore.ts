@@ -393,6 +393,7 @@ const DEFAULT_CONFIG = {
     { value: 'event', label: 'Event' },
     { value: 'schedule', label: 'Schedule' },
     { value: 'tag_expired', label: 'Tag Expired' },
+    { value: 'expires_today', label: 'Tag Expiration Date Is Today' },
     { value: 'scoring_change', label: 'Scoring Change' },
     { value: 'import_complete', label: 'Import Complete' },
   ],
@@ -1048,7 +1049,7 @@ export const useTagConfigStore = create<TagConfigState>()(
     }),
     {
       name: 'tag-config-storage',
-      version: 5,
+      version: 6,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TagConfigState> | undefined
         if (!state) return cloneDefaultConfig()
@@ -1056,9 +1057,10 @@ export const useTagConfigStore = create<TagConfigState>()(
         return {
           ...cloneDefaultConfig(),
           ...state,
-          // Reset conditionFields to defaults so new fields appear in localStorage
-          // until the next loadFromServer() overwrites with the backend's merged set.
+          // Reset conditionFields and triggerTypes to defaults so new entries
+          // appear in localStorage until loadFromServer() overwrites.
           conditionFields: cloneConfigItems(DEFAULT_CONFIG.conditionFields),
+          triggerTypes: cloneConfigItems(DEFAULT_CONFIG.triggerTypes),
           availableEvents: normalizeAvailableEventsState(state.availableEvents),
           operators: Array.isArray(state.operators)
             ? normalizeOperators(state.operators)
