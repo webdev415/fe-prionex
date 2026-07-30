@@ -8,7 +8,7 @@
  * Each document row has: filename, type badge, date, size, preview, download, delete buttons.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -62,10 +62,17 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
     })
   }
 
+  // Newest first within every section. ISO timestamps sort lexicographically,
+  // so a string compare is chronological; DESC = (b, a).
+  const sortedDocuments = useMemo(
+    () => [...documents].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
+    [documents]
+  )
+
   // Group documents by debt_id
-  const unlinked = documents.filter((d) => d.debt_id == null)
+  const unlinked = sortedDocuments.filter((d) => d.debt_id == null)
   const byDebt = new Map<number, ClientDocument[]>()
-  for (const doc of documents) {
+  for (const doc of sortedDocuments) {
     if (doc.debt_id != null) {
       const list = byDebt.get(doc.debt_id) ?? []
       list.push(doc)
@@ -95,12 +102,19 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   }
 
   const renderDocRow = (doc: ClientDocument) => (
-    <tr key={doc.id} className="border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]">
+    <tr key={doc.id} className="border-border hover:bg-muted border-b last:border-b-0">
       <td
-        className="truncate px-3 py-2 text-sm font-medium text-[#05040D]"
+        className="text-foreground truncate px-3 py-2 text-sm font-medium"
         title={doc.original_filename}
       >
-        {doc.original_filename}
+        <div className="flex items-center gap-2">
+          <span className="truncate">{doc.original_filename}</span>
+          {doc.source === 'generated' && (
+            <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {t('pages.clients.detail.generatedBadge', 'Згенеровано')}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-2">
         <DocumentTypePill
@@ -108,14 +122,14 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           hex={doc.document_type_ref?.color ?? '#64748B'}
         />
       </td>
-      <td className="px-3 py-2 text-sm text-[#6B7280]">{formatDate(doc.created_at)}</td>
-      <td className="px-3 py-2 text-sm text-[#6B7280]">{formatFileSize(doc.file_size)}</td>
+      <td className="text-muted-foreground px-3 py-2 text-sm">{formatDate(doc.created_at)}</td>
+      <td className="text-muted-foreground px-3 py-2 text-sm">{formatFileSize(doc.file_size)}</td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-1">
           {/* Preview */}
           <button
             onClick={() => setPreviewDoc(doc)}
-            className="hover:bg-primary-300/15 hover:text-primary-500 rounded-md p-1.5 text-[#6B7280] transition-colors"
+            className="hover:bg-primary-300/15 hover:text-primary-500 text-muted-foreground rounded-md p-1.5 transition-colors"
             title={t('common.preview', 'Preview')}
           >
             <svg
@@ -133,7 +147,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {/* Download */}
           <button
             onClick={() => handleDownload(doc)}
-            className="hover:bg-primary-300/15 hover:text-primary-500 rounded-md p-1.5 text-[#6B7280] transition-colors"
+            className="hover:bg-primary-300/15 hover:text-primary-500 text-muted-foreground rounded-md p-1.5 transition-colors"
             title={t('common.download', 'Download')}
           >
             <svg
@@ -152,7 +166,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {/* Delete */}
           <button
             onClick={() => handleDelete(doc)}
-            className="rounded p-1 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            className="hover:bg-error-100 rounded p-1 text-red-400 transition-colors hover:text-red-600"
             title={t('common.delete', 'Delete')}
           >
             <svg
@@ -184,7 +198,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
         <col className="w-[120px]" />
       </colgroup>
       <thead>
-        <tr className="border-b border-[#EBECE8] text-xs font-medium text-[#05040D]">
+        <tr className="border-border text-foreground border-b text-xs font-medium">
           <th className="px-3 py-2">
             {t('pages.clients.detail.tableHeaders.documentName', 'Name')}
           </th>
@@ -205,31 +219,31 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   const renderSection = (key: string, title: string, docs: ClientDocument[]) => {
     const isOpen = expanded.has(key)
     return (
-      <div
-        key={key}
-        className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-sm"
-      >
+      <div key={key} className="border-border bg-card overflow-hidden rounded-xl border shadow-sm">
         <button
           onClick={() => toggleSection(key)}
-          className="flex w-full items-center gap-2 px-4 py-3 text-left font-medium text-[#05040D] transition-colors hover:bg-[#F9FAF8]"
+          className="text-foreground hover:bg-muted flex w-full items-center gap-2 px-4 py-3 text-left font-medium transition-colors"
         >
           <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#374151"
+            stroke="currentColor"
             strokeWidth="2"
-            className={cn('shrink-0 transition-transform', isOpen ? 'rotate-90' : '')}
+            className={cn(
+              'text-muted-foreground shrink-0 transition-transform',
+              isOpen ? 'rotate-90' : ''
+            )}
           >
             <polyline points="9 18 15 12 9 6" />
           </svg>
           <span className="text-sm">{title}</span>
-          <span className="ml-auto text-sm font-normal text-[#374151]">
+          <span className="text-muted-foreground ml-auto text-sm font-normal">
             {docs.length} {docs.length === 1 ? 'док.' : 'док.'}
           </span>
         </button>
-        {isOpen && <div className="border-t border-[#EBECE8]">{renderDocTable(docs)}</div>}
+        {isOpen && <div className="border-border border-t">{renderDocTable(docs)}</div>}
       </div>
     )
   }
@@ -238,8 +252,8 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
     return (
       <div className="flex flex-col items-center gap-4 self-stretch py-45 md:gap-6">
         <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-          <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-          <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+          <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+          <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
             {t('common.noDataFound', 'No data found')}
           </p>
         </div>

@@ -330,7 +330,7 @@ export function ScoringConfigurationPage() {
   }
 
   const handleViewHistory = () => {
-    navigate('/dashboard/scoring-configuration/history')
+    navigate('/dashboard/system-settings/scoring-configuration/history')
   }
 
   const formatPercentage = (count: number, total: number) => {
@@ -348,14 +348,14 @@ export function ScoringConfigurationPage() {
     <div className="flex w-full flex-col items-start gap-4">
       {/* Header */}
       <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.scoringConfiguration.title', 'Scoring Configuration')} -{' '}
           <span className="font-semibold">{projectName}</span>
         </h1>
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-primary-foreground" />}
           className="flex h-12 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:w-auto"
         >
           {t('pages.scoringConfiguration.viewHistory', 'View History')}
@@ -369,8 +369,8 @@ export function ScoringConfigurationPage() {
           className={cn(
             'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors duration-200',
             activeTab === 'weights'
-              ? 'bg-secondary-800 text-white shadow-sm'
-              : 'text-dark-500 bg-white hover:bg-gray-50'
+              ? 'bg-secondary-800 text-secondary-foreground shadow-sm'
+              : 'text-foreground bg-card hover:bg-muted'
           )}
         >
           {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
@@ -380,8 +380,8 @@ export function ScoringConfigurationPage() {
           className={cn(
             'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors duration-200',
             activeTab === 'thresholds'
-              ? 'bg-secondary-800 text-white shadow-sm'
-              : 'text-dark-500 bg-white hover:bg-gray-50'
+              ? 'bg-secondary-800 text-secondary-foreground shadow-sm'
+              : 'text-foreground bg-card hover:bg-muted'
           )}
         >
           {t('pages.scoringConfiguration.priorityThresholds', 'Priority Thresholds')}
@@ -397,8 +397,8 @@ export function ScoringConfigurationPage() {
             className={cn(
               'flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors duration-200',
               activeTab === 'weights'
-                ? 'bg-secondary-800 text-white shadow-sm'
-                : 'text-dark-500 bg-white hover:bg-gray-50'
+                ? 'bg-secondary-800 text-secondary-foreground shadow-sm'
+                : 'text-foreground bg-card hover:bg-muted'
             )}
           >
             {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
@@ -408,8 +408,8 @@ export function ScoringConfigurationPage() {
             className={cn(
               'flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors duration-200',
               activeTab === 'thresholds'
-                ? 'bg-secondary-800 text-white shadow-sm'
-                : 'text-dark-500 bg-white hover:bg-gray-50'
+                ? 'bg-secondary-800 text-secondary-foreground shadow-sm'
+                : 'text-foreground bg-card hover:bg-muted'
             )}
           >
             {t('pages.scoringConfiguration.priorityThresholds', 'Priority Thresholds')}
@@ -420,13 +420,13 @@ export function ScoringConfigurationPage() {
         <div className="flex flex-1 flex-col gap-4">
           {/* Score Weights Tab */}
           {activeTab === 'weights' && (
-            <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+            <div className="border-border bg-card/50 flex w-full flex-col gap-4 rounded-xl border p-4 sm:p-6">
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
+                  <h2 className="text-foreground mb-1 text-base font-semibold sm:text-lg">
                     {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
                   </h2>
-                  <p className="text-dark-400 text-sm font-light">
+                  <p className="text-muted-foreground text-sm font-light">
                     {t(
                       'pages.scoringConfiguration.scoreWeightsDescription',
                       'Configure the relative importance of each factor in calculating client scores. Total must equal 100%.'
@@ -438,9 +438,9 @@ export function ScoringConfigurationPage() {
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex flex-col gap-4">
                   {/* Debt Amount Weight */}
-                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                  <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
                     <div className="flex flex-1 items-center gap-3">
-                      <span className="text-dark-500 text-sm font-medium">
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.scoringConfiguration.debtAmountWeight', 'Debt Amount Weight')}
                       </span>
                     </div>
@@ -458,9 +458,9 @@ export function ScoringConfigurationPage() {
                   </div>
 
                   {/* Days Overdue Weight */}
-                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                  <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
                     <div className="flex flex-1 items-center gap-3">
-                      <span className="text-dark-500 text-sm font-medium">
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.scoringConfiguration.daysOverdueWeight', 'Days Overdue Weight')}
                       </span>
                     </div>
@@ -478,9 +478,9 @@ export function ScoringConfigurationPage() {
                   </div>
 
                   {/* Contact History Weight */}
-                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                  <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
                     <div className="flex flex-1 items-center gap-3">
-                      <span className="text-dark-500 text-sm font-medium">
+                      <span className="text-foreground text-sm font-medium">
                         {t(
                           'pages.scoringConfiguration.contactHistoryWeight',
                           'Contact History Weight'
@@ -505,19 +505,21 @@ export function ScoringConfigurationPage() {
               <div className="mt-4 flex items-center justify-end">
                 <span
                   className={`inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium ${
-                    totalWeight === 100 ? 'bg-success-500 text-white' : 'bg-error-500 text-white'
+                    totalWeight === 100
+                      ? 'bg-success-100 text-success-700'
+                      : 'bg-error-100 text-error-700'
                   }`}
                 >
-                  {totalWeight === 100 && <span className="h-2 w-2 rounded-full bg-white" />}
+                  {totalWeight === 100 && <span className="bg-success-500 h-2 w-2 rounded-full" />}
                   {t('pages.scoringConfiguration.current', 'Current')}: {totalWeight}%
                 </span>
               </div>
 
               {/* Change Reason Input */}
               <div className="flex flex-col gap-2">
-                <label className="text-dark-500 text-sm font-medium">
+                <label className="text-foreground text-sm font-medium">
                   {t('pages.scoringConfiguration.changeReason', 'Change Reason')}
-                  <span className="text-xs font-normal text-gray-500">
+                  <span className="text-muted-foreground text-xs font-normal">
                     {' '}
                     ({t('pages.scoringConfiguration.optional', 'Optional')})
                   </span>
@@ -555,16 +557,16 @@ export function ScoringConfigurationPage() {
           {/* Priority Thresholds Tab */}
           {activeTab === 'thresholds' && (
             <div className="flex w-full flex-col gap-4">
-              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+              <div className="border-border bg-card/50 flex w-full flex-col gap-4 rounded-xl border p-4 sm:p-6">
                 <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
+                    <h2 className="text-foreground mb-1 text-base font-semibold sm:text-lg">
                       {t(
                         'pages.scoringConfiguration.priorityThresholds',
                         'Priority Classification Thresholds'
                       )}
                     </h2>
-                    <p className="text-dark-400 text-sm font-light">
+                    <p className="text-muted-foreground text-sm font-light">
                       {t(
                         'pages.scoringConfiguration.thresholdsDescription',
                         'Set the minimum score values for each priority level. Clients are classified based on their calculated scores.'
@@ -583,89 +585,79 @@ export function ScoringConfigurationPage() {
                   </PermissionGuard>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="flex flex-col gap-4">
-                    {/* Critical Priority */}
-                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                      <PriorityBadge priority="Critical" variant="compact" />
-                      <div className="flex flex-1 items-center gap-3">
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                        </span>
-                        <div>
-                          <Input
-                            type="number"
-                            value={priorityThresholds.critical}
-                            onChange={(e) =>
-                              handleThresholdChange('critical', Number(e.target.value) || 0)
-                            }
-                            className="w-20 rounded-md"
-                            inputSize="sm"
-                            disabled={!canEditScoring}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* High Priority */}
-                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                      <PriorityBadge priority="High" variant="compact" />
-                      <div className="flex flex-1 items-center gap-3">
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                        </span>
-                        <div>
-                          <Input
-                            type="number"
-                            value={priorityThresholds.high}
-                            onChange={(e) =>
-                              handleThresholdChange('high', Number(e.target.value) || 0)
-                            }
-                            className="w-20 rounded-md"
-                            inputSize="sm"
-                            disabled={!canEditScoring}
-                          />
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 md:gap-6">
+                  {/* Critical Priority */}
+                  <div className="border-border bg-card flex min-h-16 flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+                    <PriorityBadge priority="Critical" variant="compact" />
+                    <div className="flex min-h-8 flex-1 items-center gap-3">
+                      <span className="text-foreground text-sm font-medium">
+                        {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                      </span>
+                      <Input
+                        type="number"
+                        value={priorityThresholds.critical}
+                        onChange={(e) =>
+                          handleThresholdChange('critical', Number(e.target.value) || 0)
+                        }
+                        className="w-20 rounded-md"
+                        inputSize="sm"
+                        disabled={!canEditScoring}
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-4">
-                    {/* Medium Priority */}
-                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                      <PriorityBadge priority="Medium" variant="compact" />
-                      <div className="flex flex-1 items-center gap-3">
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                        </span>
-                        <div>
-                          <Input
-                            type="number"
-                            value={priorityThresholds.medium}
-                            onChange={(e) =>
-                              handleThresholdChange('medium', Number(e.target.value) || 0)
-                            }
-                            className="w-20 rounded-md"
-                            inputSize="sm"
-                            disabled={!canEditScoring}
-                          />
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Low Priority */}
-                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                      <PriorityBadge priority="Low" variant="compact" />
-                      <div className="flex flex-1 items-center gap-3">
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
-                          {priorityThresholds.medium}
-                        </span>
-                      </div>
+                  {/* Medium Priority */}
+                  <div className="border-border bg-card flex min-h-16 flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+                    <PriorityBadge priority="Medium" variant="compact" />
+                    <div className="flex min-h-8 flex-1 items-center gap-3">
+                      <span className="text-foreground text-sm font-medium">
+                        {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                      </span>
+                      <Input
+                        type="number"
+                        value={priorityThresholds.medium}
+                        onChange={(e) =>
+                          handleThresholdChange('medium', Number(e.target.value) || 0)
+                        }
+                        className="w-20 rounded-md"
+                        inputSize="sm"
+                        disabled={!canEditScoring}
+                      />
+                    </div>
+                  </div>
+
+                  {/* High Priority */}
+                  <div className="border-border bg-card flex min-h-16 flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+                    <PriorityBadge priority="High" variant="compact" />
+                    <div className="flex min-h-8 flex-1 items-center gap-3">
+                      <span className="text-foreground text-sm font-medium">
+                        {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                      </span>
+                      <Input
+                        type="number"
+                        value={priorityThresholds.high}
+                        onChange={(e) => handleThresholdChange('high', Number(e.target.value) || 0)}
+                        className="w-20 rounded-md"
+                        inputSize="sm"
+                        disabled={!canEditScoring}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Low Priority — spacer matches Input sm (h-8 w-20) so row height aligns */}
+                  <div className="border-border bg-card flex min-h-16 flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+                    <PriorityBadge priority="Low" variant="compact" />
+                    <div className="flex min-h-8 flex-1 items-center gap-3">
+                      <span className="text-foreground text-sm font-medium">
+                        {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
+                        {priorityThresholds.medium}
+                      </span>
+                      <div className="h-8 w-20 shrink-0" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="border-border bg-muted mt-4 flex items-center gap-3 rounded-lg border p-4">
                   <Checkbox
                     id="immediate-effect"
                     checked={immediateEffect}
@@ -675,7 +667,7 @@ export function ScoringConfigurationPage() {
                   />
                   <label
                     htmlFor="immediate-effect"
-                    className="text-dark-500 cursor-pointer text-sm font-light"
+                    className="text-foreground cursor-pointer text-sm font-light"
                   >
                     {t(
                       'pages.scoringConfiguration.immediateEffect',
@@ -686,9 +678,9 @@ export function ScoringConfigurationPage() {
 
                 {/* Change Reason Input */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-dark-500 text-sm font-medium">
+                  <label className="text-foreground text-sm font-medium">
                     {t('pages.scoringConfiguration.changeReason', 'Change Reason')}
-                    <span className="text-xs font-normal text-gray-500">
+                    <span className="text-muted-foreground text-xs font-normal">
                       {' '}
                       ({t('pages.scoringConfiguration.optional', 'Optional')})
                     </span>
@@ -723,16 +715,16 @@ export function ScoringConfigurationPage() {
               </div>
 
               {/* Configuration Preview Section */}
-              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+              <div className="border-border bg-card/50 flex w-full flex-col gap-4 rounded-xl border p-4 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
+                    <h2 className="text-foreground mb-1 text-base font-semibold sm:text-lg">
                       {t(
                         'pages.scoringConfiguration.configurationPreview',
                         'Configuration Preview'
                       )}
                     </h2>
-                    <p className="text-dark-400 text-sm font-light">
+                    <p className="text-muted-foreground text-sm font-light">
                       {t(
                         'pages.scoringConfiguration.previewDescription',
                         'See how threshold changes will affect client priority distribution'
@@ -756,9 +748,9 @@ export function ScoringConfigurationPage() {
 
                 {/* Preview Content */}
                 {!previewData ? (
-                  <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8">
-                    <Icons.Info size={48} className="text-gray-400" strokeWidth={1.5} />
-                    <p className="text-dark-400 text-center text-sm font-light">
+                  <div className="border-border bg-muted flex min-h-[200px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8">
+                    <Icons.Info size={48} className="text-muted-foreground" strokeWidth={1.5} />
+                    <p className="text-muted-foreground text-center text-sm font-light">
                       {t(
                         'pages.scoringConfiguration.previewEmpty',
                         'Click "Preview Changes" to see how threshold changes will affect client priority distribution'
@@ -768,26 +760,26 @@ export function ScoringConfigurationPage() {
                 ) : (
                   <div className="flex flex-col gap-6">
                     {/* Threshold Details */}
-                    <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                      <h3 className="text-dark-500 text-sm font-semibold">
+                    <div className="border-border bg-muted flex flex-col gap-2 rounded-lg border p-4">
+                      <h3 className="text-foreground text-sm font-semibold">
                         {t('pages.scoringConfiguration.thresholdDetails', 'Threshold Details:')}
                       </h3>
                       <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                         <div>
-                          <span className="text-dark-400 font-medium">
+                          <span className="text-muted-foreground font-medium">
                             {t('pages.scoringConfiguration.current', 'Current')}:
                           </span>
-                          <span className="text-dark-600 ml-2">
+                          <span className="text-foreground ml-2">
                             Critical ≥ {originalConfig?.priority_thresholds.critical || 0}, High ≥{' '}
                             {originalConfig?.priority_thresholds.high || 0}, Medium ≥{' '}
                             {originalConfig?.priority_thresholds.medium || 0}
                           </span>
                         </div>
                         <div>
-                          <span className="text-dark-400 font-medium">
+                          <span className="text-muted-foreground font-medium">
                             {t('pages.scoringConfiguration.new', 'New')}:
                           </span>
-                          <span className="text-dark-600 ml-2">
+                          <span className="text-foreground ml-2">
                             Critical ≥ {priorityThresholds.critical}, High ≥{' '}
                             {priorityThresholds.high}, Medium ≥ {priorityThresholds.medium}
                           </span>
@@ -799,7 +791,7 @@ export function ScoringConfigurationPage() {
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                       {/* Current Distribution */}
                       <div className="flex flex-col gap-3">
-                        <h3 className="text-dark-500 text-sm font-semibold">
+                        <h3 className="text-foreground text-sm font-semibold">
                           {t(
                             'pages.scoringConfiguration.currentDistribution',
                             'Current Distribution:'
@@ -808,7 +800,7 @@ export function ScoringConfigurationPage() {
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Critical" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {currentDistribution?.critical || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {currentDistribution
@@ -819,7 +811,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="High" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {currentDistribution?.high || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {currentDistribution
@@ -830,7 +822,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Medium" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {currentDistribution?.medium || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {currentDistribution
@@ -841,7 +833,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Low" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {currentDistribution?.low || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {currentDistribution
@@ -855,7 +847,7 @@ export function ScoringConfigurationPage() {
 
                       {/* New Distribution */}
                       <div className="flex flex-col gap-3">
-                        <h3 className="text-dark-500 text-sm font-semibold">
+                        <h3 className="text-foreground text-sm font-semibold">
                           {t(
                             'pages.scoringConfiguration.withNewThresholds',
                             'With New Thresholds:'
@@ -864,7 +856,7 @@ export function ScoringConfigurationPage() {
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Critical" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {newDistribution?.critical || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {newDistribution
@@ -885,7 +877,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="High" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {newDistribution?.high || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {newDistribution
@@ -906,7 +898,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Medium" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {newDistribution?.medium || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {newDistribution
@@ -927,7 +919,7 @@ export function ScoringConfigurationPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <PriorityBadge priority="Low" variant="compact" />
-                            <span className="text-dark-500 text-sm">
+                            <span className="text-foreground text-sm">
                               {newDistribution?.low || 0}{' '}
                               {t('pages.scoringConfiguration.clients', 'clients')} (
                               {newDistribution

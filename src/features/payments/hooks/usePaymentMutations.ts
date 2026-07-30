@@ -25,7 +25,7 @@ import type {
   Payment,
   PaymentListParams,
 } from '../api/types'
-import { generateReceiptPDF } from '../utils/receiptGenerator'
+import { generateReceiptPDF, selectDebtForPayment } from '../utils/receiptGenerator'
 import { getClientById } from '@/features/clients/api/clientApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import { getSeller } from '@/features/sellers/api/sellersApi'
@@ -285,7 +285,7 @@ export function useGenerateReceipt() {
 
           // Extract seller_id and days_past_due from debts
           if (client.debts && client.debts.length > 0) {
-            const primaryDebt = client.debts[0]
+            const primaryDebt = selectDebtForPayment(paymentData, client.debts) ?? client.debts[0]
             // Get seller_id from primary debt for fetching seller information
             sellerId = primaryDebt.seller_id
 
@@ -307,8 +307,7 @@ export function useGenerateReceipt() {
             const fullName = formatClientFullName(client)
 
             // Get contract number from debt (preferred) or use provided one if it's not 'N/A'
-            const contractFromDebt =
-              client.debts && client.debts.length > 0 ? client.debts[0].contract_number : undefined
+            const contractFromDebt = primaryDebt.contract_number
             const contractNumber =
               contractFromDebt ||
               (finalClientData?.contract && finalClientData.contract !== 'N/A'

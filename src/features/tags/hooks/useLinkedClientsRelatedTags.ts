@@ -7,6 +7,7 @@ import { useQueries } from '@tanstack/react-query'
 import { tagsApi } from '../api/tagsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { filterTagsForRole } from '../utils/visibility'
+import { compareRelatedTagEntries, sortTagsByOrder } from '../utils/sortTags'
 import type { TagDefinition } from '../types'
 
 export interface LinkedContactInfo {
@@ -116,9 +117,9 @@ export function useLinkedClientsRelatedTags(
       const sharedPhones = getSharedPhonesForClient(linkedClientId, linkedContactsByPhone)
       if (sharedPhones.length === 0) return
 
-      const tags = filterTagsForRole(tagQueries[index]?.data ?? [], roleName, includeHidden).filter(
-        (tag) => tag.is_related_tag === true
-      )
+      const tags = sortTagsByOrder(
+        filterTagsForRole(tagQueries[index]?.data ?? [], roleName, includeHidden)
+      ).filter((tag) => tag.is_related_tag === true)
       if (tags.length === 0) return
 
       const phoneEntries: RelatedTagPhoneEntry[] = sharedPhones.map((normalizedPhone) => {
@@ -141,6 +142,13 @@ export function useLinkedClientsRelatedTags(
         })
       })
     })
+
+    result.sort((a, b) =>
+      compareRelatedTagEntries(
+        { tag: a.tag, linkedClientId: a.linkedClient.id },
+        { tag: b.tag, linkedClientId: b.linkedClient.id }
+      )
+    )
 
     return result
   }, [

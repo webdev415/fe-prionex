@@ -106,13 +106,13 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
           />
 
           {/* Tags List */}
-          <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 sm:max-h-96 sm:p-4">
+          <div className="border-border bg-card max-h-64 space-y-2 overflow-y-auto rounded-lg border p-3 sm:max-h-96 sm:p-4">
             {isLoading ? (
-              <div className="py-4 text-center text-xs text-gray-500 sm:text-sm">
+              <div className="text-muted-foreground py-4 text-center text-xs sm:text-sm">
                 {t('pages.clients.modals.bulkTag.loadingTags', 'Loading tags...')}
               </div>
             ) : filteredTags?.length === 0 ? (
-              <div className="py-4 text-center text-xs text-gray-500 sm:text-sm">
+              <div className="text-muted-foreground py-4 text-center text-xs sm:text-sm">
                 {t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')}
               </div>
             ) : (
@@ -124,7 +124,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
                 return (
                   <label
                     key={tag.id}
-                    className={`flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50 ${isDisabledRemove ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-2 ${isDisabledRemove ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     <Checkbox
                       checked={selectedTagIds.includes(tag.id)}
@@ -138,12 +138,12 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
                       isProtected={isProtected}
                     />
                     {isDisabledRemove && (
-                      <span className="text-xs text-amber-600">
+                      <span className="text-warning-600 text-xs">
                         {t('pages.tags.protectedWarning', 'Requires approval')}
                       </span>
                     )}
                     {tag.description && !isDisabledRemove && (
-                      <span className="hidden text-xs text-gray-500 sm:inline">
+                      <span className="text-muted-foreground hidden text-xs sm:inline">
                         - {tag.description}
                       </span>
                     )}
@@ -155,7 +155,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
 
           {/* Selected count */}
           {selectedTagIds.length > 0 && (
-            <div className="text-xs text-gray-600 sm:text-sm">
+            <div className="text-muted-foreground text-xs sm:text-sm">
               {selectedTagIds.length}{' '}
               {t('pages.clients.modals.bulkTag.tagsSelected', 'tag(s) selected')}
             </div>

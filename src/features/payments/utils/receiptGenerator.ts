@@ -4,10 +4,35 @@
  * Converts payment data to PDF receipt format and generates PDFs
  */
 
+import type { DebtDetail } from '@/features/clients/api/types'
 import type { Payment } from '@/features/payments/api/types'
 import type { PaymentReceiptData } from '@/lib/pdfReceiptGenerator'
 import { generatePaymentReceiptPDF } from '@/lib/pdfReceiptGenerator'
 import type { PaymentMethod, PaymentStatus } from '@/features/payments/api/types'
+
+export function selectDebtForPayment(
+  payment: Pick<Payment, 'debt_id' | 'debt_contract_number'>,
+  debts: DebtDetail[] | undefined | null
+): DebtDetail | undefined {
+  if (!debts || debts.length === 0) {
+    return undefined
+  }
+
+  const byId =
+    payment.debt_id != null ? debts.find((debt) => debt.id === payment.debt_id) : undefined
+  if (byId) {
+    return byId
+  }
+
+  const byContract = payment.debt_contract_number
+    ? debts.find((debt) => debt.contract_number === payment.debt_contract_number)
+    : undefined
+  if (byContract) {
+    return byContract
+  }
+
+  return debts[0]
+}
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   bank_transfer: 'Bank Transfer',

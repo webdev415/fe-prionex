@@ -46,6 +46,22 @@ function createWrapper() {
   )
 }
 
+function renderWithInvalidateSpy(agentExtension = '1003') {
+  const queryClient = new QueryClient()
+  const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+
+  renderHook(() => useCallWebSocket(agentExtension), { wrapper })
+
+  const stateChangeHandler = mockSocket.on.mock.calls.find(
+    (call) => call[0] === 'call.state_changed'
+  )?.[1]
+
+  return { invalidateQueriesSpy, stateChangeHandler }
+}
+
 describe('useCallWebSocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -122,31 +138,17 @@ describe('useCallWebSocket', () => {
   })
 
   it('should handle call state change events', async () => {
-    const agentExtension = '1003'
     const mockEvent: CallStateEvent = {
-      event_type: 'call.state.changed',
-      call_id: 'CALL-123',
-      current_state: 'ACTIVE',
+      event_type: 'call.state_changed',
+      timestamp: '2026-07-29T10:00:00Z',
       data: {
         call_id: 'CALL-123',
         state: 'ACTIVE',
-        duration: 120,
+        total_duration: 120,
       },
     }
 
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    // Simulate call state changed event
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
     stateChangeHandler?.(mockEvent)
 
     await waitFor(() => {
@@ -158,6 +160,65 @@ describe('useCallWebSocket', () => {
         exact: false,
       })
     })
+  })
+
+  it('should skip the call-details invalidation when the payload carries no call_id', async () => {
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
+
+    expect(() =>
+      stateChangeHandler?.({
+        event_type: 'call.state_changed',
+        timestamp: '2026-07-29T10:00:00Z',
+        data: {},
+      })
+    ).not.toThrow()
+    expect(() =>
+      stateChangeHandler?.({ event_type: 'call.state_changed', timestamp: '...' })
+    ).not.toThrow()
+
+    await waitFor(() => {
+      expect(invalidateQueriesSpy).toHaveBeenCalled()
+    })
+    const callDetailsKeys = invalidateQueriesSpy.mock.calls
+      .map(([filters]) => (filters as { queryKey?: unknown[] })?.queryKey)
+      .filter((key) => Array.isArray(key) && key[0] === 'callDetails')
+    expect(callDetailsKeys).toHaveLength(0)
+  })
+
+  // client_id is not part of the call.state_changed payload, but the shared
+  // helper reads it defensively — this pins that it is fed event.data, not event.
+  it('should pass the nested client id to the call-related invalidation', async () => {
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
+    stateChangeHandler?.({
+      event_type: 'call.state_changed',
+      timestamp: '2026-07-29T10:00:00Z',
+      data: { call_id: 'CALL-123', state: 'COMPLETED', client_id: 4242 },
+    })
+
+    await waitFor(() => {
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['clients', 'detail', 4242, 'callSmsHistory'],
+      })
+    })
+  })
+
+  // Pins the matching semantics the bug depended on, in case a react-query
+  // upgrade changes partial matching.
+  it('should not match a live callDetails query when the key holds undefined', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const queryKey = ['callDetails', 'CALL-123']
+    const isInvalidated = () => queryClient.getQueryState(queryKey)?.isInvalidated
+
+    await queryClient.fetchQuery({ queryKey, queryFn: async () => ({ call_id: 'CALL-123' }) })
+    expect(isInvalidated()).toBe(false)
+
+    await queryClient.invalidateQueries({ queryKey: ['callDetails', undefined] })
+    expect(isInvalidated()).toBe(false) // the buggy key matched nothing
+
+    await queryClient.invalidateQueries({ queryKey })
+    expect(isInvalidated()).toBe(true) // the correct key matches
   })
 
   it('should show reconnecting notification after 3 failed attempts', () => {
@@ -282,49 +343,33 @@ describe('useCallWebSocket', () => {
   })
 
   it('should handle multiple state change events', async () => {
-    const agentExtension = '1003'
     const mockEvents: CallStateEvent[] = [
       {
-        event_type: 'call.state.changed',
-        call_id: 'CALL-123',
-        current_state: 'RINGING',
+        event_type: 'call.state_changed',
+        timestamp: '2026-07-29T10:00:00Z',
         data: { call_id: 'CALL-123', state: 'RINGING' },
       },
       {
-        event_type: 'call.state.changed',
-        call_id: 'CALL-123',
-        current_state: 'ACTIVE',
+        event_type: 'call.state_changed',
+        timestamp: '2026-07-29T10:00:01Z',
         data: { call_id: 'CALL-123', state: 'ACTIVE' },
       },
       {
-        event_type: 'call.state.changed',
-        call_id: 'CALL-123',
-        current_state: 'COMPLETED',
+        event_type: 'call.state_changed',
+        timestamp: '2026-07-29T10:00:02Z',
         data: { call_id: 'CALL-123', state: 'COMPLETED' },
       },
     ]
 
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
-
-    // Simulate multiple events
     for (const event of mockEvents) {
       stateChangeHandler?.(event)
     }
 
     await waitFor(() => {
-      // Should invalidate queries for each event
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(mockEvents.length * 2) // 2 invalidations per event
+      // callDetails + callHistory per event
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(mockEvents.length * 2)
     })
   })
 })

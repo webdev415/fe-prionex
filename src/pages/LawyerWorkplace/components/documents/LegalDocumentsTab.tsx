@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
-  useGenerateLegalDocument,
   useLegalDocumentFilterCounts,
   useLegalDocuments,
   useLegalDocumentStats,
@@ -21,7 +20,6 @@ import { DocumentsStatsBar } from './DocumentsStatsBar'
 import { DocumentsPageSkeleton, DocumentsTableSkeleton } from './DocumentsTabSkeleton'
 import { DocumentsToolbar } from './DocumentsToolbar'
 import { DocumentsTable } from './DocumentsTable'
-import { GenerateDocumentModal } from './GenerateDocumentModal'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -50,7 +48,6 @@ export function LegalDocumentsTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [generateOpen, setGenerateOpen] = useState(false)
   const [addIncomingOpen, setAddIncomingOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LegalDocumentRow | null>(null)
 
@@ -71,7 +68,6 @@ export function LegalDocumentsTab() {
   const { data: stats } = useLegalDocumentStats()
   const { data: filterCounts } = useLegalDocumentFilterCounts()
   const uploadMutation = useUploadIncomingLegalDocument()
-  const generateMutation = useGenerateLegalDocument()
 
   const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
@@ -98,31 +94,6 @@ export function LegalDocumentsTab() {
     setPage(1)
   }
 
-  const handleGenerateSubmit = async (input: {
-    documentType: 'outgoing' | 'nbu_response'
-    title: string
-    clientId: number
-    assignedToUserId: number
-    contractNumber?: string | null
-  }) => {
-    try {
-      const result = await generateMutation.mutateAsync({
-        document_type: input.documentType,
-        title: input.title,
-        client_id: input.clientId,
-        assigned_to_user_id: input.assignedToUserId,
-        contract_number: input.contractNumber,
-      })
-      setPage(1)
-      toast.success(
-        t('pages.lawyerWorkplace.documents.modals.generate.success', 'Document generated'),
-        { description: result.number }
-      )
-    } catch {
-      // mutation toast handles errors
-    }
-  }
-
   const handleIncomingSubmit = async (input: {
     title: string
     clientId: number
@@ -130,6 +101,8 @@ export function LegalDocumentsTab() {
     relatedLetterNumber?: string
     file: File
     contractNumber?: string | null
+    senderEmail?: string
+    summary?: string
   }) => {
     try {
       const result = await uploadMutation.mutateAsync({
@@ -139,6 +112,8 @@ export function LegalDocumentsTab() {
         assigned_to_user_id: input.assignedToUserId,
         contract_number: input.contractNumber,
         related_letter_number: input.relatedLetterNumber,
+        sender_email: input.senderEmail,
+        summary: input.summary,
       })
       setPage(1)
       toast.success(
@@ -156,7 +131,7 @@ export function LegalDocumentsTab() {
   const emptyState = useMemo(() => {
     if (hasSearch) {
       return {
-        icon: <Icons.Search size={22} strokeWidth={1.5} className="text-light-500" />,
+        icon: <Icons.Search size={22} strokeWidth={1.5} className="text-muted-foreground" />,
         title: t('pages.lawyerWorkplace.documents.empty.search.title', 'No matching documents'),
         description: t(
           'pages.lawyerWorkplace.documents.empty.search.description',
@@ -172,7 +147,7 @@ export function LegalDocumentsTab() {
         : t('pages.lawyerWorkplace.documents.filters.allTypes', 'All types')
 
       return {
-        icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />,
+        icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-muted-foreground" />,
         title: t('pages.lawyerWorkplace.documents.empty.filter.title', 'No documents in this view'),
         description: t('pages.lawyerWorkplace.documents.empty.filter.description', {
           filter: filterLabel,
@@ -182,7 +157,7 @@ export function LegalDocumentsTab() {
     }
 
     return {
-      icon: <Icons.File size={22} strokeWidth={1.5} className="text-light-500" />,
+      icon: <Icons.File size={22} strokeWidth={1.5} className="text-muted-foreground" />,
       title: t('pages.lawyerWorkplace.documents.empty.title', 'No documents yet'),
       description: t(
         'pages.lawyerWorkplace.documents.empty.description',
@@ -213,7 +188,6 @@ export function LegalDocumentsTab() {
                   searchQuery={searchQuery}
                   onSearchQueryChange={handleSearchQueryChange}
                   filterCounts={filterCounts}
-                  onGenerateDocument={() => setGenerateOpen(true)}
                   onAddIncoming={() => setAddIncomingOpen(true)}
                 />
               </>
@@ -227,10 +201,10 @@ export function LegalDocumentsTab() {
                 <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                   <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
                 </div>
-                <p className="text-dark-500 text-[14px] font-medium">
+                <p className="text-foreground text-[14px] font-medium">
                   {t('pages.lawyerWorkplace.documents.loadError.title', 'Could not load documents')}
                 </p>
-                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                   {t(
                     'pages.lawyerWorkplace.documents.loadError.description',
                     'Check your connection and try again.'
@@ -252,14 +226,14 @@ export function LegalDocumentsTab() {
 
             {showEmptyState ? (
               <div
-                className="mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-14 text-center sm:mx-5 lg:mx-7"
+                className="bg-card border-border mx-4 flex flex-col items-center justify-center rounded-xl border px-6 py-14 text-center sm:mx-5 lg:mx-7"
                 role="status"
               >
-                <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                   {emptyState.icon}
                 </div>
-                <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
-                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                <p className="text-foreground text-[14px] font-medium">{emptyState.title}</p>
+                <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                   {emptyState.description}
                 </p>
               </div>
@@ -280,12 +254,6 @@ export function LegalDocumentsTab() {
         )}
       </div>
 
-      <GenerateDocumentModal
-        open={generateOpen}
-        onClose={() => setGenerateOpen(false)}
-        onSubmit={handleGenerateSubmit}
-        isSubmitting={generateMutation.isPending}
-      />
       <AddIncomingDocumentModal
         open={addIncomingOpen}
         onClose={() => setAddIncomingOpen(false)}

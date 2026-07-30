@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay, formatNumber, formatTimeShort } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useLeaks } from '@/features/training/hooks/useLeaks'
@@ -88,35 +89,29 @@ function deriveInitials(fullName: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-function formatShortDate(iso: string | null): string {
+function formatShortDate(iso: string | null, language: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${dd}.${mm}`
+  return formatMonthDay(d, language)
 }
 
-function formatShortDateTime(iso: string | null): string | null {
+function formatShortDateTime(iso: string | null, language: string): string | null {
   if (!iso) return null
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mn = String(d.getMinutes()).padStart(2, '0')
-  return `${dd}.${mm} ${hh}:${mn}`
+  return `${formatMonthDay(d, language)} ${formatTimeShort(d, language)}`
 }
 
-function formatAmount(raw: string | null | undefined): string {
+function formatAmount(raw: string | null | undefined, language: string): string {
   if (raw == null) return '—'
   const n = Number(raw)
   if (!Number.isFinite(n)) return String(raw)
-  return n.toLocaleString()
+  return formatNumber(n, language)
 }
 
 export function LeaksSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<LeakStatusFilter>('all')
   const [period, setPeriod] = useState<PeriodOption>('7d')
   const [lookbackDays, setLookbackDays] = useState(DEFAULT_LOOKBACK_DAYS)
@@ -407,6 +402,7 @@ export function LeaksSubTab() {
                 <LeakRow
                   key={row.id}
                   row={row}
+                  language={i18n.language}
                   followedLabel={t('pages.training.leaks.followUp.followed', 'Followed up')}
                   notFollowedLabel={t(
                     'pages.training.leaks.followUp.notFollowed',
@@ -435,11 +431,13 @@ export function LeaksSubTab() {
 
 function LeakRow({
   row,
+  language,
   followedLabel,
   notFollowedLabel,
   noCallLabel,
 }: {
   row: LeakItem
+  language: string
   followedLabel: string
   notFollowedLabel: string
   noCallLabel: string
@@ -448,7 +446,7 @@ function LeakRow({
   const isFollowed = row.follow_up_status === 'followed_up'
   const operatorName = row.operator_name ?? (row.operator_id ? `#${row.operator_id}` : '—')
   const initials = row.operator_name ? deriveInitials(row.operator_name) : ''
-  const callAfter = formatShortDateTime(row.last_call_after_escalation_at)
+  const callAfter = formatShortDateTime(row.last_call_after_escalation_at, language)
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
       <td className={ANALYTICS_TABLE_TD}>
@@ -476,9 +474,9 @@ function LeakRow({
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {row.promise_amount != null ? `${formatAmount(row.promise_amount)} ₴` : '—'}
+        {row.promise_amount != null ? `${formatAmount(row.promise_amount, language)} ₴` : '—'}
       </td>
-      <td className={ANALYTICS_TABLE_TD}>{formatShortDate(row.promise_date)}</td>
+      <td className={ANALYTICS_TABLE_TD}>{formatShortDate(row.promise_date, language)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         {isFollowed ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">

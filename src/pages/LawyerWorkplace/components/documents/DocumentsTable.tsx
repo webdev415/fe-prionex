@@ -38,14 +38,14 @@ export function DocumentsTable({
         header: t('pages.lawyerWorkplace.documents.columns.number', 'Number'),
         className: 'whitespace-nowrap',
         render: (row) => (
-          <span className="text-light-600 text-[13px] font-medium">{row.number}</span>
+          <span className="text-muted-foreground text-[13px] font-medium">{row.number}</span>
         ),
       },
       {
         key: 'name',
         header: t('pages.lawyerWorkplace.documents.columns.documentName', 'Document name'),
         render: (row) => (
-          <span className="text-dark-500 text-[13px] font-medium">
+          <span className="text-foreground text-[13px] font-medium">
             {getDocumentDisplayName(row, t)}
           </span>
         ),
@@ -60,8 +60,8 @@ export function DocumentsTable({
         header: t('pages.lawyerWorkplace.documents.columns.clientContract', 'Client - Contract'),
         render: (row) => (
           <div className="min-w-[140px]">
-            <p className="text-dark-500 text-[13px] font-medium">{row.clientName}</p>
-            <p className="text-light-600 text-[11px]">{row.contractId}</p>
+            <p className="text-foreground text-[13px] font-medium">{row.clientName}</p>
+            <p className="text-muted-foreground text-[11px]">{row.contractId}</p>
           </div>
         ),
       },
@@ -69,7 +69,7 @@ export function DocumentsTable({
         key: 'action',
         header: t('pages.lawyerWorkplace.documents.columns.action', 'Action'),
         render: (row) => (
-          <span className="text-light-600 text-[13px] lowercase">
+          <span className="text-muted-foreground text-[13px] lowercase">
             {t(`pages.lawyerWorkplace.documents.actions.${row.action}`, row.action)}
           </span>
         ),
@@ -78,7 +78,7 @@ export function DocumentsTable({
         key: 'assignee',
         header: t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee'),
         render: (row) => (
-          <span className="text-dark-500 text-[13px]">{row.assigneeName || '—'}</span>
+          <span className="text-foreground text-[13px]">{row.assigneeName || '—'}</span>
         ),
       },
       {
@@ -88,8 +88,8 @@ export function DocumentsTable({
           const { dateLine, timeLine } = formatDocumentDateLines(row.createdAt, t, i18n.language)
           return (
             <div className="min-w-[100px]">
-              <p className="text-dark-500 text-[13px]">{dateLine}</p>
-              <p className="text-light-600 text-[11px]">{timeLine}</p>
+              <p className="text-foreground text-[13px]">{dateLine}</p>
+              <p className="text-muted-foreground text-[11px]">{timeLine}</p>
             </div>
           )
         },

@@ -71,7 +71,7 @@ export function LawyerLetterTypesCell({
                 type="button"
                 disabled={saving}
                 onClick={() => void handleRemove(typeId)}
-                className="text-light-500 hover:text-dark-500 flex h-5 w-5 items-center justify-center rounded-full transition-colors disabled:opacity-40"
+                className="text-muted-foreground hover:text-foreground flex h-5 w-5 items-center justify-center rounded-full transition-colors disabled:opacity-40"
                 aria-label={t(
                   'pages.lawyerWorkplace.settings.lawyers.removeLetterType',
                   'Remove letter type'
@@ -90,7 +90,7 @@ export function LawyerLetterTypesCell({
             <button
               type="button"
               disabled={saving || availableToAdd.length === 0}
-              className="border-light-300 text-light-600 hover:border-primary-400 hover:text-primary-600 flex h-6 w-6 items-center justify-center rounded-full border bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="border-border text-muted-foreground hover:border-primary-400 hover:text-primary-600 bg-card flex h-6 w-6 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={t(
                 'pages.lawyerWorkplace.settings.lawyers.addLetterType',
                 'Add letter type'
@@ -101,7 +101,7 @@ export function LawyerLetterTypesCell({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-56 overflow-y-auto p-1.5">
             {availableToAdd.length === 0 ? (
-              <DropdownMenuItem disabled className="text-light-500 text-[12px]">
+              <DropdownMenuItem disabled className="text-muted-foreground text-[12px]">
                 {t(
                   'pages.lawyerWorkplace.settings.lawyers.noMoreLetterTypes',
                   'All letter types assigned'

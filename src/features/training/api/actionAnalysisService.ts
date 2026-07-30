@@ -28,6 +28,7 @@ function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
   filters.telephony_types?.forEach((t) => {
     if (t) params.append('telephony_types', t)
   })
+  if (filters.category) params.set('category', filters.category)
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))

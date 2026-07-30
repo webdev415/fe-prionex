@@ -45,6 +45,19 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Reversals Category (2 permissions, KAN-334)
+   * Payment reversal (storno) — reallocation of a payment's distribution.
+   * Split rights: VIEW (see the Reversals table) vs CREATE (single + bulk).
+   * Seeded by auth migration 056.
+   */
+  REVERSALS: {
+    VIEW: 'view_reversals',
+    CREATE: 'create_reversal',
+    // Bulk upload reuses CREATE — no separate bulk permission.
+    BULK: 'create_reversal',
+  },
+
+  /**
    * Sale Notes Category (1 permission)
    * Controls bulk upload + delete of primary creditor comments.
    * Seeded by auth migration 039.
@@ -96,6 +109,7 @@ export const PERMISSIONS = {
   DATA: {
     IMPORT: 'import_clients',
     IMPORT_PAYMENTS: 'import_payments',
+    IMPORT_DOCUMENTS: 'import_documents',
     EXPORT: 'export_clients',
     MANAGE_PRIORITY: 'manage_client_priority',
   },
@@ -113,7 +127,7 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (4 permissions)
+   * System Category (5 permissions)
    * Controls access to system administration
    */
   SYSTEM: {
@@ -122,6 +136,8 @@ export const PERMISSIONS = {
     MANAGE_ROLES: 'manage_roles',
     // Call QA — global «AI call analysis» switch + its settings surface
     MANAGE_CALL_QA: 'manage_call_qa',
+    // AI settings — global assistant kill-switch + its settings surface
+    MANAGE_AI_SETTINGS: 'manage_ai_settings',
   },
 
   /**
@@ -350,8 +366,6 @@ export const PERMISSIONS = {
     TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
-    ACTIVATE: 'rr_activate',
-    DELETE_DRAFT: 'rr_delete_draft',
   },
 
   /**
@@ -362,6 +376,16 @@ export const PERMISSIONS = {
    */
   UBKI: {
     SUBMIT: 'submit_to_ubki',
+  },
+
+  /**
+   * AI Assistant Category (1 permission)
+   * Gates access to the operator AI assistant (chat, history, feedback,
+   * voice/TTS). Enforced server-side by the ai-assistant proxy; this UI gate
+   * hides the entry for users who lack it. Orthogonal to per-user data-scope.
+   */
+  AI_ASSISTANT: {
+    USE: 'use_ai_assistant',
   },
 } as const
 
@@ -421,6 +445,8 @@ export const PERMISSION_CATEGORIES = {
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
+  REVERSALS: 'Reversals',
+  AI_ASSISTANT: 'AI Assistant',
 } as const
 
 /**
@@ -469,6 +495,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Data
   import_clients: 'Import client data from files',
   import_payments: 'Import payments from bank CSV files in bulk',
+  import_documents: 'Bulk-import client and credit documents from a ZIP archive',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
   manage_primary_creditor_comments: 'Upload bulk sale notes and delete individual sale notes',
@@ -605,8 +632,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
   rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
   rr_complete: 'Manually mark a restructuring agreement as Completed',
-  rr_activate: 'Manually activate a draft restructuring agreement (Draft → Connected)',
-  rr_delete_draft: 'Delete a draft restructuring agreement before it is activated',
 
   // Write-offs (KAN-245)
   view_writeoffs: 'List and read individual debt write-off entries',
@@ -618,4 +643,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // UBKI — outbound credit-bureau submission
   submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
+
+  // Reversals (KAN-334)
+  view_reversals: 'View the payment reversals (storno) table',
+  create_reversal: 'Create a payment reversal (storno) — single and bulk',
+
+  // AI Assistant
+  use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
+  manage_ai_settings: 'Manage global AI settings (assistant kill-switch)',
 }

@@ -81,7 +81,7 @@ export function HeatmapTab() {
 
   const stateFilterControl = (
     <div className="flex flex-col gap-1.5">
-      <span className="text-dark-500 text-xs font-medium sm:text-sm">
+      <span className="text-foreground text-xs font-medium sm:text-sm">
         {t('pages.actionAnalysis.heatmap.filters.state', 'State filter')}
       </span>
       <Select value={urlState.state_filter ?? 'all'} onValueChange={handleStateChange}>
@@ -135,7 +135,7 @@ export function HeatmapTab() {
           variant="primary"
           onClick={handleExport}
           disabled={!periodReady || exportMutation.isPending || !operatorList.length}
-          leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[45px] rounded-full sm:px-6"
         >
           {exportMutation.isPending
@@ -145,41 +145,37 @@ export function HeatmapTab() {
       </div>
 
       {!periodReady ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.filters.selectCustomRange',
             'Pick a custom date range to load data.'
           )}
         </div>
       ) : isError ? (
-        <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+        <div className="bg-error-100 text-error-700 rounded-xl p-6 text-center text-sm shadow-sm">
           {t('pages.actionAnalysis.errors.loadHeatmapFailed', 'Failed to load the heatmap.')}
         </div>
       ) : isPending ? (
-        <div className="overflow-x-auto rounded-xl bg-white/80 p-4 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-7 w-24 animate-pulse rounded-full bg-gray-200"
-                aria-hidden
-              />
+              <div key={i} className="bg-border h-7 w-24 animate-pulse rounded-full" aria-hidden />
             ))}
           </div>
           <TableSkeleton columns={12} rows={8} className="w-full min-w-[640px]" />
         </div>
       ) : !operatorList.length ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t('pages.actionAnalysis.heatmap.empty', 'No heatmap data for the selected filters.')}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white/80 p-4 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-2 pb-3">
             {(['active_call', 'post_call', 'waiting', 'idle', 'break'] as HeatmapState[]).map(
               (state) => (
                 <span
                   key={state}
-                  className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
+                  className="bg-muted text-foreground flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
                 >
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
@@ -191,9 +187,9 @@ export function HeatmapTab() {
             )}
           </div>
           <table className="w-full text-xs">
-            <thead className="text-left text-gray-500">
+            <thead className="text-muted-foreground text-left">
               <tr>
-                <th className="sticky left-0 bg-white/80 px-2 py-2">
+                <th className="bg-card/80 sticky left-0 px-2 py-2">
                   {t('pages.actionAnalysis.heatmap.operator', 'Operator')}
                 </th>
                 {allHours.map((hour) => (
@@ -212,8 +208,8 @@ export function HeatmapTab() {
               {operatorList.map((op) => {
                 const byHour = new Map(op.hours.map((h) => [h.hour, h]))
                 return (
-                  <tr key={op.operator_id} className="border-t border-gray-100">
-                    <td className="sticky left-0 bg-white/80 px-2 py-1 font-medium text-gray-800">
+                  <tr key={op.operator_id} className="border-border border-t">
+                    <td className="bg-card/80 text-foreground sticky left-0 px-2 py-1 font-medium">
                       {operatorById.get(op.operator_id) ?? `#${op.operator_id}`}
                     </td>
                     {allHours.map((hour) => {

@@ -26,7 +26,7 @@ import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 import { StepFilterDropdown } from './StepFilterDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 interface Props {
   value: TaHistoryBarState
@@ -172,11 +172,11 @@ export function TaHistoryFiltersBar({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.department', 'Department')}
             </span>
             <Select
@@ -221,7 +221,7 @@ export function TaHistoryFiltersBar({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.chain', 'Chain')}
             </span>
             <Select
@@ -261,7 +261,7 @@ export function TaHistoryFiltersBar({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.notesSearch', 'Notes search')}
             </span>
             <Input
@@ -281,8 +281,8 @@ export function TaHistoryFiltersBar({
         </div>
 
         {selectedStepRows.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
-            <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+          <div className="border-border bg-card/60 flex flex-col gap-3 rounded-lg border p-4">
+            <span className="text-foreground text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.stepValuesHeading', 'Step value filters')}
             </span>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
@@ -340,7 +340,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span
-        className="text-dark-500 truncate text-xs font-medium tracking-[-0.24px] sm:w-44 sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]"
+        className="text-foreground truncate text-xs font-medium tracking-[-0.24px] sm:w-44 sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]"
         title={stepLabel}
       >
         {stepLabel}
@@ -429,7 +429,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
           />
         )}
         {fieldType === null && (
-          <span className="text-xs text-gray-500 italic">
+          <span className="text-muted-foreground text-xs italic">
             {t(
               'pages.actionAnalysis.filters.stepValueUnsupported',
               'No value filter available for this step.'

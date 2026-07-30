@@ -65,12 +65,15 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
 
   const isAssignment = entry.source === 'assignment'
   const action = isAssignment
-    ? entry.summary.split(' ')[0]
+    ? entry.action || entry.summary.split(' ')[0]
     : entry.processing_status || entry.summary
 
   const badgeColor = isAssignment
     ? ACTION_BADGE_COLORS[action] || 'bg-gray-100 text-gray-700'
     : STATUS_BADGE_COLORS[String(entry.processing_status)] || 'bg-gray-100 text-gray-700'
+
+  const showOperatorDisplay =
+    isAssignment && entry.actor_type === 'operator' && Boolean(entry.actor_display_name)
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-3 text-sm">
@@ -80,11 +83,19 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeColor}`}>
               {action}
             </span>
-            {isAssignment && entry.actor_type && (
-              <span className="text-[11px] text-gray-500">
-                {t('pages.tags.trace.actor')}: {entry.actor_type}
-                {entry.actor_id ? ` #${entry.actor_id}` : ''}
-              </span>
+            {entry.tag_name && (
+              <span className="text-[11px] font-medium text-gray-800">{entry.tag_name}</span>
+            )}
+            {showOperatorDisplay ? (
+              <span className="text-[11px] text-gray-600">{entry.actor_display_name}</span>
+            ) : (
+              isAssignment &&
+              entry.actor_type && (
+                <span className="text-[11px] text-gray-500">
+                  {t('pages.tags.trace.actor')}: {entry.actor_type}
+                  {entry.actor_id ? ` #${entry.actor_id}` : ''}
+                </span>
+              )
             )}
             {!isAssignment && entry.event_type && (
               <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">

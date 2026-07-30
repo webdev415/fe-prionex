@@ -416,8 +416,12 @@ export function EditInteractionModal({
       <ModalHeader
         onClose={handleClose}
         icon={
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.PencilEdit size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.PencilEdit
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
         }
         title={t('pages.clients.modals.editInteraction.title')}
@@ -428,14 +432,18 @@ export function EditInteractionModal({
           {phoneNumber ? (
             <div className="flex flex-row items-center gap-2 gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-dark-500 text-xs font-light sm:text-sm">
+                <span className="text-foreground text-xs font-light sm:text-sm">
                   {t('pages.clients.modals.addNote.phone', 'Phone')}:
                 </span>
-                <span className="text-dark-500 text-xs font-light sm:text-sm">{phoneNumber}</span>
+                <span className="text-foreground text-xs font-light sm:text-sm">{phoneNumber}</span>
               </div>
-              <button className="bg-primary-300 flex items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5">
-                <Icons.Headset size={14} className="text-dark-500 sm:size-4" strokeWidth={1.5} />
-                <span className="text-dark-500 text-[10px] font-medium sm:text-xs">
+              <button className="bg-primary flex items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5">
+                <Icons.Headset
+                  size={14}
+                  className="text-primary-foreground sm:size-4"
+                  strokeWidth={1.5}
+                />
+                <span className="text-primary-foreground text-[10px] font-medium sm:text-xs">
                   {t('pages.clients.activity.call')}
                 </span>
               </button>
@@ -445,13 +453,15 @@ export function EditInteractionModal({
           {/* Step 1 — Type */}
           <div className="flex flex-col gap-2">
             <label
-              className="text-dark-500 text-xs font-light sm:text-sm"
+              className="text-foreground text-xs font-light sm:text-sm"
               htmlFor="edit-interaction-type"
             >
               {t('pages.clients.modals.addNote.type', 'Type')}:
             </label>
             {isLoadingTypes ? (
-              <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
+              <div className="text-muted-foreground text-xs">
+                {t('common.loading', 'Loading...')}
+              </div>
             ) : (
               <Select value={safeTypeValue} onValueChange={handleTypeChange}>
                 <SelectTrigger
@@ -481,13 +491,15 @@ export function EditInteractionModal({
           {typeId !== undefined && showChannelStep && (
             <div className="flex flex-col gap-2">
               <label
-                className="text-dark-500 text-xs font-light sm:text-sm"
+                className="text-foreground text-xs font-light sm:text-sm"
                 htmlFor="edit-interaction-channel"
               >
                 {t('pages.clients.modals.addNote.channel', 'Communication channel')}:
               </label>
               {isLoadingChannels ? (
-                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
+                <div className="text-muted-foreground text-xs">
+                  {t('common.loading', 'Loading...')}
+                </div>
               ) : (
                 <Select value={safeSubtypeValue} onValueChange={handleChannelChange}>
                   <SelectTrigger
@@ -518,13 +530,15 @@ export function EditInteractionModal({
           {subtypeId !== undefined && showContactTypeStep && (
             <div className="flex flex-col gap-2">
               <label
-                className="text-dark-500 text-xs font-light sm:text-sm"
+                className="text-foreground text-xs font-light sm:text-sm"
                 htmlFor="edit-interaction-contact-type"
               >
                 {t('pages.clients.modals.addNote.contactType', 'Contact type')}:
               </label>
               {isLoadingContactTypes ? (
-                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
+                <div className="text-muted-foreground text-xs">
+                  {t('common.loading', 'Loading...')}
+                </div>
               ) : (
                 <Select value={safeContactTypeValue} onValueChange={handleContactTypeChange}>
                   <SelectTrigger
@@ -559,13 +573,15 @@ export function EditInteractionModal({
               : contactTypeId !== undefined) && (
             <div className="flex flex-col gap-2">
               <label
-                className="text-dark-500 text-xs font-light sm:text-sm"
+                className="text-foreground text-xs font-light sm:text-sm"
                 htmlFor="edit-interaction-result"
               >
                 {t('pages.clients.modals.addNote.result', 'Result')}:
               </label>
               {isLoadingResults ? (
-                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
+                <div className="text-muted-foreground text-xs">
+                  {t('common.loading', 'Loading...')}
+                </div>
               ) : (
                 <Select value={safeResultValue} onValueChange={handleResultChange}>
                   <SelectTrigger
@@ -595,7 +611,7 @@ export function EditInteractionModal({
                         <>
                           {agreementResults.length > 0 && (
                             <SelectGroup>
-                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                              <SelectLabel className="text-muted-foreground text-xs font-semibold">
                                 {t('interactionResults.agreementGroup', 'Agreement')}
                               </SelectLabel>
                               {agreementResults.map((result) => (
@@ -612,7 +628,7 @@ export function EditInteractionModal({
                           )}
                           {otherResults.length > 0 && (
                             <SelectGroup>
-                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                              <SelectLabel className="text-muted-foreground text-xs font-semibold">
                                 {t('interactionResults.otherGroup', 'Other')}
                               </SelectLabel>
                               {otherResults.map((result) => (
@@ -637,7 +653,7 @@ export function EditInteractionModal({
           {showCreditNumberField && (
             <div className="flex flex-col gap-2">
               <label
-                className="text-dark-500 text-xs font-light sm:text-sm"
+                className="text-foreground text-xs font-light sm:text-sm"
                 htmlFor="edit-interaction-credit-number"
               >
                 {t('pages.clients.modals.addNote.creditNumber', 'Credit number')}:
@@ -690,7 +706,7 @@ export function EditInteractionModal({
           {showPromiseAmount && (
             <div className="flex flex-col gap-2">
               <label
-                className="text-dark-500 text-xs font-light sm:text-sm"
+                className="text-foreground text-xs font-light sm:text-sm"
                 htmlFor="edit-promise-amount"
               >
                 {t('pages.clients.modals.addNote.promiseAmount', 'Promise amount')}:
@@ -703,7 +719,7 @@ export function EditInteractionModal({
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:text-sm"
+                className="text-foreground focus:ring-primary-300/20 focus:border-primary-300 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
               />
             </div>
           )}
@@ -727,7 +743,7 @@ export function EditInteractionModal({
 
           {/* Note / Comment */}
           <div className="flex flex-col gap-2">
-            <label className="text-dark-500 text-xs font-light sm:text-sm">
+            <label className="text-foreground text-xs font-light sm:text-sm">
               {t('pages.clients.modals.addNote.note', 'Note')}:
             </label>
             <div className="relative">
@@ -739,9 +755,9 @@ export function EditInteractionModal({
                   'Type your note here...'
                 )}
                 maxLength={isSearching ? undefined : MAX_NOTE_LENGTH}
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
+                className="text-foreground focus:ring-primary-300/20 focus:border-primary-300 border-border bg-card placeholder:text-muted-foreground min-h-[100px] w-full resize-none rounded-lg border px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
               />
-              <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
+              <div className="text-muted-foreground absolute right-2 bottom-2 text-[10px] font-light sm:text-xs">
                 {isSearching ? note.length : `${note.length}/${MAX_NOTE_LENGTH}`}
               </div>
             </div>

@@ -21,17 +21,17 @@ export interface OperatorGridViewProps {
 }
 
 const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white ring-red-300',
-  amber: 'bg-amber-400 text-white ring-amber-300',
-  green: 'bg-green-500 text-white ring-green-300',
+  red: 'bg-error-100 text-error-700 ring-error-200',
+  amber: 'bg-warning-100 text-warning-700 ring-warning-200',
+  green: 'bg-success-100 text-success-700 ring-success-200',
 }
 
 const ASSIGNMENT_STATE_TONE: Record<AssignmentState, string> = {
-  wait: 'bg-yellow-100 text-yellow-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  awaiting_training: 'bg-purple-100 text-purple-700',
-  scheduled: 'bg-indigo-100 text-indigo-700',
-  closed: 'bg-gray-100 text-gray-700',
+  wait: 'bg-warning-100 text-warning-700',
+  in_progress: 'bg-info-100 text-info-700',
+  awaiting_training: 'bg-secondary-100 text-secondary-700',
+  scheduled: 'bg-primary-100 text-primary-700',
+  closed: 'bg-muted text-muted-foreground',
 }
 
 const ASSIGNMENT_STATE_LABEL_KEYS: Record<AssignmentState, { key: string; fallback: string }> = {
@@ -93,7 +93,7 @@ export function OperatorGridView({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
         {t('pages.actionAnalysis.inbox.list.loading', 'Loading queue…')}
       </div>
     )
@@ -101,7 +101,7 @@ export function OperatorGridView({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
         {t('pages.actionAnalysis.inbox.list.empty', 'No operators in the current scope.')}
       </div>
     )
@@ -121,10 +121,10 @@ export function OperatorGridView({
               type="button"
               onClick={() => onSelect(row.operator_id)}
               className={[
-                'flex h-full w-full flex-col gap-3 rounded-xl border bg-white p-3 text-left transition-colors',
+                'bg-card flex h-full w-full flex-col gap-3 rounded-xl border p-3 text-left transition-colors',
                 isSelected
                   ? 'border-primary-400 ring-primary-100 ring-2'
-                  : 'hover:border-primary-200 border-gray-100',
+                  : 'hover:border-primary-200 border-border',
               ].join(' ')}
             >
               <header className="flex items-center justify-between gap-2">
@@ -136,15 +136,15 @@ export function OperatorGridView({
                     {row.triggers.length > 0 ? (
                       <span
                         aria-label="red flag"
-                        className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
+                        className="border-card bg-destructive absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2"
                       />
                     ) : null}
                   </div>
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
+                    <span className="text-foreground truncate text-sm font-medium">{name}</span>
                     <div className="flex flex-wrap items-center gap-1">
                       {departmentName ? (
-                        <span className="bg-primary-50 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
+                        <span className="bg-primary-100 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
                           {departmentName}
                         </span>
                       ) : null}
@@ -156,19 +156,19 @@ export function OperatorGridView({
                         </span>
                       ) : null}
                       {lastActive ? (
-                        <span className="text-[9px] text-gray-500">{lastActive}</span>
+                        <span className="text-muted-foreground text-[9px]">{lastActive}</span>
                       ) : null}
                     </div>
                   </div>
                 </div>
                 <span
-                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-gray-300 text-gray-600 ring-gray-200'}`}
+                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-muted text-muted-foreground ring-border'}`}
                 >
                   {row.composite_score}
                 </span>
               </header>
 
-              <div className="grid grid-cols-3 gap-1.5 border-t border-gray-100 pt-2">
+              <div className="border-border grid grid-cols-3 gap-1.5 border-t pt-2">
                 <ProgressRing
                   label={t('pages.actionAnalysis.inbox.detail.kpis.scriptAdherence', 'Script')}
                   pct={row.kpis.script_adherence_pct}
@@ -187,7 +187,7 @@ export function OperatorGridView({
               </div>
 
               {row.triggers.length > 0 ? (
-                <footer className="text-[10px] font-medium text-red-600">
+                <footer className="text-error-600 text-[10px] font-medium">
                   {t('pages.actionAnalysis.inbox.list.triggerCount', '{{count}} triggers', {
                     count: row.triggers.length,
                   })}
@@ -204,7 +204,7 @@ export function OperatorGridView({
 type RingTone = 'emerald' | 'blue' | 'amber'
 
 const RING_STROKES: Record<RingTone, string> = {
-  emerald: 'stroke-emerald-500',
+  emerald: 'stroke-success-500',
   blue: 'stroke-blue-500',
   amber: 'stroke-amber-500',
 }
@@ -247,11 +247,13 @@ function ProgressRing({
             strokeDashoffset={dashOffset}
           />
         </svg>
-        <span className="text-dark-500 absolute inset-0 flex items-center justify-center text-[10px] font-semibold">
+        <span className="text-foreground absolute inset-0 flex items-center justify-center text-[10px] font-semibold">
           {display}
         </span>
       </div>
-      <span className="text-[9px] font-medium tracking-wide text-gray-500 uppercase">{label}</span>
+      <span className="text-muted-foreground text-[9px] font-medium tracking-wide uppercase">
+        {label}
+      </span>
     </div>
   )
 }

@@ -65,13 +65,6 @@ export async function restoreProject(projectId: number): Promise<ProjectDetailRe
 }
 
 /**
- * Delete a project (hard delete)
- */
-export async function deleteProject(projectId: number): Promise<void> {
-  await api.delete(`/api/v1/projects/${projectId}`)
-}
-
-/**
  * Export projects to CSV or XLSX
  */
 export async function exportProjects(params: {
@@ -94,6 +87,5 @@ export const projectsApi = {
   updateProject,
   archiveProject,
   restoreProject,
-  deleteProject,
   exportProjects,
 }

@@ -143,7 +143,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
   return (
     <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
       {isLocked && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="border-warning-200 bg-warning-100 text-warning-700 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
           <span className="font-semibold">⚠</span>
           <span>
             {t(
@@ -207,18 +207,18 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                className="focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
               >
                 <div className="flex min-w-0 flex-1 flex-wrap gap-1">
                   {departmentIds.length === 0 ? (
-                    <span className="text-gray-400">
+                    <span className="text-muted-foreground">
                       {t('pages.taChains.form.departmentPlaceholder')}
                     </span>
                   ) : (
                     departmentIds.map((id) => (
                       <span
                         key={id}
-                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+                        className="bg-info-100 text-info-700 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
                       >
                         {departmentNameById.get(id) ?? `#${id}`}
                         <button
@@ -228,7 +228,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                             ev.stopPropagation()
                             toggleDepartment(id)
                           }}
-                          className="rounded-full hover:bg-blue-100"
+                          className="hover:bg-info-100 rounded-full"
                         >
                           <Icons.Close size={12} strokeWidth={2} />
                         </button>
@@ -236,21 +236,21 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                     ))
                   )}
                 </div>
-                <Icons.ArrowDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                <Icons.ArrowDown size={16} className="text-muted-foreground" strokeWidth={1.5} />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
               sideOffset={6}
-              className="w-[--radix-dropdown-menu-trigger-width] min-w-[240px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+              className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[240px] rounded-md border p-0 shadow-lg"
             >
-              <div className="border-b border-gray-200 p-2">
+              <div className="border-border border-b p-2">
                 <input
                   type="text"
                   value={deptSearch}
                   onChange={(e) => setDeptSearch(e.target.value)}
                   placeholder={t('pages.taChains.form.departmentSearchPlaceholder')}
-                  className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                  className="focus:border-primary-500 border-border bg-card text-foreground placeholder:text-muted-foreground w-full rounded-md border px-2 py-1.5 text-sm outline-none"
                 />
               </div>
               <div
@@ -258,27 +258,27 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                 onWheel={(e) => e.stopPropagation()}
               >
                 {filteredDepartments.length === 0 ? (
-                  <div className="py-3 text-center text-xs text-gray-500">
+                  <div className="text-muted-foreground py-3 text-center text-xs">
                     {t('pages.taChains.form.departmentNoneFound')}
                   </div>
                 ) : (
                   filteredDepartments.map((d) => (
                     <label
                       key={d.id}
-                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50"
+                      className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-1.5"
                     >
                       <Checkbox
                         checked={departmentIds.includes(d.id)}
                         onCheckedChange={() => toggleDepartment(d.id)}
                       />
-                      <span className="text-sm text-gray-800">{d.name}</span>
+                      <span className="text-foreground text-sm">{d.name}</span>
                     </label>
                   ))
                 )}
               </div>
               {departmentIds.length > 0 && (
-                <div className="flex items-center justify-between border-t border-gray-200 px-2 py-1.5">
-                  <span className="text-xs text-gray-500">
+                <div className="border-border flex items-center justify-between border-t px-2 py-1.5">
+                  <span className="text-muted-foreground text-xs">
                     {t('pages.taChains.form.departmentSelectedCount', {
                       count: departmentIds.length,
                     })}
@@ -286,7 +286,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                   <button
                     type="button"
                     onClick={clearDepartments}
-                    className="text-xs text-gray-600 hover:text-gray-900"
+                    className="text-muted-foreground hover:text-foreground text-xs"
                   >
                     {t('pages.taChains.form.departmentClear')}
                   </button>
@@ -297,7 +297,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-gray-700">
+      <label className="text-foreground flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={isSystemHidden}

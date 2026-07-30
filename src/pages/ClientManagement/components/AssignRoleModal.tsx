@@ -142,8 +142,8 @@ export function AssignRoleModal({
     <Modal open={open} onClose={handleCancel} maxWidth="md">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Tick02 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Tick02 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t(titleKey)}
@@ -154,7 +154,7 @@ export function AssignRoleModal({
           <div className="flex flex-col gap-1">
             <Label
               htmlFor="assign-role-user"
-              className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+              className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
             >
               {t(labelKey)}
             </Label>
@@ -169,7 +169,7 @@ export function AssignRoleModal({
 
           {/* Assignment Reason — required for both employee and searcher */}
           <div className="flex flex-col gap-2">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.modals.assignRole.assignmentReason')}
             </Label>
             <RadioGroup value={reason} onValueChange={setReason}>
@@ -182,7 +182,7 @@ export function AssignRoleModal({
                       <RadioItem value={reasonValue} id={`role-reason-${reasonKey}`} />
                       <Label
                         htmlFor={`role-reason-${reasonKey}`}
-                        className="text-dark-500 text-xs font-light tracking-[-0.24px]"
+                        className="text-foreground text-xs font-light tracking-[-0.24px]"
                       >
                         {t(translationKey)}
                       </Label>

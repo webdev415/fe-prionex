@@ -40,7 +40,7 @@ export function DynamicsSubTab() {
 
   if (!operators.length) {
     return (
-      <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+      <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
         {t('pages.actionAnalysis.errors.noOperators', 'No operators in scope.')}
       </div>
     )
@@ -51,13 +51,13 @@ export function DynamicsSubTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.operator', 'Operator')}
             </label>
             <select
               value={operatorId ?? ''}
               onChange={(e) => setOperatorId(e.target.value ? Number(e.target.value) : null)}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               <option value="">
                 {t('pages.actionAnalysis.filters.selectOperator', 'Select an operator…')}
@@ -71,13 +71,13 @@ export function DynamicsSubTab() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.period', 'Period')}
             </label>
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value as (typeof PERIODS)[number])}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               {PERIODS.map((p) => (
                 <option key={p} value={p}>
@@ -88,13 +88,13 @@ export function DynamicsSubTab() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.granularity', 'Granularity')}
             </label>
             <select
               value={granularity}
               onChange={(e) => setGranularity(e.target.value as DynamicsGranularity)}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               {GRANULARITIES.map((g) => (
                 <option key={g} value={g}>
@@ -110,7 +110,7 @@ export function DynamicsSubTab() {
           size="md"
           onClick={() => filters && exportMutation.mutate(filters)}
           disabled={!filters || exportMutation.isPending}
-          leftIcon={<Icons.Download size={16} className="text-white" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
@@ -120,18 +120,18 @@ export function DynamicsSubTab() {
       </div>
 
       {operatorId == null ? (
-        <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.dynamics.selectOperatorHint',
             'Pick an operator to view their score dynamics.'
           )}
         </div>
       ) : dynamicsQuery.isLoading ? (
-        <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
           {t('common.loading', 'Loading…')}
         </div>
       ) : dynamicsQuery.isError ? (
-        <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-red-500 shadow-sm">
+        <div className="bg-card/50 text-error-700 rounded-xl p-12 text-center text-sm shadow-sm">
           {t('pages.actionAnalysis.errors.loadDynamicsFailed', 'Failed to load dynamics')}
         </div>
       ) : dynamicsQuery.data ? (
@@ -173,9 +173,9 @@ function Stat({
   isCount?: boolean
 }) {
   return (
-    <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-dark-500 text-lg font-medium">
+    <div className="bg-card rounded-lg px-3 py-2 shadow-sm">
+      <div className="text-muted-foreground text-xs">{label}</div>
+      <div className="text-foreground text-lg font-medium">
         {value == null ? '—' : isCount ? value : Number(value).toFixed(2)}
       </div>
     </div>

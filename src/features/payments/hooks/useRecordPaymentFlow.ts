@@ -34,6 +34,7 @@ export interface RecordPaymentInput {
   paymentMethodDetails?: string
   debtId?: number
   paymentType: PaymentType
+  restructuringAgreementId?: number
 }
 
 export interface UseRecordPaymentFlowOptions {
@@ -80,6 +81,7 @@ export function useRecordPaymentFlow(
           payment_method: backendMethod,
           payment_method_details: data.paymentMethodDetails,
           payment_type: data.paymentType,
+          restructuring_agreement_id: data.restructuringAgreementId,
           bank_reference:
             data.referenceNumber ||
             (data.method === 'Card' ? `****${data.last4Digits}` : undefined),

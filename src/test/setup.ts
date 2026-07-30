@@ -1,6 +1,9 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterAll } from 'vitest'
+import './mocks/callQaSettings'
+import './mocks/aiAssistantSettings'
+import './mocks/assistantOverview'
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
@@ -115,6 +118,7 @@ vi.mock('react-i18next', () => ({
         'alreadyLoggedIn.forceLogout': 'Force Logout Other Session',
         'alreadyLoggedIn.cancel': 'Back to Login',
         'common.selectAll': 'Select all',
+        'common.selectionOptions': 'Selection options',
         'pages.clients.listOfClients': 'List of Clients',
         'pages.clients.clearAll': 'Clear All',
         'pages.clients.filtersLabel': 'Filters',

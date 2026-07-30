@@ -22,6 +22,7 @@ import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatte
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
+import { fetchFilteredClientIds } from '@/features/messaging/utils/fetchFilteredClientIds'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import {
@@ -48,6 +49,7 @@ import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorF
 import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
+import { cycleTagTriState } from '@/features/tags/utils/tagFilterState'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
@@ -191,10 +193,11 @@ export interface ClientFilters {
   responsibleSearcher?: string
   unassignedOnly?: boolean
 
-  // Tags Filter
+  // Tags Filter (3-state: include / exclude / neutral)
   tagIds?: number[]
-
-  rrStatusIds?: number[]
+  excludeTagIds?: number[]
+  /** Active Tag Service segment preset (mutually exclusive with manual tags) */
+  segmentId?: number
 
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
@@ -253,7 +256,9 @@ function decodeStepValues(raw: string): Record<number, StepValueEntry> {
 // OFF; only per-loan manual submit stays active. The backend
 // /submit/by-clients endpoint is also disabled. Re-enable by flipping this
 // flag to true.
-const ENABLE_BULK_UBKI_SUBMISSION = false
+const ENABLE_BULK_UBKI_SUBMISSION = true
+
+const BULK_ACTION_LIMIT = 10000
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
@@ -276,7 +281,8 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
-  const [rrStatusFilter, setRrStatusFilter] = useURLState<number[]>('rr_status', [])
+  const [excludeTagIdsFilter, setExcludeTagIdsFilter] = useURLState<number[]>('excludeTags', [])
+  const [segmentIdFilter, setSegmentIdFilter] = useURLState<number>('segment', 0)
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
     'employee',
     ''
@@ -346,7 +352,8 @@ export function ClientManagementPage() {
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
-      rrStatusIds: rrStatusFilter,
+      excludeTagIds: excludeTagIdsFilter,
+      segmentId: segmentIdFilter || undefined,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
@@ -373,7 +380,8 @@ export function ClientManagementPage() {
     [
       portfolioFilter,
       tagIdsFilter,
-      rrStatusFilter,
+      excludeTagIdsFilter,
+      segmentIdFilter,
       responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
@@ -414,6 +422,7 @@ export function ClientManagementPage() {
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
   const [showBulkSendMessageModal, setShowBulkSendMessageModal] = useState(false)
   const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
+  const [bulkTagClientIds, setBulkTagClientIds] = useState<number[]>([])
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedClientForTags, setSelectedClientForTags] = useState<{
     id: number
@@ -473,7 +482,8 @@ export function ClientManagementPage() {
       sortOrder,
       portfolioFilter,
       tagIdsFilter,
-      rrStatusFilter,
+      excludeTagIdsFilter,
+      segmentIdFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -507,7 +517,8 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      rrStatusFilter.length > 0 ||
+      excludeTagIdsFilter.length > 0 ||
+      segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -544,7 +555,8 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
-    rrStatusFilter,
+    excludeTagIdsFilter,
+    segmentIdFilter,
     responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
@@ -582,7 +594,8 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      rrStatusFilter.length > 0 ||
+      excludeTagIdsFilter.length > 0 ||
+      segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -611,7 +624,8 @@ export function ClientManagementPage() {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
-            if (parsed.rrStatusFilter) setRrStatusFilter(parsed.rrStatusFilter)
+            if (parsed.excludeTagIdsFilter) setExcludeTagIdsFilter(parsed.excludeTagIdsFilter)
+            if (parsed.segmentIdFilter) setSegmentIdFilter(parsed.segmentIdFilter)
             // Migrate legacy scalar `responsibleEmployeeFilter` to the new
             // `responsibleEmployeeIdsFilter` array (KAN-572). Saved states
             // from before the multi-select migration carry the scalar key.
@@ -850,13 +864,17 @@ export function ClientManagementPage() {
       params.debt_max = filters.debtRangeTo
     }
 
-    // FILTER 9: Tags
-    if (filters.tagIds && filters.tagIds.length > 0) {
-      params.tag_ids = filters.tagIds.join(',')
-    }
-
-    if (filters.rrStatusIds && filters.rrStatusIds.length > 0) {
-      params.rr_status_in = filters.rrStatusIds.join(',')
+    // FILTER 9: Tags (include OR + exclude AND-NOT) OR segment preset
+    // (mutually exclusive — prefer segment when set)
+    if (filters.segmentId) {
+      params.segment_id = filters.segmentId
+    } else {
+      if (filters.tagIds && filters.tagIds.length > 0) {
+        params.tag_ids = filters.tagIds.join(',')
+      }
+      if (filters.excludeTagIds && filters.excludeTagIds.length > 0) {
+        params.exclude_tag_ids = filters.excludeTagIds.join(',')
+      }
     }
 
     // FILTER 10: Priority
@@ -1048,7 +1066,12 @@ export function ClientManagementPage() {
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
-    if (filters.tagIds && filters.tagIds.length > 0) count++
+    if (
+      (filters.tagIds && filters.tagIds.length > 0) ||
+      (filters.excludeTagIds && filters.excludeTagIds.length > 0) ||
+      filters.segmentId
+    )
+      count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -1100,19 +1123,69 @@ export function ClientManagementPage() {
     setCurrentPage(1)
   }
 
-  // Bulk selection handlers
+  const handleSelectPage = () => {
+    setAllClientsSelected(false)
+    setExcludedClients(new Set())
+    setSelectedClients(new Set(filteredClients.map((client) => client.id)))
+  }
+
+  const exceedsBulkLimit = (): boolean => {
+    if (totalSelectedCount > BULK_ACTION_LIMIT) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.limitExceeded',
+          'The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again.'
+        )
+      )
+      return true
+    }
+    return false
+  }
+
+  const resolveBulkClientIds = async (): Promise<number[]> => {
+    if (allClientsSelected) {
+      return fetchFilteredClientIds(clientListFilterParams, excludedClients)
+    }
+    return Array.from(selectedClients).map(Number)
+  }
+
   const handleBulkAssign = () => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    if (exceedsBulkLimit()) return
     setShowBulkAssignModal(true)
   }
 
-  const handleBulkAddTags = () => {
-    setBulkTagAction('add')
+  const openBulkTagModal = async (action: 'add' | 'remove') => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    if (exceedsBulkLimit()) return
+    const ids = await resolveBulkClientIds()
+    setBulkTagClientIds(ids)
+    setBulkTagAction(action)
     setShowBulkTagModal(true)
   }
 
+  const handleBulkAddTags = () => {
+    void openBulkTagModal('add')
+  }
+
   const handleBulkRemoveTags = () => {
-    setBulkTagAction('remove')
-    setShowBulkTagModal(true)
+    void openBulkTagModal('remove')
   }
 
   const handleBulkSendMessage = () => {
@@ -1125,7 +1198,7 @@ export function ClientManagementPage() {
       )
       return
     }
-
+    if (exceedsBulkLimit()) return
     setShowBulkSendMessageModal(true)
   }
 
@@ -1189,24 +1262,15 @@ export function ClientManagementPage() {
     )
   }
 
-  const handleBulkAssignSubmit = (assignmentData: {
+  const handleBulkAssignSubmit = async (assignmentData: {
     employeeId?: string
     searcherId?: string
     distributionMethod: 'assign-all' | 'distribute-evenly'
     reason: string
   }) => {
-    // Collect client IDs to assign
-    let clientIds: number[]
+    if (exceedsBulkLimit()) return
 
-    if (allClientsSelected) {
-      // All selected minus excluded - get from current page data
-      clientIds = apiClients
-        .filter((client) => !excludedClients.has(client.id))
-        .map((client) => client.id)
-    } else {
-      // Just the explicitly selected clients
-      clientIds = Array.from(selectedClients).map(Number)
-    }
+    const clientIds = await resolveBulkClientIds()
 
     if (clientIds.length === 0) return
 
@@ -1381,20 +1445,18 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleTag') {
+    if (newFilters._action === 'cycleTag') {
       const tagId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setTagIdsFilter((prev) => (checked ? [...prev, tagId] : prev.filter((id) => id !== tagId)))
-      setCurrentPage(1)
-      return
-    }
-
-    if (newFilters._action === 'toggleRrStatus') {
-      const statusId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setRrStatusFilter((prev) =>
-        checked ? [...prev, statusId] : prev.filter((id) => id !== statusId)
+      const next = cycleTagTriState(
+        { includeIds: tagIdsFilter, excludeIds: excludeTagIdsFilter },
+        tagId
       )
+      setTagIdsFilter(next.includeIds)
+      setExcludeTagIdsFilter(next.excludeIds)
+      // Manual tag selection clears segment (mutually exclusive)
+      if (next.includeIds.length > 0 || next.excludeIds.length > 0) {
+        setSegmentIdFilter(0)
+      }
       setCurrentPage(1)
       return
     }
@@ -1407,8 +1469,11 @@ export function ClientManagementPage() {
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
     }
-    if (JSON.stringify(newFilters.rrStatusIds) !== JSON.stringify(rrStatusFilter)) {
-      setRrStatusFilter(newFilters.rrStatusIds || [])
+    if (JSON.stringify(newFilters.excludeTagIds) !== JSON.stringify(excludeTagIdsFilter)) {
+      setExcludeTagIdsFilter(newFilters.excludeTagIds || [])
+    }
+    if ((newFilters.segmentId || 0) !== segmentIdFilter) {
+      setSegmentIdFilter(newFilters.segmentId || 0)
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1508,7 +1573,8 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
-    setRrStatusFilter([])
+    setExcludeTagIdsFilter([])
+    setSegmentIdFilter(0)
     setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
@@ -1586,7 +1652,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-dark-500 cursor-pointer text-left hover:underline"
+          className="text-primary cursor-pointer text-left hover:underline"
         >
           {client.fullName}
         </Link>
@@ -1601,7 +1667,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-dark-500 cursor-pointer text-left hover:underline"
+          className="text-primary cursor-pointer text-left hover:underline"
         >
           {client.taxIdNumber}
         </Link>
@@ -1632,7 +1698,7 @@ export function ClientManagementPage() {
                 ))}
                 {remainingCount > 0 && (
                   <span
-                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                    className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium"
                     title={tags
                       .slice(3)
                       .map((t) => t.name)
@@ -1643,7 +1709,7 @@ export function ClientManagementPage() {
                 )}
               </>
             ) : (
-              <span className="text-xs text-gray-400">-</span>
+              <span className="text-muted-foreground text-xs">-</span>
             )}
           </div>
         )
@@ -1722,7 +1788,7 @@ export function ClientManagementPage() {
       render: (client) =>
         client.doNotSendToUbki ? (
           <span
-            className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+            className="bg-error-100 text-error-700 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
             title={t(
               'pages.clients.detail.ubki.optedOutTooltip',
               'Client is opted out of UBKI; submission is disabled.'
@@ -1731,7 +1797,7 @@ export function ClientManagementPage() {
             {t('pages.clients.detail.ubki.optedOut', 'Opted out')}
           </span>
         ) : (
-          <span className="text-xs text-gray-400">-</span>
+          <span className="text-muted-foreground text-xs">-</span>
         ),
     },
     {
@@ -1754,7 +1820,7 @@ export function ClientManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleAssign(client.id)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
                 disabled={isBulkActionActive}
               >
                 {t('pages.clients.assign')}
@@ -1764,7 +1830,7 @@ export function ClientManagementPage() {
                   variant="regular-black"
                   size="xs"
                   onClick={() => handleManageTags(client.id, client.fullName)}
-                  leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
+                  leftIcon={<Icons.File size={16} strokeWidth={1.5} />}
                   disabled={isBulkActionActive}
                   data-testid={`tag-button-${client.id}`}
                 >
@@ -1783,19 +1849,19 @@ export function ClientManagementPage() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="border-border bg-card text-foreground hover:bg-muted focus-visible:ring-ring flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={t('pages.clients.tableHeaders.actions')}
                     disabled={isBulkActionActive}
                   >
                     <Icons.FilterVertical size={16} strokeWidth={1.5} />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuContent align="end" className="border-border bg-card">
                   {/* Reassign trigger is always visible; warn-on-click happens on the
                       modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                   <DropdownMenuItem
                     onClick={() => handleAssign(client.id)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                     disabled={isBulkActionActive}
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
@@ -1804,7 +1870,7 @@ export function ClientManagementPage() {
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                       disabled={isBulkActionActive}
                       data-testid={`tag-button-${client.id}`}
                     >
@@ -1851,8 +1917,8 @@ export function ClientManagementPage() {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">{t('pages.clients.errorLoading')}</p>
-        <p className="text-sm text-gray-600">
+        <p className="text-foreground font-medium">{t('pages.clients.errorLoading')}</p>
+        <p className="text-muted-foreground text-sm">
           {error?.message || t('pages.clients.errorOccurred')}
         </p>
       </div>
@@ -1873,10 +1939,10 @@ export function ClientManagementPage() {
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-row items-center gap-2">
-              <span className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.4px] sm:text-2xl sm:tracking-[-0.48px]">
+              <span className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.4px] sm:text-2xl sm:tracking-[-0.48px]">
                 {t('pages.clients.listOfClients')}
               </span>
-              <span className="text-center text-sm leading-[155%] font-light tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              <span className="text-muted-foreground text-center text-sm leading-[155%] font-light tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                 {totalCount}
               </span>
             </div>
@@ -1885,32 +1951,28 @@ export function ClientManagementPage() {
             {appliedFiltersCount > 0 && (
               <button
                 onClick={handleClearAll}
-                className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
+                className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-full border px-4 py-2.5 transition-colors"
               >
-                <Icons.Cancel01
-                  size={20}
-                  className="stroke-secondary-800 text-secondary-800"
-                  strokeWidth={1.5}
-                />
-                <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
+                <span className="text-foreground text-center text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {t('pages.clients.clearAll')}
                 </span>
               </button>
             )}
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"
+              className="border-border bg-card/50 flex flex-col items-start gap-2.5 rounded-lg border px-5 py-3 shadow-sm"
             >
               <div className="flex items-center gap-2">
-                <Icons.FilterVertical size={20} className="text-gray-700" strokeWidth={1.5} />
-                <span className="text-dark-500 text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
+                <Icons.FilterVertical size={20} className="text-foreground" strokeWidth={1.5} />
+                <span className="text-foreground text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
                   {t('pages.clients.filtersLabel')}{' '}
                   <span className="font-medium">
                     ({appliedFiltersCount} {t('pages.clients.applied')})
                   </span>
                 </span>
                 <span className={`transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`}>
-                  <Icons.ArrowUp size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <Icons.ArrowUp size={18} className="text-foreground" strokeWidth={1.5} />
                 </span>
               </div>
             </button>
@@ -1940,7 +2002,10 @@ export function ClientManagementPage() {
               selectedItems={selectedClients}
               onSelectionChange={handleSelectionChange}
               totalCount={totalCount}
-              onSelectAll={handleSelectAll}
+              onSelectPage={handleSelectPage}
+              onSelectAllByFilter={handleSelectAll}
+              pageSelectableCount={filteredClients.length}
+              filterSelectableCount={totalCount}
               allItemsSelected={allClientsSelected}
               excludedItemsCount={excludedClients.size}
               excludedItems={excludedClients}
@@ -1954,44 +2019,44 @@ export function ClientManagementPage() {
                     >
                       <Icons.Settings
                         size={16}
-                        className="text-dark-500 sm:h-[18px] sm:w-[18px]"
+                        className="text-primary-foreground sm:h-[18px] sm:w-[18px]"
                         strokeWidth={1.5}
                       />
                       <span className="hidden font-medium sm:inline">Bulk Actions</span>
                       <span className="font-medium sm:hidden">Actions</span>
                       <Icons.ArrowDown
                         size={14}
-                        className="text-dark-500 sm:h-4 sm:w-4"
+                        className="text-primary-foreground sm:h-4 sm:w-4"
                         strokeWidth={1.5}
                       />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                    className="border-border bg-card w-56 rounded-lg border p-1 shadow-lg"
                   >
                     {/* Bulk-assign trigger is always visible; warn-on-click happens on the
                         modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <DropdownMenuItem
                       onClick={handleBulkAssign}
-                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                     >
-                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                      <span className="text-dark-500 text-sm font-medium">
+                      <Icons.UserCheck01 size={18} className="text-foreground" strokeWidth={1.5} />
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
                       </span>
                     </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
                         <Icons.PlusSignCircle
                           size={18}
-                          className="text-dark-500"
+                          className="text-foreground"
                           strokeWidth={1.5}
                         />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.addTags', 'Add Tags')}
                         </span>
                       </DropdownMenuItem>
@@ -1999,10 +2064,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkRemoveTags}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Remove02 size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
                         </span>
                       </DropdownMenuItem>
@@ -2010,14 +2075,14 @@ export function ClientManagementPage() {
                     <PermissionGuard permissions={ALL_MESSAGING_LAUNCH_PERMISSIONS} mode="any">
                       <DropdownMenuItem
                         onClick={handleBulkSendMessage}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
                         <Icons.MessageMultiple01
                           size={18}
-                          className="text-dark-500"
+                          className="text-foreground"
                           strokeWidth={1.5}
                         />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
                         </span>
                       </DropdownMenuItem>
@@ -2031,10 +2096,14 @@ export function ClientManagementPage() {
                           disabled={
                             totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending
                           }
-                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                          className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                         >
-                          <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                          <span className="text-dark-500 text-sm font-medium">
+                          <Icons.MailSend01
+                            size={18}
+                            className="text-foreground"
+                            strokeWidth={1.5}
+                          />
+                          <span className="text-foreground text-sm font-medium">
                             {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
                           </span>
                         </DropdownMenuItem>
@@ -2043,10 +2112,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <DropdownMenuItem
                         onClick={() => handleBulkUbkiOptOut(true)}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Cancel01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Cancel01 size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
                         </span>
                       </DropdownMenuItem>
@@ -2054,10 +2123,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <DropdownMenuItem
                         onClick={() => handleBulkUbkiOptOut(false)}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Reload size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Reload size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
                         </span>
                       </DropdownMenuItem>
@@ -2118,13 +2187,7 @@ export function ClientManagementPage() {
         {/* Bulk Tag Modal */}
         <BulkTagModal
           open={showBulkTagModal}
-          clientIds={
-            allClientsSelected
-              ? apiClients
-                  .filter((client) => !excludedClients.has(client.id))
-                  .map((client) => client.id)
-              : Array.from(selectedClients).map(Number)
-          }
+          clientIds={bulkTagClientIds}
           clientCount={totalSelectedCount}
           action={bulkTagAction}
           onClose={() => setShowBulkTagModal(false)}

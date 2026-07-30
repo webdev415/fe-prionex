@@ -9,11 +9,10 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
-import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
+import { useProjectExport } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { ProjectDetailModal } from './components/ProjectDetailModal'
-import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
 import { formatPeriod, formatCurrency, formatNumber } from '@/lib/formatters'
@@ -95,7 +94,6 @@ export function ProjectManagementPage() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
-  const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
   const [showDetailModal, setShowDetailModal] = useState(false)
 
@@ -145,9 +143,6 @@ export function ProjectManagementPage() {
 
   // Export mutation
   const exportMutation = useProjectExport()
-
-  // Delete mutation
-  const deleteMutation = useDeleteProject()
 
   // Extract unique client companies for filter
   const clientCompanies = useMemo(() => {
@@ -216,31 +211,6 @@ export function ProjectManagementPage() {
     refetch()
   }, [refetch])
 
-  const handleDeleteFromPanel = useCallback(() => {
-    if (projectDetail) {
-      setDeletingProject(projectDetail as ApiProjectDetail)
-    }
-  }, [projectDetail])
-
-  const handleDeleteConfirm = useCallback(() => {
-    if (deletingProject) {
-      deleteMutation.mutate(
-        { projectId: deletingProject.id },
-        {
-          onSuccess: () => {
-            setDeletingProject(null)
-            setSelectedProjectId(null)
-            refetch()
-          },
-        }
-      )
-    }
-  }, [deletingProject, deleteMutation, refetch])
-
-  const handleDeleteCancel = useCallback(() => {
-    setDeletingProject(null)
-  }, [])
-
   // Map status for StatusBadge component
   const getStatusType = (status: string): 'active' | 'disabled' | 'inactive' | 'archived' => {
     switch (status) {
@@ -264,7 +234,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex items-center justify-center">
-          <span className="text-dark-500 flex items-center justify-center text-xs font-medium">
+          <span className="text-foreground flex items-center justify-center text-xs font-medium">
             {project.user_count || 0}
           </span>
         </div>
@@ -276,8 +246,8 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span className="text-dark-500 text-xs font-medium">{project.name}</span>
-          <span className="text-xs font-medium text-gray-700">{project.code}</span>
+          <span className="text-foreground text-xs font-medium">{project.name}</span>
+          <span className="text-muted-foreground text-xs font-medium">{project.code}</span>
         </div>
       ),
     },
@@ -287,7 +257,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <span
-          className="text-dark-500 block max-w-[180px] truncate text-xs font-medium"
+          className="text-foreground block max-w-[180px] truncate text-xs font-medium"
           title={project.client_company}
         >
           {project.client_company || '—'}
@@ -299,7 +269,7 @@ export function ProjectManagementPage() {
       header: t('pages.projects.tableHeaders.period'),
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -310,7 +280,7 @@ export function ProjectManagementPage() {
       align: 'center',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatNumber(project.total_clients)}
         </span>
       ),
@@ -321,7 +291,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -339,7 +309,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.projects.title')}
         </h1>
       </div>
@@ -375,7 +345,7 @@ export function ProjectManagementPage() {
             <div className="flex flex-1 gap-4 overflow-hidden">
               {/* Table Container */}
               <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white/50">
+                <div className="bg-card/50 flex h-full flex-col overflow-hidden rounded-xl">
                   <div className="flex-1 overflow-auto lg:p-6">
                     <DataTable
                       columns={columns}
@@ -395,7 +365,6 @@ export function ProjectManagementPage() {
                     project={projectDetail as ApiProjectDetail | null}
                     hasProjects={projects.length > 0}
                     onEdit={handleEditFromPanel}
-                    onDelete={handleDeleteFromPanel}
                     isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
                   />
                 </div>
@@ -431,19 +400,6 @@ export function ProjectManagementPage() {
         )}
       </PermissionGuard>
 
-      {/* Delete Confirmation Modal */}
-      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
-        {deletingProject && (
-          <DeleteProjectConfirmationModal
-            open={deletingProject !== null}
-            projectName={deletingProject.name}
-            onConfirm={handleDeleteConfirm}
-            onCancel={handleDeleteCancel}
-            isLoading={deleteMutation.isPending}
-          />
-        )}
-      </PermissionGuard>
-
       {/* Project Detail Modal - shown on mobile when project is clicked */}
       {showDetailModal && (
         <ProjectDetailModal
@@ -452,7 +408,6 @@ export function ProjectManagementPage() {
           project={projectDetail as ApiProjectDetail | null}
           hasProjects={projects.length > 0}
           onEdit={handleEditFromPanel}
-          onDelete={handleDeleteFromPanel}
           isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
         />
       )}

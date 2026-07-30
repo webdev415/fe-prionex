@@ -34,10 +34,13 @@ export interface CallMonitoringFilters {
   to_datetime?: string
   campaign_id?: string
   telephony_types?: TelephonyType[]
+  category?: ScorecardCategory
   sort?: CallMonitoringSort
   limit?: number
   offset?: number
 }
+
+export type ScorecardCategory = 'unscored' | 'low' | 'average' | 'high'
 
 export interface CallMonitoringItem {
   call_id: string
@@ -56,6 +59,12 @@ export interface CallMonitoringItem {
   campaign_id: string | null
   has_recording: boolean
   telephony_type: TelephonyType
+  has_scorecard: boolean
+  scorecard_id: number | null
+  scorecard_status: string | null
+  scorecard_weighted_score: number | null
+  scorecard_category: ScorecardCategory | null
+  scorecard_comment: string | null
 }
 
 export interface CallMonitoringSummary {

@@ -20,28 +20,18 @@ import type {
 export const documentTypesKeys = {
   all: ['documentTypes'] as const,
   lists: () => [...documentTypesKeys.all, 'list'] as const,
-  list: (includeHidden: boolean, withCounts: boolean) =>
-    [...documentTypesKeys.lists(), { includeHidden, withCounts }] as const,
+  list: (includeHidden: boolean) => [...documentTypesKeys.lists(), { includeHidden }] as const,
 }
 
 interface UseDocumentTypesOptions {
   includeHidden?: boolean
-  /**
-   * Request per-type ``doc_count`` from the BE. OFF by default — turning
-   * it on makes the BE scan the whole client_documents table, so only the
-   * admin management tab should set it. ``withCounts`` is part of the
-   * query key, so count and no-count variants are cached separately (the
-   * journal filter never triggers the expensive count fetch).
-   */
-  withCounts?: boolean
 }
 
 export function useDocumentTypes(options: UseDocumentTypesOptions = {}) {
   const includeHidden = options.includeHidden ?? false
-  const withCounts = options.withCounts ?? false
   return useQuery<DocumentType[]>({
-    queryKey: documentTypesKeys.list(includeHidden, withCounts),
-    queryFn: () => documentTypesApi.list(includeHidden, withCounts),
+    queryKey: documentTypesKeys.list(includeHidden),
+    queryFn: () => documentTypesApi.list(includeHidden),
     staleTime: 5 * 60 * 1000,
   })
 }

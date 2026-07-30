@@ -206,8 +206,8 @@ export function SmsTemplatesPage() {
       sortKey: 'name',
       render: (template) => (
         <div className="flex flex-col gap-1">
-          <span className="text-dark-500 font-medium">{template.name}</span>
-          <span className="text-xs font-light text-gray-700">
+          <span className="text-foreground font-medium">{template.name}</span>
+          <span className="text-muted-foreground text-xs font-light">
             {t('pages.smsTemplates.forms.variables')}: {template.variables.length}{' '}
             {t('pages.smsTemplates.used')}: {template.usageCount} {t('pages.smsTemplates.times')}
           </span>
@@ -219,7 +219,7 @@ export function SmsTemplatesPage() {
       header: t('pages.smsTemplates.tableHeaders.messageTextExcerpt'),
       align: 'left',
       render: (template) => (
-        <span className="text-dark-500 text-sm">
+        <span className="text-foreground text-sm">
           {truncateMessage(template.messageText, MESSAGE_EXCERPT_LENGTH)}
         </span>
       ),
@@ -230,7 +230,7 @@ export function SmsTemplatesPage() {
       align: 'left',
       sortable: true,
       sortKey: 'category',
-      render: (template) => <span className="text-dark-500 text-sm">{template.category}</span>,
+      render: (template) => <span className="text-foreground text-sm">{template.category}</span>,
     },
     {
       key: 'actions',
@@ -245,7 +245,9 @@ export function SmsTemplatesPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleEdit(template)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={
+                  <Icons.PencilEdit size={16} className="text-foreground" strokeWidth={1.5} />
+                }
               >
                 {t('actions.edit')}
               </LinkButton>
@@ -254,7 +256,7 @@ export function SmsTemplatesPage() {
               variant="regular-black"
               size="xs"
               onClick={() => handleView(template)}
-              leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+              leftIcon={<Icons.View size={16} className="text-foreground" strokeWidth={1.5} />}
             >
               {t('pages.smsTemplates.view')}
             </LinkButton>
@@ -264,7 +266,7 @@ export function SmsTemplatesPage() {
                 size="xs"
                 disabled={template.isSystem}
                 onClick={() => handleDelete(template)}
-                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Delete size={16} className="text-foreground" strokeWidth={1.5} />}
               >
                 {t('actions.delete')}
               </LinkButton>
@@ -281,17 +283,17 @@ export function SmsTemplatesPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  className="border-border bg-card text-foreground hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none"
                   aria-label={t('pages.smsTemplates.tableHeaders.actions')}
                 >
                   <Icons.FilterVertical size={16} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white">
+              <DropdownMenuContent align="end" className="bg-card">
                 <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
                   <DropdownMenuItem
                     onClick={() => handleEdit(template)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('actions.edit')}</span>
@@ -299,7 +301,7 @@ export function SmsTemplatesPage() {
                 </PermissionGuard>
                 <DropdownMenuItem
                   onClick={() => handleView(template)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                 >
                   <Icons.View size={16} strokeWidth={1.5} />
                   <span>{t('pages.smsTemplates.view')}</span>
@@ -308,7 +310,7 @@ export function SmsTemplatesPage() {
                   <DropdownMenuItem
                     onClick={() => handleDelete(template)}
                     disabled={template.isSystem}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Icons.Delete size={16} strokeWidth={1.5} />
                     <span>{t('actions.delete')}</span>
@@ -331,10 +333,10 @@ export function SmsTemplatesPage() {
       {/* Page Header */}
       <div className="mb-4 flex w-full flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.smsTemplates.title')}
           </h1>
-          <span className="text-sm font-light text-gray-500 sm:text-base">
+          <span className="text-muted-foreground text-sm font-light sm:text-base">
             {filteredTemplates.length} {t('pages.smsTemplates.templates')}
           </span>
         </div>
@@ -354,7 +356,7 @@ export function SmsTemplatesPage() {
           {/* Mobile: Icon-only button */}
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
             aria-label={t('pages.smsTemplates.createTemplate')}
           >
             <Icons.Add size={20} strokeWidth={2} />
@@ -378,7 +380,7 @@ export function SmsTemplatesPage() {
 
           {/* Pagination */}
           <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
-            <span className="hidden text-xs font-light text-gray-700 sm:inline sm:text-sm">
+            <span className="text-muted-foreground hidden text-xs font-light sm:inline sm:text-sm">
               {t('pages.smsTemplates.showing')} {paginatedTemplates.length}{' '}
               {t('pages.smsTemplates.of')} {filteredTemplates.length}{' '}
               {t('pages.smsTemplates.templates')}
@@ -388,10 +390,10 @@ export function SmsTemplatesPage() {
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-10 w-10 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Previous page"
               >
-                <Icons.ArrowLeft size={16} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.ArrowLeft size={16} className="text-foreground" strokeWidth={1.5} />
               </button>
 
               {/* Page Numbers */}
@@ -438,7 +440,7 @@ export function SmsTemplatesPage() {
                     return (
                       <span
                         key={`ellipsis-${index}`}
-                        className="text-dark-500 px-1 text-xs sm:px-2 sm:text-sm"
+                        className="text-foreground px-1 text-xs sm:px-2 sm:text-sm"
                       >
                         ...
                       </span>
@@ -450,8 +452,8 @@ export function SmsTemplatesPage() {
                       onClick={() => setCurrentPage(page as number)}
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm ${
                         currentPage === page
-                          ? 'bg-secondary-800 text-white'
-                          : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+                          ? 'bg-secondary-800 text-secondary-foreground'
+                          : 'border-border bg-card text-foreground hover:bg-muted border'
                       }`}
                       aria-label={`Go to page ${page}`}
                       aria-current={currentPage === page ? 'page' : undefined}
@@ -466,15 +468,15 @@ export function SmsTemplatesPage() {
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-10 w-10 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Next page"
               >
-                <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.ArrowRight size={16} className="text-foreground" strokeWidth={1.5} />
               </button>
             </div>
             <div className="flex hidden items-center gap-1 sm:flex">
-              <Icons.Info size={14} className="text-gray-500 sm:size-4" strokeWidth={1.5} />
-              <span className="text-[10px] font-light text-gray-700 sm:text-xs">
+              <Icons.Info size={14} className="text-muted-foreground sm:size-4" strokeWidth={1.5} />
+              <span className="text-muted-foreground text-[10px] font-light sm:text-xs">
                 {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
               </span>
             </div>

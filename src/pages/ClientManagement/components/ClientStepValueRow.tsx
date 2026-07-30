@@ -60,7 +60,7 @@ function formatYmd(d: Date | null): string | undefined {
 // glow on focus, padding tightened to px-3 to match SelectTrigger. Without
 // this the focused Credit input grows a primary-500 focus ring while the
 // adjacent dropdowns stay flat, which looks inconsistent.
-const STEP_VALUE_INPUT_CLASS = 'px-3 focus:border-gray-400 focus:ring-0 focus:ring-offset-0'
+const STEP_VALUE_INPUT_CLASS = 'px-3 focus:border-border focus:ring-0 focus:ring-offset-0'
 
 export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValueRowProps) {
   const { t } = useTranslation('common')
@@ -80,7 +80,7 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
   return (
     <div className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
       <label
-        className="text-dark-500 w-full shrink-0 truncate text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px]"
+        className="text-foreground w-full shrink-0 truncate text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px]"
         title={labelText}
       >
         {labelText}
@@ -96,7 +96,7 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
               format="dd.MM.yyyy"
               className="flex flex-1 flex-col gap-2"
             />
-            <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+            <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
               -
             </span>
             <DateSelect
@@ -121,7 +121,7 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
                 onChange({ min: v === '' ? undefined : v })
               }}
             />
-            <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+            <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
               -
             </span>
             <Input
@@ -169,7 +169,7 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
           />
         )}
         {fieldType === null && (
-          <span className="text-xs text-gray-500 italic">{noFilterLabel}</span>
+          <span className="text-muted-foreground text-xs italic">{noFilterLabel}</span>
         )}
       </div>
     </div>

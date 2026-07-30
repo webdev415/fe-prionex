@@ -69,7 +69,7 @@ export function QuickActionOverlay({
         <Button
           variant="primary"
           size="md"
-          leftIcon={<Icons.Add size={16} className="text-white" />}
+          leftIcon={<Icons.Add size={16} className="text-primary-foreground" />}
           className="h-[45px] rounded-full px-5 text-xs"
         >
           {t('pages.actionAnalysis.inbox.quickActions.button', 'Quick Action')}
@@ -83,7 +83,7 @@ export function QuickActionOverlay({
               <span className="text-sm font-medium">
                 {t('pages.actionAnalysis.inbox.quickActions.assignTask', 'Assign task')}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {t(
                   'pages.actionAnalysis.inbox.quickActions.assignTaskHint',
                   'Operator · topic · deadline'
@@ -100,7 +100,7 @@ export function QuickActionOverlay({
               <span className="text-sm font-medium">
                 {t('pages.actionAnalysis.inbox.quickActions.scheduleOneOnOne', 'Schedule 1-on-1')}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {t(
                   'pages.actionAnalysis.inbox.quickActions.scheduleOneOnOneHint',
                   'Operator · date · time'
@@ -117,7 +117,7 @@ export function QuickActionOverlay({
               <span className="text-sm font-medium">
                 {t('pages.actionAnalysis.inbox.quickActions.assignCourse', 'Assign course / drill')}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {t(
                   'pages.actionAnalysis.inbox.quickActions.assignCourseHint',
                   'Operator · material'
@@ -134,7 +134,7 @@ export function QuickActionOverlay({
               <span className="text-sm font-medium">
                 {t('pages.actionAnalysis.inbox.quickActions.rateDialogue', 'Rate dialogue')}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {t('pages.actionAnalysis.inbox.quickActions.rateDialogueHint', 'Open scorecard')}
               </span>
             </div>

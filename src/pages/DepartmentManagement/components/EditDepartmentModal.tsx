@@ -94,8 +94,8 @@ export function EditDepartmentModal({
     <Modal open={open} onClose={handleClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.PencilEdit size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.departments.modals.edit.title')}
@@ -109,7 +109,7 @@ export function EditDepartmentModal({
               {/* Project Name (Read-only) */}
               <div>
                 <Label>{t('pages.departments.forms.project')}</Label>
-                <div className="mt-2 text-gray-900">{project.name}</div>
+                <div className="text-foreground mt-2">{project.name}</div>
               </div>
 
               {/* Department Name */}
@@ -155,7 +155,7 @@ export function EditDepartmentModal({
             </div>
           </form>
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.departments.modals.edit.failedToLoad')}
           </div>
         )}

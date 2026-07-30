@@ -24,7 +24,7 @@ export function EditTAChainModal({ open, chainId, onClose, onSuccess }: Props) {
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={18} className="text-dark-500" strokeWidth={2} />
+            <Icons.PencilEdit size={18} className="text-primary-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.taChains.modals.edit.title')}
@@ -42,7 +42,7 @@ export function EditTAChainModal({ open, chainId, onClose, onSuccess }: Props) {
             }}
           />
         ) : (
-          <div className="py-8 text-center text-sm text-gray-600">
+          <div className="text-muted-foreground py-8 text-center text-sm">
             {t('pages.taChains.modals.edit.notFound')}
           </div>
         )}

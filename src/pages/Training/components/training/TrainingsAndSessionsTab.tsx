@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { TRAININGS_AND_SESSIONS_SUB_TABS, type TrainingsAndSessionsSubTabId } from '../../types'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
+import { AssignmentsGridTab } from './AssignmentsGridTab'
 import { CallLibraryTab } from './CallLibraryTab'
 import { CoursesCatalogTab } from './CoursesCatalogTab'
 import { MaterialsLibraryTab } from './MaterialsLibraryTab'
@@ -14,6 +15,7 @@ import { TRAINING_SUB_TAB_COUNTS } from './trainingSubTabCounts'
 
 const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallback: string }> = {
   courses: { key: 'pages.training.training.subTabs.courses', fallback: 'Courses' },
+  assignments: { key: 'pages.training.training.subTabs.assignments', fallback: 'Assignments' },
   'group-trainings': {
     key: 'pages.training.training.subTabs.groupTrainings',
     fallback: 'Group Training Sessions',
@@ -68,6 +70,7 @@ export function TrainingsAndSessionsTab() {
       />
 
       {activeSubTab === 'courses' && <CoursesCatalogTab />}
+      {activeSubTab === 'assignments' && <AssignmentsGridTab />}
       {activeSubTab === 'group-trainings' && <GroupTrainingsTab />}
       {activeSubTab === 'drills' && <DrillsTab />}
       {activeSubTab === 'calendar' && <OneOnOneCalendarTab />}

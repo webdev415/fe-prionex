@@ -91,23 +91,23 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
     switch (color) {
       case 'error':
         return {
-          card: `border-error-500 hover:bg-gray-50 ${isSelected ? 'shadow-[0_0_0_4px_rgba(239,68,68,0.25)] ring-2 ring-error-400/40' : ''}`,
-          text: 'text-dark-500',
+          card: `border-error-500 hover:bg-muted ${isSelected ? 'shadow-[0_0_0_4px_rgba(239,68,68,0.25)] ring-2 ring-error-400/40' : ''}`,
+          text: 'text-foreground',
         }
       case 'warning':
         return {
-          card: `border-warning-500 hover:bg-gray-50 ${isSelected ? 'shadow-[0_0_0_4px_rgba(245,158,11,0.25)] ring-2 ring-warning-400/40' : ''}`,
-          text: 'text-dark-500',
+          card: `border-warning-500 hover:bg-muted ${isSelected ? 'shadow-[0_0_0_4px_rgba(245,158,11,0.25)] ring-2 ring-warning-400/40' : ''}`,
+          text: 'text-foreground',
         }
       case 'success':
         return {
-          card: `border-success-500 hover:bg-gray-50 ${isSelected ? 'shadow-[0_0_0_4px_rgba(34,197,94,0.25)] ring-2 ring-success-400/40' : ''}`,
-          text: 'text-dark-500',
+          card: `border-success-500 hover:bg-muted ${isSelected ? 'shadow-[0_0_0_4px_rgba(34,197,94,0.25)] ring-2 ring-success-400/40' : ''}`,
+          text: 'text-foreground',
         }
       case 'gray':
         return {
-          card: `border-gray-500 hover:bg-gray-50 ${isSelected ? 'shadow-[0_0_0_4px_rgba(107,114,128,0.25)] ring-2 ring-gray-400/40' : ''}`,
-          text: 'text-dark-500',
+          card: `border-muted-foreground hover:bg-muted ${isSelected ? 'shadow-[0_0_0_4px_rgba(107,114,128,0.25)] ring-2 ring-border' : ''}`,
+          text: 'text-foreground',
         }
     }
   }
@@ -142,7 +142,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
             aria-label={`${card.label}: ${t('pages.clients.priorityCards.ariaSummary', '{{count}} clients, {{debt}} UAH total debt', { count: card.clientCount, debt: formatCurrency(card.totalDebt) })}${isSelected ? ` ${t('pages.clients.priorityCards.ariaSelected', '(selected)')}` : ''}`}
             onClick={() => isClickable && handleCardClick(card.priority)}
             onKeyDown={(e) => isClickable && handleKeyDown(e, card.priority)}
-            className={`flex flex-1 flex-col items-start gap-3 rounded-xl border-2 bg-white/50 p-4 transition-all duration-200 sm:gap-4 sm:p-5 xl:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
+            className={`bg-card/50 flex flex-1 flex-col items-start gap-3 rounded-xl border-2 p-4 transition-all duration-200 sm:gap-4 sm:p-5 xl:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
           >
             <div className="flex items-start gap-2 sm:gap-3">
               <PriorityBadge priority={card.priority} />
@@ -155,7 +155,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
 
             <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:justify-between sm:gap-0">
               <div className="flex flex-row items-start gap-1">
-                <p className="text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-800 sm:text-sm sm:tracking-[-0.28px]">
+                <p className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.priorityCards.totalDebt')}
                 </p>
                 <p
@@ -165,7 +165,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
                 </p>
               </div>
               <div className="flex flex-row items-start gap-1">
-                <p className="text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-800 sm:text-sm sm:tracking-[-0.28px]">
+                <p className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.priorityCards.client')}
                 </p>
                 <p

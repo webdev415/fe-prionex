@@ -5,18 +5,26 @@
  * editor + delete modals.
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { useDocumentTemplates, type DocumentTemplate } from '@/features/documents'
+import { cn } from '@/lib/utils'
+import {
+  useDocumentTemplates,
+  downloadDocumentTemplateFile,
+  type DocumentTemplate,
+} from '@/features/documents'
+import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTemplateEditor } from './DocumentTemplateEditor'
 import { DeleteDocumentTemplateModal } from './DeleteDocumentTemplateModal'
+import { TemplatePreviewModal } from './TemplatePreviewModal'
 
 const PREVIEW_LENGTH = 100
 
@@ -38,8 +46,27 @@ export function DocumentTemplatesTab() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null)
   const [deleting, setDeleting] = useState<DocumentTemplate | null>(null)
+  const [previewing, setPreviewing] = useState<DocumentTemplate | null>(null)
+  const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
   const items = data?.items ?? []
+
+  const handleDownloadFile = useCallback(
+    async (row: DocumentTemplate) => {
+      setDownloadingId(row.id)
+      try {
+        const blob = await downloadDocumentTemplateFile(row.id)
+        downloadBlob(blob, row.file_name ?? `${row.name}.docx`)
+      } catch {
+        toast.error(
+          t('pages.documentGeneration.templates.messages.downloadError', 'Failed to download file')
+        )
+      } finally {
+        setDownloadingId(null)
+      }
+    },
+    [t]
+  )
 
   const dateFormatter = useMemo(
     () =>
@@ -58,21 +85,52 @@ export function DocumentTemplatesTab() {
         header: t('pages.documentGeneration.templates.columns.name', 'Template name'),
         render: (row) => (
           <div className="flex flex-col">
-            <span className="text-dark-500 font-medium">{row.name}</span>
-            {row.description && <span className="text-xs text-gray-500">{row.description}</span>}
+            <span className="text-foreground font-medium">{row.name}</span>
+            {row.description && (
+              <span className="text-muted-foreground text-xs">{row.description}</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'kind',
+        header: t('pages.documentGeneration.templates.columns.type', 'Type'),
+        render: (row) => (
+          <div className="flex flex-col gap-1">
+            <span
+              className={cn(
+                'inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium',
+                row.template_kind === 'docx'
+                  ? 'bg-info-100 text-info-700'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {t(
+                `pages.documentGeneration.templates.templateKind.${row.template_kind}`,
+                row.template_kind === 'docx' ? '.docx file' : 'Text template'
+              )}
+            </span>
+            {row.template_kind === 'docx' && row.file_name && (
+              <span
+                className="text-muted-foreground max-w-[180px] truncate text-xs"
+                title={row.file_name}
+              >
+                {row.file_name}
+              </span>
+            )}
           </div>
         ),
       },
       {
         key: 'body',
         header: t('pages.documentGeneration.templates.columns.preview', 'Preview'),
-        render: (row) => <span className="text-sm text-gray-700">{htmlToPreview(row.body)}</span>,
+        render: (row) => <span className="text-foreground text-sm">{htmlToPreview(row.body)}</span>,
       },
       {
         key: 'variables',
         header: t('pages.documentGeneration.templates.columns.variables', 'Variables'),
         render: (row) => (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {row.available_variables ? row.available_variables.length : 0}
           </span>
         ),
@@ -81,7 +139,7 @@ export function DocumentTemplatesTab() {
         key: 'updated_at',
         header: t('pages.documentGeneration.templates.columns.updated', 'Updated'),
         render: (row) => (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {dateFormatter.format(new Date(row.updated_at))}
           </span>
         ),
@@ -92,6 +150,27 @@ export function DocumentTemplatesTab() {
         align: 'right',
         render: (row) => (
           <div className="flex items-center justify-end gap-2">
+            {row.template_kind === 'docx' && (
+              <button
+                type="button"
+                title={t('pages.documentGeneration.templates.actions.preview', 'Preview')}
+                onClick={() => setPreviewing(row)}
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md"
+              >
+                <Icons.Eye size={16} strokeWidth={1.5} />
+              </button>
+            )}
+            {row.template_kind === 'docx' && (
+              <button
+                type="button"
+                title={t('pages.documentGeneration.templates.form.downloadFile', 'Download file')}
+                onClick={() => handleDownloadFile(row)}
+                disabled={downloadingId === row.id}
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-50"
+              >
+                <Icons.Download size={16} strokeWidth={1.5} />
+              </button>
+            )}
             {canCreateEdit && (
               <button
                 type="button"
@@ -100,7 +179,7 @@ export function DocumentTemplatesTab() {
                   setEditingTemplate(row)
                   setEditorOpen(true)
                 }}
-                className="text-dark-500 hover:bg-primary-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md"
               >
                 <Icons.PencilEdit size={16} strokeWidth={1.5} />
               </button>
@@ -110,7 +189,7 @@ export function DocumentTemplatesTab() {
                 type="button"
                 title={t('actions.delete', 'Delete')}
                 onClick={() => setDeleting(row)}
-                className="text-error-600 hover:bg-error-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+                className="text-error-600 hover:bg-error-100 inline-flex h-8 w-8 items-center justify-center rounded-md"
               >
                 <Icons.Delete size={16} strokeWidth={1.5} />
               </button>
@@ -119,28 +198,43 @@ export function DocumentTemplatesTab() {
         ),
       },
     ],
-    [t, dateFormatter, canCreateEdit, canDelete]
+    [t, dateFormatter, canCreateEdit, canDelete, handleDownloadFile, downloadingId]
   )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-muted-foreground min-w-0 flex-1 text-sm">
           {t(
             'pages.documentGeneration.templates.intro',
             'Reusable document bodies with variable placeholders.'
           )}
         </p>
         {canCreateEdit && (
-          <Button
-            onClick={() => {
-              setEditingTemplate(null)
-              setEditorOpen(true)
-            }}
-          >
-            <Icons.Add size={16} strokeWidth={2} className="mr-1" />
-            {t('pages.documentGeneration.templates.create', 'Create template')}
-          </Button>
+          <>
+            <div className="hidden shrink-0 sm:block">
+              <Button
+                onClick={() => {
+                  setEditingTemplate(null)
+                  setEditorOpen(true)
+                }}
+              >
+                <Icons.Add size={16} strokeWidth={2} className="mr-1" />
+                {t('pages.documentGeneration.templates.create', 'Create template')}
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingTemplate(null)
+                setEditorOpen(true)
+              }}
+              className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              aria-label={t('pages.documentGeneration.templates.create', 'Create template')}
+            >
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </>
         )}
       </div>
 
@@ -180,6 +274,14 @@ export function DocumentTemplatesTab() {
           open={!!deleting}
           template={deleting}
           onClose={() => setDeleting(null)}
+        />
+      )}
+
+      {previewing && (
+        <TemplatePreviewModal
+          open={!!previewing}
+          template={previewing}
+          onClose={() => setPreviewing(null)}
         />
       )}
     </div>

@@ -170,18 +170,22 @@ export function SearchBar({
     <div className="relative">
       <div
         className={cn(
-          'border-light-100 flex h-11 items-center gap-2 rounded-full border bg-white sm:gap-3',
+          'bg-search-bar flex h-11 items-center gap-2 rounded-full sm:gap-3',
           // Responsive padding: less on mobile, more on desktop
           'pl-3 sm:pl-4',
           // Responsive width: smaller on mobile, full width on larger screens
           'w-[200px] sm:w-[280px] md:w-[360px] lg:w-[448px]',
           // Responsive right padding: adjust for mobile (with filter button) and desktop (with search button)
-          'pr-2 lg:pr-2',
+          'pr-1 lg:pr-1',
           className
         )}
       >
         {/* Search icon - shown on mobile when search button is hidden, hidden on desktop when search button is visible */}
-        <Icons.Search size={18} className="shrink-0 text-gray-400 lg:hidden" strokeWidth={1.5} />
+        <Icons.Search
+          size={18}
+          className="text-muted-foreground shrink-0 lg:hidden"
+          strokeWidth={1.5}
+        />
 
         <input
           type="text"
@@ -190,7 +194,7 @@ export function SearchBar({
           onFocus={handleInputFocus}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="text-dark-500 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light placeholder:text-gray-400 sm:text-sm"
+          className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light sm:text-sm"
         />
 
         {/* Search type selector - icon-only on mobile, full on desktop */}
@@ -205,31 +209,31 @@ export function SearchBar({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                  className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                   aria-label="Search type"
                 >
                   <Icons.Filter
                     size={18}
-                    className="text-dark-500 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    className="text-primary-foreground shrink-0 transition-transform duration-200 group-hover:scale-110"
                     strokeWidth={1.5}
                   />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 bg-white">
+              <DropdownMenuContent align="end" className="w-40">
                 {searchOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
                     onClick={() => handleSearchTypeChange(option.value)}
                     className={cn(
-                      'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
-                      searchType === option.value && 'bg-gray-100 font-medium'
+                      'text-foreground flex cursor-pointer items-center gap-2 text-xs',
+                      searchType === option.value && 'bg-muted font-medium'
                     )}
                   >
                     {option.label}
                     {searchType === option.value && (
                       <Icons.Checkmark
                         size={16}
-                        className="text-dark-500 ml-auto"
+                        className="text-foreground ml-auto"
                         strokeWidth={2}
                       />
                     )}
@@ -241,7 +245,7 @@ export function SearchBar({
 
           {/* Desktop: Full selector with divider */}
           <div className="hidden items-center lg:flex">
-            <div className="mx-2 h-5 w-px bg-gray-300" />
+            <div className="bg-border mx-2 h-5 w-px" />
             <DropdownMenu
               modal={false}
               open={isDesktopDropdownOpen}
@@ -250,32 +254,32 @@ export function SearchBar({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 group flex h-auto w-auto min-w-[120px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 hover:bg-gray-100 focus:outline-none active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                  className="text-foreground group hover:bg-muted active:bg-muted flex h-auto w-auto min-w-[120px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                   aria-label="Search type"
                 >
                   <span className="transition-colors duration-200">{currentSearchTypeLabel}</span>
                   <Icons.ArrowDown
                     size={14}
-                    className="text-gray-500 opacity-50 transition-all duration-200 group-hover:translate-y-0.5 group-hover:opacity-100"
+                    className="text-muted-foreground opacity-50 transition-all duration-200 group-hover:translate-y-0.5 group-hover:opacity-100"
                     strokeWidth={1.5}
                   />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 bg-white">
+              <DropdownMenuContent align="end" className="w-40">
                 {searchOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
                     onClick={() => handleSearchTypeChange(option.value)}
                     className={cn(
-                      'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
-                      searchType === option.value && 'bg-gray-100 font-medium'
+                      'text-foreground flex cursor-pointer items-center gap-2 text-xs',
+                      searchType === option.value && 'bg-muted font-medium'
                     )}
                   >
                     {option.label}
                     {searchType === option.value && (
                       <Icons.Checkmark
                         size={16}
-                        className="text-dark-500 ml-auto"
+                        className="text-foreground ml-auto"
                         strokeWidth={2}
                       />
                     )}
@@ -293,7 +297,7 @@ export function SearchBar({
           onClick={handleSearch}
           disabled={isLoading}
         >
-          <Icons.Search size={20} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.Search size={20} className="text-primary-foreground" strokeWidth={1.5} />
         </button>
       </div>
     </div>

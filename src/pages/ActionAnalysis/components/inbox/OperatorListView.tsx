@@ -22,9 +22,9 @@ export interface OperatorListViewProps {
 }
 
 const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white ring-red-300',
-  amber: 'bg-amber-400 text-white ring-amber-300',
-  green: 'bg-green-500 text-white ring-green-300',
+  red: 'bg-error-100 text-error-700 ring-error-200',
+  amber: 'bg-warning-100 text-warning-700 ring-warning-200',
+  green: 'bg-success-100 text-success-700 ring-success-200',
 }
 
 const ASSIGNMENT_STATE_LABEL: Record<
@@ -34,27 +34,27 @@ const ASSIGNMENT_STATE_LABEL: Record<
   wait: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.wait',
     fallback: 'Wait',
-    tone: 'bg-yellow-100 text-yellow-700',
+    tone: 'bg-warning-100 text-warning-700',
   },
   in_progress: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.in_progress',
     fallback: 'In progress',
-    tone: 'bg-blue-100 text-blue-700',
+    tone: 'bg-info-100 text-info-700',
   },
   awaiting_training: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.awaiting_training',
     fallback: 'Awaiting training',
-    tone: 'bg-purple-100 text-purple-700',
+    tone: 'bg-secondary-100 text-secondary-700',
   },
   scheduled: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.scheduled',
     fallback: 'Scheduled',
-    tone: 'bg-indigo-100 text-indigo-700',
+    tone: 'bg-primary-100 text-primary-700',
   },
   closed: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.closed',
     fallback: 'Closed',
-    tone: 'bg-gray-100 text-gray-700',
+    tone: 'bg-muted text-muted-foreground',
   },
 }
 
@@ -98,7 +98,7 @@ export function OperatorListView({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
         {t('pages.actionAnalysis.inbox.list.loading', 'Loading queue…')}
       </div>
     )
@@ -106,7 +106,7 @@ export function OperatorListView({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
         {t('pages.actionAnalysis.inbox.list.empty', 'No operators in the current scope.')}
       </div>
     )
@@ -127,10 +127,10 @@ export function OperatorListView({
               type="button"
               onClick={() => onSelect(row.operator_id)}
               className={[
-                'flex w-full items-center gap-3 rounded-xl border bg-white p-3 text-left transition-colors',
+                'bg-card flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors',
                 isSelected
                   ? 'border-primary-400 ring-primary-100 ring-2'
-                  : 'hover:border-primary-200 border-gray-100',
+                  : 'hover:border-primary-200 border-border',
               ].join(' ')}
             >
               <div className="relative flex-shrink-0">
@@ -140,15 +140,15 @@ export function OperatorListView({
                 {row.triggers.length > 0 ? (
                   <span
                     aria-label="red flag"
-                    className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
+                    className="border-card bg-destructive absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2"
                   />
                 ) : null}
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
+                  <span className="text-foreground truncate text-sm font-medium">{name}</span>
                   {departmentName ? (
-                    <span className="bg-primary-50 text-primary-700 flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
+                    <span className="bg-primary-100 text-primary-700 flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
                       {departmentName}
                     </span>
                   ) : null}
@@ -162,10 +162,10 @@ export function OperatorListView({
                     </span>
                   ) : null}
                   {lastActive ? (
-                    <span className="text-[10px] text-gray-500">{lastActive}</span>
+                    <span className="text-muted-foreground text-[10px]">{lastActive}</span>
                   ) : null}
                   {row.triggers.length > 0 ? (
-                    <span className="text-[10px] font-medium text-red-600">
+                    <span className="text-error-600 text-[10px] font-medium">
                       {t('pages.actionAnalysis.inbox.list.triggerCount', '{{count}} triggers', {
                         count: row.triggers.length,
                       })}
@@ -174,7 +174,7 @@ export function OperatorListView({
                 </div>
               </div>
               <span
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-gray-300 text-gray-600 ring-gray-200'}`}
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-muted text-muted-foreground ring-border'}`}
               >
                 {row.composite_score}
               </span>

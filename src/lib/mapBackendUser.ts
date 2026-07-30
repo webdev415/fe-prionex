@@ -150,6 +150,8 @@ export function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
     agent_status: backendUser.agent_status ?? 'offline',
     timezone: backendUser.timezone,
     language: backendUser.language,
+    themeBase: backendUser.theme_base,
+    themeAccent: backendUser.theme_accent,
     mustChangePassword: backendUser.must_change_password ?? false,
     twoFactorEnabled: backendUser.two_factor_enabled ?? false,
   }

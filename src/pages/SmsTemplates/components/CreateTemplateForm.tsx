@@ -130,7 +130,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
     <form id="create-template-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Template Name */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <Label htmlFor="name" className="text-dark-500 text-sm font-medium">
+        <Label htmlFor="name" className="text-foreground text-sm font-medium">
           {t('pages.smsTemplates.forms.templateName')}
           <span className="text-error-500 ml-1">*</span>
         </Label>
@@ -144,7 +144,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
 
       {/* Category */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <Label htmlFor="category" className="text-dark-500 text-sm font-medium">
+        <Label htmlFor="category" className="text-foreground text-sm font-medium">
           {t('pages.smsTemplates.forms.category')}:
         </Label>
         <Controller
@@ -171,12 +171,12 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
             </Select>
           )}
         />
-        {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
+        {errors.category && <p className="text-error-500 text-xs">{errors.category.message}</p>}
       </div>
 
       {/* Message Text */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <Label htmlFor="messageText" className="text-dark-500 text-sm font-medium">
+        <Label htmlFor="messageText" className="text-foreground text-sm font-medium">
           {t('pages.smsTemplates.forms.messageText')}
           <span className="text-error-500 ml-1">*</span>
         </Label>
@@ -202,7 +202,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Variables Detected */}
       {detectedVariables.length > 0 && (
         <div className="flex flex-col items-start gap-2 self-stretch">
-          <Label className="text-dark-500 text-sm font-medium">
+          <Label className="text-foreground text-sm font-medium">
             {t('pages.smsTemplates.forms.variablesDetected')}:
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -210,14 +210,14 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
               <button
                 key={variable}
                 type="button"
-                className="text-dark-500 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium transition-colors hover:bg-gray-50"
+                className="text-foreground bg-card hover:bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
               >
                 <span>{`{${variable}}`}</span>
                 <Icons.PlusSignCircle size={18} className="text-secondary-800" strokeWidth={1.5} />
               </button>
             ))}
           </div>
-          <span className="text-dark-500 w-full text-right text-sm font-light">
+          <span className="text-muted-foreground w-full text-right text-sm font-light">
             {t('pages.smsTemplates.forms.clickToInsert')}
           </span>
         </div>
@@ -226,7 +226,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Available Variables */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <div className="flex items-start justify-between self-stretch">
-          <Label className="text-dark-500 text-sm font-medium">
+          <Label className="text-foreground text-sm font-medium">
             {t('pages.smsTemplates.forms.availableVariables')}:
           </Label>
           <div className="flex items-center justify-center gap-2.5">
@@ -236,13 +236,13 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
             </span>
           </div>
         </div>
-        <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+        <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border p-5 px-6">
           {AVAILABLE_VARIABLES.map((variable) => (
             <button
               key={variable.name}
               type="button"
               onClick={() => insertVariable(variable.name)}
-              className="text-dark-500 flex items-start gap-6 self-stretch text-left text-xs transition-colors hover:cursor-pointer"
+              className="text-foreground hover:bg-muted flex items-start gap-6 self-stretch rounded-lg px-1 py-0.5 text-left text-xs transition-colors hover:cursor-pointer"
             >
               <span className="w-[130px] font-light">{`{${variable.name}}`}</span>
               <span className="flex-1 font-medium">

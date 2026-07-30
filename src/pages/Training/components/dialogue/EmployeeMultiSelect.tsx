@@ -4,17 +4,24 @@ import { Icons } from '@/lib/icons'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 
 /**
- * Multi-select employee dropdown rendered to the right of the
- * "Schedule a session" CTA on the Dialogue Evaluation tab. Mirrors the
- * Figma frame — text trigger + checkbox list + apply/clear footer.
+ * Multi-select employee filter on the Dialogue Evaluation tab: text trigger +
+ * checkbox list, with an optional pinned shortcut row on top.
  *
  * Operator candidates come from the live project roster (`useOperators`,
- * passed down by the tab) — KAN-737.
+ * passed down by the tab).
  */
 export interface EmployeeMultiSelectProps {
   value: number[]
   onChange: (next: number[]) => void
   operators: OperatorUser[]
+  /** Pinned shortcut at the top of the list (e.g. "My employees"). Selecting it
+   *  replaces the current selection with ``ids``; selecting it again clears. */
+  quickSelect?: {
+    label: string
+    ids: number[]
+    disabled?: boolean
+    hint?: string
+  }
 }
 
 const AVATAR_PALETTE = [
@@ -35,7 +42,12 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMultiSelectProps) {
+export function EmployeeMultiSelect({
+  value,
+  onChange,
+  operators,
+  quickSelect,
+}: EmployeeMultiSelectProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -77,8 +89,21 @@ export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMult
   const clearAll = () => onChange([])
   const selectAll = () => onChange(candidates.map((r) => r.operatorId))
 
-  const triggerLabel =
-    value.length === 0
+  // The shortcut reads as "on" only when the selection is exactly its set.
+  const quickActive =
+    quickSelect != null &&
+    quickSelect.ids.length > 0 &&
+    value.length === quickSelect.ids.length &&
+    quickSelect.ids.every((id) => value.includes(id))
+
+  const toggleQuickSelect = () => {
+    if (!quickSelect || quickSelect.disabled) return
+    onChange(quickActive ? [] : quickSelect.ids)
+  }
+
+  const triggerLabel = quickActive
+    ? (quickSelect?.label ?? '')
+    : value.length === 0
       ? t('pages.training.dialogue.employee.all', 'All employees')
       : value.length === 1
         ? (candidates.find((r) => r.operatorId === value[0])?.name ?? '')
@@ -106,7 +131,7 @@ export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMult
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-30 mt-1 flex w-[280px] flex-col overflow-hidden rounded-lg border border-[#EBECE8] bg-white shadow-lg">
+        <div className="absolute left-0 z-30 mt-1 flex w-[280px] flex-col overflow-hidden rounded-lg border border-[#EBECE8] bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-[#EBECE8] px-3 py-2 text-[11px] text-[#676767]">
             <span>
               {t('pages.training.dialogue.employee.label', 'Employee')}{' '}
@@ -122,6 +147,30 @@ export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMult
               </button>
             </div>
           </div>
+          {quickSelect ? (
+            <button
+              type="button"
+              onClick={toggleQuickSelect}
+              disabled={quickSelect.disabled}
+              title={quickSelect.hint}
+              className={`flex w-full items-center gap-2 border-b border-[#EBECE8] px-3 py-2 text-left text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                quickActive ? 'bg-[#F7FFE5] text-[#204E4D]' : 'text-[#05040D] hover:bg-[#F7F7F7]'
+              }`}
+            >
+              <span
+                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                  quickActive
+                    ? 'border-[#204E4D] bg-[#204E4D] text-white'
+                    : 'border-[#DFDFDF] bg-white'
+                }`}
+              >
+                {quickActive ? <Icons.Checkmark size={10} className="text-white" /> : null}
+              </span>
+              <span className="truncate">{quickSelect.label}</span>
+              <span className="ml-auto text-[10px] text-[#676767]">({quickSelect.ids.length})</span>
+            </button>
+          ) : null}
+
           <ul className="max-h-[240px] overflow-y-auto py-1">
             {candidates.map((row) => {
               const checked = value.includes(row.operatorId)

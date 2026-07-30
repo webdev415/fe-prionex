@@ -392,7 +392,7 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.userId'),
       sortable: true,
       sortKey: 'id',
-      render: (user) => <span className="text-gray-700">{user.id}</span>,
+      render: (user) => <span className="text-foreground">{user.id}</span>,
     },
     {
       key: 'username',
@@ -413,7 +413,7 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.email'),
       sortable: true,
       sortKey: 'email',
-      render: (user) => <span className="text-gray-700">{user.email || '-'}</span>,
+      render: (user) => <span className="text-foreground">{user.email || '-'}</span>,
     },
     {
       key: 'projectRole',
@@ -430,16 +430,16 @@ export function UserManagementPage() {
             return (
               <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
                 <span className="font-medium">{projectName}</span>
-                <span className="text-gray-600"> ({roleName})</span>
+                <span className="text-muted-foreground"> ({roleName})</span>
                 {orgParts.length > 0 && (
-                  <div className="text-xs text-gray-500">{orgParts.join(' · ')}</div>
+                  <div className="text-muted-foreground text-xs">{orgParts.join(' · ')}</div>
                 )}
               </div>
             )
           })
           return <div className="flex flex-col gap-0.5">{projectRoles}</div>
         }
-        return <span className="text-gray-500">{t('pages.users.noAssignment')}</span>
+        return <span className="text-muted-foreground">{t('pages.users.noAssignment')}</span>
       },
     },
     {
@@ -448,21 +448,21 @@ export function UserManagementPage() {
       align: 'center',
       render: (user) => (
         <div className="flex flex-col items-center gap-1">
-          <span className="text-sm text-gray-700">{user.asterisk_extension || '—'}</span>
+          <span className="text-foreground text-sm">{user.asterisk_extension || '—'}</span>
           {user.is_agent && (
             <div className="flex items-center gap-1">
               <span
                 className={`h-2 w-2 rounded-full ${
                   user.agent_status === 'online'
-                    ? 'bg-green-500'
+                    ? 'bg-success-500'
                     : user.agent_status === 'busy'
-                      ? 'bg-yellow-500'
+                      ? 'bg-warning-500'
                       : user.agent_status === 'on-call'
-                        ? 'bg-red-500'
-                        : 'bg-gray-400'
+                        ? 'bg-error-500'
+                        : 'bg-muted-foreground'
                 }`}
               />
-              <span className="text-xs text-gray-500 capitalize">
+              <span className="text-muted-foreground text-xs capitalize">
                 {user.agent_status || 'offline'}
               </span>
             </div>
@@ -495,7 +495,7 @@ export function UserManagementPage() {
               variant="regular-black"
               size="xs"
               onClick={() => handleView(user)}
-              leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+              leftIcon={<Icons.View size={16} strokeWidth={1.5} className="text-foreground" />}
             >
               {t('pages.users.actions.view')}
             </LinkButton>
@@ -504,7 +504,9 @@ export function UserManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleEdit(user)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={
+                  <Icons.PencilEdit size={16} strokeWidth={1.5} className="text-foreground" />
+                }
               >
                 {t('pages.users.actions.edit')}
               </LinkButton>
@@ -516,7 +518,9 @@ export function UserManagementPage() {
                   variant="regular-black"
                   size="xs"
                   onClick={() => setResetPasswordUser(user)}
-                  leftIcon={<Icons.LockSync01 size={16} color="#05040D" strokeWidth={1.5} />}
+                  leftIcon={
+                    <Icons.LockSync01 size={16} strokeWidth={1.5} className="text-foreground" />
+                  }
                 >
                   {t('pages.users.actions.resetPassword')}
                 </LinkButton>
@@ -530,7 +534,9 @@ export function UserManagementPage() {
                     variant="regular-black"
                     size="xs"
                     onClick={() => setToggleTwoFactorUser(user)}
-                    leftIcon={<Icons.Shield size={16} color="#05040D" strokeWidth={1.5} />}
+                    leftIcon={
+                      <Icons.Shield size={16} strokeWidth={1.5} className="text-foreground" />
+                    }
                   >
                     {user.two_factor_enabled
                       ? t('pages.users.actions.disableTwoFactor')
@@ -547,7 +553,11 @@ export function UserManagementPage() {
                   onClick={() => handleImpersonate(user)}
                   disabled={authLoading || impersonatingUserId !== null}
                   leftIcon={
-                    <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                    <Icons.SecurityValidation
+                      size={16}
+                      strokeWidth={1.5}
+                      className="text-foreground"
+                    />
                   }
                 >
                   {impersonatingUserId === user.id
@@ -563,7 +573,7 @@ export function UserManagementPage() {
                 size="xs"
                 onClick={() => setUnlockUser(user)}
                 disabled={!isUserLocked(user)}
-                leftIcon={<Icons.Unlock size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Unlock size={16} strokeWidth={1.5} className="text-foreground" />}
               >
                 {t('pages.users.actions.unlock')}
               </LinkButton>
@@ -580,16 +590,16 @@ export function UserManagementPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  className="text-foreground border-border bg-card hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none"
                   aria-label={t('pages.users.tableHeaders.actions')}
                 >
                   <Icons.FilterVertical size={16} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white">
+              <DropdownMenuContent align="end" className="bg-card">
                 <DropdownMenuItem
                   onClick={() => handleView(user)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                 >
                   <Icons.View size={16} strokeWidth={1.5} />
                   <span>{t('pages.users.actions.view')}</span>
@@ -597,7 +607,7 @@ export function UserManagementPage() {
                 <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
                   <DropdownMenuItem
                     onClick={() => handleEdit(user)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('pages.users.actions.edit')}</span>
@@ -610,7 +620,7 @@ export function UserManagementPage() {
                         setOpenDropdownUserId(null)
                         setResetPasswordUser(user)
                       }}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                     >
                       <Icons.LockSync01 size={16} strokeWidth={1.5} />
                       <span>{t('pages.users.actions.resetPassword')}</span>
@@ -625,7 +635,7 @@ export function UserManagementPage() {
                           setOpenDropdownUserId(null)
                           setToggleTwoFactorUser(user)
                         }}
-                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                        className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                       >
                         <Icons.Shield size={16} strokeWidth={1.5} />
                         <span>
@@ -641,7 +651,7 @@ export function UserManagementPage() {
                     <DropdownMenuItem
                       onClick={() => handleImpersonate(user)}
                       disabled={authLoading || impersonatingUserId !== null}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="text-foreground flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Icons.SecurityValidation size={16} strokeWidth={1.5} />
                       <span>
@@ -659,7 +669,7 @@ export function UserManagementPage() {
                       setUnlockUser(user)
                     }}
                     disabled={!isUserLocked(user)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Icons.Unlock size={16} strokeWidth={1.5} />
                     <span>{t('pages.users.actions.unlock')}</span>
@@ -673,7 +683,7 @@ export function UserManagementPage() {
           <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
             {currentUser?.id !== String(user.id) && (
               <div className="flex items-center gap-1 sm:gap-2">
-                <label className="text-dark-500 hidden text-xs font-medium sm:inline">
+                <label className="text-foreground hidden text-xs font-medium sm:inline">
                   {t('pages.users.actions.status')}
                 </label>
                 <ToggleSwitch
@@ -695,10 +705,12 @@ export function UserManagementPage() {
         {/* Page Header */}
         <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3">
-            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            <h1 className="text-foreground text-xl font-light sm:text-2xl">
               {t('pages.users.title')}
             </h1>
-            <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
+            <span className="text-muted-foreground text-sm font-light sm:text-base">
+              {totalUsers}
+            </span>
           </div>
 
           <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
@@ -716,7 +728,7 @@ export function UserManagementPage() {
             {/* Mobile: Icon-only button */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
               aria-label={t('pages.users.addNewUser')}
             >
               <Icons.Add size={20} strokeWidth={2} />

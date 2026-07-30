@@ -127,7 +127,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
       <ModalContent>
         <div className="flex flex-col gap-4">
           {!operatorId ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="bg-error-100 text-error-700 rounded-lg px-3 py-2 text-sm">
               {t(
                 'pages.actionAnalysis.inbox.scheduleOneOnOne.errors.noOperator',
                 'Select an operator first.'
@@ -135,10 +135,10 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
             </p>
           ) : (
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.inbox.scheduleOneOnOne.operator', 'Operator')}
               </span>
-              <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800">
+              <div className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm font-medium">
                 {operator?.full_name ?? `#${operatorId}`}
               </div>
             </div>
@@ -148,7 +148,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="schedule-one-on-one-datetime"
-                className="text-xs font-medium text-gray-600"
+                className="text-muted-foreground text-xs font-medium"
               >
                 {t('pages.actionAnalysis.inbox.scheduleOneOnOne.scheduledAt', 'Date and time')}
               </label>
@@ -163,7 +163,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="schedule-one-on-one-duration"
-                className="text-xs font-medium text-gray-600"
+                className="text-muted-foreground text-xs font-medium"
               >
                 {t('pages.actionAnalysis.inbox.scheduleOneOnOne.duration', 'Duration (minutes)')}
               </label>
@@ -183,7 +183,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
           <div className="flex flex-col gap-1">
             <label
               htmlFor="schedule-one-on-one-notes"
-              className="text-xs font-medium text-gray-600"
+              className="text-muted-foreground text-xs font-medium"
             >
               {t('pages.actionAnalysis.inbox.scheduleOneOnOne.notes', 'Notes (optional)')}
             </label>
@@ -197,7 +197,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
                 'pages.actionAnalysis.inbox.scheduleOneOnOne.notesPlaceholder',
                 'What do you want to cover in this session?'
               )}
-              className="focus:border-primary-400 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none"
+              className="focus:border-primary-400 border-border rounded-md border px-3 py-2 text-sm focus:outline-none"
             />
           </div>
         </div>

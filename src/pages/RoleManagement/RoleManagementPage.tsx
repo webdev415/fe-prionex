@@ -135,18 +135,18 @@ export function RoleManagementPage() {
             <button
               type="button"
               onClick={() => setSelectedRoleId(role.id)}
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              className="text-foreground flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             >
-              <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+              <Icons.View size={16} strokeWidth={1.5} className="text-foreground" />
               {t('pages.roles.actions.view')}
             </button>
             <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
               <button
                 type="button"
-                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                className="text-foreground flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
                 onClick={() => setEditRoleId(role.id)}
               >
-                <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+                <Icons.PencilEdit size={16} strokeWidth={1.5} className="text-foreground" />
                 {t('pages.roles.actions.edit')}
               </button>
             </PermissionGuard>
@@ -154,10 +154,10 @@ export function RoleManagementPage() {
               {!role.is_default && (
                 <button
                   type="button"
-                  className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                  className="text-foreground flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
                   onClick={() => setArchiveRoleId(role.id)}
                 >
-                  <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
+                  <Icons.Delete size={16} strokeWidth={1.5} className="text-foreground" />
                   {t('pages.roles.actions.delete')}
                 </button>
               )}
@@ -174,16 +174,16 @@ export function RoleManagementPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  className="text-foreground border-border bg-card hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none"
                   aria-label={t('pages.roles.tableHeaders.actions')}
                 >
                   <Icons.FilterVertical size={16} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white">
+              <DropdownMenuContent align="end" className="bg-card">
                 <DropdownMenuItem
                   onClick={() => setSelectedRoleId(role.id)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                 >
                   <Icons.View size={16} strokeWidth={1.5} />
                   <span>{t('pages.roles.actions.view')}</span>
@@ -191,7 +191,7 @@ export function RoleManagementPage() {
                 <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
                   <DropdownMenuItem
                     onClick={() => setEditRoleId(role.id)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('pages.roles.actions.edit')}</span>
@@ -201,7 +201,7 @@ export function RoleManagementPage() {
                   {!role.is_default && (
                     <DropdownMenuItem
                       onClick={() => setArchiveRoleId(role.id)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                     >
                       <Icons.Delete size={16} strokeWidth={1.5} />
                       <span>{t('pages.roles.actions.delete')}</span>
@@ -228,7 +228,7 @@ export function RoleManagementPage() {
       {!showFullPageSkeleton && (
         <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3">
-            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            <h1 className="text-foreground text-xl font-light sm:text-2xl">
               {t('pages.roles.title')}
             </h1>
           </div>
@@ -249,7 +249,7 @@ export function RoleManagementPage() {
             <button
               onClick={() => setShowCreateModal(true)}
               disabled={!selectedProjectId}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
+              className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
               aria-label={t('pages.roles.newRole')}
             >
               <Icons.Add size={20} strokeWidth={2} />
@@ -261,21 +261,18 @@ export function RoleManagementPage() {
       {/* Project Selector */}
       {!showFullPageSkeleton && (
         <div className="mb-6 flex items-center gap-3">
-          <span className="text-base font-light text-gray-500 sm:text-xl">
+          <span className="text-muted-foreground text-base font-light sm:text-xl">
             {t('pages.roles.project')}
           </span>
           <Select
             value={selectedProjectId ? String(selectedProjectId) : ''}
             onValueChange={(value) => setSelectedProjectId(Number(value))}
           >
-            <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-base font-light shadow-none focus:ring-0 sm:text-xl [&>div.opacity-50]:hidden">
+            <SelectTrigger className="text-foreground flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-base font-light shadow-none focus:ring-0 sm:text-xl [&>div.opacity-50]:hidden">
               <SelectValue
                 placeholder={t('pages.roles.selectProject')}
-                className="text-dark-500 text-base font-light sm:text-xl"
+                className="text-foreground text-base font-light sm:text-xl"
               />
-              <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
-                <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
-              </div>
             </SelectTrigger>
             <SelectContent>
               {projects.map((project) => (
@@ -294,8 +291,8 @@ export function RoleManagementPage() {
 
       {/* Error States */}
       {!showFullPageSkeleton && projects.length === 0 && (
-        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-          <p className="text-sm text-gray-500">{t('pages.roles.noActiveProjects')}</p>
+        <div className="bg-card rounded-lg p-8 text-center shadow-sm">
+          <p className="text-muted-foreground text-sm">{t('pages.roles.noActiveProjects')}</p>
         </div>
       )}
 
@@ -307,8 +304,8 @@ export function RoleManagementPage() {
       {!showFullPageSkeleton && projects.length > 0 && !isError && !showTablesSkeleton && (
         <div className="space-y-8">
           {/* Default Roles */}
-          <section className="rounded-xl bg-white/50 p-6">
-            <h2 className="mb-3 text-base font-light text-black sm:text-xl">
+          <section className="bg-card/50 rounded-xl p-6">
+            <h2 className="text-foreground mb-3 text-base font-light sm:text-xl">
               {t('pages.roles.defaultRoles')}
             </h2>
             <DataTable<ApiRole>
@@ -319,8 +316,8 @@ export function RoleManagementPage() {
           </section>
 
           {/* Custom Roles */}
-          <section className="rounded-xl bg-white/50 p-6">
-            <h2 className="mb-3 text-base font-light text-black sm:text-xl">
+          <section className="bg-card/50 rounded-xl p-6">
+            <h2 className="text-foreground mb-3 text-base font-light sm:text-xl">
               {t('pages.roles.customRoles')}
             </h2>
             <DataTable<ApiRole>

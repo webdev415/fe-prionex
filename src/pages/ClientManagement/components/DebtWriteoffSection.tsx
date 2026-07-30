@@ -50,7 +50,7 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
     <div className="flex flex-col gap-3">
       {showHeader && (
         <div className="flex items-center justify-between">
-          <h3 className="text-dark-500 text-base font-semibold">
+          <h3 className="text-foreground text-base font-semibold">
             {t('pages.clients.detail.writeOffSection.title')}
           </h3>
           <div className="flex gap-2">
@@ -58,8 +58,8 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
               type="button"
               className={`rounded px-3 py-1 text-xs ${
                 tab === 'active'
-                  ? 'bg-secondary-800 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-muted text-foreground hover:bg-muted'
               }`}
               onClick={() => setTab('active')}
             >
@@ -69,8 +69,8 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
               type="button"
               className={`rounded px-3 py-1 text-xs ${
                 tab === 'cancelled'
-                  ? 'bg-secondary-800 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-muted text-foreground hover:bg-muted'
               }`}
               onClick={() => setTab('cancelled')}
             >
@@ -80,14 +80,14 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-gray-500">{t('common.loading')}</p>}
+      {isLoading && <p className="text-muted-foreground text-sm">{t('common.loading')}</p>}
       {error && (
         <p className="text-error-500 text-sm">
           {t('pages.clients.detail.writeOffSection.loadError')}
         </p>
       )}
       {!isLoading && !error && entries.length === 0 && (
-        <p className="text-sm text-gray-500">
+        <p className="text-muted-foreground text-sm">
           {tab === 'active'
             ? t('pages.clients.detail.writeOffSection.noActiveEntries')
             : t('pages.clients.detail.writeOffSection.noCancelledEntries')}
@@ -99,27 +99,29 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
           {entries.map((entry) => (
             <li
               key={entry.id}
-              className="flex flex-col gap-2 rounded border border-gray-200 p-3 md:flex-row md:items-center md:justify-between md:gap-4"
+              className="border-border flex flex-col gap-2 rounded border p-3 md:flex-row md:items-center md:justify-between md:gap-4"
             >
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-dark-500 text-sm font-semibold">
+                  <span className="text-foreground text-sm font-semibold">
                     {t(`pages.clients.detail.writeOffModal.components.${entry.accrual_type}`)}
                   </span>
-                  <span className="text-dark-500 text-sm font-medium">
+                  <span className="text-foreground text-sm font-medium">
                     {formatMoneyUAHTwoDecimals(Number(entry.amount))}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-muted-foreground text-xs">
                   {t('pages.clients.detail.writeOffSection.expiresOn')}{' '}
                   {new Date(entry.cancellation_date).toLocaleDateString(dateLocale)}
                   {' • '}
                   {t('pages.clients.detail.writeOffSection.createdBy')}{' '}
                   {entry.created_by.name ?? `#${entry.created_by.user_id}`}
                 </p>
-                {entry.notes && <p className="text-xs text-gray-600 italic">{entry.notes}</p>}
+                {entry.notes && (
+                  <p className="text-muted-foreground text-xs italic">{entry.notes}</p>
+                )}
                 {entry.status === 'cancelled' && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-muted-foreground text-xs">
                     {t(
                       `pages.clients.detail.writeOffSection.cancellationSource.${entry.cancellation_source ?? 'manual'}`
                     )}

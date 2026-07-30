@@ -4,16 +4,18 @@ import { toast } from 'sonner'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { useCallMonitoring } from '@/features/training'
-import type { CallMonitoringItem } from '@/features/training'
+import type { CallMonitoringItem, TelephonyType } from '@/features/training'
 import { useCreateScorecard, useTemplates } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { formatDate, formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * New-assessment picker (KAN-504 / Scorecard Review Panel redesign).
  *
  * A single modal: pick the operator (searchable) and one of that operator's
- * recent recorded calls (last_30d, last 10), then **Add** — which creates a
+ * recent recorded calls (last_30d by default; filterable by dialing type,
+ * call date and min talk duration — KAN-827), then **Add** — which creates a
  * draft scorecard (default Client type, changeable later in the review panel)
  * that appears in the Dialogue Evaluation list with no score yet. The trainer
  * then selects that row to review the call in the inline CallReviewPanel.
@@ -28,15 +30,12 @@ export interface RateDialogueDialogProps {
   operatorId?: number
 }
 
-function formatTime(value: string): { date: string; time: string } {
+function formatTime(value: string, language: string): { date: string; time: string } {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return { date: '—', time: '' }
   return {
-    date: d.toLocaleDateString(),
-    time: d.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    date: formatDate(d, language),
+    time: formatTimeShort(d, language),
   }
 }
 
@@ -48,13 +47,18 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDialogProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(operatorId ?? null)
   const [selectedCall, setSelectedCall] = useState<CallMonitoringItem | null>(null)
   const [operatorQuery, setOperatorQuery] = useState('')
+  // KAN-827: let trainers narrow an operator's calls when picking one to rate.
+  const [telephonyType, setTelephonyType] = useState<'' | TelephonyType>('')
+  const [callFrom, setCallFrom] = useState('')
+  const [callTo, setCallTo] = useState('')
+  const [minDuration, setMinDuration] = useState('')
 
   // Reset selection each time the modal opens (render-time adjustment, no
   // effect): honour the caller-provided operator as the initial pick.
@@ -64,6 +68,10 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     setSelectedOperatorId(open ? (operatorId ?? null) : null)
     setSelectedCall(null)
     setOperatorQuery('')
+    setTelephonyType('')
+    setCallFrom('')
+    setCallTo('')
+    setMinDuration('')
   }
 
   const filteredOperators = useMemo(() => {
@@ -77,12 +85,17 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     : undefined
   const extension = operator?.asterisk_extension ?? null
 
+  const useCustomRange = !!(callFrom || callTo)
   const { data: callsData, isLoading } = useCallMonitoring(
     {
       agent_extensions: extension ? [extension] : [],
-      period: 'last_30d',
+      period: useCustomRange ? undefined : 'last_30d',
+      from_datetime: callFrom ? new Date(`${callFrom}T00:00:00`).toISOString() : undefined,
+      to_datetime: callTo ? new Date(`${callTo}T23:59:59.999`).toISOString() : undefined,
+      telephony_types: telephonyType ? [telephonyType] : undefined,
+      min_duration: minDuration ? Number(minDuration) : undefined,
       sort: 'date_desc',
-      limit: 10,
+      limit: 50,
     },
     open && !!extension
   )
@@ -157,7 +170,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     return (
       <ul className="divide-y divide-gray-100">
         {calls.map((call) => {
-          const start = formatTime(call.initiated_at)
+          const start = formatTime(call.initiated_at, i18n.language)
           const disabled = !call.has_recording
           return (
             <li key={call.call_id}>
@@ -266,6 +279,48 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                 </button>
               </div>
             )}
+
+            {selectedOperatorId != null && extension ? (
+              <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2">
+                <select
+                  value={telephonyType}
+                  onChange={(e) => setTelephonyType(e.target.value as '' | TelephonyType)}
+                  className="h-8 rounded-lg border border-gray-200 px-2 text-xs"
+                >
+                  <option value="">
+                    {t('pages.training.dialogue.filters.allTypes', 'All types')}
+                  </option>
+                  <option value="white">
+                    {t('pages.training.dialogue.filters.white', 'White')}
+                  </option>
+                  <option value="grey">{t('pages.training.dialogue.filters.grey', 'Grey')}</option>
+                  <option value="unknown">
+                    {t('pages.training.dialogue.filters.unknown', 'Unknown')}
+                  </option>
+                </select>
+                <input
+                  type="date"
+                  value={callFrom}
+                  onChange={(e) => setCallFrom(e.target.value)}
+                  className="h-8 rounded-lg border border-gray-200 px-2 text-xs"
+                />
+                <span className="text-[10px] text-gray-400">–</span>
+                <input
+                  type="date"
+                  value={callTo}
+                  onChange={(e) => setCallTo(e.target.value)}
+                  className="h-8 rounded-lg border border-gray-200 px-2 text-xs"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  value={minDuration}
+                  onChange={(e) => setMinDuration(e.target.value)}
+                  placeholder={t('pages.training.dialogue.filters.minDuration', 'Min talk (sec)')}
+                  className="h-8 w-[120px] rounded-lg border border-gray-200 px-2 text-xs"
+                />
+              </div>
+            ) : null}
 
             {selectedOperatorId != null ? (
               <div className="border-t border-gray-100 pt-1">{renderCallList()}</div>

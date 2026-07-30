@@ -86,21 +86,21 @@ export function BulkPaymentVerificationPage() {
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.imports.bulkPaymentVerification.title')}
         </h1>
 
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-primary-foreground" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
           {t('pages.imports.bulkPaymentVerification.viewHistory')}
         </Button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="border-border bg-card/50 rounded-xl border p-4 shadow-sm sm:p-6">
         {state === 'upload' && (
           <PaymentImportUpload
             onFileSelected={handleFileSelected}

@@ -410,6 +410,11 @@ const DEFAULT_CONFIG = {
     { value: 'remaining_debt', label: 'Remaining Debt' },
     { value: 'debt_count', label: 'Debt Count' },
     { value: 'status', label: 'Status' },
+    { value: 'days_since_last_debt_purchase', label: 'Days Since Last Debt Purchase (All)' },
+    {
+      value: 'days_since_last_active_debt_purchase',
+      label: 'Days Since Last Debt Purchase (Active)',
+    },
     { value: 'has_tag', label: 'Has Tag' },
     { value: 'not_has_tag', label: 'Not Has Tag' },
   ],
@@ -1043,7 +1048,7 @@ export const useTagConfigStore = create<TagConfigState>()(
     }),
     {
       name: 'tag-config-storage',
-      version: 4,
+      version: 5,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TagConfigState> | undefined
         if (!state) return cloneDefaultConfig()
@@ -1051,6 +1056,9 @@ export const useTagConfigStore = create<TagConfigState>()(
         return {
           ...cloneDefaultConfig(),
           ...state,
+          // Reset conditionFields to defaults so new fields appear in localStorage
+          // until the next loadFromServer() overwrites with the backend's merged set.
+          conditionFields: cloneConfigItems(DEFAULT_CONFIG.conditionFields),
           availableEvents: normalizeAvailableEventsState(state.availableEvents),
           operators: Array.isArray(state.operators)
             ? normalizeOperators(state.operators)

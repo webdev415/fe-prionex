@@ -335,8 +335,12 @@ export function WriteoffCreateModal({
     <Modal open={open} onClose={onClose} maxWidth="xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.MoneyRemove01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.MoneyRemove01
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
         }
         title={t('pages.clients.detail.writeOffModal.title')}
@@ -345,7 +349,7 @@ export function WriteoffCreateModal({
         <div className="flex flex-col gap-6">
           {/* Loan picker */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.writeOffModal.chooseALoan')}
             </label>
             <Select
@@ -365,7 +369,7 @@ export function WriteoffCreateModal({
                     <SelectItem key={d.id} value={String(d.id)} disabled={d.status !== 'active'}>
                       {label}
                       {d.status !== 'active' && (
-                        <span className="ml-2 text-xs text-gray-500">({d.status})</span>
+                        <span className="text-muted-foreground ml-2 text-xs">({d.status})</span>
                       )}
                     </SelectItem>
                   )
@@ -383,7 +387,7 @@ export function WriteoffCreateModal({
               (KAN-246); disabled ones are hidden entirely. */}
           <div className="flex flex-col gap-4">
             {enabledAccruals.length === 0 && (
-              <p className="text-dark-500 rounded border border-gray-200 p-3 text-sm md:p-4">
+              <p className="text-foreground border-border rounded border p-3 text-sm md:p-4">
                 {t('pages.clients.detail.writeOffModal.errors.noComponentsToWriteOff')}
               </p>
             )}
@@ -398,7 +402,7 @@ export function WriteoffCreateModal({
               return (
                 <div
                   key={accrual}
-                  className="flex flex-col gap-3 rounded border border-gray-200 p-3 md:p-4"
+                  className="border-border flex flex-col gap-3 rounded border p-3 md:p-4"
                 >
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                     <Input
@@ -442,7 +446,7 @@ export function WriteoffCreateModal({
 
           {/* Notes */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.writeOffModal.notes')}
             </label>
             <Textarea
@@ -458,11 +462,11 @@ export function WriteoffCreateModal({
           {topLevelError && <p className="text-error-500 text-sm">{topLevelError}</p>}
 
           {/* Total amount written off */}
-          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-            <span className="text-sm font-medium text-gray-700">
+          <div className="border-border flex items-center justify-between border-t pt-4">
+            <span className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.writeOffModal.totalAmount')}
             </span>
-            <span className="text-dark-500 text-base font-semibold">
+            <span className="text-foreground text-base font-semibold">
               {formatMoneyUAHTwoDecimals(totalAmount)}
             </span>
           </div>

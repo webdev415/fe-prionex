@@ -6,7 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import type { Period } from '../types'
@@ -105,7 +105,9 @@ export function ContactRateDetailModal({
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-      <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
+      <span className="text-foreground text-sm font-medium">
+        {t('common.loading', 'Loading...')}
+      </span>
     </div>
   )
 
@@ -113,10 +115,10 @@ export function ContactRateDetailModal({
   const renderError = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <Icons.Warning size={48} className="text-error-500" />
-      <h3 className="text-dark-500 text-lg font-medium">
+      <h3 className="text-foreground text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">
+      <p className="text-muted-foreground">
         {error?.message || t('pages.reports.error.generic', 'An error occurred')}
       </p>
     </div>
@@ -125,8 +127,8 @@ export function ContactRateDetailModal({
   // Empty state
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <Icons.Folder size={48} className="text-gray-400" />
-      <p className="text-gray-500">
+      <Icons.Folder size={48} className="text-muted-foreground" />
+      <p className="text-muted-foreground">
         {t('pages.reports.contactRateModal.noData', 'No data available')}
       </p>
     </div>
@@ -138,17 +140,17 @@ export function ContactRateDetailModal({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="bg-primary-400 flex flex-col items-start gap-2.5 rounded-full p-[10px]">
-            <Icons.Chart01 size={20} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.Chart01 size={20} className="text-foreground" strokeWidth={1.5} />
           </div>
-          <span className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]">
+          <ModalTitle className="text-foreground text-2xl leading-tight font-light tracking-[-0.48px]">
             {t('pages.reports.contactRateModal.title')} – {getPeriodLabel()}
-          </span>
+          </ModalTitle>
         </div>
-        <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+        <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
           {formatDate()}
         </span>
       </div>
-      <div className="mt-4 h-px w-full bg-gray-200" />
+      <div className="bg-border mt-4 h-px w-full" />
 
       <ModalContent className="max-h-[calc(90vh-140px)]">
         {isLoading ? (
@@ -161,7 +163,7 @@ export function ContactRateDetailModal({
           <>
             {/* Summary */}
             <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
-              <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
+              <div className="text-foreground text-2xl leading-tight font-medium tracking-[-0.48px]">
                 {data.rate.toFixed(1)}% ({data.contacted} {t('pages.reports.contactRateModal.of')}{' '}
                 {data.total} {t('pages.reports.callsMadeModal.calls')})
               </div>
@@ -172,11 +174,11 @@ export function ContactRateDetailModal({
                   ) : (
                     <Icons.ArrowDown02 size={20} className="text-error-500" />
                   )}
-                  <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {data.change}%
                   </span>
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
                   <span className="font-light">{t('pages.reports.kpi.vs')} </span>
                   <span className="font-medium">{getComparisonText()}</span>
                   <span className="font-light"> ({data.previousRate}%)</span>
@@ -187,10 +189,10 @@ export function ContactRateDetailModal({
             {/* Outcomes Card */}
             {data.outcomes.length > 0 && (
               <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.reports.contactRateModal.outcomes')}:
                 </span>
-                <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+                <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-5 px-6">
                   {data.outcomes.map((o) => {
                     const IconComponent = outcomeIcons[o.key]
                     return (
@@ -198,13 +200,17 @@ export function ContactRateDetailModal({
                         key={o.key}
                         className="flex w-full items-center justify-between self-stretch"
                       >
-                        <span className="text-dark-500 flex items-center gap-2 text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                        <span className="text-foreground flex items-center gap-2 text-sm leading-[140%] font-medium tracking-[-0.24px]">
                           {IconComponent && (
-                            <IconComponent size={18} className="text-dark-500" strokeWidth={1.5} />
+                            <IconComponent
+                              size={18}
+                              className="text-foreground"
+                              strokeWidth={1.5}
+                            />
                           )}
                           {t(`pages.reports.contactRateModal.${o.key}`)}
                         </span>
-                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {o.count} ({o.percentage}%)
                         </span>
                       </div>
@@ -219,8 +225,8 @@ export function ContactRateDetailModal({
               <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
                 <div className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:flex-wrap sm:gap-4">
                   {data.bestPerformer && (
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      <span className="font-medium text-gray-700">
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      <span className="text-muted-foreground font-medium">
                         {t('pages.reports.contactRateModal.bestPerformer')}:{' '}
                       </span>
                       {data.bestPerformer.name} ({data.bestPerformer.rate}%)
@@ -228,8 +234,8 @@ export function ContactRateDetailModal({
                   )}
                   {data.needsImprovement &&
                     data.needsImprovement.name !== data.bestPerformer?.name && (
-                      <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        <span className="font-medium text-gray-700">
+                      <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-muted-foreground font-medium">
                           {t('pages.reports.contactRateModal.needsImprovement')}:{' '}
                         </span>
                         {data.needsImprovement.name} ({data.needsImprovement.rate}%)

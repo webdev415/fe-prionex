@@ -29,14 +29,14 @@ export function DeleteSellerConfirmationModal({
     <Modal open={open} onClose={onCancel} maxWidth="md">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.sellers.modals.delete.title')}
       />
       <ModalContent>
-        <div className="text-dark-500 space-y-2 text-base font-light">
+        <div className="text-foreground space-y-2 text-base font-light">
           <p>{t('pages.sellers.modals.delete.confirmMessage.question')}</p>
           <p>{t('pages.sellers.modals.delete.confirmMessage.warning')}</p>
         </div>

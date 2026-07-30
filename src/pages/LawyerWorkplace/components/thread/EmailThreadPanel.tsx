@@ -5,19 +5,29 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
-  applyLetterTemplatePlaceholders,
+  fillTemplateVariables,
+  formatTemplateDate,
+  extractIncomingRef,
+  extractCaseNo,
+  LEGAL_COMPANY_INFO,
+  type LegalTemplateFillContext,
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
+  useLegalLawyerMe,
   useLegalMailboxes,
   useReplyComposerState,
   useReplyToLegalThread,
   loadReplyDraftForMessage,
-  type EdoType,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
 import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
+import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
+import { useClientLoans } from '@/features/clients/hooks/useClients'
+import type { GenerateDocumentResponse } from '@/features/documents'
+import { GenerateDocumentModal } from '@/pages/ClientManagement/components/GenerateDocumentModal'
 import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
+import { AttachClientDocumentModal } from './AttachClientDocumentModal'
 import { ReplyComposer } from './ReplyComposer'
 import { EmailMessageBody } from './EmailMessageBody'
 
@@ -37,9 +47,9 @@ function initials(name: string): string {
 function DateSeparator({ label }: { label: string }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <div className="h-px flex-1 bg-gray-200" />
-      <span className="text-light-700 shrink-0 text-[11px]">{label}</span>
-      <div className="h-px flex-1 bg-gray-200" />
+      <div className="bg-muted h-px flex-1" />
+      <span className="text-muted-foreground shrink-0 text-[11px]">{label}</span>
+      <div className="bg-muted h-px flex-1" />
     </div>
   )
 }
@@ -67,9 +77,9 @@ function AttachmentPill({
   }
 
   return (
-    <div className="flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm sm:min-w-[220px]">
+    <div className="bg-card border-border flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border px-2.5 py-2 shadow-sm sm:min-w-[220px]">
       <span
-        className="text-secondary-800 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-gray-50 text-center font-medium tracking-wide uppercase"
+        className="text-secondary-800 bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] text-center font-medium tracking-wide uppercase"
         title={extensionLabel}
       >
         <span
@@ -82,14 +92,14 @@ function AttachmentPill({
         </span>
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-dark-500 truncate text-[11px] font-medium">{attachment.filename}</p>
-        <p className="text-light-700 text-[10px]">{attachment.sizeLabel}</p>
+        <p className="text-foreground truncate text-[11px] font-medium">{attachment.filename}</p>
+        <p className="text-muted-foreground text-[10px]">{attachment.sizeLabel}</p>
       </div>
       <button
         type="button"
         disabled={downloading}
         onClick={handleDownload}
-        className="text-light-700 hover:text-secondary-700 shrink-0 cursor-pointer transition-colors disabled:opacity-50"
+        className="text-muted-foreground hover:text-secondary-700 shrink-0 cursor-pointer transition-colors disabled:opacity-50"
         aria-label={t('pages.lawyerWorkplace.thread.download', 'Download')}
       >
         <Icons.CloudDownload size={18} strokeWidth={2} />
@@ -111,7 +121,7 @@ function MessageCard({
   const hasAttachments = (message.attachments?.length ?? 0) > 0
 
   return (
-    <div className="overflow-hidden rounded-[12px] bg-white shadow-sm">
+    <div className="bg-card overflow-hidden rounded-[12px] shadow-sm">
       <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5">
         <div className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium">
           {initials(message.senderName)}
@@ -119,11 +129,11 @@ function MessageCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-            <span className="text-dark-500 text-[13px] font-semibold">{message.senderName}</span>
-            <span className="text-light-700 text-[11px]">{message.senderEmail}</span>
+            <span className="text-foreground text-[13px] font-semibold">{message.senderName}</span>
+            <span className="text-muted-foreground text-[11px]">{message.senderEmail}</span>
           </div>
           {message.toMailbox && (
-            <p className="text-light-700 mt-0.5 flex flex-wrap items-center gap-0.5 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-0.5 text-[11px]">
               <span>
                 {t('pages.lawyerWorkplace.thread.toMailbox', {
                   mailbox: message.toMailbox,
@@ -136,7 +146,7 @@ function MessageCard({
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-light-700 text-[10.5px]">
+          <p className="text-muted-foreground text-[10.5px]">
             {formatLetterTime(message.sentAt, t, i18n.language)}
           </p>
           <p
@@ -153,7 +163,7 @@ function MessageCard({
       </div>
 
       {hasBody && (
-        <div className="border-t border-gray-200 px-4 py-3">
+        <div className="border-border border-t px-4 py-3">
           <EmailMessageBody body={message.body} bodyFormat={message.bodyFormat} />
         </div>
       )}
@@ -162,7 +172,7 @@ function MessageCard({
         <div
           className={cn(
             'mx-4 grid grid-cols-1 gap-2 sm:grid-cols-2',
-            hasBody ? 'border-t border-dashed border-gray-200 pt-2.5 pb-3' : 'pb-3'
+            hasBody ? 'border-border border-t border-dashed pt-2.5 pb-3' : 'pb-3'
           )}
         >
           {message.attachments!.map((att) => (
@@ -183,6 +193,8 @@ export interface EmailThreadPanelProps {
   onReplySent?: () => void
   onBack?: () => void
   onOpenParameters?: () => void
+  /** Centre the message column at a readable max-width (wide drawer layout). */
+  contentMaxWidth?: boolean
 }
 
 export function EmailThreadPanel({
@@ -194,9 +206,11 @@ export function EmailThreadPanel({
   onReplySent,
   onBack,
   onOpenParameters,
+  contentMaxWidth = false,
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
   const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
+  const { data: lawyerMe } = useLegalLawyerMe({ enabled: Boolean(letter) })
   const { data: replyTemplatesData } = useLegalComposerReplyTemplates(letter?.letterType, {
     enabled: Boolean(letter),
   })
@@ -205,10 +219,6 @@ export function EmailThreadPanel({
   const [mailboxOverride, setMailboxOverride] = useState<{
     letterId: string
     mailboxId: string | null
-  } | null>(null)
-  const [edoOverride, setEdoOverride] = useState<{
-    letterId: string
-    edoType: EdoType
   } | null>(null)
 
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
@@ -224,16 +234,25 @@ export function EmailThreadPanel({
 
   const handleApplyTemplate = (body: string) => {
     if (!letter) return
-    const filled = applyLetterTemplatePlaceholders(
-      body,
-      {
-        clientName: letter.clientName,
-        referenceId: letter.referenceId,
-        contract: letter.parameters.contractLabel,
-        dueDate: letter.parameters.dueDate,
-      },
-      { language: i18n.language }
-    )
+    const language = i18n.language
+    // Prefill from everything the thread already knows. Anything the frontend
+    // cannot see (ІПН, debt amount, outgoing № assigned at send, attachment list)
+    // keeps its {{placeholder}} for the lawyer to complete before sending.
+    const context: LegalTemplateFillContext = {
+      clientName: letter.clientName,
+      contract: letter.parameters.contractLabel,
+      dueDate: formatTemplateDate(letter.parameters.dueDate, language),
+      requestNo: letter.referenceId,
+      senderName: letter.senderName,
+      incomingDate: formatTemplateDate(letter.receivedAt, language),
+      incomingRef: extractIncomingRef(letter.subject),
+      caseNo: extractCaseNo(letter.subject),
+      date: formatTemplateDate(new Date().toISOString(), language),
+      lawyerName: lawyerMe?.display_name ?? null,
+      companyName: LEGAL_COMPANY_INFO.name,
+      companyPhone: LEGAL_COMPANY_INFO.phone,
+    }
+    const filled = fillTemplateVariables(body, context)
     onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)
   }
 
@@ -244,7 +263,6 @@ export function EmailThreadPanel({
 
   const selectedMailboxId =
     mailboxOverride?.letterId === letterId ? mailboxOverride.mailboxId : defaultMailboxId
-  const edoType = edoOverride?.letterId === letterId ? edoOverride.edoType : 'none'
 
   const {
     stagedAttachments,
@@ -257,10 +275,39 @@ export function EmailThreadPanel({
   } = useReplyComposerState({
     messageId: letterId || null,
     selectedMailboxId,
-    edoType,
     body: replyDraft,
     enabled: Boolean(letter),
   })
+
+  // Client + delivery context for the attach-from-client and generate-document
+  // reply actions. Both need a confirmed client on the letter.
+  const letterClientId = useMemo(() => {
+    if (!letter) return null
+    return (
+      letter.replyContext.clientId ??
+      (letter.parameters.clientId ? Number(letter.parameters.clientId) : null)
+    )
+  }, [letter])
+  const clientActionsEnabled = letterClientId != null
+
+  const { data: clientDebts = [] } = useClientLoans(
+    letterClientId ?? 0,
+    clientActionsEnabled && Boolean(letter)
+  )
+  const generateLoans = useMemo(
+    () =>
+      clientDebts.map((debt) => ({
+        id: debt.id,
+        loanNumber: debt.contract_number ?? String(debt.id),
+        counterparty: debt.seller_company ?? '',
+        status: debt.status,
+      })),
+    [clientDebts]
+  )
+
+  const [clientDocPickerOpen, setClientDocPickerOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [attachingClientDocId, setAttachingClientDocId] = useState<number | null>(null)
 
   const loadedDraftForLetterRef = useRef<string | null>(null)
 
@@ -276,9 +323,6 @@ export function EmailThreadPanel({
         if (saved.mailboxId) {
           setMailboxOverride({ letterId, mailboxId: saved.mailboxId })
         }
-        if (saved.edoType !== 'none') {
-          setEdoOverride({ letterId, edoType: saved.edoType })
-        }
       } else {
         onReplyDraftChange('')
       }
@@ -287,10 +331,6 @@ export function EmailThreadPanel({
 
   const handleMailboxChange = (mailboxId: string) => {
     setMailboxOverride({ letterId, mailboxId })
-  }
-
-  const handleEdoTypeChange = (nextEdoType: EdoType) => {
-    setEdoOverride({ letterId, edoType: nextEdoType })
   }
 
   const handleSendReply = async () => {
@@ -309,17 +349,12 @@ export function EmailThreadPanel({
     const assignedUserId =
       replyContext.assignedUserId ??
       (letter.parameters.lawyerId ? Number(letter.parameters.lawyerId) : null)
+    const contractNumber = letter.parameters.contractLabel.trim() || null
 
-    if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
-      toast.error(
-        t(
-          'pages.lawyerWorkplace.reply.edoRequiresClientLawyer',
-          'Select client and lawyer in parameters before registering EDO'
-        )
-      )
-      return
-    }
-
+    // Replies are always registered in the correspondence journal — there is no
+    // mode selector, so `edo_type` is never sent. Registration metadata is
+    // included only when the letter carries it; when omitted the backend falls
+    // back to the confirmed client/lawyer of the source letter.
     replyMutation.mutate(
       {
         threadId: replyContext.threadId,
@@ -329,11 +364,9 @@ export function EmailThreadPanel({
           to_addresses: [letter.senderEmail],
           subject: letter.subject.startsWith('RE:') ? letter.subject : `RE: ${letter.subject}`,
           body_text: body,
-          edo_type: edoType,
-          client_id: edoType !== 'none' ? clientId : null,
-          assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
-          contract_number:
-            edoType !== 'none' ? letter.parameters.contractLabel.trim() || null : null,
+          ...(clientId != null ? { client_id: clientId } : {}),
+          ...(assignedUserId != null ? { assigned_to_user_id: assignedUserId } : {}),
+          ...(contractNumber ? { contract_number: contractNumber } : {}),
           attachment_ids: stagedAttachments.map((item) => item.id),
           draft_message_id: letter.id,
         },
@@ -370,35 +403,37 @@ export function EmailThreadPanel({
 
     return (
       <div
-        className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden bg-gray-50/50"
+        className="bg-muted/50 flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden"
         role={isLoading ? 'status' : isError ? 'alert' : 'status'}
         aria-busy={isLoading || undefined}
       >
         {isLoading ? (
           <div className="flex w-full max-w-md flex-col gap-3 px-6">
             <span className="sr-only">{title}</span>
-            <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-            <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
-            <div className="mt-4 h-24 w-full animate-pulse rounded-xl bg-gray-200" />
-            <div className="h-24 w-full animate-pulse rounded-xl bg-gray-200" />
+            <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+            <div className="bg-muted h-3 w-full animate-pulse rounded" />
+            <div className="bg-muted mt-4 h-24 w-full animate-pulse rounded-xl" />
+            <div className="bg-muted h-24 w-full animate-pulse rounded-xl" />
           </div>
         ) : (
           <div className="flex max-w-sm flex-col items-center px-6 text-center">
             <div
               className={cn(
                 'mb-4 flex h-12 w-12 items-center justify-center rounded-full',
-                isError ? 'bg-error-50' : 'bg-light-100'
+                isError ? 'bg-error-50' : 'bg-muted'
               )}
             >
               {isError ? (
                 <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
               ) : (
-                <Icons.Mail size={22} strokeWidth={1.5} className="text-light-500" />
+                <Icons.Mail size={22} strokeWidth={1.5} className="text-muted-foreground" />
               )}
             </div>
-            <p className="text-dark-500 text-[14px] font-medium">{title}</p>
+            <p className="text-foreground text-[14px] font-medium">{title}</p>
             {description ? (
-              <p className="text-light-600 mt-1 text-[12px] leading-relaxed">{description}</p>
+              <p className="text-muted-foreground mt-1 text-[12px] leading-relaxed">
+                {description}
+              </p>
             ) : null}
           </div>
         )}
@@ -410,15 +445,66 @@ export function EmailThreadPanel({
 
   const showCompactNav = Boolean(onBack || onOpenParameters)
 
+  // Turn a downloaded blob into a File and stage it on the reply exactly like a
+  // file picked from disk (same upload path).
+  const attachBlobToReply = async (blob: Blob, filename: string) => {
+    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' })
+    return uploadAttachment(file)
+  }
+
+  const handleSelectClientDocument = async (doc: ClientDocument) => {
+    if (letterClientId == null) return
+    setAttachingClientDocId(doc.id)
+    try {
+      const blob = await documentApi.preview(letterClientId, doc.id)
+      const uploaded = await attachBlobToReply(blob, doc.original_filename)
+      if (uploaded) {
+        setClientDocPickerOpen(false)
+        toast.success(
+          t(
+            'pages.lawyerWorkplace.reply.attachClientModal.attached',
+            'Document attached to the reply'
+          )
+        )
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setAttachingClientDocId(null)
+    }
+  }
+
+  // Fired by the generation modal after a successful generate: pull the freshly
+  // persisted PDF and attach it to the reply, then close the modal.
+  const handleGeneratedDocument = async (result: GenerateDocumentResponse) => {
+    if (letterClientId == null) return
+    setGenerateOpen(false)
+    try {
+      const blob = await documentApi.preview(letterClientId, result.document_id)
+      const filename = result.pdf_document?.original_filename ?? `${result.document_name}.pdf`
+      const uploaded = await attachBlobToReply(blob, filename)
+      if (uploaded) {
+        toast.success(
+          t(
+            'pages.lawyerWorkplace.reply.generatedAttached',
+            'Document generated and attached to the reply'
+          )
+        )
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
+  }
+
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gray-50/20">
+    <div className="bg-muted/20 flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {showCompactNav && (
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2">
+        <div className="bg-card border-border flex shrink-0 items-center justify-between border-b px-3 py-2">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="text-dark-500 hover:text-secondary-800 flex cursor-pointer items-center gap-1.5 text-[13px] font-medium"
+              className="text-foreground hover:text-secondary-800 flex cursor-pointer items-center gap-1.5 text-[13px] font-medium"
             >
               <Icons.ArrowLeft size={18} strokeWidth={1.5} />
               {t('pages.lawyerWorkplace.thread.backToList', 'Back to list')}
@@ -454,13 +540,13 @@ export function EmailThreadPanel({
         </div>
       ) : null}
 
-      <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2.5 sm:px-6 sm:py-4">
+      <div className="border-border bg-card shrink-0 border-b px-3 py-2.5 sm:px-6 sm:py-4">
         <div className="mb-1.5 flex min-w-0 items-start gap-2 sm:items-center sm:gap-5">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-5">
-            <span className="bg-light-100 text-light-700 w-fit shrink-0 rounded-full border border-gray-200 px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
+            <span className="bg-muted text-muted-foreground border-border w-fit shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
               {formatReferenceId(letter.referenceId)}
             </span>
-            <h3 className="text-dark-500 min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]">
+            <h3 className="text-foreground min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]">
               {letter.subject}
             </h3>
           </div>
@@ -468,16 +554,20 @@ export function EmailThreadPanel({
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
           <p className="min-w-0 flex-1 text-[10.5px] sm:truncate sm:text-[11.5px]">
-            <span className="text-dark-500 break-all sm:break-normal">{letter.routeFromEmail}</span>
+            <span className="text-foreground break-all sm:break-normal">
+              {letter.routeFromEmail}
+            </span>
             <span
-              className="text-light-700 inline-flex items-center px-0.5 py-0.5 align-middle"
+              className="text-muted-foreground inline-flex items-center px-0.5 py-0.5 align-middle"
               aria-hidden="true"
             >
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
-            <span className="text-light-700 break-all sm:break-normal">{letter.routeToEmail}</span>
+            <span className="text-muted-foreground break-all sm:break-normal">
+              {letter.routeToEmail}
+            </span>
             {threadCount > 1 && (
-              <span className="text-light-700 block sm:inline">
+              <span className="text-muted-foreground block sm:inline">
                 {' '}
                 /{' '}
                 {t('pages.lawyerWorkplace.thread.messagesInThread', {
@@ -490,27 +580,29 @@ export function EmailThreadPanel({
         </div>
       </div>
 
-      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
-        {isLoading && (
-          <p className="text-center text-xs text-gray-400">
-            {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
-          </p>
-        )}
-        {letter.thread.map((message, index) => {
-          const showDateSep =
-            index === 0 ||
-            formatDateSeparator(message.sentAt, i18n.language) !==
-              formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
+        <div className={cn('space-y-4', contentMaxWidth && 'mx-auto w-full max-w-4xl')}>
+          {isLoading && (
+            <p className="text-muted-foreground text-center text-xs">
+              {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
+            </p>
+          )}
+          {letter.thread.map((message, index) => {
+            const showDateSep =
+              index === 0 ||
+              formatDateSeparator(message.sentAt, i18n.language) !==
+                formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
 
-          return (
-            <div key={message.id}>
-              {showDateSep && (
-                <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
-              )}
-              <MessageCard message={message} messageId={message.id} />
-            </div>
-          )
-        })}
+            return (
+              <div key={message.id}>
+                {showDateSep && (
+                  <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
+                )}
+                <MessageCard message={message} messageId={message.id} />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <ReplyComposer
@@ -520,8 +612,6 @@ export function EmailThreadPanel({
         toMailbox={letter.senderEmail}
         value={replyDraft}
         onChange={onReplyDraftChange}
-        edoType={edoType}
-        onEdoTypeChange={handleEdoTypeChange}
         onSend={handleSendReply}
         replyTemplates={replyTemplates}
         onApplyTemplate={handleApplyTemplate}
@@ -535,11 +625,35 @@ export function EmailThreadPanel({
         onRemoveAttachment={(attachmentId) => {
           void removeAttachment(attachmentId)
         }}
+        onAttachFromClient={() => setClientDocPickerOpen(true)}
+        onGenerateDocument={() => setGenerateOpen(true)}
+        clientActionsEnabled={clientActionsEnabled}
         isSavingDraft={isSavingDraft}
         isUploadingAttachment={isUploadingAttachment}
         isSending={replyMutation.isPending}
         sendDisabled={!letter.replyContext.threadId}
       />
+
+      {letterClientId != null && (
+        <AttachClientDocumentModal
+          open={clientDocPickerOpen}
+          clientId={letterClientId}
+          onClose={() => setClientDocPickerOpen(false)}
+          onSelect={handleSelectClientDocument}
+          attachingDocId={attachingClientDocId}
+        />
+      )}
+
+      {letterClientId != null && generateOpen && (
+        <GenerateDocumentModal
+          open={generateOpen}
+          onClose={() => setGenerateOpen(false)}
+          clientId={letterClientId}
+          loans={generateLoans}
+          prefill={{ deliveryChannel: 'email', deliveryContact: letter.senderEmail }}
+          onGenerated={handleGeneratedDocument}
+        />
+      )}
     </div>
   )
 }

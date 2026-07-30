@@ -81,14 +81,14 @@ export function PromiseAssignDialog({
       <ModalHeader
         icon={
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-            <Icons.Clock01 size={18} strokeWidth={2} className="text-amber-700" />
+            <Icons.Clock01 size={18} strokeWidth={2} className="text-warning-700" />
           </div>
         }
         title={`Назначить «${tagName}» — ${clientName}`}
       />
       <ModalContent>
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-muted-foreground text-sm">
             Этот тег требует целевую дату оплаты. Когда ЦД наступит, фоновое правило автоматически
             заменит «{tagName}» на «Порушена обіцянка».
           </p>
