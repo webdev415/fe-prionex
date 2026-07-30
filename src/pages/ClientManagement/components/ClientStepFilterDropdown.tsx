@@ -142,7 +142,7 @@ export function ClientStepFilterDropdown({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('pages.clients.filters.searchPlaceholder', 'Search')}
+                placeholder={t('pages.clients.filters.searchPlaceholder', 'Search...')}
                 className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-10 text-sm outline-none placeholder:text-gray-400"
               />
               <Icons.Search

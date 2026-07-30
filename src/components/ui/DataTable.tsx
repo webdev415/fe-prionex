@@ -88,7 +88,7 @@ export interface DataTableProps<T> {
 export function DataTable<T extends { id: number | string }>({
   columns,
   data,
-  emptyMessage = 'No data found',
+  emptyMessage,
   onRowClick,
   className,
   sortConfig,
@@ -337,7 +337,7 @@ export function DataTable<T extends { id: number | string }>({
                     checked={headerCheckboxChecked}
                     onCheckedChange={handleSelectAll}
                     aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
-                    aria-label="Select all"
+                    aria-label={t('common.selectAll', 'Select all')}
                   />
                 </th>
               )}
@@ -372,7 +372,7 @@ export function DataTable<T extends { id: number | string }>({
                   colSpan={enableBulkSelection ? columns.length + 1 : columns.length}
                   className="h-[49px] px-4 text-center text-xs font-medium text-[#05040D]"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t('common.noDataFound', 'No data found')}
                 </td>
               </tr>
             ) : (
@@ -407,7 +407,9 @@ export function DataTable<T extends { id: number | string }>({
                             onCheckedChange={(checked) =>
                               handleSelectItem(item.id, checked === true)
                             }
-                            aria-label={`Select item ${item.id}`}
+                            aria-label={t('common.selectItem', 'Select item {{id}}', {
+                              id: item.id,
+                            })}
                           />
                         </td>
                       )}

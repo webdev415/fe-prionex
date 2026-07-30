@@ -535,7 +535,7 @@ export function DebtSummaryPage() {
     // Find payment by ID
     const payment = debtSummary?.payments.find((p) => p.id.toString() === paymentId)
     if (!payment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -953,7 +953,7 @@ export function DebtSummaryPage() {
                         : 'text-error-500'
                     )}
                   >
-                    {debtSummary.status}
+                    {t(`debtSummaryStatuses.${debtSummary.status}`, debtSummary.status)}
                   </span>
                 </div>
               </div>
@@ -1039,7 +1039,7 @@ export function DebtSummaryPage() {
                   onClick={() => {
                     const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
-                      toast.error('Client has no phone number')
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                       return
                     }
 
@@ -1300,7 +1300,7 @@ export function DebtSummaryPage() {
                                         format: 'pdf',
                                       })
                                     } else {
-                                      toast.error('Payment not found')
+                                      toast.error(t('errors.paymentNotFound', 'Payment not found'))
                                     }
                                   }}
                                   className="text-xs"
@@ -1563,7 +1563,7 @@ export function DebtSummaryPage() {
               (p) => p.id === selectedPayment.id
             )
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1648,7 +1648,7 @@ export function DebtSummaryPage() {
                 (p) => p.id === selectedPayment.id
               )
               if (!backendPayment) {
-                toast.error('Payment not found')
+                toast.error(t('errors.paymentNotFound', 'Payment not found'))
                 return
               }
 

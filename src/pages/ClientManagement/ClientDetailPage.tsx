@@ -2572,14 +2572,14 @@ export function ClientDetailPage() {
       render: (item) => (
         <span
           className={cn(
-            'inline-block rounded px-2 py-0.5 text-[10px] font-medium capitalize',
+            'inline-block rounded px-2 py-0.5 text-[10px] font-medium',
             item.status === 'pending' && 'bg-yellow-100 text-yellow-600',
             item.status === 'in_progress' && 'bg-blue-100 text-blue-600',
             item.status === 'completed' && 'bg-green-100 text-green-600',
             item.status === 'cancelled' && 'bg-gray-100 text-gray-500'
           )}
         >
-          {item.status.replace(/_/g, ' ')}
+          {t(`taskStatuses.${item.status}`, item.status.replace(/_/g, ' '))}
         </span>
       ),
     },
@@ -2594,7 +2594,7 @@ export function ClientDetailPage() {
                 {item.status !== 'completed' && item.status !== 'cancelled' && (
                   <button
                     type="button"
-                    title="Complete task"
+                    title={t('pages.clients.tasks.completeTask', 'Complete task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2610,7 +2610,7 @@ export function ClientDetailPage() {
                 {item.status !== 'cancelled' && item.status !== 'completed' && (
                   <button
                     type="button"
-                    title="Cancel task"
+                    title={t('pages.clients.tasks.cancelTask', 'Cancel task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2625,10 +2625,17 @@ export function ClientDetailPage() {
                 )}
                 <button
                   type="button"
-                  title="Delete task"
+                  title={t('pages.clients.tasks.deleteTask', 'Delete task')}
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (window.confirm('Are you sure you want to delete this task?')) {
+                    if (
+                      window.confirm(
+                        t(
+                          'pages.clients.tasks.confirmDelete',
+                          'Are you sure you want to delete this task?'
+                        )
+                      )
+                    ) {
                       deleteTaskMutation.mutate(item.id)
                     }
                   }}
@@ -2715,7 +2722,7 @@ export function ClientDetailPage() {
                 onClick={() => {
                   const phoneNumber = client.phones?.[0]?.number
                   if (!phoneNumber) {
-                    toast.error('Client has no phone number')
+                    toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                     return
                   }
 
@@ -2740,7 +2747,7 @@ export function ClientDetailPage() {
                 <button
                   type="button"
                   className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100"
-                  aria-label="More actions"
+                  aria-label={t('pages.clients.detail.moreActions', 'More actions')}
                 >
                   <Icons.FilterVertical size={18} strokeWidth={1.5} />
                 </button>
@@ -2826,7 +2833,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      title={t('pages.clients.detail.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -2858,7 +2865,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setAssignRoleModalMode('employee')}
                       className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign employee"
+                      title={t('pages.clients.detail.assignEmployee', 'Assign employee')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -2880,7 +2887,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setAssignRoleModalMode('searcher')}
                       className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign searcher"
+                      title={t('pages.clients.detail.assignSearcher', 'Assign searcher')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -3140,7 +3147,7 @@ export function ClientDetailPage() {
                   <button
                     onClick={() => scrollClientCardTabs('left')}
                     className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs left"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
                     <Icons.ArrowLeft size={20} className="text-secondary-800" />
@@ -3152,7 +3159,7 @@ export function ClientDetailPage() {
                   <button
                     onClick={() => scrollClientCardTabs('right')}
                     className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs right"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
                     <Icons.ArrowRight size={20} className="text-secondary-800" />
@@ -3575,7 +3582,7 @@ export function ClientDetailPage() {
                   <button
                     onClick={() => scrollTabs('left')}
                     className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs left"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
                     <Icons.ArrowLeft size={20} className="text-secondary-800" />
@@ -3587,7 +3594,7 @@ export function ClientDetailPage() {
                   <button
                     onClick={() => scrollTabs('right')}
                     className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs right"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
                     <Icons.ArrowRight size={20} className="text-secondary-800" />
@@ -5472,7 +5479,7 @@ export function ClientDetailPage() {
               <button
                 onClick={() => chainExecutorMinimizeRef.current?.()}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
-                aria-label="Minimize modal"
+                aria-label={t('pages.clients.detail.minimizeModal', 'Minimize modal')}
               >
                 <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
               </button>
@@ -6757,7 +6764,7 @@ export function ClientDetailPage() {
             </div>
 
             <label className="text-dark-500 mb-1 block text-sm font-medium">
-              {t('pages.clients.detail.overpaymentReason', 'Reason (optional)')}
+              {t('pages.clients.detail.overpaymentReasonOptional', 'Reason (optional)')}
             </label>
             <textarea
               value={overpaymentModal?.reason ?? ''}

@@ -215,11 +215,11 @@ export function ContactTagsPage() {
   // Column defs reference handlers — do not wrap in useMemo without listing those
   // deps (react-hooks/preserve-manual-memoization). Small table: rebuild each render.
   const columns: Column<ContactTagCategory>[] = [
-    { key: 'sort_order', header: t('pages.contactTags.sortOrder', 'Sort') },
+    { key: 'sort_order', header: t('pages.contactTags.tableHeaders.sortOrder', 'Sort') },
     { key: 'name', header: t('pages.contactTags.category', 'Category') },
     {
       key: 'selection_type',
-      header: t('pages.contactTags.selectionType', 'Selection'),
+      header: t('pages.contactTags.tableHeaders.selectionType', 'Selection'),
       render: (row) =>
         row.selection_type === 'multi'
           ? t('pages.contactTags.multi', 'Multi')

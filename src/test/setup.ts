@@ -70,7 +70,17 @@ if (typeof globalThis.HTMLAudioElement === 'undefined') {
 // Mock i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
+    // Third arg carries the interpolation values for the `t(key, fallback, vars)`
+    // call form; `options` holds them for the two-arg `t(key, vars)` form.
+    t: (
+      key: string,
+      options?: Record<string, unknown>,
+      interpolation?: Record<string, unknown>
+    ) => {
+      const vars = interpolation ?? options
+      if (key === 'common.selectItem') {
+        return `Select item ${String(vars?.id)}`
+      }
       if (key === 'pages.imports.operatorAssignment.preview.fileInfo' && options) {
         return `File: ${String(options.filename)} · ${String(options.totalRecords)} records · Batch: ${String(options.batchId)}`
       }
@@ -104,6 +114,7 @@ vi.mock('react-i18next', () => ({
         'alreadyLoggedIn.message': 'You are already logged in on another device.',
         'alreadyLoggedIn.forceLogout': 'Force Logout Other Session',
         'alreadyLoggedIn.cancel': 'Back to Login',
+        'common.selectAll': 'Select all',
         'pages.clients.listOfClients': 'List of Clients',
         'pages.clients.clearAll': 'Clear All',
         'pages.clients.filtersLabel': 'Filters',
@@ -339,6 +350,10 @@ vi.mock('i18next', () => ({
   default: {
     use: vi.fn().mockReturnThis(),
     init: vi.fn(),
+    // `src/lib/i18n.ts` subscribes to languageChanged at module scope to keep
+    // `<html lang>` in step with the active language.
+    on: vi.fn(),
+    language: 'en',
   },
 }))
 
