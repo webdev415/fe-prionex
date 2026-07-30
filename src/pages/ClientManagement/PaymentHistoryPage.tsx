@@ -1199,7 +1199,7 @@ export function PaymentHistoryPage() {
                       2 * Math.PI * 45 * (1 - paymentHistory.progressPercentage / 100)
                     }
                     strokeLinecap="round"
-                    className="text-primary transition-all duration-500 ease-in-out"
+                    className="text-primary-700 transition-all duration-500 ease-in-out"
                   />
                 </svg>
                 <span className="text-foreground absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">

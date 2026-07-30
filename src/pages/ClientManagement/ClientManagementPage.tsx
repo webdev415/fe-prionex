@@ -1652,7 +1652,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-primary cursor-pointer text-left hover:underline"
+          className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.fullName}
         </Link>
@@ -1667,7 +1667,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-primary cursor-pointer text-left hover:underline"
+          className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.taxIdNumber}
         </Link>

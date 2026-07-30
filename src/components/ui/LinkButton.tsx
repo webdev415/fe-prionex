@@ -9,12 +9,12 @@ const linkButtonVariants = cva(
   {
     variants: {
       variant: {
-        // Use semantic primary (light in dark themes) — primary-600/700 stay dark on dark accents
+        // primary-700 is dark green on classic; remapped to --primary on dark themes
         'regular-primary':
-          'text-primary hover:text-primary/80 active:text-primary/90 disabled:text-muted-foreground',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
         'regular-secondary':
-          'text-primary hover:text-primary/80 active:text-primary/90 disabled:text-muted-foreground',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
         'regular-red':
           'text-error-500 hover:text-error-400 active:text-error-500 disabled:text-muted-foreground',
@@ -26,10 +26,10 @@ const linkButtonVariants = cva(
           'text-muted-foreground hover:text-foreground active:text-foreground disabled:text-muted-foreground/60',
 
         'medium-primary':
-          'text-primary hover:text-primary/80 active:text-primary/90 disabled:text-muted-foreground',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
         'medium-secondary':
-          'text-primary hover:text-primary/80 active:text-primary/90 disabled:text-muted-foreground',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
         'medium-red':
           'text-error-500 hover:text-error-400 active:text-error-500 disabled:text-muted-foreground',

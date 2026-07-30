@@ -559,7 +559,7 @@ export function ExportPaymentsCSVModal({
                 key={column.id}
                 className="flex min-w-[140px] flex-1 items-center gap-1 sm:min-w-[120px]"
               >
-                <Icons.Tick02 size={18} className="text-primary sm:size-5" />
+                <Icons.Tick02 size={18} className="text-primary-700 sm:size-5" />
                 <span className="text-foreground w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                   {t(`pages.clients.modals.exportPaymentsCSV.${column.translationKey}`)}
                 </span>

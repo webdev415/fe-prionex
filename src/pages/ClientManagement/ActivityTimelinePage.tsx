@@ -402,7 +402,7 @@ export function ActivityTimelinePage() {
               onClick={() => navigate(`/dashboard/clients/${client?.id ?? clientId}`)}
               className="flex h-6 w-6 items-center justify-center"
             >
-              <Icons.ArrowLeft02 size={24} className="text-primary" strokeWidth={1.5} />
+              <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
             </button>
             <h1 className="text-foreground text-center text-xl leading-[150%] font-light md:text-2xl">
               {client?.fullName ?? '-'}

@@ -697,7 +697,7 @@ export function CallDialogModal({
                 </div>
               )}
 
-              <button className="text-primary flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
+              <button className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
                 {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
                 <Icons.ArrowDown size={14} className="sm:size-4" />
               </button>
@@ -1211,7 +1211,7 @@ function LoanCard({
             </div>
           </div>
         </div>
-        <button className="text-primary text-xs font-medium sm:text-sm">
+        <button className="text-primary-700 text-xs font-medium sm:text-sm">
           {t('pages.clients.modals.callDialog.viewClient')} &gt;
         </button>
       </div>
