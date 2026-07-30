@@ -10,10 +10,13 @@
 import api from '@/lib/api'
 import type {
   GetV3ScoreParams,
+  V3CalibrationResponse,
   V3ClientOrderResponse,
   V3ClientRollup,
+  V3DriftResponse,
   V3MonitoringResponse,
   V3ScoreListResponse,
+  V3UiEnabled,
 } from './types'
 
 const BASE_URL = '/api/v1/v3-score'
@@ -49,6 +52,38 @@ export async function getV3Monitoring(
   return res.data
 }
 
+/** Snapshot months this brand actually has results for, newest first.
+ *  Drives the month picker so it never offers a month that was never scored. */
+export async function getV3ScoredMonths(projectId: number): Promise<string[]> {
+  const res = await api.get<string[]>(`${BASE_URL}/${projectId}/months`)
+  return res.data
+}
+
+/** Predicted-vs-actual pay rate by decile — the KAN-794 sign-off gate metric.
+ *  Only meaningful once the scored month has elapsed and real payments exist. */
+export async function getV3Calibration(
+  projectId: number,
+  monthStart: string,
+  nBins = 10
+): Promise<V3CalibrationResponse> {
+  const res = await api.get<V3CalibrationResponse>(`${BASE_URL}/${projectId}/calibration`, {
+    params: { month_start: monthStart, n_bins: nBins },
+  })
+  return res.data
+}
+
+/** Month-over-month distribution drift for a brand. */
+export async function getV3Drift(
+  projectId: number,
+  fromMonth: string,
+  toMonth: string
+): Promise<V3DriftResponse> {
+  const res = await api.get<V3DriftResponse>(`${BASE_URL}/${projectId}/drift`, {
+    params: { from_month: fromMonth, to_month: toMonth },
+  })
+  return res.data
+}
+
 /** Trigger a re-score for a brand (async Celery job). */
 export async function triggerV3Scoring(
   projectId: number,
@@ -73,10 +108,42 @@ export async function getV3ClientOrder(
   return res.data
 }
 
+// The v3 UI cutover switch (KAN-791/794) is per brand and lives with the rest of
+// the scoring config, so it goes through the client service's config proxy — not
+// the /v3-score prefix above.
+const CONFIG_BASE_URL = '/api/v1/config/scoring/v3/ui-enabled'
+
+/** Is the v3 operator UI signed off and live for this brand? */
+export async function getV3UiEnabled(projectId: number): Promise<V3UiEnabled> {
+  const res = await api.get<V3UiEnabled>(CONFIG_BASE_URL, {
+    params: { project_id: projectId },
+  })
+  return res.data
+}
+
+/** Flip a brand's cutover switch. Requires edit_scoring_config; audited. */
+export async function setV3UiEnabled(
+  projectId: number,
+  enabled: boolean,
+  changeReason?: string
+): Promise<V3UiEnabled> {
+  const res = await api.put<V3UiEnabled>(CONFIG_BASE_URL, {
+    enabled,
+    project_id: projectId,
+    change_reason: changeReason,
+  })
+  return res.data
+}
+
 export const scoringApi = {
   getV3Scores,
   getV3Monitoring,
   triggerV3Scoring,
   getV3ClientRollup,
   getV3ClientOrder,
+  getV3UiEnabled,
+  setV3UiEnabled,
+  getV3Calibration,
+  getV3Drift,
+  getV3ScoredMonths,
 }

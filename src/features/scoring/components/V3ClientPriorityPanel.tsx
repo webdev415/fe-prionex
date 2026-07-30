@@ -2,15 +2,16 @@
  * v3 Priority panel for the client card / detail (KAN-791).
  *
  * Shows the client's debts with their v3 bucket, pay-chance, and the deciding
- * rule ("why this priority"). Renders nothing unless the v3 flag is on and the
- * client has scored debts — so it's safe to drop into the existing client view.
+ * rule ("why this priority"). Renders nothing unless this brand has been cut over
+ * (KAN-794 sign-off) and the client has scored debts — so it's safe to drop into
+ * the existing client view.
  */
 
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import {
   currentMonthStart,
   useV3Scores,
-  V3_WORKLIST_ENABLED,
+  useV3UiEnabled,
 } from '@/features/scoring/hooks/useV3Scores'
 
 export function V3ClientPriorityPanel({
@@ -20,14 +21,15 @@ export function V3ClientPriorityPanel({
   projectId?: number
   clientId?: number
 }) {
-  const enabled = V3_WORKLIST_ENABLED && !!projectId && !!clientId
+  const v3UiEnabled = useV3UiEnabled()
+  const enabled = v3UiEnabled && !!projectId && !!clientId
   const { data } = useV3Scores(
     projectId,
     { client_id: clientId, month_start: currentMonthStart() },
     { enabled }
   )
 
-  if (!V3_WORKLIST_ENABLED) return null
+  if (!v3UiEnabled) return null
   const rows = data?.results ?? []
   if (rows.length === 0) return null
 

@@ -151,6 +151,11 @@ const OperatorWorkListPage = lazy(() =>
     default: m.OperatorWorkListPage,
   }))
 )
+const ScoringV3MonitoringPage = lazy(() =>
+  import('@/pages/ScoringV3Monitoring').then((m) => ({
+    default: m.ScoringV3MonitoringPage,
+  }))
+)
 const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
@@ -472,6 +477,16 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
             {withSuspense(<OperatorWorkListPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Scoring v3 shadow-run report (KAN-794). NOT behind the cutover switch —
+        // it exists to be read while operators still cannot see v3.
+        path: 'system-settings/scoring-v3-monitoring',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<ScoringV3MonitoringPage />)}
           </PermissionRoute>
         ),
       },

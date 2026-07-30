@@ -63,3 +63,47 @@ export interface V3MonitoringResponse {
   total_priority_dollar: number
   rule_fired_counts: Record<string, number>
 }
+
+/** Per-brand v3 UI cutover switch (KAN-791/794). */
+export interface V3UiEnabled {
+  project_id: number | null
+  enabled: boolean
+  /** 'database' once set for the brand; 'default'/'fallback' mean off. */
+  source: string
+}
+
+/** One decile of the predicted-vs-actual calibration table (KAN-794 gate metric). */
+export interface V3CalibrationBin {
+  bin: number
+  n: number
+  predicted_mean: number
+  actual_rate: number
+}
+
+export interface V3CalibrationResponse {
+  project_id: number
+  month_start: string
+  n: number
+  n_bins: number
+  predicted_base_rate: number | null
+  actual_base_rate: number | null
+  calibration_error: number | null
+  bins: V3CalibrationBin[]
+}
+
+export interface V3DriftDeltas {
+  bucket_pct_delta: Record<string, number>
+  exit_rate_delta: number
+  avg_or_higher_share_delta: number
+  hazard_mean_delta: number | null
+  total_delta: number
+}
+
+export interface V3DriftResponse {
+  project_id: number
+  from_month: string
+  to_month: string
+  from_summary: V3MonitoringResponse
+  to_summary: V3MonitoringResponse
+  deltas: V3DriftDeltas
+}

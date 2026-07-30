@@ -17,7 +17,7 @@ import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge
 import {
   currentMonthStart,
   useV3ClientRollup,
-  V3_WORKLIST_ENABLED,
+  useV3UiEnabled,
 } from '@/features/scoring/hooks/useV3Scores'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { TooltipProvider } from '@/components/ui/Tooltip'
@@ -990,14 +990,16 @@ export function ClientManagementPage() {
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const activeProjectIdNum = activeProjectId ? Number(activeProjectId) : undefined
 
-  // v3 priority rollup for the visible clients (KAN-791) — behind the flag; shows
-  // the v3 bucket in place of the old priority badge once the shadow-run is on.
+  // v3 priority rollup for the visible clients (KAN-791) — only for brands cut
+  // over after the KAN-794 sign-off; shows the v3 bucket in place of the old
+  // priority badge.
+  const v3UiEnabled = useV3UiEnabled()
   const v3ClientIds = useMemo(() => apiClients.map((c) => c.id), [apiClients])
   const { data: v3Rollup } = useV3ClientRollup(
     activeProjectIdNum,
     v3ClientIds,
     currentMonthStart(),
-    { enabled: V3_WORKLIST_ENABLED }
+    { enabled: v3UiEnabled }
   )
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
@@ -1663,7 +1665,7 @@ export function ClientManagementPage() {
       sortable: true,
       sortKey: 'priority',
       render: (client) => {
-        const v3 = V3_WORKLIST_ENABLED ? v3Rollup?.get(client.id) : undefined
+        const v3 = v3UiEnabled ? v3Rollup?.get(client.id) : undefined
         return v3 ? (
           <V3BucketBadge bucket={v3.bucket_v3} />
         ) : (

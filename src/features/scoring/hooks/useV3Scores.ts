@@ -4,11 +4,9 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/authStore'
 import { scoringApi } from '../api/scoringApi'
 import type { GetV3ScoreParams } from '../api/types'
-
-/** Feature flag: v3 UI stays hidden until the shadow-run is signed off. */
-export const V3_WORKLIST_ENABLED = import.meta.env.VITE_V3_WORKLIST_ENABLED === 'true'
 
 /** Current month as YYYY-MM-01 (the snapshot the client card/list reads). */
 export function currentMonthStart(): string {
@@ -23,6 +21,36 @@ export const scoringKeys = {
     [...scoringKeys.lists(), projectId, params] as const,
   monitoring: (projectId: number, month?: string) =>
     [...scoringKeys.all, 'monitoring', projectId, month ?? null] as const,
+  uiEnabled: (projectId: number) => [...scoringKeys.all, 'ui-enabled', projectId] as const,
+}
+
+/** Active project id as a number (the "brand" v3 is scoped to). */
+export function useActiveProjectId(): number | undefined {
+  const raw = useAuthStore((s) => s.user?.active_project_id)
+  return raw ? Number(raw) : undefined
+}
+
+/**
+ * Is the v3 operator UI live for the CURRENT brand? (KAN-791, gated by KAN-794.)
+ *
+ * Replaces the old build-time `VITE_V3_WORKLIST_ENABLED`, which was global: one
+ * rebuild flipped v3 on for every brand, including ones with no shadow-run
+ * sign-off. This reads the per-brand switch instead, so cutover is a per-brand
+ * ops decision (audited) and rollback is flipping it back — no deploy either way.
+ *
+ * Returns false while loading and on any error: an unsigned-off brand must never
+ * see v3 because a request was slow or the config service was down.
+ */
+export function useV3UiEnabled(): boolean {
+  const projectId = useActiveProjectId()
+  const { data } = useQuery({
+    queryKey: scoringKeys.uiEnabled(projectId ?? 0),
+    queryFn: () => scoringApi.getV3UiEnabled(projectId as number),
+    enabled: !!projectId,
+    staleTime: 5 * 60_000, // cutover is a rare, deliberate event
+    retry: 1,
+  })
+  return data?.enabled ?? false
 }
 
 export function useV3Scores(
@@ -48,6 +76,49 @@ export function useV3Monitoring(
     queryKey: scoringKeys.monitoring(projectId ?? 0, month),
     queryFn: () => scoringApi.getV3Monitoring(projectId as number, month),
     enabled: !!projectId && (options.enabled ?? true),
+  })
+}
+
+/** Months this brand has v3 results for, newest first. Empty until the job runs. */
+export function useV3ScoredMonths(projectId: number | undefined) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'months', projectId ?? 0],
+    queryFn: () => scoringApi.getV3ScoredMonths(projectId as number),
+    enabled: !!projectId,
+    staleTime: 5 * 60_000,
+  })
+}
+
+/** Predicted-vs-actual calibration for a scored month (KAN-794 sign-off gate).
+ *  404s / empty until the month has elapsed and payments exist — the page treats
+ *  a failure as "not ready yet", not as an error. */
+export function useV3Calibration(
+  projectId: number | undefined,
+  monthStart: string,
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'calibration', projectId ?? 0, monthStart],
+    queryFn: () => scoringApi.getV3Calibration(projectId as number, monthStart),
+    enabled: !!projectId && !!monthStart && (options.enabled ?? true),
+    retry: false, // "no data yet" is the normal case early in a shadow run
+    staleTime: 5 * 60_000,
+  })
+}
+
+/** Month-over-month drift for a brand (KAN-794). */
+export function useV3Drift(
+  projectId: number | undefined,
+  fromMonth: string,
+  toMonth: string,
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'drift', projectId ?? 0, fromMonth, toMonth],
+    queryFn: () => scoringApi.getV3Drift(projectId as number, fromMonth, toMonth),
+    enabled: !!projectId && !!fromMonth && !!toMonth && (options.enabled ?? true),
+    retry: false, // needs two scored months; absent early in the run
+    staleTime: 5 * 60_000,
   })
 }
 
