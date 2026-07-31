@@ -76,6 +76,7 @@
     "operator": {
       "myCampaigns": "Мої кампанії",
       "availableCampaigns": "Доступні кампанії вашого відділу",
+      "campaignCount": "{{count}} кампаній",
       "noCampaigns": "Поки немає доступних кампаній.",
       "selectCampaignTitle": "Виберіть кампанію",
       "selectCampaignHint": "Виберіть кампанію зі списку ліворуч, щоб запустити дайлер.",
@@ -101,13 +102,16 @@
       "grey": "СІРА",
       "hangUp": "Завершити",
       "phone": "Телефон",
-      "clientInfo": "Інфо клієнта",
       "viewClient": "Картка клієнта",
       "recentInteractions": "Останні взаємодії з цим клієнтом",
       "noInteractions": "Взаємодій ще немає.",
       "interaction": "Взаємодія",
       "addInteraction": "Додати взаємодію",
-      "interactionSaved": "Взаємодію збережено"
+      "interactionSaved": "Взаємодію збережено",
+      "chainStepLabel": "Крок {{step}} - Збір: {{label}}",
+      "chainStepCreditLabel": "Крок 9 - Збір: Кредит *",
+      "chainContinue": "Продовжити",
+      "chainDemoNotice": "Це демо-ланцюжок — дані не збережено."
     },
     "accessGroup": {
       "all_groups": "Усі групи",
@@ -117,7 +121,7 @@
     },
     "queueStatus": {
       "active": "Активна",
-      "paused": "Призупинена",
+      "paused": "Пауза",
       "empty": "Черга порожня",
       "inactive": "Неактивна"
     },

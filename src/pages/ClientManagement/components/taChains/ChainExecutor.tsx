@@ -69,7 +69,116 @@ import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { applyStepEdits, collectFromSnapshot, type StepEdit } from './taChainSaveData'
+
+/**
+ * Synthetic client ids reserved for the operator dialer's mock personas
+ * (see `features/dialer/mocks/fixtures.ts`) start at 900000 and never exist
+ * in the real backend, so they never have a real chain configured here.
+ * `DialerMockChainPreview` below gives those ids something to show instead
+ * of the normal "No active chains" empty state, purely so the dialer's
+ * Figma flow can be reviewed without wiring a full fake chain through this
+ * component's ~8 backend-fed hooks.
+ */
+const DIALER_MOCK_CLIENT_ID_MIN = 900000
+
+interface DialerMockCompletedStep {
+  step: number
+  label: string
+  value: string
+}
+
+const DIALER_MOCK_COMPLETED_STEPS: DialerMockCompletedStep[] = [
+  { step: 1, label: 'Type of Contact', value: 'Relative' },
+  { step: 2, label: 'Communication Channel', value: 'Call' },
+  { step: 3, label: 'Result', value: 'Agreement' },
+  { step: 5, label: 'Agreement', value: 'Full Payment' },
+]
+
+interface DialerMockCreditOption {
+  id: string
+  loanNumber: string
+  counterparty: string
+  amountLabel: string
+}
+
+const DIALER_MOCK_CREDIT_OPTIONS: DialerMockCreditOption[] = [
+  {
+    id: '1026289',
+    loanNumber: '#1026289',
+    counterparty: 'E-money',
+    amountLabel: '₴2,050.00 - overdue 134d',
+  },
+  { id: '9618668', loanNumber: '#9618668', counterparty: 'Benefit', amountLabel: '~₴870.40' },
+]
+
+function DialerMockChainPreview() {
+  const { t } = useTranslation('common')
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+
+  const toggle = (id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {DIALER_MOCK_COMPLETED_STEPS.map((s) => (
+        <div
+          key={s.step}
+          className="bg-muted/30 flex items-center justify-between gap-3 rounded-lg p-3"
+        >
+          <div>
+            <p className="text-muted-foreground text-xs">
+              {t('dialer.call.chainStepLabel', 'Step {{step}} - Collection: {{label}}', {
+                step: s.step,
+                label: s.label,
+              })}
+            </p>
+            <p className="text-foreground text-sm font-semibold">{s.value}</p>
+          </div>
+          <Icons.Success size={22} className="text-success-500 shrink-0" />
+        </div>
+      ))}
+
+      <div className="border-primary-500 rounded-lg border-2 p-3">
+        <p className="text-muted-foreground mb-2 text-xs">
+          {t('dialer.call.chainStepCreditLabel', 'Step 9 - Collection: Credit *')}
+        </p>
+        <div className="flex flex-col gap-2">
+          {DIALER_MOCK_CREDIT_OPTIONS.map((opt) => (
+            <label
+              key={opt.id}
+              className="border-border bg-card hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm"
+            >
+              <Checkbox checked={checkedIds.has(opt.id)} onCheckedChange={() => toggle(opt.id)} />
+              <span className="text-foreground">
+                {opt.loanNumber} - {opt.counterparty} - {opt.amountLabel}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() =>
+          toast.info(t('dialer.call.chainDemoNotice', 'This is a demo chain — no data was saved.'))
+        }
+        disabled={checkedIds.size === 0}
+        className="bg-sidebar text-sidebar-foreground mt-1 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {t('dialer.call.chainContinue', 'Continue')}
+        <Icons.ArrowRight02 size={16} />
+      </button>
+    </div>
+  )
+}
 
 interface Props {
   clientId: number
@@ -1423,6 +1532,8 @@ export function ChainExecutor({
 
       {isLoadingChains ? (
         <ChainExecutorSkeleton />
+      ) : manualChains.length === 0 && clientId >= DIALER_MOCK_CLIENT_ID_MIN ? (
+        <DialerMockChainPreview />
       ) : manualChains.length === 0 ? (
         <p className="text-sm text-gray-500">{t('pages.clientChains.noChains')}</p>
       ) : (

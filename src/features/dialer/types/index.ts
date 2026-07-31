@@ -160,3 +160,41 @@ export interface RoutedCall {
   /** Optional debt/loan context for the interaction + TA chain. */
   debt_id?: number | null
 }
+
+export interface MoneyStat {
+  amount: number
+  count: number
+}
+
+export interface RecentInteractionItem {
+  id: number
+  type_name?: string | null
+  direction?: string | null
+  interaction_date?: string | null
+  summary?: string | null
+  notes?: string | null
+}
+
+export interface CallSummaryLoan {
+  number: string
+  counterparty: string
+  date_of_sale?: string | null
+  body_amount: number
+  total_to_return: number
+  legitimate: number
+}
+
+export interface ClientCallSummary {
+  client_id: number
+  status: 'active' | 'inactive'
+  tax_id?: string | null
+  tags?: string[]
+  currency?: string
+  total_paid: number
+  progress_pct: number
+  total_payments: MoneyStat
+  verified: MoneyStat
+  pending: MoneyStat
+  loan?: CallSummaryLoan | null
+  recent_interactions: RecentInteractionItem[]
+}

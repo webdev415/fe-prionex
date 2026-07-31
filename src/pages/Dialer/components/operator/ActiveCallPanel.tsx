@@ -1,39 +1,20 @@
-/**
- * Operator active-call workspace (KAN-379, design: operator-02).
- *
- * Shown while a live call is routed to the operator: a call bar with a live
- * timer, the client-info block (identity, link to the client card, 5 recent
- * interactions), the standard interaction-creation form, and the TA-chain
- * stepper. Reuses AddNoteModal (interaction form), ChainExecutor (TA chain),
- * and useClientActivities — the same components used across the CRM.
- *
- * NOTE (§7.3): the design shows the interaction form inline; this reuses the
- * canonical AddNoteModal (opened from the panel) so the form stays identical to
- * the rest of the CRM. The phone is pre-filled and read-only.
- */
-
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { useCreateInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import type { RoutedCall } from '@/features/dialer'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import {
-  AddNoteModal,
-  type InteractionCreateData,
-} from '@/pages/ClientManagement/components/AddNoteModal'
 import { ChainExecutor } from '@/pages/ClientManagement/components/taChains/ChainExecutor'
 
+import { CallInteractionForm } from './CallInteractionForm'
 import { ClientInfoPopup } from './ClientInfoPopup'
-import { RecentInteractions } from './RecentInteractions'
+import { ToggleChip } from './ToggleChip'
 
 interface ActiveCallPanelProps {
   routedCall: RoutedCall
   campaignName: string
+  waitTimeSeconds: number
   autoConnect: boolean
   onToggleAutoConnect: (value: boolean) => void
   onLeave: () => void
@@ -50,6 +31,7 @@ function fmtClock(totalSeconds: number): string {
 export function ActiveCallPanel({
   routedCall,
   campaignName,
+  waitTimeSeconds,
   autoConnect,
   onToggleAutoConnect,
   onLeave,
@@ -58,54 +40,66 @@ export function ActiveCallPanel({
 }: ActiveCallPanelProps) {
   const { t } = useTranslation('common')
 
+  const [phase, setPhase] = useState<'active' | 'wrapup'>('active')
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const [wrapRemaining, setWrapRemaining] = useState(waitTimeSeconds)
+  const [infoOpen, setInfoOpen] = useState(false)
+
   useEffect(() => {
+    if (phase !== 'active') return
     const id = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'wrapup') return
+    if (wrapRemaining <= 0) {
+      onHangup()
+      return
+    }
+    const id = setTimeout(() => setWrapRemaining((r) => r - 1), 1000)
+    return () => clearTimeout(id)
+  }, [phase, wrapRemaining, onHangup])
+
   const elapsed = Math.max(
     0,
     Math.floor((nowMs - new Date(routedCall.started_at).getTime()) / 1000)
   )
-
-  const [noteOpen, setNoteOpen] = useState(false)
-  const [infoOpen, setInfoOpen] = useState(false)
-  const createInteraction = useCreateInteraction()
-
-  const handleSaveInteraction = async (data: InteractionCreateData) => {
-    try {
-      await createInteraction.mutateAsync({ clientId: routedCall.client_id, data })
-      toast.success(t('dialer.call.interactionSaved', 'Interaction saved'))
-      setNoteOpen(false)
-    } catch {
-      // useCreateInteraction handles its own error surface.
-    }
-  }
 
   const lineLabel =
     routedCall.line_type === 'white'
       ? t('dialer.call.white', 'WHITE')
       : t('dialer.call.grey', 'GREY')
 
+  const isWrapup = phase === 'wrapup'
+
   return (
-    <section className="border-border flex min-h-[420px] flex-col rounded-xl border bg-white p-4">
-      {/* Header */}
+    <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="bg-success-500 h-2 w-2 rounded-full" />
-          <h3 className="text-foreground text-sm font-semibold">
-            {t('dialer.call.activeCall', 'Active Call')} · {campaignName}
-          </h3>
+        <div className="text-foreground flex items-center gap-2 text-sm font-medium">
+          <span>
+            {isWrapup
+              ? t('dialer.call.wrapUp', 'Wrap-up')
+              : t('dialer.call.activeCall', 'Active Call')}
+          </span>
+          <span className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+            <span
+              className={cn(
+                'h-1.5 w-1.5 shrink-0 rounded-full',
+                isWrapup ? 'bg-warning-500' : 'bg-success-500'
+              )}
+            />
+            {campaignName}
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-muted-foreground flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <ToggleChip active={autoConnect} onClick={() => onToggleAutoConnect(!autoConnect)}>
             {t('dialer.call.autoConnection', 'Auto-connection')}
-            <ToggleSwitch checked={autoConnect} onChange={onToggleAutoConnect} />
-          </label>
+          </ToggleChip>
           <Button
             variant="secondary"
             size="sm"
-            leftIcon={<Icons.CallEnd size={16} />}
+            leftIcon={<Icons.LoginSquare01 size={16} />}
             onClick={onLeave}
             isLoading={leaving}
           >
@@ -114,74 +108,61 @@ export function ActiveCallPanel({
         </div>
       </div>
 
-      {/* Call bar */}
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-[#1f3d3a] px-4 py-3 text-white">
+      <div className="bg-sidebar text-sidebar-foreground flex items-center justify-between gap-3 rounded-lg px-4 py-3">
         <span className="text-base font-medium">{routedCall.phone}</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm">
             <Icons.Clock01 size={16} />
-            {fmtClock(elapsed)}
+            {isWrapup
+              ? t('dialer.call.wrapUpIn', 'Wrap-up {{s}}s', { s: wrapRemaining })
+              : fmtClock(elapsed)}
           </span>
-          <span className="rounded bg-white/15 px-2 py-0.5 text-xs font-semibold">{lineLabel}</span>
-          <button
-            type="button"
-            onClick={onHangup}
-            aria-label={t('dialer.call.hangUp', 'Hang up')}
-            className="bg-error-500 hover:bg-error-600 flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-          >
-            <Icons.CallEnd size={18} />
-          </button>
+          <span className="rounded bg-black/25 px-2 py-0.5 text-xs font-semibold">{lineLabel}</span>
+          {isWrapup ? (
+            <button
+              type="button"
+              onClick={onHangup}
+              className="rounded-md bg-white/15 px-2 py-1 text-xs font-medium hover:bg-white/25"
+            >
+              {t('dialer.call.skip', 'Skip')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPhase('wrapup')}
+              aria-label={t('dialer.call.hangUp', 'Hang up')}
+              className="bg-error-500 hover:bg-error-600 flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors"
+            >
+              <Icons.CallEnd size={18} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Body */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Left: client info + interaction */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_5fr]">
         <div className="flex flex-col gap-4">
-          <div className="border-border rounded-lg border p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-foreground truncate text-base font-semibold">
-                  {routedCall.client_name}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-sm">{routedCall.phone}</p>
-              </div>
-              <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setInfoOpen(true)}>
-                  {t('dialer.call.clientInfo', 'Client info')}
-                </Button>
-                <a
-                  href={`/dashboard/clients/${routedCall.client_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Button variant="ghost" size="sm" rightIcon={<Icons.ArrowRight02 size={16} />}>
-                    {t('dialer.call.viewClient', 'View Client')}
-                  </Button>
-                </a>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-muted-foreground mb-2 text-xs font-medium">
-                {t('dialer.call.recentInteractions', 'Recent interactions with this client')}
-              </p>
-              <RecentInteractions clientId={routedCall.client_id} />
-            </div>
-          </div>
-
-          <Button
-            variant="primary"
-            leftIcon={<Icons.Add size={16} />}
-            onClick={() => setNoteOpen(true)}
-            className={cn('self-start')}
-          >
-            {t('dialer.call.addInteraction', 'Add interaction')}
-          </Button>
+          <CallInteractionForm
+            clientId={routedCall.client_id}
+            clientName={routedCall.client_name}
+            phone={routedCall.phone}
+          />
         </div>
 
-        {/* Right: TA chain */}
-        <div className="border-border rounded-lg border p-4">
+        <div className="border-border border-l pl-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-foreground text-sm font-semibold">
+              {t('dialer.call.taChain', 'TA Chain')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setInfoOpen(true)}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
+            >
+              <Icons.User02 size={14} />
+              {t('dialer.call.viewClient', 'View Client')}
+              <Icons.ArrowRight02 size={16} />
+            </button>
+          </div>
           <ChainExecutor
             clientId={routedCall.client_id}
             clientName={routedCall.client_name}
@@ -190,15 +171,6 @@ export function ActiveCallPanel({
           />
         </div>
       </div>
-
-      {/* Interaction form (canonical) — phone pre-filled + read-only */}
-      <AddNoteModal
-        open={noteOpen}
-        onClose={() => setNoteOpen(false)}
-        phoneNumber={routedCall.phone}
-        clientId={routedCall.client_id}
-        onSave={handleSaveInteraction}
-      />
 
       <ClientInfoPopup
         open={infoOpen}

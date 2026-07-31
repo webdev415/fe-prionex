@@ -76,6 +76,7 @@
     "operator": {
       "myCampaigns": "My Campaigns",
       "availableCampaigns": "Available campaigns for your department",
+      "campaignCount": "{{count}} campaigns",
       "noCampaigns": "No campaigns available yet.",
       "selectCampaignTitle": "Select a campaign",
       "selectCampaignHint": "Select a campaign from the list on the left to start the dialer.",
@@ -101,13 +102,16 @@
       "grey": "GREY",
       "hangUp": "Hang up",
       "phone": "Phone",
-      "clientInfo": "Client info",
       "viewClient": "View Client",
       "recentInteractions": "Recent interactions with this client",
       "noInteractions": "No interactions yet.",
       "interaction": "Interaction",
       "addInteraction": "Add interaction",
-      "interactionSaved": "Interaction saved"
+      "interactionSaved": "Interaction saved",
+      "chainStepLabel": "Step {{step}} - Collection: {{label}}",
+      "chainStepCreditLabel": "Step 9 - Collection: Credit *",
+      "chainContinue": "Continue",
+      "chainDemoNotice": "This is a demo chain — no data was saved."
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -117,7 +121,7 @@
     },
     "queueStatus": {
       "active": "Active",
-      "paused": "Paused",
+      "paused": "Pause",
       "empty": "Queue is empty",
       "inactive": "Inactive"
     },

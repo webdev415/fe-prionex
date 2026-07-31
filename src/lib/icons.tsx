@@ -184,6 +184,8 @@ import {
   AddMaleIcon,
   Profile02Icon,
   RightToLeftListNumberIcon,
+  Calling02Icon,
+  LoginSquare01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -444,6 +446,8 @@ export const Icons = {
   ArtificialIntelligence08: (props: Omit<IconProps, 'icon'>) => (
     <Icon icon={ArtificialIntelligence08Icon} {...props} />
   ),
+  Calling02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calling02Icon} {...props} />,
+  LoginSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LoginSquare01Icon} {...props} />,
 }
 
 /**
@@ -611,6 +615,8 @@ export {
   ArrowUpDoubleIcon,
   EqualSignIcon,
   ArtificialIntelligence08Icon,
+  Calling02Icon,
+  LoginSquare01Icon,
 }
 
 /**

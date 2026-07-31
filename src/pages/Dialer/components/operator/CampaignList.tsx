@@ -2,13 +2,15 @@
  * Operator campaign list (KAN-379, design: operator-01).
  *
  * The left column of the operator surface: the campaigns available to the
- * operator's department, each card showing live counts. The joined campaign is
- * highlighted; clicking a card selects it.
+ * operator's department, each card showing live counts. The currently
+ * selected campaign is highlighted with a primary-tinted row + left accent
+ * bar; clicking a row selects it.
  */
 
 import { useTranslation } from 'react-i18next'
 
 import type { DialerQueue } from '@/features/dialer'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 interface CampaignListProps {
@@ -18,14 +20,35 @@ interface CampaignListProps {
   onSelect: (id: number) => void
 }
 
-function statusDotClass(status: DialerQueue['status']): string {
+function statusMeta(
+  status: DialerQueue['status'],
+  t: (key: string, fallback: string) => string
+): { label: string; textClass: string; dotClass: string } {
   switch (status) {
     case 'active':
-      return 'bg-success-500'
+      return {
+        label: t('dialer.queueStatus.active', 'Active'),
+        textClass: 'text-success-600',
+        dotClass: 'bg-success-500',
+      }
     case 'paused':
-      return 'bg-amber-500'
+      return {
+        label: t('dialer.queueStatus.paused', 'Pause'),
+        textClass: 'text-warning-600',
+        dotClass: 'bg-warning-500',
+      }
+    case 'empty':
+      return {
+        label: t('dialer.queueStatus.empty', 'Queue is empty'),
+        textClass: 'text-muted-foreground',
+        dotClass: 'bg-muted-foreground',
+      }
     default:
-      return 'bg-muted-foreground/40'
+      return {
+        label: t('dialer.queueStatus.inactive', 'Inactive'),
+        textClass: 'text-muted-foreground',
+        dotClass: 'bg-muted-foreground',
+      }
   }
 }
 
@@ -33,71 +56,101 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
   const { t } = useTranslation('common')
 
   return (
-    <aside className="border-border rounded-xl border bg-white p-4">
-      <div className="mb-3">
-        <h2 className="text-foreground text-sm font-semibold">
-          {t('dialer.operator.myCampaigns', 'My Campaigns')}
-        </h2>
-        <p className="text-muted-foreground mt-1 text-xs">
-          {t('dialer.operator.availableCampaigns', 'Available campaigns for your department')}
-        </p>
+    <aside className="border-border bg-card/60 relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
+      <div className="bg-card relative z-10 flex shrink-0 items-start justify-between gap-2 p-4 pb-3">
+        <div>
+          <h2 className="text-foreground text-sm font-semibold">
+            {t('dialer.operator.myCampaigns', 'My Campaigns')}
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {t('dialer.operator.availableCampaigns', 'Available campaigns for your department')}
+          </p>
+        </div>
+        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium">
+          {t('dialer.operator.campaignCount', '{{count}} campaigns', {
+            count: campaigns.length,
+          })}
+        </span>
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="text-muted-foreground py-6 text-sm">
+        <div className="bg-card text-muted-foreground px-4 pb-4 text-sm">
           {t('dialer.operator.noCampaigns', 'No campaigns available yet.')}
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {campaigns.map((c) => {
-            const isSelected = c.id === selectedId
-            const isJoined = c.id === joinedId
-            return (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(c.id)}
-                  className={cn(
-                    'w-full rounded-lg border p-3 text-left transition-colors',
-                    isSelected
-                      ? 'border-primary-500 bg-primary-50/50'
-                      : 'border-border hover:border-primary-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-foreground truncate text-sm font-medium">{c.name}</span>
-                    <span className="flex items-center gap-1.5">
-                      {isJoined && (
-                        <span className="bg-success-50 text-success-600 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
-                          {t('dialer.operator.joined', 'Joined')}
+        // `relative` + `flex-1 min-h-0` wrapper has no in-flow children, so it
+        // never contributes its own content height to the grid row's intrinsic
+        // sizing — only the header does. The list itself is absolutely
+        // positioned to fill whatever height the row ends up resolving to
+        // (driven by the right-hand panel), and scrolls internally within
+        // that fixed box regardless of how many campaigns it holds.
+        <div className="relative min-h-0 flex-1">
+          {/* `bg-card` here (not just on each row) keeps any leftover space
+              below the last row — when the list is shorter than the
+              right-hand panel's height — looking like part of the same solid
+              card instead of falling through to the aside's translucent
+              backdrop. */}
+          <ul className="border-border divide-border dialer-campaign-list-scroll bg-card absolute inset-0 divide-y overflow-y-auto border-t">
+            {campaigns.map((c) => {
+              const isSelected = c.id === selectedId
+              const isJoined = c.id === joinedId
+              const meta = statusMeta(c.status, t)
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(c.id)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      'block w-full border-l-4 px-4 py-3 text-left transition-colors',
+                      isSelected
+                        ? 'bg-primary/10 border-l-primary-500'
+                        : 'bg-card hover:bg-muted/40 border-l-transparent'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
+                        <span className="truncate">{c.name}</span>
+                        {isJoined && (
+                          <span
+                            className="bg-success-500 h-1.5 w-1.5 shrink-0 rounded-full"
+                            title={t('dialer.operator.joined', 'Joined')}
+                          />
+                        )}
+                      </span>
+                      <span className={cn('flex items-center gap-1.5 text-xs', meta.textClass)}>
+                        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta.dotClass)} />
+                        {meta.label}
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                      <span className="flex items-center gap-1">
+                        <Icons.RightToLeftListNumber size={12} strokeWidth={1.8} />
+                        {t('dialer.operator.inQueue', 'In queue')}:{' '}
+                        {(c.total_in_queue ?? 0).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Icons.UserMultiple02 size={12} strokeWidth={1.8} />
+                        {t('dialer.operator.operators', 'Operators')}: {c.operators_connected ?? 0}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Icons.Flash size={12} strokeWidth={1.8} />
+                        {t('dialer.operator.aggressiveness', 'Aggressiveness')}: {c.aggressiveness}×
+                      </span>
+                      {c.calling_hours_start && c.calling_hours_end && (
+                        <span className="flex items-center gap-1">
+                          <Icons.Clock01 size={12} strokeWidth={1.8} />
+                          {t('dialer.operator.hours', 'Hours')}: {c.calling_hours_start}–
+                          {c.calling_hours_end}
                         </span>
                       )}
-                      <span className={cn('h-1.5 w-1.5 rounded-full', statusDotClass(c.status))} />
-                    </span>
-                  </div>
-                  <div className="text-muted-foreground mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <span>
-                      {t('dialer.operator.inQueue', 'In queue')}:{' '}
-                      {(c.total_in_queue ?? 0).toLocaleString()}
-                    </span>
-                    <span>
-                      {t('dialer.operator.operators', 'Operators')}: {c.operators_connected ?? 0}
-                    </span>
-                    <span>
-                      {t('dialer.operator.aggressiveness', 'Aggressiveness')}: {c.aggressiveness}×
-                    </span>
-                    {c.calling_hours_start && c.calling_hours_end && (
-                      <span>
-                        {t('dialer.operator.hours', 'Hours')}: {c.calling_hours_start}–
-                        {c.calling_hours_end}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
     </aside>
   )

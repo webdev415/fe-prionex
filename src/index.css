@@ -584,6 +584,47 @@ html.theme-switching * {
     scrollbar-width: thin;
     scrollbar-color: #9ca3af transparent;
   }
+
+  /* Dialer operator view — baseline is the remaining viewport height below
+     the fixed top bar + page title, so both columns match that height by
+     default. If the right-hand panel's content needs more room than the
+     screen, the row grows to fit it (grid stretch keeps the campaign list
+     column the same height) and the page scrolls instead of clipping the
+     panel. The campaign list's own row-list still scrolls internally via
+     `.dialer-campaign-list-scroll`, independent of this. */
+  .dialer-operator-view {
+    min-height: max(560px, calc(100vh - 150px));
+  }
+
+  /* Dialer campaign list — thin, theme-aware scrollbar for the operator's
+     "My Campaigns" panel. */
+  .dialer-campaign-list-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent) transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer components {
