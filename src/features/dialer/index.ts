@@ -2,11 +2,7 @@
  * Dialer feature barrel (KAN-379).
  */
 
-export {
-  dialerService,
-  default as dialerServiceDefault,
-  USE_DIALER_MOCK,
-} from './api/dialerService'
+export { dialerService, default as dialerServiceDefault } from './api/dialerService'
 export * from './types'
 export * from './constants/dialer'
 export {
