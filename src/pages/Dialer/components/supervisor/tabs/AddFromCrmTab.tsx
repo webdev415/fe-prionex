@@ -10,7 +10,7 @@
  * `responsible_employee_ids` (see plan §7.5).
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -131,15 +131,33 @@ export function AddFromCrmTab() {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
+  // Capture each client's real phone (from the loaded rows) as they're ticked,
+  // so the queue gets the real number even when selecting across pages.
+  const selectedPhones = useRef<Map<number, string | null>>(new Map())
+  const handleSelectionChange = (next: Set<number | string>) => {
+    for (const id of next) {
+      const nid = Number(id)
+      if (!selectedPhones.current.has(nid)) {
+        const row = clients.find((c) => c.id === nid)
+        if (row) selectedPhones.current.set(nid, row.phone_primary ?? null)
+      }
+    }
+    setSelected(next)
+  }
+  const resetSelection = () => {
+    selectedPhones.current = new Map()
+    setSelected(new Set())
+  }
+
   const applyFilters = () => {
     setApplied(draft)
-    setSelected(new Set())
+    resetSelection()
     setPage(1)
   }
   const clearFilters = () => {
     setDraft(EMPTY_FILTERS)
     setApplied(EMPTY_FILTERS)
-    setSelected(new Set())
+    resetSelection()
     setPage(1)
   }
   const handlePageSizeChange = (size: number) => {
@@ -149,13 +167,24 @@ export function AddFromCrmTab() {
 
   const handleAdd = async () => {
     if (!destQueueId || selected.size === 0) return
-    const clientIds = [...selected].map(Number)
+    const payload = [...selected].map(Number).map((id) => ({
+      client_id: id,
+      phone_number: selectedPhones.current.get(id) ?? null,
+    }))
     try {
-      const res = await addMutation.mutateAsync({ queueId: destQueueId, clientIds })
+      const res = await addMutation.mutateAsync({ queueId: destQueueId, clients: payload })
       toast.success(
-        t('dialer.crm.added', '{{count}} clients added to the queue', { count: res.added_count })
+        res.skipped_count > 0
+          ? t(
+              'dialer.crm.addedWithSkipped',
+              '{{count}} clients added ({{skipped}} skipped — no phone)',
+              { count: res.added_count, skipped: res.skipped_count }
+            )
+          : t('dialer.crm.added', '{{count}} clients added to the queue', {
+              count: res.added_count,
+            })
       )
-      setSelected(new Set())
+      resetSelection()
     } catch {
       // onError toast handled by the mutation.
     }
@@ -330,7 +359,7 @@ export function AddFromCrmTab() {
             data={clients}
             enableBulkSelection
             selectedItems={selected}
-            onSelectionChange={setSelected}
+            onSelectionChange={handleSelectionChange}
             totalCount={total}
             emptyMessage={t('dialer.crm.empty', 'No clients match these filters.')}
             // Destination + action live in the table's bulk header (design:

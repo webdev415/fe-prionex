@@ -91,10 +91,11 @@ export class DialerHttpService {
     return response.data
   }
 
-  async addClientsFromCrm(queueId: number, clientIds: number[]): Promise<{ added_count: number }> {
-    const response = await api.post(`${base}/queues/${queueId}/numbers/from-crm`, {
-      client_ids: clientIds,
-    })
+  async addClientsFromCrm(
+    queueId: number,
+    clients: { client_id: number; phone_number: string | null }[]
+  ): Promise<{ added_count: number; skipped_count: number }> {
+    const response = await api.post(`${base}/queues/${queueId}/numbers/from-crm`, { clients })
     return response.data
   }
 

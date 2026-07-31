@@ -213,7 +213,8 @@
       "empty": "No clients match these filters.",
       "loadError": "Failed to load clients.",
       "showingFirst": "Showing the first {{shown}} of {{total}} clients.",
-      "added": "{{count}} clients added to the queue"
+      "added": "{{count}} clients added to the queue",
+      "addedWithSkipped": "{{count}} clients added ({{skipped}} skipped — no phone)"
     },
     "analysis": {
       "operatorsInLine": "Operators in Line",

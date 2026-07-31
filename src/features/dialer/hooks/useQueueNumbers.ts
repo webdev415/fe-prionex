@@ -55,8 +55,12 @@ export function useConfirmQueueUpload() {
 /** Bulk-add CRM clients to a queue (design: supervisor-06 "Add from CRM"). */
 export function useAddClientsToQueue() {
   const queryClient = useQueryClient()
-  return useMutation<{ added_count: number }, Error, { queueId: number; clientIds: number[] }>({
-    mutationFn: ({ queueId, clientIds }) => dialerService.addClientsFromCrm(queueId, clientIds),
+  return useMutation<
+    { added_count: number; skipped_count: number },
+    Error,
+    { queueId: number; clients: { client_id: number; phone_number: string | null }[] }
+  >({
+    mutationFn: ({ queueId, clients }) => dialerService.addClientsFromCrm(queueId, clients),
     onSuccess: (_data, { queueId }) => {
       queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
       queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all })
