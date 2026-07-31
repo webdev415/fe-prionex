@@ -496,6 +496,83 @@ describe('CallDialogModal', () => {
       expect(mockOnCallEnd).toHaveBeenCalledWith(0, 'rejected')
     })
 
+    const candidate = (id: number, name: string) => ({
+      client_id: id,
+      client_name: name,
+      responsible_employee_id: null,
+      contact_comment: null,
+      contact_source: null,
+      contact_type_name: null,
+      recent_interactions: [],
+      loans: [],
+    })
+
+    it('offers a picker when the number belongs to several clients', () => {
+      const onSelect = vi.fn()
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[candidate(1, 'Іван Петренко'), candidate(2, 'Марія Коваль')]}
+          selectedIncomingClientId={1}
+          onSelectIncomingClient={onSelect}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('Several clients found')).toBeInTheDocument()
+      fireEvent.click(screen.getByLabelText('Марія Коваль'))
+
+      expect(onSelect).toHaveBeenCalledWith(2)
+    })
+
+    it('shows no picker when exactly one client matched', () => {
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[candidate(1, 'Іван Петренко')]}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.queryByText('Several clients found')).not.toBeInTheDocument()
+    })
+
+    it('shows the not-found state, with no picker, when nobody matched', () => {
+      const onSearch = vi.fn()
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[]}
+          onSearchByPhone={onSearch}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('Client not found')).toBeInTheDocument()
+      expect(screen.queryByText('Several clients found')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Search by this number' }))
+      expect(onSearch).toHaveBeenCalled()
+    })
+
+    it('still shows the number and reject control when the caller is unknown', () => {
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          phoneNumber="+380971234567"
+          incomingClients={[]}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('+380971234567')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
+    })
+
     it('renders the caller context: annotation, responsible and history', () => {
       render(
         <CallDialogModal

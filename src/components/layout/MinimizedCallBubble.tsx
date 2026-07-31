@@ -469,6 +469,7 @@ export function MinimizedCallBubble() {
           callId={minimizedCall.callId}
           loans={minimizedCall.loans}
           incomingContext={minimizedCall.incomingContext}
+          incomingClients={minimizedCall.incomingClients}
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
           minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}

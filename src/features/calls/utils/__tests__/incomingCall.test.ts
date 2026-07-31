@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { IncomingCallClient, IncomingCallData } from '../../types'
-import { buildIncomingCallLoans, resolvePrimaryClient } from '../incomingCall'
+import { buildIncomingCallLoans, isCallerUnresolved, resolvePrimaryClient } from '../incomingCall'
 
 function client(overrides: Partial<IncomingCallClient> = {}): IncomingCallClient {
   return {
@@ -47,6 +47,35 @@ describe('resolvePrimaryClient', () => {
     const data = payload({ clients: [client({ client_id: 9 }), client({ client_id: 3 })] })
 
     expect(resolvePrimaryClient(data)?.client_id).toBe(9)
+  })
+
+  it("lets the operator's choice override the backend primary", () => {
+    const data = payload({
+      client_id: 1,
+      clients: [client({ client_id: 1 }), client({ client_id: 2 })],
+    })
+
+    expect(resolvePrimaryClient(data, 2)?.client_id).toBe(2)
+  })
+
+  it('ignores a selection that is not among the candidates', () => {
+    const data = payload({ client_id: 1, clients: [client({ client_id: 1 })] })
+
+    expect(resolvePrimaryClient(data, 999)?.client_id).toBe(1)
+  })
+})
+
+describe('isCallerUnresolved', () => {
+  it('is true when the number matched nobody', () => {
+    expect(isCallerUnresolved(payload({ clients: [] }))).toBe(true)
+  })
+
+  it('is false when at least one client matched', () => {
+    expect(isCallerUnresolved(payload({ clients: [client()] }))).toBe(false)
+  })
+
+  it('is false without an incoming call at all', () => {
+    expect(isCallerUnresolved(null)).toBe(false)
   })
 })
 
@@ -118,6 +147,20 @@ describe('buildIncomingCallLoans', () => {
     expect(row.saleDate).toBe('2024-03-12')
     expect(row.lastContact).toBe('2025-12-03T14:30:00')
     expect(row.loanPrincipal).toBe(40000)
+  })
+
+  it('re-groups around the client the operator picked', () => {
+    const data = payload({
+      client_id: 1,
+      loans: [primaryLoan, thirdPartyLoan],
+      clients: [
+        client({ client_id: 1, loans: [primaryLoan] }),
+        client({ client_id: 2, loans: [thirdPartyLoan] }),
+      ],
+    })
+
+    // Picking client 2 makes their debt the primary group, not the default one.
+    expect(buildIncomingCallLoans(data, 2)!.map((r) => r.priority)).toEqual(['High', 'Critical'])
   })
 
   it('treats loans as the caller’s own when no client breakdown is present', () => {

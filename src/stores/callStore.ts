@@ -43,6 +43,7 @@ export interface MinimizedCallInfo {
   // back the caller card rather than an empty modal.
   loans?: IncomingModalLoan[]
   incomingContext?: IncomingCallClient | null
+  incomingClients?: IncomingCallClient[]
   // For call recording
   callData?: {
     type: string

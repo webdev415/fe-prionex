@@ -66,6 +66,13 @@ export interface CallDialogModalProps {
   loans?: IncomingModalLoan[]
   /** Screen-pop context for the ringing state: annotation, responsible, history. */
   incomingContext?: IncomingCallClient | null
+  /** Every client the calling number resolved to. Length drives the ringing UI:
+   *  0 → "client not found", 1 → context only, >1 → the operator picks one. */
+  incomingClients?: IncomingCallClient[]
+  selectedIncomingClientId?: number | null
+  onSelectIncomingClient?: (clientId: number) => void
+  /** Opens the client list pre-seeded with the calling number. */
+  onSearchByPhone?: () => void
   /** Answering has no backend path yet, so the control stays hidden by default. */
   answerEnabled?: boolean
 }
@@ -109,6 +116,10 @@ export function CallDialogModal({
   spamOptionEnabled = true,
   loans = [],
   incomingContext = null,
+  incomingClients = [],
+  selectedIncomingClientId = null,
+  onSelectIncomingClient,
+  onSearchByPhone,
   answerEnabled = false,
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
@@ -564,6 +575,7 @@ export function CallDialogModal({
         manualPhoneDigits,
         loans,
         incomingContext,
+        incomingClients,
         timestamp: Date.now(),
       })
       // If onMinimize is provided, use it instead of onClose
@@ -589,6 +601,7 @@ export function CallDialogModal({
       manualPhoneDigits,
       loans,
       incomingContext,
+      incomingClients,
       onMinimize,
       onClose,
     ]
@@ -671,7 +684,24 @@ export function CallDialogModal({
             </div>
           </div>
 
-          <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
+          {/* Guard on the context too: a call restored from minimized carries the
+              resolved client but not the full candidate list, and must not be
+              mistaken for an unresolved caller. */}
+          {incomingClients.length === 0 && !incomingContext ? (
+            <IncomingCallerNotFound onSearchByPhone={onSearchByPhone} t={t} />
+          ) : (
+            <>
+              {incomingClients.length > 1 && (
+                <IncomingClientPicker
+                  clients={incomingClients}
+                  selectedClientId={incomingContext?.client_id ?? selectedIncomingClientId}
+                  onSelect={onSelectIncomingClient}
+                  t={t}
+                />
+              )}
+              <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
+            </>
+          )}
 
           {/* Loans Information */}
           {loans.length > 0 && (
@@ -1189,6 +1219,100 @@ export function CallDialogModal({
 type TFn = (key: string, fallback: string) => string
 
 /**
+ * Shown when the calling number belongs to more than one client. The operator's
+ * choice anchors the popup and becomes the context any interaction is filed
+ * against, so nothing is assumed on their behalf.
+ */
+function IncomingClientPicker({
+  clients,
+  selectedClientId,
+  onSelect,
+  t,
+}: {
+  clients: IncomingCallClient[]
+  selectedClientId?: number | null
+  onSelect?: (clientId: number) => void
+  t: TFn
+}) {
+  return (
+    <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-foreground text-sm font-semibold">
+          {t('pages.clients.modals.callDialog.multipleClientsTitle', 'Several clients found')}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {t(
+            'pages.clients.modals.callDialog.multipleClientsHint',
+            'Choose who is calling — the interaction will be filed against this client.'
+          )}
+        </span>
+      </div>
+
+      <RadioGroup
+        value={selectedClientId != null ? String(selectedClientId) : undefined}
+        onValueChange={(value) => onSelect?.(Number(value))}
+      >
+        {clients.map((candidate) => (
+          <div
+            key={candidate.client_id}
+            className="border-border flex items-center justify-between gap-2 rounded-md border p-2"
+          >
+            <label
+              htmlFor={`incoming-client-${candidate.client_id}`}
+              className="flex cursor-pointer items-center gap-2"
+            >
+              <RadioItem
+                value={String(candidate.client_id)}
+                id={`incoming-client-${candidate.client_id}`}
+              />
+              <span className="text-foreground text-xs font-medium sm:text-sm">
+                {candidate.client_name}
+              </span>
+            </label>
+            <a
+              href={`/dashboard/clients/${candidate.client_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-700 shrink-0 text-xs font-medium"
+            >
+              {t('pages.clients.modals.callDialog.viewClient', 'View Client')}
+            </a>
+          </div>
+        ))}
+      </RadioGroup>
+    </div>
+  )
+}
+
+/**
+ * Shown when the number matched nobody in the operator's projects — including a
+ * client of another brand, which is deliberately indistinguishable from absent.
+ * No interaction can be filed without a client, so only the search route out is
+ * offered.
+ */
+function IncomingCallerNotFound({ onSearchByPhone, t }: { onSearchByPhone?: () => void; t: TFn }) {
+  return (
+    <div className="border-border flex flex-col items-center gap-2 rounded-lg border border-dashed p-4 text-center">
+      <Icons.UserSearch01 size={24} className="text-muted-foreground" strokeWidth={1.5} />
+      <span className="text-foreground text-sm font-medium">
+        {t('pages.clients.modals.callDialog.clientNotFound', 'Client not found')}
+      </span>
+      <span className="text-muted-foreground text-xs">
+        {t(
+          'pages.clients.modals.callDialog.clientNotFoundHint',
+          'This number is not linked to any client in your projects.'
+        )}
+      </span>
+      {onSearchByPhone && (
+        <Button variant="secondary" size="sm" onClick={onSearchByPhone} className="mt-1">
+          {t('pages.clients.modals.callDialog.searchByNumber', 'Search by this number')}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/**
  * The caller context the screen-pop is required to show beyond the debts:
  * how the number is annotated, whose number it is, who is responsible, and the
  * client's recent history. Renders nothing when the caller is unresolved.
@@ -1213,7 +1337,7 @@ function IncomingCallContext({
         <span className="text-foreground text-sm font-semibold">{context.client_name}</span>
         {targetClientId ? (
           <a
-            href={`/clients/${targetClientId}`}
+            href={`/dashboard/clients/${targetClientId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary-700 text-xs font-medium sm:text-sm"

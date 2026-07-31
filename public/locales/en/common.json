@@ -4829,7 +4829,12 @@
           "numberBelongsTo": "Number belongs to",
           "responsible": "Responsible",
           "numberComment": "Comment",
-          "recentInteractions": "Recent interactions"
+          "recentInteractions": "Recent interactions",
+          "multipleClientsTitle": "Several clients found",
+          "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
+          "clientNotFound": "Client not found",
+          "clientNotFoundHint": "This number is not linked to any client in your projects.",
+          "searchByNumber": "Search by this number"
         },
         "callLogCard": {
           "message": "Message",

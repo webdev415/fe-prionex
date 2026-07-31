@@ -429,6 +429,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           callId={minimizedCall.callId}
           loans={minimizedCall.loans}
           incomingContext={minimizedCall.incomingContext}
+          incomingClients={minimizedCall.incomingClients}
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
           minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
@@ -516,8 +517,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setPopupSuppressed(openCallModal !== null || existing !== null)
   }, [incomingCall])
 
-  const primaryIncomingClient = useMemo(() => resolvePrimaryClient(incomingCall), [incomingCall])
-  const incomingCallLoans = useMemo(() => buildIncomingCallLoans(incomingCall), [incomingCall])
+  // Which client the operator picked when the number is shared. Reset per call
+  // so a previous choice never leaks onto the next caller.
+  const [selectedIncomingClientId, setSelectedIncomingClientId] = useState<number | null>(null)
+  useEffect(() => {
+    setSelectedIncomingClientId(null)
+  }, [incomingCall?.call_id])
+
+  const primaryIncomingClient = useMemo(
+    () => resolvePrimaryClient(incomingCall, selectedIncomingClientId),
+    [incomingCall, selectedIncomingClientId]
+  )
+  const incomingCallLoans = useMemo(
+    () => buildIncomingCallLoans(incomingCall, selectedIncomingClientId),
+    [incomingCall, selectedIncomingClientId]
+  )
+
+  const handleSearchIncomingByPhone = useCallback(() => {
+    if (!incomingCall) return
+    // Mirrors the header search: the client list reads these off the store.
+    useSearchStore.getState().setSearchType('phone')
+    useSearchStore.getState().setSearchQuery(incomingCall.customer_phone)
+    navigate('/dashboard')
+  }, [incomingCall, navigate])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -1203,6 +1225,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             callId={incomingCall.call_id}
             loans={incomingCallLoans}
             incomingContext={primaryIncomingClient}
+            incomingClients={incomingCall.clients ?? []}
+            selectedIncomingClientId={selectedIncomingClientId}
+            onSelectIncomingClient={setSelectedIncomingClientId}
+            onSearchByPhone={handleSearchIncomingByPhone}
             onReject={dismissIncomingCall}
           />
         )}
