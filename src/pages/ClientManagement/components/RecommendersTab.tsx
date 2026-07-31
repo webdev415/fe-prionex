@@ -37,6 +37,7 @@ import {
   sortContactsByTypeOrder,
 } from '@/features/clients/utils/contactTypeVisualHelpers'
 import type { ContactTypeOption } from '@/features/clients/api/types'
+import { ContactTagDropdown } from './ContactTagDropdown'
 import {
   requiresDigitsOnly,
   hasNonDigitChars,
@@ -103,6 +104,7 @@ type ContactFormData = {
 }
 
 type RecommendersTabProps = {
+  clientId: number
   contacts: RecommenderContact[]
   contactTypesForSelect: ContactTypeOption[]
   contactTypesById: Map<number, ContactTypeOption>
@@ -124,7 +126,9 @@ type RecommendersTabProps = {
   onCancelEditor: () => void
   onDelete: (contactId: number) => void
   onOpenTagHistory: (contactId: number, phone: string) => void
-  onOpenTagModal: (contactId: number, phone: string) => void
+  openContactId: number | null
+  onOpenContactTagDropdown: (contactId: number) => void
+  onCloseContactTagDropdown: () => void
   onCall: (phone: string, contactTypeId: number | null) => void
   onSendSms: (phone: string) => void
   onSendMessage: (phone: string) => void
@@ -509,6 +513,7 @@ function MessageActionsButton({
 }
 
 function ContactCard({
+  clientId,
   contact,
   contactTypesById,
   canEditClient,
@@ -517,12 +522,15 @@ function ContactCard({
   onStartEdit,
   onDelete,
   onOpenTagHistory,
-  onOpenTagModal,
+  openContactId,
+  onOpenContactTagDropdown,
+  onCloseContactTagDropdown,
   onCall,
   onSendSms,
   onSendMessage,
   onStartInteraction,
 }: {
+  clientId: number
   contact: RecommenderContact
   contactTypesById: Map<number, ContactTypeOption>
   canEditClient: boolean
@@ -531,7 +539,9 @@ function ContactCard({
   onStartEdit: (contact: RecommenderContact) => void
   onDelete: (contactId: number) => void
   onOpenTagHistory: (contactId: number, phone: string) => void
-  onOpenTagModal: (contactId: number, phone: string) => void
+  openContactId: number | null
+  onOpenContactTagDropdown: (contactId: number) => void
+  onCloseContactTagDropdown: () => void
   onCall: (phone: string, contactTypeId: number | null) => void
   onSendSms: (phone: string) => void
   onSendMessage: (phone: string) => void
@@ -622,14 +632,14 @@ function ContactCard({
                       onSendSms={onSendSms}
                       onSendMessage={onSendMessage}
                     />
-                    <ActionIconButton
-                      primary
-                      title={t('pages.contactTags.tags', 'Tags')}
+                    <ContactTagDropdown
+                      clientId={clientId}
+                      contactId={contact.id}
+                      isOpen={openContactId === contact.id}
+                      onOpen={() => onOpenContactTagDropdown(contact.id)}
+                      onClose={onCloseContactTagDropdown}
                       data-testid="action-tag"
-                      onClick={() => onOpenTagModal(contact.id, contact.contactValue)}
-                    >
-                      <Icons.Tag01 size={15} className="shrink-0" />
-                    </ActionIconButton>
+                    />
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
                       <ActionIconButton
                         primary
@@ -684,7 +694,7 @@ function ContactCard({
                       type="button"
                       className="inline-flex cursor-pointer items-center rounded-full border-0 bg-transparent p-0 leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                       title={tag.category_name}
-                      onClick={() => onOpenTagModal(contact.id, contact.contactValue)}
+                      onClick={() => onOpenContactTagDropdown(contact.id)}
                     >
                       <TagBadge
                         name={tag.name}
@@ -816,6 +826,7 @@ function ContactSection({
           return (
             <ContactCard
               key={contact.id ?? `recommender-${index}-${contact.contactValue}`}
+              clientId={shared.clientId}
               contact={contact}
               contactTypesById={contactTypesById}
               canEditClient={canEditClient}
@@ -824,7 +835,9 @@ function ContactSection({
               onStartEdit={shared.onStartEdit}
               onDelete={shared.onDelete}
               onOpenTagHistory={shared.onOpenTagHistory}
-              onOpenTagModal={shared.onOpenTagModal}
+              openContactId={shared.openContactId}
+              onOpenContactTagDropdown={shared.onOpenContactTagDropdown}
+              onCloseContactTagDropdown={shared.onCloseContactTagDropdown}
               onCall={shared.onCall}
               onSendSms={shared.onSendSms}
               onSendMessage={shared.onSendMessage}

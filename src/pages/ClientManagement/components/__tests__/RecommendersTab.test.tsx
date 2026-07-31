@@ -15,6 +15,11 @@ vi.mock('@/hooks/usePermissions', () => ({
   useHasAnyPermission: () => true,
 }))
 
+vi.mock('@/features/contactTags/hooks/useContactTags', () => ({
+  useContactTags: () => ({ data: [], isLoading: false }),
+  useSetContactTags: () => ({ mutateAsync: vi.fn() }),
+}))
+
 const phoneType: ContactTypeOption = {
   id: 29,
   code: 'register_mobile_phone',
@@ -135,6 +140,7 @@ function otherContact(overrides: Partial<RecommenderContact> = {}): RecommenderC
 function renderTab(overrides: Partial<React.ComponentProps<typeof RecommendersTab>> = {}) {
   const onStartAdd = vi.fn()
   const props: React.ComponentProps<typeof RecommendersTab> = {
+    clientId: 1,
     contacts: [
       phoneContact({ id: 102, contactTypeId: 7, contactTypeCode: 'third_party_mobile_phone' }),
       phoneContact({
@@ -168,7 +174,9 @@ function renderTab(overrides: Partial<React.ComponentProps<typeof RecommendersTa
     onCancelEditor: vi.fn(),
     onDelete: vi.fn(),
     onOpenTagHistory: vi.fn(),
-    onOpenTagModal: vi.fn(),
+    openContactId: null,
+    onOpenContactTagDropdown: vi.fn(),
+    onCloseContactTagDropdown: vi.fn(),
     onCall: vi.fn(),
     onSendSms: vi.fn(),
     onSendMessage: vi.fn(),
