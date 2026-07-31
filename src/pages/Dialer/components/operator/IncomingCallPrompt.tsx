@@ -35,14 +35,14 @@ export function IncomingCallPrompt({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-foreground flex items-center gap-2 text-sm font-medium">
-          <span>{t('dialer.call.incomingCall', 'Incoming Call')}</span>
-          <span className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+        <div className="text-foreground flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium">
+          <span className="shrink-0">{t('dialer.call.incomingCall', 'Incoming Call')}</span>
+          <span className="bg-muted inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs font-medium">
             <span className="bg-warning-500 h-1.5 w-1.5 shrink-0 animate-pulse rounded-full" />
-            {campaignName}
+            <span className="truncate">{campaignName}</span>
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ToggleChip active={autoConnect} onClick={() => onToggleAutoConnect(!autoConnect)}>
             {t('dialer.call.autoConnection', 'Auto-connection')}
           </ToggleChip>

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { ActiveCallPanel } from './ActiveCallPanel'
 import { CampaignList } from './CampaignList'
 import { IncomingCallPrompt } from './IncomingCallPrompt'
+import { OperatorDialerSkeleton } from './OperatorDialerSkeleton'
 import { ToggleChip } from './ToggleChip'
 
 export function OperatorDialerView() {
@@ -97,158 +98,164 @@ export function OperatorDialerView() {
   const showActiveCall = isJoinedHere && routedCall != null && !queueComplete && isCallActive
 
   return (
-    <div className="dialer-operator-view grid grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
+    <div className="dialer-operator-view grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,420px)_1fr]">
       {isLoading ? (
-        <aside className="border-border bg-card text-muted-foreground h-full rounded-xl border p-4 text-sm">
-          {t('common.loading', 'Loading...')}
-        </aside>
+        <OperatorDialerSkeleton />
       ) : (
-        <CampaignList
-          campaigns={campaigns ?? []}
-          selectedId={activeId}
-          joinedId={joinedQueueId}
-          onSelect={setSelectedId}
-        />
+        <>
+          <CampaignList
+            campaigns={campaigns ?? []}
+            selectedId={activeId}
+            joinedId={joinedQueueId}
+            onSelect={setSelectedId}
+          />
+
+          {/* Persistent translucent panel — always rendered regardless of
+              selection/queue/call state, so the right section never falls back
+              to a flat/opaque or fully invisible background. */}
+          <section className="bg-card/60 flex h-full flex-col rounded-xl p-4 sm:p-6">
+            {!activeCampaign ? (
+              <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+                <Icons.Calling02 size={40} className="text-muted-foreground" strokeWidth={1.5} />
+                <h3 className="text-foreground mt-4 text-lg font-medium sm:text-xl">
+                  {t('dialer.operator.selectCampaignTitle', 'Select a campaign')}
+                </h3>
+                <p className="text-muted-foreground mt-1 max-w-xs text-sm">
+                  {t(
+                    'dialer.operator.selectCampaignHint',
+                    'Select a campaign from the list on the left to start the dialer.'
+                  )}
+                </p>
+              </div>
+            ) : showIncoming ? (
+              <IncomingCallPrompt
+                routedCall={routedCall!}
+                campaignName={activeCampaign.name}
+                autoConnect={autoConnect}
+                onToggleAutoConnect={setAutoConnect}
+                onAccept={() => setAcceptedCallId(routedCall!.call_id)}
+                onLeave={handleLeave}
+                leaving={leaveMutation.isPending}
+              />
+            ) : showActiveCall ? (
+              <ActiveCallPanel
+                key={routedCall!.call_id}
+                routedCall={routedCall!}
+                campaignName={activeCampaign.name}
+                waitTimeSeconds={activeCampaign.wait_time_seconds ?? 8}
+                autoConnect={autoConnect}
+                onToggleAutoConnect={setAutoConnect}
+                onLeave={handleLeave}
+                leaving={leaveMutation.isPending}
+                onHangup={handleHangup}
+              />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground text-sm">{statusLabel}</span>
+                    <span className="bg-muted text-foreground inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-sm font-medium">
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          displayStatus === 'active'
+                            ? 'bg-success-500'
+                            : displayStatus === 'paused'
+                              ? 'bg-warning-500'
+                              : 'bg-muted-foreground/50'
+                        )}
+                      />
+                      <span className="truncate">{activeCampaign.name}</span>
+                    </span>
+                  </div>
+                  {isJoinedHere ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ToggleChip active={autoConnect} onClick={() => setAutoConnect(!autoConnect)}>
+                        {t('dialer.call.autoConnection', 'Auto-connection')}
+                      </ToggleChip>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        leftIcon={<Icons.LoginSquare01 size={16} />}
+                        onClick={handleLeave}
+                        isLoading={leaveMutation.isPending}
+                      >
+                        {t('dialer.operator.leaveDialer', 'Leave Dialer')}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      leftIcon={<Icons.Phone size={18} />}
+                      onClick={handleJoin}
+                      isLoading={joinMutation.isPending}
+                      disabled={joinedQueueId != null && joinedQueueId !== activeCampaign.id}
+                    >
+                      {t('dialer.operator.joinDialer', 'Join Dialer')}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="text-muted-foreground mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+                  <div>
+                    <p className="flex items-center gap-1 text-xs">
+                      <Icons.RightToLeftListNumber size={12} strokeWidth={1.8} />
+                      {t('dialer.operator.inQueue', 'In queue')}
+                    </p>
+                    <p className="text-foreground text-base font-semibold">
+                      {(activeCampaign.total_in_queue ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="flex items-center gap-1 text-xs">
+                      <Icons.UserMultiple02 size={12} strokeWidth={1.8} />
+                      {t('dialer.operator.operators', 'Operators')}
+                    </p>
+                    <p className="text-foreground text-base font-semibold">
+                      {activeCampaign.operators_connected ?? 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="flex items-center gap-1 text-xs">
+                      <Icons.Flash size={12} strokeWidth={1.8} />
+                      {t('dialer.operator.aggressiveness', 'Aggressiveness')}
+                    </p>
+                    <p className="text-foreground text-base font-semibold">
+                      {activeCampaign.aggressiveness}×
+                    </p>
+                  </div>
+                  {activeCampaign.calling_hours_start && activeCampaign.calling_hours_end && (
+                    <div>
+                      <p className="flex items-center gap-1 text-xs">
+                        <Icons.Clock01 size={12} strokeWidth={1.8} />
+                        {t('dialer.operator.hours', 'Hours')}
+                      </p>
+                      <p className="text-foreground text-base font-semibold">
+                        {activeCampaign.calling_hours_start}–{activeCampaign.calling_hours_end}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 flex flex-1 flex-col items-center justify-center py-8 text-center">
+                  <Icons.Calling02 size={40} className="text-muted-foreground" strokeWidth={1.5} />
+                  <p className="text-muted-foreground mt-3 max-w-xs text-sm">
+                    {isJoinedHere
+                      ? t(
+                          'dialer.operator.waitingForCall',
+                          'Connected — waiting for the next call…'
+                        )
+                      : t(
+                          'dialer.operator.joinToStart',
+                          'Join the dialer to start receiving calls.'
+                        )}
+                  </p>
+                </div>
+              </>
+            )}
+          </section>
+        </>
       )}
-
-      {/* Persistent translucent panel — always rendered regardless of
-          selection/queue/call state, so the right section never falls back
-          to a flat/opaque or fully invisible background. */}
-      <section className="bg-card/60 flex h-full flex-col rounded-xl p-6">
-        {!activeCampaign ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center">
-            <Icons.Calling02 size={40} className="text-muted-foreground" strokeWidth={1.5} />
-            <h3 className="text-foreground mt-4 text-xl font-medium">
-              {t('dialer.operator.selectCampaignTitle', 'Select a campaign')}
-            </h3>
-            <p className="text-muted-foreground mt-1 max-w-xs text-sm">
-              {t(
-                'dialer.operator.selectCampaignHint',
-                'Select a campaign from the list on the left to start the dialer.'
-              )}
-            </p>
-          </div>
-        ) : showIncoming ? (
-          <IncomingCallPrompt
-            routedCall={routedCall!}
-            campaignName={activeCampaign.name}
-            autoConnect={autoConnect}
-            onToggleAutoConnect={setAutoConnect}
-            onAccept={() => setAcceptedCallId(routedCall!.call_id)}
-            onLeave={handleLeave}
-            leaving={leaveMutation.isPending}
-          />
-        ) : showActiveCall ? (
-          <ActiveCallPanel
-            key={routedCall!.call_id}
-            routedCall={routedCall!}
-            campaignName={activeCampaign.name}
-            waitTimeSeconds={activeCampaign.wait_time_seconds ?? 8}
-            autoConnect={autoConnect}
-            onToggleAutoConnect={setAutoConnect}
-            onLeave={handleLeave}
-            leaving={leaveMutation.isPending}
-            onHangup={handleHangup}
-          />
-        ) : (
-          <>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-sm">{statusLabel}</span>
-                <span className="bg-muted text-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium">
-                  <span
-                    className={cn(
-                      'h-1.5 w-1.5 shrink-0 rounded-full',
-                      displayStatus === 'active'
-                        ? 'bg-success-500'
-                        : displayStatus === 'paused'
-                          ? 'bg-warning-500'
-                          : 'bg-muted-foreground/50'
-                    )}
-                  />
-                  {activeCampaign.name}
-                </span>
-              </div>
-              {isJoinedHere ? (
-                <div className="flex items-center gap-2">
-                  <ToggleChip active={autoConnect} onClick={() => setAutoConnect(!autoConnect)}>
-                    {t('dialer.call.autoConnection', 'Auto-connection')}
-                  </ToggleChip>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<Icons.LoginSquare01 size={16} />}
-                    onClick={handleLeave}
-                    isLoading={leaveMutation.isPending}
-                  >
-                    {t('dialer.operator.leaveDialer', 'Leave Dialer')}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="primary"
-                  leftIcon={<Icons.Phone size={18} />}
-                  onClick={handleJoin}
-                  isLoading={joinMutation.isPending}
-                  disabled={joinedQueueId != null && joinedQueueId !== activeCampaign.id}
-                >
-                  {t('dialer.operator.joinDialer', 'Join Dialer')}
-                </Button>
-              )}
-            </div>
-
-            <div className="text-muted-foreground mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-              <div>
-                <p className="flex items-center gap-1 text-xs">
-                  <Icons.RightToLeftListNumber size={12} strokeWidth={1.8} />
-                  {t('dialer.operator.inQueue', 'In queue')}
-                </p>
-                <p className="text-foreground text-base font-semibold">
-                  {(activeCampaign.total_in_queue ?? 0).toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="flex items-center gap-1 text-xs">
-                  <Icons.UserMultiple02 size={12} strokeWidth={1.8} />
-                  {t('dialer.operator.operators', 'Operators')}
-                </p>
-                <p className="text-foreground text-base font-semibold">
-                  {activeCampaign.operators_connected ?? 0}
-                </p>
-              </div>
-              <div>
-                <p className="flex items-center gap-1 text-xs">
-                  <Icons.Flash size={12} strokeWidth={1.8} />
-                  {t('dialer.operator.aggressiveness', 'Aggressiveness')}
-                </p>
-                <p className="text-foreground text-base font-semibold">
-                  {activeCampaign.aggressiveness}×
-                </p>
-              </div>
-              {activeCampaign.calling_hours_start && activeCampaign.calling_hours_end && (
-                <div>
-                  <p className="flex items-center gap-1 text-xs">
-                    <Icons.Clock01 size={12} strokeWidth={1.8} />
-                    {t('dialer.operator.hours', 'Hours')}
-                  </p>
-                  <p className="text-foreground text-base font-semibold">
-                    {activeCampaign.calling_hours_start}–{activeCampaign.calling_hours_end}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex flex-1 flex-col items-center justify-center text-center">
-              <Icons.Calling02 size={40} className="text-muted-foreground" strokeWidth={1.5} />
-              <p className="text-muted-foreground mt-3 max-w-xs text-sm">
-                {isJoinedHere
-                  ? t('dialer.operator.waitingForCall', 'Connected — waiting for the next call…')
-                  : t('dialer.operator.joinToStart', 'Join the dialer to start receiving calls.')}
-              </p>
-            </div>
-          </>
-        )}
-      </section>
     </div>
   )
 }

@@ -94,9 +94,18 @@ export function ClientInfoPopup({
           </div>
 
           {isLoading ? (
-            <p className="text-muted-foreground py-6 text-sm">
-              {t('common.loading', 'Loading...')}
-            </p>
+            <div className="flex w-full flex-col items-center gap-4 py-4">
+              <div className="bg-muted h-[140px] w-[140px] animate-pulse rounded-full" />
+              <div className="bg-muted h-5 w-40 animate-pulse rounded" />
+              <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="border-border bg-card rounded-xl border p-4">
+                    <div className="bg-muted mb-2 h-3 w-20 animate-pulse rounded" />
+                    <div className="bg-muted h-5 w-28 animate-pulse rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <>
               <CallProgressRing percent={summary?.progress_pct ?? 0} />
