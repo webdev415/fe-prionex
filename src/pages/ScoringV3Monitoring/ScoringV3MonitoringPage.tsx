@@ -19,6 +19,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Bar,
   BarChart,
@@ -347,6 +348,19 @@ export function ScoringV3MonitoringPage() {
                 hint={`top 10% ≈ ${pct(summary.hazard_p90, 2)}`}
               />
             </div>
+
+            {avgShareOff && (
+              <div className="rounded-xl border border-[#FF9D00] bg-[#FFF6E6] px-4 py-3 text-sm text-[#8A5500]">
+                The AVG share is off target. tau is the knob that moves it —{' '}
+                <Link
+                  to="/dashboard/system-settings/scoring-v3-settings"
+                  className="font-medium underline"
+                >
+                  adjust it in v3 scoring settings
+                </Link>
+                . The change applies on the next scoring run.
+              </div>
+            )}
 
             <Panel
               title="How debts were split"

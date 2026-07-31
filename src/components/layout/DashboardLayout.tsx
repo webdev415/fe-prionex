@@ -883,6 +883,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
           },
+          {
+            // v3 tunables (KAN-792). Sits next to the shadow-run report because
+            // that is where tau actually gets decided.
+            path: '/dashboard/system-settings/scoring-v3-settings',
+            label: t('navigation.scoringV3Settings', 'v3 Scoring Settings'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
           // Scoring v3 operator work list (KAN-791). Hidden until THIS brand has
           // passed the shadow-run sign-off (KAN-794) — flipped per brand from the
           // scoring config, no rebuild.
@@ -892,7 +900,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   path: '/dashboard/operator-work-list',
                   label: t('navigation.operatorWorkList', 'Priority Work List'),
                   icon: 'chart-01',
-                  requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+                  // operators' own queue — see routes/index.tsx
+                  requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW_PRIORITY_SCORES,
                 },
               ]
             : []),

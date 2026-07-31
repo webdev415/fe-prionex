@@ -3,8 +3,14 @@
  *
  * Shows a brand's debts ranked by the v3 priority model — "call first" at the
  * top — with the bucket, the pay-probability, and the deciding rule ("why").
- * EXIT (do-not-call) debts are hidden by default. Sorted server-side by
- * priority_dollar (hazard × principal).
+ * EXIT (do-not-call) debts are hidden by default.
+ *
+ * Ordering is server-side (KAN-790): bucket SEVERITY first (CRIT → HIGH → AVG →
+ * LOW), then priority_dollar (hazard × principal) within the bucket. Sorting by
+ * priority_dollar alone put the biggest balances on top regardless of urgency —
+ * on the real portfolio that filled the first page with AVG debts while the
+ * CRIT ones sat further down. Do not re-sort client-side; the page is only one
+ * slice of the ordered result.
  *
  * This screen previews the v3 output during the shadow-run; it is gated behind a
  * permission and (in the nav) a feature flag until the model is signed off.

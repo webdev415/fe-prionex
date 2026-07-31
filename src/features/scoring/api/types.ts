@@ -107,3 +107,60 @@ export interface V3DriftResponse {
   to_summary: V3MonitoringResponse
   deltas: V3DriftDeltas
 }
+
+/**
+ * v3 scoring tunables (KAN-792) — every knob ops can change without a deploy.
+ *
+ * Mirrors `scoring-service app/schemas/v3_settings.V3ScoringSettings`, which is
+ * the schema of record and the only place these are validated. Keep the field
+ * names identical: the payload is passed straight through the gateway.
+ */
+export interface V3Settings {
+  /** ML cutoff: hazard >= tau -> AVG, else LOW. */
+  tau: number
+
+  /** Promise-to-pay windows, in days. */
+  ptp_active_window_days: number
+  ptp_broken_min_days: number
+  ptp_broken_max_days: number
+  ptp_active_max_age_days: number
+
+  /** Inbound-contact recency bands, in days. */
+  inbound_crit_max_days: number
+  inbound_high_max_days: number
+
+  /** Partial-payment cadence bands, in days. */
+  partial_avg_max_days: number
+  partial_high_max_days: number
+  /** null = a stale partial payment forces CRIT forever (package default). */
+  partial_pay_expire_days: number | null
+
+  /** Compliance de-prioritisation: more contacts than this in 7 days -> LOW. */
+  weekly_contact_cap: number
+
+  /** Floor rules: pin an engaged debt up from LOW to AVG. */
+  floor_min_real_payments: number
+  floor_min_reached_rate: number
+
+  /** result_code -> ttl_days overrides. Absent codes keep the package TTL. */
+  result_ttls: Record<string, number>
+}
+
+/** One row of the tau capacity guide shown next to the tau field. */
+export interface TauCapacityPoint {
+  avg_share: number
+  tau: number
+}
+
+export interface V3SettingsResponse {
+  project_id: number | null
+  is_global: boolean
+  settings: V3Settings
+  /** 'database' once a brand has saved its own values, else 'default'. */
+  source: string
+  /** Out-of-the-box values — served so the UI never hard-codes a stale default. */
+  defaults?: V3Settings
+  /** result_code -> {bucket, ttl_days} from the scoring package. */
+  rule_table?: Record<string, { bucket: string; ttl_days: number }>
+  tau_capacity_guide?: TauCapacityPoint[]
+}

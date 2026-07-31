@@ -16,6 +16,8 @@ import type {
   V3DriftResponse,
   V3MonitoringResponse,
   V3ScoreListResponse,
+  V3Settings,
+  V3SettingsResponse,
   V3UiEnabled,
 } from './types'
 
@@ -112,6 +114,7 @@ export async function getV3ClientOrder(
 // the scoring config, so it goes through the client service's config proxy — not
 // the /v3-score prefix above.
 const CONFIG_BASE_URL = '/api/v1/config/scoring/v3/ui-enabled'
+const SETTINGS_URL = '/api/v1/config/scoring/v3'
 
 /** Is the v3 operator UI signed off and live for this brand? */
 export async function getV3UiEnabled(projectId: number): Promise<V3UiEnabled> {
@@ -135,7 +138,32 @@ export async function setV3UiEnabled(
   return res.data
 }
 
+/** A brand's v3 tunables, plus the defaults and rule table they sit on (KAN-792). */
+export async function getV3Settings(projectId: number): Promise<V3SettingsResponse> {
+  const res = await api.get<V3SettingsResponse>(SETTINGS_URL, {
+    params: { project_id: projectId },
+  })
+  return res.data
+}
+
+/** Save a brand's v3 tunables. Requires edit_scoring_config; validated + audited
+ *  server-side, and applied on the NEXT scoring run (nothing is re-scored now). */
+export async function updateV3Settings(
+  projectId: number,
+  settings: V3Settings,
+  changeReason?: string
+): Promise<V3SettingsResponse> {
+  const res = await api.put<V3SettingsResponse>(SETTINGS_URL, {
+    settings,
+    project_id: projectId,
+    change_reason: changeReason,
+  })
+  return res.data
+}
+
 export const scoringApi = {
+  getV3Settings,
+  updateV3Settings,
   getV3Scores,
   getV3Monitoring,
   triggerV3Scoring,

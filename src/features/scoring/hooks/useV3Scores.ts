@@ -6,7 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { scoringApi } from '../api/scoringApi'
-import type { GetV3ScoreParams } from '../api/types'
+import type { GetV3ScoreParams, V3Settings } from '../api/types'
 
 /** Current month as YYYY-MM-01 (the snapshot the client card/list reads). */
 export function currentMonthStart(): string {
@@ -206,5 +206,42 @@ export function useTriggerV3Scoring() {
       setTimeout(() => qc.invalidateQueries({ queryKey: scoringKeys.all }), 4000)
     },
     onError: () => toast.error('Could not start scoring.'),
+  })
+}
+
+/** A brand's v3 tunables + the defaults they sit on (KAN-792). */
+export function useV3Settings(projectId: number | undefined) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'settings', projectId ?? 0],
+    queryFn: () => scoringApi.getV3Settings(projectId as number),
+    enabled: !!projectId,
+    // No staleTime: these drive the next scoring run, so showing a cached value
+    // after someone else edited them would be actively misleading.
+    staleTime: 0,
+  })
+}
+
+/**
+ * Save a brand's v3 tunables.
+ *
+ * Server-side validation is the only validation that matters (the scoring job
+ * reads the stored values, not the form), so a rejected field comes back as a
+ * 422 and is surfaced verbatim rather than being pre-empted client-side.
+ */
+export function useUpdateV3Settings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { projectId: number; settings: V3Settings; reason?: string }) =>
+      scoringApi.updateV3Settings(vars.projectId, vars.settings, vars.reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: scoringKeys.all })
+      toast.success('Saved. The next scoring run will use these values.')
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+      toast.error(
+        typeof detail === 'string' ? detail : 'Could not save. Check the values and try again.'
+      )
+    },
   })
 }

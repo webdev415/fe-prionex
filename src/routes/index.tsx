@@ -152,6 +152,11 @@ const OperatorWorkListPage = lazy(() =>
     default: m.OperatorWorkListPage,
   }))
 )
+const ScoringV3SettingsPage = lazy(() =>
+  import('@/pages/ScoringV3Settings').then((m) => ({
+    default: m.ScoringV3SettingsPage,
+  }))
+)
 const ScoringV3MonitoringPage = lazy(() =>
   import('@/pages/ScoringV3Monitoring').then((m) => ({
     default: m.ScoringV3MonitoringPage,
@@ -476,10 +481,25 @@ export const router = createBrowserRouter([
         // the permission, AND the per-brand cutover switch — the ticket says
         // "hidden until sub-task 8 sign-off", and hiding only the nav entry left
         // the URL reachable during the shadow run.
+        //
+        // The permission is VIEW_PRIORITY_SCORES, not SCORING_CONFIG.VIEW: this
+        // is the operators' own work queue, and gating it on the config-read
+        // right would have 403'd every operator (only Admin/Supervisor hold it).
         path: 'operator-work-list',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_PRIORITY_SCORES}>
             <V3CutoverRoute>{withSuspense(<OperatorWorkListPage />)}</V3CutoverRoute>
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Scoring v3 tunables (KAN-792). Admin/Supervisor read, Admin edits.
+        // NOT behind the cutover switch: tau has to be re-picked from the
+        // shadow-run report, i.e. precisely while operators still cannot see v3.
+        path: 'system-settings/scoring-v3-settings',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<ScoringV3SettingsPage />)}
           </PermissionRoute>
         ),
       },
