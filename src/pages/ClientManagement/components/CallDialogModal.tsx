@@ -9,7 +9,7 @@
  * - Incoming: Incoming call popup
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
@@ -19,7 +19,9 @@ import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
-import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
+import type { IncomingModalLoan } from '@/stores/callStore'
+import { useCallDetails, useHangupCall, useRejectCall } from '@/features/calls/hooks/useCall'
+import type { IncomingCallClient } from '@/features/calls/types'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -61,19 +63,11 @@ export interface CallDialogModalProps {
   /** When false, spam-calls option is hidden. Default true. */
   spamOptionEnabled?: boolean
   // For incoming call
-  loans?: Array<{
-    id: string
-    clientName: string
-    loanNumber: string
-    counterparty: string
-    loanPrincipal: number
-    debt: number
-    status: string
-    saleDate: string
-    lastContact: string
-    priority: 'Critical' | 'High' | 'Medium' | 'Low'
-    score: number
-  }>
+  loans?: IncomingModalLoan[]
+  /** Screen-pop context for the ringing state: annotation, responsible, history. */
+  incomingContext?: IncomingCallClient | null
+  /** Answering has no backend path yet, so the control stays hidden by default. */
+  answerEnabled?: boolean
 }
 
 const formatTime = (seconds: number): string => {
@@ -114,6 +108,8 @@ export function CallDialogModal({
   onSpamCall,
   spamOptionEnabled = true,
   loans = [],
+  incomingContext = null,
+  answerEnabled = false,
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
@@ -131,6 +127,7 @@ export function CallDialogModal({
 
   // Hangup mutation
   const hangupMutation = useHangupCall(clientId)
+  const rejectMutation = useRejectCall(clientId)
   const callDetailsState = callDetails?.state
 
   // Track modal open state
@@ -500,10 +497,11 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
-    if (hangupMutation.isPending) return
-    // Send hangup command to Asterisk to reject the incoming call
+    if (rejectMutation.isPending) return
+    // Reject rather than hangup: the backend records this as declined by the
+    // operator, which the client history has to tell apart from a missed call.
     if (callId) {
-      hangupMutation.mutate(callId)
+      rejectMutation.mutate(callId)
     }
 
     if (onReject) {
@@ -545,39 +543,56 @@ export function CallDialogModal({
     }
   }
 
-  const handleMinimize = (overrides?: {
-    callId?: string
-    callState?: CallState
-    elapsedTime?: number
-  }): string => {
-    const id = `call-dialog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    setMinimizedCall({
-      id,
-      type: 'call-dialog',
+  const handleMinimize = useCallback(
+    (overrides?: { callId?: string; callState?: CallState; elapsedTime?: number }): string => {
+      const id = `call-dialog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      setMinimizedCall({
+        id,
+        type: 'call-dialog',
+        clientName,
+        // Always store the ORIGINAL client phone here so restoring and
+        // un-checking "manual phone entry" falls back to the correct number.
+        phoneNumber,
+        // Separate field for what the minimized-bubble tooltip should show.
+        displayPhone,
+        clientId,
+        callId: overrides?.callId ?? callId ?? null,
+        callState: overrides?.callState ?? callState,
+        callType,
+        elapsedTime: overrides?.elapsedTime ?? elapsedTime,
+        manualPhoneEnabled,
+        manualPhoneDigits,
+        loans,
+        incomingContext,
+        timestamp: Date.now(),
+      })
+      // If onMinimize is provided, use it instead of onClose
+      // This prevents clearing the minimized state when restoring and re-minimizing
+      if (onMinimize) {
+        onMinimize()
+      } else {
+        onClose()
+      }
+      return id
+    },
+    [
+      setMinimizedCall,
       clientName,
-      // Always store the ORIGINAL client phone here so restoring and
-      // un-checking "manual phone entry" falls back to the correct number.
       phoneNumber,
-      // Separate field for what the minimized-bubble tooltip should show.
       displayPhone,
       clientId,
-      callId: overrides?.callId ?? callId ?? null,
-      callState: overrides?.callState ?? callState,
+      callId,
+      callState,
       callType,
-      elapsedTime: overrides?.elapsedTime ?? elapsedTime,
+      elapsedTime,
       manualPhoneEnabled,
       manualPhoneDigits,
-      timestamp: Date.now(),
-    })
-    // If onMinimize is provided, use it instead of onClose
-    // This prevents clearing the minimized state when restoring and re-minimizing
-    if (onMinimize) {
-      onMinimize()
-    } else {
-      onClose()
-    }
-    return id
-  }
+      loans,
+      incomingContext,
+      onMinimize,
+      onClose,
+    ]
+  )
 
   const handleClose = () => {
     if (intervalRef.current) {
@@ -656,6 +671,8 @@ export function CallDialogModal({
             </div>
           </div>
 
+          <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
+
           {/* Loans Information */}
           {loans.length > 0 && (
             <div className="flex flex-col gap-3 sm:gap-4">
@@ -717,21 +734,32 @@ export function CallDialogModal({
                 variant="danger"
                 size="sm"
                 onClick={handleReject}
+                disabled={rejectMutation.isPending}
                 className="w-full rounded-md"
               >
                 <Icons.Cancel01 size={18} className="mr-2 sm:size-5" />
                 {t('pages.clients.modals.callDialog.reject')}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleAnswer}
-                className="w-full rounded-md"
-              >
-                <Icons.HeadphoneMute size={18} className="mr-2 sm:size-5" />
-                {t('pages.clients.modals.callDialog.answerCall')}
-              </Button>
+              {answerEnabled && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAnswer}
+                  className="w-full rounded-md"
+                >
+                  <Icons.HeadphoneMute size={18} className="mr-2 sm:size-5" />
+                  {t('pages.clients.modals.callDialog.answerCall')}
+                </Button>
+              )}
             </div>
+            {!answerEnabled && (
+              <p className="text-muted-foreground text-center text-xs">
+                {t(
+                  'pages.clients.modals.callDialog.answerOnSoftphone',
+                  'Answer the call on your softphone'
+                )}
+              </p>
+            )}
           </div>
         </div>
       </Modal>
@@ -1158,6 +1186,104 @@ export function CallDialogModal({
 }
 
 // Loan Card Component for Incoming Call
+type TFn = (key: string, fallback: string) => string
+
+/**
+ * The caller context the screen-pop is required to show beyond the debts:
+ * how the number is annotated, whose number it is, who is responsible, and the
+ * client's recent history. Renders nothing when the caller is unresolved.
+ */
+function IncomingCallContext({
+  context,
+  clientId,
+  t,
+}: {
+  context: IncomingCallClient | null
+  clientId?: number | null
+  t: TFn
+}) {
+  if (!context) return null
+
+  const interactions = context.recent_interactions ?? []
+  const targetClientId = context.client_id ?? clientId
+
+  return (
+    <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-foreground text-sm font-semibold">{context.client_name}</span>
+        {targetClientId ? (
+          <a
+            href={`/clients/${targetClientId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-700 text-xs font-medium sm:text-sm"
+          >
+            {t('pages.clients.modals.callDialog.viewClient', 'View Client')}
+          </a>
+        ) : null}
+      </div>
+
+      <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 sm:text-sm">
+        {context.contact_type_name ? (
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">
+              {t('pages.clients.modals.callDialog.numberBelongsTo', 'Number belongs to')}:
+            </dt>
+            <dd className="text-foreground font-medium">
+              {context.contact_source
+                ? `${context.contact_type_name} (${context.contact_source})`
+                : context.contact_type_name}
+            </dd>
+          </div>
+        ) : null}
+        {context.responsible_employee_id ? (
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">
+              {t('pages.clients.modals.callDialog.responsible', 'Responsible')}:
+            </dt>
+            <dd className="text-foreground font-medium">#{context.responsible_employee_id}</dd>
+          </div>
+        ) : null}
+        {context.contact_comment ? (
+          <div className="flex gap-2 sm:col-span-2">
+            <dt className="text-muted-foreground">
+              {t('pages.clients.modals.callDialog.numberComment', 'Comment')}:
+            </dt>
+            <dd className="text-foreground">{context.contact_comment}</dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {interactions.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs font-medium">
+            {t('pages.clients.modals.callDialog.recentInteractions', 'Recent interactions')}
+          </span>
+          <ul className="flex flex-col gap-1">
+            {interactions.map((interaction) => (
+              <li
+                key={interaction.id}
+                className="text-foreground flex flex-wrap gap-2 text-xs sm:text-sm"
+              >
+                <span className="text-muted-foreground">
+                  {interaction.interaction_date
+                    ? new Date(interaction.interaction_date).toLocaleDateString()
+                    : '—'}
+                </span>
+                <span className="font-medium">{interaction.type_name ?? '—'}</span>
+                {interaction.result_name ? <span>· {interaction.result_name}</span> : null}
+                {interaction.user_name ? (
+                  <span className="text-muted-foreground">· {interaction.user_name}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LoanCard({
   loan,
 }: {

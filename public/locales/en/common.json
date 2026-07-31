@@ -4824,7 +4824,12 @@
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
           "lastContact": "Last contact",
-          "callInProgress": "Another call or recording is already in progress. Please finish or close it first."
+          "callInProgress": "Another call or recording is already in progress. Please finish or close it first.",
+          "answerOnSoftphone": "Answer the call on your softphone",
+          "numberBelongsTo": "Number belongs to",
+          "responsible": "Responsible",
+          "numberComment": "Comment",
+          "recentInteractions": "Recent interactions"
         },
         "callLogCard": {
           "message": "Message",

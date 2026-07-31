@@ -27,6 +27,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,10 +172,13 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
     setIsRestored(false)
   }
 
-  // Determine if call is active (dialing or connected) for styling
+  // Determine if call is active for styling. 'incoming' counts: the call is
+  // still ringing, so its timer must keep running while minimized.
   const isActiveCall =
     minimizedCall?.type === 'call-dialog' &&
-    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+    (minimizedCall.callState === 'dialing' ||
+      minimizedCall.callState === 'connected' ||
+      minimizedCall.callState === 'incoming')
 
   // Format time helper
   const formatTime = (seconds: number): string => {
@@ -423,13 +427,11 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           callId={minimizedCall.callId}
+          loans={minimizedCall.loans}
+          incomingContext={minimizedCall.incomingContext}
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
-          minimizedAt={
-            minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected'
-              ? minimizedCall.timestamp
-              : undefined
-          }
+          minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
           initialCallType={minimizedCall.callType || 'white-line'}
           initialManualPhoneEnabled={minimizedCall.manualPhoneEnabled ?? false}
           initialManualPhoneDigits={minimizedCall.manualPhoneDigits ?? ''}
@@ -494,6 +496,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Handle incoming calls
   const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+
+  // One call window at a time: if a call modal is already open or minimized when
+  // the call arrives, the operator keeps only the bell. The decision is latched
+  // per call rather than subscribed, because the popup itself sets openCallModal
+  // on mount and a live read would make it suppress itself on the next render.
+  const [popupSuppressed, setPopupSuppressed] = useState(false)
+  const suppressionDecidedFor = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!incomingCall) {
+      suppressionDecidedFor.current = null
+      setPopupSuppressed(false)
+      return
+    }
+    if (suppressionDecidedFor.current === incomingCall.call_id) return
+    suppressionDecidedFor.current = incomingCall.call_id
+    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
+    setPopupSuppressed(openCallModal !== null || existing !== null)
+  }, [incomingCall])
+
+  const primaryIncomingClient = useMemo(() => resolvePrimaryClient(incomingCall), [incomingCall])
+  const incomingCallLoans = useMemo(() => buildIncomingCallLoans(incomingCall), [incomingCall])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -1167,36 +1191,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isLoading={isLoggingOut}
         />
 
-        {/* Incoming Call Modal */}
-        {incomingCall && (
+        {/* Incoming Call Modal — suppressed while another call window is up */}
+        {incomingCall && !popupSuppressed && (
           <CallDialogModal
             open={true}
             onClose={dismissIncomingCall}
             initialState="incoming"
+            clientId={incomingCall.client_id ?? null}
             clientName={incomingCall.client_name || 'Unknown Caller'}
             phoneNumber={incomingCall.customer_phone}
             callId={incomingCall.call_id}
-            loans={incomingCall.loans?.map((loan) => ({
-              id: loan.loan_id.toString(),
-              clientName: incomingCall.client_name || 'Unknown',
-              loanNumber: loan.contract_number,
-              counterparty: '', // Not provided by backend
-              loanPrincipal: Number(loan.remaining_debt) || 0,
-              debt: Number(loan.remaining_debt) || 0,
-              status: loan.status,
-              saleDate: '', // Not provided by backend
-              lastContact: '', // Not provided by backend
-              priority: 'Medium' as const, // Default priority
-              score: 0, // Not provided by backend
-            }))}
-            onAnswer={() => {
-              // TODO: Handle answer call - send to backend
-              dismissIncomingCall()
-            }}
-            onReject={() => {
-              // TODO: Handle reject call - send to backend
-              dismissIncomingCall()
-            }}
+            loans={incomingCallLoans}
+            incomingContext={primaryIncomingClient}
+            onReject={dismissIncomingCall}
           />
         )}
       </div>

@@ -67,11 +67,12 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Communication Category (3 permissions)
+   * Communication Category (4 permissions)
    * Controls access to calling and messaging features
    */
   COMMUNICATION: {
     MAKE_CALLS: 'make_calls',
+    RECEIVE_CALLS: 'receive_calls',
     SEND_SMS: 'send_sms',
     VIEW_CALL_HISTORY: 'view_call_history',
   },
@@ -473,6 +474,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Communication
   make_calls: 'Make outbound phone calls to clients',
+  receive_calls: 'Receive inbound calls: incoming-call popup and its reject control',
   send_sms: 'Send SMS messages to clients',
   view_call_history: 'View call recordings and SMS history',
 

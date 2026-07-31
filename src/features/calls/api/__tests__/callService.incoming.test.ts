@@ -150,4 +150,27 @@ describe('CallService - Incoming Call Methods', () => {
       expect(result.client_name).toBeUndefined()
     })
   })
+
+  describe('rejectCall', () => {
+    const callId = '123e4567-e89b-12d3-a456-426614174000'
+
+    it('posts to the reject endpoint, not hangup', async () => {
+      mockApi.post.mockResolvedValue({ data: { status: 'success', message: 'ok' } })
+
+      await callService.rejectCall(callId)
+
+      expect(mockApi.post).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/reject`)
+      expect(mockApi.post).not.toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
+    })
+
+    it('returns the backend payload', async () => {
+      mockApi.post.mockResolvedValue({
+        data: { status: 'success', message: `Reject sent for call ${callId}` },
+      })
+
+      const result = await callService.rejectCall(callId)
+
+      expect(result.status).toBe('success')
+    })
+  })
 })
