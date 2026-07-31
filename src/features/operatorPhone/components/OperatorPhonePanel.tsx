@@ -9,7 +9,10 @@ import { OperatorPhoneStatus } from './OperatorPhoneStatus'
  *
  * The iframe is kept mounted (so the SIP session and audio persist) but moved
  * fully off-screen — deliberately NOT `display:none`, which can suspend media in
- * some browsers. `allow="microphone"` grants the cross-origin phone mic access.
+ * some browsers. `allow="microphone; autoplay"` grants the cross-origin phone
+ * mic access AND lets it play call/ringtone audio without a user gesture inside
+ * the frame (autoplay is not delegated to cross-origin iframes by default). The
+ * CRM top page must also delegate these features via Permissions-Policy.
  */
 export function OperatorPhonePanel() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -22,7 +25,7 @@ export function OperatorPhonePanel() {
         src={OPERATOR_PHONE_URL}
         title="Operator phone"
         aria-hidden
-        allow="microphone"
+        allow="microphone; autoplay"
         style={{
           position: 'fixed',
           width: 1,

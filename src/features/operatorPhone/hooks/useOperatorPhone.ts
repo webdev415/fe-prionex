@@ -17,6 +17,12 @@ export interface OperatorPhoneState {
   aor: string | null
 }
 
+// Bounded retry for a transient mint failure (the token endpoint is a POST, which
+// the shared axios layer deliberately does not auto-retry). Without this a single
+// 503/timeout at handshake would strand the phone offline until a remount.
+const MINT_MAX_ATTEMPTS = 3
+const MINT_RETRY_BASE_MS = 1000
+
 /**
  * Drives the hidden WebRTC phone iframe (KAN-353, phases 1–2):
  *
@@ -27,7 +33,7 @@ export interface OperatorPhoneState {
  *    surface for the status indicator;
  * 4. on `token-expired` we re-mint (a safety net; the phone also self-refreshes).
  *
- * Every message is origin-checked against the phone's exact origin.
+ * Every message is checked against the phone's exact origin AND source frame.
  */
 export function useOperatorPhone(
   iframeRef: RefObject<HTMLIFrameElement | null>
@@ -49,11 +55,20 @@ export function useOperatorPhone(
     // Optimistic: we're acquiring a token and the phone will register shortly.
     setStatus((current) => (current === 'ready' ? current : 'connecting'))
     try {
-      const { access_token, aor: mintedAor } = await issuePhoneToken()
-      setAor(mintedAor)
-      postToPhone({ type: MSG_TOKEN, token: access_token })
+      for (let attempt = 1; attempt <= MINT_MAX_ATTEMPTS; attempt++) {
+        try {
+          const { access_token, aor: mintedAor } = await issuePhoneToken()
+          setAor(mintedAor)
+          postToPhone({ type: MSG_TOKEN, token: access_token })
+          return
+        } catch (err) {
+          if (attempt === MINT_MAX_ATTEMPTS) throw err
+          await new Promise((resolve) => setTimeout(resolve, MINT_RETRY_BASE_MS * attempt))
+        }
+      }
     } catch {
       setStatus('error')
+      setAor(null)
     } finally {
       mintingRef.current = false
     }
@@ -61,7 +76,10 @@ export function useOperatorPhone(
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
+      // Trust only the configured phone origin AND the actual iframe window —
+      // origin alone would let any same-origin frame/popup spoof status.
       if (event.origin !== OPERATOR_PHONE_ORIGIN) return
+      if (event.source !== iframeRef.current?.contentWindow) return
       const message = parsePhoneMessage(event.data)
       if (!message) return
       switch (message.type) {
@@ -71,7 +89,10 @@ export function useOperatorPhone(
           break
         case MSG_STATUS:
           setStatus(message.status)
+          // Keep the AOR only while connected; drop it once offline/errored so
+          // the pill never shows a stale "Offline · operator-…".
           if (message.aor) setAor(message.aor)
+          else if (message.status === 'offline' || message.status === 'error') setAor(null)
           break
       }
     }
@@ -81,7 +102,7 @@ export function useOperatorPhone(
       // Best-effort: tell the phone to drop its session as the operator leaves.
       postToPhone({ type: MSG_LOGOUT })
     }
-  }, [mintAndSend, postToPhone])
+  }, [mintAndSend, postToPhone, iframeRef])
 
   return { status, aor }
 }
