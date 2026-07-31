@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { getAccessToken } from '@/lib/api'
+import { CALL_STATE_CHANGED_EVENT } from '../types'
+import type { CallStateEvent } from '../types'
 import {
   getClientIdFromCallEventData,
   invalidateCallRelatedQueries,
@@ -9,23 +11,6 @@ import {
 
 const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
-
-interface CallStateChangedEventData {
-  call_id: string
-  state: string
-  customer_number: string
-  client_id?: unknown
-  clientId?: unknown
-  total_duration?: number
-  hangup_cause?: number
-  [key: string]: unknown
-}
-
-interface CallStateChangedEvent {
-  event_type: string
-  timestamp: string
-  data: CallStateChangedEventData
-}
 
 /**
  * Hook to listen for real-time call state updates via Socket.IO
@@ -78,7 +63,7 @@ export function useCallStateUpdates(
     const socket = socketRef.current
 
     // Listen for call state change events
-    const handleCallStateChanged = (event: CallStateChangedEvent) => {
+    const handleCallStateChanged = (event: CallStateEvent) => {
       // Extract data from the event (backend wraps payload in 'data' field)
       const eventData = event.data
 
@@ -94,13 +79,13 @@ export function useCallStateUpdates(
       }
     }
 
-    socket.on('call.state_changed', handleCallStateChanged)
+    socket.on(CALL_STATE_CHANGED_EVENT, handleCallStateChanged)
 
     // Cleanup on unmount or when parameters change — disconnect so an
     // authenticated socket does not keep receiving call events after the
     // consumer unmounts or its parameters change.
     return () => {
-      socket.off('call.state_changed', handleCallStateChanged)
+      socket.off(CALL_STATE_CHANGED_EVENT, handleCallStateChanged)
       socket.disconnect()
       socketRef.current = null
     }

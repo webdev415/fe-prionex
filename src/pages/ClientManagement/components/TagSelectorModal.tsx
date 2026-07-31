@@ -196,8 +196,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     <Modal open={open} onClose={onClose} maxWidth="lg" data-testid="tag-selector-modal">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-9 w-9 items-center justify-center rounded-full">
-            <Icons.Contact size={21} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex h-9 w-9 items-center justify-center rounded-full">
+            <Icons.Contact size={21} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
@@ -206,8 +206,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
       <ModalContent>
         {isLoading ? (
           <div className="space-y-4 sm:space-y-5" data-testid="tag-selector-loading-skeleton">
-            <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200" />
-            <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-lg" />
+            <div className="bg-muted-foreground/25 h-4 w-40 animate-pulse rounded" />
             <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
@@ -215,9 +215,9 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                   className="flex items-center gap-3 rounded p-2"
                   aria-label={t('pages.clients.modals.tagSelector.loadingTags')}
                 >
-                  <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
-                  <div className="h-6 w-32 animate-pulse rounded-full bg-gray-200" />
-                  <div className="hidden h-4 w-40 animate-pulse rounded bg-gray-200 sm:block" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 animate-pulse rounded" />
+                  <div className="bg-muted-foreground/25 h-6 w-32 animate-pulse rounded-full" />
+                  <div className="bg-muted-foreground/25 hidden h-4 w-40 animate-pulse rounded sm:block" />
                 </div>
               ))}
             </div>
@@ -234,7 +234,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
               />
             </div>
 
-            <div className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
+            <div className="text-muted-foreground mb-3 text-xs sm:mb-4 sm:text-sm">
               {t('pages.clients.modals.tagSelector.selectedCount', {
                 selected: selectedTagIds.size,
                 total: catalogTags.length,
@@ -267,19 +267,19 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                       />
                       {isPayloadTag && (
                         <span
-                          className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                          className="bg-warning-100 text-warning-700 rounded px-1.5 py-0.5 text-[10px] font-medium"
                           title={t('pages.clients.modals.tagSelector.payloadTagHint')}
                         >
                           {t('pages.clients.modals.tagSelector.payloadTagBadge')}
                         </span>
                       )}
                       {removalLocked && (
-                        <span className="text-xs text-amber-600">
+                        <span className="text-warning-600 text-xs">
                           {t('pages.tags.protectedWarning', 'Removal requires manager approval')}
                         </span>
                       )}
                       {tag.description && !removalLocked && (
-                        <span className="hidden text-xs text-gray-500 sm:inline">
+                        <span className="text-muted-foreground hidden text-xs sm:inline">
                           {tag.description}
                         </span>
                       )}
@@ -287,7 +287,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                   )
                 })
               ) : (
-                <div className="py-6 text-center text-xs text-gray-500 sm:py-8 sm:text-sm">
+                <div className="text-muted-foreground py-6 text-center text-xs sm:py-8 sm:text-sm">
                   {debouncedSearchQuery
                     ? t('pages.clients.modals.tagSelector.noTagsMatch')
                     : t('pages.clients.modals.tagSelector.noTagsAvailable')}

@@ -161,35 +161,35 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
         {/* Minimize Button */}
         <button
           onClick={handleMinimize}
-          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
+          className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
           aria-label="Minimize modal"
         >
-          <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
         <div className="flex flex-col gap-4 sm:gap-6">
           {/* Audio Waveform Icon */}
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white sm:h-16 sm:w-16">
-              <Icons.Voice size={32} className="text-dark-500 p-1 sm:size-10" strokeWidth={1} />
+            <div className="bg-card flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
+              <Icons.Voice size={32} className="text-foreground p-1 sm:size-10" strokeWidth={1} />
             </div>
           </div>
 
           {/* Title */}
-          <DialogPrimitive.Title className="text-dark-500 self-stretch text-center text-xl leading-tight font-medium sm:text-2xl">
+          <DialogPrimitive.Title className="text-foreground self-stretch text-center text-xl leading-tight font-medium sm:text-2xl">
             {t('pages.clients.modals.callRecording.title')}
           </DialogPrimitive.Title>
 
           {/* Call Details */}
           <div className="flex flex-col gap-2">
-            <div className="text-dark-500 flex items-center justify-center gap-2 self-stretch text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+            <div className="text-foreground flex items-center justify-center gap-2 self-stretch text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               <span>{callData.type}</span>
               <TelephonyTypeBadge type={callData.telephony_type} direction={callData.direction} />
             </div>
-            <div className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
+            <div className="text-foreground self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
               {callData.clientId != null ? (
                 <Link
                   to={`/dashboard/clients/${callData.clientId}`}
-                  className="text-primary-600 hover:underline"
+                  className="text-primary-700 hover:underline"
                   onClick={onClose}
                 >
                   {callData.clientName}
@@ -201,26 +201,26 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
             </div>
             <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-2">
               <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
-                <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+                <span className="text-foreground text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.clients.modals.callRecording.operator')}:{' '}
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {callData.operator}
                 </span>
               </div>
               <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
-                <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+                <span className="text-foreground text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.clients.modals.callRecording.duration')}:{' '}
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {callData.duration}
                 </span>
               </div>
               <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
-                <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+                <span className="text-foreground text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.clients.modals.callRecording.phone')}:{' '}
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {callData.phone}
                 </span>
               </div>

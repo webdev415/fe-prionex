@@ -75,7 +75,7 @@ export function ClientReversalsTable({
           onPaymentClick ? (
             <button
               type="button"
-              className="text-secondary-700 hover:underline"
+              className="text-foreground hover:underline"
               onClick={() => onPaymentClick(r.original_payment_id)}
             >
               {r.payment_number ?? `#${r.original_payment_id}`}
@@ -157,7 +157,7 @@ export function ClientReversalsTable({
           {t('pages.clients.detail.reversalsTable.loadError')}
         </p>
       )}
-      {isLoading && <p className="text-sm text-gray-500">{t('common.loading')}</p>}
+      {isLoading && <p className="text-muted-foreground text-sm">{t('common.loading')}</p>}
       <DataTable
         columns={columns}
         data={rows}

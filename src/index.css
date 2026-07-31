@@ -592,16 +592,25 @@ html.theme-switching * {
      column the same height) and the page scrolls instead of clipping the
      panel. The campaign list's own row-list still scrolls internally via
      `.dialer-campaign-list-scroll`, independent of this. */
+  /* On mobile the two panels stack, so don't force a tall empty min-height —
+     that only matters for the side-by-side desktop layout where both columns
+     share one row height. */
   .dialer-operator-view {
-    min-height: max(560px, calc(100vh - 150px));
+    min-height: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .dialer-operator-view {
+      min-height: max(560px, calc(100vh - 150px));
+    }
   }
 
   /* Dialer campaign list — thin, theme-aware scrollbar for the operator's
-     "My Campaigns" panel. */
+     "My Campaigns" panel. No `scrollbar-gutter: stable` — that reserved a
+     permanent blank strip on the right even when the list does not overflow. */
   .dialer-campaign-list-scroll {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent) transparent;
-    scrollbar-gutter: stable;
   }
 
   .dialer-campaign-list-scroll::-webkit-scrollbar {

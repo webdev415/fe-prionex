@@ -98,7 +98,7 @@ export interface DataTableProps<T> {
 export function DataTable<T extends { id: number | string }>({
   columns,
   data,
-  emptyMessage = 'No data found',
+  emptyMessage,
   onRowClick,
   className,
   sortConfig,
@@ -358,11 +358,11 @@ export function DataTable<T extends { id: number | string }>({
                           checked ? onSelectPage() : onSelectionChange?.(new Set())
                         }
                         aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
-                        aria-label="Select all"
+                        aria-label={t('common.selectAll', 'Select all')}
                       />
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          aria-label="Selection options"
+                          aria-label={t('common.selectionOptions', 'Selection options')}
                           className="text-muted-foreground hover:text-foreground flex items-center outline-none"
                         >
                           <Icons.ArrowDown size={14} strokeWidth={1.5} />
@@ -387,7 +387,7 @@ export function DataTable<T extends { id: number | string }>({
                       checked={headerCheckboxChecked}
                       onCheckedChange={handleSelectAll}
                       aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
-                      aria-label="Select all"
+                      aria-label={t('common.selectAll', 'Select all')}
                     />
                   )}
                 </th>
@@ -423,7 +423,7 @@ export function DataTable<T extends { id: number | string }>({
                   colSpan={enableBulkSelection ? columns.length + 1 : columns.length}
                   className="text-foreground h-[49px] px-4 text-center text-xs font-medium"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t('common.noDataFound', 'No data found')}
                 </td>
               </tr>
             ) : (
@@ -458,7 +458,9 @@ export function DataTable<T extends { id: number | string }>({
                             onCheckedChange={(checked) =>
                               handleSelectItem(item.id, checked === true)
                             }
-                            aria-label={`Select item ${item.id}`}
+                            aria-label={t('common.selectItem', 'Select item {{id}}', {
+                              id: item.id,
+                            })}
                           />
                         </td>
                       )}

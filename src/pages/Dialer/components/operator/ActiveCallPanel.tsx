@@ -76,23 +76,23 @@ export function ActiveCallPanel({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-foreground flex items-center gap-2 text-sm font-medium">
-          <span>
+        <div className="text-foreground flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium">
+          <span className="shrink-0">
             {isWrapup
               ? t('dialer.call.wrapUp', 'Wrap-up')
               : t('dialer.call.activeCall', 'Active Call')}
           </span>
-          <span className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+          <span className="bg-muted inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs font-medium">
             <span
               className={cn(
                 'h-1.5 w-1.5 shrink-0 rounded-full',
                 isWrapup ? 'bg-warning-500' : 'bg-success-500'
               )}
             />
-            {campaignName}
+            <span className="truncate">{campaignName}</span>
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ToggleChip active={autoConnect} onClick={() => onToggleAutoConnect(!autoConnect)}>
             {t('dialer.call.autoConnection', 'Auto-connection')}
           </ToggleChip>
@@ -108,9 +108,9 @@ export function ActiveCallPanel({
         </div>
       </div>
 
-      <div className="bg-sidebar text-sidebar-foreground flex items-center justify-between gap-3 rounded-lg px-4 py-3">
-        <span className="text-base font-medium">{routedCall.phone}</span>
-        <div className="flex items-center gap-3">
+      <div className="bg-sidebar text-sidebar-foreground flex flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-3 sm:px-4">
+        <span className="text-sm font-medium sm:text-base">{routedCall.phone}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="flex items-center gap-1.5 text-sm">
             <Icons.Clock01 size={16} />
             {isWrapup
@@ -148,8 +148,8 @@ export function ActiveCallPanel({
           />
         </div>
 
-        <div className="border-border border-l pl-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="border-border border-t pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-foreground text-sm font-semibold">
               {t('dialer.call.taChain', 'TA Chain')}
             </p>

@@ -23,8 +23,8 @@ export function useLegalSettingsActions() {
   const archiveLawyer = useArchiveLegalLawyer()
 
   const addLetterType = useCallback(
-    async (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId'>) => {
-      const id = slugifyLegalId(input.nameFallback, `type_${Date.now()}`)
+    async (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId' | 'id'>) => {
+      const id = slugifyLegalId(input.id || input.nameFallback, `type_${Date.now()}`)
       const created = await createLetterType.mutateAsync({
         id,
         name: input.nameFallback,

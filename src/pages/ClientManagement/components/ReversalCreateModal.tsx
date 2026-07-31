@@ -210,8 +210,12 @@ export function ReversalCreateModal({
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.Reload size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.Reload
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
         }
         title={t('pages.clients.detail.reversalModal.title')}
@@ -220,7 +224,7 @@ export function ReversalCreateModal({
         <div className="flex flex-col gap-6">
           {/* Payment picker */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.reversalModal.chooseAPayment')}
             </label>
             <Select
@@ -241,7 +245,7 @@ export function ReversalCreateModal({
                     {p.contractNumber ? `${p.contractNumber} — ` : ''}
                     {p.paymentDate} — {formatMoneyUAHTwoDecimals(p.amount)}
                     {p.isReversed && (
-                      <span className="ml-2 text-xs text-gray-500">
+                      <span className="text-muted-foreground ml-2 text-xs">
                         ({t('pages.clients.detail.reversalModal.reversedTag')})
                       </span>
                     )}
@@ -250,7 +254,7 @@ export function ReversalCreateModal({
               </SelectContent>
             </Select>
             {isLoading ? (
-              <p className="text-sm text-gray-500">{t('common.loading')}</p>
+              <p className="text-muted-foreground text-sm">{t('common.loading')}</p>
             ) : (
               selectablePayments.length === 0 && (
                 <p className="text-error-500 text-sm">
@@ -285,7 +289,7 @@ export function ReversalCreateModal({
 
           {/* Comment / reason */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.reversalModal.comment')}
             </label>
             <Textarea
@@ -300,20 +304,20 @@ export function ReversalCreateModal({
           {topLevelError && <p className="text-error-500 text-sm">{topLevelError}</p>}
 
           {/* Total amount of reversal */}
-          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-            <span className="text-sm font-medium text-gray-700">
+          <div className="border-border flex items-center justify-between border-t pt-4">
+            <span className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.reversalModal.totalAmount')}
             </span>
             <span
               className={
                 selectedPayment && !matches
                   ? 'text-error-500 text-base font-semibold'
-                  : 'text-dark-500 text-base font-semibold'
+                  : 'text-foreground text-base font-semibold'
               }
             >
               {formatMoneyUAHTwoDecimals(totalEntered)}
               {selectedPayment && (
-                <span className="ml-2 text-xs font-normal text-gray-500">
+                <span className="text-muted-foreground ml-2 text-xs font-normal">
                   / {formatMoneyUAHTwoDecimals(expected)}
                 </span>
               )}

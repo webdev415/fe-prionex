@@ -175,30 +175,30 @@ export function AuditLogTab() {
       key: 'dateTime',
       header: t('pages.ubkiIntegration.audit.columns.dateTime', 'Date / time'),
       render: (r) => (
-        <span className="text-xs whitespace-pre-line text-gray-700">{r.dateTime}</span>
+        <span className="text-muted-foreground text-xs whitespace-pre-line">{r.dateTime}</span>
       ),
     },
     {
       key: 'event',
       header: t('pages.ubkiIntegration.audit.columns.event', 'Event'),
-      render: (r) => <span className="text-dark-500 text-xs font-medium">{r.event}</span>,
+      render: (r) => <span className="text-foreground text-xs font-medium">{r.event}</span>,
     },
     {
       key: 'performedBy',
       header: t('pages.ubkiIntegration.audit.columns.performedBy', 'Performed By'),
-      render: (r) => <span className="text-xs text-gray-700">{r.performedBy}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.performedBy}</span>,
     },
     {
       key: 'details',
       header: t('pages.ubkiIntegration.audit.columns.details', 'Details'),
-      render: (r) => <span className="text-xs text-gray-600">{r.details}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.details}</span>,
     },
     {
       key: 'status',
       header: t('pages.ubkiIntegration.audit.columns.status', 'Status'),
       render: (r) => (
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? 'bg-gray-100 text-gray-600'}`}
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? 'bg-muted text-muted-foreground'}`}
         >
           {r.status}
         </span>
@@ -208,15 +208,15 @@ export function AuditLogTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="border-border bg-card rounded-2xl border p-5">
         {/* Card header — title + subtitle + Export, inside the card. */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-dark-500 flex items-center gap-1.5 text-sm font-semibold">
+            <h2 className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
               {t('pages.ubkiIntegration.audit.title', 'Audit log')}
-              <MdInfoOutline size={15} className="text-gray-400" />
+              <MdInfoOutline size={15} className="text-muted-foreground" />
             </h2>
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               {t(
                 'pages.ubkiIntegration.audit.subtitle',
                 'All configuration changes and admin actions for UBKI integration.'
@@ -271,7 +271,7 @@ export function AuditLogTab() {
               placeholder="dd / mm / yyyy"
             />
           </div>
-          <span className="text-gray-400">—</span>
+          <span className="text-muted-foreground">—</span>
           <div className="w-40">
             <DateSelect
               value={dateTo}
@@ -295,12 +295,12 @@ export function AuditLogTab() {
               'pages.ubkiIntegration.audit.filters.searchPlaceholder',
               'Search by event / actor / details…'
             )}
-            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 border-border bg-card text-foreground h-[45px] min-w-[200px] flex-1 rounded-full border px-4 text-xs focus:outline-none"
           />
           <Button
             variant="transparent-black"
             size="sm"
-            className="rounded-full text-gray-600"
+            className="text-muted-foreground rounded-full"
             leftIcon={<MdSync size={15} />}
             onClick={resetFilters}
           >
@@ -315,7 +315,7 @@ export function AuditLogTab() {
             {t('pages.ubkiIntegration.audit.loadError', 'Failed to load the audit log.')}
           </div>
         ) : rows.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-500">
+          <div className="text-muted-foreground py-16 text-center text-sm">
             {t(
               'pages.ubkiIntegration.audit.empty',
               'No audit entries yet. Saving settings or changing the opt-out list will appear here.'

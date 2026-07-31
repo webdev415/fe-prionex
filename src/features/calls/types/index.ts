@@ -93,16 +93,28 @@ export interface AMIHealthResponse {
 }
 
 // WebSocket event interfaces
-export interface CallStateEvent {
-  event_type: 'call.state.changed'
+
+// Underscore, unlike the dotted "call.state.changed" RabbitMQ domain event that
+// client-service consumes. See services/call/app/services/event_listener.py.
+export const CALL_STATE_CHANGED_EVENT = 'call.state_changed'
+
+// Mirrors the data block of the only call.state_changed emitter
+// (event_listener.py). The index signature keeps the shared
+// getClientIdFromCallEventData helper usable across event shapes.
+export interface CallStateEventData {
   call_id: string
-  current_state: CallState
-  data: {
-    call_id: string
-    state: CallState
-    duration?: number
-    [key: string]: unknown
-  }
+  state: CallState
+  customer_number?: string
+  project_id?: number
+  total_duration?: number
+  hangup_cause?: number
+  [key: string]: unknown
+}
+
+export interface CallStateEvent {
+  event_type: string
+  timestamp: string
+  data: CallStateEventData
 }
 
 export interface ConnectionStatus {

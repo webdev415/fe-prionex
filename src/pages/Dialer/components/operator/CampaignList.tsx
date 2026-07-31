@@ -57,8 +57,8 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
 
   return (
     <aside className="border-border bg-card/60 relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
-      <div className="bg-card relative z-10 flex shrink-0 items-start justify-between gap-2 p-4 pb-3">
-        <div>
+      <div className="bg-card relative z-10 flex shrink-0 items-start justify-between gap-2 p-3 pb-3 sm:p-4">
+        <div className="min-w-0">
           <h2 className="text-foreground text-sm font-semibold">
             {t('dialer.operator.myCampaigns', 'My Campaigns')}
           </h2>
@@ -78,19 +78,17 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
           {t('dialer.operator.noCampaigns', 'No campaigns available yet.')}
         </div>
       ) : (
-        // `relative` + `flex-1 min-h-0` wrapper has no in-flow children, so it
-        // never contributes its own content height to the grid row's intrinsic
-        // sizing — only the header does. The list itself is absolutely
-        // positioned to fill whatever height the row ends up resolving to
-        // (driven by the right-hand panel), and scrolls internally within
-        // that fixed box regardless of how many campaigns it holds.
-        <div className="relative min-h-0 flex-1">
+        // Desktop (lg+): absolute inset list so this column's height is driven
+        // by the right panel (absolute children don't contribute intrinsic
+        // height). Mobile: in-flow list with a capped max-height so the panel
+        // still shows rows when stacked in a single-column grid.
+        <div className="relative max-h-[min(55vh,480px)] min-h-0 flex-1 lg:max-h-none">
           {/* `bg-card` here (not just on each row) keeps any leftover space
               below the last row — when the list is shorter than the
               right-hand panel's height — looking like part of the same solid
               card instead of falling through to the aside's translucent
               backdrop. */}
-          <ul className="border-border divide-border dialer-campaign-list-scroll bg-card absolute inset-0 divide-y overflow-y-auto border-t">
+          <ul className="border-border divide-border dialer-campaign-list-scroll bg-card max-h-full divide-y overflow-y-auto border-t lg:absolute lg:inset-0">
             {campaigns.map((c) => {
               const isSelected = c.id === selectedId
               const isJoined = c.id === joinedId
@@ -118,7 +116,9 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
                           />
                         )}
                       </span>
-                      <span className={cn('flex items-center gap-1.5 text-xs', meta.textClass)}>
+                      <span
+                        className={cn('flex shrink-0 items-center gap-1.5 text-xs', meta.textClass)}
+                      >
                         <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta.dotClass)} />
                         {meta.label}
                       </span>
@@ -133,15 +133,20 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
                         <Icons.UserMultiple02 size={12} strokeWidth={1.8} />
                         {t('dialer.operator.operators', 'Operators')}: {c.operators_connected ?? 0}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Icons.Flash size={12} strokeWidth={1.8} />
-                        {t('dialer.operator.aggressiveness', 'Aggressiveness')}: {c.aggressiveness}×
+                      <span className="flex min-w-0 items-center gap-1">
+                        <Icons.Flash size={12} className="shrink-0" strokeWidth={1.8} />
+                        <span className="truncate">
+                          {t('dialer.operator.aggressiveness', 'Aggressiveness')}:{' '}
+                          {c.aggressiveness}×
+                        </span>
                       </span>
                       {c.calling_hours_start && c.calling_hours_end && (
-                        <span className="flex items-center gap-1">
-                          <Icons.Clock01 size={12} strokeWidth={1.8} />
-                          {t('dialer.operator.hours', 'Hours')}: {c.calling_hours_start}–
-                          {c.calling_hours_end}
+                        <span className="flex min-w-0 items-center gap-1">
+                          <Icons.Clock01 size={12} className="shrink-0" strokeWidth={1.8} />
+                          <span className="truncate">
+                            {t('dialer.operator.hours', 'Hours')}: {c.calling_hours_start}–
+                            {c.calling_hours_end}
+                          </span>
                         </span>
                       )}
                     </div>

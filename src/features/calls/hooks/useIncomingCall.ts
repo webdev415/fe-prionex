@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getAccessToken } from '@/lib/api'
-import type { IncomingCallData, IncomingCallEvent } from '../types'
+import { CALL_STATE_CHANGED_EVENT } from '../types'
+import type { CallStateEvent, IncomingCallData, IncomingCallEvent } from '../types'
 
 const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
@@ -54,7 +55,7 @@ export function useIncomingCall(agentExtension: string | null) {
     }
 
     // Listen for call state changes to dismiss popup when call ends/rejected
-    const handleCallStateChanged = (event: { data?: { call_id?: string; state?: string } }) => {
+    const handleCallStateChanged = (event: CallStateEvent) => {
       const state = event.data?.state?.toUpperCase()
       // Dismiss popup when call is completed, failed, or cancelled
       if (state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
@@ -63,14 +64,14 @@ export function useIncomingCall(agentExtension: string | null) {
     }
 
     socket.on('call.incoming', handleIncomingCall)
-    socket.on('call.state_changed', handleCallStateChanged)
+    socket.on(CALL_STATE_CHANGED_EVENT, handleCallStateChanged)
 
     // Cleanup on unmount or when agent extension changes — disconnect so an
     // authenticated socket does not keep receiving call PII after the consumer
     // unmounts or the agent changes.
     return () => {
       socket.off('call.incoming', handleIncomingCall)
-      socket.off('call.state_changed', handleCallStateChanged)
+      socket.off(CALL_STATE_CHANGED_EVENT, handleCallStateChanged)
       socket.disconnect()
       socketRef.current = null
     }

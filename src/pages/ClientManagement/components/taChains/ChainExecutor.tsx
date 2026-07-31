@@ -115,11 +115,11 @@ interface InstantStepValue {
 function ChainExecutorSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <div className="h-10 w-full animate-pulse rounded-md border border-gray-200 bg-gray-100" />
-      <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-        <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
-        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+      <div className="border-border bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md border" />
+      <div className="border-border bg-muted/60 space-y-3 rounded-lg border p-3">
+        <div className="bg-muted-foreground/25 h-4 w-48 animate-pulse rounded" />
+        <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
+        <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
       </div>
     </div>
   )
@@ -1411,7 +1411,7 @@ export function ChainExecutor({
     <div className="flex w-full flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-dark-500 text-base font-semibold">
+        <h3 className="text-foreground text-base font-semibold">
           {t('pages.clientChains.logInteraction')}
         </h3>
         {activeInstance && (
@@ -1424,13 +1424,15 @@ export function ChainExecutor({
       {isLoadingChains ? (
         <ChainExecutorSkeleton />
       ) : manualChains.length === 0 ? (
-        <p className="text-sm text-gray-500">{t('pages.clientChains.noChains')}</p>
+        <p className="text-muted-foreground text-sm">{t('pages.clientChains.noChains')}</p>
       ) : (
         <>
           {/* Templates dropdown — only when no instance is running */}
           {!activeInstance && quickPicks.length > 0 && (
             <div className="flex flex-col gap-2">
-              <Label className="text-sm text-gray-700">{t('pages.clientChains.quickPicks')}</Label>
+              <Label className="text-foreground text-sm">
+                {t('pages.clientChains.quickPicks')}
+              </Label>
               <DropdownMenu
                 open={templateOpen}
                 onOpenChange={(o) => {
@@ -1444,14 +1446,20 @@ export function ChainExecutor({
                     type="button"
                     className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
-                    <span className={selectedTemplate ? 'text-gray-800' : 'text-gray-400'}>
+                    <span
+                      className={selectedTemplate ? 'text-foreground' : 'text-muted-foreground'}
+                    >
                       {selectedTemplate
                         ? (selectedTemplate.name ??
                           selectedTemplate.chain_name ??
                           `Chain #${selectedTemplate.chain_id}`)
                         : t('pages.clientChains.templatePlaceholder', 'Pick a template…')}
                     </span>
-                    <Icons.ArrowDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                    <Icons.ArrowDown
+                      size={16}
+                      className="text-muted-foreground"
+                      strokeWidth={1.5}
+                    />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -1459,7 +1467,7 @@ export function ChainExecutor({
                   sideOffset={6}
                   className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
-                  <div className="border-b border-gray-200 p-2">
+                  <div className="border-border border-b p-2">
                     <input
                       type="text"
                       value={templateSearch}
@@ -1476,7 +1484,7 @@ export function ChainExecutor({
                     onWheel={(e) => e.stopPropagation()}
                   >
                     {filteredTemplates.length === 0 ? (
-                      <div className="py-3 text-center text-xs text-gray-500">
+                      <div className="text-muted-foreground py-3 text-center text-xs">
                         {t('pages.clientChains.templateNoneFound', 'No templates match.')}
                       </div>
                     ) : (
@@ -1492,8 +1500,8 @@ export function ChainExecutor({
                               setTemplateOpen(false)
                               setTemplateSearch('')
                             }}
-                            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 ${
-                              isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-800'
+                            className={`hover:bg-muted flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm ${
+                              isSelected ? 'bg-blue-50 text-blue-700' : 'text-foreground'
                             }`}
                           >
                             <span className="truncate">{label}</span>
@@ -1522,9 +1530,11 @@ export function ChainExecutor({
 
           {/* Chain selector — always present; locked once an instance is running */}
           <div className="flex flex-col gap-1">
-            <Label className="text-sm text-gray-700">{t('pages.clientChains.taChainLabel')}</Label>
+            <Label className="text-foreground text-sm">
+              {t('pages.clientChains.taChainLabel')}
+            </Label>
             {activeInstance ? (
-              <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800">
+              <div className="border-border bg-muted text-foreground rounded-md border px-3 py-2.5 text-sm">
                 {activeChain?.name}
               </div>
             ) : (
@@ -1541,12 +1551,18 @@ export function ChainExecutor({
                     type="button"
                     className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
-                    <span className={selectedChainObj ? 'text-gray-800' : 'text-gray-400'}>
+                    <span
+                      className={selectedChainObj ? 'text-foreground' : 'text-muted-foreground'}
+                    >
                       {selectedChainObj
                         ? selectedChainObj.name
                         : t('pages.clientChains.selectChainPlaceholder')}
                     </span>
-                    <Icons.ArrowDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                    <Icons.ArrowDown
+                      size={16}
+                      className="text-muted-foreground"
+                      strokeWidth={1.5}
+                    />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -1554,7 +1570,7 @@ export function ChainExecutor({
                   sideOffset={6}
                   className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
-                  <div className="border-b border-gray-200 p-2">
+                  <div className="border-border border-b p-2">
                     <input
                       type="text"
                       value={chainSearch}
@@ -1568,14 +1584,14 @@ export function ChainExecutor({
                     onWheel={(e) => e.stopPropagation()}
                   >
                     {filteredChains.length === 0 ? (
-                      <div className="py-3 text-center text-xs text-gray-500">
+                      <div className="text-muted-foreground py-3 text-center text-xs">
                         {t('pages.clientChains.chainNoneFound', 'No chains match.')}
                       </div>
                     ) : (
                       <>
                         {pinnedChains.length > 0 && (
                           <div>
-                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                            <div className="text-muted-foreground px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wide uppercase">
                               {t('pages.clientChains.pinnedGroup', 'Pinned')}
                             </div>
                             {pinnedChains.map((c) => {
@@ -1585,7 +1601,7 @@ export function ChainExecutor({
                               return (
                                 <div
                                   key={c.id}
-                                  className={`group flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm hover:bg-gray-50 ${
+                                  className={`group hover:bg-muted flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm ${
                                     isSelected ? 'bg-blue-50' : ''
                                   }`}
                                 >
@@ -1597,14 +1613,14 @@ export function ChainExecutor({
                                       setChainSearch('')
                                     }}
                                     className={`flex flex-1 items-center justify-between text-left ${
-                                      isSelected ? 'text-blue-700' : 'text-gray-800'
+                                      isSelected ? 'text-blue-700' : 'text-foreground'
                                     }`}
                                   >
                                     <span className="flex items-center gap-1 truncate">
                                       <span className="truncate">{c.name}</span>
                                       {isClientPinned && !isChainPinned && (
                                         <span
-                                          className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-medium text-amber-700"
+                                          className="text-warning-700 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-medium"
                                           title={t(
                                             'pages.clientChains.clientPinHint',
                                             'Pinned via this client’s history'
@@ -1644,7 +1660,7 @@ export function ChainExecutor({
                         {unpinnedChains.length > 0 && (
                           <div>
                             {pinnedChains.length > 0 && (
-                              <div className="px-2 pt-2 pb-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                              <div className="text-muted-foreground px-2 pt-2 pb-0.5 text-[10px] font-semibold tracking-wide uppercase">
                                 {t('pages.clientChains.allGroup', 'All chains')}
                               </div>
                             )}
@@ -1653,7 +1669,7 @@ export function ChainExecutor({
                               return (
                                 <div
                                   key={c.id}
-                                  className={`group flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm hover:bg-gray-50 ${
+                                  className={`group hover:bg-muted flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm ${
                                     isSelected ? 'bg-blue-50' : ''
                                   }`}
                                 >
@@ -1665,7 +1681,7 @@ export function ChainExecutor({
                                       setChainSearch('')
                                     }}
                                     className={`flex flex-1 items-center justify-between text-left ${
-                                      isSelected ? 'text-blue-700' : 'text-gray-800'
+                                      isSelected ? 'text-blue-700' : 'text-foreground'
                                     }`}
                                   >
                                     <span className="truncate">{c.name}</span>
@@ -1685,7 +1701,7 @@ export function ChainExecutor({
                                       e.stopPropagation()
                                       toggleChainPin(c.id, false)
                                     }}
-                                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                    className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1"
                                   >
                                     <Icons.Pin size={14} strokeWidth={1.5} />
                                   </button>
@@ -1704,7 +1720,7 @@ export function ChainExecutor({
 
           {/* Body switch */}
           {!effectiveChain ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground text-sm">
               {t('pages.clientChains.pickToContinue', 'Pick a chain above to continue.')}
             </p>
           ) : activeInstance ? (
@@ -1727,14 +1743,14 @@ export function ChainExecutor({
                       {/* Header row */}
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-xs font-semibold ${isEditing ? 'text-blue-700' : 'text-green-700'}`}
+                          className={`text-xs font-semibold ${isEditing ? 'text-blue-700' : 'text-success-700'}`}
                         >
                           {t('pages.clientChains.stepLabel', { order: cs.stepOrder })} — {cs.taName}
                         </span>
                         {!isEditing && !isFinalizing && !isAutoAdvancing && (
                           <button
                             onClick={() => openEditStep(cs)}
-                            className="rounded p-1 text-gray-400 hover:bg-white hover:text-gray-700"
+                            className="text-muted-foreground hover:bg-card hover:text-foreground rounded p-1"
                             title={t('common.edit', 'Edit')}
                           >
                             <Icons.Edit size={13} strokeWidth={1.5} />
@@ -1772,9 +1788,11 @@ export function ChainExecutor({
                           ) : editingStep.fieldType === 'contact' ? (
                             <div className="flex flex-col gap-1">
                               {!editingContactOptions ? (
-                                <span className="text-xs text-gray-500">{t('common.loading')}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {t('common.loading')}
+                                </span>
                               ) : editingContactOptions.length === 0 ? (
-                                <span className="text-xs text-gray-500">
+                                <span className="text-muted-foreground text-xs">
                                   {editingContactMeta?.isEmail
                                     ? t(
                                         'pages.clientChains.noEmails',
@@ -1792,7 +1810,7 @@ export function ChainExecutor({
                                   return (
                                     <label
                                       key={p.id}
-                                      className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                      className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-xs"
                                     >
                                       <input
                                         type="radio"
@@ -1811,13 +1829,15 @@ export function ChainExecutor({
                                         <span className="font-medium">
                                           {p.contact_value}
                                           {p.type_name && (
-                                            <span className="ml-2 text-xs text-gray-400">
+                                            <span className="text-muted-foreground ml-2 text-xs">
                                               ({p.type_name})
                                             </span>
                                           )}
                                         </span>
                                         {showComment && p.comment && (
-                                          <span className="text-xs text-gray-500">{p.comment}</span>
+                                          <span className="text-muted-foreground text-xs">
+                                            {p.comment}
+                                          </span>
                                         )}
                                       </span>
                                     </label>
@@ -1868,7 +1888,7 @@ export function ChainExecutor({
                               min={0}
                               step="0.01"
                               className="h-8 text-xs"
-                              leftIcon={<span className="text-gray-700">₴</span>}
+                              leftIcon={<span className="text-foreground">₴</span>}
                               value={editingStep.value}
                               onChange={(e) =>
                                 setEditingStep((prev) =>
@@ -1892,7 +1912,7 @@ export function ChainExecutor({
                           {editingStep.promiseDate !== undefined &&
                             editingStep.promiseDate !== '' && (
                               <div className="flex flex-col gap-1">
-                                <Label className="text-xs text-gray-600">
+                                <Label className="text-muted-foreground text-xs">
                                   {t('pages.clientChains.promiseDate')}
                                 </Label>
                                 <DateSelect
@@ -1919,7 +1939,7 @@ export function ChainExecutor({
                           {editingStep.promiseAmount !== undefined &&
                             editingStep.promiseAmount !== '' && (
                               <div className="flex flex-col gap-1">
-                                <Label className="text-xs text-gray-600">
+                                <Label className="text-muted-foreground text-xs">
                                   {t('pages.clientChains.promiseAmount')}
                                 </Label>
                                 <Input
@@ -1927,7 +1947,7 @@ export function ChainExecutor({
                                   min={0}
                                   step="0.01"
                                   className="h-8 text-xs"
-                                  leftIcon={<span className="text-gray-700">₴</span>}
+                                  leftIcon={<span className="text-foreground">₴</span>}
                                   value={editingStep.promiseAmount}
                                   onChange={(e) =>
                                     setEditingStep((prev) =>
@@ -1940,14 +1960,14 @@ export function ChainExecutor({
 
                           {/* Rewind warning — shown inline when a branch step is saved */}
                           {showRewindWarning ? (
-                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <div className="border-warning-200 bg-warning-100 rounded-lg border p-3">
                               <p className="mb-1 text-xs font-semibold text-amber-800">
                                 {t(
                                   'pages.clientChains.rewindWarningTitle',
                                   'Change branching step?'
                                 )}
                               </p>
-                              <p className="mb-2 text-xs text-amber-700">
+                              <p className="text-warning-700 mb-2 text-xs">
                                 {t(
                                   'pages.clientChains.rewindWarningBody',
                                   'Steps after step {{order}} will be cleared and you will re-walk them.',
@@ -2000,14 +2020,14 @@ export function ChainExecutor({
                 })}
 
                 {(isFinalizing || isAutoAdvancing) && (
-                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                  <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
+                    <span className="border-border h-4 w-4 animate-spin rounded-full border-2 border-t-blue-600" />
                     {t('pages.clientChains.saving', 'Saving…')}
                   </div>
                 )}
 
                 {!isFinalizing && !isAutoAdvancing && isDelayBlocked && (
-                  <div className="flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-6 text-center">
+                  <div className="border-warning-200 bg-warning-100 flex flex-col items-center gap-2 rounded-lg border p-6 text-center">
                     <span className="text-2xl">⏳</span>
                     <span className="text-sm font-medium text-amber-800">
                       {delaySecondsLeft >= 60
@@ -2016,7 +2036,7 @@ export function ChainExecutor({
                             seconds: delaySecondsLeft,
                           })}
                     </span>
-                    <span className="text-xs text-amber-600">
+                    <span className="text-warning-600 text-xs">
                       {t('pages.clientChains.delayHint')}
                     </span>
                   </div>
@@ -2027,8 +2047,8 @@ export function ChainExecutor({
                   !isDelayBlocked &&
                   currentStep &&
                   currentTA && (
-                    <div className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
-                      <Label className="text-sm font-medium text-gray-800">
+                    <div className="border-border bg-muted/50 flex flex-col gap-1 rounded-lg border p-3">
+                      <Label className="text-foreground text-sm font-medium">
                         {t('pages.clientChains.stepLabel', { order: currentStep.step_order })} —{' '}
                         {currentTA.name}
                         {currentStep.is_required && <span className="ml-1 text-red-500">*</span>}
@@ -2080,14 +2100,14 @@ export function ChainExecutor({
                           min={0}
                           step="0.01"
                           placeholder="0.00"
-                          leftIcon={<span className="text-gray-700">₴</span>}
+                          leftIcon={<span className="text-foreground">₴</span>}
                           value={stepValue}
                           onChange={(e) => setStepValue(e.target.value)}
                         />
                       ) : currentTA.field_type === 'credit' ? (
                         <div className="flex flex-col gap-2">
                           {visibleDebts.length === 0 ? (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-muted-foreground text-xs">
                               {t('pages.clientChains.noCredits')}
                             </span>
                           ) : (
@@ -2098,7 +2118,7 @@ export function ChainExecutor({
                               return (
                                 <label
                                   key={d.id}
-                                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                                 >
                                   <input
                                     type="checkbox"
@@ -2126,9 +2146,11 @@ export function ChainExecutor({
                       ) : currentTA.field_type === 'contact' ? (
                         <div className="flex flex-col gap-2">
                           {!contactOptions ? (
-                            <span className="text-xs text-gray-500">{t('common.loading')}</span>
+                            <span className="text-muted-foreground text-xs">
+                              {t('common.loading')}
+                            </span>
                           ) : contactOptions.length === 0 ? (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-muted-foreground text-xs">
                               {isEmailContactStep
                                 ? t(
                                     'pages.clientChains.noEmails',
@@ -2146,7 +2168,7 @@ export function ChainExecutor({
                               return (
                                 <label
                                   key={p.id}
-                                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                                 >
                                   <input
                                     type="radio"
@@ -2159,13 +2181,15 @@ export function ChainExecutor({
                                     <span className="font-medium">
                                       {p.contact_value}
                                       {p.type_name ? (
-                                        <span className="ml-2 text-xs text-gray-400">
+                                        <span className="text-muted-foreground ml-2 text-xs">
                                           ({p.type_name})
                                         </span>
                                       ) : null}
                                     </span>
                                     {showComment && p.comment && (
-                                      <span className="text-xs text-gray-500">{p.comment}</span>
+                                      <span className="text-muted-foreground text-xs">
+                                        {p.comment}
+                                      </span>
                                     )}
                                   </span>
                                 </label>
@@ -2186,7 +2210,7 @@ export function ChainExecutor({
 
                 {selectedDropdownValue?.require_promise_date && (
                   <div className="flex flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
+                    <Label className="text-foreground text-sm">
                       {t('pages.clientChains.promiseDate')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -2199,7 +2223,7 @@ export function ChainExecutor({
 
                 {selectedDropdownValue?.require_promise_amount && (
                   <div className="flex flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
+                    <Label className="text-foreground text-sm">
                       {t('pages.clientChains.promiseAmountUAH')}{' '}
                       <span className="text-red-500">*</span>
                     </Label>
@@ -2208,7 +2232,7 @@ export function ChainExecutor({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
-                      leftIcon={<span className="text-gray-700">₴</span>}
+                      leftIcon={<span className="text-foreground">₴</span>}
                       value={promiseAmount}
                       onChange={(e) => setPromiseAmount(e.target.value)}
                     />
@@ -2217,7 +2241,7 @@ export function ChainExecutor({
 
                 {visibleDebts.length > 0 && selectedDropdownValue?.require_credit && (
                   <div className="flex flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
+                    <Label className="text-foreground text-sm">
                       {t('pages.clientChains.credit')} <span className="text-red-500">*</span>
                     </Label>
                     <Select value={creditId} onValueChange={setCreditId}>
@@ -2242,7 +2266,9 @@ export function ChainExecutor({
 
                 {!isFinalizing && !isAutoAdvancing && isLastStep && (
                   <div className="flex flex-col gap-1">
-                    <Label className="text-sm text-gray-700">{t('pages.clientChains.notes')}</Label>
+                    <Label className="text-foreground text-sm">
+                      {t('pages.clientChains.notes')}
+                    </Label>
                     <Textarea
                       rows={3}
                       value={notes}
@@ -2272,7 +2298,7 @@ export function ChainExecutor({
                   !isDelayBlocked &&
                   isLastStep &&
                   showNotifyResponsibleCheckbox && (
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <label className="text-foreground flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
                         checked={notifyResponsible}
@@ -2297,10 +2323,10 @@ export function ChainExecutor({
               {/* RIGHT: progress + effects */}
               <div className="flex w-full flex-col gap-6 lg:w-[280px]">
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-dark-500 text-base font-semibold">
+                  <h3 className="text-foreground text-base font-semibold">
                     {t('pages.clientChains.chainProgress')}
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-muted-foreground text-xs">
                     {activeChain?.name} —{' '}
                     {t('pages.clientChains.stepOf', {
                       current: activeInstance.current_step_order ?? 1,
@@ -2327,20 +2353,20 @@ export function ChainExecutor({
                                 isCurrent
                                   ? 'bg-blue-600 text-white'
                                   : isPast
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'border border-gray-300 bg-white text-gray-400'
+                                    ? 'text-success-700 bg-green-100'
+                                    : 'border-border bg-card text-muted-foreground border'
                               }`}
                             >
                               {step.step_order}
                             </div>
                             {!isLast && (
-                              <div className="my-1 h-6 border-l border-dashed border-gray-300" />
+                              <div className="border-border my-1 h-6 border-l border-dashed" />
                             )}
                           </div>
                           <div className="flex flex-1 items-center justify-between gap-2 pt-1">
                             <span
                               className={`text-sm ${
-                                isCurrent ? 'font-semibold text-gray-900' : 'text-gray-700'
+                                isCurrent ? 'text-foreground font-semibold' : 'text-foreground'
                               }`}
                             >
                               {step.target_action_name ?? `Step ${step.step_order}`}
@@ -2352,12 +2378,12 @@ export function ChainExecutor({
                                 </span>
                               )}
                               {step.delay_minutes > 0 && (
-                                <span className="text-[11px] text-gray-400">
+                                <span className="text-muted-foreground text-[11px]">
                                   {formatDelay(step.delay_minutes)}
                                 </span>
                               )}
                               {hasBranch && (
-                                <span className="text-[11px] text-gray-400">
+                                <span className="text-muted-foreground text-[11px]">
                                   {t('pages.clientChains.branch')}
                                 </span>
                               )}
@@ -2370,8 +2396,8 @@ export function ChainExecutor({
                 </div>
 
                 {currentStepEffects.length > 0 && (
-                  <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
-                    <h3 className="text-dark-500 text-base font-semibold">
+                  <div className="border-border flex flex-col gap-2 border-t pt-4">
+                    <h3 className="text-foreground text-base font-semibold">
                       {t('pages.clientChains.effectsOnSave')}
                     </h3>
                     <ul className="flex flex-col gap-1.5">
@@ -2383,9 +2409,9 @@ export function ChainExecutor({
                         return (
                           <li
                             key={ef.id}
-                            className="flex items-center gap-1.5 text-sm text-gray-700"
+                            className="text-foreground flex items-center gap-1.5 text-sm"
                           >
-                            <span className="text-gray-400">→</span>
+                            <span className="text-muted-foreground">→</span>
                             {ef.effect_type === 'add_tag' && (
                               <>
                                 <span>{t('pages.clientChains.effectTag')}:</span>
@@ -2443,7 +2469,7 @@ export function ChainExecutor({
                 )
               })}
               <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">{t('pages.clientChains.notes')}</Label>
+                <Label className="text-foreground text-sm">{t('pages.clientChains.notes')}</Label>
                 <Textarea
                   rows={3}
                   value={instantNotes}
@@ -2452,7 +2478,7 @@ export function ChainExecutor({
                 />
               </div>
               {showNotifyResponsibleCheckbox && (
-                <label className="flex items-center gap-2 text-sm text-gray-700">
+                <label className="text-foreground flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     checked={notifyResponsible}
@@ -2475,7 +2501,7 @@ export function ChainExecutor({
             <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-6">
               {/* LEFT: hint + Start */}
               <div className="flex flex-1 flex-col gap-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-muted-foreground text-sm">
                   {t(
                     'pages.clientChains.previewHint',
                     'Review the chain on the right and click Start when ready.'
@@ -2493,10 +2519,10 @@ export function ChainExecutor({
               {/* RIGHT: progress timeline (no current step yet) */}
               <div className="flex w-full flex-col gap-6 lg:w-[280px]">
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-dark-500 text-base font-semibold">
+                  <h3 className="text-foreground text-base font-semibold">
                     {t('pages.clientChains.chainProgress')}
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-muted-foreground text-xs">
                     {effectiveChain.name} —{' '}
                     {t('pages.clientChains.stepCount', {
                       count: effectiveSteps.length,
@@ -2515,26 +2541,26 @@ export function ChainExecutor({
                       return (
                         <li key={step.id} className="relative flex items-start gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-400">
+                            <div className="border-border bg-card text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
                               {step.step_order}
                             </div>
                             {!isLast && (
-                              <div className="my-1 h-6 border-l border-dashed border-gray-300" />
+                              <div className="border-border my-1 h-6 border-l border-dashed" />
                             )}
                           </div>
                           <div className="flex flex-1 items-center justify-between gap-2 pt-1">
-                            <span className="text-sm text-gray-700">
+                            <span className="text-foreground text-sm">
                               {ta?.name ?? step.target_action_name ?? `Step ${step.step_order}`}
                               {step.is_required && <span className="ml-1 text-red-500">*</span>}
                             </span>
                             <div className="flex shrink-0 items-center gap-2">
                               {step.delay_minutes > 0 && (
-                                <span className="text-[11px] text-gray-400">
+                                <span className="text-muted-foreground text-[11px]">
                                   {formatDelay(step.delay_minutes)}
                                 </span>
                               )}
                               {hasBranch && (
-                                <span className="text-[11px] text-gray-400">
+                                <span className="text-muted-foreground text-[11px]">
                                   {t('pages.clientChains.branch')}
                                 </span>
                               )}
@@ -2611,8 +2637,8 @@ function InstantStepCard({
       : null
 
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-gray-200 bg-gray-50/50 p-3">
-      <Label className="text-sm font-medium text-gray-800">
+    <div className="border-border bg-muted/50 flex flex-col gap-1 rounded-md border p-3">
+      <Label className="text-foreground text-sm font-medium">
         {t('pages.clientChains.stepLabel', { order: index + 1 })} — {ta.name}
         {step.is_required && <span className="ml-1 text-red-500">*</span>}
       </Label>
@@ -2657,14 +2683,16 @@ function InstantStepCard({
           min={0}
           step="0.01"
           placeholder="0.00"
-          leftIcon={<span className="text-gray-700">₴</span>}
+          leftIcon={<span className="text-foreground">₴</span>}
           value={value.value}
           onChange={(e) => onChange({ value: e.target.value })}
         />
       ) : ta.field_type === 'credit' ? (
         <div className="flex flex-col gap-2">
           {visibleDebts.length === 0 ? (
-            <span className="text-xs text-gray-500">{t('pages.clientChains.noCredits')}</span>
+            <span className="text-muted-foreground text-xs">
+              {t('pages.clientChains.noCredits')}
+            </span>
           ) : (
             visibleDebts.map((d) => {
               const creditKey = String(d.id)
@@ -2673,7 +2701,7 @@ function InstantStepCard({
               return (
                 <label
                   key={d.id}
-                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
                   <input
                     type="checkbox"
@@ -2701,9 +2729,9 @@ function InstantStepCard({
       ) : ta.field_type === 'contact' ? (
         <div className="flex flex-col gap-2">
           {!contactOptions ? (
-            <span className="text-xs text-gray-500">{t('common.loading')}</span>
+            <span className="text-muted-foreground text-xs">{t('common.loading')}</span>
           ) : contactOptions.length === 0 ? (
-            <span className="text-xs text-gray-500">
+            <span className="text-muted-foreground text-xs">
               {isEmailContact
                 ? t('pages.clientChains.noEmails', 'No emails available for this source.')
                 : t('pages.clientChains.noContacts', 'No phones available for this source.')}
@@ -2715,7 +2743,7 @@ function InstantStepCard({
               return (
                 <label
                   key={p.id}
-                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
                   <input
                     type="radio"
@@ -2728,11 +2756,11 @@ function InstantStepCard({
                     <span className="font-medium">
                       {p.contact_value}
                       {p.type_name ? (
-                        <span className="ml-2 text-xs text-gray-400">({p.type_name})</span>
+                        <span className="text-muted-foreground ml-2 text-xs">({p.type_name})</span>
                       ) : null}
                     </span>
                     {showComment && p.comment && (
-                      <span className="text-xs text-gray-500">{p.comment}</span>
+                      <span className="text-muted-foreground text-xs">{p.comment}</span>
                     )}
                   </span>
                 </label>
@@ -2751,7 +2779,7 @@ function InstantStepCard({
 
       {dv?.require_promise_date && (
         <div className="mt-1 flex flex-col gap-1">
-          <Label className="text-xs text-gray-600">
+          <Label className="text-muted-foreground text-xs">
             {t('pages.clientChains.promiseDate')} <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -2763,7 +2791,7 @@ function InstantStepCard({
       )}
       {dv?.require_promise_amount && (
         <div className="mt-1 flex flex-col gap-1">
-          <Label className="text-xs text-gray-600">
+          <Label className="text-muted-foreground text-xs">
             {t('pages.clientChains.promiseAmountUAH')} <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -2771,7 +2799,7 @@ function InstantStepCard({
             min={0}
             step="0.01"
             placeholder="0.00"
-            leftIcon={<span className="text-gray-700">₴</span>}
+            leftIcon={<span className="text-foreground">₴</span>}
             value={value.promiseAmount}
             onChange={(e) => onChange({ promiseAmount: e.target.value })}
           />
@@ -2779,7 +2807,7 @@ function InstantStepCard({
       )}
       {dv?.require_credit && visibleDebts.length > 0 && (
         <div className="mt-1 flex flex-col gap-1">
-          <Label className="text-xs text-gray-600">
+          <Label className="text-muted-foreground text-xs">
             {t('pages.clientChains.credit')} <span className="text-red-500">*</span>
           </Label>
           <Select value={value.creditId} onValueChange={(v) => onChange({ creditId: v })}>

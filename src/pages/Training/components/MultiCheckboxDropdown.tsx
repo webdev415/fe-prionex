@@ -97,7 +97,7 @@ export function MultiCheckboxDropdown<V extends string>({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+        <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
           {label}
         </span>
       )}
@@ -108,29 +108,33 @@ export function MultiCheckboxDropdown<V extends string>({
               type="button"
               disabled={disabled}
               className={cn(
-                'text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                'text-foreground focus:border-primary-500 border-border bg-card flex h-[45px] w-full items-center justify-between rounded-lg border px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
               <span className="truncate text-left">{triggerLabel}</span>
-              <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+              <Icons.ArrowDown
+                size={16}
+                className="text-muted-foreground shrink-0"
+                strokeWidth={1.5}
+              />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
             sideOffset={8}
             style={{ width: triggerWidth ? `${triggerWidth}px` : undefined }}
-            className="max-w-[calc(100vw-2rem)] rounded-md border border-gray-200 bg-white p-0 shadow-lg sm:max-w-none"
+            className="border-border bg-card max-w-[calc(100vw-2rem)] rounded-md border p-0 shadow-lg sm:max-w-none"
           >
             <div className="flex max-h-72 flex-col overflow-y-auto py-1">
-              <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+              <label className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 px-3 py-2 text-sm">
                 <Checkbox checked={isAllSelected} onCheckedChange={toggleAll} />
                 <span className="font-medium">{allLabel}</span>
               </label>
-              <div className="my-1 h-px bg-gray-200" />
+              <div className="bg-border my-1 h-px" />
               {options.map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 px-3 py-2 text-sm"
                 >
                   <Checkbox
                     checked={selected.includes(opt.value)}

@@ -13,6 +13,8 @@ export const legalWorkplaceKeys = {
   inboxList: (params: LegalInboxParams) => [...legalWorkplaceKeys.inbox(), params] as const,
   messages: () => [...legalWorkplaceKeys.all, 'messages'] as const,
   message: (messageId: string) => [...legalWorkplaceKeys.messages(), messageId] as const,
+  senderHistory: (messageId: string) =>
+    [...legalWorkplaceKeys.messages(), messageId, 'sender-history'] as const,
   threads: () => [...legalWorkplaceKeys.all, 'threads'] as const,
   thread: (threadId: string, includeQuarantined?: boolean) =>
     [...legalWorkplaceKeys.threads(), threadId, { includeQuarantined }] as const,
@@ -64,6 +66,15 @@ export function useLegalMessage(messageId: string | null, options?: { enabled?: 
     queryFn: () => legalApi.getMessage(messageId!),
     enabled: options?.enabled !== false && Boolean(messageId),
     staleTime: 10_000,
+  })
+}
+
+export function useLegalSenderHistory(messageId: string | null, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.senderHistory(messageId ?? ''),
+    queryFn: () => legalApi.getSenderHistory(messageId!),
+    enabled: options?.enabled !== false && Boolean(messageId),
+    staleTime: 30_000,
   })
 }
 

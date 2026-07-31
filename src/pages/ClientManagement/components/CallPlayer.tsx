@@ -285,24 +285,28 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
             <Icons.Spinner className="h-6 w-6" />
           </div>
         )}
-        <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
+        <div className="bg-card flex items-center gap-2 self-stretch rounded-full px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
           <button
             onClick={handlePlayPause}
             disabled={isAudioLoading || !!loadError}
             className="shrink-0 cursor-pointer disabled:opacity-40"
           >
             {isPlaying ? (
-              <Icons.Pause size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
+              <Icons.Pause size={18} className="text-foreground sm:size-5" strokeWidth={1.5} />
             ) : (
-              <Icons.PlayCircle02 size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
+              <Icons.PlayCircle02
+                size={18}
+                className="text-foreground sm:size-5"
+                strokeWidth={1.5}
+              />
             )}
           </button>
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+            <span className="text-foreground shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(currentTime))}
             </span>
             <div
-              className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
+              className="bg-muted relative h-1 min-w-0 flex-1 cursor-pointer rounded-full"
               onClick={handleProgressChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -318,16 +322,16 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
               aria-valuenow={currentTime}
             >
               <div
-                className="h-full rounded-full bg-gray-700 transition-all"
+                className="bg-muted-foreground h-full rounded-full transition-all"
                 style={{ width: `${progressPercentage}%` }}
               />
               {markerOverlay}
             </div>
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+            <span className="text-foreground shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(duration))}
             </span>
           </div>
-          <button className="text-dark-500 shrink-0 cursor-pointer hover:text-gray-800">
+          <button className="text-foreground hover:text-foreground shrink-0 cursor-pointer">
             <Icons.VolumeHigh size={18} className="sm:size-5" />
           </button>
         </div>

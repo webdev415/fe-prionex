@@ -31,20 +31,20 @@ function TimelineIcon({ state }: { state: UbkiLogDetailStep['state'] }) {
 function CodeBlock({ title, body }: { title: string; body: string }) {
   const { t } = useTranslation('common')
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-800 bg-[#0f1420]">
-      <div className="flex items-center justify-between border-b border-gray-800 px-3 py-1.5">
-        <span className="text-[11px] font-medium tracking-wide text-gray-400 uppercase">
+    <div className="border-border bg-muted overflow-hidden rounded-lg border">
+      <div className="border-border flex items-center justify-between border-b px-3 py-1.5">
+        <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
           {title}
         </span>
         <button
           type="button"
           onClick={() => navigator.clipboard?.writeText(body)}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
         >
           <MdContentCopy size={12} /> {t('pages.ubkiIntegration.drawer.codeBlock.copy', 'Copy')}
         </button>
       </div>
-      <pre className="max-h-48 overflow-auto px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap text-gray-300">
+      <pre className="text-foreground max-h-48 overflow-auto px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap">
         {body}
       </pre>
     </div>
@@ -61,7 +61,7 @@ function DrawerShell({ children, onClose }: { children: React.ReactNode; onClose
         onClick={onClose}
         className="absolute inset-0 bg-black/30"
       />
-      <aside className="relative flex h-full w-full max-w-md flex-col bg-white shadow-xl">
+      <aside className="bg-card relative flex h-full w-full max-w-md flex-col shadow-xl">
         {children}
       </aside>
     </div>
@@ -91,18 +91,22 @@ function SubmissionDrawerLoader({ logId, onClose }: { logId: string; onClose: ()
   if (isLoading || !data) {
     return (
       <DrawerShell onClose={onClose}>
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h3 className="text-dark-500 text-sm font-semibold">
+        <div className="border-border flex items-center justify-between border-b px-5 py-4">
+          <h3 className="text-foreground text-sm font-semibold">
             {t('pages.ubkiIntegration.drawer.submissionTitle', {
               defaultValue: 'Submission #{{id}}',
               id: logId,
             })}
           </h3>
-          <button type="button" onClick={onClose} className="hover:text-dark-500 text-gray-400">
+          <button
+            type="button"
+            onClick={onClose}
+            className="hover:text-foreground text-muted-foreground"
+          >
             <MdClose size={20} />
           </button>
         </div>
-        <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
+        <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
           {isError
             ? t('pages.ubkiIntegration.drawer.loadError', 'Failed to load submission.')
             : t('pages.ubkiIntegration.drawer.loading', 'Loading…')}
@@ -191,7 +195,7 @@ function SubmissionDrawerContent({
   return (
     <DrawerShell onClose={onClose}>
       {/* header */}
-      <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+      <div className="border-border flex items-start justify-between border-b px-5 py-4">
         <div>
           <div className="flex items-center gap-2">
             <span
@@ -201,19 +205,23 @@ function SubmissionDrawerContent({
             >
               {detail.status}
             </span>
-            <h3 className="text-dark-500 text-sm font-semibold">
+            <h3 className="text-foreground text-sm font-semibold">
               {t('pages.ubkiIntegration.drawer.submissionTitle', {
                 defaultValue: 'Submission #{{id}}',
                 id: detail.id,
               })}
             </h3>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="text-muted-foreground mt-1 text-xs">
             {clientName} · #{detail.client_id} · {clientTin}
           </p>
-          <p className="text-xs text-gray-400">{creditDate}</p>
+          <p className="text-muted-foreground text-xs">{creditDate}</p>
         </div>
-        <button type="button" onClick={onClose} className="hover:text-dark-500 text-gray-400">
+        <button
+          type="button"
+          onClick={onClose}
+          className="hover:text-foreground text-muted-foreground"
+        >
           <MdClose size={20} />
         </button>
       </div>
@@ -244,7 +252,7 @@ function SubmissionDrawerContent({
       {/* body */}
       <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-5">
         <div>
-          <p className="text-dark-500 mb-2 text-xs font-semibold">
+          <p className="text-foreground mb-2 text-xs font-semibold">
             {t('pages.ubkiIntegration.drawer.timeline.title', 'Submission Timeline')}
           </p>
           <ol className="space-y-3">
@@ -253,10 +261,12 @@ function SubmissionDrawerContent({
                 <TimelineIcon state={step.state} />
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-dark-500 text-xs font-medium">{step.label}</span>
-                    <span className="text-[11px] text-gray-400">{step.time}</span>
+                    <span className="text-foreground text-xs font-medium">{step.label}</span>
+                    <span className="text-muted-foreground text-[11px]">{step.time}</span>
                   </div>
-                  {step.detail && <p className="text-[11px] text-gray-500">{step.detail}</p>}
+                  {step.detail && (
+                    <p className="text-muted-foreground text-[11px]">{step.detail}</p>
+                  )}
                 </div>
               </li>
             ))}
@@ -290,7 +300,7 @@ function SubmissionDrawerContent({
 
         {/* admin notes */}
         <div>
-          <p className="text-dark-500 mb-1 text-xs font-semibold">
+          <p className="text-foreground mb-1 text-xs font-semibold">
             {t('pages.ubkiIntegration.drawer.adminNotes.title', 'Admin Notes')}
           </p>
           <textarea
@@ -301,9 +311,9 @@ function SubmissionDrawerContent({
               'pages.ubkiIntegration.drawer.adminNotes.placeholder',
               'Add a note about this submission…'
             )}
-            className="focus:border-primary-500 h-20 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 border-border text-foreground h-20 w-full resize-none rounded-lg border px-3 py-2 text-xs focus:outline-none"
           />
-          <div className="text-right text-[11px] text-gray-400">{note.length}/100</div>
+          <div className="text-muted-foreground text-right text-[11px]">{note.length}/100</div>
           {saveNote.isError && (
             <p className="text-error-600 text-[11px]">
               {t('pages.ubkiIntegration.drawer.adminNotes.saveError', 'Failed to save note.')}
@@ -313,7 +323,7 @@ function SubmissionDrawerContent({
       </div>
 
       {/* footer */}
-      <div className="flex justify-end gap-2 border-t border-gray-200 px-5 py-3">
+      <div className="border-border flex justify-end gap-2 border-t px-5 py-3">
         <Button
           variant="outline"
           size="sm"

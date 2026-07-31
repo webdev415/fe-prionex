@@ -68,22 +68,22 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
       key: 'matchedFolders',
       value: counts?.matched_folders ?? 0,
       label: t(`${p}.matchedFolders`, 'Folders matched'),
-      className: 'border-gray-200 bg-white/50',
-      valueClassName: 'text-dark-500',
+      className: 'border-border bg-card',
+      valueClassName: 'text-foreground',
     },
     {
       key: 'skippedNoMatch',
       value: counts?.skipped_no_match ?? 0,
       label: t(`${p}.skippedNoMatch`, 'Skipped (no match)'),
-      className: 'border-gray-200 bg-white/50',
-      valueClassName: 'text-dark-500',
+      className: 'border-border bg-card',
+      valueClassName: 'text-foreground',
     },
     {
       key: 'duplicateSkipped',
       value: counts?.duplicate_skipped ?? 0,
       label: t(`${p}.duplicateSkipped`, 'Skipped (duplicate)'),
-      className: 'border-gray-200 bg-white/50',
-      valueClassName: 'text-dark-500',
+      className: 'border-border bg-card',
+      valueClassName: 'text-foreground',
     },
     {
       key: 'executablesBlocked',
@@ -96,8 +96,8 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
       key: 'oversizedSkipped',
       value: counts?.oversized_skipped ?? 0,
       label: t(`${p}.oversizedSkipped`, 'Skipped (too large)'),
-      className: 'border-gray-200 bg-white/50',
-      valueClassName: 'text-dark-500',
+      className: 'border-border bg-card',
+      valueClassName: 'text-foreground',
     },
     {
       key: 'errors',
@@ -109,20 +109,20 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
   ]
 
   return (
-    <div className="space-y-6 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+    <div className="border-border bg-card/50 space-y-6 rounded-xl border p-4 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         {isComplete && <Icons.Success size={24} className="text-success-500" />}
         {isFailed && <Icons.Cancel01 size={24} className="text-error-500" />}
-        {isCancelled && <Icons.Cancel01 size={24} className="text-gray-400" />}
+        {isCancelled && <Icons.Cancel01 size={24} className="text-muted-foreground" />}
         {isActive && <Icons.Spinner className="h-6 w-6" />}
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">
+          <h3 className="text-foreground text-lg font-medium">
             {isComplete && t(`${p}.headingComplete`, 'Document import complete')}
             {isFailed && t(`${p}.headingFailed`, 'Document import failed')}
             {isCancelled && t(`${p}.headingCancelled`, 'Document import cancelled')}
             {isActive && t(`${p}.processing`, 'Processing documents…')}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-muted-foreground text-sm">
             {isActive
               ? t(
                   `${p}.processingHint`,
@@ -135,14 +135,14 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
 
       {isActive && job.progress_percent != null && (
         <div>
-          <div className="mb-1 flex justify-between text-xs text-gray-500">
+          <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
               {t(`${p}.attaching`, 'Attaching documents…')}
               {job.total ? ` (${job.processed ?? 0}/${job.total})` : ''}
             </span>
             <span>{job.progress_percent}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
             <div
               className="bg-primary-400 h-full rounded-full transition-all"
               style={{ width: `${job.progress_percent}%` }}
@@ -155,7 +155,7 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
         {stats.map((s) => (
           <div key={s.key} className={`rounded-xl border px-4 py-3 shadow-sm ${s.className}`}>
             <p className={`text-2xl font-bold ${s.valueClassName}`}>{isTerminal ? s.value : '—'}</p>
-            <p className="text-xs text-gray-600">{s.label}</p>
+            <p className="text-muted-foreground text-xs">{s.label}</p>
           </div>
         ))}
       </div>
@@ -169,7 +169,7 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
         {isTerminal && (
           <>
             <Button
