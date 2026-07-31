@@ -31,7 +31,10 @@ import {
   YAxis,
 } from 'recharts'
 import { PermissionGuard } from '@/components/auth'
+import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { useHasPermission } from '@/hooks'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
@@ -41,6 +44,8 @@ import {
   useV3Monitoring,
   useV3ScoredMonths,
   useV3UiEnabled,
+  useTriggerV3Scoring,
+  useSetV3UiEnabled,
 } from '@/features/scoring/hooks/useV3Scores'
 import type { V3Bucket } from '@/features/scoring/api/types'
 
@@ -128,6 +133,38 @@ function Empty({ children }: { children: React.ReactNode }) {
 export function ScoringV3MonitoringPage() {
   const projectId = useActiveProjectId()
   const cutoverOn = useV3UiEnabled()
+  // The other "Run now" button lives on the Priority Work List, whose nav entry
+  // is hidden until cutover — i.e. unreachable during exactly the period when a
+  // manual run is most needed. So the report carries its own.
+  const canRun = useHasPermission(PERMISSIONS.SCORING_CONFIG.EDIT)
+  const trigger = useTriggerV3Scoring()
+  const setCutover = useSetV3UiEnabled()
+  const { confirm, confirmDialog } = useConfirm()
+
+  /** Record the client's sign-off decision. Confirmed both ways: enabling puts
+   *  unvalidated-until-now priorities in front of every operator on the brand,
+   *  and disabling pulls the work list out from under them mid-shift. */
+  const handleCutover = async () => {
+    if (!projectId) return
+    const turningOn = !cutoverOn
+    const ok = await confirm({
+      title: turningOn ? 'Show v3 priorities to operators?' : 'Hide v3 priorities from operators?',
+      message: turningOn
+        ? 'Every operator on this brand will see v3 buckets instead of the old priority, and the Priority Work List becomes available. Do this only after the client has signed off on the report above. You can undo it here at any time.'
+        : 'Operators go back to the old priority immediately. Scoring keeps running in the background, so no data is lost.',
+      confirmLabel: turningOn ? 'Enable for operators' : 'Hide from operators',
+      cancelLabel: 'Cancel',
+      tone: turningOn ? 'default' : 'danger',
+    })
+    if (!ok) return
+    setCutover.mutate({
+      projectId,
+      enabled: turningOn,
+      reason: turningOn
+        ? 'KAN-794 sign-off — cutover enabled from the shadow-run report'
+        : 'KAN-794 rollback — v3 hidden from operators',
+    })
+  }
 
   // Only offer months that were actually scored — a picker full of empty months
   // reads as "the report is broken". Newest first; default to the newest.
@@ -210,6 +247,16 @@ export function ScoringV3MonitoringPage() {
               showYearDropdown. Months with no snapshot say so rather than being
               hidden, so browsing ahead is harmless. */}
           <div className="flex items-center gap-2 text-sm">
+            {canRun && (
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => projectId && trigger.mutate({ projectId, asOf: month || undefined })}
+                disabled={!projectId || trigger.isPending}
+              >
+                {trigger.isPending ? 'Starting…' : 'Run now'}
+              </Button>
+            )}
             <span className="text-gray-600">Month</span>
             <DateSelect
               value={month ? new Date(month) : null}
@@ -222,17 +269,38 @@ export function ScoringV3MonitoringPage() {
           </div>
         </div>
 
+        {/* Status + the cutover switch. KAN-794's decision is a human one — the
+            client approves or does not — and this is where that decision is
+            recorded into the system, audited with who flipped it and why. */}
         <div
-          className={`w-full rounded-xl border p-3 text-sm ${
+          className={`flex w-full flex-col gap-3 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${
             cutoverOn
               ? 'border-primary-600 text-primary-700 bg-[#F0F7E6]'
               : 'border-[#FF9D00] bg-[#FFF6E6] text-[#B36F00]'
           }`}
         >
-          {cutoverOn
-            ? 'Live — operators are seeing v3 priorities for this brand.'
-            : 'Shadow run — scores are being calculated and stored, but operators do NOT see them yet.'}
+          <span>
+            {cutoverOn
+              ? 'Live — operators are seeing v3 priorities for this brand.'
+              : 'Shadow run — scores are being calculated and stored, but operators do NOT see them yet.'}
+          </span>
+          {canRun && (
+            <Button
+              variant={cutoverOn ? 'outline' : 'primary'}
+              size="sm"
+              disabled={setCutover.isPending || !projectId}
+              onClick={handleCutover}
+              className="shrink-0"
+            >
+              {setCutover.isPending
+                ? 'Saving…'
+                : cutoverOn
+                  ? 'Hide from operators'
+                  : 'Enable for operators'}
+            </Button>
+          )}
         </div>
+        {confirmDialog}
 
         {(monthsLoading || (isLoading && !!month)) && <Empty>Loading…</Empty>}
         {isError && <Empty>Could not load the report. Is the scoring service running?</Empty>}

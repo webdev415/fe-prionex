@@ -7,6 +7,7 @@ import { GuestRoute } from './GuestRoute'
 import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
+import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
@@ -471,12 +472,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        // Scoring v3 operator work list (KAN-791). Permission-gated; nav entry is
-        // additionally feature-flagged off until the shadow-run is signed off.
+        // Scoring v3 operator work list (KAN-791). Two gates, both required:
+        // the permission, AND the per-brand cutover switch — the ticket says
+        // "hidden until sub-task 8 sign-off", and hiding only the nav entry left
+        // the URL reachable during the shadow run.
         path: 'operator-work-list',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
-            {withSuspense(<OperatorWorkListPage />)}
+            <V3CutoverRoute>{withSuspense(<OperatorWorkListPage />)}</V3CutoverRoute>
           </PermissionRoute>
         ),
       },

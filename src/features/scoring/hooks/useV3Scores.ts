@@ -42,15 +42,23 @@ export function useActiveProjectId(): number | undefined {
  * see v3 because a request was slow or the config service was down.
  */
 export function useV3UiEnabled(): boolean {
+  return useV3UiEnabledState().enabled
+}
+
+/**
+ * Same switch, with the loading flag — for route guards, which must not redirect
+ * on the first render just because the answer has not arrived yet.
+ */
+export function useV3UiEnabledState(): { enabled: boolean; isLoading: boolean } {
   const projectId = useActiveProjectId()
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: scoringKeys.uiEnabled(projectId ?? 0),
     queryFn: () => scoringApi.getV3UiEnabled(projectId as number),
     enabled: !!projectId,
     staleTime: 5 * 60_000, // cutover is a rare, deliberate event
     retry: 1,
   })
-  return data?.enabled ?? false
+  return { enabled: data?.enabled ?? false, isLoading: isLoading && !!projectId }
 }
 
 export function useV3Scores(
@@ -76,6 +84,31 @@ export function useV3Monitoring(
     queryKey: scoringKeys.monitoring(projectId ?? 0, month),
     queryFn: () => scoringApi.getV3Monitoring(projectId as number, month),
     enabled: !!projectId && (options.enabled ?? true),
+  })
+}
+
+/**
+ * Flip a brand's cutover switch (KAN-791/794).
+ *
+ * This is how a human records the client's sign-off decision — the system never
+ * infers it. Enabling makes v3 live for every operator on that brand at their
+ * next page load; disabling is the documented rollback. Both are audited
+ * server-side with the acting user and the reason.
+ */
+export function useSetV3UiEnabled() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { projectId: number; enabled: boolean; reason?: string }) =>
+      scoringApi.setV3UiEnabled(vars.projectId, vars.enabled, vars.reason),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: scoringKeys.all })
+      toast.success(
+        data.enabled
+          ? 'v3 is now live for operators on this brand.'
+          : 'v3 hidden from operators again. Scoring keeps running in the background.'
+      )
+    },
+    onError: () => toast.error('Could not change the setting. Do you have permission?'),
   })
 }
 
@@ -167,7 +200,10 @@ export function useTriggerV3Scoring() {
       scoringApi.triggerV3Scoring(vars.projectId, vars.asOf),
     onSuccess: () => {
       toast.success('Scoring started — refresh in a moment to see updates.')
-      setTimeout(() => qc.invalidateQueries({ queryKey: scoringKeys.lists() }), 4000)
+      // Invalidate the whole v3 namespace, not just the lists: a run also changes
+      // the available months, the monitoring summary and the drift comparison,
+      // which the shadow-run report reads.
+      setTimeout(() => qc.invalidateQueries({ queryKey: scoringKeys.all }), 4000)
     },
     onError: () => toast.error('Could not start scoring.'),
   })
