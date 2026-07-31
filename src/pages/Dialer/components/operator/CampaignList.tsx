@@ -82,7 +82,7 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
         // by the right panel (absolute children don't contribute intrinsic
         // height). Mobile: in-flow list with a capped max-height so the panel
         // still shows rows when stacked in a single-column grid.
-        <div className="relative min-h-0 max-h-[min(55vh,480px)] flex-1 lg:max-h-none">
+        <div className="relative max-h-[min(55vh,480px)] min-h-0 flex-1 lg:max-h-none">
           {/* `bg-card` here (not just on each row) keeps any leftover space
               below the last row — when the list is shorter than the
               right-hand panel's height — looking like part of the same solid
@@ -116,7 +116,9 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
                           />
                         )}
                       </span>
-                      <span className={cn('flex shrink-0 items-center gap-1.5 text-xs', meta.textClass)}>
+                      <span
+                        className={cn('flex shrink-0 items-center gap-1.5 text-xs', meta.textClass)}
+                      >
                         <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta.dotClass)} />
                         {meta.label}
                       </span>
@@ -134,7 +136,8 @@ export function CampaignList({ campaigns, selectedId, joinedId, onSelect }: Camp
                       <span className="flex min-w-0 items-center gap-1">
                         <Icons.Flash size={12} className="shrink-0" strokeWidth={1.8} />
                         <span className="truncate">
-                          {t('dialer.operator.aggressiveness', 'Aggressiveness')}: {c.aggressiveness}×
+                          {t('dialer.operator.aggressiveness', 'Aggressiveness')}:{' '}
+                          {c.aggressiveness}×
                         </span>
                       </span>
                       {c.calling_hours_start && c.calling_hours_end && (
