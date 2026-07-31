@@ -62,6 +62,7 @@ type TagFormData = {
   expiry_type?: string
   is_related_tag?: boolean
   sort_order?: number
+  skip_weekends?: boolean
 }
 
 /**
@@ -226,6 +227,7 @@ export function TagFormModal({
       expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
       is_related_tag: (tag as TagDefinition)?.is_related_tag ?? false,
       sort_order: (tag as TagDefinition)?.sort_order ?? 100,
+      skip_weekends: (tag as TagDefinition)?.skip_weekends ?? false,
     },
   })
 
@@ -264,6 +266,7 @@ export function TagFormModal({
         expiry_type: tagDef?.expiry_type ?? 'permanent',
         is_related_tag: tagDef?.is_related_tag ?? false,
         sort_order: tagDef?.sort_order ?? 100,
+        skip_weekends: tagDef?.skip_weekends ?? false,
       })
     }
   }, [open, tag, reset])
@@ -649,6 +652,25 @@ export function TagFormModal({
                       )}
                       disabled={isSystemTag}
                     />
+                  </div>
+                  {/* Skip Weekends */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="skip_weekends"
+                      {...register('skip_weekends')}
+                      className="h-4 w-4 rounded border-gray-300"
+                      disabled={isSystemTag}
+                    />
+                    <Label htmlFor="skip_weekends" className="cursor-pointer text-sm font-normal">
+                      {t('pages.tags.fields.skipWeekends', 'Skip weekends')}
+                      <FieldTooltip
+                        text={t(
+                          'pages.tags.fields.tooltips.skipWeekends',
+                          'When enabled, the TTL countdown pauses on Saturday and Sunday. For example, a 48-hour TTL assigned on Friday at 18:00 will expire on Tuesday at 18:00, not Sunday.'
+                        )}
+                      />
+                    </Label>
                   </div>
                   <p className="text-xs text-gray-500">
                     {t(
