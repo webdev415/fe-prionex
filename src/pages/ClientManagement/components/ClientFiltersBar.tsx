@@ -19,6 +19,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
+import { RR_STATUS_FILTER_OPTIONS, rrStatusMeta } from '@/features/clients/constants/rrStatus'
 import { getTagTriState, type TagFilterSelection } from '@/features/tags/utils/tagFilterState'
 import { TagFilterTriState } from './TagFilterTriState'
 import {
@@ -277,6 +278,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const tags = tagsData || []
   const displayedTags = tags.slice(0, 3)
   const hiddenTagsCount = Math.max(0, tags.length - 3)
+  const selectedRrStatusIds = filters.rrStatusIds || []
 
   return (
     <div className="border-border bg-card/50 flex w-full flex-col items-start gap-3 self-stretch rounded-xl border p-4 shadow-sm sm:p-6">
@@ -643,7 +645,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 ))}
                 {hiddenPortfoliosCount > 0 && (
                   <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-primary-700 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
                     </span>
                     <PortfolioDropdown
@@ -655,20 +657,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       trigger={
                         <button
                           type="button"
-                          className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                          className="bg-primary-700 text-primary-foreground flex items-center gap-2 rounded p-1"
+                          aria-label={t('pages.clients.filters.more')}
                         >
                           {portfolioDropdownOpen ? (
-                            <Icons.ArrowUp
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
+                            <Icons.ArrowUp size={16} className="text-current" strokeWidth={2} />
                           ) : (
-                            <Icons.ArrowDown
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
+                            <Icons.ArrowDown size={16} className="text-current" strokeWidth={2} />
                           )}
                         </button>
                       }
@@ -711,13 +706,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {/* Always show dropdown so Segments tab remains reachable even with ≤3 tags */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   {hiddenTagsCount > 0 && (
-                    <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-primary-700 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenTagsCount} {t('pages.clients.filters.more')}
                     </span>
                   )}
                   {filters.segmentId != null && (
                     <span
-                      className="text-primary-600 max-w-[140px] truncate text-xs font-medium sm:text-sm"
+                      className="text-primary-700 max-w-[140px] truncate text-xs font-medium sm:text-sm"
                       title={t('pages.clients.filters.segmentActive')}
                     >
                       {t('pages.clients.filters.segmentActive')}
@@ -735,21 +730,52 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <button
                         type="button"
                         data-testid="tags-multiselect-trigger"
-                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                        className="bg-primary-700 text-primary-foreground flex items-center gap-2 rounded p-1"
+                        aria-label={t('pages.clients.filters.more')}
                       >
                         {tagsDropdownOpen ? (
-                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                          <Icons.ArrowUp size={16} className="text-current" strokeWidth={2} />
                         ) : (
-                          <Icons.ArrowDown
-                            size={16}
-                            className="text-secondary-800"
-                            strokeWidth={2}
-                          />
+                          <Icons.ArrowDown size={16} className="text-current" strokeWidth={2} />
                         )}
                       </button>
                     }
                   />
                 </div>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
+          </div>
+
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.rrStatus', 'RR status')}
+              </label>
+              <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
+                {RR_STATUS_FILTER_OPTIONS.map((statusId) => {
+                  const meta = rrStatusMeta[statusId]
+                  return (
+                    <label
+                      key={statusId}
+                      className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
+                    >
+                      <Checkbox
+                        checked={selectedRrStatusIds.includes(statusId)}
+                        onCheckedChange={(checked) => {
+                          onFilterChange({
+                            _action: 'toggleRrStatus',
+                            _value: statusId,
+                            _checked: checked,
+                          } as unknown as ClientFilters)
+                        }}
+                      />
+                      <span className="text-dark-500 text-xs sm:text-sm">
+                        {t(meta.labelKey, meta.fallbackLabel)}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

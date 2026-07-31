@@ -100,6 +100,8 @@ import {
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
   useDisconnectRR,
+  useActivateRR,
+  useDeleteRRDraft,
   useRecordRROverpayment,
   useRRStatusHistory,
   useRROverpayments,
@@ -129,6 +131,7 @@ import {
 } from '@/features/clients/utils/contactBlocking'
 import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import { RR_STATUS, rrBadgeClass } from '@/features/clients/constants/rrStatus'
 import {
   generateSchedule,
   PERIODICITY_EVERY_N_DAYS,
@@ -361,6 +364,7 @@ export function ClientDetailPage() {
       return next
     })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  const [deleteDraftConfirm, setDeleteDraftConfirm] = useState<number | null>(null)
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
   const [disconnectRrConfirm, setDisconnectRrConfirm] = useState<{
@@ -518,6 +522,116 @@ export function ClientDetailPage() {
     !!selectedRaId
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+
+  const submitConnectRr = (saveMode: 'draft' | 'active') => {
+    const d = 'pages.clients.detail'
+    setConnectRrError(null)
+    if (!connectRrForm.debtId) {
+      setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+      return
+    }
+    if (!connectRrForm.connectionDate) {
+      setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+      return
+    }
+    if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+      setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+      return
+    }
+    for (let i = 0; i < connectRrForm.payments.length; i++) {
+      if (!connectRrForm.payments[i].date) {
+        setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+        return
+      }
+      if (!connectRrForm.payments[i].amount || parseFloat(connectRrForm.payments[i].amount) <= 0) {
+        setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+        return
+      }
+    }
+    const totalAmount = parseFloat(connectRrForm.totalAmount)
+    const paymentsSum = connectRrForm.payments.reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0),
+      0
+    )
+    if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+      setConnectRrError(
+        t(`${d}.rrValidationSumMismatch`, {
+          sum: paymentsSum.toFixed(2),
+          total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    const formatDate = (dt: Date | null) => {
+      if (!dt) return null
+      const y = dt.getFullYear()
+      const m = String(dt.getMonth() + 1).padStart(2, '0')
+      const day = String(dt.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+    createRr(
+      {
+        clientId,
+        data: {
+          debt_id: parseInt(connectRrForm.debtId),
+          connection_date: formatDate(connectRrForm.connectionDate),
+          restructuring_amount: totalAmount,
+          num_payments: connectRrForm.numPayments,
+          save_mode: saveMode,
+          payments: connectRrForm.payments.map((p) => ({
+            payment_date: formatDate(p.date),
+            payment_amount: parseFloat(p.amount),
+          })),
+          penalty_amount:
+            connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+              ? parseFloat(connectRrForm.penaltyAmount)
+              : null,
+          periodicity: connectRrForm.frequency
+            ? {
+                frequency: connectRrForm.frequency,
+                interval_days: connectRrForm.intervalDays
+                  ? parseInt(connectRrForm.intervalDays, 10)
+                  : null,
+                day_of_month: connectRrForm.dayOfMonth || null,
+              }
+            : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (saveMode === 'draft') {
+            toast.success(t(`${d}.saveDraftRRSuccess`, 'Draft saved'))
+          } else {
+            toast.success(t(`${d}.connectRRSuccess`))
+          }
+          setIsConnectRrOpen(false)
+        },
+        onError: (error) => {
+          const detail = (
+            error as import('axios').AxiosError<{
+              detail?: string | Array<{ msg?: string }>
+            }>
+          )?.response?.data?.detail
+          let message = t(
+            `${d}.connectRRError`,
+            t('errors.somethingWentWrong', 'Something went wrong')
+          )
+          if (typeof detail === 'string') {
+            message = detail
+          } else if (Array.isArray(detail) && detail.length > 0) {
+            message = detail
+              .map((e) => e.msg || '')
+              .filter(Boolean)
+              .join('; ')
+          }
+          setConnectRrError(message)
+          toast.error(message)
+        },
+      }
+    )
+  }
+
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
@@ -556,6 +670,8 @@ export function ClientDetailPage() {
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
+  const { mutate: activateRr, isPending: isActivatingRr } = useActivateRR()
+  const { mutate: deleteRrDraft, isPending: isDeletingRrDraft } = useDeleteRRDraft()
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
@@ -769,6 +885,8 @@ export function ClientDetailPage() {
   )
   const canDisconnectRR = useHasPermission(PERMISSIONS.RESTRUCTURING.DISCONNECT)
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
+  const canActivateRR = useHasPermission(PERMISSIONS.RESTRUCTURING.ACTIVATE)
+  const canDeleteRRDraft = useHasPermission(PERMISSIONS.RESTRUCTURING.DELETE_DRAFT)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real) — async; does not block profile render
@@ -1374,7 +1492,7 @@ export function ClientDetailPage() {
           <Link
             key={linkedContact.id}
             to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
             title={linkedContact.fullName}
           >
             <span aria-hidden="true">🔗</span>
@@ -1772,8 +1890,10 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">Failed to load client</p>
-        <p className="text-sm text-gray-600">{profileError?.message || 'An error occurred'}</p>
+        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-muted-foreground text-sm">
+          {profileError?.message || 'An error occurred'}
+        </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
           Back to Clients
         </Button>
@@ -1784,7 +1904,7 @@ export function ClientDetailPage() {
   if (!client) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">{t('pages.clients.detail.clientNotFound')}</p>
+        <p className="text-muted-foreground">{t('pages.clients.detail.clientNotFound')}</p>
         <Button variant="outline" onClick={() => navigate('/dashboard')} className="mt-4">
           {t('pages.clients.detail.backToClients')}
         </Button>
@@ -1811,12 +1931,17 @@ export function ClientDetailPage() {
   const rrDebtIds = new Set<number>()
   const connectedRrDebtIds = new Set<number>()
   const activeRrDebtIds = new Set<number>()
+  const draftRrDebtIds = new Set<number>()
   for (const ra of restructuringAgreements) {
     if (ra.debt_id == null) continue
     rrDebtIds.add(ra.debt_id)
     if (ra.status_id === 1) connectedRrDebtIds.add(ra.debt_id)
     if (ra.status_id === 1 || ra.status_id === 2) activeRrDebtIds.add(ra.debt_id)
+    if (ra.status_id === RR_STATUS.Draft) draftRrDebtIds.add(ra.debt_id)
   }
+  const selectedDebtHasDraft = connectRrForm.debtId
+    ? draftRrDebtIds.has(parseInt(connectRrForm.debtId))
+    : false
 
   // The single loan row currently selected in the grid (drives the bottom
   // action panel). Null if nothing is selected or the id is no longer present.
@@ -1979,7 +2104,7 @@ export function ClientDetailPage() {
                 e.stopPropagation()
                 toggleDebtExpand(loan.id)
               }}
-              className="p-1 text-gray-500 hover:text-gray-700"
+              className="text-muted-foreground hover:text-foreground p-1"
               title={t('pages.clients.detail.loanInfo', 'Agreement info')}
               aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
             >
@@ -1990,7 +2115,7 @@ export function ClientDetailPage() {
                 e.stopPropagation()
                 setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })
               }}
-              className="p-1 text-gray-500 hover:text-gray-700"
+              className="text-muted-foreground hover:text-foreground p-1"
               title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
               aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
             >
@@ -2006,8 +2131,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'p-1 disabled:opacity-50',
                   loan.sentToCreditBureau
-                    ? 'text-secondary-800 hover:text-secondary-900'
-                    : 'text-gray-500 hover:text-gray-700',
+                    ? 'text-primary-700 hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                   doNotSendToUbki ? 'cursor-not-allowed' : ''
                 )}
                 title={ubkiSendTitle}
@@ -2031,25 +2156,12 @@ export function ClientDetailPage() {
   // helpers were lifted verbatim out of the old rrColumns so the RR status
   // badge and lifecycle actions behave exactly as they did in the grid.
   const renderRrStatusBadge = (row: RrRow) => {
-    // restructuring_statuses lookup ids:
-    //   1 Connected, 2 Violated, 3 Cancelled, 4 Completed, 5 Completed Early
-    const sid = row.status_id
     const label = row.status_name ?? '-'
-    const cls =
-      sid === 1
-        ? 'bg-blue-100 text-blue-800' // Connected — paying on time
-        : sid === 2
-          ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
-          : sid === 3
-            ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
-            : sid === 4
-              ? 'bg-green-100 text-green-800' // Completed
-              : sid === 5
-                ? 'bg-emerald-100 text-emerald-800' // Completed Early
-                : 'bg-gray-100 text-gray-600'
     return (
       <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${rrBadgeClass(
+          row.status_id
+        )}`}
       >
         {label}
       </span>
@@ -2067,6 +2179,8 @@ export function ClientDetailPage() {
     const sid = row.status_id
     const isTerminal = sid === 3 || sid === 4 || sid === 5
     const isCompleted = sid === 4 || sid === 5
+    const isDraft = sid === RR_STATUS.Draft
+    const draftBusy = isActivatingRr || isDeletingRrDraft
     const showMarkViolated = sid === 1
     const showRestore = sid === 2 || sid === 3
     const canRestoreFromHere =
@@ -2080,16 +2194,40 @@ export function ClientDetailPage() {
       <div className="flex items-center justify-center gap-1">
         <button
           onClick={() => setSelectedRaId(row.id)}
-          className="text-secondary-800 hover:text-secondary-600 p-1"
+          className="text-primary-700 hover:text-muted-foreground p-1"
           title={t('pages.clients.detail.viewDetail')}
         >
           <Icons.Eye size={18} />
         </button>
+        {isDraft && (
+          <>
+            <button
+              onClick={() => activateRr({ clientId, raId: row.id })}
+              disabled={draftBusy || !canActivateRR}
+              className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={canActivateRR ? t('pages.clients.detail.activateRR', 'Activate') : noPermTip}
+            >
+              <Icons.Checkmark size={18} />
+            </button>
+            <button
+              onClick={() => setDeleteDraftConfirm(row.id)}
+              disabled={draftBusy || !canDeleteRRDraft}
+              className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={
+                canDeleteRRDraft
+                  ? t('pages.clients.detail.deleteDraftRR', 'Delete draft')
+                  : noPermTip
+              }
+            >
+              <Icons.Delete size={18} />
+            </button>
+          </>
+        )}
         {showMarkViolated && (
           <button
             onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
             disabled={transitionBusy || !canMarkViolated}
-            className="p-1 text-amber-600 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-warning-600 p-1 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
             title={
               canMarkViolated
                 ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
@@ -2113,17 +2251,17 @@ export function ClientDetailPage() {
             <Icons.Reload size={18} />
           </button>
         )}
-        {!isTerminal && (
+        {!isTerminal && !isDraft && (
           <button
             onClick={() => setCompleteRrConfirm(row.id)}
             disabled={isCompletingRa || transitionBusy || !canCompleteRR}
-            className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-success-600 p-1 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
             title={canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip}
           >
             <Icons.Success size={18} />
           </button>
         )}
-        {!isTerminal && (
+        {!isTerminal && !isDraft && (
           <button
             onClick={() =>
               setOverpaymentModal({
@@ -2134,13 +2272,13 @@ export function ClientDetailPage() {
               })
             }
             disabled={transitionBusy || isRecordingOverpayment}
-            className="p-1 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
+            className="text-primary-700 hover:text-primary-700/80 p-1 disabled:opacity-50"
             title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
           >
             <Icons.MoneyReceive01 size={18} />
           </button>
         )}
-        {!isCompleted && sid !== 3 && (
+        {!isCompleted && sid !== 3 && !isDraft && (
           <button
             onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
             disabled={transitionBusy || !canDisconnectRR}
@@ -2173,21 +2311,21 @@ export function ClientDetailPage() {
             <span className="font-semibold text-purple-800">
               {t('pages.clients.detail.rrTag', 'RR')}
             </span>
-            <span className="text-gray-600">
+            <span className="text-muted-foreground">
               {t('pages.clients.detail.tableHeaders.rrAmount')}:{' '}
-              <span className="font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {formatMoneyUAHTwoDecimals(Number(ra.restructuring_amount ?? 0))}
               </span>
             </span>
-            <span className="text-gray-600">
+            <span className="text-muted-foreground">
               {t('pages.clients.detail.tableHeaders.rrConnectionDate')}:{' '}
-              <span className="font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {formatDate(ra.first_payment_date ?? undefined)}
               </span>
             </span>
-            <span className="text-gray-600">
+            <span className="text-muted-foreground">
               {t('pages.clients.detail.tableHeaders.totalToBeRepaid')}:{' '}
-              <span className="font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {formatMoneyUAHTwoDecimals(Number(ra.remaining_debt_amount ?? 0))}
               </span>
             </span>
@@ -2288,9 +2426,11 @@ export function ClientDetailPage() {
       className: 'w-[200px] whitespace-normal',
       render: (activity) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          <span className="text-foreground text-xs font-medium">{activity.employee}</span>
           {activity.updated_at && (
-            <span className="text-[10px] text-gray-400">{formatDateTime(activity.updated_at)}</span>
+            <span className="text-muted-foreground text-[10px]">
+              {formatDateTime(activity.updated_at)}
+            </span>
           )}
         </div>
       ),
@@ -2308,7 +2448,7 @@ export function ClientDetailPage() {
               setEditingInteraction(activity._raw)
               setIsEditInteractionModalOpen(true)
             }}
-            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center rounded-full p-1 transition-colors"
           >
             <Icons.PencilEdit size={16} strokeWidth={1.5} />
           </button>
@@ -2387,24 +2527,24 @@ export function ClientDetailPage() {
         const dotInner = isVerified
           ? 'bg-success-500'
           : isPending
-            ? 'bg-gray-500'
+            ? 'bg-muted-foreground'
             : isCancelled
               ? 'bg-error-500'
-              : 'bg-gray-400'
+              : 'bg-muted-foreground'
         const dotOuter = isVerified
           ? 'bg-success-200'
           : isPending
-            ? 'bg-gray-200'
+            ? 'bg-muted'
             : isCancelled
               ? 'bg-error-200'
-              : 'bg-gray-200'
+              : 'bg-muted'
         const textClass = isVerified
           ? 'text-success-500'
           : isPending
-            ? 'text-gray-500'
+            ? 'text-muted-foreground'
             : isCancelled
               ? 'text-error-500'
-              : 'text-gray-500'
+              : 'text-muted-foreground'
 
         // Use debtSummary.paymentStatus keys (verified/pending/cancelled) for consistency
         const labelKey = isVerified
@@ -2435,7 +2575,7 @@ export function ClientDetailPage() {
                 <button
                   type="button"
                   title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
-                  className="bg-primary-100 text-secondary-800 inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
+                  className="bg-primary-100 text-primary-700 inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
                   onClick={(e) => {
                     e.stopPropagation()
                     setHighlightedReversalPaymentId(payment.id)
@@ -2446,7 +2586,7 @@ export function ClientDetailPage() {
                   {t('pages.clients.detail.reversalsTable.reversedBadge')}
                 </button>
               ) : (
-                <span className="bg-primary-100 text-secondary-800 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
                   <Icons.Reload size={10} strokeWidth={2} />
                   {t('pages.clients.detail.reversalsTable.reversedBadge')}
                 </span>
@@ -2480,7 +2620,7 @@ export function ClientDetailPage() {
                 // Clicking the badge cross-navigates to this payment's row in
                 // the Reversals tab (the "vice versa" direction of KAN-334).
                 const badge = (
-                  <span className="bg-primary-100 text-secondary-800 inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
+                  <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
                     <Icons.Reload size={12} strokeWidth={2} />
                     {t('pages.clients.detail.reversalsTable.reversedBadge')}
                   </span>
@@ -2655,14 +2795,14 @@ export function ClientDetailPage() {
       render: (item) => (
         <span
           className={cn(
-            'inline-block rounded px-2 py-0.5 text-[10px] font-medium capitalize',
+            'inline-block rounded px-2 py-0.5 text-[10px] font-medium',
             item.status === 'pending' && 'bg-yellow-100 text-yellow-600',
             item.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-            item.status === 'completed' && 'bg-green-100 text-green-600',
-            item.status === 'cancelled' && 'bg-gray-100 text-gray-500'
+            item.status === 'completed' && 'text-success-600 bg-green-100',
+            item.status === 'cancelled' && 'bg-muted text-muted-foreground'
           )}
         >
-          {item.status.replace(/_/g, ' ')}
+          {t(`taskStatuses.${item.status}`, item.status.replace(/_/g, ' '))}
         </span>
       ),
     },
@@ -2677,7 +2817,7 @@ export function ClientDetailPage() {
                 {item.status !== 'completed' && item.status !== 'cancelled' && (
                   <button
                     type="button"
-                    title="Complete task"
+                    title={t('pages.clients.tasks.completeTask', 'Complete task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2685,7 +2825,7 @@ export function ClientDetailPage() {
                         data: { status: 'completed' },
                       })
                     }}
-                    className="flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-50 hover:text-green-700"
+                    className="hover:text-success-700 flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-50"
                   >
                     <Icons.Tick02 size={14} strokeWidth={2} />
                   </button>
@@ -2693,7 +2833,7 @@ export function ClientDetailPage() {
                 {item.status !== 'cancelled' && item.status !== 'completed' && (
                   <button
                     type="button"
-                    title="Cancel task"
+                    title={t('pages.clients.tasks.cancelTask', 'Cancel task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2708,14 +2848,21 @@ export function ClientDetailPage() {
                 )}
                 <button
                   type="button"
-                  title="Delete task"
+                  title={t('pages.clients.tasks.deleteTask', 'Delete task')}
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (window.confirm('Are you sure you want to delete this task?')) {
+                    if (
+                      window.confirm(
+                        t(
+                          'pages.clients.tasks.confirmDelete',
+                          'Are you sure you want to delete this task?'
+                        )
+                      )
+                    ) {
                       deleteTaskMutation.mutate(item.id)
                     }
                   }}
-                  className="flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  className="hover:bg-error-100 flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:text-red-600"
                 >
                   <Icons.Delete size={14} strokeWidth={2} />
                 </button>
@@ -2739,10 +2886,10 @@ export function ClientDetailPage() {
                 onClick={() => navigate('/dashboard')}
                 className="flex h-6 w-6 shrink-0 items-center justify-center"
               >
-                <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+                <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
               </button>
               <div className="flex min-w-0 items-center gap-2">
-                <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                <h1 className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl">
                   {client.fullName}
                 </h1>
                 <button
@@ -2751,14 +2898,14 @@ export function ClientDetailPage() {
                   disabled={!client.fullName}
                   aria-label={t('pages.clients.detail.copyName', 'Copy name')}
                   title={t('pages.clients.detail.copyName', 'Copy name')}
-                  className="text-dark-500 hover:text-secondary-800 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-foreground hover:text-primary-700 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icons.Copy size={18} strokeWidth={1.5} />
                 </button>
               </div>
             </div>
             <div className="flex flex-row items-center gap-2">
-              <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+              <span className="text-foreground bg-card/10 flex items-center rounded-[16px] px-3 py-0 text-sm">
                 {client.score} {t('pages.clients.activity.score')}
               </span>
               <PriorityBadge priority={client.priority as Priority} />
@@ -2798,7 +2945,7 @@ export function ClientDetailPage() {
                 onClick={() => {
                   const phoneNumber = client.phones?.[0]?.number
                   if (!phoneNumber) {
-                    toast.error('Client has no phone number')
+                    toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                     return
                   }
 
@@ -2822,8 +2969,8 @@ export function ClientDetailPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100"
-                  aria-label="More actions"
+                  className="text-foreground flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+                  aria-label={t('pages.clients.detail.moreActions', 'More actions')}
                 >
                   <Icons.FilterVertical size={18} strokeWidth={1.5} />
                 </button>
@@ -2843,14 +2990,14 @@ export function ClientDetailPage() {
         </div>
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
-          <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
+          <div className="client-panel-scroll bg-card/50 flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
             {/* Credit Details (top part of card) */}
             <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
               <div className="flex flex-col gap-2 self-stretch">
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {isClientTagsLoading ? (
-                      <span className="inline-block h-5 w-24 animate-pulse rounded-full bg-gray-200" />
+                      <span className="bg-muted-foreground/25 inline-block h-5 w-24 animate-pulse rounded-full" />
                     ) : clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
@@ -2880,7 +3027,7 @@ export function ClientDetailPage() {
                           <button
                             type="button"
                             onClick={() => setIsTagModalOpen(true)}
-                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                            className="bg-muted text-muted-foreground hover:bg-muted rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
                           >
                             {t('pages.tags.showMore', '+{{count}} more', {
                               count: clientTags.length - 3,
@@ -2900,7 +3047,7 @@ export function ClientDetailPage() {
                         </button>
                       </>
                     ) : (
-                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                      <span className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                         {t('pages.clients.detail.noTagsAssigned')}
                       </span>
                     )}
@@ -2908,8 +3055,8 @@ export function ClientDetailPage() {
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                     <button
                       onClick={() => setIsTagModalOpen(true)}
-                      className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -2919,20 +3066,20 @@ export function ClientDetailPage() {
               </div>
               <div className="flex flex-col gap-1 self-stretch">
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.detail.department')}
                   </label>
-                  <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {client.department || '-'}
                   </p>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleEmployee')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_employee_id && (
-                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.responsibleEmployee}
                       </p>
                     )}
@@ -2940,8 +3087,8 @@ export function ClientDetailPage() {
                         the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <button
                       onClick={() => setAssignRoleModalMode('employee')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign employee"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.assignEmployee', 'Assign employee')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -2949,12 +3096,12 @@ export function ClientDetailPage() {
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleSearcher')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_searcher_id && (
-                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.responsibleResearcher}
                       </p>
                     )}
@@ -2962,8 +3109,8 @@ export function ClientDetailPage() {
                         the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <button
                       onClick={() => setAssignRoleModalMode('searcher')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign searcher"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.assignSearcher', 'Assign searcher')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -2973,7 +3120,7 @@ export function ClientDetailPage() {
                 {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
                 <div className="flex min-h-8 items-center self-stretch p-0">
                   <label
-                    className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700"
+                    className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]"
                     title={t(
                       'pages.clients.detail.ubki.doNotSendHint',
                       'When enabled, this client is excluded from all UBKI submissions.'
@@ -2996,7 +3143,7 @@ export function ClientDetailPage() {
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
                 <div className="flex flex-1 shrink-0 items-center gap-2.5">
-                  <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.detail.phones')}
                   </label>
                 </div>
@@ -3008,7 +3155,7 @@ export function ClientDetailPage() {
                           <div className="flex min-w-0 flex-col items-end gap-1">
                             <span
                               className={cn(
-                                'text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                                'text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
                                 phone.blocking.blocks_calls && 'line-through opacity-70'
                               )}
                             >
@@ -3221,21 +3368,21 @@ export function ClientDetailPage() {
               </div>
             </div>
 
-            <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+            <div className="bg-muted mx-2 flex h-px flex-col items-start gap-2.5 self-stretch p-0"></div>
 
             {/* Personal & Contact Details - 4 left tabs inside client card */}
             <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
               {/* Vertical tab icons - horizontal scroll on mobile */}
-              <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
+              <div className="border-border relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
                 {/* Left Arrow Button - only show on mobile when scrolling */}
                 {showClientCardLeftArrow && (
                   <button
                     onClick={() => scrollClientCardTabs('left')}
-                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs left"
+                    className="from-card via-card/95 absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3243,11 +3390,11 @@ export function ClientDetailPage() {
                 {showClientCardRightArrow && (
                   <button
                     onClick={() => scrollClientCardTabs('right')}
-                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs right"
+                    className="from-card via-card/95 absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3266,9 +3413,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('related')}
                     title={t('pages.clients.detail.tabs.relatedTags', 'Related tags')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'related'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3276,7 +3423,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'related' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'related' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3286,9 +3433,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('personal')}
                     title={t('pages.clients.detail.tabs.personal')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'personal'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3296,7 +3443,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'personal' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3306,9 +3453,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('work')}
                     title={t('pages.clients.detail.tabs.work')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'work'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3316,7 +3463,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'work' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3326,9 +3473,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('passport')}
                     title={t('pages.clients.detail.tabs.passport')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'passport'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3336,7 +3483,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'passport' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3373,80 +3520,82 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.tin')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.tin}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.dateOfBirth')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.dateOfBirth}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.age')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.age}
                       </p>
                     </div>
-                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    <div className="bg-muted mx-2 h-px self-stretch"></div>
                     {client.addresses.map((address) => (
                       <React.Fragment key={address.id}>
                         <div className="flex items-start self-stretch p-0">
                           <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                               {address.addressType === 'registration'
                                 ? t('pages.clients.detail.registrationAddress')
                                 : t('pages.clients.detail.personalAddress')}
                             </label>
                           </div>
-                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          <p className="text-foreground min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
                             {address.fullAddress}
                           </p>
                         </div>
                       </React.Fragment>
                     ))}
-                    {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
-                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    {client.addresses.length === 0 && (
+                      <p className="text-muted-foreground text-xs">-</p>
+                    )}
+                    <div className="bg-muted mx-2 h-px self-stretch"></div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.maritalStatus')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.maritalStatus}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.numberOfFamilyMembers')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.familyMembers}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.incomeLevel')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.incomeLevel}
                       </p>
                     </div>
@@ -3457,71 +3606,71 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.documentType')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.documentType}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.passportSeries')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.passportSeries}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.passportNumber')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.passportNumber}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.issuedBy')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.issuedBy}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.issuedDate')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.issuedDate}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.expiresDate')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.expiresDate}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.gender')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.gender}
                       </p>
                     </div>
@@ -3532,63 +3681,63 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.organizationName')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.organizationName || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.position')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.position || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.experience')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.experience || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.managerFullName')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.managerFullName || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.employmentType')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.employmentType || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.workPhone')}
                         </label>
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
                         <div className="flex min-w-0 flex-col items-end gap-1">
-                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          <span className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                             {client.work?.workPhone || '-'}
                           </span>
                           {client.work?.workPhone &&
@@ -3659,18 +3808,18 @@ export function ClientDetailPage() {
 
           {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
           <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
-            <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
+            <div className="bg-card/50 flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg p-0">
               {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
               <div className="border-border relative mx-3 flex items-center gap-0 self-stretch border-b">
                 {/* Left Arrow Button */}
                 {showLeftArrow && (
                   <button
                     onClick={() => scrollTabs('left')}
-                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs left"
+                    className="from-card via-card/95 absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3678,11 +3827,11 @@ export function ClientDetailPage() {
                 {showRightArrow && (
                   <button
                     onClick={() => scrollTabs('right')}
-                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs right"
+                    className="from-card via-card/95 absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3703,8 +3852,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'loans'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Folder size={20} className="shrink-0 text-current" />
@@ -3720,8 +3869,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'payments'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Wallet01 size={20} className="shrink-0 text-current" />
@@ -3747,7 +3896,7 @@ export function ClientDetailPage() {
                             setIsRecordPaymentModalOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3761,8 +3910,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'recommenders'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
@@ -3778,8 +3927,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'operators'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
@@ -3805,7 +3954,7 @@ export function ClientDetailPage() {
                             setIsAssignClientOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3819,8 +3968,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'call-sms-history'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Clock01 size={20} className="shrink-0 text-current" />
@@ -3836,8 +3985,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'tasks'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
@@ -3864,7 +4013,7 @@ export function ClientDetailPage() {
                             setIsTaskModalOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3880,8 +4029,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'documents'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.File size={20} className="shrink-0 text-current" />
@@ -3906,7 +4055,7 @@ export function ClientDetailPage() {
                           setIsUploadDocModalOpen(true)
                         }
                       }}
-                      className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                      className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                     >
                       +
                     </span>
@@ -3970,7 +4119,7 @@ export function ClientDetailPage() {
                         client-scoped (their own modals carry a picker). */}
                     <div className="flex flex-col gap-2 self-stretch px-3 py-4 md:px-6">
                       {!selectedLoan && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-muted-foreground text-xs">
                           {t(
                             'pages.clients.detail.selectLoanHint',
                             'Select a loan row to enable actions.'
@@ -4199,10 +4348,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActivePaymentTab('payments')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'payments'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.payments')}
@@ -4210,10 +4359,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActivePaymentTab('writes-off')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'writes-off'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.writesOff')}
@@ -4223,10 +4372,10 @@ export function ClientDetailPage() {
                         <button
                           onClick={() => setActivePaymentTab('reversals')}
                           className={cn(
-                            'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                            'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                             activePaymentTab === 'reversals'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                           )}
                         >
                           {t('pages.clients.detail.reversals')}
@@ -4235,10 +4384,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActivePaymentTab('primary-creditor')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'primary-creditor'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.paymentToPrimaryCreditor')}
@@ -4366,10 +4515,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveOperatorTab('operators')}
                         className={cn(
-                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'operators'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.operators')}
@@ -4377,10 +4526,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveOperatorTab('searchers')}
                         className={cn(
-                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'searchers'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.searchers')}
@@ -4416,7 +4565,7 @@ export function ClientDetailPage() {
                   <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
                     <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {activeCallSmsTab === 'calls'
                             ? t('pages.clients.detail.latestCalls')
                             : activeCallSmsTab === 'sms'
@@ -4426,14 +4575,14 @@ export function ClientDetailPage() {
                                 : t('pages.clients.detail.latestCallsAndSms')}
                         </span>
                       </div>
-                      <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
+                      <div className="bg-card/50 flex w-full flex-1 items-center justify-between gap-1 rounded-lg p-1 shadow-sm md:w-auto">
                         <button
                           onClick={() => setActiveCallSmsTab('all')}
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'all'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.all')}
@@ -4443,8 +4592,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'calls'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.calls')}
@@ -4454,8 +4603,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'sms'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.sms')}
@@ -4466,8 +4615,8 @@ export function ClientDetailPage() {
                             className={cn(
                               'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                               activeCallSmsTab === 'messaging'
-                                ? 'bg-secondary-800/10 text-secondary-800'
-                                : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                             )}
                           >
                             {t('pages.clients.activity.messaging', 'Messaging')}
@@ -4478,7 +4627,7 @@ export function ClientDetailPage() {
                         <div className="flex w-full flex-col gap-2 md:w-auto">
                           <Button
                             leftIcon={<Icons.Download size={20} />}
-                            className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                            className="bg-primary-600 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
                             size="sm"
                             disabled={
                               (activeCallSmsTab !== 'messaging' && activeCallSmsTab !== 'all') ||
@@ -4618,7 +4767,7 @@ export function ClientDetailPage() {
                                 )
                                 .map(([date, items]) => (
                                   <div key={date} className="w-full space-y-4">
-                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                    <h3 className="text-foreground text-sm font-semibold md:text-base">
                                       {date}
                                     </h3>
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -4655,7 +4804,7 @@ export function ClientDetailPage() {
                                               : null
                                           }
                                           icon={
-                                            <Icons.Play size={24} className="text-secondary-800" />
+                                            <Icons.Play size={24} className="text-primary-700" />
                                           }
                                           setSelectedCallData={setSelectedCallData}
                                           setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
@@ -4677,7 +4826,7 @@ export function ClientDetailPage() {
                                           sent_at={sms.sent_at}
                                           delivered_at={sms.delivered_at}
                                           icon={
-                                            <Icons.Chat size={24} className="text-secondary-800" />
+                                            <Icons.Chat size={24} className="text-primary-700" />
                                           }
                                           setSelectedSMSData={setSelectedSMSData}
                                           setIsViewSMSModalOpen={setIsViewSMSModalOpen}
@@ -4732,7 +4881,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             onSelect={() => {
@@ -4772,7 +4921,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -4789,29 +4938,29 @@ export function ClientDetailPage() {
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             {/* Summary Statistics */}
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.Call02 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.Call02 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.detail.totalCalls')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {client.callSmsHistory.calls.length}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.CallDone02 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.CallDone02 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.statuses.answered')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const answered = client.callSmsHistory.calls.filter(
                                       (c) => c.status === 'COMPLETED'
@@ -4823,16 +4972,16 @@ export function ClientDetailPage() {
                                   })()}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.Clock01 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.Clock01 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.detail.avgDuration')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const durations = client.callSmsHistory.calls
                                       .filter((c) => c.duration && c.duration !== '-')
@@ -4891,7 +5040,7 @@ export function ClientDetailPage() {
                                   )
                                   .map(([date, calls]) => (
                                     <div key={date} className="space-y-4">
-                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      <h3 className="text-foreground text-sm font-semibold md:text-base">
                                         {date}
                                       </h3>
                                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -4931,7 +5080,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.PlayCircle02
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedCallData={setSelectedCallData}
@@ -4948,7 +5097,7 @@ export function ClientDetailPage() {
                             {!showAllCalls &&
                               client.callSmsHistory.calls.length === 0 &&
                               client.callSmsHistory.callsTotal > 0 && (
-                                <p className="self-center text-sm text-gray-600">
+                                <p className="text-muted-foreground self-center text-sm">
                                   {t(
                                     'pages.clients.detail.noCallsLast7Days',
                                     'No call records in the last 7 days — click View All to see older records.'
@@ -4962,7 +5111,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -4979,12 +5128,12 @@ export function ClientDetailPage() {
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             {/* Summary Statistics */}
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.totalCost')}
                                 </div>
 
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const totalCost = client.callSmsHistory.sms.reduce(
                                       (sum, s) => sum + (s.cost || 0),
@@ -4994,12 +5143,12 @@ export function ClientDetailPage() {
                                   })()}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.deliveryRate')}
                                 </div>
 
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const delivered = client.callSmsHistory.sms.filter(
                                       (s) => s.status === 'Delivered'
@@ -5053,7 +5202,7 @@ export function ClientDetailPage() {
                                   )
                                   .map(([date, smsList]) => (
                                     <div key={date} className="space-y-4">
-                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      <h3 className="text-foreground text-sm font-semibold md:text-base">
                                         {date}
                                       </h3>
                                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -5074,7 +5223,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedSMSData={setSelectedSMSData}
@@ -5091,19 +5240,19 @@ export function ClientDetailPage() {
                         {activeCallSmsTab === 'messaging' && (
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.totalMessages', 'Total messages')}
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {messagingHistory.length}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.deliveryRate')}
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const { delivered, failed, pending, total } =
                                       countMessagingHistoryByOutcome(messagingHistory)
@@ -5156,7 +5305,7 @@ export function ClientDetailPage() {
                                     )
                                     .map(([date, items]) => (
                                       <div key={date} className="space-y-4">
-                                        <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        <h3 className="text-foreground text-sm font-semibold md:text-base">
                                           {date}
                                         </h3>
                                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -5214,7 +5363,7 @@ export function ClientDetailPage() {
                                                 icon={
                                                   <Icons.ChatFeedback01
                                                     size={20}
-                                                    className="text-secondary-800"
+                                                    className="text-primary-700"
                                                   />
                                                 }
                                                 onSelect={() => {
@@ -5287,18 +5436,18 @@ export function ClientDetailPage() {
         </div>
 
         {/* Comments / Activity Section - Merged per Marina's request */}
-        <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        <div className="bg-card/50 flex flex-col items-start gap-3 self-stretch rounded-xl p-3 md:p-6">
           {/* Header with tabs and View All */}
           <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             {/* Tabs */}
-            <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
+            <div className="border-border bg-card flex items-center rounded-lg border p-1 shadow-sm">
               <button
                 onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'ta-chains'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
@@ -5306,10 +5455,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('comments')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'comments'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.comments')}
@@ -5317,10 +5466,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'primary'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.commentsFromPrimaryCreditor')}
@@ -5328,10 +5477,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('searcher')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'searcher'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.searcherComments')}
@@ -5339,10 +5488,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'dial-history'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.spamCallHistory')}
@@ -5381,10 +5530,10 @@ export function ClientDetailPage() {
             <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
               <button
                 onClick={() => chainExecutorMinimizeRef.current?.()}
-                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
-                aria-label="Minimize modal"
+                className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+                aria-label={t('pages.clients.detail.minimizeModal', 'Minimize modal')}
               >
-                <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => {
@@ -5392,10 +5541,10 @@ export function ClientDetailPage() {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
               >
-                <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
             </div>
             <ModalContent>
@@ -5427,12 +5576,12 @@ export function ClientDetailPage() {
             ) : displayedActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noHistoryYet')}
                   </p>
                 </div>
-                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                <p className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
                   {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
                 </p>
                 <button
@@ -5441,13 +5590,13 @@ export function ClientDetailPage() {
                     setChainExecutorPrefilledPhone(null)
                     setIsChainExecutorOpen(true)
                   }}
-                  className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                  className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
                   aria-label={t('pages.clientChains.logInteraction')}
                 >
-                  <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                    <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                  <div className="bg-primary-foreground/20 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                    <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
                   </div>
-                  <span className="px-4 py-3 text-sm font-medium text-white">
+                  <span className="text-primary-foreground px-4 py-3 text-sm font-medium">
                     {t('pages.clientChains.logInteraction')}
                   </span>
                 </button>
@@ -5471,8 +5620,8 @@ export function ClientDetailPage() {
             ) : displayedSearcherActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noSearcherComments', 'No searcher comments yet')}
                   </p>
                 </div>
@@ -5494,8 +5643,8 @@ export function ClientDetailPage() {
             ) : dialHistory.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noSpamCallHistory')}
                   </p>
                 </div>
@@ -5811,8 +5960,12 @@ export function ClientDetailPage() {
         <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
           <ModalHeader
             icon={
-              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate
+                  size={20}
+                  className="text-primary-foreground sm:size-6"
+                  strokeWidth={1.5}
+                />
               </div>
             }
             title={t('pages.clients.detail.rrDetail')}
@@ -5823,50 +5976,50 @@ export function ClientDetailPage() {
                 {/* Two fields per row */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrLoanNumber')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.contract_number ?? '-'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrClientNumber')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.client_id ?? '-'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrRestructuringAmount')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatMoneyUAHTwoDecimals(Number(rrDetail.restructuring_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrFirstPaymentDate')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatDate(rrDetail.first_payment_date ?? undefined)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrFirstPaymentAmount')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatMoneyUAHTwoDecimals(Number(rrDetail.first_payment_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrResponsibleEmployee')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.responsible_user_name ?? '-'}
                     </span>
                   </div>
@@ -5878,7 +6031,7 @@ export function ClientDetailPage() {
                     which installments are paid / partial / unpaid. */}
                 {rrDetail.payments.length > 0 && (
                   <div className="pt-2">
-                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrPaymentSchedule')}
                     </h3>
                     <div className="max-h-60 overflow-y-auto">
@@ -5928,10 +6081,10 @@ export function ClientDetailPage() {
                               const s = p.status ?? 'unpaid'
                               const cls =
                                 s === 'paid'
-                                  ? 'bg-green-100 text-green-700'
+                                  ? 'bg-green-100 text-success-700'
                                   : s === 'partially_paid'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-gray-100 text-gray-600'
+                                    ? 'bg-amber-100 text-warning-700'
+                                    : 'bg-muted text-muted-foreground'
                               const label =
                                 s === 'paid'
                                   ? t('pages.clients.detail.rrPaid', 'Paid')
@@ -5959,12 +6112,12 @@ export function ClientDetailPage() {
                     the most common case (debtor pays exactly the schedule). */}
                 {(isOverpaymentsLoading || rrOverpayments.length > 0) && (
                   <div className="pt-2">
-                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrOverpayments', 'Overpayments')}
                     </h3>
                     {isOverpaymentsLoading ? (
                       <div className="flex justify-center py-4">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                        <div className="border-border h-5 w-5 animate-spin rounded-full border-2 border-t-blue-600" />
                       </div>
                     ) : (
                       <div className="max-h-48 overflow-y-auto">
@@ -6016,15 +6169,15 @@ export function ClientDetailPage() {
                     so an operator can see whether the daily job or a person
                     flipped the RR. */}
                 <div className="pt-2">
-                  <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                  <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                     {t('pages.clients.detail.rrStatusHistory', 'Status history')}
                   </h3>
                   {isStatusHistoryLoading ? (
                     <div className="flex justify-center py-4">
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                      <div className="border-border h-5 w-5 animate-spin rounded-full border-2 border-t-blue-600" />
                     </div>
                   ) : rrStatusHistory.length === 0 ? (
-                    <p className="text-dark-300 py-2 text-sm">
+                    <p className="text-muted-foreground py-2 text-sm">
                       {t(
                         'pages.clients.detail.rrStatusHistoryEmpty',
                         'No status changes recorded yet.'
@@ -6069,7 +6222,7 @@ export function ClientDetailPage() {
               </div>
             ) : (
               <div className="flex justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                <div className="border-border h-6 w-6 animate-spin rounded-full border-2 border-t-blue-600" />
               </div>
             )}
           </ModalContent>
@@ -6093,14 +6246,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Delete size={18} className="text-dark-500" strokeWidth={1.8} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Delete size={18} className="text-primary-foreground" strokeWidth={1.8} />
               </div>
             }
             title={t('pages.clients.editModal.deleteContact', 'Delete contact')}
           />
           <ModalContent>
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-foreground text-base font-light">
               {t(
                 'pages.clients.editModal.confirmDeleteContact',
                 'Are you sure you want to delete this contact?'
@@ -6160,14 +6313,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.CancelCircle size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.CancelCircle size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.closeLoan')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-4 text-base font-light">
+            <p className="text-foreground mb-4 text-base font-light">
               {t(
                 'pages.clients.detail.confirmCloseLoan',
                 'Are you sure you want to close this loan? This action cannot be undone.'
@@ -6204,7 +6357,7 @@ export function ClientDetailPage() {
                   'pages.clients.detail.closureReasonPlaceholder',
                   'Add a note explaining why this loan is being closed'
                 )}
-                className="focus:border-primary-400 w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none"
+                className="focus:border-primary-400 border-border w-full resize-y rounded-md border px-3 py-2 text-sm outline-none"
               />
             </div>
           </ModalContent>
@@ -6284,14 +6437,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-4 text-base font-light">
+            <p className="text-foreground mb-4 text-base font-light">
               {t(
                 'pages.clients.detail.confirmReopenLoan',
                 'Are you sure you want to reopen this credit?'
@@ -6349,8 +6502,8 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Edit size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Edit size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
@@ -6433,14 +6586,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Success size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Success size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.completeRR', 'Complete RR')}
           />
           <ModalContent>
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-foreground text-base font-light">
               {t(
                 'pages.clients.detail.confirmCompleteRR',
                 'Are you sure you want to mark this restructuring agreement as completed?'
@@ -6475,6 +6628,59 @@ export function ClientDetailPage() {
           </ModalFooter>
         </Modal>
 
+        {/* Delete Draft RR Confirmation Modal */}
+        <Modal
+          open={deleteDraftConfirm !== null}
+          onClose={() => setDeleteDraftConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <Icons.Delete size={20} className="text-red-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmDeleteDraftRR',
+                'Are you sure you want to delete this draft restructuring agreement? This cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setDeleteDraftConfirm(null)}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (deleteDraftConfirm !== null) {
+                  deleteRrDraft(
+                    { clientId, raId: deleteDraftConfirm },
+                    { onSettled: () => setDeleteDraftConfirm(null) }
+                  )
+                }
+              }}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isDeletingRrDraft
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
         {/* Disconnect RR Confirmation Modal — reason required */}
         <Modal
           open={disconnectRrConfirm !== null}
@@ -6490,7 +6696,7 @@ export function ClientDetailPage() {
             title={t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-3 text-base font-light">
+            <p className="text-foreground mb-3 text-base font-light">
               {t(
                 'pages.clients.detail.confirmDisconnectRR',
                 'Disconnecting will mark this restructuring agreement as Cancelled. Please provide a reason — it will be recorded in the audit log.'
@@ -6509,7 +6715,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+              className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground border-border w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>
@@ -6559,21 +6765,25 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-                <Icons.MoneyReceive01 size={20} className="text-emerald-600" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.MoneyReceive01
+                  size={20}
+                  className="text-primary-foreground"
+                  strokeWidth={2}
+                />
               </div>
             }
             title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-3 text-base font-light">
+            <p className="text-foreground mb-3 text-base font-light">
               {t(
                 'pages.clients.detail.recordOverpaymentHelp',
                 'Record an excess payment above the scheduled amount. Choose where to allocate the excess.'
               )}
             </p>
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.overpaymentAmount', 'Overpayment amount')}
             </label>
             <input
@@ -6585,14 +6795,14 @@ export function ClientDetailPage() {
                 setOverpaymentModal((prev) => (prev ? { ...prev, amount: e.target.value } : prev))
               }
               placeholder="0.00"
-              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+              className="bg-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary border-border mb-3 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.allocationTarget', 'Allocate excess to')}
             </label>
-            <div className="mb-3 flex gap-4">
-              <label className="text-dark-500 flex items-center gap-2 text-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:gap-4">
+              <label className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name="allocation_target"
@@ -6603,13 +6813,14 @@ export function ClientDetailPage() {
                       prev ? { ...prev, allocationTarget: 'next' } : prev
                     )
                   }
+                  className="accent-primary border-muted-foreground/50 bg-card h-4 w-4 border-2"
                 />
                 {t(
                   'pages.clients.detail.allocateToNext',
                   'Next scheduled payment (reduces next installment)'
                 )}
               </label>
-              <label className="text-dark-500 flex items-center gap-2 text-sm">
+              <label className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name="allocation_target"
@@ -6620,13 +6831,14 @@ export function ClientDetailPage() {
                       prev ? { ...prev, allocationTarget: 'last' } : prev
                     )
                   }
+                  className="accent-primary border-muted-foreground/50 bg-card h-4 w-4 border-2"
                 />
                 {t('pages.clients.detail.allocateToLast', 'Final payment (RR closes earlier)')}
               </label>
             </div>
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
-              {t('pages.clients.detail.overpaymentReason', 'Reason (optional)')}
+            <label className="text-foreground mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.overpaymentReasonOptional', 'Reason (optional)')}
             </label>
             <textarea
               value={overpaymentModal?.reason ?? ''}
@@ -6639,7 +6851,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+              className="bg-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary border-border w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>
@@ -6713,8 +6925,12 @@ export function ClientDetailPage() {
         <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
           <ModalHeader
             icon={
-              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate
+                  size={20}
+                  className="text-primary-foreground sm:size-6"
+                  strokeWidth={1.5}
+                />
               </div>
             }
             title={t('pages.clients.detail.connectRR')}
@@ -6723,7 +6939,7 @@ export function ClientDetailPage() {
             <div className="flex flex-col gap-4">
               {/* Loan Selection */}
               <div>
-                <label className="text-dark-500 mb-1 block text-sm font-medium">
+                <label className="text-foreground mb-1 block text-sm font-medium">
                   {t('pages.clients.detail.rrSelectLoan')} *
                 </label>
                 <Select
@@ -6742,7 +6958,7 @@ export function ClientDetailPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="text-dark-300 px-2 py-1 text-sm">
+                      <div className="text-muted-foreground px-2 py-1 text-sm">
                         {t(
                           'pages.clients.detail.rrNoEligibleCredits',
                           'No active credits available for restructuring'
@@ -6762,7 +6978,7 @@ export function ClientDetailPage() {
                   }
                   format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
-                  className="rounded-lg border-gray-400"
+                  className="border-border rounded-lg"
                 />
                 <Input
                   label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
@@ -6802,7 +7018,7 @@ export function ClientDetailPage() {
                       })
                     }}
                   />
-                  <p className="text-dark-300 mt-1 text-xs">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {t('pages.clients.detail.rrNumPaymentsHint', {
                       max: MAX_RR_PAYMENTS,
                       defaultValue: 'Up to {{max}} payments.',
@@ -6815,7 +7031,7 @@ export function ClientDetailPage() {
                 <div className="flex flex-col gap-2">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div>
-                      <label className="text-dark-500 mb-1 block text-sm font-medium">
+                      <label className="text-foreground mb-1 block text-sm font-medium">
                         {t('pages.clients.detail.rrFrequency', 'Payment Frequency')}
                       </label>
                       <Select
@@ -6869,7 +7085,7 @@ export function ClientDetailPage() {
 
                     {connectRrForm.frequency === PERIODICITY_MONTHLY_NTH_DAY && (
                       <div>
-                        <label className="text-dark-500 mb-1 block text-sm font-medium">
+                        <label className="text-foreground mb-1 block text-sm font-medium">
                           {t('pages.clients.detail.rrDayOfMonth', 'Day of month')}
                         </label>
                         <Select
@@ -6919,12 +7135,12 @@ export function ClientDetailPage() {
                           'pages.clients.detail.rrFirstPaymentDate',
                           'First Payment Date'
                         )}
-                        className="rounded-lg border-gray-400"
+                        className="border-border rounded-lg"
                       />
                     )}
                   </div>
                   {connectRrForm.frequency && (
-                    <p className="text-dark-300 text-xs">
+                    <p className="text-muted-foreground text-xs">
                       {t(
                         'pages.clients.detail.rrPeriodicityHint',
                         'The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.'
@@ -6935,7 +7151,7 @@ export function ClientDetailPage() {
               )}
               {/* Payment Schedule */}
               <div className="pt-2">
-                <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                   {t('pages.clients.detail.rrPaymentSchedule')}
                 </h3>
                 <div className="flex flex-col gap-3">
@@ -6957,7 +7173,7 @@ export function ClientDetailPage() {
                         }}
                         format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
-                        className="rounded-lg border-gray-400"
+                        className="border-border rounded-lg"
                       />
                       <Input
                         label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
@@ -6978,7 +7194,7 @@ export function ClientDetailPage() {
                   ))}
                 </div>
                 {connectRrForm.clampedRows.length > 0 && (
-                  <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  <div className="bg-warning-100 text-warning-700 mt-2 rounded-md px-3 py-2 text-xs">
                     {t('pages.clients.detail.rrClampNotice', {
                       rows: connectRrForm.clampedRows.map((i) => i + 1).join(', '),
                       defaultValue:
@@ -6988,7 +7204,7 @@ export function ClientDetailPage() {
                 )}
               </div>
               {/* Overdue Penalty (optional) — KAN-785 Part 2 */}
-              <div className="border-t border-gray-100 pt-3">
+              <div className="border-border border-t pt-3">
                 <Input
                   label={t('pages.clients.detail.rrPenaltyAmount', 'Overdue Penalty (optional)')}
                   type="number"
@@ -7000,7 +7216,7 @@ export function ClientDetailPage() {
                   }
                   placeholder="0.00"
                 />
-                <p className="text-dark-300 mt-1 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.clients.detail.rrPenaltyHint',
                     'If any payment goes 3+ days overdue, this amount is charged once as an extra payment at the end of the schedule.'
@@ -7011,6 +7227,14 @@ export function ClientDetailPage() {
             {connectRrError && (
               <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
                 {connectRrError}
+              </div>
+            )}
+            {selectedDebtHasDraft && (
+              <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                {t(
+                  'pages.clients.detail.rrDraftAlreadyExists',
+                  'This credit already has a draft restructuring agreement.'
+                )}
               </div>
             )}
           </ModalContent>
@@ -7024,120 +7248,22 @@ export function ClientDetailPage() {
               {t('actions.cancel')}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              disabled={isCreatingRr || !hasEligibleLoansForRr || selectedDebtHasDraft}
+              onClick={() => submitConnectRr('draft')}
+              className="w-full rounded-md"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveDraftRR', 'Save draft')}
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               disabled={isCreatingRr || !hasEligibleLoansForRr}
-              onClick={() => {
-                const d = 'pages.clients.detail'
-                setConnectRrError(null)
-                // Validation
-                if (!connectRrForm.debtId) {
-                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
-                  return
-                }
-                if (!connectRrForm.connectionDate) {
-                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
-                  return
-                }
-                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
-                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
-                  return
-                }
-                for (let i = 0; i < connectRrForm.payments.length; i++) {
-                  if (!connectRrForm.payments[i].date) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
-                    return
-                  }
-                  if (
-                    !connectRrForm.payments[i].amount ||
-                    parseFloat(connectRrForm.payments[i].amount) <= 0
-                  ) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
-                    return
-                  }
-                }
-                const totalAmount = parseFloat(connectRrForm.totalAmount)
-                const paymentsSum = connectRrForm.payments.reduce(
-                  (sum, p) => sum + (parseFloat(p.amount) || 0),
-                  0
-                )
-                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-                  setConnectRrError(
-                    t(`${d}.rrValidationSumMismatch`, {
-                      sum: paymentsSum.toFixed(2),
-                      total: totalAmount.toFixed(2),
-                    })
-                  )
-                  return
-                }
-
-                const formatDate = (dt: Date | null) => {
-                  if (!dt) return null
-                  const y = dt.getFullYear()
-                  const m = String(dt.getMonth() + 1).padStart(2, '0')
-                  const day = String(dt.getDate()).padStart(2, '0')
-                  return `${y}-${m}-${day}`
-                }
-                createRr(
-                  {
-                    clientId,
-                    data: {
-                      debt_id: parseInt(connectRrForm.debtId),
-                      connection_date: formatDate(connectRrForm.connectionDate),
-                      restructuring_amount: totalAmount,
-                      num_payments: connectRrForm.numPayments,
-                      payments: connectRrForm.payments.map((p) => ({
-                        payment_date: formatDate(p.date),
-                        payment_amount: parseFloat(p.amount),
-                      })),
-                      // KAN-785 Part 2 — optional penalty + persisted periodicity
-                      // (so the backend can date the penalty by this RR's cadence).
-                      penalty_amount:
-                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
-                          ? parseFloat(connectRrForm.penaltyAmount)
-                          : null,
-                      periodicity: connectRrForm.frequency
-                        ? {
-                            frequency: connectRrForm.frequency,
-                            interval_days: connectRrForm.intervalDays
-                              ? parseInt(connectRrForm.intervalDays, 10)
-                              : null,
-                            day_of_month: connectRrForm.dayOfMonth || null,
-                          }
-                        : null,
-                    },
-                  },
-                  {
-                    onSuccess: () => {
-                      toast.success(t(`${d}.connectRRSuccess`))
-                      setIsConnectRrOpen(false)
-                    },
-                    onError: (error) => {
-                      const detail = (
-                        error as import('axios').AxiosError<{
-                          detail?: string | Array<{ msg?: string }>
-                        }>
-                      )?.response?.data?.detail
-                      let message = t(
-                        `${d}.connectRRError`,
-                        t('errors.somethingWentWrong', 'Something went wrong')
-                      )
-                      if (typeof detail === 'string') {
-                        message = detail
-                      } else if (Array.isArray(detail) && detail.length > 0) {
-                        message = detail
-                          .map((e) => e.msg || '')
-                          .filter(Boolean)
-                          .join('; ')
-                      }
-                      setConnectRrError(message)
-                    },
-                  }
-                )
-              }}
+              onClick={() => submitConnectRr('active')}
               className="w-full rounded-md"
             >
-              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveActivateRR', 'Save & activate')}
             </Button>
           </ModalFooter>
         </Modal>

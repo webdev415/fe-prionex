@@ -14,7 +14,7 @@ interface TagFilterTriStateProps {
 }
 
 const stateStyles: Record<TagFilterTriState, string> = {
-  neutral: 'border-gray-300 bg-transparent hover:border-gray-400',
+  neutral: 'border-border bg-transparent hover:border-border',
   include: 'border-primary-500 bg-primary-500',
   exclude: 'border-red-500 bg-red-500',
 }

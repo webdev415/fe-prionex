@@ -10,7 +10,7 @@
  * .docx twin for download.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -28,7 +28,8 @@ import {
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { clientKeys } from '@/features/clients/hooks/useClients'
+import { clientKeys, useClientProfile } from '@/features/clients/hooks/useClients'
+import type { ClientProfileResponse } from '@/features/clients/api/types'
 import { legalRegistryKeys } from '@/features/lawyerWorkplace/hooks/useLegalRegistry'
 import { useDocumentTypes } from '@/features/documentTypes'
 import {
@@ -116,6 +117,168 @@ function base64ToBlob(base64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime })
 }
 
+type ContactKind = 'phone' | 'email' | 'address'
+
+/** A single suggestion offered in the "Контакт (куди)" combobox. */
+interface ContactOption {
+  /** The value written into deliveryContact when picked. */
+  value: string
+  kind: ContactKind
+  /** Optional label shown next to the value, e.g. "основний" or "Мобільний". */
+  hint?: string
+}
+
+/**
+ * Which contact kind a delivery channel points at. `null` means "no channel
+ * chosen yet" → every contact is offered. Messenger/SMS channels all target a
+ * phone number; the mapping is intentionally soft (the operator may still type
+ * any value manually).
+ */
+function contactKindForChannel(channel: DeliveryChannel | null): ContactKind | null {
+  if (channel == null) return null
+  if (channel === 'email') return 'email'
+  if (channel === 'post') return 'address'
+  return 'phone'
+}
+
+/**
+ * Contact picker for the "Контакт (куди)" field: a free-text input backed by a
+ * dropdown of the client's own contacts. Picking a suggestion fills the value;
+ * typing an arbitrary value that matches no contact simply hides the dropdown,
+ * so manual entry (and the caller's `deliveryContact.trim()` validation) is
+ * never blocked. When the client has no contacts the field behaves like a plain
+ * input.
+ */
+function DeliveryContactCombobox({
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+}: {
+  value: string
+  onChange: (value: string) => void
+  suggestions: ContactOption[]
+  placeholder?: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const query = value.trim().toLowerCase()
+  const filtered = query
+    ? suggestions.filter(
+        (c) =>
+          c.value.toLowerCase().includes(query) || (c.hint?.toLowerCase().includes(query) ?? false)
+      )
+    : suggestions
+
+  // Close when the pointer goes down outside the field + dropdown.
+  useEffect(() => {
+    if (!isOpen) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [isOpen])
+
+  const showDropdown = isOpen && filtered.length > 0
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setIsOpen(false)
+        }}
+        placeholder={placeholder}
+        autoComplete="off"
+        aria-autocomplete="list"
+      />
+      {showDropdown && (
+        <ul
+          role="listbox"
+          className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] max-h-52 overflow-y-auto rounded-lg border py-1 shadow-lg"
+        >
+          {filtered.map((c) => {
+            const pick = () => {
+              onChange(c.value)
+              setIsOpen(false)
+            }
+            return (
+              <li
+                key={`${c.kind}:${c.value}`}
+                role="option"
+                aria-selected={c.value === value}
+                tabIndex={0}
+                onClick={pick}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    pick()
+                  }
+                }}
+                className={cn(
+                  'hover:bg-muted flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm',
+                  c.value === value && 'bg-muted font-medium'
+                )}
+              >
+                <span className="text-foreground truncate">{c.value}</span>
+                {c.hint && (
+                  <span className="text-muted-foreground shrink-0 text-[11px]">{c.hint}</span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Collect the client's own contacts (phones, email, postal addresses) into a
+ * de-duplicated option list, primary phone first. `primaryHint`/`emailHint` are
+ * the localised labels for the base phone/email (the additional phones and
+ * addresses carry their own labels from the data).
+ */
+function buildContactOptions(
+  profile: ClientProfileResponse | undefined,
+  primaryHint: string,
+  emailHint: string
+): ContactOption[] {
+  if (!profile) return []
+  const out: ContactOption[] = []
+  const seen = new Set<string>()
+  const add = (raw: string | null | undefined, kind: ContactKind, hint?: string | null) => {
+    const contactValue = (raw ?? '').trim()
+    if (!contactValue) return
+    const key = `${kind}:${contactValue.toLowerCase()}`
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push({ value: contactValue, kind, hint: hint?.trim() || undefined })
+  }
+
+  // Phones — the client's own numbers, primary first then the extras.
+  add(profile.phone_primary, 'phone', primaryHint)
+  for (const phone of profile.additional_phones ?? []) {
+    add(phone.number, 'phone', phone.label || phone.type)
+  }
+  // Email.
+  add(profile.email, 'email', emailHint)
+  // Postal addresses — offered for the "Поштою" channel.
+  for (const address of profile.addresses ?? []) {
+    add(address.full_address, 'address', address.address_type)
+  }
+  return out
+}
+
 export function GenerateDocumentModal({
   open,
   onClose,
@@ -149,6 +312,28 @@ export function GenerateDocumentModal({
   } = useGenerationOptions(clientId, open)
   const { data: types } = useDocumentTypes({ includeHidden: false })
   const generateMutation = useGenerateDocument()
+
+  // Client contacts feed the "Контакт (куди)" combobox so the operator can pick
+  // an existing phone/email instead of retyping it. Loaded only while the modal
+  // is open; a missing profile degrades to plain free-text entry.
+  const { data: clientProfile } = useClientProfile(clientId, open)
+  const contactOptions = useMemo(
+    () =>
+      buildContactOptions(
+        clientProfile,
+        t('pages.clients.detail.generateModal.contactHints.primary', 'основний'),
+        t('pages.clients.detail.generateModal.contactHints.email', 'ел. пошта')
+      ),
+    [clientProfile, t]
+  )
+  // Narrow the suggestions to the channel's contact kind, but softly: if the
+  // client has no contact of that kind, keep offering all of them.
+  const contactSuggestions = useMemo(() => {
+    const kind = contactKindForChannel(deliveryChannel)
+    if (kind == null) return contactOptions
+    const matching = contactOptions.filter((c) => c.kind === kind)
+    return matching.length > 0 ? matching : contactOptions
+  }, [contactOptions, deliveryChannel])
 
   // When the backend numbers outgoing letters from the correspondence
   // registry, the manual number field is hidden and any typed index_num is
@@ -304,16 +489,16 @@ export function GenerateDocumentModal({
         <div className="flex flex-col items-center gap-4 p-4 text-center md:p-6">
           <Icons.Success size={40} className="text-success-500" />
           <div className="flex flex-col gap-1">
-            <p className="text-secondary-900 text-base font-medium">
+            <p className="text-foreground text-base font-medium">
               {t('pages.clients.detail.generateModal.successTitle', 'Документ згенеровано')}
             </p>
-            <p className="text-secondary-600 text-sm">{generated.document_name}</p>
-            <p className="text-secondary-500 text-xs">
+            <p className="text-muted-foreground text-sm">{generated.document_name}</p>
+            <p className="text-muted-foreground text-xs">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}:{' '}
               {generated.index_num}
             </p>
           </div>
-          <p className="text-secondary-600 text-sm">
+          <p className="text-muted-foreground text-sm">
             {t(
               'pages.clients.detail.generateModal.successPdfHint',
               'PDF додано до документів клієнта.'
@@ -333,7 +518,7 @@ export function GenerateDocumentModal({
         <div className="flex flex-col gap-4 p-4 md:p-6">
           {/* Credit */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.credit', 'Кредит')}
             </label>
             <Select value={debtId == null ? '' : String(debtId)} onValueChange={handleSelectDebt}>
@@ -357,15 +542,15 @@ export function GenerateDocumentModal({
 
           {/* Templates */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.template', 'Шаблон')}
             </label>
             {debtId == null ? (
-              <p className="text-secondary-500 rounded-lg border border-dashed border-[#EBECE8] px-3 py-4 text-sm">
+              <p className="text-muted-foreground border-border rounded-lg border border-dashed px-3 py-4 text-sm">
                 {t('pages.clients.detail.generateModal.selectCreditFirst', 'Спершу оберіть кредит')}
               </p>
             ) : optionsLoading ? (
-              <p className="text-secondary-500 px-3 py-4 text-sm">{t('status.loading', '…')}</p>
+              <p className="text-muted-foreground px-3 py-4 text-sm">{t('status.loading', '…')}</p>
             ) : optionsError ? (
               <p className="text-sm text-red-500">
                 {t(
@@ -374,7 +559,7 @@ export function GenerateDocumentModal({
                 )}
               </p>
             ) : templatesForDebt.length === 0 ? (
-              <p className="text-secondary-500 rounded-lg border border-dashed border-[#EBECE8] px-3 py-4 text-sm">
+              <p className="text-muted-foreground border-border rounded-lg border border-dashed px-3 py-4 text-sm">
                 {t('pages.clients.detail.generateModal.templatesEmpty', 'Немає доступних шаблонів')}
               </p>
             ) : (
@@ -391,11 +576,11 @@ export function GenerateDocumentModal({
                       className={cn(
                         'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                         isSelected
-                          ? 'border-primary-400 bg-primary-50/50'
-                          : 'hover:border-secondary-400 hover:bg-secondary-50 border-[#EBECE8]'
+                          ? 'border-primary-400 bg-primary/50'
+                          : 'hover:border-primary-400 hover:bg-primary/10 border-border'
                       )}
                     >
-                      <span className="text-secondary-900 text-sm font-medium">{tpl.name}</span>
+                      <span className="text-foreground text-sm font-medium">{tpl.name}</span>
                     </button>
                   )
                 })}
@@ -413,7 +598,7 @@ export function GenerateDocumentModal({
 
           {/* Document type: auto from the template, manual pick otherwise */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.documentType', 'Тип документа')}
             </label>
             {boundType != null ? (
@@ -456,11 +641,11 @@ export function GenerateDocumentModal({
 
           {/* Outgoing number */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}
             </label>
             {registryNumbering ? (
-              <p className="text-secondary-500 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.clients.detail.generateModal.indexNumRegistryHint',
                   'Вихідний № буде присвоєно автоматично з реєстру кореспонденції'
@@ -474,7 +659,7 @@ export function GenerateDocumentModal({
                   onChange={(e) => setIndexNum(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={t('pages.clients.detail.generateModal.indexNumPlaceholder', 'Авто')}
                 />
-                <p className="text-secondary-500 mt-1 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.clients.detail.generateModal.indexNumHint',
                     'Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.'
@@ -486,9 +671,9 @@ export function GenerateDocumentModal({
 
           {/* Delivery to the client — mandatory; feeds the outgoing registry's
               "from → to" column. The operator must record where it is sent. */}
-          <div className="flex flex-col gap-4 border-t border-[#EBECE8] pt-4">
+          <div className="border-border flex flex-col gap-4 border-t pt-4">
             <div>
-              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryChannel', 'Канал відправки клієнту')}
                 <span className="text-error-500 ml-1">*</span>
               </label>
@@ -517,13 +702,14 @@ export function GenerateDocumentModal({
             </div>
 
             <div>
-              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryContact', 'Контакт (куди)')}
                 <span className="text-error-500 ml-1">*</span>
               </label>
-              <Input
+              <DeliveryContactCombobox
                 value={deliveryContact}
-                onChange={(e) => setDeliveryContact(e.target.value)}
+                onChange={setDeliveryContact}
+                suggestions={contactSuggestions}
                 placeholder={t(
                   'pages.clients.detail.generateModal.deliveryContactPlaceholder',
                   '+380… або email'

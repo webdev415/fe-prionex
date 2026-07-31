@@ -129,7 +129,7 @@ function ContactStepEdit({
         {!valueIsKnown && value !== '' && (
           <SelectItem value={value}>
             {value}
-            <span className="ml-2 text-xs text-gray-400">
+            <span className="text-muted-foreground ml-2 text-xs">
               {t('pages.clientChains.contactStale', '(stale)')}
             </span>
           </SelectItem>
@@ -149,16 +149,16 @@ function ContactStepEdit({
 function EditInteractionSkeleton() {
   return (
     <div className="space-y-3" aria-hidden="true">
-      <div className="h-9 animate-pulse rounded-lg border border-gray-200 bg-gray-100" />
+      <div className="border-border bg-muted-foreground/25 h-9 animate-pulse rounded-lg border" />
       {Array.from({ length: 4 }).map((_, idx) => (
-        <div key={idx} className="space-y-2 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-          <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-          <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+        <div key={idx} className="border-border bg-muted/60 space-y-2 rounded-lg border p-3">
+          <div className="bg-muted-foreground/25 h-4 w-40 animate-pulse rounded" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
         </div>
       ))}
       <div className="space-y-2">
-        <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-        <div className="h-20 w-full animate-pulse rounded-md bg-gray-200" />
+        <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded" />
+        <div className="bg-muted-foreground/25 h-20 w-full animate-pulse rounded-md" />
       </div>
     </div>
   )
@@ -376,8 +376,8 @@ export function EditTAInteractionModal({
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={22} className="text-dark-500" strokeWidth={1.8} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.PencilEdit size={22} className="text-primary-foreground" strokeWidth={1.8} />
           </div>
         }
         title={t('pages.clientChains.editInteraction.title')}
@@ -387,9 +387,9 @@ export function EditTAInteractionModal({
           <EditInteractionSkeleton />
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            <div className="border-border bg-muted text-muted-foreground rounded-lg border px-3 py-2 text-xs">
               {t('pages.clientChains.editInteraction.chainLabel')}:{' '}
-              <span className="font-medium text-gray-800">{chain.name}</span>
+              <span className="text-foreground font-medium">{chain.name}</span>
             </div>
 
             {orderedSteps.map((step) => {
@@ -399,9 +399,9 @@ export function EditTAInteractionModal({
               return (
                 <div
                   key={step.id}
-                  className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3"
+                  className="border-border bg-muted/50 flex flex-col gap-1 rounded-lg border p-3"
                 >
-                  <Label className="text-sm font-medium text-gray-800">
+                  <Label className="text-foreground text-sm font-medium">
                     {t('pages.clientChains.stepLabel', { order: step.step_order })} — {ta.name}
                     {step.is_required && <span className="ml-1 text-red-500">*</span>}
                   </Label>
@@ -447,7 +447,7 @@ export function EditTAInteractionModal({
                             {...notInPastBounds(step.not_in_the_past)}
                           />
                           {value && !isValid && (
-                            <span className="text-xs text-amber-600">
+                            <span className="text-warning-600 text-xs">
                               {t('pages.clientChains.editInteraction.savedValue')}: {value}{' '}
                               <span className="text-amber-500">
                                 {t('pages.clientChains.contactStale', '(stale)')}
@@ -463,7 +463,7 @@ export function EditTAInteractionModal({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
-                      leftIcon={<span className="text-gray-700">₴</span>}
+                      leftIcon={<span className="text-foreground">₴</span>}
                       value={value}
                       onChange={(e) => setStepValue(step.id, e.target.value)}
                     />
@@ -495,7 +495,7 @@ export function EditTAInteractionModal({
                       return (
                         <div className="flex flex-col gap-2">
                           {shownDebts.length === 0 && staleIds.length === 0 ? (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-muted-foreground text-xs">
                               {t('pages.clientChains.noCredits')}
                             </span>
                           ) : (
@@ -539,7 +539,7 @@ export function EditTAInteractionModal({
                               {staleIds.map((id) => (
                                 <label
                                   key={`stale-${id}`}
-                                  className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100"
+                                  className="border-warning-200 bg-warning-100 flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-amber-800 hover:bg-amber-100"
                                 >
                                   <input
                                     type="checkbox"
@@ -551,7 +551,7 @@ export function EditTAInteractionModal({
                                   />
                                   <span>
                                     {id}
-                                    <span className="ml-2 text-xs text-amber-600">
+                                    <span className="text-warning-600 ml-2 text-xs">
                                       {t('pages.clientChains.contactStale', '(stale)')}
                                     </span>
                                   </span>
@@ -576,7 +576,7 @@ export function EditTAInteractionModal({
 
             {showPromiseDate && (
               <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">
+                <Label className="text-foreground text-sm">
                   {t('pages.clientChains.promiseDate')}
                 </Label>
                 <Input
@@ -589,7 +589,7 @@ export function EditTAInteractionModal({
 
             {showPromiseAmount && (
               <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">
+                <Label className="text-foreground text-sm">
                   {t('pages.clientChains.promiseAmountUAH')}
                 </Label>
                 <Input
@@ -597,7 +597,7 @@ export function EditTAInteractionModal({
                   min={0}
                   step="0.01"
                   placeholder="0.00"
-                  leftIcon={<span className="text-gray-700">₴</span>}
+                  leftIcon={<span className="text-foreground">₴</span>}
                   value={promiseAmount}
                   onChange={(e) => setPromiseAmount(e.target.value)}
                 />
@@ -606,7 +606,7 @@ export function EditTAInteractionModal({
 
             {showCredit && debts.length > 0 && (
               <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">
+                <Label className="text-foreground text-sm">
                   {t('pages.clientChains.credit', 'Credit')}
                 </Label>
                 <Select value={creditId} onValueChange={setCreditId}>
@@ -630,7 +630,7 @@ export function EditTAInteractionModal({
             )}
 
             <div className="flex flex-col gap-1">
-              <Label className="text-sm text-gray-700">{t('pages.clientChains.notes')}</Label>
+              <Label className="text-foreground text-sm">{t('pages.clientChains.notes')}</Label>
               <Textarea
                 rows={3}
                 value={notes}

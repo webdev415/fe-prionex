@@ -134,25 +134,17 @@ export function BulkDocumentImportPage() {
   }
 
   return (
-    <div className={`mx-auto space-y-6 p-6 ${jobId !== null ? 'max-w-5xl' : 'max-w-3xl'}`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-dark-500 text-2xl font-semibold">
-            {t('pages.imports.documents.title', 'Bulk Document Import')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {t(
-              'pages.imports.documents.subtitle',
-              'Upload a ZIP archive of credit and client documents, matched to a selected factoring agreement.'
-            )}
-          </p>
-        </div>
+    <div>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
+          {t('pages.imports.documents.title', 'Bulk Document Import')}
+        </h1>
 
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
-          className="flex h-10 w-full shrink-0 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
+          leftIcon={<Icons.TransactionHistory size={20} className="text-primary-foreground" />}
+          className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
           {t('pages.imports.documents.viewHistory', 'Import History')}
         </Button>
@@ -161,7 +153,19 @@ export function BulkDocumentImportPage() {
       {jobId !== null ? (
         <DocumentImportProgress jobId={jobId} onComplete={handleReset} />
       ) : (
-        <div className="space-y-5 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+        <div className="border-border bg-card/50 space-y-5 rounded-xl border p-4 shadow-sm sm:p-6">
+          <div>
+            <h3 className="text-foreground text-lg font-medium">
+              {t('pages.imports.documents.sectionTitle', 'Upload Document Archive')}
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              {t(
+                'pages.imports.documents.subtitle',
+                'Upload a ZIP archive of credit and client documents, matched to a selected factoring agreement.'
+              )}
+            </p>
+          </div>
+
           {/* Factoring agreement */}
           <div>
             <Label htmlFor="doc-import-agreement" required className="mb-1.5 block">
@@ -193,30 +197,30 @@ export function BulkDocumentImportPage() {
 
           {/* Agreement info panel — agreement number, who sold, purchase date */}
           {selectedAgreement && (
-            <dl className="grid grid-cols-1 gap-y-2 rounded-md bg-gray-50 p-4 text-sm sm:grid-cols-[max-content_1fr] sm:gap-x-6">
-              <dt className="font-medium text-gray-500">
+            <dl className="bg-muted grid grid-cols-1 gap-y-2 rounded-md p-4 text-sm sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+              <dt className="text-muted-foreground font-medium">
                 {t('pages.imports.documents.seller', 'Seller')}
               </dt>
-              <dd className="text-dark-500 font-light">{sellerName || '—'}</dd>
+              <dd className="text-foreground font-light">{sellerName || '—'}</dd>
 
-              <dt className="font-medium text-gray-500">
+              <dt className="text-muted-foreground font-medium">
                 {t('pages.imports.documents.agreementNumber', 'Agreement number')}
               </dt>
-              <dd className="text-dark-500 font-light">
+              <dd className="text-foreground font-light">
                 {selectedAgreement.agreement_number || '—'}
               </dd>
 
-              <dt className="font-medium text-gray-500">
+              <dt className="text-muted-foreground font-medium">
                 {t('pages.imports.documents.whoSold', 'Who sold')}
               </dt>
-              <dd className="text-dark-500 font-light">
+              <dd className="text-foreground font-light">
                 {selectedAgreement.previous_lender || '—'}
               </dd>
 
-              <dt className="font-medium text-gray-500">
+              <dt className="text-muted-foreground font-medium">
                 {t('pages.imports.documents.purchaseDate', 'Purchase date')}
               </dt>
-              <dd className="text-dark-500 font-light">
+              <dd className="text-foreground font-light">
                 {selectedAgreement.contract_purchase_date || '—'}
               </dd>
             </dl>
@@ -286,13 +290,13 @@ export function BulkDocumentImportPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-white/70 p-8 text-center transition hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="border-border hover:bg-muted/50 flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Icons.CloudDownload size={32} strokeWidth={0.75} className="text-gray-400" />
+              <Icons.CloudDownload size={32} strokeWidth={0.75} className="text-muted-foreground" />
               {zipFile ? (
-                <span className="text-dark-500 text-sm font-medium">{zipFile.name}</span>
+                <span className="text-foreground text-sm font-medium">{zipFile.name}</span>
               ) : (
-                <span className="text-sm text-gray-500">
+                <span className="text-muted-foreground text-sm">
                   {t('pages.imports.documents.dropZip', 'Click to select a .zip archive')}
                 </span>
               )}
@@ -319,7 +323,7 @@ export function BulkDocumentImportPage() {
                 </button>
               </div>
             )}
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="text-muted-foreground mt-2 text-xs">
               {t(
                 'pages.imports.documents.structureHint',
                 'ZIP with credits/<external_id>/ and users/<external_id>/ folders — each folder is named by the credit or client external_id. Files inside are attached to the matching credit or client.'
@@ -330,7 +334,7 @@ export function BulkDocumentImportPage() {
           {/* Upload progress */}
           {uploading && (
             <div>
-              <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+              <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
                 <span>{t('pages.imports.documents.uploading', 'Uploading…')}</span>
                 <div className="flex items-center gap-3">
                   <span>{progress}%</span>
@@ -343,7 +347,7 @@ export function BulkDocumentImportPage() {
                   </button>
                 </div>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+              <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                 <div
                   className="bg-primary-400 h-full rounded-full transition-all"
                   style={{ width: `${progress}%` }}

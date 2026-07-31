@@ -432,8 +432,8 @@ export function SendMessageModal({
     <Modal open={open} onClose={onClose} maxWidth="xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Message01 size={18} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Message01 size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.sendMessage.title', {
@@ -448,7 +448,7 @@ export function SendMessageModal({
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                <label className="text-foreground mb-1.5 block text-sm font-light">
                   {t('pages.clients.modals.sendMessage.channel', 'Channel')}
                 </label>
                 <Select
@@ -477,7 +477,7 @@ export function SendMessageModal({
               </div>
 
               <div>
-                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                <label className="text-foreground mb-1.5 block text-sm font-light">
                   {t('pages.clients.modals.sendMessage.service', 'Service')}
                 </label>
                 <Select
@@ -520,14 +520,14 @@ export function SendMessageModal({
               </div>
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="text-dark-500 mb-2 text-sm font-medium">
+            <div className="border-border bg-muted rounded-lg border px-4 py-3">
+              <div className="text-foreground mb-2 text-sm font-medium">
                 {t('pages.clients.modals.sendMessage.recipient', 'Recipient')}
               </div>
               {destinationKind === 'email' ? (
                 <div className="space-y-2">
-                  <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
-                  <div className="text-dark-500 text-sm font-medium">{clientEmail || '—'}</div>
+                  <div className="text-foreground text-xs font-light">{destinationLabel}</div>
+                  <div className="text-foreground text-sm font-medium">{clientEmail || '—'}</div>
                   {!clientEmail && (
                     <p className="text-error-600 text-xs">
                       {t(
@@ -539,7 +539,7 @@ export function SendMessageModal({
                   {clientEmail && quotaData && (
                     <div
                       className={`flex items-center gap-1.5 text-xs ${
-                        quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
+                        quotaData.allowed ? 'text-muted-foreground' : 'text-error-600 font-medium'
                       }`}
                     >
                       {quotaData.allowed ? (
@@ -563,10 +563,10 @@ export function SendMessageModal({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
+                  <div className="text-foreground text-xs font-light">{destinationLabel}</div>
                   {clientPhones.length > 1 ? (
                     <Select value={selectedPhone} onValueChange={setSelectedPhone}>
-                      <SelectTrigger className="bg-white">
+                      <SelectTrigger className="bg-card">
                         <SelectValue
                           placeholder={t(
                             'pages.clients.modals.sendMessage.selectPhone',
@@ -593,7 +593,9 @@ export function SendMessageModal({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="text-dark-500 text-sm font-medium">{selectedPhone || '—'}</div>
+                    <div className="text-foreground text-sm font-medium">
+                      {selectedPhone || '—'}
+                    </div>
                   )}
                   {!hasPhoneDestination && (
                     <p className="text-error-600 text-xs">
@@ -606,7 +608,7 @@ export function SendMessageModal({
                   {hasPhoneDestination && quotaData && (
                     <div
                       className={`flex items-center gap-1.5 text-xs ${
-                        quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
+                        quotaData.allowed ? 'text-muted-foreground' : 'text-error-600 font-medium'
                       }`}
                     >
                       {quotaData.allowed ? (
@@ -632,7 +634,7 @@ export function SendMessageModal({
             </div>
 
             <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
+              <label className="text-foreground mb-1.5 block text-sm font-light">
                 {t('pages.clients.modals.sendMessage.draft', 'Draft')}
               </label>
               <Select value={draftId} onValueChange={handleDraftChange} disabled={!hasDestination}>
@@ -660,7 +662,7 @@ export function SendMessageModal({
 
             {loans.length > 0 && (
               <div>
-                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                <label className="text-foreground mb-1.5 block text-sm font-light">
                   {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
                 </label>
                 <Select
@@ -740,37 +742,37 @@ export function SendMessageModal({
               />
             )}
 
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="border-border bg-muted rounded-xl border p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-dark-500 text-sm font-medium">
+                <span className="text-foreground text-sm font-medium">
                   {t('pages.clients.modals.sendMessage.preview', 'Message preview')}
                 </span>
-                <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                <span className="bg-card text-muted-foreground ring-border rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                   {channel.toUpperCase()}
                 </span>
               </div>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-dark-500 font-medium">
+                  <span className="text-foreground font-medium">
                     {t('pages.clients.modals.sendMessage.previewTo', 'To')}:
                   </span>{' '}
-                  <span className="text-gray-600">
+                  <span className="text-muted-foreground">
                     {destinationKind === 'email' ? clientEmail || '—' : selectedPhone || '—'}
                   </span>
                 </div>
                 {showSubject && (
                   <div>
-                    <span className="text-dark-500 font-medium">
+                    <span className="text-foreground font-medium">
                       {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
                     </span>{' '}
-                    <span className="text-gray-600">{previewSubject || '—'}</span>
+                    <span className="text-muted-foreground">{previewSubject || '—'}</span>
                   </div>
                 )}
                 <div>
-                  <span className="text-dark-500 font-medium">
+                  <span className="text-foreground font-medium">
                     {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
                   </span>
-                  <pre className="text-dark-500 mt-1 overflow-auto rounded-lg bg-white p-3 text-xs whitespace-pre-wrap">
+                  <pre className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap">
                     {previewBody.trim() || '—'}
                   </pre>
                 </div>

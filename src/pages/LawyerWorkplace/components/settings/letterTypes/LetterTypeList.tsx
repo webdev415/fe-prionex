@@ -38,7 +38,7 @@ export function LetterTypeList({
           <button
             type="button"
             onClick={onAddType}
-            className="bg-primary-300 text-foreground hover:bg-primary-400 inline-flex items-center gap-1 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"
           >
             <Icons.Add size={14} strokeWidth={2} />
             {t('pages.lawyerWorkplace.settings.addType', 'Add type')}

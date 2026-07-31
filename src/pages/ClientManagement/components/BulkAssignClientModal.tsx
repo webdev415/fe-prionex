@@ -179,7 +179,7 @@ export function BulkAssignClientModal({
     <Modal open={open} onClose={handleCancel} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
             <Icons.UserCheck01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }

@@ -60,7 +60,7 @@ export function RelatedTagsTab({
 
   if (isLoading && entries.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-muted-foreground text-xs">
         {t('pages.clients.detail.relatedTags.loading', 'Loading related tags...')}
       </p>
     )
@@ -68,7 +68,7 @@ export function RelatedTagsTab({
 
   if (entries.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-muted-foreground text-xs">
         {t(
           'pages.clients.detail.relatedTags.empty',
           'No related tags from linked contacts with shared phone numbers.'
@@ -86,7 +86,7 @@ export function RelatedTagsTab({
         return (
           <div
             key={entry.key}
-            className="flex w-full min-w-0 flex-col gap-2 border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+            className="border-border flex w-full min-w-0 flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0"
           >
             <span
               className="inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs font-medium"
@@ -112,7 +112,7 @@ export function RelatedTagsTab({
                   <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
                     <span
                       className={cn(
-                        'text-dark-500 min-w-0 truncate text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                        'text-foreground min-w-0 truncate text-xs leading-[140%] font-medium tracking-[-0.24px]',
                         phone.blocking.blocks_calls && 'line-through opacity-70'
                       )}
                     >
@@ -194,7 +194,7 @@ export function RelatedTagsTab({
                   </div>
                   <Link
                     to={`/dashboard/clients/${entry.linkedClient.id}`}
-                    className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[#d7ebc6] bg-[#ecf6e4] px-1.5 py-0.5 text-[10px] leading-3 font-medium text-[#519a3d] hover:border-[#c5ddb3] hover:bg-[#e3f2d8]"
+                    className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
                     title={t('pages.clients.detail.relatedTags.goToClient', {
                       defaultValue: 'Go to client №{{id}}',
                       id: entry.linkedClient.id,

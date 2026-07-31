@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -74,8 +74,28 @@ vi.mock('@/features/documentTypes/api/documentTypesApi', () => ({
   },
 }))
 
+// Client profile powers the contact picker in the delivery-contact field.
+// Only `useClientProfile` is swapped; the rest of the hooks module (clientKeys,
+// …) is kept real. Default: no profile → the field is a plain free-text input
+// (unchanged behaviour). Individual tests override it to expose suggestions.
+const { useClientProfileMock } = vi.hoisted(() => ({
+  useClientProfileMock: vi.fn(() => ({ data: undefined as unknown })),
+}))
+vi.mock('@/features/clients/hooks/useClients', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/clients/hooks/useClients')>()
+  return { ...actual, useClientProfile: useClientProfileMock }
+})
+
 import { GenerateDocumentModal } from '../GenerateDocumentModal'
 import { legalRegistryKeys } from '@/features/lawyerWorkplace/hooks/useLegalRegistry'
+
+/** Client profile exposing a primary phone, an extra phone, an email and an address. */
+const PROFILE_WITH_CONTACTS = {
+  phone_primary: '+380501112233',
+  email: 'client@example.com',
+  additional_phones: [{ number: '+380671234567', type: 'Мобільний', label: null }],
+  addresses: [{ full_address: 'м. Київ, вул. Хрещатик, 1', address_type: 'Реєстрація' }],
+}
 
 // jsdom lacks the pointer-capture APIs Radix Select relies on.
 beforeEach(() => {
@@ -151,6 +171,9 @@ describe('GenerateDocumentModal', () => {
   beforeEach(() => {
     getOptionsMock.mockReset()
     generateMock.mockReset()
+    // No client contacts by default — the delivery-contact field stays a plain
+    // input. Contact-picker tests override this per case.
+    useClientProfileMock.mockReturnValue({ data: undefined })
   })
 
   it('shows only available templates and a hidden-count note for the rest', async () => {
@@ -476,5 +499,81 @@ describe('GenerateDocumentModal', () => {
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     expect(await screen.findByText('Немає потрібного тегу на клієнті')).toBeInTheDocument()
+  })
+
+  it("offers the client's contacts as options in the delivery-contact field", async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    useClientProfileMock.mockReturnValue({ data: PROFILE_WITH_CONTACTS })
+    const user = userEvent.setup()
+    renderModal()
+
+    // Focusing the field drops down the client's own contacts.
+    await user.click(screen.getByPlaceholderText(/380/))
+    const listbox = await screen.findByRole('listbox')
+    expect(within(listbox).getByText('+380501112233')).toBeInTheDocument()
+    expect(within(listbox).getByText('+380671234567')).toBeInTheDocument()
+    expect(within(listbox).getByText('client@example.com')).toBeInTheDocument()
+    // The primary number is labelled with its localised hint.
+    expect(within(listbox).getByText('основний')).toBeInTheDocument()
+  })
+
+  it('fills the delivery contact when a suggestion is picked', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    useClientProfileMock.mockReturnValue({ data: PROFILE_WITH_CONTACTS })
+    const user = userEvent.setup()
+    renderModal()
+
+    const input = screen.getByPlaceholderText(/380/)
+    await user.click(input)
+    await user.click(await screen.findByRole('option', { name: /client@example\.com/ }))
+
+    expect(input).toHaveValue('client@example.com')
+    // The dropdown closes once a contact is chosen.
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('still accepts a manually typed contact that is not in the list', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    useClientProfileMock.mockReturnValue({ data: PROFILE_WITH_CONTACTS })
+    const user = userEvent.setup()
+    renderModal()
+
+    const input = screen.getByPlaceholderText(/380/)
+    await user.type(input, 'lawyer.override@mail.com')
+
+    expect(input).toHaveValue('lawyer.override@mail.com')
+    // Nothing matches the free-text value → the dropdown gives way to it.
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('narrows the suggestions to the selected delivery channel', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    useClientProfileMock.mockReturnValue({ data: PROFILE_WITH_CONTACTS })
+    const user = userEvent.setup()
+    renderModal()
+
+    // Pick the email channel (last combobox) → only email contacts remain.
+    const combos = await screen.findAllByRole('combobox')
+    await user.click(combos[combos.length - 1])
+    await user.click(await screen.findByRole('option', { name: 'Ел. пошта' }))
+
+    await user.click(screen.getByPlaceholderText(/380/))
+    const listbox = await screen.findByRole('listbox')
+    expect(within(listbox).getByText('client@example.com')).toBeInTheDocument()
+    expect(within(listbox).queryByText('+380501112233')).not.toBeInTheDocument()
+  })
+
+  it('falls back to a plain input when the client has no contacts', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    useClientProfileMock.mockReturnValue({ data: undefined })
+    const user = userEvent.setup()
+    renderModal()
+
+    const input = screen.getByPlaceholderText(/380/)
+    await user.click(input)
+    // No contacts → no dropdown, only free-text entry.
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    await user.type(input, '+380123456789')
+    expect(input).toHaveValue('+380123456789')
   })
 })

@@ -3,6 +3,8 @@
  * Kept separate from JSX components so react-refresh/only-export-components stays clean.
  */
 
+import type { CSSProperties } from 'react'
+
 type SortableContact = {
   id: number
   contactTypeId: number | null
@@ -14,8 +16,22 @@ type TypeSortMeta = {
 }
 
 /**
- * Variant-5 pill tones by contact-type code (color customization is out of scope;
- * these match the approved mockup categories).
+ * Build inline styles for a contact-type pill from the admin-picked color.
+ * Returns `null` when no custom color is provided so the caller can fall back
+ * to the code-based Tailwind classes.
+ */
+export function contactTypePillStyle(color: string | null | undefined): CSSProperties | null {
+  if (!color) return null
+  return {
+    borderColor: color,
+    backgroundColor: color + '20',
+    color: color,
+  }
+}
+
+/**
+ * Fallback pill tones by contact-type code — used only when the contact type
+ * has no admin-picked color.
  */
 export function contactTypePillToneClass(
   code: string | null | undefined,

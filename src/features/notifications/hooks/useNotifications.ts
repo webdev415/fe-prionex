@@ -8,7 +8,7 @@ import type { NotificationListResponse } from '../types'
 export function useNotifications(params?: {
   page?: number
   page_size?: number
-  type?: string
+  type?: string | string[]
   read?: boolean
   starred?: boolean
 }) {

@@ -33,7 +33,7 @@ const REASON_STYLES: Record<string, string> = {
   'Legal request': 'text-success-700',
   'Data dispute': 'text-information-600',
   'Test client': 'text-warning-700',
-  Other: 'text-gray-600',
+  Other: 'text-muted-foreground',
 }
 
 interface Row {
@@ -150,22 +150,22 @@ export function OptOutTab() {
       header: t('pages.ubkiIntegration.optOut.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">
-          <div className="text-dark-500 font-medium">{r.clientName}</div>
-          <div className="text-gray-500">{r.clientRef}</div>
+          <div className="text-foreground font-medium">{r.clientName}</div>
+          <div className="text-muted-foreground">{r.clientRef}</div>
         </div>
       ),
     },
     {
       key: 'tin',
       header: t('pages.ubkiIntegration.optOut.columns.tin', 'TIN'),
-      render: (r) => <span className="text-xs text-gray-700">{r.tin}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.tin}</span>,
     },
     {
       key: 'reason',
       header: t('pages.ubkiIntegration.optOut.columns.reason', 'Reason'),
       render: (r) => (
         <span
-          className={`text-xs font-medium ${r.reason ? (REASON_STYLES[r.reason] ?? 'text-gray-600') : 'text-gray-400'}`}
+          className={`text-xs font-medium ${r.reason ? (REASON_STYLES[r.reason] ?? 'text-muted-foreground') : 'text-muted-foreground'}`}
         >
           {r.reason ? reasonLabel(r.reason) : '—'}
         </span>
@@ -174,17 +174,17 @@ export function OptOutTab() {
     {
       key: 'setBy',
       header: t('pages.ubkiIntegration.optOut.columns.setBy', 'Set by'),
-      render: (r) => <span className="text-xs text-gray-700">{r.setBy}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.setBy}</span>,
     },
     {
       key: 'dateAdded',
       header: t('pages.ubkiIntegration.optOut.columns.dateAdded', 'Date added'),
-      render: (r) => <span className="text-xs text-gray-500">{r.dateAdded}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.dateAdded}</span>,
     },
     {
       key: 'note',
       header: t('pages.ubkiIntegration.optOut.columns.note', 'Note'),
-      render: (r) => <span className="text-xs text-gray-600">{r.note}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.note}</span>,
     },
     {
       key: 'actions',
@@ -273,12 +273,12 @@ export function OptOutTab() {
     <div className="flex flex-col gap-4">
       <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={onFilePicked} />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="border-border bg-card rounded-2xl border p-5">
         {/* Card header — title + actions, inside the card. */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-dark-500 flex items-center gap-2 text-sm font-semibold">
+          <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
             {t('pages.ubkiIntegration.optOut.title', 'Opt-out clients')}
-            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+            <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-xs">
               {items.length}
             </span>
           </h2>
@@ -306,7 +306,7 @@ export function OptOutTab() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-dark-500 text-xs font-medium">
+          <span className="text-foreground text-xs font-medium">
             {t('pages.ubkiIntegration.optOut.selected', {
               defaultValue: 'Selected: {{count}}',
               count: selected.size,
@@ -330,7 +330,7 @@ export function OptOutTab() {
               'pages.ubkiIntegration.optOut.searchPlaceholder',
               'Search by client / TIN / contract…'
             )}
-            className="focus:border-primary-500 h-[45px] min-w-[220px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 border-border bg-card text-foreground h-[45px] min-w-[220px] flex-1 rounded-full border px-4 text-xs focus:outline-none"
           />
           <div className="w-44">
             <MultiCheckboxDropdown
@@ -361,11 +361,11 @@ export function OptOutTab() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <MdOutlinePersonOff size={28} className="text-gray-400" />
-            <p className="text-dark-500 text-sm font-medium">
+            <MdOutlinePersonOff size={28} className="text-muted-foreground" />
+            <p className="text-foreground text-sm font-medium">
               {t('pages.ubkiIntegration.optOut.empty', 'No opt-out clients')}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               {t(
                 'pages.ubkiIntegration.optOut.emptyHint',
                 "Clients added to the opt-out list won't receive UBKI submissions."
@@ -414,12 +414,12 @@ export function OptOutTab() {
           <div
             role="dialog"
             aria-modal="true"
-            className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+            className="bg-card relative w-full max-w-md rounded-2xl p-5 shadow-xl"
           >
-            <h3 className="text-dark-500 text-sm font-semibold">
+            <h3 className="text-foreground text-sm font-semibold">
               {t('pages.ubkiIntegration.optOut.add.dialogTitle', 'Add clients to opt-out')}
             </h3>
-            <p className="mb-4 text-xs text-gray-500">
+            <p className="text-muted-foreground mb-4 text-xs">
               {t(
                 'pages.ubkiIntegration.optOut.add.dialogHint',
                 'Their credits will stop being sent to UBKI.'
@@ -427,7 +427,7 @@ export function OptOutTab() {
             </p>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label className="text-muted-foreground mb-1 block text-xs font-medium">
                   {t('pages.ubkiIntegration.optOut.add.clientTins', 'Client TINs')}
                 </label>
                 <input
@@ -437,14 +437,14 @@ export function OptOutTab() {
                     'pages.ubkiIntegration.optOut.add.tinsPlaceholder',
                     'e.g. 2288805863, 3328719312'
                   )}
-                  className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
+                  className="focus:border-primary-500 border-border bg-card text-foreground h-10 w-full rounded-lg border px-3 text-xs focus:outline-none"
                 />
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="text-muted-foreground mt-1 text-[11px]">
                   {t('pages.ubkiIntegration.optOut.add.tinsHelp', 'Comma or space separated.')}
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label className="text-muted-foreground mb-1 block text-xs font-medium">
                   {t('pages.ubkiIntegration.optOut.add.reason', 'Reason')}
                 </label>
                 <Select value={addReason} onValueChange={(v) => setAddReason(v as Reason)}>
@@ -461,7 +461,7 @@ export function OptOutTab() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label className="text-muted-foreground mb-1 block text-xs font-medium">
                   {t('pages.ubkiIntegration.optOut.add.note', 'Note (optional)')}
                 </label>
                 <input
@@ -471,7 +471,7 @@ export function OptOutTab() {
                     'pages.ubkiIntegration.optOut.add.notePlaceholder',
                     'Why are these clients excluded?'
                   )}
-                  className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
+                  className="focus:border-primary-500 border-border bg-card text-foreground h-10 w-full rounded-lg border px-3 text-xs focus:outline-none"
                 />
               </div>
             </div>

@@ -8,24 +8,24 @@ export function BulkSendMessageModalSkeleton() {
     <div className="space-y-6" aria-busy="true" aria-hidden="true">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <div className="bg-muted h-4 w-28 animate-pulse rounded" />
-          <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+          <div className="bg-muted-foreground/25 h-4 w-28 animate-pulse rounded" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
         </div>
         <div className="space-y-1.5">
-          <div className="bg-muted h-4 w-16 animate-pulse rounded" />
-          <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+          <div className="bg-muted-foreground/25 h-4 w-16 animate-pulse rounded" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
         </div>
         <div className="space-y-1.5">
-          <div className="bg-muted h-4 w-16 animate-pulse rounded" />
-          <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+          <div className="bg-muted-foreground/25 h-4 w-16 animate-pulse rounded" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
         </div>
         <div className="space-y-1.5">
-          <div className="bg-muted h-4 w-16 animate-pulse rounded" />
-          <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+          <div className="bg-muted-foreground/25 h-4 w-16 animate-pulse rounded" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-md" />
         </div>
       </div>
-      <div className="bg-muted h-32 w-full animate-pulse rounded-md" />
-      <div className="border-border bg-muted h-36 w-full animate-pulse rounded-xl border" />
+      <div className="bg-muted-foreground/25 h-32 w-full animate-pulse rounded-md" />
+      <div className="border-border bg-muted-foreground/25 h-36 w-full animate-pulse rounded-xl border" />
     </div>
   )
 }

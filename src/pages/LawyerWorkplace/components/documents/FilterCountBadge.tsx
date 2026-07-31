@@ -10,7 +10,7 @@ export function FilterCountBadge({ count, active }: FilterCountBadgeProps) {
     <span
       className={cn(
         'flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] leading-none',
-        active ? 'bg-primary-300 text-foreground' : 'bg-muted text-foreground'
+        active ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
       )}
     >
       {count}
