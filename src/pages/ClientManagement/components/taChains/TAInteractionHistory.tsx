@@ -100,7 +100,7 @@ function NotesCell({
       aria-expanded={expanded}
       aria-label={label}
       title={label}
-      className="hover:bg-muted shrink-0 cursor-pointer rounded p-0.5 text-black"
+      className="hover:bg-muted text-foreground shrink-0 cursor-pointer rounded p-0.5"
     >
       {expanded ? (
         <Icons.ArrowUp size={16} strokeWidth={2} />

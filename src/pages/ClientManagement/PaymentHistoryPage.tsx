@@ -461,14 +461,7 @@ export function PaymentHistoryPage() {
   // Helper function to check if payment date is less than 7 days old
   // Use utility function from payments feature
   const checkPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
-    // Convert MM/DD/YYYY to ISO date for utility function
-    try {
-      const [month, day, year] = paymentDate.split('/')
-      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-      return isPaymentLessThan7DaysOld(isoDate)
-    } catch {
-      return false
-    }
+    return isPaymentLessThan7DaysOld(paymentDate)
   }, [])
 
   // Resolve a human-friendly project name for a payment
