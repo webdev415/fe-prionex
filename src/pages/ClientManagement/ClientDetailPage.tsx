@@ -5446,8 +5446,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'ta-chains'
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary-700'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
@@ -5457,8 +5457,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'comments'
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary-700'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.comments')}
@@ -5468,8 +5468,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'primary'
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary-700'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.commentsFromPrimaryCreditor')}
@@ -5479,8 +5479,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'searcher'
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary-700'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.searcherComments')}
@@ -5490,8 +5490,8 @@ export function ClientDetailPage() {
                 className={cn(
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'dial-history'
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary-700'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.spamCallHistory')}

@@ -186,7 +186,7 @@ export function PaymentVerificationQueueModal({
           <div className="flex items-center gap-3">
             <div className="flex h-6 items-center gap-3">
               <ToggleSwitch checked={autoRefresh} onChange={setAutoRefresh} />
-              <span className="text-primary-700 text-sm">
+              <span className="text-foreground text-sm">
                 {t('pages.clients.modals.paymentVerificationQueue.autoRefresh')}
               </span>
             </div>
@@ -350,7 +350,9 @@ export function PaymentVerificationQueueModal({
                       </Button>
                       <Button
                         variant="primary"
-                        leftIcon={<Icons.CheckmarkSquare03 size={18} className="text-foreground" />}
+                        leftIcon={
+                          <Icons.CheckmarkSquare03 size={18} className="text-primary-foreground" />
+                        }
                         onClick={() => onVerify(payment.id)}
                         className="w-full rounded-md"
                       >
