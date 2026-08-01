@@ -33,7 +33,12 @@ interface Props {
   template?: DocumentTemplate | null
 }
 
-const GROUP_ORDER: Array<'client' | 'credit' | 'system'> = ['client', 'credit', 'system']
+const GROUP_ORDER: Array<'client' | 'credit' | 'project' | 'system'> = [
+  'client',
+  'credit',
+  'project',
+  'system',
+]
 
 export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const { t } = useTranslation('common')
@@ -102,12 +107,14 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     }
   }
 
-  const groupLabel = (g: 'client' | 'credit' | 'system'): string => {
+  const groupLabel = (g: 'client' | 'credit' | 'project' | 'system'): string => {
     switch (g) {
       case 'client':
         return t('pages.documentGeneration.templates.variableGroups.client', 'Client')
       case 'credit':
         return t('pages.documentGeneration.templates.variableGroups.credit', 'Credit')
+      case 'project':
+        return t('pages.documentGeneration.templates.variableGroups.project', 'Project')
       case 'system':
         return t('pages.documentGeneration.templates.variableGroups.system', 'System')
     }

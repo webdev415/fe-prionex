@@ -17,7 +17,7 @@ export interface TemplateVariableEntry {
   /** Sample value used by the preview block. */
   sample: string
   /** Group label used to bucket variables in the UI. */
-  group: 'client' | 'credit' | 'system'
+  group: 'client' | 'credit' | 'project' | 'system'
 }
 
 export const TEMPLATE_VARIABLES: TemplateVariableEntry[] = [
@@ -113,6 +113,77 @@ export const TEMPLATE_VARIABLES: TemplateVariableEntry[] = [
     fallback: 'Next payment due date',
     sample: '2026-05-31',
     group: 'credit',
+  },
+  // --- Project (company/banking) -------------------------------------------
+  {
+    name: 'project_full_company_name',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectFullCompanyName',
+    fallback: 'Full company name',
+    sample: 'ТОВ "Прикладна Компанія"',
+    group: 'project',
+  },
+  {
+    name: 'project_address',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectAddress',
+    fallback: 'Company address',
+    sample: 'м. Київ, вул. Хрещатик, 1',
+    group: 'project',
+  },
+  {
+    name: 'project_edrpou_code',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectEdrpouCode',
+    fallback: 'EDRPOU code',
+    sample: '12345678',
+    group: 'project',
+  },
+  {
+    name: 'project_website',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectWebsite',
+    fallback: 'Website',
+    sample: 'https://prionex.example.ua',
+    group: 'project',
+  },
+  {
+    name: 'project_email',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectEmail',
+    fallback: 'Contact email',
+    sample: 'ops@prionex.example.ua',
+    group: 'project',
+  },
+  {
+    name: 'project_hotline_phone',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectHotlinePhone',
+    fallback: 'Support hotline phone',
+    sample: '380 44 000 1234',
+    group: 'project',
+  },
+  {
+    name: 'project_director_name',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectDirectorName',
+    fallback: "Director's name",
+    sample: 'Іваненко Іван Іванович',
+    group: 'project',
+  },
+  {
+    name: 'project_iban',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectIban',
+    fallback: 'IBAN',
+    sample: 'UA213223130000026007233566001',
+    group: 'project',
+  },
+  {
+    name: 'project_bank_name',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectBankName',
+    fallback: 'Bank name',
+    sample: 'АТ КБ "ПриватБанк"',
+    group: 'project',
+  },
+  {
+    name: 'project_bank_code',
+    descriptionKey: 'pages.documentGeneration.templates.variables.projectBankCode',
+    fallback: 'Bank code',
+    sample: '305299',
+    group: 'project',
   },
   // --- System ---------------------------------------------------------------
   {
