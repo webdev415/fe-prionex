@@ -4830,7 +4830,9 @@
         "failed": "Failed",
         "pending": "Pending",
         "skipped": "Skipped",
-        "bounced": "Bounced"
+        "bounced": "Bounced",
+        "missed": "Missed",
+        "rejected": "Rejected"
       },
       "messageHistory": {
         "destinationOwner": {
