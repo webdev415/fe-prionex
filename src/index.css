@@ -584,6 +584,56 @@ html.theme-switching * {
     scrollbar-width: thin;
     scrollbar-color: #9ca3af transparent;
   }
+
+  /* Dialer operator view — baseline is the remaining viewport height below
+     the fixed top bar + page title, so both columns match that height by
+     default. If the right-hand panel's content needs more room than the
+     screen, the row grows to fit it (grid stretch keeps the campaign list
+     column the same height) and the page scrolls instead of clipping the
+     panel. The campaign list's own row-list still scrolls internally via
+     `.dialer-campaign-list-scroll`, independent of this. */
+  /* On mobile the two panels stack, so don't force a tall empty min-height —
+     that only matters for the side-by-side desktop layout where both columns
+     share one row height. */
+  .dialer-operator-view {
+    min-height: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .dialer-operator-view {
+      min-height: max(560px, calc(100vh - 150px));
+    }
+  }
+
+  /* Dialer campaign list — thin, theme-aware scrollbar for the operator's
+     "My Campaigns" panel. No `scrollbar-gutter: stable` — that reserved a
+     permanent blank strip on the right even when the list does not overflow. */
+  .dialer-campaign-list-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent) transparent;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer components {
@@ -715,4 +765,130 @@ input[type='week']::-webkit-calendar-picker-indicator {
 input[type='date']::-webkit-calendar-picker-indicator:hover,
 input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Dialer Queue List — Figma card (KAN-379)
+   The shared DataTable ships its own bordered card with a white header and a
+   grey-first-row zebra. Inside .dialer-queue-card we reset that card, recolour
+   the header to muted, and invert the zebra so the FIRST row uses --card.
+   Unlayered so it wins over Tailwind's layered utilities; scoped to the
+   class so no other table is affected.
+   --------------------------------------------------------------------------- */
+.dialer-queue-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-queue-card table thead tr,
+.dialer-queue-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-queue-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-queue-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+/* Header column dividers match the card surface; the body has no column dividers. */
+.dialer-queue-card table thead th {
+  border-right-color: var(--card);
+}
+.dialer-queue-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+/* Emphasise only Queue name (col 1) and Number of entries (col 4). */
+.dialer-queue-card table tbody td:nth-child(1),
+.dialer-queue-card table tbody td:nth-child(4) {
+  font-weight: 500;
+}
+/* Active toggle: Secondary-600 track with a themed knob (Figma),
+   overriding the shared ToggleSwitch's green primary track for this table only. */
+.dialer-queue-card button[role='switch'][aria-checked='true'] {
+  background-color: var(--color-secondary-600);
+}
+.dialer-queue-card button[role='switch'][aria-checked='true'] > span {
+  background-color: var(--background);
+}
+
+/* Add-from-CRM (KAN-379, design: supervisor-06): identical table look to the
+   Queue List card — reset the DataTable's own card chrome, muted column header
+   with card-colored column dividers (default height), first-row-card zebra, no body
+   column dividers, and weight-300 body content. Scoped so no other table is
+   affected. */
+.dialer-crm-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+/* Select row (bulk header: Selected N of Y + destination + Add-to-queue): keep
+   its vertical padding but drop the divider + shadow so it reads as one surface
+   with the column header. */
+.dialer-crm-card .data-table-scroll .min-w-full > div:first-child {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.dialer-crm-card table thead tr,
+.dialer-crm-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-crm-card table thead th {
+  border-right-color: var(--card);
+  border-bottom: 0;
+  /* The DataTable stamps the (padded) select-row height onto every column
+     header via an inline style; pin it back to the standard row height so the
+     header is not taller than the Queue List / the body rows. */
+  height: 49px !important;
+}
+.dialer-crm-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-crm-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.dialer-crm-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+
+/* Analysis operator table (KAN-379, design: supervisor-07) — same look as the
+   Queue List: card reset, muted header with card column dividers, first-row-
+   card zebra, no body dividers, weight-300 body with the Operator name (col 1)
+   emphasised. Scoped so no other table is affected. */
+.dialer-analysis-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-analysis-card table thead tr,
+.dialer-analysis-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-analysis-card table thead th {
+  border-right-color: var(--card);
+}
+.dialer-analysis-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-analysis-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.dialer-analysis-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+/* Emphasise Talk Time (col 5) and Processed (col 7); all other cells weight 300
+   (the operator name keeps its own medium weight via the cell's markup). */
+.dialer-analysis-card table tbody td:nth-child(5),
+.dialer-analysis-card table tbody td:nth-child(7) {
+  font-weight: 500;
 }
