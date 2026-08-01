@@ -128,9 +128,40 @@ export interface ConnectionStatus {
 // Incoming call types
 export interface LoanInfo {
   loan_id: number
+  client_id?: number
   contract_number: string
   remaining_debt: string
+  principal_amount?: number | null
   status: string
+  seller_name?: string | null
+  purchase_date?: string | null
+}
+
+export interface IncomingCallInteraction {
+  id: number
+  interaction_date: string | null
+  type_name: string | null
+  result_name: string | null
+  direction: string | null
+  channel: string | null
+  summary: string | null
+  user_name: string | null
+}
+
+/**
+ * One client the calling number resolved to. More than one entry means the
+ * number is shared and the operator has to choose which client the call is
+ * about; none means the caller is unknown to this project.
+ */
+export interface IncomingCallClient {
+  client_id: number
+  client_name: string
+  responsible_employee_id: number | null
+  contact_comment: string | null
+  contact_source: string | null
+  contact_type_name: string | null
+  recent_interactions: IncomingCallInteraction[]
+  loans: LoanInfo[]
 }
 
 export interface IncomingCallData {
@@ -138,9 +169,12 @@ export interface IncomingCallData {
   customer_phone: string
   agent_extension: string
   client_name?: string
+  client_id?: number | null
+  project_id?: number | null
   loan_count: number
   total_debt: string
   loans: LoanInfo[]
+  clients?: IncomingCallClient[]
 }
 
 export interface IncomingCallEvent {

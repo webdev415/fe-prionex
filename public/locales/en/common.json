@@ -5005,7 +5005,17 @@
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
           "lastContact": "Last contact",
-          "callInProgress": "Another call or recording is already in progress. Please finish or close it first."
+          "callInProgress": "Another call or recording is already in progress. Please finish or close it first.",
+          "answerOnSoftphone": "Answer the call on your softphone",
+          "numberBelongsTo": "Number belongs to",
+          "responsible": "Responsible",
+          "numberComment": "Comment",
+          "recentInteractions": "Recent interactions",
+          "multipleClientsTitle": "Several clients found",
+          "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
+          "clientNotFound": "Client not found",
+          "clientNotFoundHint": "This number is not linked to any client in your projects.",
+          "searchByNumber": "Search by this number"
         },
         "callLogCard": {
           "message": "Message",

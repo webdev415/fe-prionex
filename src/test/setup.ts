@@ -132,6 +132,13 @@ vi.mock('react-i18next', () => ({
         'pages.clients.priorityCards.criticalPriority': 'Critical Priority',
         'pages.clients.priorityCards.totalDebt': 'Total Debt',
         // Call-related translations
+        'pages.clients.modals.callDialog.multipleClientsTitle': 'Several clients found',
+        'pages.clients.modals.callDialog.multipleClientsHint':
+          'Choose who is calling — the interaction will be filed against this client.',
+        'pages.clients.modals.callDialog.clientNotFound': 'Client not found',
+        'pages.clients.modals.callDialog.clientNotFoundHint':
+          'This number is not linked to any client in your projects.',
+        'pages.clients.modals.callDialog.searchByNumber': 'Search by this number',
         'pages.clients.modals.callDialog.callClient': 'Call Client',
         'pages.clients.modals.callDialog.clientName': 'Client Name',
         'pages.clients.modals.callDialog.phoneNumber': 'Phone Number',

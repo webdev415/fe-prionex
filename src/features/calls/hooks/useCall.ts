@@ -108,3 +108,21 @@ export function useHangupCall(clientId?: number | null) {
     },
   })
 }
+
+/** Declines a ringing inbound call, recording it as rejected rather than missed. */
+export function useRejectCall(clientId?: number | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (callId: string) => callService.rejectCall(callId),
+    onSuccess: () => {
+      toast.success('Call rejected')
+      queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+      invalidateCallRelatedQueries(queryClient, clientId)
+    },
+    onError: () => {
+      toast.error('Failed to reject call')
+      invalidateCallRelatedQueries(queryClient, clientId)
+    },
+  })
+}
