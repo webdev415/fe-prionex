@@ -90,20 +90,20 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
 
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl transition-transform duration-200 ease-out sm:w-[min(480px,92vw)]',
+          'bg-card fixed inset-y-0 right-0 z-50 flex w-full flex-col shadow-2xl transition-transform duration-200 ease-out sm:w-[min(480px,92vw)]',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-          <span className="text-dark-500 text-[13px] font-medium">
+        <div className="bg-card border-border flex shrink-0 items-center justify-between border-b px-4 py-3">
+          <span className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.documents.modals.detail.title', 'Document details')}
           </span>
           <button
             type="button"
             onClick={onClose}
             aria-label={t('pages.lawyerWorkplace.documents.modals.detail.close', 'Close document')}
-            className="text-light-700 hover:text-dark-500 flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
           >
             <Icons.Cancel01 size={18} strokeWidth={1.5} />
           </button>
@@ -114,9 +114,11 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
             <div className="mb-5 flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <DocumentTypeBadge type={document.type} />
-                <span className="text-light-600 text-[12px] font-medium">{document.number}</span>
+                <span className="text-muted-foreground text-[12px] font-medium">
+                  {document.number}
+                </span>
               </div>
-              <h2 className="text-dark-500 text-lg leading-snug font-light">
+              <h2 className="text-foreground text-lg leading-snug font-light">
                 {getDocumentDisplayName(document, t)}
               </h2>
             </div>
@@ -129,7 +131,7 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
                 )}
               >
                 <p className="font-medium">{document.clientName}</p>
-                <p className="text-light-600 text-[12px]">{document.contractId}</p>
+                <p className="text-muted-foreground text-[12px]">{document.contractId}</p>
               </DocumentDetailField>
 
               <DocumentDetailField
@@ -162,7 +164,7 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
                   return (
                     <>
                       <p>{dateLine}</p>
-                      <p className="text-light-600 text-[12px]">{timeLine}</p>
+                      <p className="text-muted-foreground text-[12px]">{timeLine}</p>
                     </>
                   )
                 })()}

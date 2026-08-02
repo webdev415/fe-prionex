@@ -1,21 +1,14 @@
-/**
- * PasswordInput Component
- *
- * A specialized input component for password fields with show/hide password toggle.
- * Extends the Input component with built-in password visibility toggle functionality.
- */
-
 import { forwardRef, useState, useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-500 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground placeholder:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'border-gray-400 focus:border-primary-500 focus:ring-primary-500',
+        default: 'border-input-border focus:border-primary-500 focus:ring-primary-500',
         error: 'border-error-500 focus:border-error-500 focus:ring-error-500',
         success: 'border-success-500 focus:border-success-500 focus:ring-success-500',
       },
@@ -76,7 +69,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
+          <label htmlFor={inputId} className="text-foreground mb-1.5 block text-sm font-light">
             {label.split(/(\*)/).map((token, i) =>
               token === '*' ? (
                 <span key={i} className="text-error-500 font-light">
@@ -92,7 +85,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               {leftIcon}
             </div>
           )}
@@ -115,7 +108,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             <button
               type="button"
               onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-0 z-10 flex cursor-pointer items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex cursor-pointer items-center px-3 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               disabled={disabled}
               tabIndex={-1}
@@ -124,7 +117,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
                 size={18}
                 className={cn(
                   'transition-colors',
-                  showPassword ? 'text-primary-500' : 'text-gray-400'
+                  showPassword ? 'text-primary-500' : 'text-muted-foreground'
                 )}
               />
             </button>
@@ -136,7 +129,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           </p>
         )}
         {helperText && !error && (
-          <p id={helperId} className="mt-1.5 text-xs text-gray-500">
+          <p id={helperId} className="text-muted-foreground mt-1.5 text-xs">
             {helperText}
           </p>
         )}

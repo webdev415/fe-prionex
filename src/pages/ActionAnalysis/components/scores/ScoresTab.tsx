@@ -74,7 +74,7 @@ export function ScoresTab() {
 
   if (visibleSubTabs.length === 0) {
     return (
-      <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+      <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
         {t(
           'pages.actionAnalysis.errors.noScoresPermission',
           'You do not have permission to view any quality scoring data.'
@@ -96,8 +96,8 @@ export function ScoresTab() {
               onClick={() => setActiveSubTab(sub)}
               className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
                 isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'hover:border-primary-300 border-gray-200 bg-white text-gray-700'
+                  ? 'bg-primary-500 border-primary-500 text-primary-foreground'
+                  : 'hover:border-primary-300 border-border bg-card text-foreground'
               }`}
             >
               {t(meta.key, meta.fallback)}

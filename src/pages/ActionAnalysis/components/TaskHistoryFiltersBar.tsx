@@ -24,7 +24,7 @@ import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 const PRIORITY_VALUES: readonly TaskPriority[] = ['low', 'normal', 'high', 'urgent', 'critical']
 const STATUS_VALUES: readonly TaskStatus[] = [
@@ -134,11 +134,11 @@ export function TaskHistoryFiltersBar({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.department', 'Department')}
             </span>
             <Select
@@ -190,7 +190,7 @@ export function TaskHistoryFiltersBar({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.group', 'Group')}
             </span>
             <Select value="all" disabled>
@@ -208,7 +208,7 @@ export function TaskHistoryFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.topic', 'Topic')}
             </span>
             <Select
@@ -234,7 +234,7 @@ export function TaskHistoryFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.priority', 'Priority')}
             </span>
             <Select
@@ -262,7 +262,7 @@ export function TaskHistoryFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.status', 'Status')}
             </span>
             <Select
@@ -288,13 +288,13 @@ export function TaskHistoryFiltersBar({
 
         {/* Due-date / Due-time filters live after Status. The two visible
             filters compose into one due_date_from / due_date_to window. */}
-        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
-          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+        <div className="border-border bg-card/60 flex flex-col gap-3 rounded-lg border p-4">
+          <span className="text-foreground text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.actionAnalysis.filters.dueRangeHeading', 'Due date / time')}
           </span>
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.dueDateFrom', 'Due date from')}
               </span>
               <DateSelect
@@ -308,7 +308,7 @@ export function TaskHistoryFiltersBar({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.dueTimeFrom', 'Due time from')}
               </span>
               <Input
@@ -322,7 +322,7 @@ export function TaskHistoryFiltersBar({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.dueDateTo', 'Due date to')}
               </span>
               <DateSelect
@@ -336,7 +336,7 @@ export function TaskHistoryFiltersBar({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.dueTimeTo', 'Due time to')}
               </span>
               <Input

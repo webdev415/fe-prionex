@@ -1,10 +1,3 @@
-/**
- * LanguageSwitcher Component
- *
- * Dropdown component for switching between supported languages.
- * Built with Radix UI DropdownMenu for consistency.
- */
-
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -56,7 +49,7 @@ export function LanguageSwitcher({
           'cursor-pointer',
           isAuth
             ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
-            : 'text-dark-500 bg-white'
+            : 'text-foreground bg-input'
         )}
       >
         <SelectValue />

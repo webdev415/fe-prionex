@@ -22,7 +22,7 @@ export function KanbanAssigneeChip({
       >
         {initials}
       </span>
-      <span className="text-light-700 text-[11px]">{name}</span>
+      <span className="text-muted-foreground text-[11px]">{name}</span>
     </div>
   )
 }

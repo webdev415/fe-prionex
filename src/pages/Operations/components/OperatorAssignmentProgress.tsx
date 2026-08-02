@@ -53,29 +53,29 @@ export function OperatorAssignmentProgress({ jobId, onComplete }: Props) {
       <div className="flex items-center gap-3">
         {isComplete && <Icons.Success size={24} className="text-success-500" />}
         {isFailed && <Icons.Cancel01 size={24} className="text-error-500" />}
-        {isCancelled && <Icons.Cancel01 size={24} className="text-gray-400" />}
+        {isCancelled && <Icons.Cancel01 size={24} className="text-muted-foreground" />}
         {isActive && <Icons.Spinner className="h-6 w-6" />}
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">
+          <h3 className="text-foreground text-lg font-medium">
             {isComplete && t(`${p}.assignmentComplete`)}
             {isFailed && t(`${p}.assignmentFailed`)}
             {isCancelled && t(`${p}.assignmentCancelled`)}
             {isActive && t(`${p}.processing`)}
           </h3>
-          <p className="text-sm text-gray-600">{job.file_name}</p>
+          <p className="text-muted-foreground text-sm">{job.file_name}</p>
         </div>
       </div>
 
       {/* Progress bar */}
       {isActive && (
         <div>
-          <div className="mb-1 flex justify-between text-sm text-gray-600">
+          <div className="text-muted-foreground mb-1 flex justify-between text-sm">
             <span>{t(`${p}.progress`)}</span>
             <span>{progressPct}%</span>
           </div>
-          <div className="h-2.5 w-full rounded-full bg-gray-200">
+          <div className="bg-muted h-2.5 w-full rounded-full">
             <div
-              className="bg-secondary-700 h-2.5 rounded-full transition-all duration-500"
+              className="bg-primary-500 h-2.5 rounded-full transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -84,17 +84,17 @@ export function OperatorAssignmentProgress({ jobId, onComplete }: Props) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-gray-200 bg-white/50 px-4 py-3 shadow-sm">
-          <p className="text-dark-500 text-2xl font-bold">{job.total_rows}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.totalRecords`)}</p>
+        <div className="border-border bg-card/50 rounded-xl border px-4 py-3 shadow-sm">
+          <p className="text-foreground text-2xl font-bold">{job.total_rows}</p>
+          <p className="text-muted-foreground text-xs">{t(`${p}.totalRecords`)}</p>
         </div>
         <div className="border-success-200 bg-success-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-success-700 text-2xl font-bold">{job.new_clients}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.successful`)}</p>
+          <p className="text-muted-foreground text-xs">{t(`${p}.successful`)}</p>
         </div>
         <div className="border-error-200 bg-error-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-error-700 text-2xl font-bold">{job.errors_count}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.failed`)}</p>
+          <p className="text-muted-foreground text-xs">{t(`${p}.failed`)}</p>
         </div>
       </div>
 
@@ -113,13 +113,13 @@ export function OperatorAssignmentProgress({ jobId, onComplete }: Props) {
 
       {/* Processing time */}
       {(isComplete || isFailed) && job.processing_time && (
-        <p className="text-sm text-gray-600">
+        <p className="text-muted-foreground text-sm">
           {t(`${p}.processingTime`, { time: job.processing_time })}
         </p>
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
         {isActive && (
           <Button
             variant="danger"

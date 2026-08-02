@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import {
   AddMarkerButton,
   LeaveFeedbackButton,
   MarkerOverlay,
   ScorecardPanel,
 } from '@/features/quality'
-import type { Scorecard } from '@/features/quality'
 import { useMarkersForCall } from '@/features/quality/hooks/useMarkers'
 import { CallPlayer, type CallPlayerHandle } from '@/pages/ClientManagement/components/CallPlayer'
 import { CreateCorrectionTaskDialog } from '../inbox/CreateCorrectionTaskDialog'
@@ -23,22 +23,39 @@ import { CreateCorrectionTaskDialog } from '../inbox/CreateCorrectionTaskDialog'
  * criteria + script stages + explicit save / edit-lock).
  */
 export interface CallReviewPanelProps {
-  /** The selected scorecard (raw). Undefined → empty state. */
-  scorecard?: Scorecard
+  /** The call to review. Undefined → empty state. */
+  callId?: string
+  /** Operator whose call this is. Undefined → empty state. */
+  operatorId?: number
   /** Resolved operator display name for the header. */
   operatorName?: string
+  /** Header timestamp (call date or scorecard created_at); optional. */
+  createdAt?: string
+  /** Pin a specific scorecard; when absent the editor opens the latest draft on
+   *  the call or lets the trainer start a new evaluation (call-first flow). */
+  scorecardId?: number
+  /** Whether the trainer may create/edit/send/remove here (operator assigned). */
+  canEdit?: boolean
+  /** Known talk time, used to position markers before the audio is fetched. */
+  talkDurationSec?: number | null
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function CallReviewPanel({ scorecard, operatorName, onDirtyChange }: CallReviewPanelProps) {
-  const { t } = useTranslation('common')
+export function CallReviewPanel({
+  callId,
+  operatorId,
+  operatorName,
+  createdAt,
+  scorecardId,
+  canEdit = false,
+  talkDurationSec,
+  onDirtyChange,
+}: CallReviewPanelProps) {
+  const { t, i18n } = useTranslation('common')
   const playerRef = useRef<CallPlayerHandle>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [durationMs, setDurationMs] = useState(0)
-
-  const callId = scorecard?.call_id
-  const operatorId = scorecard?.operator_id
 
   const markersQuery = useMarkersForCall(callId ?? null, !!callId)
   const markers = markersQuery.data ?? []
@@ -46,10 +63,10 @@ export function CallReviewPanel({ scorecard, operatorName, onDirtyChange }: Call
   const seekTo = (ms: number) => playerRef.current?.seekTo(ms)
   const getCurrentTimeMs = () => playerRef.current?.getCurrentTimeMs() ?? 0
 
-  if (!scorecard || callId == null || operatorId == null) {
+  if (callId == null || operatorId == null) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-[#6B7280] shadow-sm">
-        {t('pages.training.dialogue.detail.empty', 'Select a scorecard to view details')}
+        {t('pages.training.dialogue.detail.empty', 'Select a dialog to review')}
       </div>
     )
   }
@@ -63,18 +80,23 @@ export function CallReviewPanel({ scorecard, operatorName, onDirtyChange }: Call
           <p className="truncate text-sm font-semibold text-[#05040D]">
             {operatorName ?? `#${operatorId}`}
           </p>
-          <p className="text-[11px] text-[#6B7280]">
-            {new Date(scorecard.created_at).toLocaleString()}
-          </p>
+          {createdAt ? (
+            <p className="text-[11px] text-[#6B7280]">{formatDateTime(createdAt, i18n.language)}</p>
+          ) : null}
         </div>
 
         <CallPlayer
           ref={playerRef}
           callId={callId}
           active
+          lazy
           onDurationChange={setDurationMs}
           markerOverlay={
-            <MarkerOverlay markers={markers} durationMs={durationMs} onSeek={seekTo} />
+            <MarkerOverlay
+              markers={markers}
+              durationMs={durationMs || (talkDurationSec ?? 0) * 1000}
+              onSeek={seekTo}
+            />
           }
         />
 
@@ -104,10 +126,11 @@ export function CallReviewPanel({ scorecard, operatorName, onDirtyChange }: Call
       {/* Scrolling scorecard editor (its own header / score / save controls). */}
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#EBECE8] p-3">
         <ScorecardPanel
-          key={scorecard.id}
+          key={scorecardId ?? callId}
           callId={callId}
           operatorId={operatorId}
-          scorecardId={scorecard.id}
+          scorecardId={scorecardId}
+          canEdit={canEdit}
           onDirtyChange={onDirtyChange}
         />
       </div>

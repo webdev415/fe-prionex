@@ -137,7 +137,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.edit.projectInformation')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -158,9 +158,9 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   label={t('pages.projects.modals.edit.projectCode')}
                   value={project.code}
                   disabled
-                  className="bg-gray-100"
+                  className="bg-muted"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t('pages.projects.modals.edit.codeCannotBeChanged')}
                 </p>
               </div>
@@ -197,12 +197,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </RadioGroup>
               </div>
             )}
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.edit.clientContract')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -224,12 +224,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 disabled={updateMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.edit.timeline')}
             </h3>
             <div className="flex items-center gap-4">
@@ -271,7 +271,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Description Section */}
@@ -329,8 +329,8 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.PencilEdit size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.projects.modals.edit.title')}

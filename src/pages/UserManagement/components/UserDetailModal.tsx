@@ -28,7 +28,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.View size={18} className="text-dark-500" strokeWidth={2} />
+            <Icons.View size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.users.modals.view.title')}
@@ -39,7 +39,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
         ) : user ? (
           <ViewUserForm user={user} />
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.users.modals.view.userNotFound')}
           </div>
         )}

@@ -361,7 +361,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'uk'} onValueChange={field.onChange}>
-                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+                  <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -385,7 +385,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'Europe/Kyiv'} onValueChange={field.onChange}>
-                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+                  <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -428,7 +428,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             {errors.asterisk_extension && (
               <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.asteriskExtension')}
             </p>
           </div>
@@ -454,7 +454,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Assign Projects Section */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3 className="text-dark-500 text-sm font-semibold">
+        <h3 className="text-foreground text-sm font-semibold">
           {t('pages.users.forms.assignProjects')}
         </h3>
         <div className="flex flex-wrap gap-4">
@@ -463,7 +463,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             return (
               <label
                 key={project.id}
-                className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm font-light"
+                className="text-foreground flex cursor-pointer items-center gap-2 text-sm font-light"
               >
                 <Checkbox
                   checked={isChecked}
@@ -486,7 +486,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       {/* Role per Project Section */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3 className="text-dark-500 text-sm font-semibold">
+          <h3 className="text-foreground text-sm font-semibold">
             {t('pages.users.forms.rolePerProject')}
           </h3>
           <div className="space-y-3">

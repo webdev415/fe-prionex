@@ -282,10 +282,14 @@ export function SendSMSModal({
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-3 self-stretch sm:flex-row sm:items-center sm:gap-0">
         <div className="flex items-center gap-3 sm:gap-6">
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.ChatFeedback01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.ChatFeedback01
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
-          <span className="text-dark-500 text-xl font-medium sm:text-2xl">
+          <span className="text-foreground text-xl font-medium sm:text-2xl">
             {t('pages.clients.modals.sendSMS.title')}
           </span>
         </div>
@@ -296,7 +300,7 @@ export function SendSMSModal({
               isDailyLimitReached ? 'bg-error-500' : 'bg-success-500'
             )}
           />
-          <span className="text-dark-500 text-xs font-light sm:text-base">
+          <span className="text-foreground text-xs font-light sm:text-base">
             {t('pages.clients.modals.sendSMS.smsSentToday')}:{' '}
             <span className="font-medium">
               {smsSentToday}/{dailyLimit}
@@ -304,22 +308,22 @@ export function SendSMSModal({
           </span>
         </div>
       </div>
-      <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+      <div className="bg-muted flex h-px flex-col items-start gap-2.5 self-stretch p-0"></div>
       {/* Content */}
       <ModalContent className="p-0">
         <div className="flex flex-col gap-4 sm:gap-6">
           {/* Recipient Info */}
           <div className="flex flex-col items-start justify-between gap-2 self-stretch sm:flex-row sm:items-center">
-            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+            <span className="text-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
             </span>
-            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+            <span className="text-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {phoneNumber}
             </span>
           </div>
           {/* Daily Limit Reached State */}
           {isDailyLimitReached ? (
-            <div className="flex flex-col items-center gap-4 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+            <div className="border-border bg-card/50 flex flex-col items-center gap-4 self-stretch rounded-xl border px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
               <Icons.MailBlock02
                 size={40}
                 className="text-error-500 sm:size-12"
@@ -329,7 +333,7 @@ export function SendSMSModal({
                 {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/{dailyLimit}{' '}
                 {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
               </p>
-              <p className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
+              <p className="text-foreground self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
                 {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
                 <span className="font-medium">00:00</span>
               </p>
@@ -338,7 +342,7 @@ export function SendSMSModal({
             <>
               {/* Template Selection */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.sendSMS.template')}:
                 </label>
                 <Select
@@ -376,7 +380,7 @@ export function SendSMSModal({
 
               {/* Message */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.sendSMS.message')}:
                 </label>
                 <textarea
@@ -391,14 +395,14 @@ export function SendSMSModal({
                   }}
                   disabled={!!selectedTemplateId && isLoadingTemplates}
                   placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
-                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 sm:min-h-[120px] sm:text-sm"
+                  className="text-foreground focus:border-primary focus:ring-primary/20 border-border bg-card placeholder:text-muted-foreground disabled:bg-muted min-h-[100px] resize-none rounded-lg border px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none disabled:cursor-not-allowed sm:min-h-[120px] sm:text-sm"
                 />
               </div>
 
               {/* Client Name and Loan Number */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                  <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.sendSMS.clientName')}:
                   </label>
                   <input
@@ -406,11 +410,11 @@ export function SendSMSModal({
                     value={clientNameField}
                     onChange={(e) => setClientNameField(e.target.value)}
                     readOnly
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
+                    className="text-foreground focus:border-primary focus:ring-primary/20 border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                  <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.sendSMS.loanNumber')}:
                   </label>
                   {loans.length > 0 ? (
@@ -434,7 +438,7 @@ export function SendSMSModal({
                       type="text"
                       value="—"
                       readOnly
-                      className="text-dark-500 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light sm:text-sm"
+                      className="text-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
                     />
                   )}
                 </div>

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getHeaderKpis,
   getInboxQueue,
+  getMyOperators,
+  getOperatorTrainers,
   getOperatorCoachingDetail,
   getTeamEvents,
   getTeamRoster,
@@ -34,6 +36,28 @@ export const coachingKeys = {
     [...coachingKeys.all, 'team-events', filters] as const,
   teamRoster: (filters: TeamRosterFilters) =>
     [...coachingKeys.all, 'team-roster', filters] as const,
+  myOperators: () => [...coachingKeys.all, 'my-operators'] as const,
+  operatorTrainers: () => [...coachingKeys.all, 'operator-trainers'] as const,
+}
+
+/** Operator ids the current trainer has taken under control (My employees). */
+export function useMyOperators(enabled = true) {
+  return useQuery({
+    queryKey: coachingKeys.myOperators(),
+    queryFn: getMyOperators,
+    enabled,
+    staleTime: 60_000,
+  })
+}
+
+/** Assigned trainer per operator — the Dialogue "Trainer" column (project-wide). */
+export function useOperatorTrainers(enabled = true) {
+  return useQuery({
+    queryKey: coachingKeys.operatorTrainers(),
+    queryFn: getOperatorTrainers,
+    enabled,
+    staleTime: 60_000,
+  })
 }
 
 export function useInboxQueue(filters: QueueFilters, enabled = true) {

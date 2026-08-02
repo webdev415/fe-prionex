@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChainInstanceStepSnapshot } from '@/features/taInteractions/api/types'
-import { collectFromSnapshot } from '../taChainSaveData'
+import { applyStepEdits, collectFromSnapshot } from '../taChainSaveData'
 
 /**
  * These tests reproduce the minimize/restore bug at the data layer.
@@ -110,5 +110,50 @@ describe('minimize/restore save merge (the bug scenario)', () => {
     }
     const merged = { ...collectFromSnapshot(serverSnapshot).stepData, ...inMemoryComplete }
     expect(merged).toEqual(inMemoryComplete)
+  })
+})
+
+describe('applyStepEdits (edit a previously confirmed step)', () => {
+  // Step 1 was confirmed with promise 500 / 10-07; the server snapshot holds it.
+  const confirmed: Record<string, ChainInstanceStepSnapshot> = {
+    '1': snap({ value: 'Promise to pay', promise_amount: '500', promise_date: '2026-07-10' }),
+  }
+
+  it('reflects an edited promise amount/date instead of the original', () => {
+    const edited = applyStepEdits(confirmed, {
+      '1': { promiseAmount: '100', promiseDate: '2026-07-11' },
+    })
+    const collected = collectFromSnapshot(edited)
+    expect(collected.promiseAmount).toBe('100')
+    expect(collected.promiseDate).toBe('2026-07-11')
+  })
+
+  it('with no edits, keeps the originally confirmed values', () => {
+    const collected = collectFromSnapshot(applyStepEdits(confirmed, {}))
+    expect(collected.promiseAmount).toBe('500')
+    expect(collected.promiseDate).toBe('2026-07-10')
+  })
+
+  it("editing one step never clobbers another step's promise", () => {
+    const twoSteps: Record<string, ChainInstanceStepSnapshot> = {
+      '1': snap({ value: 'a', promise_amount: '500', promise_date: '2026-07-10' }),
+      '2': snap({ value: 'b' }),
+    }
+    const edited = applyStepEdits(twoSteps, { '2': { value: 'b-edited' } })
+    const collected = collectFromSnapshot(edited)
+    expect(collected.promiseAmount).toBe('500')
+    expect(collected.promiseDate).toBe('2026-07-10')
+    expect(collected.stepData['2']).toBe('b-edited')
+  })
+
+  it('does not mutate the input snapshot', () => {
+    const before = JSON.stringify(confirmed)
+    applyStepEdits(confirmed, { '1': { promiseAmount: '999' } })
+    expect(JSON.stringify(confirmed)).toBe(before)
+  })
+
+  it('an explicitly cleared field is honored', () => {
+    const edited = applyStepEdits(confirmed, { '1': { promiseAmount: '' } })
+    expect(edited['1'].promise_amount).toBe('')
   })
 })

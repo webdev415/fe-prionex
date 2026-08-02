@@ -1,0 +1,32 @@
+{
+  "title": "Debt Repayment",
+  "subtitle": "Enter your details to check and repay your debt online.",
+  "form": {
+    "tinLabel": "TIN",
+    "tinPlaceholder": "Enter your TIN",
+    "contractLabel": "Credit Agreement Number",
+    "contractPlaceholder": "Enter your agreement number",
+    "submit": "Check debt"
+  },
+  "result": {
+    "notFound": "No debt found for the given parameters. Please check the entered data or contact the hotline.",
+    "closed": "Debt #{{number}} is closed.",
+    "checkAgain": "Check again"
+  },
+  "amount": {
+    "title": "Enter payment amount",
+    "contract": "Agreement",
+    "remaining": "Remaining debt",
+    "label": "Payment amount",
+    "placeholder": "0.00",
+    "maxHint": "Maximum: {{max}}",
+    "errorInvalid": "Please enter a valid amount.",
+    "errorExceeds": "Amount cannot exceed {{max}}.",
+    "cancel": "Cancel",
+    "pay": "Proceed to payment"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again or contact the hotline.",
+    "portalNotConfigured": "The payment portal is temporarily unavailable. Please try again later."
+  }
+}

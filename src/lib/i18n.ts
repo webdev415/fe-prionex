@@ -34,7 +34,7 @@ i18n
     fallbackLng: 'en',
     supportedLngs: SUPPORTED_LANGUAGES,
     defaultNS: 'common',
-    ns: ['common', 'auth', 'errors', 'payments'],
+    ns: ['common', 'auth', 'errors', 'payments', 'easypay'],
 
     interpolation: {
       escapeValue: false,
@@ -50,6 +50,19 @@ i18n
       queryStringParams: { v: BUILD_TIMESTAMP },
     },
   })
+
+/**
+ * Keep `<html lang>` in step with the active UI language. The static `lang="en"` in
+ * index.html otherwise misreports Ukrainian content to screen readers and to the
+ * browser's own hyphenation/spellcheck.
+ */
+function syncDocumentLang(lng: string): void {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = lng
+  }
+}
+i18n.on('languageChanged', syncDocumentLang)
+syncDocumentLang(i18n.language ?? 'en')
 
 /**
  * Map API / legacy `language` to a supported UI code (en | uk only).

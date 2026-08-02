@@ -26,6 +26,7 @@ import type {
   MessagingIntegration,
 } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { MessagingIntegrationsPageSkeleton } from './components/MessagingIntegrationsPageSkeleton'
 
 const formatStatusFallback = (status: string) =>
@@ -34,14 +35,14 @@ const formatStatusFallback = (status: string) =>
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'configured':
-      return 'border-success-200 bg-success-50 text-success-700'
+      return 'bg-success-100 text-success-700'
     case 'error':
-      return 'border-error-200 bg-error-50 text-error-700'
+      return 'bg-error-100 text-error-700'
     case 'unconfigured':
     case 'not_configured':
-      return 'border-warning-200 bg-warning-50 text-warning-700'
+      return 'bg-warning-100 text-warning-700'
     default:
-      return 'border-gray-200 bg-gray-50 text-gray-700'
+      return 'bg-muted text-muted-foreground'
   }
 }
 
@@ -66,6 +67,7 @@ interface IntegrationCardProps {
 
 function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const updateIntegrationMutation = useUpdateMessagingIntegration()
   const testIntegrationMutation = useTestMessagingIntegration()
   const revealCredentialsMutation = useRevealMessagingIntegrationCredentials()
@@ -231,15 +233,15 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
 
   return (
     <div
-      className="animate-in fade-in-0 slide-in-from-bottom-3 fill-mode-both rounded-2xl border border-white/70 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-shadow duration-300 ease-out hover:shadow-md motion-reduce:animate-none"
+      className="animate-in fade-in-0 slide-in-from-bottom-3 border-border bg-card/70 fill-mode-both rounded-2xl border p-5 shadow-sm backdrop-blur-sm transition-shadow duration-300 ease-out hover:shadow-md motion-reduce:animate-none"
       style={{ animationDelay: `${animationIndex * 80}ms`, animationDuration: '450ms' }}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <div className="text-dark-500 text-lg font-semibold">{row.label}</div>
+          <div className="text-foreground text-lg font-semibold">{row.label}</div>
         </div>
         <span
-          className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClass(
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(
             row.status
           )}`}
         >
@@ -247,8 +249,8 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
         </span>
       </div>
 
-      <div className="bg-light-50/70 mt-4 rounded-2xl border border-gray-200 p-4 transition-colors duration-300 ease-out">
-        <div className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+      <div className="bg-muted/70 border-border mt-4 rounded-2xl border p-4 transition-colors duration-300 ease-out">
+        <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           {t('pages.messagingIntegrations.table.channels', 'Channels')}
         </div>
         <div className="mt-3 flex flex-col gap-3">
@@ -257,9 +259,9 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
             return (
               <div
                 key={channel}
-                className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-3 py-2.5"
+                className="border-border bg-card flex items-center justify-between gap-4 rounded-xl border px-3 py-2.5"
               >
-                <span className="text-dark-500 text-sm font-medium">{channel.toUpperCase()}</span>
+                <span className="text-foreground text-sm font-medium">{channel.toUpperCase()}</span>
                 <ToggleSwitch
                   checked={enabled}
                   onChange={(checked) => {
@@ -283,7 +285,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
             )
           })}
         </div>
-        <div className="mt-3 text-xs text-gray-500">
+        <div className="text-muted-foreground mt-3 text-xs">
           {t(
             'pages.messagingIntegrations.channelToggleHint',
             'Use these toggles to enable or disable the service channels supported by this provider.'
@@ -300,8 +302,8 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
       </div>
 
       <div
-        className={`bg-light-50/40 mt-4 overflow-hidden rounded-2xl border transition-[border-color,box-shadow] duration-300 ease-out ${
-          isEditingCredentials ? 'border-primary-200 shadow-sm' : 'border-gray-200 shadow-none'
+        className={`bg-muted/40 mt-4 overflow-hidden rounded-2xl border transition-[border-color,box-shadow] duration-300 ease-out ${
+          isEditingCredentials ? 'border-primary-500 shadow-sm' : 'border-border shadow-none'
         }`}
       >
         <div className="flex items-center gap-3 px-4 py-3">
@@ -314,10 +316,10 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
             aria-busy={isRevealing}
             aria-label={t('pages.messagingIntegrations.form.editCredentials', 'Edit credentials')}
             title={t('pages.messagingIntegrations.form.editCredentials', 'Edit credentials')}
-            className={`focus-visible:ring-primary-500 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+            className={`focus-visible:ring-primary-500 focus-visible:ring-offset-background inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
               isEditingCredentials
-                ? 'border-primary-500 bg-primary-50 text-primary-600 cursor-default'
-                : 'hover:border-primary-500 hover:text-primary-600 border-gray-300 bg-white text-gray-500 disabled:cursor-not-allowed disabled:opacity-60'
+                ? 'border-primary-500 bg-muted text-primary-600 cursor-default'
+                : 'border-border bg-card text-muted-foreground hover:border-primary-500 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-60'
             }`}
           >
             {isRevealing ? (
@@ -329,12 +331,12 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
               <MdEdit size={14} />
             )}
           </button>
-          <span className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+          <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             {t('pages.messagingIntegrations.form.credentials', 'Credentials')}
           </span>
           <MdKeyboardArrowDown
             size={20}
-            className={`ml-auto text-gray-400 transition-transform duration-300 ease-in-out motion-reduce:transition-none ${
+            className={`text-muted-foreground ml-auto transition-transform duration-300 ease-in-out motion-reduce:transition-none ${
               isEditingCredentials ? 'rotate-180' : ''
             }`}
             aria-hidden="true"
@@ -349,7 +351,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
         >
           <div className="min-h-0 overflow-hidden">
             <div
-              className={`space-y-3 border-t border-gray-200 px-4 py-4 transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
+              className={`border-border space-y-3 border-t px-4 py-4 transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
                 isEditingCredentials ? 'opacity-100' : 'opacity-0'
               }`}
             >
@@ -374,7 +376,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
                   />
                 )
               })}
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t(
                   'pages.messagingIntegrations.form.staticConfigHint',
                   'API URL and callback URL are configured by your administrator in the server environment, not here.'
@@ -385,13 +387,13 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
         </div>
       </div>
 
-      <div className="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 transition-opacity duration-300 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-border mt-5 flex flex-col gap-4 border-t pt-4 transition-opacity duration-300 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+          <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             {t('pages.messagingIntegrations.table.lastTested', 'Last tested')}
           </div>
-          <div className="text-dark-500 mt-1 text-sm">
-            {formatDateTime(row.last_tested_at ?? undefined)}
+          <div className="text-foreground mt-1 text-sm">
+            {formatDateTime(row.last_tested_at ?? undefined, userTimezone)}
           </div>
         </div>
 
@@ -480,10 +482,10 @@ export function MessagingIntegrationsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div>
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('navigation.messagingIntegrations', 'Messaging Integrations')}
           </h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="text-muted-foreground mt-1 text-sm">
             {t(
               'pages.messagingIntegrations.description',
               'Configure provider credentials, enable channels per service, and verify connection health.'

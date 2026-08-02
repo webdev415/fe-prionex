@@ -44,14 +44,16 @@ interface KpiTileProps {
 
 function KpiTile({ label, value, delta, isLoading }: KpiTileProps) {
   return (
-    <div className="flex min-w-[120px] flex-col items-start rounded-2xl bg-white/60 px-4 py-2 shadow-sm">
-      <span className="text-[10px] font-medium tracking-wide text-gray-500 uppercase">{label}</span>
+    <div className="bg-card/60 flex min-w-[120px] flex-col items-start rounded-2xl px-4 py-2 shadow-sm">
+      <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+        {label}
+      </span>
       <div className="flex items-baseline gap-2">
-        <span className="text-dark-500 text-lg font-semibold">{isLoading ? '…' : value}</span>
+        <span className="text-foreground text-lg font-semibold">{isLoading ? '…' : value}</span>
         {delta ? (
           <span
             className={`text-[11px] font-medium ${
-              delta.startsWith('+') ? 'text-primary-600' : 'text-red-500'
+              delta.startsWith('+') ? 'text-primary-600' : 'text-error-700'
             }`}
           >
             {delta}
@@ -83,7 +85,7 @@ export function HeaderKpiStrip({
   const oneOnOneToday = data?.one_on_one_today_count ?? 0
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-gray-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="bg-muted/70 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
         <form
           onSubmit={(e) => {
@@ -95,7 +97,7 @@ export function HeaderKpiStrip({
           <div className="relative">
             <Icons.Search
               size={16}
-              className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
+              className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
             />
             <Input
               value={searchQuery}
@@ -109,7 +111,7 @@ export function HeaderKpiStrip({
           </div>
         </form>
 
-        <div className="bg-primary-50 text-primary-700 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium">
+        <div className="bg-primary-100 text-primary-700 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium">
           <span className="bg-primary-500 inline-block h-1.5 w-1.5 rounded-full" />
           {t('pages.actionAnalysis.inbox.headerKpis.inProgress', 'In progress')}
           <span className="ml-1 font-semibold">{inProgress}</span>

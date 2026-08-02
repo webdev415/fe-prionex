@@ -9,6 +9,7 @@ import {
   getClientPinnedChainIds,
   getTAInteraction,
   getTAInteractions,
+  getClientTAInteractions,
   rewindChainInstance,
   startChainInstance,
   togglePinTAInteraction,
@@ -33,7 +34,7 @@ export function useClientTAInteractions(
 ) {
   return useQuery({
     queryKey: [...INT_KEY, 'client', clientId, params],
-    queryFn: () => getTAInteractions({ client_id: clientId!, ...params }),
+    queryFn: () => getClientTAInteractions(clientId!, params),
     enabled: clientId !== null && clientId > 0,
     staleTime: 10_000,
     // Interactions can also be created by the background chain-event consumer

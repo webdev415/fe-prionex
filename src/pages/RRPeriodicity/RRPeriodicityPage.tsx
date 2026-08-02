@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
-import { Label } from '@/components/ui/Label'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   useRRPeriodicitySettings,
@@ -23,6 +22,7 @@ import {
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
 import { getErrorMessage } from '@/lib/errors'
+import { cn } from '@/lib/utils'
 
 interface TypeMeta {
   key: PeriodicityType
@@ -81,6 +81,8 @@ export function RRPeriodicityPage() {
     JSON.stringify([...enabledTypes].sort()) !== JSON.stringify([...serverTypes].sort())
   const isSaveDisabled = !isDirty || updateMut.isPending
 
+  const handleCancel = () => setEdits(null)
+
   const handleSave = async () => {
     try {
       await updateMut.mutateAsync({ enabled_types: enabledTypes })
@@ -97,67 +99,118 @@ export function RRPeriodicityPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2 border-b border-gray-100 pb-4">
-        <h1 className="text-dark-500 text-2xl font-light">
-          {t('pages.rrPeriodicity.title', 'RR Payment Periodicity')}
-        </h1>
-        <p className="max-w-2xl text-sm text-gray-500">
-          {t(
-            'pages.rrPeriodicity.description',
-            'Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.'
-          )}
-        </p>
-      </div>
-
-      {isPending ? (
-        <div className="rounded-md border border-gray-200 bg-white p-6 text-sm text-gray-500">
-          {t('common.loading')}
+    <div className="flex w-full flex-col items-start gap-4">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
+            {t('pages.rrPeriodicity.title', 'RR Payment Periodicity')}
+          </h1>
+          <p className="text-muted-foreground max-w-2xl text-sm font-light">
+            {t(
+              'pages.rrPeriodicity.description',
+              'Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.'
+            )}
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          {TYPE_META.map((meta) => (
-            <div key={meta.key} className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <Label className="text-sm font-medium text-gray-800">
-                  {t(`pages.rrPeriodicity.types.${meta.i18nKey}.label`, meta.labelFallback)}
-                </Label>
-                <span className="text-xs text-gray-500">
-                  {t(`pages.rrPeriodicity.types.${meta.i18nKey}.hint`, meta.hintFallback)}
-                </span>
-              </div>
-              <ToggleSwitch
-                checked={isEnabled(meta.key)}
-                onChange={(v) => toggle(meta.key, v)}
-                aria-label={t(
-                  `pages.rrPeriodicity.types.${meta.i18nKey}.label`,
-                  meta.labelFallback
-                )}
-              />
-            </div>
-          ))}
 
-          {enabledTypes.length === 0 && (
-            <div className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              {t(
-                'pages.rrPeriodicity.allDisabledHint',
-                'With every option off, operators enter each payment date manually.'
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end border-t border-gray-100 pt-4">
+        {isDirty && (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleCancel}
+              disabled={updateMut.isPending}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="button"
               variant="primary"
               size="sm"
-              disabled={isSaveDisabled}
               onClick={handleSave}
-              className="rounded-md"
+              disabled={isSaveDisabled}
             >
               {updateMut.isPending ? t('common.saving', 'Saving…') : t('actions.save', 'Save')}
             </Button>
           </div>
+        )}
+      </div>
+
+      {isPending ? (
+        <div className="border-border bg-card text-muted-foreground w-full rounded-xl border p-6 text-sm shadow-sm">
+          {t('common.loading')}
         </div>
+      ) : (
+        <>
+          {enabledTypes.length === 0 && (
+            <div className="border-warning-200 bg-warning-100/40 text-warning-700 flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm">
+              <div className="bg-warning-100 text-warning-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                !
+              </div>
+              <p className="pt-1">
+                {t(
+                  'pages.rrPeriodicity.allDisabledHint',
+                  'With every option off, operators enter each payment date manually.'
+                )}
+              </p>
+            </div>
+          )}
+
+          <section className="border-border bg-card/50 flex w-full flex-col gap-4 rounded-xl border p-4 shadow-sm sm:p-6">
+            <div>
+              <h2 className="text-foreground mb-1 text-base font-semibold sm:text-lg">
+                {t('pages.rrPeriodicity.optionsTitle', 'Frequency options')}
+              </h2>
+              <p className="text-muted-foreground text-sm font-light">
+                {t(
+                  'pages.rrPeriodicity.optionsDescription',
+                  'Enabled options appear in the Payment Frequency dropdown on the RR creation form.'
+                )}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {TYPE_META.map((meta) => {
+                const on = isEnabled(meta.key)
+                const label = t(
+                  `pages.rrPeriodicity.types.${meta.i18nKey}.label`,
+                  meta.labelFallback
+                )
+                return (
+                  <div
+                    key={meta.key}
+                    className="border-border bg-card flex min-h-14 items-center justify-between gap-3 rounded-lg border px-4 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-foreground text-sm font-medium">{label}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs font-light">
+                        {t(`pages.rrPeriodicity.types.${meta.i18nKey}.hint`, meta.hintFallback)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          'inline-flex h-[28px] items-center rounded-full px-2.5 text-xs font-medium',
+                          on ? 'bg-success-100 text-success-700' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {on
+                          ? t('pages.rrPeriodicity.enabled', 'Enabled')
+                          : t('pages.rrPeriodicity.disabled', 'Disabled')}
+                      </span>
+                      <ToggleSwitch
+                        checked={on}
+                        onChange={(v) => toggle(meta.key, v)}
+                        ariaLabel={label}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        </>
       )}
     </div>
   )

@@ -18,7 +18,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
   // Check if user data is available
   if (!user) {
     return (
-      <div className="py-8 text-center text-gray-600">
+      <div className="text-muted-foreground py-8 text-center">
         {t('pages.users.modals.view.userNotFound')}
       </div>
     )
@@ -43,17 +43,19 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.username')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.username || '—'}
             </span>
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">{t('pages.users.forms.email')}</span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-muted-foreground text-sm font-light">
+              {t('pages.users.forms.email')}
+            </span>
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.email || '—'}
             </span>
           </div>
@@ -64,19 +66,19 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.firstName')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.first_name || '—'}
             </span>
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.lastName')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.last_name || '—'}
             </span>
           </div>
@@ -84,17 +86,19 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.middleName')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.middle_name || '—'}
             </span>
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">{t('pages.users.forms.phone')}</span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-muted-foreground text-sm font-light">
+              {t('pages.users.forms.phone')}
+            </span>
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.phone || '—'}
             </span>
           </div>
@@ -105,19 +109,19 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.language')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {getLanguageLabel(user.language || '')}
             </span>
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.timezone')}
             </span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.timezone || '—'}
             </span>
           </div>
@@ -128,15 +132,15 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">Asterisk Extension:</span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-muted-foreground text-sm font-light">Asterisk Extension:</span>
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.asterisk_extension || '—'}
             </span>
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-sm font-light text-gray-500">Is Agent:</span>
-            <span className="text-sm font-semibold break-words text-gray-950">
+            <span className="text-muted-foreground text-sm font-light">Is Agent:</span>
+            <span className="text-foreground text-sm font-semibold break-words">
               {user.is_agent ? 'Yes' : 'No'}
             </span>
           </div>
@@ -145,20 +149,20 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
         {user.is_agent && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-sm font-light text-gray-500">Agent Status:</span>
+              <span className="text-muted-foreground text-sm font-light">Agent Status:</span>
               <div className="flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     user.agent_status === 'online'
-                      ? 'bg-green-500'
+                      ? 'bg-success-500'
                       : user.agent_status === 'busy'
-                        ? 'bg-yellow-500'
+                        ? 'bg-warning-500'
                         : user.agent_status === 'on-call'
-                          ? 'bg-red-500'
-                          : 'bg-gray-400'
+                          ? 'bg-error-500'
+                          : 'bg-muted-foreground'
                   }`}
                 />
-                <span className="text-sm font-semibold text-gray-950 capitalize">
+                <span className="text-foreground text-sm font-semibold capitalize">
                   {user.agent_status || 'offline'}
                 </span>
               </div>
@@ -166,14 +170,14 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           </div>
         )}
 
-        <div className="border-t border-gray-200"></div>
+        <div className="border-border border-t"></div>
       </div>
 
       {/* Assign Projects Section */}
       {user.projects && user.projects.length > 0 && (
         <div className="space-y-4">
           <div>
-            <span className="text-sm font-light text-gray-500">
+            <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.assignProjects')}
             </span>
           </div>
@@ -183,11 +187,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
                 key={project.project_id}
                 className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
               >
-                <span className="text-sm font-light text-gray-500">{project.project_name}:</span>
-                <div className="text-sm font-semibold break-words text-gray-950">
+                <span className="text-muted-foreground text-sm font-light">
+                  {project.project_name}:
+                </span>
+                <div className="text-foreground text-sm font-semibold break-words">
                   <div>{project.role_name}</div>
                   {(project.department_name || project.group_name) && (
-                    <div className="text-xs font-normal text-gray-600">
+                    <div className="text-muted-foreground text-xs font-normal">
                       {project.department_name && (
                         <span>
                           {t('pages.users.forms.department')}: {project.department_name}

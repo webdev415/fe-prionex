@@ -8,6 +8,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+// Resolve t() to its inline fallback (matching the real app, which loads the
+// en/uk resources) so the metric-formatter assertions see the unit suffixes.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? _key }),
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: { user: { active_project_id: number } }) => unknown) =>
     selector({ user: { active_project_id: 1 } }),

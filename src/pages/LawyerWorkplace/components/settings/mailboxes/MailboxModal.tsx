@@ -38,6 +38,8 @@ export interface MailboxFormValues {
 interface ProviderPreset {
   id: MailboxProvider
   label: string
+  /** i18n key for non-brand labels (e.g. "Custom / Self-hosted"); brands keep raw label. */
+  labelKey?: string
   imapHost: string
   imapPort: number
   imapUseSsl: boolean
@@ -90,6 +92,7 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'custom',
     label: 'Custom / Self-hosted',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.customProvider',
     imapHost: '',
     imapPort: 993,
     imapUseSsl: true,
@@ -214,6 +217,8 @@ export function MailboxModal({
   isSubmitting = false,
 }: MailboxModalProps) {
   const { t } = useTranslation('common')
+  const providerLabel = (preset: ProviderPreset) =>
+    preset.labelKey ? t(preset.labelKey, preset.label) : preset.label
   const isEditing = mailbox !== null
 
   const [email, setEmail] = useState('')
@@ -375,14 +380,17 @@ export function MailboxModal({
     }
   }
 
-  const selectedProviderLabel = PROVIDER_PRESETS.find((p) => p.id === provider)?.label ?? provider
+  const selectedProviderPreset = PROVIDER_PRESETS.find((p) => p.id === provider)
+  const selectedProviderLabel = selectedProviderPreset
+    ? providerLabel(selectedProviderPreset)
+    : provider
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Mail size={20} strokeWidth={1.5} className="text-dark-500" />
+            <Icons.Mail size={20} strokeWidth={1.5} className="text-foreground" />
           </div>
         }
         title={
@@ -395,7 +403,7 @@ export function MailboxModal({
         {/* Email + Display name */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label className="text-dark-500 text-[13px] font-medium">
+            <Label className="text-foreground text-[13px] font-medium">
               {t('pages.lawyerWorkplace.settings.mailboxes.fields.email', 'Email address')}
             </Label>
             <input
@@ -403,7 +411,7 @@ export function MailboxModal({
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
               placeholder="legal@prionex.ua"
-              className="text-dark-500 focus:border-primary-400 h-11 rounded-md border border-gray-200 bg-white px-4 text-[14px] outline-none"
+              className="text-foreground focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
             />
             {duplicateEmail ? (
               <p className="text-error-600 text-[11px]">
@@ -415,7 +423,7 @@ export function MailboxModal({
             ) : null}
           </div>
           <div className="flex flex-col gap-2">
-            <Label className="text-dark-500 text-[13px] font-medium">
+            <Label className="text-foreground text-[13px] font-medium">
               {t('pages.lawyerWorkplace.settings.mailboxes.fields.displayName', 'Display name')}
             </Label>
             <input
@@ -426,24 +434,24 @@ export function MailboxModal({
                 'pages.lawyerWorkplace.settings.mailboxes.fields.displayNamePlaceholder',
                 'Legal department'
               )}
-              className="text-dark-500 focus:border-primary-400 h-11 rounded-md border border-gray-200 bg-white px-4 text-[14px] outline-none"
+              className="text-foreground focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
             />
           </div>
         </div>
 
         {/* Provider selector */}
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.mailboxes.fields.provider', 'Mail provider')}
           </Label>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-4 text-[14px]"
+                className="text-foreground border-border bg-input flex h-11 w-full items-center justify-between rounded-md border px-4 text-[14px]"
               >
                 <span>{selectedProviderLabel}</span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
+                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -456,7 +464,7 @@ export function MailboxModal({
                   className="cursor-pointer"
                   onClick={() => handleProviderChange(preset.id)}
                 >
-                  {preset.label}
+                  {providerLabel(preset)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -464,7 +472,7 @@ export function MailboxModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.mailboxes.fields.password', 'App password')}
           </Label>
           <div className="relative">
@@ -486,19 +494,23 @@ export function MailboxModal({
                       'Enter app password'
                     )
               }
-              className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-md border border-gray-200 bg-white px-4 pr-12 text-[14px] outline-none"
+              className="text-foreground focus:border-primary-400 border-border bg-input h-11 w-full rounded-md border px-4 pr-12 text-[14px] outline-none"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="text-light-500 hover:text-dark-500 absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
+              className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
               tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showPassword
+                  ? t('pages.lawyerWorkplace.settings.mailboxes.hidePassword', 'Hide password')
+                  : t('pages.lawyerWorkplace.settings.mailboxes.showPassword', 'Show password')
+              }
             >
               <Icons.View size={16} strokeWidth={showPassword ? 1.5 : 2.5} />
             </button>
           </div>
-          <p className="text-light-500 text-[11px]">
+          <p className="text-muted-foreground text-[11px]">
             {t(
               'pages.lawyerWorkplace.settings.mailboxes.fields.passwordHint',
               'Use an app-specific password generated in your mail account security settings, not your main login password.'
@@ -513,8 +525,8 @@ export function MailboxModal({
 
         {/* Custom provider server settings */}
         {isCustom ? (
-          <div className="space-y-4 rounded-md border border-gray-100 bg-gray-50 p-4">
-            <p className="text-dark-500 text-[12px] font-semibold">
+          <div className="border-border bg-muted space-y-4 rounded-md border p-4">
+            <p className="text-foreground text-[12px] font-semibold">
               {t(
                 'pages.lawyerWorkplace.settings.mailboxes.serverSettings.title',
                 'Server settings'
@@ -524,7 +536,7 @@ export function MailboxModal({
             {/* IMAP */}
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label className="text-light-600 text-[11px]">
+                <Label className="text-muted-foreground text-[11px]">
                   {t(
                     'pages.lawyerWorkplace.settings.mailboxes.serverSettings.imapHost',
                     'IMAP host'
@@ -538,11 +550,11 @@ export function MailboxModal({
                     resetConnectionTest()
                   }}
                   placeholder="imap.mail.prionex.ua"
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-foreground focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-light-600 text-[11px]">
+                <Label className="text-muted-foreground text-[11px]">
                   {t('pages.lawyerWorkplace.settings.mailboxes.serverSettings.imapPort', 'Port')}
                 </Label>
                 <input
@@ -554,7 +566,7 @@ export function MailboxModal({
                     setImapPort(Number(e.target.value))
                     resetConnectionTest()
                   }}
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-foreground focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
             </div>
@@ -566,9 +578,9 @@ export function MailboxModal({
                   setImapUseSsl(e.target.checked)
                   resetConnectionTest()
                 }}
-                className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
+                className="accent-secondary-800 border-border h-4 w-4 rounded"
               />
-              <span className="text-dark-500 text-[12px]">
+              <span className="text-foreground text-[12px]">
                 {t(
                   'pages.lawyerWorkplace.settings.mailboxes.serverSettings.imapSsl',
                   'Use SSL/TLS for IMAP'
@@ -579,7 +591,7 @@ export function MailboxModal({
             {/* SMTP */}
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label className="text-light-600 text-[11px]">
+                <Label className="text-muted-foreground text-[11px]">
                   {t(
                     'pages.lawyerWorkplace.settings.mailboxes.serverSettings.smtpHost',
                     'SMTP host'
@@ -593,11 +605,11 @@ export function MailboxModal({
                     resetConnectionTest()
                   }}
                   placeholder="smtp.mail.prionex.ua"
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-foreground focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-light-600 text-[11px]">
+                <Label className="text-muted-foreground text-[11px]">
                   {t('pages.lawyerWorkplace.settings.mailboxes.serverSettings.smtpPort', 'Port')}
                 </Label>
                 <input
@@ -609,7 +621,7 @@ export function MailboxModal({
                     setSmtpPort(Number(e.target.value))
                     resetConnectionTest()
                   }}
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-foreground focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
             </div>
@@ -621,9 +633,9 @@ export function MailboxModal({
                   setSmtpUseTls(e.target.checked)
                   resetConnectionTest()
                 }}
-                className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
+                className="accent-secondary-800 border-border h-4 w-4 rounded"
               />
-              <span className="text-dark-500 text-[12px]">
+              <span className="text-foreground text-[12px]">
                 {t(
                   'pages.lawyerWorkplace.settings.mailboxes.serverSettings.smtpTls',
                   'Use STARTTLS for SMTP'
@@ -641,16 +653,16 @@ export function MailboxModal({
                 type="checkbox"
                 checked={syncFromToday}
                 onChange={(e) => setSyncFromToday(e.target.checked)}
-                className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
+                className="accent-secondary-800 border-border h-4 w-4 rounded"
               />
-              <span className="text-dark-500 text-[13px]">
+              <span className="text-foreground text-[13px]">
                 {t(
                   'pages.lawyerWorkplace.settings.mailboxes.fields.syncFromToday',
                   'Sync from today only (skip historical emails)'
                 )}
               </span>
             </label>
-            <p className="ml-6 text-[11px] text-gray-400">
+            <p className="text-muted-foreground ml-6 text-[11px]">
               {t(
                 'pages.lawyerWorkplace.settings.mailboxes.fields.syncFromTodayHint',
                 'Recommended for mailboxes with many existing emails. Only messages arriving after this point will be imported.'

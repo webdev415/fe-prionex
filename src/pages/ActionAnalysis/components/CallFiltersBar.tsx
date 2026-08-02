@@ -22,7 +22,7 @@ import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 export type CallFiltersBarValue = Omit<CallMonitoringFilters, 'from_datetime' | 'to_datetime'> & {
   customFromDate?: string
@@ -103,7 +103,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
           <EmployeeFilterDropdown
@@ -116,7 +116,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.phone', 'Phone')}
             </span>
             <Input
@@ -133,7 +133,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.status', 'Status')}
             </span>
             <Select
@@ -175,7 +175,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.minDuration', 'Min duration (s)')}
             </span>
             <Input
@@ -193,7 +193,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.maxDuration', 'Max duration (s)')}
             </span>
             <Input
@@ -211,7 +211,7 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.telephonyType', 'Telephony type')}
             </span>
             <Select

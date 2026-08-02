@@ -32,16 +32,16 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-lg border border-gray-200',
+        'border-border overflow-hidden rounded-lg border',
         isLatest && 'border-l-4 border-l-green-500'
       )}
     >
-      <div className="flex items-center justify-between gap-3 bg-gray-50 px-4 py-2">
+      <div className="bg-muted flex items-center justify-between gap-3 px-4 py-2">
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t('pages.client.saleNotes.saleDate', 'Sale date')}:
           </span>
-          <span className="text-dark-500 font-medium">{formattedDate}</span>
+          <span className="text-foreground font-medium">{formattedDate}</span>
           {isLatest && (
             <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
               {t('pages.client.saleNotes.latest', 'LATEST')}
@@ -49,15 +49,15 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t('pages.client.saleNotes.addedBy', 'Added by')}:{' '}
-            <span className="text-dark-500">{addedBy}</span>
+            <span className="text-foreground">{addedBy}</span>
           </span>
           {canDelete && onDelete && (
             <button
               type="button"
               onClick={() => onDelete(note.id)}
-              className="text-gray-400 transition hover:text-red-500"
+              className="text-muted-foreground transition hover:text-red-500"
               aria-label={t('pages.client.saleNotes.deleteAria', 'Delete comment')}
             >
               <Icons.Delete size={16} />
@@ -65,9 +65,9 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
           )}
         </div>
       </div>
-      <div className="bg-white p-4">
+      <div className="bg-card p-4">
         <div
-          className="text-dark-500 text-sm leading-relaxed"
+          className="text-foreground text-sm leading-relaxed"
           dangerouslySetInnerHTML={{ __html: note.content }}
         />
       </div>

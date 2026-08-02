@@ -15,18 +15,19 @@ import {
   type PaymentHistoryBarState,
 } from '../lib/paymentHistoryUrlState'
 import { useScopedUserIds } from '../lib/scope'
+import { formatMoneyAmount } from '@/lib/localeFormat'
 import { PaymentHistoryFiltersBar } from './PaymentHistoryFiltersBar'
 import { PaymentHistoryTable } from './PaymentHistoryTable'
 
-function formatMoney(value: string | undefined): string {
+function formatMoney(value: string | undefined, language: string): string {
   if (!value) return '0.00'
   const n = Number(value)
   if (!Number.isFinite(n)) return value
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return formatMoneyAmount(n, language)
 }
 
 export function PaymentHistoryTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -139,17 +140,19 @@ export function PaymentHistoryTab() {
           {t('pages.training.paymentHistorySummary.totalPayments', 'payments')}
         </span>
         <span>
-          <span className="font-medium">{formatMoney(summary?.total_amount)}</span>{' '}
+          <span className="font-medium">{formatMoney(summary?.total_amount, i18n.language)}</span>{' '}
           {t('pages.training.paymentHistorySummary.totalAmount', 'total')}
         </span>
         <span>
           <span className="text-success-700 font-medium">
-            {formatMoney(summary?.verified_amount)}
+            {formatMoney(summary?.verified_amount, i18n.language)}
           </span>{' '}
           {t('pages.training.paymentHistorySummary.verified', 'confirmed')}
         </span>
         <span>
-          <span className="font-medium text-gray-600">{formatMoney(summary?.pending_amount)}</span>{' '}
+          <span className="font-medium text-gray-600">
+            {formatMoney(summary?.pending_amount, i18n.language)}
+          </span>{' '}
           {t('pages.training.paymentHistorySummary.pending', 'pending')}
         </span>
       </div>

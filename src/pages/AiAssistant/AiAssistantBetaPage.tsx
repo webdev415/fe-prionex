@@ -45,6 +45,7 @@ import {
 } from '@/features/aiAssistant/useVoiceMessageRecorder'
 import { prepareTtsText, resolveTtsVoice, useTtsPlayer } from '@/features/aiAssistant/tts'
 import { useAuthStore } from '@/stores/authStore'
+import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
@@ -80,12 +81,14 @@ const VOICE_SILENCE_OPTIONS: AssistantVoiceSilenceTimeout[] = [1.5, 2, 3]
 /** Max-recording-length choices (seconds) offered in voice settings. */
 const VOICE_MAX_DURATION_OPTIONS: AssistantVoiceMaxDuration[] = [30, 60, 120]
 
+const COMPOSER_DROPDOWN_TRIGGER_CLASS =
+  'text-foreground inline-flex h-9 min-h-9 w-full min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-light shadow-none sm:h-8 sm:min-h-0 sm:w-32 sm:flex-none'
+
 type AssistDropdownProps = {
   ariaLabel: string
   value: string
   options: { value: string; label: string }[]
   onChange: (value: string) => void
-  triggerClassName?: string
 }
 
 type ChatRole = 'user' | 'assistant'
@@ -239,13 +242,13 @@ const MARKDOWN_BODY_CLASS = [
   '[&_h2]:mt-3 [&_h2]:mb-1.5 [&_h2]:text-base [&_h2]:font-semibold',
   '[&_h3]:mt-2.5 [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold',
   '[&_table]:my-2 [&_table]:block [&_table]:w-fit [&_table]:max-w-full [&_table]:border-collapse [&_table]:overflow-x-auto [&_table]:text-xs sm:[&_table]:text-sm',
-  '[&_th]:bg-light-50 [&_th]:border [&_th]:border-gray-200 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-medium',
-  '[&_td]:border [&_td]:border-gray-200 [&_td]:px-2 [&_td]:py-1',
+  '[&_th]:bg-muted [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-medium',
+  '[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1',
   // Code styling (inline + fenced blocks) is owned by MarkdownMessage's custom
   // code renderer (syntax highlight + copy + horizontal scroll).
   '[&_a]:text-primary-600 [&_a]:underline',
-  '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-200 [&_blockquote]:pl-3 [&_blockquote]:text-gray-600',
-  '[&_hr]:my-3 [&_hr]:border-gray-200',
+  '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
+  '[&_hr]:my-3 [&_hr]:border-border',
   '[&_strong]:font-semibold',
   '[&_em]:italic',
 ].join(' ')
@@ -288,13 +291,7 @@ function resolveSpeechLang(language?: string): string {
   return 'en-US'
 }
 
-function AssistFilterDropdown({
-  ariaLabel,
-  value,
-  options,
-  onChange,
-  triggerClassName,
-}: AssistDropdownProps) {
+function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDropdownProps) {
   const label = useMemo(
     () => options.find((o) => o.value === value)?.label ?? options[0]?.label ?? '',
     [options, value]
@@ -303,23 +300,16 @@ function AssistFilterDropdown({
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={ariaLabel}
-          className={cn(
-            'text-dark-500 inline-flex h-9 min-h-9 min-w-0 cursor-pointer items-center justify-center gap-1.5 border-l border-l-gray-200 bg-white px-2.5 text-xs font-light shadow-none sm:h-6 sm:min-h-0 sm:w-32 sm:max-w-none sm:px-3',
-            triggerClassName
-          )}
-        >
+        <button type="button" aria-label={ariaLabel} className={COMPOSER_DROPDOWN_TRIGGER_CLASS}>
           <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-          <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+          <Icons.ArrowDown size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-white">
+      <DropdownMenuContent align="end" className="bg-card">
         {options.map((o) => (
           <DropdownMenuItem
             key={o.value}
-            className="text-dark-500 text-sm font-light"
+            className="text-foreground text-sm font-light"
             onSelect={() => onChange(o.value)}
           >
             {o.label}
@@ -345,7 +335,7 @@ const MODE_OPTIONS: {
   {
     mode: 'fast',
     Icon: Icons.Flash,
-    iconClass: 'text-amber-500',
+    iconClass: 'text-warning-500',
     labelKey: 'pages.aiAssistant.modeFastShort',
     hintKey: 'pages.aiAssistant.modeFastHint',
   },
@@ -391,7 +381,7 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
   }, [open])
 
   return (
-    <div ref={rootRef} className="relative shrink-0">
+    <div ref={rootRef} className="relative min-w-0 flex-1 sm:flex-none">
       <button
         type="button"
         aria-label={t('pages.aiAssistant.mode')}
@@ -399,25 +389,28 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
         aria-expanded={open}
         data-testid="assistant-mode-trigger"
         onClick={() => setOpen((prev) => !prev)}
-        className="text-dark-500 hover:border-primary-300 hover:text-primary-600 inline-flex h-9 min-h-9 w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 text-xs font-light shadow-none transition-colors sm:h-8 sm:min-h-0 sm:w-auto"
+        className={cn(
+          COMPOSER_DROPDOWN_TRIGGER_CLASS,
+          'hover:border-primary-300 hover:text-primary-600 transition-colors'
+        )}
       >
         <ActiveIcon
           size={15}
           strokeWidth={1.5}
-          className={isThinking ? 'text-primary-500' : 'text-amber-500'}
+          className={isThinking ? 'text-primary-500' : 'text-warning-500'}
         />
         <span className="min-w-0 truncate">
           {isThinking
             ? t('pages.aiAssistant.modeThinkingShort')
             : t('pages.aiAssistant.modeFastShort')}
         </span>
-        <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+        <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
       </button>
       {open && (
         <div
           role="menu"
           data-testid="assistant-mode-menu"
-          className="border-light-200 absolute right-0 bottom-full z-30 mb-2 w-64 overflow-hidden rounded-xl border bg-white p-1 shadow-lg ring-1 ring-black/[0.04]"
+          className="border-border bg-card ring-border/40 absolute right-0 bottom-full z-30 mb-2 w-64 overflow-hidden rounded-xl border p-1 shadow-lg ring-1"
         >
           {MODE_OPTIONS.map(({ mode, Icon, iconClass, labelKey, hintKey }) => (
             <button
@@ -429,11 +422,11 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
                 onChange(mode)
                 setOpen(false)
               }}
-              className="hover:bg-light-100/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
+              className="hover:bg-muted/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
             >
               <Icon size={16} strokeWidth={1.5} className={cn('mt-0.5 shrink-0', iconClass)} />
               <span className="min-w-0 flex-1">
-                <span className="text-dark-500 flex items-center gap-1.5 text-sm font-medium">
+                <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                   {t(labelKey)}
                   {value === mode && (
                     <Icons.Checkmark
@@ -443,7 +436,7 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
                     />
                   )}
                 </span>
-                <span className="mt-0.5 block text-[11px] leading-snug font-light text-gray-500">
+                <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
                   {t(hintKey)}
                 </span>
               </span>
@@ -493,7 +486,7 @@ function ComposerHubMenu({
           aria-label={t('pages.aiAssistant.composerHub')}
           title={t('pages.aiAssistant.composerHub')}
           data-testid="composer-hub-trigger"
-          className="text-dark-500 hover:border-primary-300 hover:text-primary-600 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-7 sm:w-7"
+          className="text-foreground hover:border-primary-300 hover:text-primary-600 border-border bg-card text-muted-foreground flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors sm:h-7 sm:w-7"
         >
           <Icons.Add size={18} strokeWidth={1.5} />
         </button>
@@ -501,15 +494,19 @@ function ComposerHubMenu({
       <DropdownMenuContent
         align="start"
         side="top"
-        className="w-72 bg-white"
+        className="bg-card w-72"
         data-testid="composer-hub-menu"
       >
         <DropdownMenuItem
-          className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+          className="text-foreground flex items-center gap-2.5 px-2.5 py-2 text-sm"
           onSelect={onAttach}
           data-testid="hub-attach"
         >
-          <Icons.Attachment01 size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+          <Icons.Attachment01
+            size={16}
+            strokeWidth={1.5}
+            className="text-muted-foreground shrink-0"
+          />
           {t('pages.aiAssistant.hubAttach')}
         </DropdownMenuItem>
 
@@ -520,14 +517,14 @@ function ComposerHubMenu({
             event.preventDefault()
             onToggleDeepResearch()
           }}
-          className="text-dark-500 py-2 pr-2 pl-8 text-sm"
+          className="text-foreground py-2 pr-2 pl-8 text-sm"
           data-testid="hub-deep-research"
         >
           <span className="flex items-center gap-2.5">
             <Icons.Sparkles size={16} strokeWidth={1.5} className="text-primary-500 shrink-0" />
             <span className="min-w-0">
               <span className="block">{t('pages.aiAssistant.hubDeepResearch')}</span>
-              <span className="block text-[11px] leading-snug font-light text-gray-500">
+              <span className="text-muted-foreground block text-[11px] leading-snug font-light">
                 {t('pages.aiAssistant.hubDeepResearchHint')}
               </span>
             </span>
@@ -535,8 +532,12 @@ function ComposerHubMenu({
         </DropdownMenuCheckboxItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
-          <Icons.FileSearch size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+        <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-tight">
+          <Icons.FileSearch
+            size={13}
+            strokeWidth={1.5}
+            className="text-muted-foreground shrink-0"
+          />
           {t('pages.aiAssistant.hubCrmActions')}
         </DropdownMenuLabel>
         {QUICK_ACTION_KEYS.map((key) => {
@@ -544,29 +545,33 @@ function ComposerHubMenu({
           return (
             <DropdownMenuItem
               key={key}
-              className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+              className="text-foreground flex items-center gap-2.5 px-2.5 py-2 text-sm"
               disabled={quickActionDisabled}
               onSelect={() => onQuickAction(key)}
               data-testid={`hub-action-${key}`}
             >
-              <ActionIcon size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+              <ActionIcon size={16} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
               {t(`pages.aiAssistant.${key}`)}
             </DropdownMenuItem>
           )
         })}
 
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
-          <Icons.UserMultiple size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+        <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-tight">
+          <Icons.UserMultiple
+            size={13}
+            strokeWidth={1.5}
+            className="text-muted-foreground shrink-0"
+          />
           {t('pages.aiAssistant.hubContext')}
-          <span className="text-dark-500 ml-auto max-w-[7rem] truncate font-light">
+          <span className="text-foreground ml-auto max-w-[7rem] truncate font-light">
             {activeClientLabel}
           </span>
         </DropdownMenuLabel>
         {clientOptions.map((o) => (
           <DropdownMenuItem
             key={o.value}
-            className="text-dark-500 flex items-center justify-between gap-2 px-2.5 py-2 text-sm"
+            className="text-foreground flex items-center justify-between gap-2 px-2.5 py-2 text-sm"
             onSelect={() => onClientScopeChange(o.value)}
             data-testid={`hub-context-${o.value}`}
           >
@@ -583,6 +588,7 @@ function ComposerHubMenu({
 
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
+  const { data: aiSettings } = useAiAssistantSettings()
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const userId = useAuthStore((state) => state.user?.id ?? null)
   const storedConversationId = useAiAssistantStore((state) => state.conversationIdFor(userId))
@@ -1118,26 +1124,26 @@ export function AiAssistantBetaPage() {
   )
 
   const settingsPanel = (
-    <div className="border-light-200/80 mx-auto flex max-h-full min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl ring-1 ring-black/[0.04]">
-      <header className="from-light-50/80 shrink-0 border-b border-gray-100 bg-gradient-to-b to-white px-4 pt-3 pb-2">
-        <h2 className="text-dark-500 text-sm font-semibold tracking-tight">
+    <div className="border-border/80 bg-card ring-border/40 mx-auto flex max-h-full min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1">
+      <header className="from-muted/80 border-border to-card shrink-0 border-b bg-gradient-to-b px-4 pt-3 pb-2">
+        <h2 className="text-foreground text-sm font-semibold tracking-tight">
           {t('pages.aiAssistant.settingsTitle')}
         </h2>
-        <p className="mt-1 text-xs leading-snug font-light text-gray-600">
+        <p className="text-muted-foreground mt-1 text-xs leading-snug font-light">
           {t('pages.aiAssistant.settingsDescription')}
         </p>
       </header>
 
-      <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto overscroll-y-contain">
+      <div className="divide-border min-h-0 flex-1 divide-y overflow-y-auto overscroll-y-contain">
         <section className="px-4 py-2.5">
-          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
+          <h3 className="text-foreground mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.assistantPreferences')}
           </h3>
-          <p className="mb-1.5 text-[11px] font-medium text-gray-500">
+          <p className="text-muted-foreground mb-1.5 text-[11px] font-medium">
             {t('pages.aiAssistant.responseMode')}
           </p>
           <div
-            className="bg-light-100/80 flex w-full rounded-lg p-0.5"
+            className="bg-muted/80 flex w-full rounded-lg p-0.5"
             role="group"
             aria-label={t('pages.aiAssistant.responseMode')}
           >
@@ -1147,8 +1153,8 @@ export function AiAssistantBetaPage() {
               className={cn(
                 'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
                 assistantSettings.responseMode === 'short'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
+                  ? 'text-foreground bg-card ring-border/80 shadow-sm ring-1'
+                  : 'hover:text-foreground text-muted-foreground'
               )}
             >
               {t('pages.aiAssistant.responseShort')}
@@ -1159,8 +1165,8 @@ export function AiAssistantBetaPage() {
               className={cn(
                 'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
                 assistantSettings.responseMode === 'detailed'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
+                  ? 'text-foreground bg-card ring-border/80 shadow-sm ring-1'
+                  : 'hover:text-foreground text-muted-foreground'
               )}
             >
               {t('pages.aiAssistant.responseDetailed')}
@@ -1169,28 +1175,28 @@ export function AiAssistantBetaPage() {
 
           {/* Reasoning mode now lives in the dropdown next to the composer
               (single source of truth); the settings panel only points to it. */}
-          <div className="bg-light-50/60 mt-2.5 flex items-center gap-2 rounded-lg border border-gray-200/70 px-2.5 py-2">
+          <div className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2">
             {assistantSettings.mode === 'thinking' ? (
               <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
             ) : (
-              <Icons.Flash size={14} strokeWidth={1.5} className="shrink-0 text-amber-500" />
+              <Icons.Flash size={14} strokeWidth={1.5} className="text-warning-500 shrink-0" />
             )}
-            <span className="text-dark-500 min-w-0 flex-1 text-[11px] leading-snug font-light">
+            <span className="text-foreground min-w-0 flex-1 text-[11px] leading-snug font-light">
               {t('pages.aiAssistant.mode')}:{' '}
               {assistantSettings.mode === 'thinking'
                 ? t('pages.aiAssistant.modeThinkingShort')
                 : t('pages.aiAssistant.modeFastShort')}
             </span>
-            <span className="shrink-0 text-[11px] font-light text-gray-400">
+            <span className="text-muted-foreground shrink-0 text-[11px] font-light">
               {t('pages.aiAssistant.modeChangeHint')}
             </span>
           </div>
 
-          <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+          <p className="text-muted-foreground mt-2.5 mb-1.5 text-[11px] font-medium">
             {t('pages.aiAssistant.outputFormat')}
           </p>
           <div
-            className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+            className="bg-muted/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
             role="group"
             aria-label={t('pages.aiAssistant.outputFormat')}
           >
@@ -1202,8 +1208,8 @@ export function AiAssistantBetaPage() {
                 className={cn(
                   'min-h-8 rounded-md px-1 py-1.5 text-center text-[10px] leading-tight font-medium transition-all sm:px-1.5 sm:text-[11px]',
                   assistantSettings.outputFormat === format
-                    ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                    : 'hover:text-dark-500 text-gray-600'
+                    ? 'text-foreground bg-card ring-border/80 shadow-sm ring-1'
+                    : 'hover:text-foreground text-muted-foreground'
                 )}
               >
                 {format === 'text' && t('pages.aiAssistant.outputText')}
@@ -1213,8 +1219,8 @@ export function AiAssistantBetaPage() {
             ))}
           </div>
 
-          <div className="bg-light-50/60 mt-2.5 flex items-center justify-between gap-3 rounded-lg border border-gray-200/70 px-2.5 py-2">
-            <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
+          <div className="bg-muted/60 border-border/70 mt-2.5 flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2">
+            <span className="text-foreground min-w-0 flex-1 text-xs leading-snug font-light">
               {t('pages.aiAssistant.voiceInput')}
             </span>
             <ToggleSwitch
@@ -1234,11 +1240,11 @@ export function AiAssistantBetaPage() {
 
           {assistantSettings.voiceInputEnabled && (
             <div data-testid="voice-listening-settings">
-              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+              <p className="text-muted-foreground mt-2.5 mb-1.5 text-[11px] font-medium">
                 {t('pages.aiAssistant.voiceSilenceTimeout')}
               </p>
               <div
-                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                className="bg-muted/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
                 role="group"
                 aria-label={t('pages.aiAssistant.voiceSilenceTimeout')}
               >
@@ -1250,8 +1256,8 @@ export function AiAssistantBetaPage() {
                     className={cn(
                       'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
                       assistantSettings.voiceSilenceTimeoutSec === sec
-                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                        : 'hover:text-dark-500 text-gray-600'
+                        ? 'text-foreground bg-card ring-border/80 shadow-sm ring-1'
+                        : 'hover:text-foreground text-muted-foreground'
                     )}
                   >
                     {t('pages.aiAssistant.voiceSeconds', { count: sec })}
@@ -1259,11 +1265,11 @@ export function AiAssistantBetaPage() {
                 ))}
               </div>
 
-              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+              <p className="text-muted-foreground mt-2.5 mb-1.5 text-[11px] font-medium">
                 {t('pages.aiAssistant.voiceMaxDuration')}
               </p>
               <div
-                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                className="bg-muted/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
                 role="group"
                 aria-label={t('pages.aiAssistant.voiceMaxDuration')}
               >
@@ -1275,8 +1281,8 @@ export function AiAssistantBetaPage() {
                     className={cn(
                       'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
                       assistantSettings.voiceMaxDurationSec === sec
-                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                        : 'hover:text-dark-500 text-gray-600'
+                        ? 'text-foreground bg-card ring-border/80 shadow-sm ring-1'
+                        : 'hover:text-foreground text-muted-foreground'
                     )}
                   >
                     {t('pages.aiAssistant.voiceSeconds', { count: sec })}
@@ -1288,12 +1294,12 @@ export function AiAssistantBetaPage() {
         </section>
 
         <section className="px-4 py-2.5">
-          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
+          <h3 className="text-foreground mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.contextBehavior')}
           </h3>
           <ul className="space-y-0">
             <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
+              <span className="text-foreground min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.useSelectedClientAutomatically')}
               </span>
               <ToggleSwitch
@@ -1304,8 +1310,8 @@ export function AiAssistantBetaPage() {
                 ariaLabel={t('pages.aiAssistant.useSelectedClientAutomatically')}
               />
             </li>
-            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
+            <li className="border-border flex items-center justify-between gap-3 border-t py-1.5">
+              <span className="text-foreground min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.useSelectedPeriodAutomatically')}
               </span>
               <ToggleSwitch
@@ -1316,8 +1322,8 @@ export function AiAssistantBetaPage() {
                 ariaLabel={t('pages.aiAssistant.useSelectedPeriodAutomatically')}
               />
             </li>
-            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
+            <li className="border-border flex items-center justify-between gap-3 border-t py-1.5">
+              <span className="text-foreground min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.rememberConversationContext')}
               </span>
               <ToggleSwitch
@@ -1332,12 +1338,12 @@ export function AiAssistantBetaPage() {
         </section>
 
         <section className="px-4 py-2.5">
-          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
+          <h3 className="text-foreground mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.suggestedActions')}
           </h3>
           <ul className="space-y-0">
             <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
+              <span className="text-foreground min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.autoScrollToLatestAnswer')}
               </span>
               <ToggleSwitch
@@ -1351,8 +1357,8 @@ export function AiAssistantBetaPage() {
           </ul>
         </section>
 
-        <section className="bg-light-50/40 px-4 py-2.5">
-          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
+        <section className="bg-muted/40 px-4 py-2.5">
+          <h3 className="text-foreground mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.advanced')}
           </h3>
           <button
@@ -1977,10 +1983,10 @@ export function AiAssistantBetaPage() {
     cn(
       'inline-flex min-h-7 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors',
       isChosen && 'border-primary-300 bg-primary-50 text-primary-700',
-      !isChosen && isGroupLocked && 'border-gray-100 bg-white text-gray-300',
+      !isChosen && isGroupLocked && 'border-border bg-card text-muted-foreground/60',
       !isChosen &&
         !isGroupLocked &&
-        'hover:border-primary-300 hover:text-primary-600 cursor-pointer border-gray-200 bg-white text-gray-500',
+        'hover:border-primary-300 hover:text-primary-600 cursor-pointer border-border bg-card text-muted-foreground',
       isGroupLocked && 'cursor-default'
     )
 
@@ -1999,7 +2005,7 @@ export function AiAssistantBetaPage() {
       >
         {isTtsLoading ? (
           <span
-            className="h-3.5 w-3.5 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            className="border-border h-3.5 w-3.5 animate-spin rounded-full border border-t-transparent"
             aria-hidden
           />
         ) : isTtsPlaying ? (
@@ -2038,7 +2044,7 @@ export function AiAssistantBetaPage() {
         >
           <Icons.ThumbsDown size={14} strokeWidth={1.5} />
         </button>
-        <span className="mx-0.5 h-4 w-px bg-gray-200" aria-hidden />
+        <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
         <button
           type="button"
           aria-pressed={feedback.comprehension === 'clear'}
@@ -2067,7 +2073,7 @@ export function AiAssistantBetaPage() {
       {renderTtsButton(item)}
       {item.serverMessageId != null && (
         <>
-          <span className="mx-0.5 h-4 w-px bg-gray-200" aria-hidden />
+          <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
           {renderFeedbackControls(item.serverMessageId)}
         </>
       )}
@@ -2104,11 +2110,11 @@ export function AiAssistantBetaPage() {
   const renderSourceRow = (label: string, items: string[]) =>
     items.length > 0 ? (
       <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-        <span className="text-[11px] font-medium text-gray-500">{label}</span>
+        <span className="text-muted-foreground text-[11px] font-medium">{label}</span>
         {items.map((item, index) => (
           <span
             key={index}
-            className="text-dark-500 bg-light-100 inline-flex max-w-full items-center rounded px-1.5 py-0.5 font-mono text-[10px] leading-snug"
+            className="text-foreground bg-muted inline-flex max-w-full items-center rounded px-1.5 py-0.5 font-mono text-[10px] leading-snug"
           >
             <span className="truncate">{item}</span>
           </span>
@@ -2120,10 +2126,10 @@ export function AiAssistantBetaPage() {
   const renderSources = (sources: AssistantSources) => (
     <div
       data-testid="assistant-sources"
-      className="border-light-200 bg-light-50/60 mt-2 w-full max-w-full space-y-1 rounded-xl border px-3 py-2"
+      className="border-border bg-muted/60 mt-2 w-full max-w-full space-y-1 rounded-xl border px-3 py-2"
     >
-      <div className="text-dark-500 flex items-center gap-1.5 text-[11px] font-semibold tracking-tight">
-        <Icons.Info size={13} strokeWidth={1.5} className="text-gray-500" />
+      <div className="text-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-tight">
+        <Icons.Info size={13} strokeWidth={1.5} className="text-muted-foreground" />
         {t('pages.aiAssistant.sourcesTitle')}
       </div>
       {renderSourceRow(t('pages.aiAssistant.sourcesTables'), sources.tables)}
@@ -2157,6 +2163,18 @@ export function AiAssistantBetaPage() {
   const activeSidebarConversationId = conversationId ?? storedConversationId
   const isVoiceActive =
     voiceStatus === 'listening' || dictationStatus !== 'idle' || recorderStatus === 'recording'
+
+  if (aiSettings?.assistant_enabled === false) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <div className="border-border bg-card max-w-md rounded-xl border p-6 text-center shadow-sm">
+          <div className="text-foreground text-sm font-medium">
+            {t('pages.aiSettings.disabledBanner')}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -2208,15 +2226,15 @@ export function AiAssistantBetaPage() {
           type="button"
           aria-label={t('pages.aiAssistant.historyOpenAria')}
           onClick={() => setIsHistoryDrawerOpen(true)}
-          className="border-light-200 text-dark-500 hover:bg-light-50 fixed top-[68px] left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border bg-white/95 shadow-md transition-colors lg:hidden"
+          className="border-border text-foreground hover:bg-muted bg-card/95 fixed top-[68px] left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-md transition-colors lg:hidden"
         >
           <Icons.MessageMultiple01 size={18} strokeWidth={1.5} />
         </button>
       )}
 
-      <div className="pointer-events-none sticky top-0 z-30 flex w-full justify-center px-3 pt-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50/95 px-3 py-1 text-[11px] font-medium text-amber-700 shadow-sm">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" aria-hidden />
+      <div className="pointer-events-none sticky top-0 z-1 flex w-full justify-center px-3 pt-2">
+        <span className="border-warning-200 bg-warning-100/95 text-warning-700 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium shadow-sm">
+          <span className="bg-warning-500 h-1.5 w-1.5 animate-pulse rounded-full" aria-hidden />
           {t('pages.aiAssistant.betaBadge')}
         </span>
       </div>
@@ -2253,8 +2271,8 @@ export function AiAssistantBetaPage() {
                           'max-w-full rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3',
                           hasReasoningSurface ? 'w-full' : 'w-fit',
                           item.role === 'user'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 border border-gray-100 bg-white',
+                            ? 'bg-secondary-800 text-secondary-foreground'
+                            : 'text-foreground border-border bg-card border',
                           (item.role === 'user' || item.isLoading || item.isError) &&
                             'whitespace-pre-wrap',
                           item.isError && 'border-error-200 bg-error-50/60 text-error-700'
@@ -2299,7 +2317,7 @@ export function AiAssistantBetaPage() {
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
                               {item.loadingLabel && (
-                                <span className="ml-1.5 text-xs font-light text-gray-500">
+                                <span className="text-muted-foreground ml-1.5 text-xs font-light">
                                   {item.loadingLabel}
                                 </span>
                               )}
@@ -2349,8 +2367,20 @@ export function AiAssistantBetaPage() {
           style={{ paddingBottom: `${dockHeight}px` }}
         >
           <div className="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 text-center sm:gap-5">
-            <img src="/logo.svg" alt={t('app.name')} className="mx-auto h-10 w-auto sm:h-12" />
-            <span className="text-dark-500 text-center text-2xl leading-[129%] font-light tracking-[-0.04em] sm:text-[28px] lg:text-[30px] lg:tracking-[-0.6px]">
+            <span className="relative inline-flex h-10 items-center sm:h-12">
+              <img
+                src="/logo-l.svg"
+                alt={t('app.name')}
+                className="sidebar-brand-logo-light h-10 w-auto sm:h-12"
+              />
+              <img
+                src="/logo.svg"
+                alt=""
+                aria-hidden
+                className="sidebar-brand-logo-dark h-10 w-auto sm:h-12"
+              />
+            </span>
+            <span className="text-foreground text-center text-2xl leading-[129%] font-light tracking-[-0.04em] sm:text-[28px] lg:text-[30px] lg:tracking-[-0.6px]">
               {t('pages.aiAssistant.greeting')}
             </span>
           </div>
@@ -2371,7 +2401,7 @@ export function AiAssistantBetaPage() {
           // content area (see dockGeometry.ts), so the input card and the
           // quick actions share one column centre with the message ribbon in
           // every sidebar combination. Mobile keeps the full-width box.
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          'pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
           getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
         )}
       >
@@ -2380,14 +2410,14 @@ export function AiAssistantBetaPage() {
             type="button"
             aria-label={t('pages.aiAssistant.scrollToLatestAria')}
             onClick={() => scrollToConversationBottom('smooth')}
-            className="border-light-200 text-dark-500 hover:bg-light-50 pointer-events-auto absolute -top-3 left-1/2 z-30 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors sm:-top-4"
+            className="border-border text-foreground hover:bg-muted bg-card pointer-events-auto absolute -top-3 left-1/2 z-30 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border shadow-md transition-colors sm:-top-4"
           >
             <Icons.ArrowDown size={16} strokeWidth={1.5} />
           </button>
         )}
         <div className="pointer-events-auto mx-auto w-full max-w-5xl min-w-0 2xl:max-w-6xl">
           <div
-            className="border-light-200 shadow-dark-500/5 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg sm:rounded-3xl sm:p-5"
+            className="border-border/60 bg-card/95 shadow-foreground/5 rounded-2xl border p-3 shadow-lg sm:rounded-3xl sm:p-5"
             onDragOver={(e) => {
               if (e.dataTransfer.types.includes('Files')) e.preventDefault()
             }}
@@ -2398,7 +2428,7 @@ export function AiAssistantBetaPage() {
                 {pendingImages.map((image) => (
                   <div
                     key={image.id}
-                    className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-white"
+                    className="border-border bg-card relative h-16 w-16 overflow-hidden rounded-lg border"
                   >
                     <img
                       src={image.previewUrl}
@@ -2435,7 +2465,7 @@ export function AiAssistantBetaPage() {
                 placeholder={dictationDraft ? '' : t('pages.aiAssistant.inputPlaceholder')}
                 className={cn(
                   'ai-chat-input-scrollbar max-h-[min(40vh,16rem)] min-h-[52px] resize-none overflow-y-auto border-0 bg-transparent py-2 pr-2 pl-1 text-sm shadow-none sm:max-h-none sm:min-h-[120px] sm:text-base',
-                  'placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0'
+                  'placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0'
                 )}
                 aria-label={t('pages.aiAssistant.inputPlaceholder')}
               />
@@ -2450,14 +2480,16 @@ export function AiAssistantBetaPage() {
                   className="ai-chat-input-scrollbar pointer-events-none absolute inset-0 max-h-[min(40vh,16rem)] min-h-[52px] overflow-y-auto py-2 pr-2 pl-1 text-sm font-light break-words whitespace-pre-wrap sm:max-h-none sm:min-h-[120px] sm:text-base"
                 >
                   <span className="text-transparent">{message}</span>
-                  <span className="text-gray-400">{(message ? ' ' : '') + dictationDraft}</span>
+                  <span className="text-muted-foreground">
+                    {(message ? ' ' : '') + dictationDraft}
+                  </span>
                 </div>
               )}
             </div>
 
             {voiceStatus === 'listening' && (
               <div
-                className="border-primary-200 bg-primary-50/60 text-dark-500 mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
+                className="border-primary-200 bg-primary-50/60 text-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
                 role="status"
                 aria-live="polite"
               >
@@ -2472,7 +2504,7 @@ export function AiAssistantBetaPage() {
 
             {voiceStatus !== 'listening' && dictationStatus !== 'idle' && (
               <div
-                className="border-primary-200 bg-primary-50/60 text-dark-500 mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
+                className="border-primary-200 bg-primary-50/60 text-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
                 role="status"
                 aria-live="polite"
               >
@@ -2487,7 +2519,7 @@ export function AiAssistantBetaPage() {
 
             {recorderStatus === 'recording' && (
               <div
-                className="border-error-200 bg-error-50/60 text-dark-500 mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
+                className="border-error-200 bg-error-50/60 text-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
                 role="status"
                 aria-live="polite"
               >
@@ -2495,7 +2527,7 @@ export function AiAssistantBetaPage() {
                 <span className="min-w-0 flex-1">
                   {t('pages.aiAssistant.voiceMessageRecording')}
                 </span>
-                <span className="shrink-0 font-mono text-[11px] text-gray-600 tabular-nums">
+                <span className="text-muted-foreground shrink-0 font-mono text-[11px] tabular-nums">
                   {formatRecordingTime(recorderElapsedSec)} /{' '}
                   {formatRecordingTime(assistantSettings.voiceMaxDurationSec)}
                 </span>
@@ -2503,7 +2535,7 @@ export function AiAssistantBetaPage() {
                   type="button"
                   aria-label={t('pages.aiAssistant.voiceMessageCancel')}
                   onClick={cancelVoiceMessage}
-                  className="hover:text-error-600 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-500 transition-colors"
+                  className="hover:text-error-600 text-muted-foreground flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
                 >
                   <Icons.Cancel01 size={14} strokeWidth={1.5} />
                 </button>
@@ -2511,7 +2543,7 @@ export function AiAssistantBetaPage() {
                   type="button"
                   aria-label={t('pages.aiAssistant.voiceMessageSend')}
                   onClick={stopVoiceMessage}
-                  className="bg-primary-500 hover:bg-primary-600 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
+                  className="bg-primary-500 hover:bg-primary-600 text-primary-foreground flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
                 >
                   <Icons.MailSend01 size={14} strokeWidth={1.5} />
                 </button>
@@ -2550,12 +2582,10 @@ export function AiAssistantBetaPage() {
                     type="button"
                     onClick={() => setIsSettingsOpen((open) => !open)}
                     aria-expanded={isSettingsOpen}
-                    className="text-dark-500 hover:text-primary-600 flex min-h-9 cursor-pointer items-center gap-2 text-sm font-light transition-colors"
+                    aria-label={t('pages.aiAssistant.settings')}
+                    className="text-muted-foreground hover:text-primary-600 border-border bg-card flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors sm:h-7 sm:w-7"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-7 sm:w-7">
-                      <Icons.Settings size={16} strokeWidth={1.5} />
-                    </span>
-                    <span className="hidden sm:inline">{t('pages.aiAssistant.settings')}</span>
+                    <Icons.Settings size={16} strokeWidth={1.5} />
                   </button>
                   {!isMobileOrTablet && isSettingsOpen && (
                     <div
@@ -2574,23 +2604,19 @@ export function AiAssistantBetaPage() {
                   value={clientScope}
                   onChange={setClientScope}
                   options={clientOptions}
-                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
                 <AssistFilterDropdown
                   ariaLabel={t('pages.aiAssistant.period')}
                   value={period}
                   onChange={setPeriod}
                   options={periodOptions}
-                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
 
                 {/* Reasoning-mode picker (source of truth for `mode`). */}
-                <div className="min-w-0 flex-1 sm:flex-none">
-                  <ModeDropdown
-                    value={assistantSettings.mode}
-                    onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
-                  />
-                </div>
+                <ModeDropdown
+                  value={assistantSettings.mode}
+                  onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                />
 
                 <button
                   type="button"
@@ -2614,32 +2640,27 @@ export function AiAssistantBetaPage() {
                     }
                   }}
                   className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full shadow-md transition-colors sm:h-9 sm:w-9',
-                    !assistantSettings.voiceInputEnabled && 'cursor-not-allowed bg-gray-200',
+                    'flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border transition-colors sm:h-9 sm:w-9',
+                    !assistantSettings.voiceInputEnabled &&
+                      'border-border bg-muted text-muted-foreground cursor-not-allowed',
                     assistantSettings.voiceInputEnabled &&
                       !isVoiceActive &&
-                      'bg-primary-300 hover:bg-primary-500 cursor-pointer',
+                      'border-border bg-card text-muted-foreground hover:border-primary-300 hover:text-primary-600 cursor-pointer',
                     assistantSettings.voiceInputEnabled &&
                       isVoiceActive &&
-                      'bg-error-500 hover:bg-error-600 cursor-pointer ring-2 ring-red-400/60 ring-offset-2'
+                      'border-error-500 bg-error-500 hover:bg-error-600 ring-offset-background cursor-pointer text-white ring-2 ring-red-400/60 ring-offset-2'
                   )}
                 >
                   {isVoiceActive ? (
-                    <Icons.Pause size={18} strokeWidth={1.5} className="text-white" />
+                    <Icons.Pause size={18} strokeWidth={1.5} />
                   ) : (
-                    <Icons.Mic02
-                      size={20}
-                      strokeWidth={1}
-                      className={
-                        assistantSettings.voiceInputEnabled ? 'text-dark-500' : 'text-gray-400'
-                      }
-                    />
+                    <Icons.Mic02 size={20} strokeWidth={1} />
                   )}
                 </button>
               </div>
             </div>
             {/* Enter-to-send hint is keyboard-only guidance — pointless on touch. */}
-            <p className="mt-2 hidden text-center text-[11px] leading-snug text-gray-400 sm:block sm:text-right">
+            <p className="text-muted-foreground mt-2 hidden text-center text-[11px] leading-snug sm:block sm:text-right">
               {t('pages.aiAssistant.inputHint')}
             </p>
           </div>
@@ -2656,7 +2677,7 @@ export function AiAssistantBetaPage() {
             className="absolute inset-0 bg-black/30"
             onClick={() => setIsHistoryDrawerOpen(false)}
           />
-          <div className="absolute top-0 bottom-0 left-0 flex w-[min(85vw,20rem)] flex-col bg-white shadow-2xl">
+          <div className="bg-card absolute top-0 bottom-0 left-0 flex w-[min(85vw,20rem)] flex-col shadow-2xl">
             <ConversationSidebar
               variant="drawer"
               activeConversationId={activeSidebarConversationId}
@@ -2677,9 +2698,9 @@ export function AiAssistantBetaPage() {
             className="absolute inset-0 bg-black/30"
             onClick={() => setIsSettingsOpen(false)}
           />
-          <div className="bg-light-50/95 absolute right-0 bottom-0 left-0 max-h-[90vh] overflow-auto rounded-t-2xl px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
+          <div className="bg-muted/95 absolute right-0 bottom-0 left-0 max-h-[90vh] overflow-auto rounded-t-2xl px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
             <div
-              className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-gray-300/90"
+              className="bg-muted-foreground/30 mx-auto mb-3 h-1 w-10 shrink-0 rounded-full"
               aria-hidden
             />
             <div className="mx-auto w-full max-w-lg pb-1">{settingsPanel}</div>

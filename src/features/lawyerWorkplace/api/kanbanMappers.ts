@@ -9,6 +9,7 @@ import {
   isLegalDueDateOverdue,
   legalDefaultDueDateIso,
   legalOverdueDueDateIso,
+  resolveLegalTimezone,
 } from '../utils/legalDueDate'
 import type { LegalKanbanTaskItem, LegalLawyer } from './types'
 
@@ -49,17 +50,18 @@ export type LegalKanbanTaskPatch = {
 
 export function buildKanbanColumnMovePatch(
   task: KanbanTask,
-  targetColumnId: KanbanColumnId
+  targetColumnId: KanbanColumnId,
+  timezone?: string | null
 ): LegalKanbanTaskPatch {
   const patch: LegalKanbanTaskPatch = { columnId: targetColumnId }
 
   if (targetColumnId === 'overdue') {
-    if (!task.deadline || !isLegalDueDateOverdue(task.deadline)) {
-      patch.deadline = legalOverdueDueDateIso()
+    if (!task.deadline || !isLegalDueDateOverdue(task.deadline, timezone)) {
+      patch.deadline = legalOverdueDueDateIso(timezone)
     }
   } else if (targetColumnId === 'in_progress') {
-    if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
-      patch.deadline = legalDefaultDueDateIso()
+    if (!task.deadline || isLegalDueDateOverdue(task.deadline, timezone)) {
+      patch.deadline = legalDefaultDueDateIso(timezone)
     }
   } else if (targetColumnId === 'not_defined') {
     patch.clearLetterType = true
@@ -80,13 +82,14 @@ export function mapKanbanColumnToTaskStatus(columnId: KanbanColumnId): string {
   }
 }
 
-function overdueDueDateIso(): string {
-  return legalOverdueDueDateIso()
+function overdueDueDateIso(timezone?: string | null): string {
+  return legalOverdueDueDateIso(timezone)
 }
 
 export function mapKanbanPatchToTaskUpdate(
   patch: LegalKanbanTaskPatch,
-  task: KanbanTask
+  task: KanbanTask,
+  timezone?: string | null
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
@@ -97,13 +100,13 @@ export function mapKanbanPatchToTaskUpdate(
   if (patch.columnId) {
     payload.status = mapKanbanColumnToTaskStatus(patch.columnId)
     if (patch.columnId === 'overdue' && patch.deadline === undefined) {
-      if (!task.deadline || !isLegalDueDateOverdue(task.deadline)) {
-        payload.due_date = overdueDueDateIso()
+      if (!task.deadline || !isLegalDueDateOverdue(task.deadline, timezone)) {
+        payload.due_date = overdueDueDateIso(timezone)
       }
     }
     if (patch.columnId === 'in_progress' && patch.deadline === undefined) {
-      if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
-        payload.due_date = legalDefaultDueDateIso()
+      if (!task.deadline || isLegalDueDateOverdue(task.deadline, timezone)) {
+        payload.due_date = legalDefaultDueDateIso(timezone)
       }
     }
   }
@@ -138,7 +141,8 @@ export function mapKanbanPatchToMetadataPayload(
 export function applyKanbanTaskPatch(
   task: KanbanTask,
   patch: LegalKanbanTaskPatch,
-  lawyers: LegalLawyer[] = []
+  lawyers: LegalLawyer[] = [],
+  timezone?: string | null
 ): KanbanTask {
   let next: KanbanTask = { ...task }
 
@@ -151,13 +155,13 @@ export function applyKanbanTaskPatch(
     }
     if (patch.columnId === 'overdue' && patch.deadline === undefined) {
       const currentDue = task.deadline ? new Date(task.deadline) : null
-      if (!currentDue || !isLegalDueDateOverdue(task.deadline)) {
-        next.deadline = legalOverdueDueDateIso()
+      if (!currentDue || !isLegalDueDateOverdue(task.deadline, timezone)) {
+        next.deadline = legalOverdueDueDateIso(timezone)
       }
     }
     if (patch.columnId === 'in_progress' && patch.deadline === undefined) {
-      if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
-        next.deadline = legalDefaultDueDateIso()
+      if (!task.deadline || isLegalDueDateOverdue(task.deadline, timezone)) {
+        next.deadline = legalDefaultDueDateIso(timezone)
       }
     }
     if (patch.columnId === 'not_defined' || patch.clearLetterType) {
@@ -243,14 +247,18 @@ function resolveTaskType(letterTypeId: string | null | undefined): KanbanTaskTyp
   return 'type_pending'
 }
 
-function resolveKanbanColumn(item: LegalKanbanTaskItem, taskType: KanbanTaskType): KanbanColumnId {
+function resolveKanbanColumn(
+  item: LegalKanbanTaskItem,
+  taskType: KanbanTaskType,
+  timezone?: string | null
+): KanbanColumnId {
   if (item.status === 'completed' || item.status === 'cancelled') {
     return 'completed'
   }
   if (taskType === 'unclassified' || taskType === 'type_pending') {
     return 'not_defined'
   }
-  if (item.is_overdue || isLegalDueDateOverdue(item.due_date)) {
+  if (item.is_overdue || isLegalDueDateOverdue(item.due_date, timezone)) {
     return 'overdue'
   }
   return 'in_progress'
@@ -258,7 +266,8 @@ function resolveKanbanColumn(item: LegalKanbanTaskItem, taskType: KanbanTaskType
 
 export function mapLegalKanbanItemToTask(
   item: LegalKanbanTaskItem,
-  lawyers: LegalLawyer[]
+  lawyers: LegalLawyer[],
+  timezone?: string | null
 ): KanbanTask {
   const taskType = resolveTaskType(item.letter_type_id)
   const assignee = resolveLawyerMeta(lawyers, item.assigned_to_user_id, item.assigned_to_username)
@@ -276,32 +285,19 @@ export function mapLegalKanbanItemToTask(
     assigneeInitials: assignee.initials,
     assigneeName: assignee.name,
     assigneeUserId: item.assigned_to_user_id ?? null,
-    columnId: resolveKanbanColumn(item, taskType),
+    columnId: resolveKanbanColumn(item, taskType, timezone),
     letterId: item.message_id,
     letterTypeId: item.letter_type_id ?? null,
+    legalTaskId: item.task_id,
+    letterCount: item.letter_count ?? 1,
   }
 }
 
-function startOfDay(date: Date): Date {
-  const next = new Date(date)
-  next.setHours(0, 0, 0, 0)
-  return next
-}
-
-function endOfWeek(date: Date): Date {
-  const next = startOfDay(date)
-  const day = next.getDay()
-  const mondayOffset = day === 0 ? -6 : 1 - day
-  next.setDate(next.getDate() + mondayOffset + 6)
-  next.setHours(23, 59, 59, 999)
-  return next
-}
-
-function endOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999)
-}
-
-export function matchesDeadlineFilter(task: KanbanTask, filter: DeadlineFilter): boolean {
+export function matchesDeadlineFilter(
+  task: KanbanTask,
+  filter: DeadlineFilter,
+  timezone?: string | null
+): boolean {
   if (filter === 'all') {
     return true
   }
@@ -317,17 +313,39 @@ export function matchesDeadlineFilter(task: KanbanTask, filter: DeadlineFilter):
     return false
   }
 
-  const now = new Date()
+  const tz = resolveLegalTimezone(timezone)
+  const formatDay = (value: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(value)
+
+  const dueKey = formatDay(due)
+  const nowKey = formatDay(new Date())
+  const [ny, nm, nd] = nowKey.split('-').map(Number)
+  const [dy, dm, dd] = dueKey.split('-').map(Number)
+  const nowDay = Date.UTC(ny, nm - 1, nd)
+  const dueDay = Date.UTC(dy, dm - 1, dd)
+
   if (filter === 'this_week') {
-    return due >= startOfDay(now) && due <= endOfWeek(now)
+    const nowDate = new Date(nowDay)
+    const day = nowDate.getUTCDay()
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const weekStart = nowDay + mondayOffset * 86_400_000
+    const weekEnd = weekStart + 6 * 86_400_000
+    return dueDay >= weekStart && dueDay <= weekEnd
   }
 
-  return due >= startOfDay(now) && due <= endOfMonth(now)
+  const monthEnd = Date.UTC(ny, nm, 0)
+  return dueDay >= nowDay && dueDay <= monthEnd
 }
 
 export function mapLegalKanbanItems(
   items: LegalKanbanTaskItem[],
-  lawyers: LegalLawyer[]
+  lawyers: LegalLawyer[],
+  timezone?: string | null
 ): KanbanTask[] {
-  return items.map((item) => mapLegalKanbanItemToTask(item, lawyers))
+  return items.map((item) => mapLegalKanbanItemToTask(item, lawyers, timezone))
 }

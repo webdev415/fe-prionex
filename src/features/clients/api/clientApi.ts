@@ -26,6 +26,7 @@ import type {
   CreateContactRequest,
   CreateRestructuringAgreementRequest,
   GetClientsParams,
+  LoanCalculation,
   ManualPriorityRequest,
   PaginatedClientResponse,
   RestructuringAgreementDetail,
@@ -324,6 +325,20 @@ export async function getRestructuringAgreementDetail(
 }
 
 /**
+ * Get the detailed calculation (after sale) for a single loan (KAN-335).
+ * Chronological per-event-date balance history for the modal table.
+ */
+export async function getLoanCalculation(
+  clientId: number,
+  debtId: number
+): Promise<LoanCalculation> {
+  const response = await api.get<LoanCalculation>(
+    `${BASE_URL}/${clientId}/debts/${debtId}/detailed-calculation`
+  )
+  return response.data
+}
+
+/**
  * Create a restructuring agreement for a client
  */
 export async function createRestructuringAgreement(
@@ -606,6 +621,7 @@ export const clientApi = {
   updatePassport,
   getClientRestructuringAgreements,
   getRestructuringAgreementDetail,
+  getLoanCalculation,
   createRestructuringAgreement,
   closeDebt,
   reopenDebt,

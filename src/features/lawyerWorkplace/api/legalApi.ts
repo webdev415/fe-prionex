@@ -5,6 +5,7 @@ import type {
   LegalKanbanResponse,
   LegalKanbanTaskCreateRequest,
   LegalKanbanTaskCreateResponse,
+  LegalTaskLettersResponse,
   LegalLawyer,
   LegalLawyerCreate,
   LegalLawyerListResponse,
@@ -53,6 +54,7 @@ import type {
   LegalReplyDraftUpsert,
   LegalStagedAttachment,
   LegalStagedAttachmentListResponse,
+  LegalSenderHistoryResponse,
   LegalSettingsMailbox,
   LegalSettingsMailboxListResponse,
 } from './types'
@@ -93,6 +95,12 @@ export const legalApi = {
   getThread(threadId: string, params?: { include_quarantined?: boolean }) {
     return api
       .get<LegalThreadDetail>(`${BASE_URL}/threads/${threadId}`, { params })
+      .then((response) => response.data)
+  },
+
+  getSenderHistory(messageId: string) {
+    return api
+      .get<LegalSenderHistoryResponse>(`${BASE_URL}/messages/${messageId}/sender-history`)
       .then((response) => response.data)
   },
 
@@ -143,6 +151,12 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
+  listTaskLetters(legalTaskId: number) {
+    return api
+      .get<LegalTaskLettersResponse>(`${BASE_URL}/tasks/${legalTaskId}/letters`)
+      .then((response) => response.data)
+  },
+
   createKanbanTask(payload: LegalKanbanTaskCreateRequest) {
     return api
       .post<LegalKanbanTaskCreateResponse>(`${BASE_URL}/kanban/tasks`, payload)
@@ -167,9 +181,15 @@ export const legalApi = {
 
   transitionKanbanTask(
     taskId: number,
-    payload: { target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed' }
+    payload: {
+      target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed'
+      timezone?: string
+    }
   ) {
-    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, payload)
+    const { timezone, ...body } = payload
+    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, body, {
+      params: timezone ? { timezone } : undefined,
+    })
   },
 
   listDocuments(params: LegalDocumentListParams = {}) {
@@ -191,6 +211,8 @@ export const legalApi = {
     assigned_to_user_id?: number
     contract_number?: string | null
     related_letter_number?: string | null
+    sender_email?: string | null
+    summary?: string | null
   }) {
     const formData = new FormData()
     formData.append('file', payload.file)
@@ -204,6 +226,12 @@ export const legalApi = {
     }
     if (payload.related_letter_number) {
       formData.append('related_letter_number', payload.related_letter_number)
+    }
+    if (payload.sender_email) {
+      formData.append('sender_email', payload.sender_email)
+    }
+    if (payload.summary) {
+      formData.append('summary', payload.summary)
     }
     return api
       .post<LegalDocumentResponse>(`${DOCUMENTS_URL}/incoming`, formData, {

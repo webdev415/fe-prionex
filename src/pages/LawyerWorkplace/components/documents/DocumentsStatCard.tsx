@@ -16,7 +16,7 @@ export function DocumentsStatCard({
   compact,
 }: DocumentsStatCardProps) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4">
+    <div className="border-card bg-card flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-3 shadow-sm sm:px-4">
       <div
         className={cn(
           'flex shrink-0 items-center justify-center rounded-lg',
@@ -27,12 +27,12 @@ export function DocumentsStatCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-light-600 truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
+        <p className="text-muted-foreground truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
           {label}
         </p>
         <p
           className={cn(
-            'text-dark-500 truncate leading-tight font-light',
+            'text-foreground truncate leading-tight font-light',
             compact ? 'text-base' : 'text-[18px]'
           )}
         >

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useTaskHistory, useWeeklyBucket } from '@/features/training/hooks/useTaskHistory'
 import type { TaskHistoryItem, WeeklyBucket, WeeklyDowKey } from '@/features/training/types'
@@ -41,19 +42,25 @@ const STATUS_TONE: Record<TaskStatus, string> = {
   completed: 'bg-emerald-100 text-emerald-700',
 }
 
-const STATUS_LABEL: Record<TaskStatus, string> = {
+type TFn = (key: string, fallback: string) => string
+
+const STATUS_EN: Record<TaskStatus, string> = {
   open: 'Open',
   in_progress: 'In progress',
   overdue: 'Overdue',
   completed: 'Completed',
 }
+const statusLabel = (t: TFn, s: TaskStatus) =>
+  t(`pages.training.weeklyTasks.status.${s}`, STATUS_EN[s])
 
-const PRIORITY_LABEL: Record<TaskPriority, string> = {
+const PRIORITY_EN: Record<TaskPriority, string> = {
   critical: 'Critical',
   high: 'High',
   medium: 'Medium',
   low: 'Low',
 }
+const priorityLabel = (t: TFn, p: TaskPriority) =>
+  t(`pages.training.weeklyTasks.priority.${p}`, PRIORITY_EN[p])
 
 /** Chili count per priority — Figma uses 3/2/1 chili icons as intensity indicator. */
 const PRIORITY_CHILIS: Record<TaskPriority, number> = {
@@ -65,16 +72,8 @@ const PRIORITY_CHILIS: Record<TaskPriority, number> = {
 
 /** Mon-first day-of-week keys + the six tiles the Figma strip renders (Mon–Sat). */
 const DOW_KEYS: WeeklyDowKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-const DAY_FULL_LABELS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-]
-const DAY_SHORT_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_FULL_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const DAY_SHORT_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const VISIBLE_DAY_COUNT = 6 // Mon–Sat, matching the Figma frame
 
 /** BE priority vocabulary (low/normal/high/urgent/critical) → Figma chili scale. */
@@ -113,14 +112,17 @@ interface WeeklyTaskRow {
 
 /** Parse a naive ISO due_date string directly (no timezone math — the BE stores
  *  naive UTC and the Figma table shows the stored wall-clock). */
-function toRow(item: TaskHistoryItem): WeeklyTaskRow {
+function toRow(item: TaskHistoryItem, language: string): WeeklyTaskRow {
   const iso = item.due_date ?? item.created_at ?? ''
   const [datePart = '', timePart = ''] = iso.split('T')
-  const [, mm = '', dd = ''] = datePart.split('-')
+  const [yyyy = '', mm = '', dd = ''] = datePart.split('-')
   const hhmm = timePart.slice(0, 5)
   return {
     id: item.id,
-    dateLabel: mm && dd ? `${mm}/${dd}` : '—',
+    // Reorder the stored wall-clock month/day by locale without any timezone
+    // math — build a local Date from the parsed parts, then format.
+    dateLabel:
+      mm && dd ? formatMonthDay(new Date(Number(yyyy), Number(mm) - 1, Number(dd)), language) : '—',
     timeLabel: hhmm,
     title: item.subject_name ?? item.title,
     executor: item.assigned_to_username ?? '—',
@@ -171,7 +173,7 @@ function ChiliIcon({ size = 14, className = '' }: { size?: number; className?: s
 }
 
 export function WeeklyTasksSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [page, setPage] = useState(1)
@@ -218,17 +220,20 @@ export function WeeklyTasksSubTab() {
       const overdue = bucket?.day_overdue[key] ?? 0
       const status: WeeklyDayStatus = overdue > 0 ? 'overdue' : count > 0 ? 'healthy' : 'none'
       return {
-        label: DAY_SHORT_LABELS[i],
-        fullLabel: DAY_FULL_LABELS[i],
-        dateLabel: `${pad2(dayDate.getMonth() + 1)}/${pad2(dayDate.getDate())}`,
+        label: t(`pages.training.weeklyTasks.days.short.${key}`, DAY_SHORT_EN[i]),
+        fullLabel: t(`pages.training.weeklyTasks.days.full.${key}`, DAY_FULL_EN[i]),
+        dateLabel: formatMonthDay(dayDate, i18n.language),
         isToday: dayDate.getTime() === today.getTime(),
         count,
         status,
       }
     })
-  }, [bucket, weekStart])
+  }, [bucket, weekStart, t, i18n.language])
 
-  const rows = useMemo(() => (history?.items ?? []).map(toRow), [history])
+  const rows = useMemo(
+    () => (history?.items ?? []).map((item) => toRow(item, i18n.language)),
+    [history, i18n.language]
+  )
 
   const filteredRows = rows.filter((row) => statusFilter === 'all' || row.status === statusFilter)
 
@@ -311,7 +316,8 @@ export function WeeklyTasksSubTab() {
       <div className="flex flex-wrap items-center gap-2">
         {(['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => {
           const isActive = statusFilter === s
-          const label = s === 'all' ? 'All tasks' : STATUS_LABEL[s]
+          const label =
+            s === 'all' ? t('pages.training.weeklyTasks.allTasks', 'All tasks') : statusLabel(t, s)
           const count = s === 'all' ? rows.length : rows.filter((row) => row.status === s).length
           return (
             <button
@@ -395,6 +401,7 @@ export function WeeklyTasksSubTab() {
 }
 
 function TaskRow({ task }: { task: WeeklyTaskRow }) {
+  const { t } = useTranslation('common')
   const chiliCount = PRIORITY_CHILIS[task.priority]
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
@@ -413,22 +420,22 @@ function TaskRow({ task }: { task: WeeklyTaskRow }) {
         {chiliCount > 0 ? (
           <span
             className="inline-flex items-center gap-0.5 text-[#EF4444]"
-            title={PRIORITY_LABEL[task.priority]}
-            aria-label={PRIORITY_LABEL[task.priority]}
+            title={priorityLabel(t, task.priority)}
+            aria-label={priorityLabel(t, task.priority)}
           >
             {Array.from({ length: chiliCount }).map((_, i) => (
               <ChiliIcon key={i} size={14} />
             ))}
           </span>
         ) : (
-          <span className="text-[11px] text-[#9CA3AF]">{PRIORITY_LABEL[task.priority]}</span>
+          <span className="text-[11px] text-[#9CA3AF]">{priorityLabel(t, task.priority)}</span>
         )}
       </td>
       <td className={ANALYTICS_TABLE_TD}>
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}
         >
-          {STATUS_LABEL[task.status]}
+          {statusLabel(t, task.status)}
         </span>
       </td>
     </tr>

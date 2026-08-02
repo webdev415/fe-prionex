@@ -2,6 +2,11 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import {
+  formatDate as formatLocaleDate,
+  formatDateTime as formatLocaleDateTime,
+  formatNumber,
+} from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { usePromisesAndCallbacks } from '@/features/training/hooks/usePromisesAndCallbacks'
@@ -98,34 +103,28 @@ function deriveInitials(fullName: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mn = String(d.getMinutes()).padStart(2, '0')
-  return `${dd}/${mm}/${d.getFullYear()} ${hh}:${mn}`
+  return formatLocaleDateTime(d, language)
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, language: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${dd}/${mm}/${d.getFullYear()}`
+  return formatLocaleDate(d, language)
 }
 
-function formatAmount(raw: string | null | undefined): string {
+function formatAmount(raw: string | null | undefined, language: string): string {
   if (raw == null) return '0'
   const n = Number(raw)
   if (!Number.isFinite(n)) return String(raw)
-  return n.toLocaleString()
+  return formatNumber(n, language)
 }
 
 export function PromisesAndCallbacksSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [period, setPeriod] = useState<PeriodOption>('today')
   const [priorityFilter, setPriorityFilter] = useState<'all' | PromisePriority>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -171,14 +170,14 @@ export function PromisesAndCallbacksSubTab() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.total', 'Total promises')}
-          value={`${formatAmount(cards?.total_promises_amount)} ₴`}
+          value={`${formatAmount(cards?.total_promises_amount, i18n.language)} ₴`}
           icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.paid', 'Paid')}
-          value={`${formatAmount(cards?.paid_amount)} ₴`}
+          value={`${formatAmount(cards?.paid_amount, i18n.language)} ₴`}
           valueTone="text-emerald-600"
           icon={<Icons.Wallet01 size={18} />}
           iconBg="bg-[#ECFDF5]"
@@ -194,7 +193,7 @@ export function PromisesAndCallbacksSubTab() {
         />
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.pending', 'Pending')}
-          value={`${formatAmount(cards?.pending_amount)} ₴`}
+          value={`${formatAmount(cards?.pending_amount, i18n.language)} ₴`}
           valueTone="text-amber-600"
           icon={<Icons.Clock01 size={18} />}
           iconBg="bg-[#FEFCE8]"
@@ -357,7 +356,7 @@ export function PromisesAndCallbacksSubTab() {
 }
 
 function PromiseRow({ row }: { row: PromiseCallbackItem }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
   const isOverdue = row.status === 'overdue'
   const rowTint = isOverdue ? 'bg-[#FEF2F2]' : ''
@@ -366,7 +365,7 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
   const statusLabel = STATUS_LABEL[row.status]
   return (
     <tr className={`${ANALYTICS_TABLE_ROW} ${rowTint}`}>
-      <td className={ANALYTICS_TABLE_TD}>{formatDateTime(row.interaction_date)}</td>
+      <td className={ANALYTICS_TABLE_TD}>{formatDateTime(row.interaction_date, i18n.language)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
           {initials ? (
@@ -392,10 +391,12 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {row.promise_to_pay_amount != null ? `${formatAmount(row.promise_to_pay_amount)} ₴` : '—'}
+        {row.promise_to_pay_amount != null
+          ? `${formatAmount(row.promise_to_pay_amount, i18n.language)} ₴`
+          : '—'}
       </td>
       <td className={`${ANALYTICS_TABLE_TD} ${isOverdue ? 'font-medium text-[#EF4444]' : ''}`}>
-        {formatDate(row.payment_term_date)}
+        {formatDate(row.payment_term_date, i18n.language)}
       </td>
       <td className={ANALYTICS_TABLE_TD}>
         <span

@@ -6,6 +6,7 @@
  */
 
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HexColorPicker } from 'react-colorful'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
@@ -44,6 +45,8 @@ export const ColorPickerField = memo(function ColorPickerField({
   showPreview = true,
   previewText = 'Tag Name',
 }: ColorPickerFieldProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className="space-y-2">
       {label && <Label>{label}</Label>}
@@ -80,7 +83,7 @@ export const ColorPickerField = memo(function ColorPickerField({
           {/* Hex Input */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="hex-input" className="text-xs">
-              Hex Code
+              {t('components.colorPicker.hexCode', 'Hex Code')}
             </Label>
             <div className="w-28">
               <Input
@@ -107,7 +110,7 @@ export const ColorPickerField = memo(function ColorPickerField({
           {/* Preview Badge */}
           {showPreview && (
             <div className="flex flex-col gap-2">
-              <Label className="text-xs">Preview</Label>
+              <Label className="text-xs">{t('components.colorPicker.preview', 'Preview')}</Label>
               <div
                 className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
                 style={{

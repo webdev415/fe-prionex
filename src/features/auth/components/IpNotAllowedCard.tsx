@@ -16,7 +16,7 @@ export function IpNotAllowedCard({ onBackToLogin }: IpNotAllowedCardProps) {
   return (
     <div className="w-full">
       <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
-        <h1 className="sm:text-display-xs md:text-display-sm text-dark-500 text-xl font-medium">
+        <h1 className="sm:text-display-xs md:text-display-sm text-foreground text-xl font-medium">
           {t('ipNotAllowed.title')}
         </h1>
       </div>
@@ -27,7 +27,7 @@ export function IpNotAllowedCard({ onBackToLogin }: IpNotAllowedCardProps) {
           {t('ipNotAllowed.message')}
         </span>
 
-        <div className="text-body-xs sm:text-body-sm flex flex-col items-center space-y-1 px-2 text-center text-gray-800 sm:space-y-0 sm:px-0">
+        <div className="text-body-xs sm:text-body-sm text-muted-foreground flex flex-col items-center space-y-1 px-2 text-center sm:space-y-0 sm:px-0">
           <span>{t('ipNotAllowed.contact')}</span>
         </div>
 

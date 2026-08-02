@@ -86,7 +86,7 @@ export function EditTrainingExampleModal({
       />
       <ModalContent className="flex flex-col gap-4 px-1">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-medium">
+          <Label className="text-foreground text-[12px] font-medium">
             {t('pages.lawyerWorkplace.settings.letterTypes.exampleTitle', 'Title')}
           </Label>
           <input
@@ -97,12 +97,12 @@ export function EditTrainingExampleModal({
               'pages.lawyerWorkplace.settings.letterTypes.exampleTitlePlaceholder',
               'e.g. Late-payment interest complaint'
             )}
-            className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input h-11 w-full rounded-xl border px-3 text-[13px] outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-medium">
+          <Label className="text-foreground text-[12px] font-medium">
             {t(
               'pages.lawyerWorkplace.settings.letterTypes.exampleBody',
               'Letter content (paste from archive)'
@@ -116,16 +116,16 @@ export function EditTrainingExampleModal({
               'pages.lawyerWorkplace.settings.letterTypes.exampleBodyPlaceholder',
               'Paste the full letter text here...'
             )}
-            className="text-dark-500 focus:border-primary-400 w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[13px] outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input w-full resize-y rounded-xl border px-3 py-2.5 text-[13px] outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-medium">
+          <Label className="text-foreground text-[12px] font-medium">
             {t('pages.lawyerWorkplace.settings.letterTypes.exampleSource', 'Sender')}
           </Label>
           <div className="relative">
-            <span className="text-light-600 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[13px]">
+            <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[13px]">
               {t('pages.lawyerWorkplace.settings.letterTypes.exampleSourcePrefix', 'from')}
             </span>
             <input
@@ -136,7 +136,7 @@ export function EditTrainingExampleModal({
                 'pages.lawyerWorkplace.settings.letterTypes.exampleSourcePlaceholder',
                 'I. Petrenko'
               )}
-              className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white py-2 pr-3 pl-12 text-[13px] outline-none"
+              className="text-foreground focus:border-primary-400 border-border bg-input h-11 w-full rounded-xl border py-2 pr-3 pl-12 text-[13px] outline-none"
             />
           </div>
         </div>

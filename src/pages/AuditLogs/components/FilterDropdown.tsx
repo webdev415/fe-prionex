@@ -124,21 +124,21 @@ export function FilterDropdown({
           align="start"
           sideOffset={8}
           style={{ width: triggerWidth ? `${triggerWidth}px` : undefined }}
-          className="max-w-[calc(100vw-2rem)] rounded-md border border-gray-200 bg-white p-0 shadow-lg sm:max-w-none"
+          className="border-border bg-card max-w-[calc(100vw-2rem)] rounded-md border p-0 shadow-lg sm:max-w-none"
         >
           {/* Search Input */}
-          <div className="border-b border-gray-200 p-3">
+          <div className="border-border border-b p-3">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-10 text-sm outline-none placeholder:text-gray-400"
+                className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 pr-10 text-sm outline-none"
               />
               <Icons.Search
                 size={16}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
+                className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 strokeWidth={1.5}
               />
             </div>
@@ -147,11 +147,13 @@ export function FilterDropdown({
           {/* Items List */}
           <div className="max-h-[200px] overflow-y-auto sm:max-h-[300px]">
             {filteredItems.length === 0 && searchQuery ? (
-              <div className="py-4 text-center text-sm text-gray-500">{noItemsFoundLabel}</div>
+              <div className="text-muted-foreground py-4 text-center text-sm">
+                {noItemsFoundLabel}
+              </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-border divide-y">
                 {/* All Items Option */}
-                <label className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
+                <label className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-3 px-3 py-2.5">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={() => handleToggleItem('all')}
@@ -163,7 +165,7 @@ export function FilterDropdown({
                 {filteredItems.map((item) => (
                   <label
                     key={item}
-                    className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50"
+                    className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-3 px-3 py-2.5"
                   >
                     <Checkbox
                       checked={isItemSelected(item)}

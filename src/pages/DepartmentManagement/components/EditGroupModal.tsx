@@ -68,8 +68,8 @@ export function EditGroupModal({ open, groupId, onClose, onSuccess }: EditGroupM
     <Modal open={open} onClose={handleClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.PencilEdit size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.groups.modals.edit.title')}
@@ -83,7 +83,7 @@ export function EditGroupModal({ open, groupId, onClose, onSuccess }: EditGroupM
             <div className="space-y-6">
               <div>
                 <Label>{t('pages.groups.forms.department')}</Label>
-                <div className="mt-2 text-gray-900">{group.department_name || '—'}</div>
+                <div className="text-foreground mt-2">{group.department_name || '—'}</div>
               </div>
               <div>
                 <Label htmlFor="edit-group-name" required>
@@ -118,7 +118,9 @@ export function EditGroupModal({ open, groupId, onClose, onSuccess }: EditGroupM
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-600">{t('pages.groups.modals.edit.failedToLoad')}</p>
+            <p className="text-muted-foreground text-sm">
+              {t('pages.groups.modals.edit.failedToLoad')}
+            </p>
           )}
         </ModalContent>
         <ModalFooter>

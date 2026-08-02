@@ -84,6 +84,9 @@ export interface RecordPaymentModalProps {
     debtId?: number
     /** KAN-507: required at the form layer; always set when onSave fires. */
     paymentType: PaymentType
+    /** The connected RR's id — required by the backend when paymentType is
+     * ``payment_by_rr``; undefined for all other payment types. */
+    restructuringAgreementId?: number
   }) => void
 }
 
@@ -157,12 +160,15 @@ export function RecordPaymentModal({
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
-  const hasConnectedRrForDebt = useMemo(() => {
-    if (selectedDebtId == null) return false
-    return (restructuringAgreements ?? []).some(
-      (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
+  const connectedRr = useMemo(() => {
+    if (selectedDebtId == null) return null
+    return (
+      (restructuringAgreements ?? []).find(
+        (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
+      ) ?? null
     )
   }, [restructuringAgreements, selectedDebtId])
+  const hasConnectedRrForDebt = connectedRr != null
 
   // Dirty guard prevents this auto-prefill from clobbering an explicit
   // operator pick when the picked debt changes.
@@ -304,6 +310,7 @@ export function RecordPaymentModal({
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
       paymentType,
+      restructuringAgreementId: paymentType === 'payment_by_rr' ? connectedRr?.id : undefined,
     })
 
     // Reset form
@@ -347,8 +354,8 @@ export function RecordPaymentModal({
     <Modal open={open} onClose={handleClose} maxWidth="3xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
-            <Icons.MoneyReceive01 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex items-center justify-center rounded-full p-2.5">
+            <Icons.MoneyReceive01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.recordPayment.title')}
@@ -359,14 +366,14 @@ export function RecordPaymentModal({
         {/* Client Info Section */}
         <div className="mb-6 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-              <Icons.User size={18} className="text-dark-500 sm:size-5" />
+            <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+              <Icons.User size={18} className="text-foreground sm:size-5" />
             </div>
-            <span className="text-dark-500 text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+            <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {customerName}
             </span>
           </div>
-          <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+          <span className="text-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
             {t('pages.clients.modals.recordPayment.currentDebt')}{' '}
             <span className="font-medium">{formatMoneyUAHTwoDecimals(currentDebt)}</span>
           </span>
@@ -376,10 +383,10 @@ export function RecordPaymentModal({
         <div className="mb-6 flex flex-col items-start gap-4 self-stretch lg:flex-row">
           {/* Left Column - Payment Information */}
           <div className="flex w-full flex-1 flex-col items-start gap-2 lg:w-auto">
-            <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.paymentInformation')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5">
+            <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border p-5">
               <div className="flex flex-col items-start gap-5 self-stretch">
                 {/* Payment Amount */}
                 <div className="flex flex-col items-start justify-end gap-2 self-stretch">
@@ -397,8 +404,8 @@ export function RecordPaymentModal({
                   />
                   {!amountError && (
                     <div className="flex items-center gap-2 self-stretch">
-                      <Icons.Money01 size={20} className="text-gray-700" />
-                      <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                      <Icons.Money01 size={20} className="text-foreground" />
+                      <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                         ({t('pages.clients.modals.recordPayment.min')}{' '}
                         {formatMoneyUAHTwoDecimals(minAmount)}
                         {isClosedDebtCorrection
@@ -443,8 +450,8 @@ export function RecordPaymentModal({
                   </div>
                 )}
                 {isClosedDebtCorrection && (
-                  <div className="flex items-start gap-2 self-stretch rounded-md border border-amber-300 bg-amber-50 p-3">
-                    <Icons.Warning size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                  <div className="bg-warning-100 flex items-start gap-2 self-stretch rounded-md border border-amber-300 p-3">
+                    <Icons.Warning size={18} className="text-warning-600 mt-0.5 shrink-0" />
                     <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-amber-900">
                       {t('pages.clients.modals.recordPayment.closedDebtCorrectionHint')}
                     </span>
@@ -479,7 +486,7 @@ export function RecordPaymentModal({
                     <RadioItem value="Bank Transfer" id="method-bank" />
                     <Label
                       htmlFor="method-bank"
-                      className="text-dark-500 cursor-pointer text-sm font-light"
+                      className="text-foreground cursor-pointer text-sm font-light"
                     >
                       {t('pages.clients.modals.recordPayment.bankTransfer')}
                     </Label>
@@ -488,7 +495,7 @@ export function RecordPaymentModal({
                     <RadioItem value="Online Gateway" id="method-online" />
                     <Label
                       htmlFor="method-online"
-                      className="text-dark-500 cursor-pointer text-sm font-light"
+                      className="text-foreground cursor-pointer text-sm font-light"
                     >
                       {t('pages.clients.modals.recordPayment.onlineGateway')}
                     </Label>
@@ -497,7 +504,7 @@ export function RecordPaymentModal({
                     <RadioItem value="Card" id="method-card" disabled />
                     <Label
                       htmlFor="method-card"
-                      className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
+                      className="text-foreground cursor-not-allowed text-sm font-light opacity-50"
                     >
                       {t('pages.clients.modals.recordPayment.card')}
                     </Label>
@@ -568,18 +575,18 @@ export function RecordPaymentModal({
 
           {/* Right Column - Impact Preview */}
           <div className="flex w-full flex-1 flex-col items-start gap-2 self-stretch lg:w-auto">
-            <h3 className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <h3 className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.impactPreview')}
             </h3>
 
-            <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+            <div className="border-border bg-card/50 flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border p-4 sm:p-6">
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-center gap-5 self-stretch">
-                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-foreground flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {t('pages.clients.modals.recordPayment.currentTotalDebt')}
                   </span>
                   <div className="flex flex-1 items-start justify-end gap-2.5">
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                       {formatMoneyUAHTwoDecimals(currentDebt)}
                     </span>
                   </div>
@@ -587,23 +594,23 @@ export function RecordPaymentModal({
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <div className="flex flex-col items-start gap-1 self-stretch">
                     <div className="flex items-center gap-5 self-stretch">
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      <span className="text-foreground flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                         {t('pages.clients.modals.recordPayment.paymentAmountLabel')}
                       </span>
                       <div className="flex flex-1 items-center gap-2.5">
-                        <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-foreground flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           - {formatMoneyUAHTwoDecimals(amountValue)}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="h-px w-full bg-gray-200" />
+                  <div className="bg-muted h-px w-full" />
                   <div className="flex items-center gap-5 self-stretch">
-                    <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-foreground flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                       {t('pages.clients.modals.recordPayment.newTotalDebt')}
                     </span>
                     <div className="flex flex-1 items-center gap-2.5">
-                      <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      <span className="text-foreground flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
                         {formatMoneyUAHTwoDecimals(Math.max(0, newDebt))}
                       </span>
                     </div>
@@ -612,29 +619,29 @@ export function RecordPaymentModal({
               </div>
 
               <div className="flex flex-col items-start justify-center gap-3 self-stretch">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.clients.modals.recordPayment.newStatus')}
                 </span>
                 <div className="flex items-center gap-3 self-stretch">
-                  <div className="flex items-center gap-1 rounded-[16px] bg-white px-3 py-1">
+                  <div className="bg-card flex items-center gap-1 rounded-[16px] px-3 py-1">
                     <div className="flex items-center justify-center gap-2.5">
                       <span
                         className={cn(
                           'inline-flex h-4 w-4 items-center justify-center rounded-full',
-                          hasDebt ? 'bg-success-200' : 'bg-gray-200'
+                          hasDebt ? 'bg-success-200' : 'bg-muted'
                         )}
                       >
                         <span
                           className={cn(
                             'h-2 w-2 rounded-full',
-                            hasDebt ? 'bg-success-500' : 'bg-gray-500'
+                            hasDebt ? 'bg-success-500' : 'bg-muted-foreground'
                           )}
                         />
                       </span>
                       <span
                         className={cn(
                           'text-sm font-medium',
-                          hasDebt ? 'text-success-500' : 'text-gray-500'
+                          hasDebt ? 'text-success-500' : 'text-muted-foreground'
                         )}
                       >
                         {hasDebt
@@ -643,7 +650,7 @@ export function RecordPaymentModal({
                       </span>
                     </div>
                   </div>
-                  <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                  <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {hasDebt && t('pages.clients.modals.recordPayment.stillHasDebt')}
                   </span>
                 </div>
@@ -654,12 +661,12 @@ export function RecordPaymentModal({
         <div className="flex flex-col items-start gap-4 self-stretch">
           <div className="flex flex-row items-start gap-4 self-stretch">
             <div className="flex flex-1 flex-col items-start gap-2">
-              <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.recordPayment.verification')}
               </span>
-              <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-[20px_24px]">
+              <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border p-4 sm:p-[20px_24px]">
                 <div className="flex flex-col items-start gap-2 self-stretch">
-                  <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                  <Label className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {t('pages.clients.modals.recordPayment.paymentStatus')}
                   </Label>
                   <RadioGroup
@@ -673,7 +680,7 @@ export function RecordPaymentModal({
                       <RadioItem value="Pending Verification" id="status-pending" />
                       <Label
                         htmlFor="status-pending"
-                        className="text-dark-500 cursor-pointer text-sm font-light"
+                        className="text-foreground cursor-pointer text-sm font-light"
                       >
                         {t('pages.clients.modals.recordPayment.pendingVerification')}
                       </Label>
@@ -684,12 +691,12 @@ export function RecordPaymentModal({
                           <RadioItem value="Verified" id="status-verified" />
                           <Label
                             htmlFor="status-verified"
-                            className="text-dark-500 cursor-pointer text-sm font-light"
+                            className="text-foreground cursor-pointer text-sm font-light"
                           >
                             {t('pages.clients.modals.recordPayment.verified')}
                           </Label>
                         </div>
-                        <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <span className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
                         </span>
                       </div>
@@ -708,7 +715,7 @@ export function RecordPaymentModal({
                       />
                       <Label
                         htmlFor="generate-receipt"
-                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                        className="text-foreground flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light"
                       >
                         {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
                       </Label>
@@ -721,7 +728,7 @@ export function RecordPaymentModal({
                       />
                       <Label
                         htmlFor="update-balance"
-                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                        className="text-foreground flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light"
                       >
                         {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
                       </Label>

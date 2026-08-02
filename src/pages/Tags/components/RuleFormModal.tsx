@@ -166,6 +166,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             'event',
             'schedule',
             'tag_expired',
+            'expires_today',
             'scoring_change',
             'import_complete',
           ]),
@@ -208,7 +209,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['cron_expression'],
             })
           }
-          if (data.trigger_type === 'tag_expired' && !data.trigger_tag_code) {
+          if (
+            (data.trigger_type === 'tag_expired' || data.trigger_type === 'expires_today') &&
+            !data.trigger_tag_code
+          ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: t(
@@ -335,15 +339,15 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
           mergeOptions(configuredOptions, [
             {
               value: 'inbound',
-              label: t('pages.tags.rules.eventPayloadFields.inbound', 'Входящий'),
+              label: t('pages.tags.rules.eventPayloadFields.inbound', 'Inbound'),
             },
             {
               value: 'outbound',
-              label: t('pages.tags.rules.eventPayloadFields.outbound', 'Исходящий'),
+              label: t('pages.tags.rules.eventPayloadFields.outbound', 'Outbound'),
             },
             {
               value: 'system',
-              label: t('pages.tags.rules.eventPayloadFields.system', 'Системный'),
+              label: t('pages.tags.rules.eventPayloadFields.system', 'System'),
             },
           ])
         )
@@ -390,7 +394,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         trigger_type: data.trigger_type,
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
         trigger_tag_code:
-          data.trigger_type === 'tag_expired' ? data.trigger_tag_code || undefined : undefined,
+          data.trigger_type === 'tag_expired' || data.trigger_type === 'expires_today'
+            ? data.trigger_tag_code || undefined
+            : undefined,
         cron_expression:
           data.trigger_type === 'schedule' ? data.cron_expression || undefined : undefined,
         conditions: data.conditions.map((c) => ({
@@ -569,7 +575,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               {/* Trigger Event (if event) */}
               {triggerType === 'event' && (
                 <div className="space-y-1.5">
-                  <Label>{t('pages.tags.rules.eventName', 'Название события')}</Label>
+                  <Label>{t('pages.tags.rules.eventName', 'Event name')}</Label>
                   <select
                     className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
                     value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
@@ -584,7 +590,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     }}
                   >
                     <option value="">
-                      {t('pages.tags.rules.selectEvent', 'Выберите событие...')}
+                      {t('pages.tags.rules.selectEvent', 'Select an event...')}
                     </option>
                     {AVAILABLE_EVENTS.map((ev) => (
                       <option key={ev.value} value={ev.value}>
@@ -592,7 +598,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       </option>
                     ))}
                     <option value="__custom__">
-                      {t('pages.tags.rules.customEvent', 'Своё значение...')}
+                      {t('pages.tags.rules.customEvent', 'Custom value...')}
                     </option>
                   </select>
                   {isCustomEvent && (
@@ -600,7 +606,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       {...register('trigger_event')}
                       placeholder={t(
                         'pages.tags.fields.triggerEventPlaceholder',
-                        'напр. client.payment_missed'
+                        'e.g. client.payment_missed'
                       )}
                       className="mt-2"
                     />
@@ -609,7 +615,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     <p className="text-error-500 text-xs">{errors.trigger_event.message}</p>
                   )}
                   <p className="text-xs text-gray-500">
-                    {t('pages.tags.rules.eventHint', 'Выберите системное событие или введите своё')}
+                    {t('pages.tags.rules.eventHint', 'Select a system event or enter your own')}
                   </p>
                 </div>
               )}
@@ -634,8 +640,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 </div>
               )}
 
-              {/* Trigger Tag (if tag_expired) */}
-              {triggerType === 'tag_expired' && (
+              {/* Trigger Tag (if tag_expired or expires_today) */}
+              {(triggerType === 'tag_expired' || triggerType === 'expires_today') && (
                 <div className="space-y-1.5">
                   <Label required>{t('pages.tags.rules.triggerTag', 'Expired Tag')}</Label>
                   <Controller
@@ -745,7 +751,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                                 </SelectTrigger>
                                 <SelectContent
                                   searchable
-                                  searchPlaceholder={t('pages.tags.searchTags', 'Поиск...')}
+                                  searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
                                 >
                                   {tagCodeOptions.map((o) => (
                                     <SelectItem key={o.value} value={o.value}>
@@ -769,14 +775,14 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                                 <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                                   <SelectValue
                                     placeholder={t(
-                                      'pages.tags.rules.valuePlaceholder',
-                                      'Выберите...'
+                                      'pages.tags.rules.valueSelectPlaceholder',
+                                      'Select...'
                                     )}
                                   />
                                 </SelectTrigger>
                                 <SelectContent
                                   searchable
-                                  searchPlaceholder={t('pages.tags.searchTags', 'Поиск...')}
+                                  searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
                                 >
                                   {opts.map((o) => (
                                     <SelectItem key={o.value} value={o.value}>

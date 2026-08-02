@@ -97,7 +97,7 @@ describe('ImpersonationBanner', () => {
       expect(screen.getByRole('button', { name: /exit impersonation/i })).toBeInTheDocument()
     })
 
-    it('should have white background styling for visibility', () => {
+    it('should have card background styling for visibility', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -108,7 +108,7 @@ describe('ImpersonationBanner', () => {
       )
 
       const banner = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
-      expect(banner).toHaveClass('bg-white')
+      expect(banner).toHaveClass('bg-card')
     })
 
     it('should render with proper layout structure', () => {
@@ -280,7 +280,7 @@ describe('ImpersonationBanner', () => {
       )
 
       const bannerContainer = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
-      expect(bannerContainer).toHaveClass('bg-white')
+      expect(bannerContainer).toHaveClass('bg-card')
     })
   })
 

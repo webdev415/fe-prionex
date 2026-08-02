@@ -70,7 +70,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         header: t('pages.scoringConfiguration.seller', 'Seller'),
         align: 'left',
         render: (item) => (
-          <span className="text-dark-500 text-sm font-medium">{item.seller_name}</span>
+          <span className="text-foreground text-sm font-medium">{item.seller_name}</span>
         ),
       },
       {
@@ -78,7 +78,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         header: t('pages.scoringConfiguration.criticalThreshold', 'Critical'),
         align: 'center',
         render: (item) => (
-          <span className="text-dark-400 text-sm">{item.priority_thresholds.critical}</span>
+          <span className="text-muted-foreground text-sm">{item.priority_thresholds.critical}</span>
         ),
       },
       {
@@ -86,7 +86,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         header: t('pages.scoringConfiguration.highThreshold', 'High'),
         align: 'center',
         render: (item) => (
-          <span className="text-dark-400 text-sm">{item.priority_thresholds.high}</span>
+          <span className="text-muted-foreground text-sm">{item.priority_thresholds.high}</span>
         ),
       },
       {
@@ -94,21 +94,23 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         header: t('pages.scoringConfiguration.mediumThreshold', 'Medium'),
         align: 'center',
         render: (item) => (
-          <span className="text-dark-400 text-sm">{item.priority_thresholds.medium}</span>
+          <span className="text-muted-foreground text-sm">{item.priority_thresholds.medium}</span>
         ),
       },
       {
         key: 'clients_affected',
         header: t('pages.scoringConfiguration.clientsAffected', 'Clients Affected'),
         align: 'center',
-        render: (item) => <span className="text-dark-400 text-sm">{item.clients_affected}</span>,
+        render: (item) => (
+          <span className="text-muted-foreground text-sm">{item.clients_affected}</span>
+        ),
       },
       {
         key: 'updated_at',
         header: t('pages.scoringConfiguration.lastUpdated', 'Last Updated'),
         align: 'center',
         render: (item) => (
-          <span className="text-dark-400 text-sm">
+          <span className="text-muted-foreground text-sm">
             {item.updated_at ? formatDate(item.updated_at) : '-'}
           </span>
         ),
@@ -176,8 +178,8 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
       <Modal open={isDeleteModalOpen} onClose={handleCancelDelete} maxWidth="md">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-              <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+            <div className="bg-destructive flex h-8 w-8 items-center justify-center rounded-full">
+              <Icons.Delete size={20} className="text-destructive-foreground" strokeWidth={2} />
             </div>
           }
           title={t(
@@ -186,7 +188,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
           )}
         />
         <ModalContent>
-          <div className="text-dark-500 space-y-2 text-base font-light">
+          <div className="text-foreground space-y-2 text-base font-light">
             <p>
               {t(
                 'pages.scoringConfiguration.confirmDeleteSeller',

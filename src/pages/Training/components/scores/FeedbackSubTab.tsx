@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useExportFeedback, useFeedback } from '@/features/quality/hooks/useFeedback'
@@ -25,7 +26,7 @@ const STATUSES: FeedbackStatus[] = ['unread', 'read', 'completed']
 const DEFAULT_PAGE_SIZE = 25
 
 export function FeedbackSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
@@ -172,7 +173,7 @@ export function FeedbackSubTab() {
                     openFeedbackId === row.id ? 'bg-primary-50' : ''
                   }`}
                 >
-                  <td className="px-3 py-2">{new Date(row.created_at).toLocaleString()}</td>
+                  <td className="px-3 py-2">{formatDateTime(row.created_at, i18n.language)}</td>
                   <td className="px-3 py-2">
                     {operatorLookup.get(row.operator_id) ?? `#${row.operator_id}`}
                   </td>

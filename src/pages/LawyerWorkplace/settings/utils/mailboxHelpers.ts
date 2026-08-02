@@ -98,14 +98,47 @@ export function removeRoutingRule(mailbox: SettingsMailbox, ruleId: string): Set
 export function createRoutingRule(
   letterTypeId: string,
   matchType: MailboxRoutingRule['matchType'],
-  value: string
+  value: string,
+  isActive = true
 ): MailboxRoutingRule {
   return {
     id: `rule-${nextRuleId++}`,
     matchType,
-    value: value.trim(),
+    // Default rules carry no value; only domain/keyword rules have one.
+    value: matchType === 'default' ? '' : value.trim(),
     letterTypeId,
+    isActive,
+    priority: 0,
   }
+}
+
+// Identification precedence: sender domain → subject keyword → default fallback.
+const ROUTING_MATCH_RANK: Record<MailboxRoutingRule['matchType'], number> = {
+  sender_domain: 0,
+  subject_keyword: 1,
+  default: 2,
+}
+
+/**
+ * Order rules by identification precedence (stable within the same match type),
+ * so the table always reads domain rules first and the fallback last.
+ */
+export function sortRoutingRules(rules: MailboxRoutingRule[]): MailboxRoutingRule[] {
+  return rules
+    .map((rule, index) => ({ rule, index }))
+    .sort((a, b) => {
+      const rankDiff = ROUTING_MATCH_RANK[a.rule.matchType] - ROUTING_MATCH_RANK[b.rule.matchType]
+      return rankDiff !== 0 ? rankDiff : a.index - b.index
+    })
+    .map((entry) => entry.rule)
+}
+
+/**
+ * Sort the rules and re-stamp `priority` from their position, giving the
+ * backend a deterministic order on every replace-write.
+ */
+export function withReindexedPriority(rules: MailboxRoutingRule[]): MailboxRoutingRule[] {
+  return sortRoutingRules(rules).map((rule, index) => ({ ...rule, priority: index }))
 }
 
 export function getConnectedMailboxCount(mailboxes: SettingsMailbox[]): number {

@@ -107,8 +107,8 @@ function CodeBlock({ language, value }: CodeBlockProps) {
         onClick={handleCopy}
         aria-label={t(copied ? 'pages.aiAssistant.codeCopied' : 'pages.aiAssistant.codeCopy')}
         className={cn(
-          'absolute top-1.5 right-1.5 z-10 inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-1.5 py-1 text-[10px] font-medium text-white/80 backdrop-blur-sm transition',
-          'opacity-0 group-hover/code:opacity-100 hover:bg-white/20 focus-visible:opacity-100',
+          'bg-card/10 absolute top-1.5 right-1.5 z-10 inline-flex items-center gap-1 rounded-md border border-white/15 px-1.5 py-1 text-[10px] font-medium text-white/80 backdrop-blur-sm transition',
+          'hover:bg-card/20 opacity-0 group-hover/code:opacity-100 focus-visible:opacity-100',
           copied && 'opacity-100'
         )}
       >
@@ -159,7 +159,7 @@ function CodeRenderer({ className, children, ...props }: ComponentPropsWithoutRe
 
   return (
     <code
-      className="bg-light-100 text-dark-500 rounded px-1 py-0.5 font-mono text-[0.85em]"
+      className="bg-muted text-foreground rounded px-1 py-0.5 font-mono text-[0.85em]"
       {...props}
     >
       {children}
