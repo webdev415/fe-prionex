@@ -44,6 +44,7 @@ import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import { V3ClientPriorityPanel } from '@/features/scoring/components/V3ClientPriorityPanel'
+import { NotScoredBadge } from './components/NotScoredBadge'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import {
   currentMonthStart,
@@ -575,6 +576,12 @@ export function ClientDetailPage() {
     { enabled: v3UiEnabled && !!clientId }
   )
   const v3ClientBucket = v3UiEnabled ? v3Rollup?.get(clientId)?.bucket_v3 : undefined
+  // Compliance needs no model — see the badge below.
+  const complianceBlocked = !!(
+    profile?.is_deceased ||
+    profile?.is_fraudster ||
+    profile?.lawsuit_filed
+  )
 
   const { data: messagingOperators = [] } = useOperators(
     activeProjectId ? Number(activeProjectId) : null
@@ -2569,8 +2576,18 @@ export function ClientDetailPage() {
               <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
                 {client.score} {t('pages.clients.activity.score')}
               </span>
-              {v3ClientBucket ? (
+              {/* Same three rules as the client list, in the same order. They
+                  used to live only in the list, so one client showed "Not
+                  scored" there and "Critical" here — the card contradicting the
+                  list it was opened from. Compliance is checked FIRST because it
+                  needs no model: a deceased debtor is do-not-call whether or not
+                  v3 covers them. */}
+              {v3UiEnabled && complianceBlocked ? (
+                <V3BucketBadge bucket="EXIT" />
+              ) : v3ClientBucket ? (
                 <V3BucketBadge bucket={v3ClientBucket} />
+              ) : v3UiEnabled ? (
+                <NotScoredBadge />
               ) : (
                 <PriorityBadge priority={client.priority as Priority} />
               )}

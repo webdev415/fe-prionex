@@ -468,6 +468,9 @@ export interface ClientProfileResponse {
   is_bankrupt: boolean
   is_deceased: boolean
   is_fraudster: boolean
+  /** Compliance exclusion — the client card marks these do-not-call with or
+   *  without a v3 score. */
+  lawsuit_filed?: boolean
   is_military: boolean
   has_nbu_complaint: boolean
   do_not_send_to_ubki?: boolean

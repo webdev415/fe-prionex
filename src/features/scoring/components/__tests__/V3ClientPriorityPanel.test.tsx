@@ -62,9 +62,11 @@ describe('V3ClientPriorityPanel', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders nothing when the client has no scored debts', () => {
-    // A client with no v3 rows must not leave an empty panel on the card.
-    const { container } = setup({ results: [] })
-    expect(container).toBeEmptyDOMElement()
+  it('says the client is not scored rather than vanishing', () => {
+    // Rendering nothing looked like a panel that had failed to load. The model
+    // does not cover every client, and saying so is the honest answer.
+    setup({ results: [] })
+    expect(screen.getByText(/not scored/i)).toBeInTheDocument()
+    expect(screen.getByText(/outside the scoring model/i)).toBeInTheDocument()
   })
 })

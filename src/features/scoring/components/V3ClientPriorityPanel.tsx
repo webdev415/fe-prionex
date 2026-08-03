@@ -32,7 +32,21 @@ export function V3ClientPriorityPanel({
 
   if (!v3UiEnabled) return null
   const rows = data?.results ?? []
-  if (rows.length === 0) return null
+
+  // No v3 rows means the model does not cover this client — their debts sit
+  // outside its range. Rendering nothing left an operator wondering whether the
+  // panel had failed to load; saying so is short and removes the doubt.
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[#EBECE8] bg-white p-4">
+        <h3 className="mb-1 text-sm font-semibold text-[#05040D]">v3 Priority</h3>
+        <p className="text-xs text-gray-500">
+          Not scored — this client&apos;s debts are outside the scoring model&apos;s range, so v3
+          gives them no priority.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-xl border border-[#EBECE8] bg-white p-4">
