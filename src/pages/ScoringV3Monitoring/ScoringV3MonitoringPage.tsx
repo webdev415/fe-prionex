@@ -68,10 +68,23 @@ function toMonthStart(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+/** "2026-08-01" -> a Date at that month start in the VIEWER's timezone.
+ *
+ * `new Date("2026-08-01")` does NOT do this: the spec parses date-only ISO
+ * strings as UTC, so anywhere west of Greenwich the result is the previous
+ * evening — 2026-07-31 19:00 at UTC-5. The month picker then rendered "July
+ * 2026" while the page showed August's numbers. Building from parts keeps the
+ * date local, matching `toMonthStart` (which reads local getters) so a value
+ * survives the round trip unchanged.
+ */
+function parseMonthStart(monthStart: string): Date {
+  const [y, m] = monthStart.split('-').map(Number)
+  return new Date(y, m - 1, 1)
+}
+
 /** "2026-07-01" -> "July 2026" — a month label, not an ISO date. */
 function monthLabel(monthStart: string): string {
-  const [y, m] = monthStart.split('-')
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(undefined, {
+  return parseMonthStart(monthStart).toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
   })
@@ -208,6 +221,14 @@ export function ScoringV3MonitoringPage() {
     [calibration]
   )
 
+  // Were there any outcomes at all? A month with no recorded payments produces
+  // actual_rate = 0 in every decile, and the ranking check below would then read
+  // "ranking does NOT hold" — condemning the model for an absence of DATA. That
+  // misreading is expensive: it is exactly the banner a reviewer would use to
+  // block a sign-off. Seen for real on 2026-07, where the whole portfolio had
+  // 3 qualifying payments.
+  const hasOutcomes = (calibration?.actual_base_rate ?? 0) > 0
+
   // Does actual pay rate rise across the deciles? That is the ranking check the
   // sign-off turns on — stated in words so nobody has to interpret the chart.
   const rankingHolds = useMemo(() => {
@@ -260,7 +281,7 @@ export function ScoringV3MonitoringPage() {
             )}
             <span className="text-gray-600">Month</span>
             <DateSelect
-              value={month ? new Date(month) : null}
+              value={month ? parseMonthStart(month) : null}
               onChange={({ value }) => setPicked(value ? toMonthStart(value) : null)}
               showMonthYearPicker
               format="MMMM yyyy"
@@ -453,19 +474,27 @@ export function ScoringV3MonitoringPage() {
                 <>
                   <div
                     className={`rounded-lg border p-3 text-sm ${
-                      rankingHolds
-                        ? 'border-primary-600 text-primary-700 bg-[#F0F7E6]'
-                        : 'border-[#FF9D00] bg-[#FFF6E6] text-[#B36F00]'
+                      !hasOutcomes
+                        ? 'border-gray-300 bg-gray-50 text-gray-600'
+                        : rankingHolds
+                          ? 'border-primary-600 text-primary-700 bg-[#F0F7E6]'
+                          : 'border-[#FF9D00] bg-[#FFF6E6] text-[#B36F00]'
                     }`}
                   >
-                    {rankingHolds
-                      ? 'Ranking holds — debts predicted more likely to pay did pay more often.'
-                      : 'Ranking does NOT hold — this blocks sign-off. Investigate before cutover.'}
-                    {calibration?.calibration_error != null && (
+                    {!hasOutcomes ? (
+                      'Not measurable for this month — no payments were recorded against these debts, so there is nothing to compare the prediction with. This says nothing about the model; pick a month with payment activity.'
+                    ) : (
                       <>
-                        {' '}
-                        Average gap between predicted and actual:{' '}
-                        {pct(calibration.calibration_error, 2)}.
+                        {rankingHolds
+                          ? 'Ranking holds — debts predicted more likely to pay did pay more often.'
+                          : 'Ranking does NOT hold — this blocks sign-off. Investigate before cutover.'}
+                        {calibration?.calibration_error != null && (
+                          <>
+                            {' '}
+                            Average gap between predicted and actual:{' '}
+                            {pct(calibration.calibration_error, 2)}.
+                          </>
+                        )}
                       </>
                     )}
                   </div>

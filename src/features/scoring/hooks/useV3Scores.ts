@@ -245,3 +245,30 @@ export function useUpdateV3Settings() {
     },
   })
 }
+
+/** Clients per v3 bucket for the client-list summary cards (KAN-791). */
+export function useV3ClientSummary(
+  projectId: number | undefined,
+  monthStart?: string,
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'client-summary', projectId ?? 0, monthStart ?? null],
+    queryFn: () => scoringApi.getV3ClientSummary(projectId as number, monthStart),
+    enabled: !!projectId && (options.enabled ?? true),
+    staleTime: 60_000,
+  })
+}
+
+/** Brand-wide client counts per v3 bucket, unaffected by list filters (KAN-791). */
+export function useV3BucketCounts(
+  projectId: number | undefined,
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: [...scoringKeys.all, 'bucket-counts', projectId ?? 0],
+    queryFn: () => scoringApi.getV3BucketCounts(projectId as number),
+    enabled: !!projectId && (options.enabled ?? true),
+    staleTime: 60_000,
+  })
+}

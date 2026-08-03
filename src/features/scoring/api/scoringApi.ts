@@ -16,6 +16,7 @@ import type {
   V3DriftResponse,
   V3MonitoringResponse,
   V3ScoreListResponse,
+  V3ClientSummaryResponse,
   V3Settings,
   V3SettingsResponse,
   V3UiEnabled,
@@ -161,7 +162,34 @@ export async function updateV3Settings(
   return res.data
 }
 
+/** Clients per v3 bucket for the client-list cards. Counts CLIENTS, not debts. */
+export async function getV3ClientSummary(
+  projectId: number,
+  monthStart?: string
+): Promise<V3ClientSummaryResponse> {
+  const res = await api.get<V3ClientSummaryResponse>(`${BASE_URL}/${projectId}/client-summary`, {
+    params: monthStart ? { month_start: monthStart } : {},
+  })
+  return res.data
+}
+
+/** Clients per v3 bucket for the WHOLE brand, ignoring list filters.
+ *  Served by the client service, which owns the full client population — the
+ *  scoring service only knows the clients it scored, so it cannot count the
+ *  ones the model does not cover. */
+export async function getV3BucketCounts(
+  projectId: number
+): Promise<{ counts: Record<string, number>; total: number }> {
+  const res = await api.get<{ counts: Record<string, number>; total: number }>(
+    '/api/v1/clients/v3-bucket-counts',
+    { params: { project_id: projectId } }
+  )
+  return res.data
+}
+
 export const scoringApi = {
+  getV3BucketCounts,
+  getV3ClientSummary,
   getV3Settings,
   updateV3Settings,
   getV3Scores,

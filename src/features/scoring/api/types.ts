@@ -14,6 +14,8 @@ export interface V3ScoreResult {
   score: number | null
   priority_dollar: number | null
   rule_fired: string | null
+  /** Why an EXIT debt is excluded: deceased | fraud | lawsuit | paid_off | closed. */
+  exit_reason?: string | null
   model_id: string
   scored_at: string
 }
@@ -146,10 +148,13 @@ export interface V3Settings {
   result_ttls: Record<string, number>
 }
 
-/** One row of the tau capacity guide shown next to the tau field. */
+/** One queue-size choice: "N% of debts means tau X, i.e. this many to work".
+ *  Computed from the brand's own hazard distribution; `debts` is null when the
+ *  server falls back to the package's generic reference table. */
 export interface TauCapacityPoint {
   avg_share: number
   tau: number
+  debts?: number | null
 }
 
 export interface V3SettingsResponse {
@@ -163,4 +168,18 @@ export interface V3SettingsResponse {
   /** result_code -> {bucket, ttl_days} from the scoring package. */
   rule_table?: Record<string, { bucket: string; ttl_days: number }>
   tau_capacity_guide?: TauCapacityPoint[]
+}
+
+/** Clients per bucket, for the client-list summary cards (KAN-791). */
+export interface V3ClientBucketCount {
+  bucket: V3Bucket
+  clients: number
+  /** Sum of hazard x principal for that bucket's workable debts. */
+  priority_dollar: number
+}
+
+export interface V3ClientSummaryResponse {
+  project_id: number
+  month_start: string | null
+  buckets: V3ClientBucketCount[]
 }

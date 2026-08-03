@@ -12,11 +12,15 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
+import { V3PriorityCards } from './components/V3PriorityCards'
+import { NotScoredBadge } from './components/NotScoredBadge'
 import { PriorityBadge } from './components/PriorityBadge'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import {
   currentMonthStart,
   useV3ClientRollup,
+  useV3BucketCounts,
+  useV3ClientSummary,
   useV3UiEnabled,
 } from '@/features/scoring/hooks/useV3Scores'
 import { TagBadge } from '@/components/ui/TagBadge'
@@ -65,6 +69,10 @@ import { toast } from 'sonner'
 // Display type matching page requirements
 interface DisplayClient {
   id: number
+  /** Compliance exclusions — a do-not-call client, with or without a v3 score. */
+  isDeceased?: boolean
+  isFraudster?: boolean
+  lawsuitFiled?: boolean
   fullName: string
   taxIdNumber: string
   tags: Array<{
@@ -114,6 +122,11 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
+    // Compliance exclusions travel with the row so the priority column can mark
+    // a do-not-call client without waiting on (or needing) a v3 score.
+    isDeceased: !!client.is_deceased,
+    isFraudster: !!client.is_fraudster,
+    lawsuitFiled: !!client.lawsuit_filed,
     tags: (client.tags || []).filter((tag) => {
       if (showHiddenTags) return true
       if (isHiddenVisibility(tag.visibility)) return false
@@ -268,6 +281,10 @@ export function ClientManagementPage() {
 
   // URL state for priority filtering
   const [selectedPriorities, setSelectedPriorities] = useURLState<Priority[]>('priority', [])
+  // v3 bucket filter, kept separate from the legacy one: only one of the two
+  // card sets is on screen at a time, and mixing them into one state would
+  // let a stale legacy filter survive cutover.
+  const [selectedV3Buckets, setSelectedV3Buckets] = useURLState<string[]>('v3bucket', [])
 
   // URL state for pagination
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
@@ -858,6 +875,12 @@ export function ClientManagementPage() {
       params.priorities = priorityValues
     }
 
+    // FILTER 10b: v3 priority bucket. Reads clients.v3_bucket, published by the
+    // scoring job after each run — the client service holds no model knowledge.
+    if (selectedV3Buckets.length > 0) {
+      params.v3_buckets = selectedV3Buckets.join(',')
+    }
+
     // FILTER 11: Target Action Date — single range replaces the legacy
     // Promise + Callback pair. BE picks the latest TA-with-date per
     // client and matches when ANY of that TA's date values is in the
@@ -944,6 +967,10 @@ export function ClientManagementPage() {
     sortBy,
     sortOrder,
     selectedPriorities,
+    // Without this the request keeps the PREVIOUS bucket filter: clicking a card
+    // updated the state but never rebuilt apiParams, so the list showed the last
+    // filter's result and looked like the click had done nothing.
+    selectedV3Buckets,
     searchQuery,
     searchType,
     user?.timezone,
@@ -1001,6 +1028,15 @@ export function ClientManagementPage() {
     currentMonthStart(),
     { enabled: v3UiEnabled }
   )
+  // Brand-wide bucket totals for the summary cards. Same snapshot month as the
+  // row badges, so a card and the rows under it always describe one scoring run.
+  const { data: v3Summary } = useV3ClientSummary(activeProjectIdNum, currentMonthStart(), {
+    enabled: v3UiEnabled,
+  })
+  // Brand-wide counts, independent of the list filter — see V3PriorityCards.
+  const { data: v3BucketCounts } = useV3BucketCounts(activeProjectIdNum, {
+    enabled: v3UiEnabled,
+  })
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
   const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
@@ -1060,8 +1096,9 @@ export function ClientManagementPage() {
     if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
     if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
     if (selectedPriorities.length > 0) count++
+    if (selectedV3Buckets.length > 0) count++
     return count
-  }, [filters, selectedPriorities])
+  }, [filters, selectedPriorities, selectedV3Buckets])
 
   // All filtering (including search) is now handled server-side
   const filteredClients = displayClients
@@ -1666,11 +1703,22 @@ export function ClientManagementPage() {
       sortKey: 'priority',
       render: (client) => {
         const v3 = v3UiEnabled ? v3Rollup?.get(client.id) : undefined
-        return v3 ? (
-          <V3BucketBadge bucket={v3.bucket_v3} />
-        ) : (
-          <PriorityBadge priority={client.priority} variant="compact" />
-        )
+        // Compliance does not need a model. A debtor who has died, is marked
+        // as fraud, or is in court must never be offered for calling — and we
+        // already know that without any score. Checking it BEFORE the v3 lookup
+        // means the exclusion holds for the ~38% of clients the model does not
+        // cover, which is exactly where the old badge said "Critical".
+        const blocked = client.isDeceased || client.isFraudster || client.lawsuitFiled
+        if (v3UiEnabled && blocked) return <V3BucketBadge bucket="EXIT" />
+        if (v3) return <V3BucketBadge bucket={v3.bucket_v3} />
+        // Cut over, but this client has no v3 score — their debts all predate
+        // the model's cohort. Falling back to the LEGACY badge here was wrong
+        // twice over: it silently mixed two scoring systems in one column, and
+        // it labelled compliance cases (a deceased debtor) "Critical", i.e.
+        // call first. Industry practice for an unscorable record is to say so,
+        // never to substitute a number from a different model.
+        if (v3UiEnabled) return <NotScoredBadge />
+        return <PriorityBadge priority={client.priority} variant="compact" />
       },
     },
     {
@@ -1859,12 +1907,31 @@ export function ClientManagementPage() {
   return (
     <TooltipProvider>
       <div className="flex w-full flex-col items-start gap-3 px-2 sm:gap-4 sm:px-0">
-        {/* Priority Overview Cards */}
-        <PriorityCards
-          priorityStats={priorityStats}
-          selected={selectedPriorities}
-          onToggle={handlePriorityToggle}
-        />
+        {/* Priority Overview Cards.
+            After cutover these must show v3 buckets: leaving the legacy cards
+            above v3 row badges put two scoring systems on one screen with
+            totals that could not be reconciled against the rows beneath. */}
+        {v3UiEnabled && v3Summary?.buckets?.length ? (
+          <V3PriorityCards
+            buckets={v3Summary.buckets}
+            counts={v3BucketCounts?.counts}
+            selected={selectedV3Buckets}
+            onToggle={(bucket) => {
+              setCurrentPage(1)
+              setSelectedV3Buckets(
+                selectedV3Buckets.includes(bucket)
+                  ? selectedV3Buckets.filter((b) => b !== bucket)
+                  : [...selectedV3Buckets, bucket]
+              )
+            }}
+          />
+        ) : (
+          <PriorityCards
+            priorityStats={priorityStats}
+            selected={selectedPriorities}
+            onToggle={handlePriorityToggle}
+          />
+        )}
 
         {/* List of Clients Section */}
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-0">

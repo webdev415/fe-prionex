@@ -8,6 +8,7 @@
  */
 
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
+import { exitReasonLabel } from '@/features/scoring/lib/exitReason'
 import {
   currentMonthStart,
   useV3Scores,
@@ -41,11 +42,18 @@ export function V3ClientPriorityPanel({
           <div key={r.debt_id} className="flex flex-wrap items-center gap-3 text-xs">
             <V3BucketBadge bucket={r.bucket_v3} />
             <span className="text-gray-500">Debt {r.debt_id}</span>
+            {/* The pay-chance is shown for EXIT debts too. An operator told only
+                "do not call" on a debt that is plainly owed will assume the
+                system is wrong; seeing the score AND the ground makes the
+                exclusion something they can act on rather than argue with. */}
             {r.hazard != null && (
               <span className="text-gray-600">{(r.hazard * 100).toFixed(1)}% pay chance</span>
             )}
             <span className="ml-auto text-gray-500">
-              Why: <span className="text-gray-700">{r.rule_fired ?? '—'}</span>
+              Why:{' '}
+              <span className="text-gray-700">
+                {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
+              </span>
             </span>
           </div>
         ))}

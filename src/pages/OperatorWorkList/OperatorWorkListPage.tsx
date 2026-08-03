@@ -35,6 +35,7 @@ import {
 } from '@/features/scoring/hooks/useV3Scores'
 import type { V3Bucket, V3ClientRollup, V3ScoreResult } from '@/features/scoring/api/types'
 import { V3BucketBadge } from './components/V3BucketBadge'
+import { exitReasonLabel } from '@/features/scoring/lib/exitReason'
 
 const PAGE_SIZE = 50
 
@@ -50,7 +51,13 @@ const BUCKET_FILTERS: { value: 'ALL' | V3Bucket; label: string }[] = [
 type Row = V3ScoreResult & { id: number }
 
 function currentMonth(): string {
-  return new Date().toISOString().slice(0, 7) // YYYY-MM
+  // Local getters, NOT toISOString(): that converts to UTC first, so west of
+  // Greenwich the last evening of a month reports the NEXT month — at UTC-5,
+  // 31 Aug 20:30 local becomes "2026-09". The operator's queue would empty out
+  // for the rest of that evening because nothing is scored for a month that has
+  // not started yet.
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` // YYYY-MM
 }
 
 /** Debounce a value so a query fires only after the user stops typing. */
@@ -146,7 +153,12 @@ export function OperatorWorkListPage() {
     {
       key: 'rule_fired',
       header: 'Why',
-      render: (r) => <span className="text-gray-600">{r.rule_fired ?? '—'}</span>,
+      // EXIT rows get the compliance ground, not the generic "terminal".
+      render: (r) => (
+        <span className="text-gray-600">
+          {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
+        </span>
+      ),
     },
   ]
 
