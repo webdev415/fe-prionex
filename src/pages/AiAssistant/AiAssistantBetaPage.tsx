@@ -194,9 +194,17 @@ function messageHasReasoning(item: ChatMessage): boolean {
  * `messageHasReasoning`: клик по сноске `[[N]]` в fast-ходе без рассуждения тоже
  * должен открывать панель (там будут только «Источники»). Гейтит выбор активного
  * сообщения панели, но НЕ бабл-чип «Ход рассуждения» (тот остаётся по reasoning).
+ *
+ * `showReasoning` — настройка оператора «показывать раздумья»: когда она снята,
+ * само рассуждение перестаёт быть поводом открывать панель, а шаги оркестратора и
+ * источники — остаются (по ним проверяют факты ответа, это не раздумья).
  */
-function messageHasActivity(item: ChatMessage): boolean {
-  return messageHasReasoning(item) || Boolean(item.citations && item.citations.length > 0)
+function messageHasActivity(item: ChatMessage, showReasoning: boolean): boolean {
+  if (showReasoning && messageHasReasoning(item)) return true
+  return (
+    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
+    Boolean(item.citations && item.citations.length > 0)
+  )
 }
 
 /**
@@ -323,6 +331,9 @@ function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDro
 type ModeDropdownProps = {
   value: AssistantMode
   onChange: (mode: AssistantMode) => void
+  /** Настройка «показывать раздумья» — живёт рядом с выбором режима. */
+  showReasoning: boolean
+  onShowReasoningChange: (show: boolean) => void
 }
 
 const MODE_OPTIONS: {
@@ -356,8 +367,16 @@ const MODE_OPTIONS: {
  *
  * Implemented as a small controlled popover (not Radix) so it opens on a plain
  * click and renders inline — matching the settings popover in this component.
+ *
+ * Под списком режимов — тумблер «Показывать раздумья»: раздумья приходят только
+ * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим.
  */
-function ModeDropdown({ value, onChange }: ModeDropdownProps) {
+function ModeDropdown({
+  value,
+  onChange,
+  showReasoning,
+  onShowReasoningChange,
+}: ModeDropdownProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -442,6 +461,35 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
               </span>
             </button>
           ))}
+
+          <div
+            className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
+            data-testid="assistant-show-reasoning-row"
+          >
+            <Icons.AiBrain03
+              size={16}
+              strokeWidth={1.5}
+              className="text-muted-foreground mt-0.5 shrink-0"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block text-sm font-medium">
+                {t('pages.aiAssistant.showReasoning')}
+              </span>
+              <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                {/* На fast раздумий не бывает — честно говорим об этом, но тумблер
+                    оставляем живым: оператор настраивает его заранее. */}
+                {isThinking
+                  ? t('pages.aiAssistant.showReasoningHint')
+                  : t('pages.aiAssistant.showReasoningFastHint')}
+              </span>
+            </span>
+            <ToggleSwitch
+              checked={showReasoning}
+              onChange={onShowReasoningChange}
+              ariaLabel={t('pages.aiAssistant.showReasoning')}
+              className="mt-0.5 shrink-0"
+            />
+          </div>
         </div>
       )}
     </div>
@@ -1939,11 +1987,11 @@ export function AiAssistantBetaPage() {
     for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
       const item = chatMessages[i]
       if (item.role !== 'assistant' || item.isError) continue
-      if (!messageHasActivity(item)) continue
+      if (!messageHasActivity(item, assistantSettings.showReasoning)) continue
       if (isReasoningOpen(item)) return item
     }
     return null
-  }, [chatMessages, isReasoningOpen])
+  }, [chatMessages, isReasoningOpen, assistantSettings.showReasoning])
 
   const isReasoningPanelOpen = activeReasoningMessage != null
   // Номер источника для подсветки в панели — только если фокус принадлежит
@@ -2092,13 +2140,15 @@ export function AiAssistantBetaPage() {
     // есть — без чипа они после гидратации/перезагрузки истории становятся
     // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
     // reasoning + нулевом stepCount (см. ReasoningInlineChip).
-    if (!messageHasActivity(item)) return null
+    if (!messageHasActivity(item, assistantSettings.showReasoning)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
         open={isReasoningOpen(item)}
         streaming={Boolean(item.isStreamingReasoning)}
-        reasoning={item.reasoning ?? ''}
+        // Раздумья скрыты — не отдаём их и в тизер плашки (иначе последняя мысль
+        // всё равно попадала бы оператору на глаза).
+        reasoning={assistantSettings.showReasoning ? (item.reasoning ?? '') : ''}
         stepCount={item.toolSteps?.length ?? 0}
         elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
         onToggle={() => toggleReasoning(item)}
@@ -2253,7 +2303,9 @@ export function AiAssistantBetaPage() {
                 // shrinking to the short header (w-fit) — the reasoning box then
                 // uses the full available width rather than looking narrow.
                 const hasReasoningSurface =
-                  item.role === 'assistant' && !item.isError && messageHasActivity(item)
+                  item.role === 'assistant' &&
+                  !item.isError &&
+                  messageHasActivity(item, assistantSettings.showReasoning)
                 return (
                   <div
                     key={item.id}
@@ -2612,10 +2664,15 @@ export function AiAssistantBetaPage() {
                   options={periodOptions}
                 />
 
-                {/* Reasoning-mode picker (source of truth for `mode`). */}
+                {/* Reasoning-mode picker (source of truth for `mode`) + тумблер
+                    видимости раздумий. */}
                 <ModeDropdown
                   value={assistantSettings.mode}
                   onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                  showReasoning={assistantSettings.showReasoning}
+                  onShowReasoningChange={(show) =>
+                    applySettings((s) => ({ ...s, showReasoning: show }))
+                  }
                 />
 
                 <button
@@ -2718,6 +2775,7 @@ export function AiAssistantBetaPage() {
           activeReasoningMessage?.thinkingPlaceholder &&
           activeReasoningMessage?.isStreamingReasoning
         )}
+        showReasoning={assistantSettings.showReasoning}
         reasoning={activeReasoningMessage?.reasoning ?? ''}
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
         citations={activeReasoningMessage?.citations ?? []}

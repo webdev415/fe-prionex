@@ -717,6 +717,9 @@
       "modeFastHint": "Answers instantly",
       "modeThinkingHint": "Analyzes more thoroughly, but slower",
       "modeChangeHint": "Set next to the input",
+      "showReasoning": "Show reasoning",
+      "showReasoningHint": "The train of thought is shown in the «Activity» panel",
+      "showReasoningFastHint": "Fast mode produces no reasoning",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s"
