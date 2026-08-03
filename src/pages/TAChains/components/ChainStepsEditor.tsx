@@ -118,7 +118,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
 
   if (allTAs.length === 0) {
     return (
-      <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+      <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border p-3 text-xs">
         {t('pages.taChains.noTargetActionsHint')}
       </div>
     )
@@ -127,12 +127,14 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">{t('pages.taChains.steps.title')}</span>
+        <span className="text-foreground text-sm font-medium">
+          {t('pages.taChains.steps.title')}
+        </span>
         {!disabled && (
           <button
             type="button"
             onClick={addStep}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex items-center gap-1 rounded-md px-3 py-1 text-xs"
+            className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex items-center gap-1 rounded-md px-3 py-1 text-xs"
           >
             <Icons.Add size={14} strokeWidth={2} />
             {t('pages.taChains.steps.add')}
@@ -141,7 +143,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
       </div>
 
       {steps.length === 0 && (
-        <div className="rounded-md border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500">
+        <div className="border-border text-muted-foreground rounded-md border border-dashed p-4 text-center text-xs">
           {t('pages.taChains.steps.empty')}
         </div>
       )}
@@ -152,10 +154,10 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
           return (
             <li
               key={index}
-              className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-3"
+              className="border-border bg-card flex flex-col gap-2 rounded-md border p-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-dark-500 text-xs font-semibold">
+                <span className="text-foreground text-xs font-semibold">
                   {t('pages.taChains.steps.stepLabel', { index: index + 1 })}
                 </span>
                 {!disabled && (
@@ -164,7 +166,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       type="button"
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
-                      className="text-dark-500 rounded border border-gray-200 px-2 py-0.5 text-xs disabled:opacity-30"
+                      className="text-foreground border-border rounded border px-2 py-0.5 text-xs disabled:opacity-30"
                     >
                       ↑
                     </button>
@@ -172,14 +174,14 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       type="button"
                       onClick={() => move(index, 1)}
                       disabled={index === steps.length - 1}
-                      className="text-dark-500 rounded border border-gray-200 px-2 py-0.5 text-xs disabled:opacity-30"
+                      className="text-foreground border-border rounded border px-2 py-0.5 text-xs disabled:opacity-30"
                     >
                       ↓
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(index)}
-                      className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50"
+                      className="border-error-200 text-error-600 hover:bg-error-50 rounded border px-2 py-0.5 text-xs"
                     >
                       {t('actions.delete')}
                     </button>
@@ -189,7 +191,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-600">
+                  <label className="text-muted-foreground text-xs">
                     {t('pages.taChains.steps.targetAction')}
                   </label>
                   <Select
@@ -225,7 +227,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-600">
+                  <label className="text-muted-foreground text-xs">
                     {t('pages.taChains.steps.delayMinutes')}
                   </label>
                   <Input
@@ -242,7 +244,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs text-gray-700">
+              <div className="text-foreground flex flex-wrap items-center gap-4 text-xs">
                 <label className="flex items-center gap-1">
                   <input
                     type="checkbox"
@@ -267,7 +269,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
 
               {ta?.field_type === 'contact' && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-600">
+                  <label className="text-muted-foreground text-xs">
                     {t('pages.taChains.steps.contactSource', 'Contact source')}
                   </label>
                   <Select
@@ -292,13 +294,13 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
               )}
 
               {ta?.field_type === 'credit' && (
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-xs">
                   <input
                     type="checkbox"
                     checked={step.show_closed_credits ?? false}
                     onChange={(e) => update(index, { show_closed_credits: e.target.checked })}
                     disabled={disabled}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="border-border h-4 w-4 rounded"
                   />
                   <span>{t('pages.taChains.steps.showClosedCredits', 'Show closed credits')}</span>
                 </label>

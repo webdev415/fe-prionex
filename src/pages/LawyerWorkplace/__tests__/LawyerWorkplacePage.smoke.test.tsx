@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { LawyerWorkplacePage } from '../LawyerWorkplacePage'
@@ -108,6 +109,8 @@ vi.mock('@/hooks/usePermissions', () => ({
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClients: () => ({ data: { items: [] }, isLoading: false, isError: false }),
   useClient: () => ({ data: null, isLoading: false, isError: false }),
+  useClientLoans: () => ({ data: [] }),
+  useClientDocuments: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
 vi.mock('@/features/users/hooks/useUsers', () => ({
@@ -265,6 +268,7 @@ describe('LawyerWorkplacePage smoke', () => {
   })
 
   it('shows read-only settings notice without manage_legal_workplace', async () => {
+    const user = userEvent.setup()
     mockPermissions.delete('manage_legal_workplace')
     renderWorkplace('/?tab=settings')
 
@@ -274,5 +278,11 @@ describe('LawyerWorkplacePage smoke', () => {
       )
     ).toBeInTheDocument()
     expect(screen.queryByText('Add type')).not.toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: /Complaint/i }))
+
+    const displayName = await screen.findByDisplayValue('Complaint')
+    expect(displayName).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
   })
 })

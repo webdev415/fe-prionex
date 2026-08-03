@@ -61,6 +61,8 @@ type TagFormData = {
   protected_removal_roles?: string[]
   expiry_type?: string
   is_related_tag?: boolean
+  sort_order?: number
+  skip_weekends?: boolean
 }
 
 /**
@@ -71,7 +73,7 @@ function FieldTooltip({ text }: { text: string }) {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
+          <span className="bg-muted text-muted-foreground ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-[10px] font-bold">
             ?
           </span>
         </TooltipTrigger>
@@ -168,6 +170,23 @@ export function TagFormModal({
             )
             .optional(),
           default_expires_at: z.string().optional(),
+          sort_order: z
+            .number({
+              error: t('pages.tags.fields.validation.sortOrderRequired', 'Sort order is required'),
+            })
+            .int(
+              t(
+                'pages.tags.fields.validation.sortOrderPositiveInteger',
+                'Sort order must be a positive integer'
+              )
+            )
+            .min(
+              1,
+              t(
+                'pages.tags.fields.validation.sortOrderPositiveInteger',
+                'Sort order must be a positive integer'
+              )
+            ),
         })
         .passthrough(),
     // i18n.language is needed to recalculate schema when language changes
@@ -207,6 +226,8 @@ export function TagFormModal({
       protected_removal_roles: (tag as TagDefinition)?.protected_removal_roles ?? [],
       expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
       is_related_tag: (tag as TagDefinition)?.is_related_tag ?? false,
+      sort_order: (tag as TagDefinition)?.sort_order ?? 100,
+      skip_weekends: (tag as TagDefinition)?.skip_weekends ?? false,
     },
   })
 
@@ -244,6 +265,8 @@ export function TagFormModal({
         protected_removal_roles: tagDef?.protected_removal_roles ?? [],
         expiry_type: tagDef?.expiry_type ?? 'permanent',
         is_related_tag: tagDef?.is_related_tag ?? false,
+        sort_order: tagDef?.sort_order ?? 100,
+        skip_weekends: tagDef?.skip_weekends ?? false,
       })
     }
   }, [open, tag, reset])
@@ -273,6 +296,7 @@ export function TagFormModal({
             ? data.default_ttl_hours
             : undefined,
         default_expires_at: data.default_expires_at || undefined,
+        sort_order: data.sort_order && !Number.isNaN(data.sort_order) ? data.sort_order : 100,
         department_ids: departmentIds.length > 0 ? departmentIds : null,
       }
 
@@ -319,11 +343,11 @@ export function TagFormModal({
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
               {isEdit ? (
-                <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={2} />
               ) : (
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
               )}
             </div>
           }
@@ -333,7 +357,7 @@ export function TagFormModal({
         <ModalContent className="overflow-x-hidden">
           <div className="min-w-0 space-y-6">
             {/* Info Banner */}
-            <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            <div className="bg-information-50 text-information-700 mb-4 flex items-center gap-2 rounded-lg p-3 text-sm">
               <span>ℹ️</span>
               <span>{t('pages.tags.helpBanner', 'Нужна помощь с настройкой тегов?')}</span>
               <a
@@ -348,16 +372,16 @@ export function TagFormModal({
 
             {/* Project (Read-only) */}
             {(tag?.project_name || activeProjectName) && (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="border-border bg-muted rounded-lg border p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-foreground text-sm font-medium">
                     {t('pages.tags.fields.project', 'Project')}:
                   </span>
-                  <span className="text-sm text-gray-900">
+                  <span className="text-foreground text-sm">
                     {tag?.project_name || activeProjectName}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.tags.fields.projectNote',
                     'Tags are automatically assigned to your active project'
@@ -428,6 +452,29 @@ export function TagFormModal({
                 error={errors.description?.message}
                 rows={3}
                 aria-label={t('pages.tags.fields.description', 'Description')}
+                disabled={isSystemTag}
+              />
+            </div>
+
+            {/* Sort Order */}
+            <div className="space-y-2">
+              <Label htmlFor="sort_order">
+                {t('pages.tags.fields.sortOrder', 'Sort Order')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.sortOrder',
+                    'Lower number = higher position in tag lists. Default is 100.'
+                  )}
+                />
+              </Label>
+              <Input
+                id="sort_order"
+                type="number"
+                min={1}
+                step={1}
+                {...register('sort_order', { valueAsNumber: true })}
+                placeholder={t('pages.tags.fields.sortOrderPlaceholder', 'e.g. 1, 10, 100')}
+                error={errors.sort_order?.message}
                 disabled={isSystemTag}
               />
             </div>
@@ -506,7 +553,7 @@ export function TagFormModal({
 
             {/* Department scope (empty = all departments) */}
             {!isSystemTag && (
-              <div className="space-y-2 rounded-lg border border-gray-200 px-4 py-3">
+              <div className="border-border space-y-2 rounded-lg border px-4 py-3">
                 <Label>
                   {t('pages.tags.fields.departments', 'Departments')}
                   <FieldTooltip
@@ -516,26 +563,26 @@ export function TagFormModal({
                     )}
                   />
                 </Label>
-                <p className="text-xs text-gray-500">
+                <p className="text-muted-foreground text-xs">
                   {t(
                     'pages.tags.fields.departmentsHint',
                     'No selection = visible to every department (same as today).'
                   )}
                 </p>
-                <div className="max-h-44 space-y-2 overflow-y-auto rounded border border-gray-100 bg-white p-2">
+                <div className="border-border bg-card max-h-44 space-y-2 overflow-y-auto rounded border p-2">
                   {departments.length === 0 ? (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-muted-foreground text-sm">
                       {t('pages.tags.fields.noDepartments', 'No departments in this project.')}
                     </p>
                   ) : (
                     departments.map((d) => (
                       <label
                         key={d.id}
-                        className="flex cursor-pointer items-center gap-2 text-sm text-gray-800"
+                        className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                       >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300"
+                          className="border-border h-4 w-4 rounded"
                           checked={departmentIds.includes(d.id)}
                           onChange={() => toggleDepartment(d.id)}
                         />
@@ -548,7 +595,7 @@ export function TagFormModal({
             )}
 
             {/* Expiry Type */}
-            <div className="rounded-lg border border-gray-200 px-4 py-3">
+            <div className="border-border rounded-lg border px-4 py-3">
               <Label className="mb-2 block">
                 {t('pages.tags.fields.expiryType', 'Expiry Type')}
                 <FieldTooltip
@@ -565,10 +612,10 @@ export function TagFormModal({
                       type="radio"
                       value={type}
                       {...register('expiry_type')}
-                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border text-information-600 focus:ring-primary h-4 w-4"
                       disabled={isSystemTag}
                     />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-foreground text-sm">
                       {t(`pages.tags.expiryTypes.${type}`, type)}
                     </span>
                   </label>
@@ -591,7 +638,7 @@ export function TagFormModal({
                   </div>
                   {/* Hours input as secondary option */}
                   <div className="space-y-2">
-                    <Label htmlFor="default_ttl_hours" className="text-xs text-gray-500">
+                    <Label htmlFor="default_ttl_hours" className="text-muted-foreground text-xs">
                       {t('pages.tags.fields.ttlHoursAlt', 'or duration in hours')}
                     </Label>
                     <Input
@@ -606,7 +653,26 @@ export function TagFormModal({
                       disabled={isSystemTag}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  {/* Skip Weekends */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="skip_weekends"
+                      {...register('skip_weekends')}
+                      className="border-border h-4 w-4 rounded"
+                      disabled={isSystemTag}
+                    />
+                    <Label htmlFor="skip_weekends" className="cursor-pointer text-sm font-normal">
+                      {t('pages.tags.fields.skipWeekends', 'Skip weekends')}
+                      <FieldTooltip
+                        text={t(
+                          'pages.tags.fields.tooltips.skipWeekends',
+                          'When enabled, the TTL countdown pauses on Saturday and Sunday. For example, a 48-hour TTL assigned on Friday at 18:00 will expire on Tuesday at 18:00, not Sunday.'
+                        )}
+                      />
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
                     {t(
                       'pages.tags.fields.ttlNote',
                       'Tag will be automatically removed after this period'
@@ -615,7 +681,7 @@ export function TagFormModal({
                 </div>
               )}
               {watch('expiry_type') === 'loan_closure' && (
-                <p className="mt-2 text-xs text-amber-600">
+                <p className="text-warning-600 mt-2 text-xs">
                   {t(
                     'pages.tags.fields.loanClosureNote',
                     "Tag will be automatically removed when the client's loan is closed"
@@ -629,7 +695,7 @@ export function TagFormModal({
                   date-field selection happens in the chain effect
                   editor (not here in the tag definition). */}
               {watch('expiry_type') === 'target_action_date' && (
-                <p className="mt-2 text-xs text-amber-600">
+                <p className="text-warning-600 mt-2 text-xs">
                   {t(
                     'pages.tags.fields.targetActionDateNote',
                     'Expiry is set from a date field in the Target Action that triggers this tag. Tags of this type cannot be assigned manually by operators — only via chain effects.'
@@ -639,13 +705,13 @@ export function TagFormModal({
             </div>
 
             {/* Related Tag */}
-            <div className="rounded-lg border border-gray-200 px-4 py-3">
+            <div className="border-border rounded-lg border px-4 py-3">
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="is_related_tag"
                   {...register('is_related_tag')}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="border-border h-4 w-4 rounded"
                   disabled={isSystemTag}
                 />
                 <Label htmlFor="is_related_tag">
@@ -658,7 +724,7 @@ export function TagFormModal({
                   />
                 </Label>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.tags.relatedTagHint',
                   'Shown in the Related Tags tab on profiles of clients linked by shared phone numbers.'
@@ -667,13 +733,13 @@ export function TagFormModal({
             </div>
 
             {/* Protected Tag */}
-            <div className="rounded-lg border border-gray-200 px-4 py-3">
+            <div className="border-border rounded-lg border px-4 py-3">
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="is_protected"
                   {...register('is_protected')}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="border-border h-4 w-4 rounded"
                   disabled={isSystemTag}
                 />
                 <Label htmlFor="is_protected">
@@ -686,7 +752,7 @@ export function TagFormModal({
                   />
                 </Label>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t('pages.tags.protectedWarning', 'Removal requires manager approval')}
               </p>
               {watch('is_protected') && (
@@ -709,14 +775,14 @@ export function TagFormModal({
                               )
                             }
                           }}
-                          className="h-3.5 w-3.5 rounded border-gray-300"
+                          className="border-border h-3.5 w-3.5 rounded"
                           disabled={isSystemTag}
                         />
-                        <span className="text-sm text-gray-700">{role.name}</span>
+                        <span className="text-foreground text-sm">{role.name}</span>
                       </label>
                     ))}
                     {availableRoles.length === 0 && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-muted-foreground text-xs">
                         {t('pages.tags.fields.noRolesAvailable', 'No roles available')}
                       </span>
                     )}
@@ -726,17 +792,19 @@ export function TagFormModal({
             </div>
 
             {/* Collapsible: Notifications */}
-            <div className="rounded-lg border border-gray-200">
+            <div className="border-border rounded-lg border">
               <button
                 type="button"
                 onClick={() => toggleSection('notifications')}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="text-foreground hover:bg-muted flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium"
               >
                 <span>{t('pages.tags.fields.notifications', 'Notifications')}</span>
-                <span className="text-gray-400">{expandedSections.notifications ? '−' : '+'}</span>
+                <span className="text-muted-foreground">
+                  {expandedSections.notifications ? '−' : '+'}
+                </span>
               </button>
               {expandedSections.notifications && (
-                <div className="space-y-4 border-t border-gray-200 px-4 py-3">
+                <div className="border-border space-y-4 border-t px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Controller
                       name="notification_enabled"
@@ -779,7 +847,7 @@ export function TagFormModal({
                     />
                     {/* Available variables */}
                     <div className="mt-2 space-y-1">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-muted-foreground text-xs">
                         {t('pages.tags.fields.availableVariables', 'Доступные переменные:')}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -793,7 +861,7 @@ export function TagFormModal({
                           <button
                             key={v.var}
                             type="button"
-                            className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 transition-colors hover:bg-gray-200"
+                            className="bg-muted text-foreground hover:bg-muted/80 rounded px-2 py-0.5 font-mono text-xs transition-colors"
                             onClick={() => insertVariable(v.var)}
                             title={t(
                               `pages.tags.fields.var${v.label.charAt(0).toUpperCase() + v.label.slice(1).replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())}`,

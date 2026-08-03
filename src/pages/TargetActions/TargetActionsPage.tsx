@@ -32,10 +32,10 @@ import {
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_BADGE: Record<string, string> = {
-  text: 'bg-emerald-100 text-emerald-700',
-  dropdown: 'bg-purple-100 text-purple-700',
-  date: 'bg-orange-100 text-orange-700',
-  amount: 'bg-blue-100 text-blue-700',
+  text: 'bg-success-100 text-success-700',
+  dropdown: 'bg-secondary-100 text-secondary-700',
+  date: 'bg-warning-100 text-warning-700',
+  amount: 'bg-info-100 text-info-700',
 }
 
 export function TargetActionsPage() {
@@ -94,7 +94,7 @@ export function TargetActionsPage() {
       render: (ta) => (
         <span
           className={`text-sm font-medium ${
-            ta.is_hidden ? 'text-gray-400 line-through' : 'text-dark-500'
+            ta.is_hidden ? 'text-muted-foreground line-through' : 'text-foreground'
           }`}
         >
           {ta.name}
@@ -108,7 +108,7 @@ export function TargetActionsPage() {
       render: (ta) => (
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
-            TYPE_BADGE[ta.field_type] ?? 'bg-gray-100 text-gray-700'
+            TYPE_BADGE[ta.field_type] ?? 'bg-muted text-muted-foreground'
           }`}
         >
           {t(`pages.targetActions.fieldTypes.${ta.field_type}`)}
@@ -132,7 +132,7 @@ export function TargetActionsPage() {
       render: (ta) => (
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
-            ta.is_hidden ? 'bg-gray-200 text-gray-700' : 'bg-green-100 text-green-700'
+            ta.is_hidden ? 'bg-muted text-muted-foreground' : 'bg-success-100 text-success-700'
           }`}
         >
           {ta.is_hidden
@@ -183,12 +183,12 @@ export function TargetActionsPage() {
     <div className="flex w-full flex-col items-start gap-4">
       <div className="mb-4 flex w-full flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.targetActions.title')}</h1>
-          <span className="text-sm text-gray-500">{filtered.length}</span>
+          <h1 className="text-foreground text-2xl font-light">{t('pages.targetActions.title')}</h1>
+          <span className="text-muted-foreground text-sm">{filtered.length}</span>
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:flex-nowrap md:justify-end">
-          <label className="flex shrink-0 items-center gap-2 text-sm whitespace-nowrap text-gray-700">
+          <label className="text-foreground flex shrink-0 items-center gap-2 text-sm whitespace-nowrap">
             <input
               type="checkbox"
               checked={showHidden}

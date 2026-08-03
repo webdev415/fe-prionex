@@ -63,6 +63,7 @@ import {
   frontendToBackendPaymentMethod,
   frontendToBackendPaymentStatus,
 } from '@/features/payments/utils'
+import { getPaymentHistoryPagination } from '@/features/payments/utils/paymentHistoryPagination'
 import type {
   Payment as BackendPayment,
   PaymentMethod as BackendPaymentMethod,
@@ -85,51 +86,51 @@ interface Payment {
 /** Thead pulse row — identical for full-page load and in-table refetch skeleton */
 function PaymentHistoryTableHeadSkeletonRow() {
   return (
-    <tr className="bg-white">
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+    <tr className="border-border bg-card">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded sm:h-4 sm:w-16" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-        <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
+        <div className="bg-muted-foreground/25 h-3 w-24 animate-pulse rounded sm:h-4 sm:w-28" />
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
+        <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-right text-xs font-medium sm:px-6">
         <div className="ml-auto flex items-center justify-end gap-1">
-          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded sm:h-4 sm:w-14" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
-          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+          <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded sm:h-4 sm:w-14" />
+          <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded opacity-50" />
         </div>
       </th>
-      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
-        <div className="mx-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+      <th className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+        <div className="bg-muted-foreground/25 mx-auto h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
       </th>
     </tr>
   )
@@ -147,7 +148,7 @@ function PaymentHistoryTableBodySkeletonRows() {
     return (
       <div
         className={cn(
-          'block h-3 min-w-[3rem] animate-pulse rounded bg-gray-200 sm:h-4',
+          'bg-muted block h-3 min-w-[3rem] animate-pulse rounded sm:h-4',
           width,
           alignCls
         )}
@@ -158,38 +159,38 @@ function PaymentHistoryTableBodySkeletonRows() {
   return (
     <>
       {Array.from({ length: 10 }).map((_, rowIndex) => (
-        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}>
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left')}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left', true)}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left', true)}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-right text-xs font-medium sm:px-6">
             {bar('right', true)}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left')}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left')}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             {bar('left', true)}
           </td>
-          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+          <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
             <div className="flex w-full min-w-0 items-center gap-2">
-              <div className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-200" />
-              <div className="h-3 max-w-[6rem] min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-4 sm:max-w-[7rem]" />
+              <div className="bg-muted-foreground/25 h-3 w-3 shrink-0 animate-pulse rounded-full" />
+              <div className="bg-muted-foreground/25 h-3 max-w-[6rem] min-w-0 flex-1 animate-pulse rounded sm:h-4 sm:max-w-[7rem]" />
             </div>
           </td>
-          <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+          <td className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
             <div className="mx-auto flex w-full max-w-[7rem] items-center justify-center gap-1 sm:max-w-[9rem] sm:gap-2">
-              <div className="h-5 w-10 shrink-0 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-11" />
-              <div className="hidden h-5 w-10 shrink-0 animate-pulse rounded bg-gray-200 sm:block sm:h-6 sm:w-11" />
+              <div className="bg-muted-foreground/25 h-5 w-10 shrink-0 animate-pulse rounded sm:h-6 sm:w-11" />
+              <div className="bg-muted-foreground/25 hidden h-5 w-10 shrink-0 animate-pulse rounded sm:block sm:h-6 sm:w-11" />
             </div>
           </td>
         </tr>
@@ -460,14 +461,7 @@ export function PaymentHistoryPage() {
   // Helper function to check if payment date is less than 7 days old
   // Use utility function from payments feature
   const checkPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
-    // Convert MM/DD/YYYY to ISO date for utility function
-    try {
-      const [month, day, year] = paymentDate.split('/')
-      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-      return isPaymentLessThan7DaysOld(isoDate)
-    } catch {
-      return false
-    }
+    return isPaymentLessThan7DaysOld(paymentDate)
   }, [])
 
   // Resolve a human-friendly project name for a payment
@@ -544,7 +538,7 @@ export function PaymentHistoryPage() {
     // Find payment by ID
     const payment = paymentHistory?.payments.find((p) => p.id.toString() === paymentId)
     if (!payment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -596,7 +590,7 @@ export function PaymentHistoryPage() {
 
     const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
     if (!backendPayment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -713,12 +707,12 @@ export function PaymentHistoryPage() {
   const getStatusDot = (status: Payment['status']) => {
     const statusColors = {
       verified: 'bg-success-500',
-      pending: 'bg-gray-500',
+      pending: 'bg-muted-foreground',
       cancelled: 'bg-error-500',
     }
     const borderStatusColors = {
       verified: 'bg-success-200',
-      pending: 'bg-gray-200',
+      pending: 'bg-muted',
       cancelled: 'bg-error-200',
     }
     return (
@@ -750,7 +744,7 @@ export function PaymentHistoryPage() {
     if (!isActive) {
       return (
         <span className="ml-1 opacity-40">
-          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
+          <Icons.Sorting01Icon size={14} className="text-muted-foreground" strokeWidth={1.5} />
         </span>
       )
     }
@@ -856,21 +850,21 @@ export function PaymentHistoryPage() {
   }, [paymentHistory, statusFilter, methodFilter, startDate, endDate, sortConfig])
 
   // Paginate payments
-  const totalPages = Math.ceil(filteredPayments.length / pageSize)
-  const paginatedPayments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    const end = start + pageSize
-    return filteredPayments.slice(start, end)
-  }, [filteredPayments, currentPage, pageSize])
+  const { totalPages, rangeStart, rangeEnd } = getPaymentHistoryPagination(
+    paymentHistoryData?.total_payments ?? 0,
+    currentPage,
+    pageSize
+  )
+  const paginatedPayments = filteredPayments
 
   const paymentHistorySubtitle = useMemo(() => {
     if (!paymentHistory || filteredPayments.length === 0) {
       return null
     }
 
-    const total = filteredPayments.length
-    const start = (currentPage - 1) * pageSize + 1
-    const end = Math.min(currentPage * pageSize, total)
+    const total = paymentHistoryData?.total_payments ?? 0
+    const start = rangeStart
+    const end = rangeEnd
 
     if (currentPage === 1 && pageSize === 10 && total >= 10) {
       return t('pages.clients.paymentHistory.subtitle.last10')
@@ -880,7 +874,16 @@ export function PaymentHistoryPage() {
       return t('pages.clients.paymentHistory.subtitle.single', { index: start, total })
     }
     return t('pages.clients.paymentHistory.subtitle.range', { start, end, total })
-  }, [paymentHistory, filteredPayments, currentPage, pageSize, t])
+  }, [
+    paymentHistory,
+    filteredPayments,
+    paymentHistoryData,
+    currentPage,
+    pageSize,
+    rangeStart,
+    rangeEnd,
+    t,
+  ])
 
   /** Same thead + tbody skeleton as full-page load (filters stay interactive). */
   const showPaymentTableBodySkeleton = Boolean(
@@ -898,12 +901,12 @@ export function PaymentHistoryPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">
+        <p className="text-foreground font-medium">
           {isClientError
             ? t('pages.clients.debtSummary.failedToLoadClient')
             : t('pages.clients.paymentHistory.failedToLoadPayments')}
         </p>
-        <p className="text-sm text-gray-600">{errorMessage}</p>
+        <p className="text-muted-foreground text-sm">{errorMessage}</p>
         <Button
           variant="outline"
           onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
@@ -921,114 +924,114 @@ export function PaymentHistoryPage() {
         {/* Header — matches loaded: xl row, back + title | export */}
         <div className="flex flex-col gap-3 self-stretch xl:h-12 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 sm:self-stretch">
-            <div className="h-10 w-24 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-28" />
-            <div className="h-6 min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-8" />
+            <div className="bg-muted-foreground/25 h-10 w-24 shrink-0 animate-pulse rounded-full sm:h-12 sm:w-28" />
+            <div className="bg-muted-foreground/25 h-6 min-w-0 flex-1 animate-pulse rounded sm:h-8" />
           </div>
-          <div className="h-10 w-full animate-pulse rounded-full bg-gray-200 sm:h-12 xl:w-40 xl:shrink-0" />
+          <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-full sm:h-12 xl:w-40 xl:shrink-0" />
         </div>
 
         <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
           <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
-            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
+            <div className="border-border flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border p-4 sm:p-6">
               <div className="flex flex-col items-center justify-center gap-4 self-stretch">
                 <div className="flex items-center justify-center gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2.5 rounded-full bg-white/80 p-2">
-                    <div className="h-5 w-5 animate-pulse rounded-full bg-gray-200 sm:h-6 sm:w-6" />
+                  <div className="bg-card/80 flex items-center gap-2.5 rounded-full p-2">
+                    <div className="bg-muted-foreground/25 h-5 w-5 animate-pulse rounded-full sm:h-6 sm:w-6" />
                   </div>
-                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+                  <div className="bg-muted-foreground/25 h-5 w-36 animate-pulse rounded sm:h-6 sm:w-48" />
                 </div>
-                <div className="h-6 w-28 animate-pulse rounded-full bg-gray-200 sm:h-7 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-6 w-28 animate-pulse rounded-full sm:h-7 sm:w-32" />
               </div>
 
               <div className="mb-6 flex justify-center">
                 <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
-                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
-                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
+                  <div className="bg-muted-foreground/25 h-[120px] w-[120px] animate-pulse rounded-full sm:h-[150px] sm:w-[150px]" />
+                  <div className="bg-border absolute h-10 w-10 animate-pulse rounded-full sm:h-12 sm:w-12" />
                 </div>
               </div>
 
               <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-5 w-40 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+                <div className="bg-muted-foreground/25 h-5 w-40 animate-pulse rounded sm:h-6 sm:w-48" />
               </div>
 
               <div className="flex w-full flex-col items-start gap-3">
-                <div className="h-10 w-full animate-pulse rounded-full bg-gray-200" />
-                <div className="h-10 w-full animate-pulse rounded-full bg-gray-200" />
+                <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-full" />
+                <div className="bg-muted-foreground/25 h-10 w-full animate-pulse rounded-full" />
               </div>
             </div>
 
             {/* Total payments — gradient strip like loaded */}
-            <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="border-border bg-card/50 relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
               <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
-                  <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 shrink-0 animate-pulse rounded sm:h-[18px] sm:w-[18px]" />
+                  <div className="bg-muted-foreground/25 h-3 w-28 animate-pulse rounded sm:h-4 sm:w-32" />
                 </div>
-                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-3 w-28 animate-pulse rounded sm:h-4 sm:w-32" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
-                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+                <div className="bg-muted-foreground/25 h-5 w-24 animate-pulse rounded sm:h-6 sm:w-28" />
+                <div className="bg-muted-foreground/25 h-4 w-8 animate-pulse rounded sm:h-5 sm:w-10" />
               </div>
               <div className="from-primary-300 to-secondary-800 absolute bottom-0 h-[3px] w-full bg-gradient-to-r opacity-60" />
             </div>
 
             {/* Verified */}
-            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
               <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
-                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 shrink-0 animate-pulse rounded sm:h-[18px] sm:w-[18px]" />
+                  <div className="bg-muted-foreground/25 h-3 w-24 animate-pulse rounded sm:h-4 sm:w-28" />
                 </div>
-                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-3 w-28 animate-pulse rounded sm:h-4 sm:w-32" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
-                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+                <div className="bg-muted-foreground/25 h-5 w-24 animate-pulse rounded sm:h-6 sm:w-28" />
+                <div className="bg-muted-foreground/25 h-4 w-8 animate-pulse rounded sm:h-5 sm:w-10" />
               </div>
             </div>
 
             {/* Pending */}
-            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
               <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 shrink-0 animate-pulse rounded sm:h-[18px] sm:w-[18px]" />
+                  <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                 </div>
-                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-3 w-28 animate-pulse rounded sm:h-4 sm:w-32" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
-                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+                <div className="bg-muted-foreground/25 h-5 w-24 animate-pulse rounded sm:h-6 sm:w-28" />
+                <div className="bg-muted-foreground/25 h-4 w-8 animate-pulse rounded sm:h-5 sm:w-10" />
               </div>
             </div>
           </div>
 
-          <div className="flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+          <div className="bg-card/50 flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-4 w-48 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-56" />
+              <div className="bg-muted-foreground/25 h-4 w-48 animate-pulse rounded sm:h-5 sm:w-56" />
 
               <div className="flex flex-col items-start self-stretch">
-                <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+                <div className="border-border bg-card flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 p-3 sm:flex-row sm:gap-5 sm:p-4">
                   <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
-                    <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
-                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded" />
+                    <div className="bg-muted-foreground/25 h-[45px] w-full animate-pulse rounded-md" />
                   </div>
                   <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
-                    <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
-                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded" />
+                    <div className="bg-muted-foreground/25 h-[45px] w-full animate-pulse rounded-md" />
                   </div>
                   <div className="flex flex-col items-start justify-center gap-1 self-stretch sm:min-w-0 sm:flex-1">
-                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded" />
                     <div className="flex items-center gap-3 self-stretch">
-                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
-                      <div className="h-3 w-2 shrink-0 animate-pulse rounded bg-gray-200" />
-                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
+                      <div className="bg-muted-foreground/25 h-[45px] min-w-0 flex-1 animate-pulse rounded-md" />
+                      <div className="bg-muted-foreground/25 h-3 w-2 shrink-0 animate-pulse rounded" />
+                      <div className="bg-muted-foreground/25 h-[45px] min-w-0 flex-1 animate-pulse rounded-md" />
                     </div>
                   </div>
                 </div>
 
-                <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+                <div className="data-table-scroll border-border bg-border w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border shadow-sm">
                   <table className="min-w-full border-collapse">
                     <thead>
                       <PaymentHistoryTableHeadSkeletonRow />
@@ -1043,21 +1046,21 @@ export function PaymentHistoryPage() {
               <div className="flex w-full justify-end">
                 <div className="flex w-full flex-wrap items-center justify-between gap-2 py-4 sm:gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="hidden h-3 w-28 animate-pulse rounded bg-gray-200 md:block" />
-                    <div className="h-8 w-12 animate-pulse rounded-md bg-gray-200 sm:h-9 sm:w-14" />
+                    <div className="bg-muted-foreground/25 hidden h-3 w-28 animate-pulse rounded md:block" />
+                    <div className="bg-muted-foreground/25 h-8 w-12 animate-pulse rounded-md sm:h-9 sm:w-14" />
                   </div>
                   <div className="flex max-w-full items-center gap-1 overflow-hidden sm:gap-2">
-                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
-                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
-                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
-                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
-                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="bg-muted-foreground/25 h-8 w-8 shrink-0 animate-pulse rounded-full sm:h-10 sm:w-10" />
+                    <div className="bg-muted-foreground/25 h-8 w-8 shrink-0 animate-pulse rounded-full sm:h-10 sm:w-10" />
+                    <div className="bg-muted-foreground/25 h-8 w-8 shrink-0 animate-pulse rounded-full sm:h-10 sm:w-10" />
+                    <div className="bg-muted-foreground/25 h-8 w-8 shrink-0 animate-pulse rounded-full sm:h-10 sm:w-10" />
+                    <div className="bg-muted-foreground/25 h-8 w-8 shrink-0 animate-pulse rounded-full sm:h-10 sm:w-10" />
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="hidden h-3 w-10 animate-pulse rounded bg-gray-200 md:block" />
-                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
-                    <div className="h-3 w-4 animate-pulse rounded bg-gray-200" />
-                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
+                    <div className="bg-muted-foreground/25 hidden h-3 w-10 animate-pulse rounded md:block" />
+                    <div className="bg-muted-foreground/25 h-3 w-5 animate-pulse rounded" />
+                    <div className="bg-muted-foreground/25 h-3 w-4 animate-pulse rounded" />
+                    <div className="bg-muted-foreground/25 h-3 w-5 animate-pulse rounded" />
                   </div>
                 </div>
               </div>
@@ -1084,7 +1087,7 @@ export function PaymentHistoryPage() {
             </span>
             <span className="sm:hidden">Back</span>
           </Button>
-          <span className="text-dark-500 text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+          <span className="text-foreground text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.clients.paymentHistory.title')}:{' '}
             <span className="font-medium">{paymentHistory.customerName}</span>
           </span>
@@ -1106,17 +1109,17 @@ export function PaymentHistoryPage() {
         {/* Left Column - Client Summary */}
         <div className="flex w-full flex-col items-start gap-5 xl:w-[35%]">
           {/* Client Information Card */}
-          <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
+          <div className="border-border flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border p-4 sm:p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
               <div className="flex items-center justify-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                  <Icons.User size={20} className="text-dark-500 sm:size-[24px]" />
+                <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                  <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-dark-500 text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                   {paymentHistory.customerName}
                 </span>
               </div>
-              <div className="flex items-center gap-1 rounded-full bg-white px-3 py-1">
+              <div className="bg-card flex items-center gap-1 rounded-full px-3 py-1">
                 <div className="flex items-center justify-center gap-1">
                   <span
                     className={cn(
@@ -1155,7 +1158,7 @@ export function PaymentHistoryPage() {
                         : 'text-error-500'
                     )}
                   >
-                    {paymentHistory.status}
+                    {t(`debtSummaryStatuses.${paymentHistory.status}`, paymentHistory.status)}
                   </span>
                 </div>
               </div>
@@ -1173,33 +1176,33 @@ export function PaymentHistoryPage() {
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="#FFF"
+                    stroke="currentColor"
                     strokeWidth="10"
-                    className="transition-all duration-300"
+                    className="text-muted-foreground/25 transition-all duration-300"
                   />
                   <circle
                     cx="50"
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="#A0F229"
+                    stroke="currentColor"
                     strokeWidth="10"
                     strokeDasharray={2 * Math.PI * 45}
                     strokeDashoffset={
                       2 * Math.PI * 45 * (1 - paymentHistory.progressPercentage / 100)
                     }
                     strokeLinecap="round"
-                    className="transition-all duration-500 ease-in-out"
+                    className="text-primary-700 transition-all duration-500 ease-in-out"
                   />
                 </svg>
-                <span className="text-secondary-800 absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
+                <span className="text-foreground absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
                   {Math.round(paymentHistory.progressPercentage)}%
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-5 self-stretch">
-              <span className="text-dark-500 text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
+              <span className="text-foreground text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.paymentHistory.totalPaid')}{' '}
                 <span className="font-medium">{formatCurrency(paymentHistory.totalPaid)}</span>
               </span>
@@ -1216,7 +1219,7 @@ export function PaymentHistoryPage() {
                   onClick={() => {
                     const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
-                      toast.error('Client has no phone number')
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                       return
                     }
 
@@ -1253,25 +1256,25 @@ export function PaymentHistoryPage() {
           </div>
 
           {/* Total Payments */}
-          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+          <div className="border-border bg-card/50 relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
             <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.Wallet01 size={16} className="text-gray-700 sm:size-[18px]" />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <Icons.Wallet01 size={16} className="text-foreground sm:size-[18px]" />
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.totalPayments')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+              <span className="text-foreground text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.totalPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+              <span className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.totalPayments}
               </span>
             </div>
@@ -1279,50 +1282,50 @@ export function PaymentHistoryPage() {
           </div>
 
           {/* Verified Payments */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+          <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
             <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.AddInvoice size={16} className="text-gray-700 sm:size-[18px]" />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <Icons.AddInvoice size={16} className="text-foreground sm:size-[18px]" />
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.verified')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+              <span className="text-foreground text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.verifiedPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+              <span className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.verifiedPayments}
               </span>
             </div>
           </div>
 
           {/* Pending Payments */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+          <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
             <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.Invoice01 size={16} className="text-gray-700 sm:size-[18px]" />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <Icons.Invoice01 size={16} className="text-foreground sm:size-[18px]" />
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.pending')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
-              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+              <span className="text-foreground text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.pendingPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+              <span className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.pendingPayments}
               </span>
             </div>
@@ -1330,9 +1333,9 @@ export function PaymentHistoryPage() {
         </div>
 
         {/* Right Column - Payment History Table */}
-        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+        <div className="bg-card/50 flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
-            <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+            <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.clients.paymentHistory.title')}
               {paymentHistorySubtitle && (
                 <>
@@ -1343,13 +1346,13 @@ export function PaymentHistoryPage() {
             </span>
             <div className="flex flex-col items-start self-stretch">
               {/* Filters */}
-              <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+              <div className="border-border bg-card flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 p-3 sm:flex-row sm:gap-5 sm:p-4">
                 <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch">
-                  <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.status')}
                   </span>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-[45px] w-full rounded-md border-gray-200">
+                    <SelectTrigger className="border-border h-[45px] w-full rounded-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1371,11 +1374,11 @@ export function PaymentHistoryPage() {
                   </Select>
                 </div>
                 <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch">
-                  <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.method')}
                   </span>
                   <Select value={methodFilter} onValueChange={setMethodFilter}>
-                    <SelectTrigger className="h-[45px] rounded-md border-gray-200">
+                    <SelectTrigger className="border-border h-[45px] rounded-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1399,7 +1402,7 @@ export function PaymentHistoryPage() {
                   </Select>
                 </div>
                 <div className="flex flex-col items-start justify-center gap-1 self-stretch">
-                  <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.dateRange')}
                   </span>
                   <div className="flex items-center gap-3 self-stretch">
@@ -1411,7 +1414,7 @@ export function PaymentHistoryPage() {
                       format="dd.MM.yyyy"
                       className="flex-1"
                     />
-                    <span className="text-dark-500 text-xs sm:text-base">-</span>
+                    <span className="text-foreground text-xs sm:text-base">-</span>
                     <DateSelect
                       value={endDate}
                       onChange={({ value }) => setEndDate(value)}
@@ -1427,7 +1430,7 @@ export function PaymentHistoryPage() {
               {/* Custom Table */}
               <div
                 className={cn(
-                  'data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm',
+                  'data-table-scroll border-border bg-border w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border shadow-sm',
                   showPaymentTableBodySkeleton && 'relative min-h-[490px]'
                 )}
               >
@@ -1436,9 +1439,9 @@ export function PaymentHistoryPage() {
                     {showPaymentTableBodySkeleton ? (
                       <PaymentHistoryTableHeadSkeletonRow />
                     ) : (
-                      <tr className="bg-white">
+                      <tr className="border-border bg-card">
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('date')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1446,14 +1449,14 @@ export function PaymentHistoryPage() {
                             {getSortIcon('date')}
                           </span>
                         </th>
-                        <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                           {t('pages.clients.paymentHistory.tableHeaders.paymentConfirmationDate')}
                         </th>
-                        <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                           {t('pages.clients.paymentHistory.tableHeaders.cancelledDate')}
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-right text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('amount')}
                         >
                           <span className="inline-flex items-center justify-end gap-1">
@@ -1462,7 +1465,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('method')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1471,7 +1474,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('reference')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1480,7 +1483,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('contract')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1489,7 +1492,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-foreground hover:bg-muted border-border h-[49px] cursor-pointer border-r px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('status')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1497,7 +1500,7 @@ export function PaymentHistoryPage() {
                             {getSortIcon('status')}
                           </span>
                         </th>
-                        <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                        <th className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                           {t('pages.clients.paymentHistory.tableHeaders.actions')}
                         </th>
                       </tr>
@@ -1510,7 +1513,7 @@ export function PaymentHistoryPage() {
                       <tr>
                         <td
                           colSpan={9}
-                          className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
+                          className="text-foreground h-[49px] px-6 text-center text-xs font-medium"
                         >
                           {t('pages.clients.paymentHistory.noPaymentHistory')}
                         </td>
@@ -1529,37 +1532,37 @@ export function PaymentHistoryPage() {
                           <tr
                             key={payment.id}
                             className={`transition-colors ${
-                              index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                              index % 2 === 0 ? 'bg-muted' : 'bg-card'
                             }`}
                           >
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {paymentAddedDate
                                 ? convertUTCToUserTimezone(paymentAddedDate, userTimezone)
                                 : '—'}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {formatIsoDate(backendPayment?.payment_confirmation_date)}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {backendPayment?.status === 'cancelled' && backendPayment?.reversed_at
                                 ? convertUTCToUserTimezone(backendPayment.reversed_at, userTimezone)
                                 : '—'}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-right text-xs font-medium sm:px-6">
                               {formatCurrency(payment.amount)}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
                                 defaultValue: payment.method,
                               })}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {payment.reference || '-'}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {payment.contractNumber || '-'}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">
                                 {getStatusDot(payment.status)}
                                 <span
@@ -1567,7 +1570,7 @@ export function PaymentHistoryPage() {
                                     payment.status === 'verified'
                                       ? 'text-success-500'
                                       : payment.status === 'pending'
-                                        ? 'text-gray-500'
+                                        ? 'text-muted-foreground'
                                         : 'text-error-500'
                                   )}
                                 >
@@ -1577,7 +1580,7 @@ export function PaymentHistoryPage() {
                                 </span>
                               </div>
                             </td>
-                            <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                            <td className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                               <div className="flex items-center justify-center gap-2 sm:gap-4">
                                 {/* Desktop: Individual buttons */}
                                 <div className="hidden items-center gap-4 lg:flex">
@@ -1588,7 +1591,7 @@ export function PaymentHistoryPage() {
                                       leftIcon={
                                         <Icons.FileDownload
                                           size={16}
-                                          color="#05040D"
+                                          className="text-foreground"
                                           strokeWidth={1.5}
                                         />
                                       }
@@ -1604,7 +1607,9 @@ export function PaymentHistoryPage() {
                                             format: 'pdf',
                                           })
                                         } else {
-                                          toast.error('Payment not found')
+                                          toast.error(
+                                            t('errors.paymentNotFound', 'Payment not found')
+                                          )
                                         }
                                       }}
                                     >
@@ -1620,7 +1625,7 @@ export function PaymentHistoryPage() {
                                           leftIcon={
                                             <Icons.Success
                                               size={16}
-                                              color="#05040D"
+                                              className="text-foreground"
                                               strokeWidth={1.5}
                                             />
                                           }
@@ -1637,7 +1642,11 @@ export function PaymentHistoryPage() {
                                     variant="regular-black"
                                     size="xs"
                                     leftIcon={
-                                      <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+                                      <Icons.View
+                                        size={16}
+                                        className="text-foreground"
+                                        strokeWidth={1.5}
+                                      />
                                     }
                                     onClick={() => handleViewDetails(payment)}
                                   >
@@ -1657,7 +1666,7 @@ export function PaymentHistoryPage() {
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
-                                        className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                                        className="text-foreground border-border bg-card hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none"
                                         aria-label={t(
                                           'pages.clients.paymentHistory.tableHeaders.actions'
                                         )}
@@ -1665,7 +1674,10 @@ export function PaymentHistoryPage() {
                                         <Icons.FilterVertical size={16} strokeWidth={1.5} />
                                       </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-white">
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="border-border bg-card"
+                                    >
                                       {payment.status === 'verified' && (
                                         <DropdownMenuItem
                                           onClick={() => {
@@ -1681,11 +1693,13 @@ export function PaymentHistoryPage() {
                                                 format: 'pdf',
                                               })
                                             } else {
-                                              toast.error('Payment not found')
+                                              toast.error(
+                                                t('errors.paymentNotFound', 'Payment not found')
+                                              )
                                             }
                                             setOpenDropdownPaymentId(null)
                                           }}
-                                          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                         >
                                           <Icons.FileDownload size={16} strokeWidth={1.5} />
                                           <span>
@@ -1704,7 +1718,7 @@ export function PaymentHistoryPage() {
                                                 setIsVerificationModalOpen(true)
                                                 setOpenDropdownPaymentId(null)
                                               }}
-                                              className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                              className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                             >
                                               <Icons.Success size={16} strokeWidth={1.5} />
                                               <span>
@@ -1718,7 +1732,7 @@ export function PaymentHistoryPage() {
                                           handleViewDetails(payment)
                                           setOpenDropdownPaymentId(null)
                                         }}
-                                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                        className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                       >
                                         <Icons.View size={16} strokeWidth={1.5} />
                                         <span>
@@ -1869,7 +1883,7 @@ export function PaymentHistoryPage() {
           onViewClientProfile={handleViewClientProfile}
           onPrintReceipt={() => {
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1882,7 +1896,7 @@ export function PaymentHistoryPage() {
           }}
           onDownloadReceipt={() => {
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1950,7 +1964,7 @@ export function PaymentHistoryPage() {
                 (p) => p.id === selectedPayment.id
               )
               if (!backendPayment) {
-                toast.error('Payment not found')
+                toast.error(t('errors.paymentNotFound', 'Payment not found'))
                 return
               }
 

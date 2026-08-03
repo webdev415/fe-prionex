@@ -50,3 +50,10 @@ memory-bank/
 
 .env
 package-lock.json
+
+# DB credentials (never commit)
+docs/dbpassword.txt
+
+
+.claude/skills/
+docs/crm

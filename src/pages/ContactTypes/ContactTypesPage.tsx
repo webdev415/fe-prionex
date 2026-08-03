@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { ColorPickerField } from '@/components/forms/ColorPickerField'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
@@ -27,6 +28,8 @@ import {
   usePatchContactType,
 } from '@/features/clients/hooks/useClients'
 import type { ContactSource, ContactTypeOption } from '@/features/clients/api/types'
+
+import { ContactTypesPageSkeleton } from './ContactTypesPageSkeleton'
 
 type StatusFilter = 'all' | 'active' | 'hidden'
 
@@ -45,12 +48,19 @@ export function ContactTypesPage() {
   const [spamAllowed, setSpamAllowed] = useState(false)
   const [primaryPhone, setPrimaryPhone] = useState(false)
   const [contactSource, setContactSource] = useState<ContactSource>('client')
+  const [color, setColor] = useState('#80D80A')
   const [formError, setFormError] = useState<string | null>(null)
 
-  const contactSourceLabel = (source: ContactSource) =>
-    source === 'recommender'
-      ? t('pages.contactTypes.recommender', 'Recommender')
-      : t('pages.contactTypes.client', 'Client')
+  const contactSourceLabel = (source: ContactSource) => {
+    if (source === 'recommender') return t('pages.contactTypes.recommender', 'Recommender')
+    if (source === 'other') return t('pages.contactTypes.other', 'Other')
+    return t('pages.contactTypes.client', 'Client')
+  }
+
+  // 'Other' = non-phone contact type: call-line / spam / primary-phone are
+  // meaningless, so those controls are disabled (and derived to neutral values
+  // server-side). Name and Sort Order stay editable.
+  const isOtherSource = contactSource === 'other'
 
   const openCreate = () => {
     setFormError(null)
@@ -61,6 +71,7 @@ export function ContactTypesPage() {
     setSpamAllowed(false)
     setPrimaryPhone(false)
     setContactSource('client')
+    setColor('#80D80A')
     setFormOpen(true)
   }
 
@@ -72,6 +83,7 @@ export function ContactTypesPage() {
     setSpamAllowed(row.spam_allowed)
     setPrimaryPhone(row.show_as_primary_phone)
     setContactSource(row.contact_source ?? 'client')
+    setColor(row.color || '#80D80A')
     setFormOpen(true)
   }
 
@@ -95,6 +107,7 @@ export function ContactTypesPage() {
             spam_allowed: spamAllowed,
             show_as_primary_phone: primaryPhone,
             contact_source: contactSource,
+            color,
           },
         },
         {
@@ -114,6 +127,7 @@ export function ContactTypesPage() {
           spam_allowed: spamAllowed,
           show_as_primary_phone: primaryPhone,
           contact_source: contactSource,
+          color,
         },
         {
           onSuccess: () => {
@@ -164,7 +178,7 @@ export function ContactTypesPage() {
       key: 'name',
       header: t('pages.contactTypes.columns.name', 'Name'),
       render: (r) => (
-        <span className={r.is_hidden ? 'text-gray-400' : ''}>
+        <span className={r.is_hidden ? 'text-muted-foreground' : 'text-foreground'}>
           {i18n.language === 'uk' ? r.name : t(`contactTypes.${r.code}`, { defaultValue: r.name })}
         </span>
       ),
@@ -250,22 +264,29 @@ export function ContactTypesPage() {
   return (
     <div className="flex flex-col gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-secondary-800 text-xl font-semibold md:text-2xl">
+        <h1 className="text-foreground text-xl font-semibold md:text-2xl">
           {t('pages.contactTypes.title', 'Contact Types')}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-dark-500 text-sm">
-            {t('pages.contactTypes.filterStatus', 'Status')}
-            <select
-              className="border-dark-300 ml-2 rounded-md border px-2 py-1 text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            >
-              <option value="all">{t('pages.contactTypes.filterAll', 'All')}</option>
-              <option value="active">{t('pages.contactTypes.filterActive', 'Active')}</option>
-              <option value="hidden">{t('pages.contactTypes.filterHidden', 'Hidden')}</option>
-            </select>
-          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-foreground text-sm">
+              {t('pages.contactTypes.filterStatus', 'Status')}
+            </span>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('pages.contactTypes.filterAll', 'All')}</SelectItem>
+                <SelectItem value="active">
+                  {t('pages.contactTypes.filterActive', 'Active')}
+                </SelectItem>
+                <SelectItem value="hidden">
+                  {t('pages.contactTypes.filterHidden', 'Hidden')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <PermissionGuard
             permissions={[PERMISSIONS.CONTACT_TYPES.VIEW, PERMISSIONS.CONTACT_TYPES.CREATE]}
             mode="all"
@@ -278,7 +299,7 @@ export function ContactTypesPage() {
       </div>
 
       {isPending ? (
-        <p className="text-dark-500 text-sm">{t('status.loading')}</p>
+        <ContactTypesPageSkeleton />
       ) : (
         <DataTable
           columns={columns}
@@ -303,42 +324,66 @@ export function ContactTypesPage() {
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <div>
-            <p className="text-dark-500 mb-2 text-sm">
+          <ColorPickerField
+            value={color}
+            onChange={setColor}
+            label={t('pages.contactTypes.fieldColor', 'Color')}
+            showPreview
+            previewText={name || t('pages.contactTypes.fieldName', 'Name')}
+          />
+          <div className={isOtherSource ? 'pointer-events-none opacity-50' : undefined}>
+            <p className="text-foreground mb-2 text-sm">
               {t('pages.contactTypes.fieldDefaultLine', 'Default Call Line')}
             </p>
             <RadioGroup
               value={defaultLine}
               onValueChange={(v) => setDefaultLine(v as 'white' | 'gray')}
               className="flex flex-col gap-2 sm:flex-row"
+              disabled={isOtherSource}
             >
-              <label className="flex items-center gap-2">
-                <RadioItem value="white" id="ct-white" />
+              <label className="text-foreground flex items-center gap-2">
+                <RadioItem value="white" id="ct-white" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.white', 'White')}</span>
               </label>
-              <label className="flex items-center gap-2">
-                <RadioItem value="gray" id="ct-gray" />
+              <label className="text-foreground flex items-center gap-2">
+                <RadioItem value="gray" id="ct-gray" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.gray', 'Gray')}</span>
               </label>
             </RadioGroup>
           </div>
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-dark-500 text-sm">
+          <div
+            className={`flex items-center justify-between gap-4${
+              isOtherSource ? 'opacity-50' : ''
+            }`}
+          >
+            <span className="text-foreground text-sm">
               {t('pages.contactTypes.fieldSpam', 'Spam Allowed')}
             </span>
-            <ToggleSwitch checked={spamAllowed} onChange={setSpamAllowed} />
+            <ToggleSwitch
+              checked={isOtherSource ? false : spamAllowed}
+              onChange={setSpamAllowed}
+              disabled={isOtherSource}
+            />
           </div>
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-dark-500 text-sm">
+          <div
+            className={`flex items-center justify-between gap-4${
+              isOtherSource ? 'opacity-50' : ''
+            }`}
+          >
+            <span className="text-foreground text-sm">
               {t('pages.contactTypes.fieldPrimary', 'Show as Primary Phone')}
             </span>
-            <ToggleSwitch checked={primaryPhone} onChange={setPrimaryPhone} />
+            <ToggleSwitch
+              checked={isOtherSource ? false : primaryPhone}
+              onChange={setPrimaryPhone}
+              disabled={isOtherSource}
+            />
           </div>
           <div>
-            <p className="text-dark-500 mb-2 text-sm">
+            <p className="text-foreground mb-2 text-sm">
               {t('pages.contactTypes.fieldContactSource', 'Contact Source')}
             </p>
-            <p className="text-dark-400 mb-2 text-xs">
+            <p className="text-muted-foreground mb-2 text-xs">
               {t(
                 'pages.contactTypes.fieldContactSourceHint',
                 'Categories the contact type. Used for visual indicators in search and for contact filtering in Target Action chain conditions.'
@@ -354,6 +399,7 @@ export function ContactTypesPage() {
               <SelectContent>
                 <SelectItem value="client">{contactSourceLabel('client')}</SelectItem>
                 <SelectItem value="recommender">{contactSourceLabel('recommender')}</SelectItem>
+                <SelectItem value="other">{contactSourceLabel('other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

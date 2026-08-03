@@ -161,7 +161,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       <div>
         <Label htmlFor="department_id">
           {t('pages.roles.forms.department')}
-          <span className="ml-1 text-sm font-light text-gray-500">(Optional)</span>
+          <span className="text-muted-foreground ml-1 text-sm font-light">(Optional)</span>
         </Label>
         <select
           id="department_id"
@@ -169,7 +169,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
             setValueAs: (v) => (v === '' || v === 'null' ? null : Number(v)),
           })}
           disabled={createMutation.isPending || loadingDepartments}
-          className="text-dark-500 flex h-[45px] w-full items-center rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
+          className="text-foreground border-border bg-card flex h-[45px] w-full items-center rounded-lg border px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
         >
           <option value="">{t('pages.roles.forms.placeholders.noDepartment')}</option>
           {departments.map((dept) => (
@@ -178,7 +178,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
             </option>
           ))}
         </select>
-        <p className="mt-1 text-sm text-gray-500">{t('pages.roles.forms.departmentHint')}</p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {t('pages.roles.forms.departmentHint')}
+        </p>
         {errors.department_id && (
           <p className="text-error-500 mt-1 text-sm">{errors.department_id.message}</p>
         )}
@@ -188,14 +190,14 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       <div>
         <Label>
           {t('pages.roles.forms.permissions')}
-          <span className="ml-2 text-sm font-light text-gray-500">
+          <span className="text-muted-foreground ml-2 text-sm font-light">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
+        <div className="bg-card max-h-96 overflow-y-auto rounded-xl p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm text-gray-500">
+            <div className="text-muted-foreground py-4 text-sm">
               {t('pages.roles.forms.loadingPermissions')}
             </div>
           ) : (
@@ -204,8 +206,8 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                 return (
                   <div key={category} className="mb-6 last:mb-0">
                     <div className="mb-3 flex items-center justify-between">
-                      <span className="text-sm font-light text-gray-950">{category}</span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-foreground text-sm font-light">{category}</span>
+                      <span className="text-muted-foreground text-xs">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -217,7 +219,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                         return (
                           <label
                             key={perm.id}
-                            className="flex cursor-pointer items-center gap-3 rounded p-2 transition-colors hover:bg-gray-50"
+                            className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded p-2 transition-colors"
                           >
                             <Checkbox
                               checked={isSelected}
@@ -225,9 +227,11 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                               aria-label={perm.name}
                             />
                             <div className="flex-1">
-                              <span className="text-sm font-light text-gray-950">{perm.name}</span>
+                              <span className="text-foreground text-sm font-light">
+                                {perm.name}
+                              </span>
                               {perm.description && (
-                                <span className="ml-2 text-sm font-light text-gray-500">
+                                <span className="text-muted-foreground ml-2 text-sm font-light">
                                   {perm.description}
                                 </span>
                               )}
@@ -239,7 +243,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                                 disabled={!isSelected || createMutation.isPending}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleAccessLevelChange(perm.id, e.target.value)}
-                                className="text-dark-500 h-[34px] rounded-lg border border-gray-400 bg-white px-2 text-sm font-light focus:ring-0 focus:outline-none disabled:opacity-50"
+                                className="text-foreground border-border bg-card h-[34px] rounded-lg border px-2 text-sm font-light focus:ring-0 focus:outline-none disabled:opacity-50"
                               >
                                 {ACCESS_LEVEL_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>

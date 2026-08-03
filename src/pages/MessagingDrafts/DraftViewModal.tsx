@@ -13,8 +13,8 @@ import { CHANNEL_SPECS, extractDraftVariables } from './draftModalShared'
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1.5">
-      <div className="text-dark-500 text-sm font-light">{label}</div>
-      <div className="text-dark-500 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm whitespace-pre-wrap">
+      <div className="text-foreground text-sm font-light">{label}</div>
+      <div className="text-foreground border-border bg-muted rounded-lg border px-3 py-2 text-sm whitespace-pre-wrap">
         {value || '-'}
       </div>
     </div>
@@ -41,7 +41,7 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.BubbleChatEdit size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.BubbleChatEdit size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={
@@ -85,14 +85,14 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
 
             {draftVariables.length > 0 && (
               <div className="space-y-2">
-                <div className="text-dark-500 text-sm font-light">
+                <div className="text-foreground text-sm font-light">
                   {t('pages.messagingDrafts.view.variables', 'Variables in this draft')}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {draftVariables.map((name) => (
                     <code
                       key={name}
-                      className="text-dark-500 rounded-full bg-gray-100 px-2.5 py-1 text-xs"
+                      className="text-foreground bg-muted rounded-full px-2.5 py-1 text-xs"
                     >
                       {`{{${name}}}`}
                     </code>

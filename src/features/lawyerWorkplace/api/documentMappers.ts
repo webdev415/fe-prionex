@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import type { Client } from '@/features/clients/api/types'
 import type { LegalDocumentListItem, LegalDocumentStatsResponse, LegalLawyer } from './types'
 import type {
@@ -20,13 +21,23 @@ function resolveDocumentType(value: string): LegalDocumentType {
 }
 
 function resolveDocumentAction(value: string): LegalDocumentAction {
-  return value === 'uploaded' ? 'uploaded' : 'generated'
+  // Pass known actions through; anything unexpected keeps the legacy
+  // "generated" fallback so an unknown server value never crashes the table.
+  if (value === 'uploaded' || value === 'received' || value === 'synced') {
+    return value
+  }
+  return 'generated'
 }
 
 function resolveClientName(clientId: number | null, lookup: LegalDocumentLookup): string {
   if (clientId == null) return '—'
   const client = lookup.clientsById.get(clientId)
-  if (!client) return `Client #${clientId}`
+  if (!client) {
+    return i18n.t('pages.lawyerWorkplace.documents.unknownClient', {
+      defaultValue: 'Client #{{id}}',
+      id: clientId,
+    })
+  }
   const code = `CL-${String(client.id).padStart(5, '0')}`
   const name = [client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')
   return name ? `${code} · ${name}` : code
@@ -44,7 +55,13 @@ function resolveContractId(
 function resolveAssigneeName(userId: number | null, lookup: LegalDocumentLookup): string {
   if (userId == null) return '—'
   const lawyer = lookup.lawyersByUserId.get(userId)
-  return lawyer?.display_name ?? `User #${userId}`
+  return (
+    lawyer?.display_name ??
+    i18n.t('pages.lawyerWorkplace.documents.unknownUser', {
+      defaultValue: 'User #{{id}}',
+      id: userId,
+    })
+  )
 }
 
 export function mapLegalDocumentItem(

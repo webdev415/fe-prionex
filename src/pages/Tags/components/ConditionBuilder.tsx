@@ -85,16 +85,16 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
           {/* OR divider between groups */}
           {gIdx > 0 && (
             <div className="my-3 flex items-center gap-3">
-              <div className="h-px flex-1 bg-gray-200" />
+              <div className="bg-muted h-px flex-1" />
               <span className="bg-warning-100 text-warning-600 rounded px-2 py-0.5 text-xs font-medium">
                 {t('pages.tags.segments.orLabel', 'OR')}
               </span>
-              <div className="h-px flex-1 bg-gray-200" />
+              <div className="bg-muted h-px flex-1" />
             </div>
           )}
 
           {/* Group container */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+          <div className="border-border bg-muted/50 rounded-lg border p-3">
             <div className="space-y-2">
               {groupConditions.map((cond, cIdx) => (
                 <div key={`${groupIndex}-${cIdx}`}>
@@ -121,7 +121,7 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
               type="button"
               variant="ghost"
               size="xs"
-              className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+              className="text-muted-foreground hover:text-foreground mt-2 text-xs"
               onClick={() => handleAddCondition(groupIndex)}
               leftIcon={<Icons.Add size={12} />}
             >
@@ -133,8 +133,8 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
 
       {/* Empty state */}
       {groups.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="border-border rounded-lg border border-dashed p-6 text-center">
+          <p className="text-muted-foreground text-sm">
             {t(
               'pages.tags.segments.noConditions',
               'No conditions defined. Add a condition group to get started.'

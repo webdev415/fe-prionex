@@ -26,17 +26,17 @@ export function DeleteLetterTemplateModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <div className="flex flex-col gap-4">
-        <DialogPrimitive.Title className="text-dark-500 text-lg font-semibold">
+        <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
           {t('pages.lawyerWorkplace.settings.templates.deleteReplyTitle', 'Delete letter template')}
         </DialogPrimitive.Title>
-        <p className="text-sm text-gray-700">
+        <p className="text-foreground text-sm">
           {t(
             'pages.lawyerWorkplace.settings.templates.deleteReplyConfirm',
             'Are you sure you want to delete this letter template?'
           )}{' '}
-          <span className="text-dark-500 font-medium">{templateName}</span>
+          <span className="text-foreground font-medium">{templateName}</span>
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-muted-foreground text-xs">
           {t(
             'pages.lawyerWorkplace.settings.templates.deleteReplyWarning',
             'This action cannot be undone.'

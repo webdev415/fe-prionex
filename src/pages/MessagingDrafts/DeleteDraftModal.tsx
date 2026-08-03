@@ -42,15 +42,19 @@ export function DeleteDraftModal({ draft, open, onClose }: DeleteDraftModalProps
     >
       <ModalHeader
         icon={
-          <div className="bg-error-500 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.Delete size={18} className="text-white sm:size-5" strokeWidth={2} />
+          <div className="bg-destructive flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete
+              size={18}
+              className="text-destructive-foreground sm:size-5"
+              strokeWidth={2}
+            />
           </div>
         }
         title={t('pages.messagingDrafts.delete.title', 'Delete draft')}
       />
       <ModalContent>
         <div className="space-y-4">
-          <p className="text-dark-500 text-xs sm:text-sm">
+          <p className="text-foreground text-xs sm:text-sm">
             {t('pages.messagingDrafts.delete.confirmMessage', {
               name: draft.name,
               defaultValue: `Are you sure you want to delete the draft "${draft.name}"?`,

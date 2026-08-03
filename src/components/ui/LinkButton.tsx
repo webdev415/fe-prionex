@@ -5,45 +5,37 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const linkButtonVariants = cva(
-  'inline-flex items-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none cursor-pointer bg-transparent',
+  'inline-flex items-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none cursor-pointer bg-transparent',
   {
     variants: {
       variant: {
-        // Regular Primary: secondary-800 (default), primary-500 (hover), gray-700 (disabled)
+        // primary-700 is dark green on classic; remapped to --primary on dark themes
         'regular-primary':
-          'text-primary-700 hover:text-primary-500 active:text-primary-600 disabled:text-gray-700',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
-        // Regular Secondary: secondary-800 (default), primary-500 (hover), gray-700 (disabled)
         'regular-secondary':
-          'text-secondary-800 hover:text-primary-500 active:text-primary-600 disabled:text-gray-700',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
-        // Regular Red: error-500 (default), error-700 (hover), gray-700 (disabled)
         'regular-red':
-          'text-error-500 hover:text-error-700 active:text-error-800 disabled:text-gray-700',
+          'text-error-500 hover:text-error-400 active:text-error-500 disabled:text-muted-foreground',
 
-        // Regular Black: dark-500 (default), dark-500 (hover), gray-700 (disabled)
         'regular-black':
-          'text-dark-500 hover:text-dark-500 active:text-dark-500 disabled:text-gray-700',
+          'text-foreground hover:text-foreground/80 active:text-foreground disabled:text-muted-foreground',
 
-        // Regular Gray: gray-800 (default), gray-800 (hover), gray-700 (disabled)
         'regular-gray':
-          'text-gray-800 hover:text-gray-400 active:text-gray-800 disabled:text-gray-400',
+          'text-muted-foreground hover:text-foreground active:text-foreground disabled:text-muted-foreground/60',
 
-        // Medium Primary: primary-700 (default), primary-500 (hover), gray-700 (disabled)
         'medium-primary':
-          'text-primary-700 hover:text-primary-500 active:text-primary-600 disabled:text-gray-700',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
-        // Medium Secondary: primary-700 (default), primary-500 (hover), gray-700 (disabled)
         'medium-secondary':
-          'text-secondary-800 hover:text-primary-500 active:text-primary-600 disabled:text-gray-700',
+          'text-primary-700 hover:text-primary-600 active:text-primary-700 disabled:text-muted-foreground',
 
-        // Medium Red: error-500 (default), error-700 (hover), gray-700 (disabled)
         'medium-red':
-          'text-error-500 hover:text-error-700 active:text-error-800 disabled:text-gray-700',
+          'text-error-500 hover:text-error-400 active:text-error-500 disabled:text-muted-foreground',
 
-        // Medium Black: dark-500 (default), dark-500 (hover), gray-700 (disabled)
         'medium-black':
-          'text-dark-500 hover:text-dark-500 active:text-dark-500 disabled:text-gray-700',
+          'text-foreground hover:text-foreground/80 active:text-foreground disabled:text-muted-foreground',
       },
       size: {
         xs: 'h-8 px-2 text-xs gap-1.5',

@@ -38,6 +38,7 @@ export type {
   CallMonitoringPeriod,
   CallMonitoringOutcomeFilter,
   TelephonyType,
+  ScorecardCategory,
   InteractionMonitoringFilters,
   InteractionMonitoringItem,
   InteractionMonitoringResponse,

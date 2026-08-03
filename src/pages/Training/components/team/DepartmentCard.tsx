@@ -48,7 +48,11 @@ export function DepartmentCard({ department, onSelectOperator }: DepartmentCardP
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#204E4D] text-xs font-semibold text-[#BBFB5B]"
-          aria-label={expanded ? 'Collapse department' : 'Expand department'}
+          aria-label={
+            expanded
+              ? t('pages.training.team.collapseDepartment', 'Collapse department')
+              : t('pages.training.team.expandDepartment', 'Expand department')
+          }
         >
           {/* Fall back to a generic department glyph when no manager is set so
               the tile doesn't render as a dash. */}

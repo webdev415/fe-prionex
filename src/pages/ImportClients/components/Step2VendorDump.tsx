@@ -256,6 +256,9 @@ export function Step2VendorDump({
         // but client-service's Pydantic schema expects a plain YYYY-MM-DD.
         payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
       }
+      if (newFa.reporting_date) {
+        payload.reporting_date = newFa.reporting_date.split('T')[0]
+      }
       newFactoringAgreementJson = JSON.stringify(payload)
       effectivePurchaseDate = newFa.contract_purchase_date || undefined
     }
@@ -320,7 +323,7 @@ export function Step2VendorDump({
     {
       key: 'name',
       header: t('pages.imports.step2.vendor.dataset'),
-      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.name}</span>,
+      render: (item) => <span className="text-foreground text-xs font-medium">{item.name}</span>,
     },
     {
       key: 'status',
@@ -342,10 +345,10 @@ export function Step2VendorDump({
             <span
               className={cn(
                 'h-2 w-2 rounded-full',
-                item.status === 'required' ? 'bg-error-500' : 'bg-gray-500'
+                item.status === 'required' ? 'bg-error-500' : 'bg-muted-foreground'
               )}
             />
-            <span className="text-dark-500 text-xs font-medium">
+            <span className="text-foreground text-xs font-medium">
               {item.status === 'required'
                 ? t('pages.imports.step2.vendor.required')
                 : t('pages.imports.step2.vendor.optional')}
@@ -372,7 +375,7 @@ export function Step2VendorDump({
                 {t('pages.imports.step2.vendor.fromZip', 'From ZIP bundle')}
               </span>
             ) : hasFile ? (
-              <span className="text-dark-500 text-xs font-medium break-words">
+              <span className="text-foreground text-xs font-medium break-words">
                 {item.file?.name} ({formatFileSize(item.file?.size || 0)})
               </span>
             ) : (
@@ -405,13 +408,13 @@ export function Step2VendorDump({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Section Title */}
-      <h2 className="text-dark-500 mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
+      <h2 className="text-foreground mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
         {t('pages.imports.step2.vendor.title')}
       </h2>
 
       {/* Error Alert - shown when import fails */}
       {importError && (
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-white p-4 sm:gap-3 sm:p-6">
+        <div className="bg-card flex items-center justify-center gap-2 rounded-lg p-4 sm:gap-3 sm:p-6">
           <Icons.Warning size={20} className="text-error-500 sm:size-6" />
           <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {importError}
@@ -421,7 +424,7 @@ export function Step2VendorDump({
 
       {/* ZIP loaded — confirm the bundle covers every logical dataset. */}
       {data.isZipUpload && data.zipFile && (
-        <div className="bg-success-50 border-success-200 flex items-center justify-center gap-2 rounded-lg border p-3 sm:gap-3 sm:p-4">
+        <div className="border-border bg-success-50 flex items-center justify-center gap-2 rounded-lg border p-3 sm:gap-3 sm:p-4">
           <Icons.Success size={20} className="text-success-500 sm:size-6" />
           <span className="text-success-700 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {t(
@@ -437,7 +440,7 @@ export function Step2VendorDump({
       )}
 
       {/* Instructions */}
-      <p className="text-dark-500 mb-4 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:mb-6 sm:text-base">
+      <p className="text-foreground mb-4 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:mb-6 sm:text-base">
         {t('pages.imports.step2.vendor.dragCsvs')}
       </p>
 
@@ -445,7 +448,7 @@ export function Step2VendorDump({
       <div
         className={cn(
           'relative flex flex-col items-center gap-4 self-stretch rounded-lg border-2 border-dashed px-4 py-8 transition-colors sm:gap-6 sm:px-6 sm:py-12',
-          isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
+          isDragging ? 'border-primary-500 bg-muted' : 'border-border',
           isImportInProgress && 'pointer-events-none opacity-50'
         )}
         onDragOver={isImportInProgress ? undefined : handleDragOver}
@@ -454,11 +457,11 @@ export function Step2VendorDump({
       >
         {/* Cloud Icon */}
         <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-          <Icons.CloudDownload size={40} className="text-dark-500 sm:size-12" strokeWidth={0.5} />
+          <Icons.CloudDownload size={40} className="text-foreground sm:size-12" strokeWidth={0.5} />
         </div>
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-3 sm:gap-4">
-          <div className="text-dark-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+          <div className="text-foreground text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.imports.step2.vendor.dragDropFiles')}
           </div>
 

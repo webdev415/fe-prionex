@@ -28,6 +28,21 @@ const CATEGORY_TONE: Record<DialogueScorecardRow['category'], string> = {
   Unscored: 'bg-gray-100 text-gray-500',
 }
 
+/** Dialing-type badge tones — white/grey/unknown (KAN-827). */
+const CALL_TYPE_TONE: Record<string, string> = {
+  white: 'bg-[#F3F4F6] text-[#374151]',
+  grey: 'bg-[#E5E7EB] text-[#4B5563]',
+  unknown: 'bg-gray-100 text-gray-400',
+}
+
+/** Talk duration (seconds) → `m:ss` (KAN-827). */
+function formatDuration(seconds: number | null): string {
+  if (seconds == null || seconds < 0) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 /** Figma score-ring tones — stroke + text both tinted by the band. */
 function scoreBandTones(score: number): { ring: string; text: string } {
   if (score >= 80) return { ring: 'stroke-[#15803D]', text: 'text-[#15803D]' }
@@ -105,6 +120,12 @@ export function ScorecardListView({
           </th>
           <th className={ANALYTICS_TABLE_TH}>{t('pages.training.dialogue.list.phone', 'Phone')}</th>
           <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.callType', 'Call type')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.duration', 'Duration')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.category', 'Category')}
           </th>
           <th className={`${ANALYTICS_TABLE_TH} text-right`}>
@@ -170,10 +191,29 @@ export function ScorecardListView({
                 {row.contactedPhone ?? '—'}
               </td>
               <td className={ANALYTICS_TABLE_TD}>
+                {row.callType ? (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                      CALL_TYPE_TONE[row.callType] ?? CALL_TYPE_TONE.unknown
+                    }`}
+                  >
+                    {t(`pages.training.dialogue.filters.${row.callType}`, row.callType)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-300">—</span>
+                )}
+              </td>
+              <td className={`${ANALYTICS_TABLE_TD} whitespace-nowrap text-[#4B5563] tabular-nums`}>
+                {formatDuration(row.callDuration)}
+              </td>
+              <td className={ANALYTICS_TABLE_TD}>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_TONE[row.category]}`}
                 >
-                  {row.category}
+                  {t(
+                    `pages.training.dialogue.category.${row.category.toLowerCase()}`,
+                    row.category
+                  )}
                 </span>
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>

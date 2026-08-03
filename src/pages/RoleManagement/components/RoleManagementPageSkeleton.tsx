@@ -13,12 +13,12 @@ const TABLE_COLUMNS = 4 // Role, Description, Users, Actions
 export function RoleManagementTablesSkeleton() {
   return (
     <div className="space-y-8">
-      <section className="rounded-xl bg-white/50 p-6">
-        <div className="mb-3 h-7 w-40 animate-pulse rounded bg-gray-300" />
+      <section className="bg-card/50 rounded-xl p-6">
+        <div className="bg-muted mb-3 h-7 w-40 animate-pulse rounded" />
         <TableSkeleton columns={TABLE_COLUMNS} rows={3} />
       </section>
-      <section className="rounded-xl bg-white/50 p-6">
-        <div className="mb-3 h-7 w-40 animate-pulse rounded bg-gray-300" />
+      <section className="bg-card/50 rounded-xl p-6">
+        <div className="bg-muted mb-3 h-7 w-40 animate-pulse rounded" />
         <TableSkeleton columns={TABLE_COLUMNS} rows={5} />
       </section>
     </div>
@@ -31,15 +31,15 @@ export function RoleManagementPageSkeleton() {
       {/* Header Skeleton */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-32 animate-pulse rounded bg-gray-300" />
+          <div className="bg-muted h-8 w-32 animate-pulse rounded" />
         </div>
-        <div className="h-[45px] w-[140px] animate-pulse rounded-full bg-gray-300" />
+        <div className="bg-muted h-[45px] w-[140px] animate-pulse rounded-full" />
       </div>
 
       {/* Project Selector Skeleton */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="h-7 w-16 animate-pulse rounded bg-gray-300" />
-        <div className="h-7 w-48 animate-pulse rounded bg-gray-300" />
+        <div className="bg-muted h-7 w-16 animate-pulse rounded" />
+        <div className="bg-muted h-7 w-48 animate-pulse rounded" />
       </div>
 
       <RoleManagementTablesSkeleton />

@@ -2,13 +2,13 @@ import { CallLogCardSkeleton, type CallLogCardSkeletonVariant } from './CallLogC
 
 function MessagingStatCardSkeleton({ wideValue = false }: { wideValue?: boolean }) {
   return (
-    <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-      <div className="h-4 w-28 max-w-[45%] animate-pulse rounded bg-gray-200 sm:w-32" />
+    <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+      <div className="bg-muted-foreground/25 h-4 w-28 max-w-[45%] animate-pulse rounded sm:w-32" />
       <div
         className={
           wideValue
-            ? 'h-4 w-24 max-w-[50%] animate-pulse rounded bg-gray-200 sm:w-40'
-            : 'h-4 w-10 shrink-0 animate-pulse rounded bg-gray-200'
+            ? 'bg-muted-foreground/25 h-4 w-24 max-w-[50%] animate-pulse rounded sm:w-40'
+            : 'bg-muted-foreground/25 h-4 w-10 shrink-0 animate-pulse rounded'
         }
       />
     </div>
@@ -24,7 +24,7 @@ function MessagingDateGroupSkeleton({
 }) {
   return (
     <div className="w-full space-y-4">
-      <div className="h-4 w-24 animate-pulse rounded bg-gray-200 md:h-5 md:w-28" />
+      <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded md:h-5 md:w-28" />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
         {Array.from({ length: cards }).map((_, index) => (
           <CallLogCardSkeleton key={index} variant={variants?.[index] ?? 'message'} />

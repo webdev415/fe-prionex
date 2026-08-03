@@ -13,11 +13,11 @@ export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
   return (
     <div className="w-full">
       <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
-        <h1 className="text-dark-500 flex items-center gap-1.5 text-2xl font-medium sm:gap-2 md:text-[30px]">
+        <h1 className="text-foreground flex items-center gap-1.5 text-2xl font-medium sm:gap-2 md:text-[30px]">
           {t('login.welcome')}
           <span className="text-xl md:text-2xl">👋🏻</span>
         </h1>
-        <p className="md:text-body-md mt-1.5 px-2 text-sm font-light text-gray-500 sm:mt-2 sm:px-0 sm:text-base">
+        <p className="text-muted-foreground md:text-body-md mt-1.5 px-2 text-sm font-light sm:mt-2 sm:px-0 sm:text-base">
           {t('login.subtitle')}
         </p>
       </div>

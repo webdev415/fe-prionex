@@ -53,19 +53,19 @@ function ReassignBody({
     <>
       <ModalHeader title={t('pages.clients.modals.reassignEmployee.title')} onClose={onClose} />
       <ModalContent className="space-y-4 overflow-visible">
-        <p className="text-sm text-gray-600">
+        <p className="text-muted-foreground text-sm">
           {t('pages.clients.modals.reassignEmployee.description')}
         </p>
 
         <div className="space-y-1">
-          <Label className="text-dark-500 text-xs font-medium">
+          <Label className="text-foreground text-xs font-medium">
             {t('pages.clients.modals.reassignEmployee.currentLabel')}
           </Label>
-          <p className="text-dark-500 text-sm font-medium">{currentEmployeeName || '—'}</p>
+          <p className="text-foreground text-sm font-medium">{currentEmployeeName || '—'}</p>
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="reassign-target" className="text-dark-500 text-xs font-medium">
+          <Label htmlFor="reassign-target" className="text-foreground text-xs font-medium">
             {t('pages.clients.modals.reassignEmployee.newLabel')}
           </Label>
           <SearchableSelect

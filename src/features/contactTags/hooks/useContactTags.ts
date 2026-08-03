@@ -31,6 +31,22 @@ export function usePatchContactTagCategory() {
   })
 }
 
+export function useDeleteContactTagCategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (categoryId: number) => contactTagsApi.deleteContactTagCategory(categoryId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contact-tag-categories'] }),
+  })
+}
+
+export function useDeleteContactTagValue() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (valueId: number) => contactTagsApi.deleteContactTagValue(valueId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contact-tag-categories'] }),
+  })
+}
+
 export function useCreateContactTagValue() {
   const qc = useQueryClient()
   return useMutation({

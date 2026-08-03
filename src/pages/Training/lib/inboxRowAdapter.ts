@@ -7,6 +7,8 @@ import type {
   MockInboxTrigger,
   MockInboxTriggerTag,
 } from '../mocks/trainerWorkplaceMocks'
+import i18n from '@/lib/i18n'
+import { formatDate, formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * Derive a Figma-faithful UI row from a `QueueOperator` returned by
@@ -65,26 +67,50 @@ function isOnline(isoTimestamp: string | null | undefined): boolean {
   return Date.now() - then < 5 * 60_000
 }
 
-function formatRelative(isoTimestamp: string | null | undefined): string {
+type TFn = (key: string, opts?: Record<string, unknown>) => string
+
+function formatRelative(t: TFn, isoTimestamp: string | null | undefined): string {
   if (!isoTimestamp) return '—'
   const then = new Date(isoTimestamp).getTime()
   if (Number.isNaN(then)) return '—'
   const diffMs = Date.now() - then
-  if (diffMs < 0) return 'now'
+  const now = t('pages.training.time.now', { defaultValue: 'now' })
+  if (diffMs < 0) return now
   const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'now'
-  if (minutes < 60) return `${minutes}m`
+  if (minutes < 1) return now
+  if (minutes < 60)
+    return t('pages.training.time.minutesShort', { count: minutes, defaultValue: '{{count}}m' })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
+  if (hours < 24)
+    return t('pages.training.time.hoursShort', { count: hours, defaultValue: '{{count}}h' })
   const days = Math.floor(hours / 24)
-  return `${days}d`
+  return t('pages.training.time.daysShort', { count: days, defaultValue: '{{count}}d' })
+}
+
+/** "Offline" or "Offline · N ago" — never the "— ago" the old code produced. */
+function formatOffline(t: TFn, isoTimestamp: string | null | undefined): string {
+  const offline = t('pages.training.inbox.detail.offline', { defaultValue: 'Offline' })
+  if (!isoTimestamp) return offline
+  const then = new Date(isoTimestamp).getTime()
+  if (Number.isNaN(then)) return offline
+  const diffMs = Date.now() - then
+  if (diffMs < 0) return offline
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return offline
+  if (minutes < 60)
+    return `${offline} · ${t('pages.training.time.minutesAgo', { count: minutes, defaultValue: '{{count}}m ago' })}`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24)
+    return `${offline} · ${t('pages.training.time.hoursAgo', { count: hours, defaultValue: '{{count}}h ago' })}`
+  const days = Math.floor(hours / 24)
+  return `${offline} · ${t('pages.training.time.daysAgo', { count: days, defaultValue: '{{count}}d ago' })}`
 }
 
 function formatClock(isoTimestamp: string | null | undefined): string {
   if (!isoTimestamp) return ''
   const d = new Date(isoTimestamp)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return formatTimeShort(d, i18n.language)
 }
 
 /**
@@ -115,54 +141,76 @@ function humanizeTrigger(trigger: string): string {
     .trim()
 }
 
+/**
+ * Localized trigger label. The BE returns opaque trigger codes; we translate
+ * the known ones via `pages.training.inbox.triggers.<code>` and fall back to
+ * the humanized code so an unmapped trigger still renders readably.
+ */
+export function triggerLabel(t: TFn, code: string): string {
+  return t(`pages.training.inbox.triggers.${code}`, { defaultValue: humanizeTrigger(code) })
+}
+
 function toInboxAssignmentState(state: AssignmentState | undefined): InboxAssignmentState {
   // Both type aliases share the same five values; `wait` is the entry state
   // the BE auto-creates for operators below the threshold.
   return (state ?? 'wait') as InboxAssignmentState
 }
 
-function buildTriggerSummaries(row: QueueOperator): {
+function buildTriggerSummaries(
+  t: TFn,
+  row: QueueOperator
+): {
   triggers: MockInboxTrigger[]
   triggerTags: MockInboxTriggerTag[]
 } {
   const triggers: MockInboxTrigger[] = row.triggers.map((code, idx) => ({
     id: idx + 1,
     code,
-    label: humanizeTrigger(code),
+    label: triggerLabel(t, code),
     severity:
       triggerTone(code) === 'red' ? 'critical' : triggerTone(code) === 'amber' ? 'warn' : 'info',
-    detectedAtLabel: formatRelative(row.last_active_at),
+    detectedAtLabel: formatRelative(t, row.last_active_at),
   }))
   const triggerTags: MockInboxTriggerTag[] = row.triggers
     .slice(0, 4)
-    .map((code) => ({ label: humanizeTrigger(code), tone: triggerTone(code) }))
+    .map((code) => ({ label: triggerLabel(t, code), tone: triggerTone(code) }))
   return { triggers, triggerTags }
 }
 
 /** Pick a one-line summary suitable for the Inbox-view card. */
-function summaryFor(row: QueueOperator): string {
+function summaryFor(t: TFn, row: QueueOperator): string {
+  const score = row.composite_score ?? '—'
   if (row.triggers.length > 0) {
-    return `${humanizeTrigger(row.triggers[0])} · score ${row.composite_score}`
+    return `${triggerLabel(t, row.triggers[0])} · ${t('pages.training.inbox.scoreShort', { score, defaultValue: `score ${score}` })}`
   }
-  return `Composite score ${row.composite_score}`
+  return t('pages.training.inbox.compositeScore', {
+    score,
+    defaultValue: `Composite score ${score}`,
+  })
 }
 
 function parseHireDate(iso: string | null | undefined): { year: string; date: string } {
   if (!iso) return { year: '', date: '' }
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return { year: '', date: '' }
-  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
+  return { year: String(d.getFullYear()), date: formatDate(d, i18n.language) }
 }
 
-export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): InboxCardRow {
+export function deriveInboxRow(
+  t: TFn,
+  row: QueueOperator,
+  operators: OperatorUser[]
+): InboxCardRow {
   const operator = operators.find((o) => o.id === row.operator_id)
   const name = operator?.full_name ?? `#${row.operator_id}`
   const departmentName = operator?.department_name ?? ''
   const extension = operator?.asterisk_extension ?? ''
   const hire = parseHireDate(operator?.hired_at)
-  const { triggers, triggerTags } = buildTriggerSummaries(row)
+  const { triggers, triggerTags } = buildTriggerSummaries(t, row)
   const online = isOnline(row.last_active_at)
-  const lastActiveLabel = online ? 'Online' : `Offline · ${formatRelative(row.last_active_at)} ago`
+  const lastActiveLabel = online
+    ? t('pages.training.inbox.detail.online', { defaultValue: 'Online' })
+    : formatOffline(t, row.last_active_at)
 
   return {
     operatorId: row.operator_id,
@@ -186,7 +234,7 @@ export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): I
     triggers,
     triggerTags,
     flagged: row.triggers.length > 0,
-    queueEnteredLabel: row.assignment ? formatRelative(row.assignment.updated_at) : '—',
+    queueEnteredLabel: row.assignment ? formatRelative(t, row.assignment.updated_at) : '—',
     dailyPlanPct: 0,
     dailyPlanDone: 0,
     dailyPlanTotal: 0,
@@ -196,11 +244,15 @@ export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): I
     experienceDate: hire.date,
     activityMinutes: 0,
     listStatusDot: row.score_band ?? 'amber',
-    cardTimestamp: formatRelative(row.last_active_at),
-    cardSummary: summaryFor(row),
+    cardTimestamp: formatRelative(t, row.last_active_at),
+    cardSummary: summaryFor(t, row),
   }
 }
 
-export function deriveInboxRows(rows: QueueOperator[], operators: OperatorUser[]): InboxCardRow[] {
-  return rows.map((r) => deriveInboxRow(r, operators))
+export function deriveInboxRows(
+  t: TFn,
+  rows: QueueOperator[],
+  operators: OperatorUser[]
+): InboxCardRow[] {
+  return rows.map((r) => deriveInboxRow(t, r, operators))
 }

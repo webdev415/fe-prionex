@@ -93,16 +93,28 @@ export interface AMIHealthResponse {
 }
 
 // WebSocket event interfaces
-export interface CallStateEvent {
-  event_type: 'call.state.changed'
+
+// Underscore, unlike the dotted "call.state.changed" RabbitMQ domain event that
+// client-service consumes. See services/call/app/services/event_listener.py.
+export const CALL_STATE_CHANGED_EVENT = 'call.state_changed'
+
+// Mirrors the data block of the only call.state_changed emitter
+// (event_listener.py). The index signature keeps the shared
+// getClientIdFromCallEventData helper usable across event shapes.
+export interface CallStateEventData {
   call_id: string
-  current_state: CallState
-  data: {
-    call_id: string
-    state: CallState
-    duration?: number
-    [key: string]: unknown
-  }
+  state: CallState
+  customer_number?: string
+  project_id?: number
+  total_duration?: number
+  hangup_cause?: number
+  [key: string]: unknown
+}
+
+export interface CallStateEvent {
+  event_type: string
+  timestamp: string
+  data: CallStateEventData
 }
 
 export interface ConnectionStatus {
@@ -116,9 +128,40 @@ export interface ConnectionStatus {
 // Incoming call types
 export interface LoanInfo {
   loan_id: number
+  client_id?: number
   contract_number: string
   remaining_debt: string
+  principal_amount?: number | null
   status: string
+  seller_name?: string | null
+  purchase_date?: string | null
+}
+
+export interface IncomingCallInteraction {
+  id: number
+  interaction_date: string | null
+  type_name: string | null
+  result_name: string | null
+  direction: string | null
+  channel: string | null
+  summary: string | null
+  user_name: string | null
+}
+
+/**
+ * One client the calling number resolved to. More than one entry means the
+ * number is shared and the operator has to choose which client the call is
+ * about; none means the caller is unknown to this project.
+ */
+export interface IncomingCallClient {
+  client_id: number
+  client_name: string
+  responsible_employee_id: number | null
+  contact_comment: string | null
+  contact_source: string | null
+  contact_type_name: string | null
+  recent_interactions: IncomingCallInteraction[]
+  loans: LoanInfo[]
 }
 
 export interface IncomingCallData {
@@ -126,9 +169,12 @@ export interface IncomingCallData {
   customer_phone: string
   agent_extension: string
   client_name?: string
+  client_id?: number | null
+  project_id?: number | null
   loan_count: number
   total_debt: string
   loans: LoanInfo[]
+  clients?: IncomingCallClient[]
 }
 
 export interface IncomingCallEvent {

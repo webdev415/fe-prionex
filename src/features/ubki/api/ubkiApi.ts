@@ -73,10 +73,17 @@ export async function bulkSubmitByClients(
 
 /**
  * Submission history log (newest first), optionally scoped to one debt.
+ *
+ * The backend paginates this endpoint (`{ items, total }`); older versions
+ * returned a bare array. Normalize both shapes to an array so callers can
+ * always `.filter()`/`.map()` the result.
  */
 export async function getUbkiLogs(params: UbkiLogsParams = {}): Promise<UbkiLogEntry[]> {
-  const response = await api.get<UbkiLogEntry[]>(`${BASE_URL}/logs`, { params })
-  return response.data
+  const response = await api.get<UbkiLogEntry[] | { items: UbkiLogEntry[] }>(`${BASE_URL}/logs`, {
+    params,
+  })
+  const data = response.data
+  return Array.isArray(data) ? data : (data?.items ?? [])
 }
 
 export const ubkiApi = {

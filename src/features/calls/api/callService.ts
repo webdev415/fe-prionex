@@ -82,6 +82,16 @@ class CallService {
     const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
     return response.data
   }
+
+  /**
+   * Declines a ringing inbound call. Distinct from `hangupCall`: the backend
+   * records the call as rejected by the operator rather than missed, and gates
+   * on `receive_calls` so an inbound-only operator can decline.
+   */
+  async rejectCall(callId: string): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/reject`)
+    return response.data
+  }
 }
 
 export const callService = new CallService()

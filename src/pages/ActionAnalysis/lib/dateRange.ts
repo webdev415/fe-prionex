@@ -10,6 +10,20 @@ export function localDateStringsToIsoRange(
   return { from_datetime: from.toISOString(), to_datetime: to.toISOString() }
 }
 
+/**
+ * Max width of a custom analytics range — mirrors the analytics-service cap
+ * (MAX_ANALYTICS_WINDOW_DAYS). Kept in sync so the picker rejects exactly what
+ * the backend would 422 on.
+ */
+export const MAX_ANALYTICS_RANGE_DAYS = 31
+
+/** True when the custom [from, to] range (YYYY-MM-DD) exceeds the analytics cap. */
+export function analyticsRangeExceedsCap(fromDate: string, toDate: string): boolean {
+  const { from_datetime, to_datetime } = localDateStringsToIsoRange(fromDate, toDate)
+  const spanMs = new Date(to_datetime).getTime() - new Date(from_datetime).getTime()
+  return spanMs > MAX_ANALYTICS_RANGE_DAYS * 24 * 60 * 60 * 1000
+}
+
 /** Default custom range: last 7 calendar days ending today, in the user's profile timezone. */
 export function defaultCustomDateRange(tz: string | null | undefined): {
   from: string

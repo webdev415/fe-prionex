@@ -29,6 +29,7 @@ import { LawyersPanel } from './lawyers/LawyersPanel'
 import { LawyersTabSkeleton } from './lawyers/LawyersTabSkeleton'
 import { MailboxesPanel } from './mailboxes/MailboxesPanel'
 import { MailboxesTabSkeleton } from './mailboxes/MailboxesTabSkeleton'
+import { RoutingRulesPanel } from './routing/RoutingRulesPanel'
 import { TemplatesPanel } from './templates/TemplatesPanel'
 import { TemplatesTabSkeleton } from './templates/TemplatesTabSkeleton'
 import { SettingsToolbar } from './SettingsToolbar'
@@ -50,12 +51,14 @@ export function LegalSettingsTab() {
   const projectId = activeProjectId ? Number(activeProjectId) : null
 
   const mailboxesEnabled = activeSubTab === 'mailboxes'
+  const routingEnabled = activeSubTab === 'routing'
   const letterTypesQuery = useLegalLetterTypes({
     includeInactive: true,
     enabled:
       activeSubTab === 'letterTypes' ||
       lawyersTabEnabled ||
       mailboxesEnabled ||
+      routingEnabled ||
       templatesTabEnabled,
   })
   const lawyersQuery = useLegalLawyers({
@@ -65,7 +68,7 @@ export function LegalSettingsTab() {
   const operatorsQuery = useOperators(lawyersTabEnabled ? projectId : null, {
     includeInactive: false,
   })
-  const mailboxesQuery = useLegalSettingsMailboxes({ enabled: mailboxesEnabled })
+  const mailboxesQuery = useLegalSettingsMailboxes({ enabled: mailboxesEnabled || routingEnabled })
   const syncQuery = useLegalSyncSettings({ enabled: mailboxesEnabled })
   const replyTemplatesQuery = useLegalSettingsReplyTemplates({ enabled: templatesTabEnabled })
   const {
@@ -84,11 +87,13 @@ export function LegalSettingsTab() {
     testMailboxConnection,
     toggleMailboxStatus,
     changeSyncInterval,
+    saveRoutingRules,
     testSync,
     isSavingMailbox,
     isTestingConnection,
     isPolling,
     isSavingSync,
+    isSavingRoutingRules,
   } = useLegalMailboxSettingsActions()
   const { saveReplyTemplate, deleteReplyTemplate, isSavingReplyTemplate, isDeletingReplyTemplate } =
     useLegalTemplateSettingsActions()
@@ -146,12 +151,14 @@ export function LegalSettingsTab() {
   const lawyersTabLoading = letterTypesQuery.isLoading || lawyersQuery.isLoading
   const mailboxesTabLoading =
     letterTypesQuery.isLoading || mailboxesQuery.isLoading || syncQuery.isLoading
+  const routingTabLoading = letterTypesQuery.isLoading || mailboxesQuery.isLoading
   const templatesTabLoading = letterTypesQuery.isLoading || replyTemplatesQuery.isLoading
   const settingsError =
     (activeSubTab === 'letterTypes' && letterTypesQuery.isError) ||
     (lawyersTabEnabled && (letterTypesQuery.isError || lawyersQuery.isError)) ||
     (mailboxesEnabled &&
       (letterTypesQuery.isError || mailboxesQuery.isError || syncQuery.isError)) ||
+    (routingEnabled && (letterTypesQuery.isError || mailboxesQuery.isError)) ||
     (templatesTabEnabled && (letterTypesQuery.isError || replyTemplatesQuery.isError))
 
   const isLoading =
@@ -159,9 +166,11 @@ export function LegalSettingsTab() {
       ? lawyersTabLoading
       : activeSubTab === 'mailboxes'
         ? mailboxesTabLoading
-        : activeSubTab === 'templates'
-          ? templatesTabLoading
-          : letterTypesLoading
+        : activeSubTab === 'routing'
+          ? routingTabLoading
+          : activeSubTab === 'templates'
+            ? templatesTabLoading
+            : letterTypesLoading
 
   const handleUpdateLawyerLetterTypes = async (lawyerId: string, letterTypeIds: string[]) => {
     setSavingLawyerId(lawyerId)
@@ -172,7 +181,11 @@ export function LegalSettingsTab() {
     }
   }
 
-  const handleAddLetterType = async (input: { nameFallback: string; colorId: string }) => {
+  const handleAddLetterType = async (input: {
+    nameFallback: string
+    colorId: string
+    id: string
+  }) => {
     try {
       const newTypeId = await addLetterType(input)
       setSelectedLetterTypeId(newTypeId)
@@ -200,7 +213,7 @@ export function LegalSettingsTab() {
       <SettingsToolbar activeSubTab={activeSubTab} onSubTabChange={setActiveSubTab} />
 
       {readOnly && (
-        <p className="text-light-600 mx-4 mb-2 rounded-lg border border-gray-100 bg-white px-4 py-2.5 text-[12px] sm:mx-5 lg:mx-7">
+        <p className="text-muted-foreground bg-card border-border mx-4 mb-2 rounded-lg border px-4 py-2.5 text-[12px] sm:mx-5 lg:mx-7">
           {t(
             'pages.lawyerWorkplace.settings.readOnlyNotice',
             'View only — you do not have permission to change department settings.'
@@ -209,6 +222,8 @@ export function LegalSettingsTab() {
       )}
 
       {isLoading && activeSubTab === 'mailboxes' ? <MailboxesTabSkeleton /> : null}
+
+      {isLoading && activeSubTab === 'routing' ? <MailboxesTabSkeleton /> : null}
 
       {isLoading && activeSubTab === 'templates' ? <TemplatesTabSkeleton /> : null}
 
@@ -220,8 +235,9 @@ export function LegalSettingsTab() {
       (activeSubTab === 'letterTypes' ||
         activeSubTab === 'lawyers' ||
         activeSubTab === 'mailboxes' ||
+        activeSubTab === 'routing' ||
         activeSubTab === 'templates') ? (
-        <p className="px-4 py-10 text-center text-sm text-red-500 sm:px-5 lg:px-7">
+        <p className="text-error-500 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
           {t('pages.lawyerWorkplace.settings.loadError', 'Could not load settings')}
         </p>
       ) : null}
@@ -269,6 +285,16 @@ export function LegalSettingsTab() {
           isTestingConnection={isTestingConnection}
           isSavingSync={isSavingSync}
           isPolling={isPolling}
+          readOnly={readOnly}
+        />
+      )}
+
+      {activeSubTab === 'routing' && !isLoading && !settingsError && (
+        <RoutingRulesPanel
+          mailboxes={mailboxes}
+          letterTypes={letterTypes}
+          onSaveRoutingRules={saveRoutingRules}
+          isSaving={isSavingRoutingRules}
           readOnly={readOnly}
         />
       )}

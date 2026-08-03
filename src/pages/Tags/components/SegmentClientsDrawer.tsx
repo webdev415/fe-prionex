@@ -29,7 +29,7 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
 
   const skip = (currentPage - 1) * pageSize
-  const { data, isLoading } = useSegmentClients(segment.id, skip, pageSize)
+  const { data, isLoading, isError, error, refetch } = useSegmentClients(segment.id, skip, pageSize)
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1
 
@@ -42,8 +42,8 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
     <Modal open onClose={onClose} maxWidth="xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-            <Icons.Users size={18} className="text-blue-600" strokeWidth={1.5} />
+          <div className="bg-information-100 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Users size={18} className="text-information-600" strokeWidth={1.5} />
           </div>
         }
         title={
@@ -51,7 +51,9 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
             {t('pages.tags.segments.clientsDrawerTitle', 'Clients in "{{name}}"', {
               name: segment.name,
             })}
-            {data && <span className="ml-2 text-sm font-normal text-gray-500">({data.total})</span>}
+            {data && (
+              <span className="text-muted-foreground ml-2 text-sm font-normal">({data.total})</span>
+            )}
           </span>
         }
       />
@@ -59,40 +61,57 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
       <ModalContent>
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <span className="text-sm text-gray-400">{t('common.loading', 'Loading...')}</span>
+            <span className="text-muted-foreground text-sm">
+              {t('common.loading', 'Loading...')}
+            </span>
           </div>
         )}
 
-        {!isLoading && data && data.client_ids.length === 0 && (
+        {!isLoading && isError && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Icons.Users size={40} className="mb-3 text-gray-300" strokeWidth={1} />
-            <p className="text-sm text-gray-500">
+            <p className="text-error-600 text-sm">
+              {t('pages.tags.segments.clientsLoadError', 'Failed to load segment clients')}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {(error as Error)?.message ||
+                t('pages.tags.segments.clientsLoadErrorHint', 'Please try again')}
+            </p>
+            <Button variant="cancel" className="mt-4 h-9 text-sm" onClick={() => refetch()}>
+              {t('actions.retry', 'Retry')}
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && !isError && data && data.client_ids.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Icons.Users size={40} className="text-muted-foreground mb-3" strokeWidth={1} />
+            <p className="text-muted-foreground text-sm">
               {t('pages.tags.segments.noClientsInSegment', 'No clients match this segment')}
             </p>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.tags.segments.noClientsHint', 'Try refreshing the segment count first')}
             </p>
           </div>
         )}
 
-        {!isLoading && data && data.client_ids.length > 0 && (
+        {!isLoading && !isError && data && data.client_ids.length > 0 && (
           <div className="space-y-1">
             {data.client_ids.map((clientId) => (
               <button
                 key={clientId}
                 onClick={() => handleClientClick(clientId)}
-                className="flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 active:bg-gray-100"
+                className="hover:bg-muted active:bg-muted flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm transition-colors"
               >
-                <span className="text-dark-500 font-medium">
+                <span className="text-foreground font-medium">
                   {t('pages.tags.segments.clientId', 'Client #{{id}}', { id: clientId })}
                 </span>
-                <Icons.ArrowRight size={14} className="text-gray-400" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-muted-foreground" strokeWidth={1.5} />
               </button>
             ))}
           </div>
         )}
 
-        {!isLoading && data && data.total > pageSize && (
+        {!isLoading && !isError && data && data.total > pageSize && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -103,7 +122,7 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
               setPageSize(size)
               setCurrentPage(1)
             }}
-            className="mt-4 border-t border-gray-100 pt-4"
+            className="border-border mt-4 border-t pt-4"
           />
         )}
       </ModalContent>

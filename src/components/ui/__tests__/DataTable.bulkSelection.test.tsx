@@ -215,3 +215,57 @@ describe('DataTable bulk selection across pages (Select All mode)', () => {
     expect(onSelectionChange.mock.calls[1][0]).toEqual(new Set([12]))
   })
 })
+
+describe('DataTable split select-all dropdown', () => {
+  const PAGE: Row[] = [
+    { id: 1, name: 'A' },
+    { id: 2, name: 'B' },
+  ]
+
+  function renderSplit(overrides: Record<string, unknown> = {}) {
+    const onSelectPage = vi.fn()
+    const onSelectAllByFilter = vi.fn()
+    const onSelectionChange = vi.fn<(s: Set<number | string>) => void>()
+    render(
+      <DataTable
+        columns={columns}
+        data={PAGE}
+        enableBulkSelection
+        selectedItems={new Set()}
+        onSelectionChange={onSelectionChange}
+        onSelectPage={onSelectPage}
+        onSelectAllByFilter={onSelectAllByFilter}
+        pageSelectableCount={2}
+        filterSelectableCount={500}
+        totalCount={500}
+        {...overrides}
+      />
+    )
+    return { onSelectPage, onSelectAllByFilter, onSelectionChange }
+  }
+
+  it('clicking the bare header checkbox selects the current page, not all-by-filter', () => {
+    const { onSelectPage, onSelectAllByFilter } = renderSplit()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+
+    expect(onSelectPage).toHaveBeenCalledTimes(1)
+    expect(onSelectAllByFilter).not.toHaveBeenCalled()
+  })
+
+  it('unchecking the header checkbox clears the selection', () => {
+    const { onSelectionChange } = renderSplit({
+      selectedItems: new Set([1, 2]),
+    })
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set())
+  })
+
+  it('renders a selection-options dropdown trigger next to the checkbox', () => {
+    renderSplit()
+
+    expect(screen.getByRole('button', { name: 'Selection options' })).toBeInTheDocument()
+  })
+})

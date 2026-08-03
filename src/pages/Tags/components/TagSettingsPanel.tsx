@@ -195,19 +195,19 @@ export function TagSettingsPanel({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-3">
-          <p className="text-xs text-gray-500">
+          <p className="text-muted-foreground text-xs">
             {t(
               'pages.tags.settings.description',
               'Manage dropdown options, events, and rule conditions. Save to apply changes for everyone in this project.'
             )}
           </p>
           {isDirty && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+            <span className="bg-warning-100 text-warning-800 rounded-full px-2 py-0.5 text-[10px] font-medium">
               {t('pages.tags.settings.unsavedChanges', 'Unsaved changes')}
             </span>
           )}
           {settingsQuery.data?.is_default && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
               {t('pages.tags.settings.usingDefaults', 'Using defaults')}
             </span>
           )}
@@ -239,25 +239,22 @@ export function TagSettingsPanel({
       {sections.map((section) => {
         const isOpen = openSection === section.id
         return (
-          <div
-            key={section.id}
-            className="overflow-hidden rounded-lg border border-gray-200 bg-white"
-          >
+          <div key={section.id} className="border-border bg-card overflow-hidden rounded-lg border">
             {/* Accordion header */}
             <button
               type="button"
               aria-expanded={isOpen}
               onClick={() => toggleSection(section.id)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+              className="hover:bg-muted flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
             >
-              <span className="text-gray-500">{section.icon}</span>
-              <span className="flex-1 text-sm font-medium text-gray-900">{section.title}</span>
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+              <span className="text-muted-foreground">{section.icon}</span>
+              <span className="text-foreground flex-1 text-sm font-medium">{section.title}</span>
+              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                 {section.count}
               </span>
               <Icons.ArrowRight
                 size={16}
-                className={`shrink-0 text-gray-400 transition-transform duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'rotate-90' : ''}`}
+                className={`text-muted-foreground shrink-0 transition-transform duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'rotate-90' : ''}`}
                 strokeWidth={1.5}
               />
             </button>
@@ -265,7 +262,7 @@ export function TagSettingsPanel({
             {/* Accordion body — grid 0fr/1fr animates height open/close */}
             {hydratedSections.has(section.id) && (
               <div
-                className={`grid border-t border-gray-100 transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                className={`border-border grid border-t transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
               >
                 <div className="min-h-0 overflow-hidden">
                   <div className="px-4 py-4">
@@ -382,7 +379,7 @@ function RuleSettings() {
           name: p.name,
           description: p.description,
           badge: t(`pages.tags.rules.triggerTypes.${p.trigger_type}`, p.trigger_type),
-          badgeColor: 'bg-blue-50 text-blue-600',
+          badgeColor: 'bg-information-50 text-information-600',
           details: [
             `${t('pages.tags.rules.action', 'Действие')}: ${t(`pages.tags.rules.actionTypes.${p.action_type}`, p.action_type)}`,
             `${t('pages.tags.rules.targetTag', 'Тег')}: ${p.target_tag_code}`,
@@ -442,12 +439,12 @@ function PresetList({
   return (
     <div className="space-y-3">
       <div>
-        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
-        {description && <p className="mt-0.5 text-xs text-gray-500">{description}</p>}
+        <h4 className="text-foreground text-sm font-medium">{title}</h4>
+        {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
       </div>
-      <div className="divide-y divide-gray-100 rounded-md border border-gray-200">
+      <div className="divide-border border-border divide-y rounded-md border">
         {presets.length === 0 && (
-          <p className="px-3 py-4 text-center text-xs text-gray-400">
+          <p className="text-muted-foreground px-3 py-4 text-center text-xs">
             {t('pages.tags.settings.noItems', 'Нет элементов')}
           </p>
         )}
@@ -458,24 +455,24 @@ function PresetList({
                 onClick={() => setExpandedKey((prev) => (prev === preset.key ? null : preset.key))}
                 className="min-w-0 flex-1 text-left"
               >
-                <p className="truncate text-xs font-medium text-gray-900">{preset.name}</p>
-                <p className="truncate text-[10px] text-gray-400">{preset.description}</p>
+                <p className="text-foreground truncate text-xs font-medium">{preset.name}</p>
+                <p className="text-muted-foreground truncate text-[10px]">{preset.description}</p>
               </button>
               <code className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${preset.badgeColor}`}>
                 {preset.badge}
               </code>
               <button
                 onClick={() => onRemove(preset.key)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-6 w-6 shrink-0 items-center justify-center rounded"
                 title={t('actions.delete', 'Удалить')}
               >
                 <Icons.Cancel01 size={12} strokeWidth={1.5} />
               </button>
             </div>
             {expandedKey === preset.key && preset.details.length > 0 && (
-              <div className="mt-2 space-y-0.5 rounded bg-gray-50 p-2">
+              <div className="bg-muted mt-2 space-y-0.5 rounded p-2">
                 {preset.details.map((detail, i) => (
-                  <p key={i} className="text-[10px] text-gray-600">
+                  <p key={i} className="text-muted-foreground text-[10px]">
                     {detail}
                   </p>
                 ))}
@@ -503,7 +500,7 @@ function GroupsSettings({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-500">
+      <p className="text-muted-foreground text-xs">
         {t(
           'pages.tags.groups.mutexNote',
           'Only one tag from a mutex group can be active on a client at a time.'
@@ -511,21 +508,21 @@ function GroupsSettings({
       </p>
 
       {!isLoading && groupEntries.length === 0 && (
-        <p className="py-4 text-center text-xs text-gray-400">
+        <p className="text-muted-foreground py-4 text-center text-xs">
           {t('pages.tags.groups.noGroups', 'No mutex groups')}
         </p>
       )}
 
       {groupEntries.map(([groupName, group]) => (
-        <div key={groupName} className="rounded-lg border border-gray-200 bg-white p-4">
+        <div key={groupName} className="border-border bg-card rounded-lg border p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-semibold text-gray-900">
+              <h4 className="text-foreground text-sm font-semibold">
                 {t(`pages.tags.mutexGroupDescriptions.${groupName}`, groupName)}
               </h4>
-              <code className="text-xs text-gray-400">{groupName}</code>
+              <code className="text-muted-foreground text-xs">{groupName}</code>
             </div>
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
+            <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs">
               {t('pages.tags.groups.clients', 'Клиенты')}: {group.totalClients}
             </span>
           </div>
@@ -533,19 +530,21 @@ function GroupsSettings({
             {group.tags.map((tag) => (
               <div
                 key={tag.id}
-                className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1"
+                className="border-border bg-muted flex items-center gap-1.5 rounded-full border px-3 py-1"
               >
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: tag.color }}
                 />
-                <span className="text-xs font-medium text-gray-800">{tag.name}</span>
-                <span className="text-[10px] text-gray-400">({tag.client_count || 0})</span>
+                <span className="text-foreground text-xs font-medium">{tag.name}</span>
+                <span className="text-muted-foreground text-[10px]">({tag.client_count || 0})</span>
               </div>
             ))}
           </div>
           {group.tags.length === 0 && (
-            <p className="text-xs text-gray-400">{t('pages.tags.groups.noTags', 'Нет тегов')}</p>
+            <p className="text-muted-foreground text-xs">
+              {t('pages.tags.groups.noTags', 'No tags available')}
+            </p>
           )}
         </div>
       ))}

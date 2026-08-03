@@ -1,6 +1,15 @@
-export type SettingsSubTab = 'letterTypes' | 'lawyers' | 'mailboxes' | 'templates'
+export type SettingsSubTab = 'letterTypes' | 'lawyers' | 'mailboxes' | 'routing' | 'templates'
 
 export type LawyerPriorityRole = 'primary' | 'backup' | 'secondary' | 'off'
+
+/**
+ * How the response-SLA countdown treats the day count.
+ *   - `working`  — business days only (weekends excluded).
+ *   - `calendar` — plain calendar days.
+ * Backend defaults to `calendar`; the field is optional on the wire for
+ * backward compatibility with older payloads.
+ */
+export type SlaDayType = 'working' | 'calendar'
 
 export type LawyerStatus = 'online' | 'away'
 
@@ -36,6 +45,7 @@ export interface LetterTypeConfig {
   nameFallback: string
   colorId: string
   slaDays: number
+  slaDayType: SlaDayType
   descriptionKey: string
   descriptionFallback: string
   letterCount: number
@@ -69,6 +79,8 @@ export interface MailboxRoutingRule {
   matchType: RoutingMatchType
   value: string
   letterTypeId: string
+  isActive: boolean
+  priority: number
 }
 
 export type MailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'
@@ -96,6 +108,8 @@ export interface SettingsReplyTemplate {
   id: string
   nameKey: string
   nameFallback: string
+  subjectKey: string
+  subjectFallback: string
   bodyKey: string
   bodyFallback: string
   letterTypeIds: string[]

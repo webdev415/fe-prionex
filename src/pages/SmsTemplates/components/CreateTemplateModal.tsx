@@ -34,7 +34,7 @@ export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplate
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.Add size={18} className="text-dark-500 sm:size-5" strokeWidth={2} />
+            <Icons.Add size={18} className="text-primary-foreground sm:size-5" strokeWidth={2} />
           </div>
         }
         title={t('pages.smsTemplates.modals.create.title')}

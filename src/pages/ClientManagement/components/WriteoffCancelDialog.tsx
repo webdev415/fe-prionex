@@ -62,16 +62,16 @@ export function WriteoffCancelDialog({ open, onClose, entry }: WriteoffCancelDia
       />
       <ModalContent>
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-foreground text-sm">
             {t('pages.clients.detail.writeOffCancelDialog.body', {
               accrualType: t(`pages.clients.detail.writeOffModal.components.${entry.accrual_type}`),
               amount: formatMoneyUAHTwoDecimals(Number(entry.amount)),
             })}
           </p>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.writeOffCancelDialog.reasonLabel')}
-              <span className="ml-1 text-gray-500">({t('common.optional')})</span>
+              <span className="text-muted-foreground ml-1">({t('common.optional')})</span>
             </label>
             <Textarea
               value={reason}

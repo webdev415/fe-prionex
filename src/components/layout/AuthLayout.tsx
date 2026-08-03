@@ -16,7 +16,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         alt="login-background"
         className="absolute inset-0 z-0 h-full w-full object-cover"
       />
-      <div className="from-dark-900/60 to-dark-900 absolute z-[5] h-full w-full bg-gradient-to-b via-transparent" />
+      <div className="absolute z-[5] h-full w-full bg-gradient-to-b from-black/60 via-transparent to-black" />
 
       {/* Main Content Container */}
       <div className="relative z-10 flex min-h-screen w-full flex-col p-3 sm:p-4 md:p-6 lg:h-full lg:flex-row lg:p-12 xl:p-16 2xl:p-20">
@@ -48,7 +48,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
               <h1 className="text-display-xs lg:text-display-sm xl:text-display-md mb-4 font-medium text-white">
                 {t('branding.tagline')}
               </h1>
-              <p className="text-body-sm lg:text-body-md xl:text-body-lg leading-relaxed text-gray-400">
+              <p className="text-body-sm lg:text-body-md xl:text-body-lg leading-relaxed text-white/70">
                 {t('branding.description')}
               </p>
             </div>
@@ -58,7 +58,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         {/* Right Panel - Form side */}
         <div className="flex w-full flex-1 flex-col items-center justify-center lg:h-full lg:w-1/2">
           {/* Form container */}
-          <div className="bg-light-50 flex w-[90%] items-center justify-center rounded-lg p-4 py-40 sm:rounded-xl sm:p-6 sm:py-40 md:rounded-2xl md:p-8 md:py-40 lg:p-10 lg:py-40 xl:p-12 xl:py-40">
+          <div className="bg-card text-card-foreground flex w-[90%] items-center justify-center rounded-lg p-4 py-40 sm:rounded-xl sm:p-6 sm:py-40 md:rounded-2xl md:p-8 md:py-40 lg:p-10 lg:py-40 xl:p-12 xl:py-40">
             <div className="w-full">{children}</div>
           </div>
         </div>

@@ -261,11 +261,11 @@ export function ViberRichContentFields({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50/80 p-3',
+        'border-border bg-muted/80 flex flex-col gap-3 rounded-lg border p-3',
         className
       )}
     >
-      <p className="text-dark-500 text-xs font-medium">
+      <p className="text-foreground text-xs font-medium">
         {t(`${p}.richContentTitle`, 'Viber rich content (My2)')}
       </p>
 
@@ -287,7 +287,7 @@ export function ViberRichContentFields({
               {displayImages.map((attachment) => (
                 <li
                   key={attachment.id}
-                  className="relative overflow-hidden rounded-lg border border-gray-200 bg-white"
+                  className="border-border bg-card relative overflow-hidden rounded-lg border"
                 >
                   <img
                     src={attachment.previewUrl}
@@ -330,33 +330,33 @@ export function ViberRichContentFields({
                 }
               }}
               className={cn(
-                'focus:ring-primary-500 relative flex min-h-[8rem] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none',
+                'focus:ring-primary-500 focus:ring-offset-card relative flex min-h-[8rem] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none',
                 dragActive
-                  ? 'border-primary-500 bg-primary-50/40'
-                  : 'border-gray-300 bg-white hover:bg-gray-50',
+                  ? 'border-primary-500 bg-muted'
+                  : 'border-border bg-card hover:bg-muted/50',
                 (disabled || isUploading) && 'pointer-events-none opacity-50'
               )}
             >
               {isUploading ? (
                 <div className="flex flex-col items-center gap-2 p-3">
                   <Icons.Spinner className="h-8 w-8" />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-muted-foreground text-sm">
                     {t(`${p}.imageUploading`, 'Uploading image…')}
                   </p>
                 </div>
               ) : (
                 <>
-                  <Icons.FileImport size={28} className="text-gray-400" />
-                  <p className="text-dark-500 mt-2 text-center text-sm">
+                  <Icons.FileImport size={28} className="text-muted-foreground" />
+                  <p className="text-foreground mt-2 text-center text-sm">
                     <span className="text-primary-600 font-medium">
                       {t(`${p}.imageUploadClick`, 'Click to upload')}
                     </span>{' '}
                     {t(`${p}.imageUploadOrDrop`, 'or drag and drop')}
                   </p>
-                  <p className="mt-1 text-center text-xs text-gray-500">
+                  <p className="text-muted-foreground mt-1 text-center text-xs">
                     {t(`${p}.imageUploadConstraints`, 'JPEG, PNG, GIF, WebP — max 5 MB each')}
                   </p>
-                  <p className="mt-1 text-center text-xs text-gray-500">
+                  <p className="text-muted-foreground mt-1 text-center text-xs">
                     {t(`${p}.imageMultiHint`, 'One image per Viber message.')}
                   </p>
                 </>

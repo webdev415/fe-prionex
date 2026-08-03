@@ -24,7 +24,7 @@ export function InboxViewModeToggle({ value, onChange }: InboxViewModeToggleProp
 
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-full bg-white/60 p-1 shadow-sm"
+      className="bg-card/60 inline-flex items-center gap-1 rounded-full p-1 shadow-sm"
       role="tablist"
       aria-label={t('pages.actionAnalysis.inbox.viewModes.label', 'View mode')}
     >
@@ -48,8 +48,8 @@ export function InboxViewModeToggle({ value, onChange }: InboxViewModeToggleProp
             className={[
               'rounded-full px-4 py-1.5 text-xs font-medium transition-colors',
               isActive
-                ? 'bg-primary-500 text-white shadow-sm'
-                : 'bg-transparent text-gray-700 hover:bg-gray-100',
+                ? 'bg-primary-500 text-primary-foreground shadow-sm'
+                : 'text-foreground hover:bg-muted bg-transparent',
               disabled ? 'cursor-not-allowed opacity-50' : '',
             ]
               .filter(Boolean)
@@ -57,7 +57,7 @@ export function InboxViewModeToggle({ value, onChange }: InboxViewModeToggleProp
           >
             {t(key, fallback)}
             {disabled ? (
-              <span className="ml-1 text-[10px] text-gray-500">
+              <span className="text-muted-foreground ml-1 text-[10px]">
                 ({t('pages.actionAnalysis.inbox.viewModes.comingSoonShort', 'soon')})
               </span>
             ) : null}

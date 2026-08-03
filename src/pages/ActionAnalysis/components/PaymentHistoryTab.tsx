@@ -133,7 +133,7 @@ export function PaymentHistoryTab() {
         scope={scoped}
       />
 
-      <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+      <div className="text-foreground flex flex-wrap gap-4 text-sm">
         <span>
           <span className="font-medium">{summary?.total_payments ?? 0}</span>{' '}
           {t('pages.actionAnalysis.paymentHistorySummary.totalPayments', 'payments')}
@@ -149,20 +149,22 @@ export function PaymentHistoryTab() {
           {t('pages.actionAnalysis.paymentHistorySummary.verified', 'confirmed')}
         </span>
         <span>
-          <span className="font-medium text-gray-600">{formatMoney(summary?.pending_amount)}</span>{' '}
+          <span className="text-muted-foreground font-medium">
+            {formatMoney(summary?.pending_amount)}
+          </span>{' '}
           {t('pages.actionAnalysis.paymentHistorySummary.pending', 'pending')}
         </span>
       </div>
 
       {isEmptyByScope ? (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+        <div className="border-border bg-muted text-foreground rounded-md border p-3 text-sm">
           {t(
             'pages.actionAnalysis.errors.departmentNoOperators',
             'No operators in this department for the current project.'
           )}
         </div>
       ) : error ? (
-        <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
+        <div className="border-error-200 bg-error-100 text-error-700 rounded-md border p-3 text-sm">
           {t(
             'pages.actionAnalysis.errors.loadPaymentHistoryFailed',
             'Failed to load payment history'

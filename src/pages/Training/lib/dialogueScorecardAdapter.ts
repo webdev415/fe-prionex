@@ -15,6 +15,8 @@
  */
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { Scorecard, ScorecardStatus } from '@/features/quality'
+import i18n from '@/lib/i18n'
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 
 // 'Unscored' = a draft with no weighted_score yet (rendered as a `—` ring and
 // excluded from the Low/Average/High bands).
@@ -56,6 +58,11 @@ export interface DialogueScorecardRow {
   clientId: number | null
   /** Resolved client display name; null until/if it loads or has no client. */
   clientName: string | null
+  /** Dialing type (white/grey/unknown) denormalized on the scorecard (KAN-827),
+   *  or null on rows not yet backfilled. */
+  callType: string | null
+  /** Call talk duration in seconds (KAN-827), or null when unknown. */
+  callDuration: number | null
   criteria: DialogueScorecardCriterion[]
 }
 
@@ -91,18 +98,14 @@ function initialsFor(name: string): string {
 function formatDayMonth(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${dd}.${mm}`
+  return formatMonthDay(d, i18n.language)
 }
 
 /** ISO timestamp → `HH:MM`. */
 function formatHourMinute(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${hh}:${mm}`
+  return formatTimeShort(d, i18n.language)
 }
 
 /**
@@ -195,6 +198,8 @@ export function buildDialogueRow(
     contactedPhone: call?.customer_number ?? null,
     clientId,
     clientName: clientId != null ? (clientNames?.get(clientId) ?? null) : null,
+    callType: scorecard.call_telephony_type ?? null,
+    callDuration: scorecard.call_talk_duration ?? null,
     criteria: buildCriteria(scorecard),
   }
 }
