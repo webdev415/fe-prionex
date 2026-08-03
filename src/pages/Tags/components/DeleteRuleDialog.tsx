@@ -36,8 +36,8 @@ export function DeleteRuleDialog({ open, rule, onClose, onSuccess }: DeleteRuleD
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-            <Icons.Cancel01 size={20} className="text-red-600" strokeWidth={2} />
+          <div className="bg-error-100 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Cancel01 size={20} className="text-error-600" strokeWidth={2} />
           </div>
         }
         title={t('pages.tags.deleteRule', 'Delete Rule')}
@@ -45,7 +45,7 @@ export function DeleteRuleDialog({ open, rule, onClose, onSuccess }: DeleteRuleD
 
       <ModalContent>
         <div className="space-y-4">
-          <p className="text-dark-500 text-base font-light">
+          <p className="text-foreground text-base font-light">
             {t(
               'pages.tags.deleteRuleConfirmation',
               'Are you sure you want to delete the rule "{{name}}"?',

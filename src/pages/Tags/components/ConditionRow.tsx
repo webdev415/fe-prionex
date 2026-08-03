@@ -178,7 +178,7 @@ export const ConditionRow = memo(function ConditionRow({
         type="button"
         variant="ghost"
         size="icon-xs"
-        className="mt-0.5 shrink-0 text-gray-400 hover:text-red-500"
+        className="text-muted-foreground hover:text-error-500 mt-0.5 shrink-0"
         onClick={onRemove}
         aria-label={t('actions.remove', 'Remove')}
       >

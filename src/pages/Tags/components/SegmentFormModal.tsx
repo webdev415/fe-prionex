@@ -56,7 +56,7 @@ function FieldTooltip({ text }: { text: string }) {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
+          <span className="bg-muted text-muted-foreground ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-[10px] font-bold">
             ?
           </span>
         </TooltipTrigger>
@@ -234,11 +234,11 @@ export function SegmentFormModal({
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
               {isEdit ? (
-                <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={2} />
               ) : (
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
               )}
             </div>
           }
@@ -344,7 +344,7 @@ export function SegmentFormModal({
             {/* Refresh Mode */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.segments.refreshMode', 'Refresh Mode')}</Label>
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t('pages.tags.segments.refreshModeHelp', 'How segment membership is recalculated')}
               </p>
               <Controller
@@ -370,7 +370,7 @@ export function SegmentFormModal({
             {/* Conditions */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.segments.conditions', 'Conditions')}</Label>
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t(
                   'pages.tags.segments.conditionHelp',
                   'Conditions within a group are combined with AND. Groups are combined with OR.'
@@ -396,7 +396,7 @@ export function SegmentFormModal({
                 {t('pages.tags.segments.preview', 'Preview')}
               </Button>
               {previewCount !== null && (
-                <span className="text-sm text-gray-600">
+                <span className="text-muted-foreground text-sm">
                   {t('pages.tags.segments.previewResult', '{{count}} client(s) match', {
                     count: previewCount,
                   })}

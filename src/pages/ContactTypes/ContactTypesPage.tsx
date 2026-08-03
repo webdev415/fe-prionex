@@ -29,6 +29,8 @@ import {
 } from '@/features/clients/hooks/useClients'
 import type { ContactSource, ContactTypeOption } from '@/features/clients/api/types'
 
+import { ContactTypesPageSkeleton } from './ContactTypesPageSkeleton'
+
 type StatusFilter = 'all' | 'active' | 'hidden'
 
 export function ContactTypesPage() {
@@ -176,7 +178,7 @@ export function ContactTypesPage() {
       key: 'name',
       header: t('pages.contactTypes.columns.name', 'Name'),
       render: (r) => (
-        <span className={r.is_hidden ? 'text-gray-400' : ''}>
+        <span className={r.is_hidden ? 'text-muted-foreground' : 'text-foreground'}>
           {i18n.language === 'uk' ? r.name : t(`contactTypes.${r.code}`, { defaultValue: r.name })}
         </span>
       ),
@@ -262,22 +264,29 @@ export function ContactTypesPage() {
   return (
     <div className="flex flex-col gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-secondary-800 text-xl font-semibold md:text-2xl">
+        <h1 className="text-foreground text-xl font-semibold md:text-2xl">
           {t('pages.contactTypes.title', 'Contact Types')}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-dark-500 text-sm">
-            {t('pages.contactTypes.filterStatus', 'Status')}
-            <select
-              className="border-dark-300 ml-2 rounded-md border px-2 py-1 text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            >
-              <option value="all">{t('pages.contactTypes.filterAll', 'All')}</option>
-              <option value="active">{t('pages.contactTypes.filterActive', 'Active')}</option>
-              <option value="hidden">{t('pages.contactTypes.filterHidden', 'Hidden')}</option>
-            </select>
-          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-foreground text-sm">
+              {t('pages.contactTypes.filterStatus', 'Status')}
+            </span>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('pages.contactTypes.filterAll', 'All')}</SelectItem>
+                <SelectItem value="active">
+                  {t('pages.contactTypes.filterActive', 'Active')}
+                </SelectItem>
+                <SelectItem value="hidden">
+                  {t('pages.contactTypes.filterHidden', 'Hidden')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <PermissionGuard
             permissions={[PERMISSIONS.CONTACT_TYPES.VIEW, PERMISSIONS.CONTACT_TYPES.CREATE]}
             mode="all"
@@ -290,7 +299,7 @@ export function ContactTypesPage() {
       </div>
 
       {isPending ? (
-        <p className="text-dark-500 text-sm">{t('status.loading')}</p>
+        <ContactTypesPageSkeleton />
       ) : (
         <DataTable
           columns={columns}
@@ -323,7 +332,7 @@ export function ContactTypesPage() {
             previewText={name || t('pages.contactTypes.fieldName', 'Name')}
           />
           <div className={isOtherSource ? 'pointer-events-none opacity-50' : undefined}>
-            <p className="text-dark-500 mb-2 text-sm">
+            <p className="text-foreground mb-2 text-sm">
               {t('pages.contactTypes.fieldDefaultLine', 'Default Call Line')}
             </p>
             <RadioGroup
@@ -332,11 +341,11 @@ export function ContactTypesPage() {
               className="flex flex-col gap-2 sm:flex-row"
               disabled={isOtherSource}
             >
-              <label className="flex items-center gap-2">
+              <label className="text-foreground flex items-center gap-2">
                 <RadioItem value="white" id="ct-white" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.white', 'White')}</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="text-foreground flex items-center gap-2">
                 <RadioItem value="gray" id="ct-gray" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.gray', 'Gray')}</span>
               </label>
@@ -347,7 +356,7 @@ export function ContactTypesPage() {
               isOtherSource ? 'opacity-50' : ''
             }`}
           >
-            <span className="text-dark-500 text-sm">
+            <span className="text-foreground text-sm">
               {t('pages.contactTypes.fieldSpam', 'Spam Allowed')}
             </span>
             <ToggleSwitch
@@ -361,7 +370,7 @@ export function ContactTypesPage() {
               isOtherSource ? 'opacity-50' : ''
             }`}
           >
-            <span className="text-dark-500 text-sm">
+            <span className="text-foreground text-sm">
               {t('pages.contactTypes.fieldPrimary', 'Show as Primary Phone')}
             </span>
             <ToggleSwitch
@@ -371,10 +380,10 @@ export function ContactTypesPage() {
             />
           </div>
           <div>
-            <p className="text-dark-500 mb-2 text-sm">
+            <p className="text-foreground mb-2 text-sm">
               {t('pages.contactTypes.fieldContactSource', 'Contact Source')}
             </p>
-            <p className="text-dark-400 mb-2 text-xs">
+            <p className="text-muted-foreground mb-2 text-xs">
               {t(
                 'pages.contactTypes.fieldContactSourceHint',
                 'Categories the contact type. Used for visual indicators in search and for contact filtering in Target Action chain conditions.'
