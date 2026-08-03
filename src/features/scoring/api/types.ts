@@ -155,6 +155,10 @@ export interface TauCapacityPoint {
   avg_share: number
   tau: number
   debts?: number | null
+  /** How much richer in payers this queue is than the book average (e.g. 2.61). */
+  pay_lift?: number | null
+  /** Share of all expected payers this queue reaches (0..1). */
+  payers_captured?: number | null
 }
 
 export interface V3SettingsResponse {

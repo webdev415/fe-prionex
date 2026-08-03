@@ -41,6 +41,8 @@ type FieldSpec = {
   label: string
   unit?: string
   hint: string
+  /** Computed by the model from another field — shown, never edited. */
+  derived?: boolean
   step?: number
   min?: number
   max?: number
@@ -70,7 +72,12 @@ const SECTIONS: { title: string; blurb: string; fields: FieldSpec[] }[] = [
         key: 'ptp_broken_min_days',
         label: 'Start chasing a broken promise',
         unit: 'days after',
-        hint: 'The money did not arrive — begin following up this many days later.',
+        // Not editable: the model starts the broken window the day the promise
+        // window closes, and has no separate setting for it. It was shown as a
+        // normal input, so ops could change it, save it, watch it audited — and
+        // the scorer ignored it. A read-only derived value is the honest form.
+        derived: true,
+        hint: 'Set automatically: the day after the promise window closes.',
       },
       {
         key: 'ptp_broken_max_days',
@@ -159,6 +166,10 @@ const SECTIONS: { title: string; blurb: string; fields: FieldSpec[] }[] = [
 const pct = (n: number) => `${Math.round(n * 100)}%`
 const num = (n: number) => n.toLocaleString()
 
+/** Shared by the header and the rows so the labels stay over their own numbers:
+ *  as two independent grids their `auto` columns sized to their own content. */
+const QUEUE_GRID = 'grid grid-cols-[1rem_1fr_6.5rem_6.5rem_6.5rem] items-center gap-x-6'
+
 /** Queue size is the decision; tau is the implementation detail. */
 function QueuePicker({
   guide,
@@ -181,10 +192,17 @@ function QueuePicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 px-4 text-xs font-medium text-gray-500">
+      <div
+        className={`${QUEUE_GRID} border border-transparent px-4 text-xs font-medium text-gray-500`}
+      >
         <span className="w-4" />
         <span>Queue size</span>
-        <span className="text-right">Debts to work each month</span>
+        <span className="text-right">Debts to work</span>
+        {/* The two numbers the ticket asks for: the BENEFIT of a bigger queue
+            (more payers reached) and its COST in efficiency (each call is less
+            likely to find one). Ops trade these off against each other. */}
+        <span className="text-right">Payers reached</span>
+        <span className="text-right">Calls that pay</span>
       </div>
       {guide.map((p) => {
         const selected = p.tau === closest.tau
@@ -194,7 +212,7 @@ function QueuePicker({
             type="button"
             disabled={!canEdit}
             onClick={() => onPick(p.tau)}
-            className={`grid grid-cols-[auto_1fr_auto] items-center gap-x-4 rounded-lg border px-4 py-3 text-left transition-colors ${
+            className={`${QUEUE_GRID} rounded-lg border px-4 py-3 text-left transition-colors ${
               selected
                 ? 'border-primary-600 bg-[#F0F7E6]'
                 : 'border-[#EBECE8] bg-white hover:bg-gray-50'
@@ -214,10 +232,19 @@ function QueuePicker({
             <span className="text-dark-500 text-right text-sm tabular-nums">
               {p.debts != null ? num(p.debts) : '—'}
             </span>
+            <span className="text-dark-500 text-right text-sm tabular-nums">
+              {p.payers_captured != null ? pct(p.payers_captured) : '—'}
+            </span>
+            <span className="text-dark-500 text-right text-sm tabular-nums">
+              {p.pay_lift != null ? `${p.pay_lift.toFixed(2)}×` : '—'}
+            </span>
           </button>
         )
       })}
       <p className="text-xs text-gray-500">
+        <strong>Payers reached</strong> = how many of the people who will pay this month end up in
+        the queue. <strong>Calls that pay</strong> = how much more often a call finds a payer than
+        if you called at random. A bigger queue reaches more payers but each call is worth less.{' '}
         {measured
           ? 'Worked out from this brand’s own scores, so these are the numbers you would actually get.'
           : 'Generic reference values — this brand has not been scored yet, so the debt counts are unknown.'}
@@ -367,17 +394,23 @@ export function ScoringV3SettingsPage() {
                       <span className="text-xs text-gray-500">{f.hint}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <input
-                        type="number"
-                        step={f.step ?? 1}
-                        min={f.min ?? 0}
-                        max={f.max}
-                        value={isEmpty ? '' : String(value)}
-                        placeholder={f.nullLabel ?? ''}
-                        disabled={!canEdit}
-                        onChange={(e) => setField(f.key, e.target.value, f.nullable)}
-                        className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-right text-sm tabular-nums disabled:bg-gray-50"
-                      />
+                      {f.derived ? (
+                        <span className="text-dark-500 w-24 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-right text-sm tabular-nums">
+                          {isEmpty ? '—' : String(value)}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          step={f.step ?? 1}
+                          min={f.min ?? 0}
+                          max={f.max}
+                          value={isEmpty ? '' : String(value)}
+                          placeholder={f.nullLabel ?? ''}
+                          disabled={!canEdit}
+                          onChange={(e) => setField(f.key, e.target.value, f.nullable)}
+                          className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-right text-sm tabular-nums disabled:bg-gray-50"
+                        />
+                      )}
                       {f.unit && (
                         <span className="w-24 text-xs text-gray-500">
                           {isEmpty && f.nullLabel ? f.nullLabel : f.unit}

@@ -46,9 +46,9 @@ const SETTINGS = {
 
 // Measured from the brand's own hazards, as the server now sends them.
 const GUIDE = [
-  { avg_share: 0.2, tau: 0.01223, debts: 50725 },
-  { avg_share: 0.25, tau: 0.01135, debts: 63406 },
-  { avg_share: 0.3, tau: 0.00831, debts: 76088 },
+  { avg_share: 0.2, tau: 0.01223, debts: 50725, pay_lift: 2.95, payers_captured: 0.59 },
+  { avg_share: 0.25, tau: 0.01135, debts: 63406, pay_lift: 2.61, payers_captured: 0.65 },
+  { avg_share: 0.3, tau: 0.00831, debts: 76088, pay_lift: 2.34, payers_captured: 0.7 },
 ]
 
 const mutate = vi.fn()
@@ -97,6 +97,23 @@ describe('ScoringV3SettingsPage', () => {
     expect(screen.getByText('50,725')).toBeInTheDocument()
   })
 
+  it('shows the benefit of each queue size, not only its cost', () => {
+    // The ticket asks for pay-lift and % payers captured: a bigger queue reaches
+    // more payers but each call is worth less. Showing only "debts to work"
+    // gives ops the cost with none of the benefit.
+    setup()
+    expect(screen.getByText('65%')).toBeInTheDocument() // payers reached at 25%
+    expect(screen.getByText('2.61×')).toBeInTheDocument() // calls that pay at 25%
+  })
+
+  it('a derived window is shown but cannot be edited', () => {
+    // "Start chasing a broken promise" is computed by the model from the promise
+    // window. It used to be an input that changed nothing when saved.
+    setup()
+    expect(screen.queryByDisplayValue('4')).not.toBeInTheDocument()
+    expect(screen.getByText(/set automatically/i)).toBeInTheDocument()
+  })
+
   it('marks the queue size matching the current cut-off', () => {
     setup() // tau 0.01135 == the 25% row
     expect(screen.getByText('current')).toBeInTheDocument()
@@ -120,7 +137,8 @@ describe('ScoringV3SettingsPage', () => {
   it('flags reference-only guidance when the brand has no scores yet', () => {
     setup({ guide: [{ avg_share: 0.25, tau: 0.0189, debts: null }] })
     expect(screen.getByText(/generic reference values/i)).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    // debts / payers-reached / calls-that-pay are all unknown without scores
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   })
 
   it('keeps the raw cut-off available but out of the way', () => {
