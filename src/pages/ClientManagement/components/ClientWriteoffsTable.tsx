@@ -240,8 +240,8 @@ export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>
           type="button"
           className={`rounded px-3 py-1 text-xs ${
             tab === 'active'
-              ? 'bg-secondary-800 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-primary-600 text-white'
+              : 'bg-muted text-foreground hover:bg-muted'
           }`}
           onClick={() => setTab('active')}
         >
@@ -251,8 +251,8 @@ export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>
           type="button"
           className={`rounded px-3 py-1 text-xs ${
             tab === 'cancelled'
-              ? 'bg-secondary-800 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-primary-600 text-white'
+              : 'bg-muted text-foreground hover:bg-muted'
           }`}
           onClick={() => setTab('cancelled')}
         >
@@ -263,8 +263,8 @@ export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>
             type="button"
             className={`rounded px-3 py-1 text-xs ${
               tab === 'legacy'
-                ? 'bg-secondary-800 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary-600 text-white'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
             onClick={() => setTab('legacy')}
           >
@@ -280,7 +280,7 @@ export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>
       )}
 
       {tab !== 'legacy' && isLoading && (
-        <p className="text-sm text-gray-500">{t('common.loading')}</p>
+        <p className="text-muted-foreground text-sm">{t('common.loading')}</p>
       )}
 
       {tab !== 'legacy' && <DataTable columns={columns} data={rows} className="w-full" />}

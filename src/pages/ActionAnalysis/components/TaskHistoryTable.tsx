@@ -28,21 +28,21 @@ const SORT_OPTIONS: TaskHistorySort[] = [
 ]
 
 const PRIORITY_BADGE: Record<string, string> = {
-  low: 'bg-gray-100 text-gray-700',
-  normal: 'bg-blue-100 text-blue-700',
-  high: 'bg-warning-50 text-warning-700',
-  urgent: 'bg-error-50 text-error-700',
-  critical: 'bg-error-100 text-error-800',
+  low: 'bg-muted text-muted-foreground',
+  normal: 'bg-info-100 text-info-700',
+  high: 'bg-warning-100 text-warning-700',
+  urgent: 'bg-error-100 text-error-700',
+  critical: 'bg-error-100 text-error-700',
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  completed: 'bg-success-50 text-success-700',
-  cancelled: 'bg-gray-100 text-gray-500',
-  extended: 'bg-warning-50 text-warning-700',
-  rejected: 'bg-error-50 text-error-700',
-  incoming_line_result: 'bg-blue-50 text-blue-700',
+  pending: 'bg-muted text-muted-foreground',
+  in_progress: 'bg-info-100 text-info-700',
+  completed: 'bg-success-100 text-success-700',
+  cancelled: 'bg-muted text-muted-foreground',
+  extended: 'bg-warning-100 text-warning-700',
+  rejected: 'bg-error-100 text-error-700',
+  incoming_line_result: 'bg-info-100 text-info-700',
 }
 
 function splitDueDate(
@@ -66,7 +66,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       key: 'createdDate',
       header: t('pages.actionAnalysis.columns.createdDate', 'Created date'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {r.created_at ? formatDateTime(r.created_at, userTimezone) : '—'}
         </span>
       ),
@@ -76,7 +76,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       header: t('pages.actionAnalysis.columns.clientId', 'Client ID'),
       render: (r) =>
         r.client_id == null ? (
-          <span className="text-sm text-gray-700">—</span>
+          <span className="text-foreground text-sm">—</span>
         ) : (
           <Link
             to={`/dashboard/clients/${r.client_id}`}
@@ -89,18 +89,20 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
     {
       key: 'author',
       header: t('pages.actionAnalysis.columns.author', 'Author'),
-      render: (r) => <span className="text-sm text-gray-700">{r.created_by_name ?? '—'}</span>,
+      render: (r) => <span className="text-foreground text-sm">{r.created_by_name ?? '—'}</span>,
     },
     {
       key: 'assignee',
       header: t('pages.actionAnalysis.columns.assignee', 'Assignee'),
-      render: (r) => <span className="text-sm text-gray-700">{r.assigned_to_username ?? '—'}</span>,
+      render: (r) => (
+        <span className="text-foreground text-sm">{r.assigned_to_username ?? '—'}</span>
+      ),
     },
     {
       key: 'priority',
       header: t('pages.actionAnalysis.columns.priority', 'Priority'),
       render: (r) => {
-        const cls = PRIORITY_BADGE[r.priority as string] ?? 'bg-gray-100 text-gray-600'
+        const cls = PRIORITY_BADGE[r.priority as string] ?? 'bg-muted text-muted-foreground'
         return (
           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
             {t(`pages.actionAnalysis.filters.priorities.${r.priority}`, String(r.priority))}
@@ -112,7 +114,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       key: 'status',
       header: t('pages.actionAnalysis.columns.status', 'Status'),
       render: (r) => {
-        const cls = STATUS_BADGE[r.status as string] ?? 'bg-gray-100 text-gray-600'
+        const cls = STATUS_BADGE[r.status as string] ?? 'bg-muted text-muted-foreground'
         return (
           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
             {t(`pages.actionAnalysis.filters.statuses.${r.status}`, String(r.status))}
@@ -124,7 +126,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       key: 'topic',
       header: t('pages.actionAnalysis.columns.topic', 'Topic'),
       render: (r) => (
-        <span className="text-sm text-gray-700" title={r.subject_name ?? undefined}>
+        <span className="text-foreground text-sm" title={r.subject_name ?? undefined}>
           {r.subject_name ?? '—'}
         </span>
       ),
@@ -134,7 +136,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       header: t('pages.actionAnalysis.columns.dueDate', 'Due date'),
       render: (r) => {
         const { date } = splitDueDate(r.due_date, userTimezone)
-        return <span className="text-sm text-gray-700">{date}</span>
+        return <span className="text-foreground text-sm">{date}</span>
       },
     },
     {
@@ -142,7 +144,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       header: t('pages.actionAnalysis.columns.dueTime', 'Due time'),
       render: (r) => {
         const { time } = splitDueDate(r.due_date, userTimezone)
-        return <span className="text-sm text-gray-700">{time}</span>
+        return <span className="text-foreground text-sm">{time}</span>
       },
     },
   ]
@@ -150,7 +152,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-end gap-2">
-        <span className="text-xs text-gray-500">
+        <span className="text-muted-foreground text-xs">
           {t('pages.actionAnalysis.filters.sortBy', 'Sort by')}
         </span>
         <Select value={sort} onValueChange={(v) => onSortChange(v as TaskHistorySort)}>

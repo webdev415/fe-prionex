@@ -19,6 +19,12 @@ import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
+import {
+  serializeCompanyBankingFields,
+  validateAllCompanyBankingFields,
+  validateCompanyBankingField,
+  type CompanyBankingFieldName,
+} from './companyBankingFields'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -36,6 +42,17 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     contract_number: '',
     start_date: '',
     end_date: '',
+    // Company legal & banking details, all optional
+    full_company_name: '',
+    address: '',
+    edrpou_code: '',
+    website: '',
+    email: '',
+    hotline_phone: '',
+    director_name: '',
+    iban: '',
+    bank_name: '',
+    bank_code: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [noEndDate, setNoEndDate] = useState(true)
@@ -61,6 +78,13 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
       }
     }
 
+    // Validate the 10 company/banking fields (each is optional; the helper
+    // returns errors only for non-empty values that fail their regex).
+    const cbErrors = validateAllCompanyBankingFields(formData)
+    for (const [field, key] of Object.entries(cbErrors)) {
+      newErrors[field] = t(key)
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -79,6 +103,9 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: formData.contract_number || undefined,
         start_date: formData.start_date || undefined,
         end_date: noEndDate ? undefined : formData.end_date || undefined,
+        // Spread the serialized company/banking payload (undefined for
+        // empty fields so the BE stores NULL, not "").
+        ...serializeCompanyBankingFields(formData),
       })
       onSuccess()
       onClose()
@@ -90,6 +117,16 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: '',
         start_date: '',
         end_date: '',
+        full_company_name: '',
+        address: '',
+        edrpou_code: '',
+        website: '',
+        email: '',
+        hotline_phone: '',
+        director_name: '',
+        iban: '',
+        bank_name: '',
+        bank_code: '',
       })
       setErrors({})
       setNoEndDate(false)
@@ -103,6 +140,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }))
     }
+  }
+
+  // Per-field on-blur validation for company/banking fields.
+  const handleCompanyBankingBlur = (field: CompanyBankingFieldName) => {
+    const errorKey = validateCompanyBankingField(field, formData[field])
+    setErrors((prev) => ({ ...prev, [field]: errorKey ? t(errorKey) : '' }))
   }
 
   const handleNoEndDateChange = (checked: boolean) => {
@@ -119,8 +162,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Add size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.projects.modals.create.title')}
@@ -138,7 +181,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.projectInformation')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -164,12 +207,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 error={errors.code}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.clientContract')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -191,12 +234,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.timeline')}
             </h3>
             <div className="flex items-center gap-4">
@@ -237,6 +280,140 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   {t('pages.projects.modals.create.noEndDate')}
                 </Label>
               </div>
+            </div>
+            <div className="bg-border h-px w-full" />
+          </div>
+
+          {/* Company Details Section */}
+          <div className="space-y-4">
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.create.companyDetails.title')}
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="full_company_name"
+                label={t('pages.projects.modals.create.companyDetails.fullCompanyName')}
+                value={formData.full_company_name ?? ''}
+                onChange={(e) => handleChange('full_company_name', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('full_company_name')}
+                placeholder={t('pages.projects.modals.create.placeholders.fullCompanyName')}
+                disabled={createMutation.isPending}
+                maxLength={1000}
+              />
+              <Input
+                id="edrpou_code"
+                label={t('pages.projects.modals.create.companyDetails.edrpouCode')}
+                value={formData.edrpou_code ?? ''}
+                onChange={(e) => handleChange('edrpou_code', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('edrpou_code')}
+                placeholder={t('pages.projects.modals.create.placeholders.edrpouCode')}
+                disabled={createMutation.isPending}
+                variant={errors.edrpou_code ? 'error' : 'default'}
+                error={errors.edrpou_code}
+                maxLength={8}
+              />
+            </div>
+            <Textarea
+              id="address"
+              label={t('pages.projects.modals.create.companyDetails.address')}
+              value={formData.address ?? ''}
+              onChange={(e) => handleChange('address', e.target.value)}
+              onBlur={() => handleCompanyBankingBlur('address')}
+              placeholder={t('pages.projects.modals.create.placeholders.address')}
+              rows={2}
+              disabled={createMutation.isPending}
+              maxLength={1000}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="website"
+                label={t('pages.projects.modals.create.companyDetails.website')}
+                value={formData.website ?? ''}
+                onChange={(e) => handleChange('website', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('website')}
+                placeholder={t('pages.projects.modals.create.placeholders.website')}
+                disabled={createMutation.isPending}
+                maxLength={1000}
+              />
+              <Input
+                id="email"
+                type="email"
+                label={t('pages.projects.modals.create.companyDetails.email')}
+                value={formData.email ?? ''}
+                onChange={(e) => handleChange('email', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('email')}
+                placeholder={t('pages.projects.modals.create.placeholders.email')}
+                disabled={createMutation.isPending}
+                variant={errors.email ? 'error' : 'default'}
+                error={errors.email}
+                maxLength={1000}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="hotline_phone"
+                label={t('pages.projects.modals.create.companyDetails.hotlinePhone')}
+                value={formData.hotline_phone ?? ''}
+                onChange={(e) => handleChange('hotline_phone', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('hotline_phone')}
+                placeholder={t('pages.projects.modals.create.placeholders.hotlinePhone')}
+                disabled={createMutation.isPending}
+                variant={errors.hotline_phone ? 'error' : 'default'}
+                error={errors.hotline_phone}
+                maxLength={1000}
+              />
+              <Input
+                id="director_name"
+                label={t('pages.projects.modals.create.companyDetails.directorName')}
+                value={formData.director_name ?? ''}
+                onChange={(e) => handleChange('director_name', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('director_name')}
+                placeholder={t('pages.projects.modals.create.placeholders.directorName')}
+                disabled={createMutation.isPending}
+                maxLength={1000}
+              />
+            </div>
+            <div className="h-px w-full bg-gray-200" />
+          </div>
+
+          {/* Banking Details Section */}
+          <div className="space-y-4">
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.create.bankingDetails.title')}
+            </h3>
+            <Input
+              id="iban"
+              label={t('pages.projects.modals.create.bankingDetails.iban')}
+              value={formData.iban ?? ''}
+              onChange={(e) => handleChange('iban', e.target.value)}
+              onBlur={() => handleCompanyBankingBlur('iban')}
+              placeholder={t('pages.projects.modals.create.placeholders.iban')}
+              disabled={createMutation.isPending}
+              variant={errors.iban ? 'error' : 'default'}
+              error={errors.iban}
+              maxLength={34}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="bank_name"
+                label={t('pages.projects.modals.create.bankingDetails.bankName')}
+                value={formData.bank_name ?? ''}
+                onChange={(e) => handleChange('bank_name', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('bank_name')}
+                placeholder={t('pages.projects.modals.create.placeholders.bankName')}
+                disabled={createMutation.isPending}
+                maxLength={1000}
+              />
+              <Input
+                id="bank_code"
+                label={t('pages.projects.modals.create.bankingDetails.bankCode')}
+                value={formData.bank_code ?? ''}
+                onChange={(e) => handleChange('bank_code', e.target.value)}
+                onBlur={() => handleCompanyBankingBlur('bank_code')}
+                placeholder={t('pages.projects.modals.create.placeholders.bankCode')}
+                disabled={createMutation.isPending}
+                maxLength={1000}
+              />
             </div>
             <div className="h-px w-full bg-gray-200" />
           </div>

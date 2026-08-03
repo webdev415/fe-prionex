@@ -173,20 +173,20 @@ export function TaskHistoryTab() {
         scope={scoped}
       />
 
-      <div className="text-sm text-gray-700">
+      <div className="text-foreground text-sm">
         <span className="font-medium">{total}</span>{' '}
         {t('pages.actionAnalysis.taskHistorySummary.total', 'tasks')}
       </div>
 
       {isDeptEmpty ? (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+        <div className="border-border bg-muted text-foreground rounded-md border p-3 text-sm">
           {t(
             'pages.actionAnalysis.errors.departmentNoOperators',
             'No operators in this department for the current project.'
           )}
         </div>
       ) : error ? (
-        <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
+        <div className="border-error-200 bg-error-100 text-error-700 rounded-md border p-3 text-sm">
           {t('pages.actionAnalysis.errors.loadTaskHistoryFailed', 'Failed to load task history')}
         </div>
       ) : (

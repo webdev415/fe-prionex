@@ -13,6 +13,12 @@ import { ALL_MESSAGING_SEND_PERMISSIONS } from '@/features/messaging/utils/messa
 import { useAuthStore } from '@/stores/authStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/Tooltip'
 import {
+  isCallBlocked,
+  isMessageBlocked,
+  callBlockReason,
+  messageBlockReason,
+} from '@/features/clients/utils/contactBlocking'
+import {
   useLinkedClientsRelatedTags,
   type LinkedContactInfo,
   type PhoneMeta,
@@ -54,7 +60,7 @@ export function RelatedTagsTab({
 
   if (isLoading && entries.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-muted-foreground text-xs">
         {t('pages.clients.detail.relatedTags.loading', 'Loading related tags...')}
       </p>
     )
@@ -62,7 +68,7 @@ export function RelatedTagsTab({
 
   if (entries.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-muted-foreground text-xs">
         {t(
           'pages.clients.detail.relatedTags.empty',
           'No related tags from linked contacts with shared phone numbers.'
@@ -80,7 +86,7 @@ export function RelatedTagsTab({
         return (
           <div
             key={entry.key}
-            className="flex w-full min-w-0 flex-col gap-2 border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+            className="border-border flex w-full min-w-0 flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0"
           >
             <span
               className="inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs font-medium"
@@ -106,7 +112,7 @@ export function RelatedTagsTab({
                   <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
                     <span
                       className={cn(
-                        'text-dark-500 min-w-0 truncate text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                        'text-foreground min-w-0 truncate text-xs leading-[140%] font-medium tracking-[-0.24px]',
                         phone.blocking.blocks_calls && 'line-through opacity-70'
                       )}
                     >
@@ -121,23 +127,23 @@ export function RelatedTagsTab({
                               disabled={
                                 !user?.is_agent ||
                                 !user?.asterisk_extension ||
-                                phone.blocking.blocks_calls
+                                isCallBlocked(phone.blocking)
                               }
                               onClick={() =>
                                 onCall(phone.displayPhone, phone.contactTypeId, phone.spamAllowed)
                               }
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                             >
-                              {phone.blocking.blocks_calls ? (
+                              {isCallBlocked(phone.blocking) ? (
                                 <Icons.Lock size={16} className="flex-shrink-0" />
                               ) : (
                                 <Icons.Headset size={16} className="flex-shrink-0" />
                               )}
                             </button>
                           </TooltipTrigger>
-                          {phone.blocking.blocks_calls && (
+                          {isCallBlocked(phone.blocking) && (
                             <TooltipContent>
-                              {phone.blocking.reasons.join('; ') ||
+                              {callBlockReason(phone.blocking) ||
                                 t('pages.contactTags.callsBlocked', 'Calls blocked')}
                             </TooltipContent>
                           )}
@@ -146,9 +152,15 @@ export function RelatedTagsTab({
                       <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
                         <button
                           type="button"
-                          disabled={phone.blocking.blocks_sms}
+                          disabled={isMessageBlocked(phone.blocking)}
                           onClick={() => onSms(phone.displayPhone)}
                           className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                          title={
+                            isMessageBlocked(phone.blocking)
+                              ? messageBlockReason(phone.blocking) ||
+                                t('pages.contactTags.smsBlocked', 'SMS blocked')
+                              : t('pages.clients.detail.sendSms', 'Send SMS')
+                          }
                         >
                           <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                         </button>
@@ -156,14 +168,13 @@ export function RelatedTagsTab({
                       {canSendMessaging && (
                         <button
                           type="button"
-                          disabled={phone.blocking.blocks_sms}
+                          disabled={isMessageBlocked(phone.blocking)}
                           onClick={() => onMessage(phone.displayPhone)}
                           className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                           title={
-                            phone.blocking.blocks_sms
-                              ? phone.blocking.reasons
-                                  .filter((reason) => reason.toLowerCase().includes('sms'))
-                                  .join('; ') || t('pages.contactTags.smsBlocked', 'SMS blocked')
+                            isMessageBlocked(phone.blocking)
+                              ? messageBlockReason(phone.blocking) ||
+                                t('pages.contactTags.smsBlocked', 'SMS blocked')
                               : t('pages.clients.detail.sendMessage', 'Send message')
                           }
                         >
@@ -183,7 +194,7 @@ export function RelatedTagsTab({
                   </div>
                   <Link
                     to={`/dashboard/clients/${entry.linkedClient.id}`}
-                    className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[#d7ebc6] bg-[#ecf6e4] px-1.5 py-0.5 text-[10px] leading-3 font-medium text-[#519a3d] hover:border-[#c5ddb3] hover:bg-[#e3f2d8]"
+                    className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
                     title={t('pages.clients.detail.relatedTags.goToClient', {
                       defaultValue: 'Go to client №{{id}}',
                       id: entry.linkedClient.id,

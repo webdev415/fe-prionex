@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -43,18 +44,23 @@ function deriveInitials(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatTimeShort(d, language)
 }
 
-function formatDateLabel(iso: string, today: string): string {
+function formatDateLabel(
+  t: (key: string, fallback: string) => string,
+  iso: string,
+  today: string,
+  language: string
+): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   const ymd = d.toISOString().slice(0, 10)
-  if (ymd === today) return 'Today'
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+  if (ymd === today) return t('pages.training.calendar.today', 'Today')
+  return formatMonthDay(d, language)
 }
 
 interface OperatorLite {
@@ -204,7 +210,7 @@ function SessionCard({
   canManage: boolean
   planned: boolean
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const reschedule = useRescheduleCalibrationSession()
   const complete = useCompleteCalibrationSession()
   const [postponeOpen, setPostponeOpen] = useState(false)
@@ -231,7 +237,7 @@ function SessionCard({
             ? t('pages.training.calendar.completed', 'Completed')
             : session.status === 'cancelled'
               ? t('pages.training.calendar.cancelled', 'Cancelled')
-              : fmt.label}
+              : t(`pages.training.calendar.meetingType.${session.format}`, fmt.label)}
         </span>
       </div>
 
@@ -239,9 +245,11 @@ function SessionCard({
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center justify-center rounded-xl bg-[#F0FDF4] px-3 py-1.5 text-[#204E4D]">
             <span className="text-base leading-tight font-bold">
-              {formatTime(session.scheduled_at)}
+              {formatTime(session.scheduled_at, i18n.language)}
             </span>
-            <span className="text-[10px]">{formatDateLabel(session.scheduled_at, today)}</span>
+            <span className="text-[10px]">
+              {formatDateLabel(t, session.scheduled_at, today, i18n.language)}
+            </span>
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-semibold text-[#05040D]">{session.title}</span>
@@ -278,7 +286,10 @@ function SessionCard({
             label={t('pages.training.calendar.duration', 'Duration')}
             value={`${session.duration_minutes} ${t('pages.training.calendar.min', 'min')}`}
           />
-          <StatTile label={t('pages.training.calendar.location', 'Location')} value={fmt.label} />
+          <StatTile
+            label={t('pages.training.calendar.location', 'Location')}
+            value={t(`pages.training.calendar.meetingType.${session.format}`, fmt.label)}
+          />
         </div>
 
         {planned ? (
@@ -355,7 +366,7 @@ function PostponeDialog({
           <h3 className="text-sm font-semibold text-[#05040D]">
             {t('pages.training.calendar.postpone', 'Postpone')}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -458,7 +469,7 @@ function MemberPicker({ label, operators, selected, onChange }: MemberPickerProp
           <button
             type="button"
             onClick={() => commit(slots.filter((_, j) => j !== i))}
-            aria-label="Remove"
+            aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Close size={13} className="text-[#9CA3AF]" />
           </button>
@@ -519,7 +530,7 @@ function ScheduleCalibrationPanel({
               {t('pages.training.calendar.schedule', 'Schedule a Calibration Session')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>

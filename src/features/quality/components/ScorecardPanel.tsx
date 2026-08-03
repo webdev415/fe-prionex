@@ -1,20 +1,18 @@
 ﻿/**
- * ScorecardPanel — side panel rendered next to the CallRecordingModal (KAN-410, Feature 2.1).
+ * ScorecardPanel — the scorecard editor for one call.
  *
- * Renders the active scorecard template with collapsible sections, per-criterion
- * inputs (binary toggle or 0..5 buttons), comment fields, and a status indicator.
- * Autosaves drafts via `useScorecardDraft`; trainer-controlled buttons flip
- * status (draft -> completed -> sent).
- *
- * The panel is mounted inside the `CallReviewLayout` wrapper (Action Analysis
- * flow only); operator-side call sites that open the modal don't pass a
- * `scorecardPanel` prop and get the legacy single-panel layout unchanged.
+ * A call has at most one scorecard, so an existing card is always opened
+ * (whatever its status) and the create picker only appears when there is none,
+ * or when the trainer explicitly switches the scorecard type (which clears the
+ * scores). Renders the template with collapsible sections, per-criterion inputs
+ * (binary toggle or 0..5 buttons), comment fields and a status indicator.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
 import { useScorecardDraft } from '../hooks/useScorecardDraft'
 import {
   useScorecard,
@@ -34,6 +32,10 @@ interface ScorecardPanelProps {
   operatorId: number
   /** When set, the panel opens that scorecard rather than the latest draft. */
   scorecardId?: number | null
+  /** Assignment-based write gate. When provided it fully governs edit rights at
+   *  any status (the trainer may edit + re-send). When omitted, the legacy
+   *  originating-trainer + draft-only gate applies. */
+  canEdit?: boolean
   /** Callback after the trainer presses "Send to operator". */
   onSent?: (scorecardId: number) => void
   /** Emits the unsaved-changes state so the parent can warn on close. */
@@ -44,6 +46,7 @@ export function ScorecardPanel({
   callId,
   operatorId,
   scorecardId: pinnedScorecardId,
+  canEdit: canEditProp,
   onSent,
   onDirtyChange,
 }: ScorecardPanelProps) {
@@ -55,8 +58,9 @@ export function ScorecardPanel({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
   const [forcePicker, setForcePicker] = useState(false)
-  const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
-  const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
+  const existingScorecardId = historyQuery.data?.[0]?.id ?? null
+  const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? existingScorecardId ?? null
+  const isChangingType = forcePicker && existingScorecardId != null
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
   const updateMutation = useUpdateScorecard()
@@ -129,7 +133,18 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const canEdit = status === 'draft' && !locked
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const isOriginatingTrainer =
+    activeScorecard != null &&
+    currentUserId != null &&
+    Number(currentUserId) === activeScorecard.trainer_id
+  // Assignment-based gate (new model) governs editing at any status; the backend
+  // enforces the same rule with a 403. Legacy callers fall back to
+  // originating-trainer + draft-only.
+  const canEdit =
+    canEditProp != null
+      ? canEditProp && !locked
+      : status === 'draft' && !locked && isOriginatingTrainer
 
   const handleSaveDraft = async () => {
     await draft.flush()
@@ -145,7 +160,7 @@ export function ScorecardPanel({
   }
 
   const handleStartNew = async () => {
-    if (!selectedTemplateId) return
+    if (!selectedTemplateId || canEditProp === false) return
     const created = await createMutation.mutateAsync({
       call_id: callId,
       operator_id: operatorId,
@@ -179,32 +194,36 @@ export function ScorecardPanel({
 
   // ---- Render branches ----
   if (!activeScorecardId || forcePicker) {
+    // Never offer a create action the caller isn't allowed to perform — the
+    // backend rejects it with a 403.
+    if (canEditProp === false) {
+      return (
+        <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+          <h2 className="text-dark-500 text-lg font-medium">
+            {t('pages.training.scorecard.title', 'Quality evaluation')}
+          </h2>
+          <p className="text-sm text-[#6B7280]">
+            {t(
+              'pages.training.scorecard.notAssigned',
+              'This operator is not assigned to you, so you cannot score this call.'
+            )}
+          </p>
+        </aside>
+      )
+    }
+
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
         <h2 className="text-dark-500 text-lg font-medium">
           {t('pages.training.scorecard.title', 'Quality evaluation')}
         </h2>
 
-        {historyQuery.data && historyQuery.data.length > 0 ? (
-          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-            <div className="mb-2 font-medium">
-              {t('pages.training.scorecard.history', 'Previous scorecards on this call')}
-            </div>
-            <ul className="space-y-1">
-              {historyQuery.data.map((row) => (
-                <li key={row.id}>
-                  <button
-                    type="button"
-                    onClick={() => setManuallySelectedId(row.id)}
-                    className="text-primary-600 hover:underline"
-                  >
-                    {new Date(row.created_at).toLocaleString()} —{' '}
-                    {t(`pages.training.scorecard.status.${row.status}`, row.status)}
-                    {row.weighted_score != null ? ` (${row.weighted_score})` : ''}
-                  </button>
-                </li>
-              ))}
-            </ul>
+        {isChangingType ? (
+          <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+            {t(
+              'pages.training.scorecard.changeTypeWarning',
+              'Changing the type replaces the criteria — the current scores will be cleared.'
+            )}
           </div>
         ) : null}
 
@@ -262,15 +281,29 @@ export function ScorecardPanel({
           </select>
         ) : null}
 
-        <Button
-          variant="primary"
-          size="md"
-          onClick={handleStartNew}
-          disabled={!selectedTemplateId || createMutation.isPending}
-          className="rounded-full"
-        >
-          {t('pages.training.scorecard.startEvaluation', 'Start evaluation')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {isChangingType ? (
+            <Button
+              variant="cancel"
+              size="md"
+              onClick={() => setForcePicker(false)}
+              className="rounded-full"
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          ) : null}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleStartNew}
+            disabled={!selectedTemplateId || createMutation.isPending}
+            className="rounded-full"
+          >
+            {isChangingType
+              ? t('pages.training.scorecard.changeTypeConfirm', 'Change type')
+              : t('pages.training.scorecard.startEvaluation', 'Start evaluation')}
+          </Button>
+        </div>
       </aside>
     )
   }
@@ -314,6 +347,23 @@ export function ScorecardPanel({
         >
           {t('pages.training.scorecard.changeType', '← Change scorecard type')}
         </button>
+      ) : null}
+
+      {(canEditProp != null ? !canEditProp : !isOriginatingTrainer && status !== 'sent') ? (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+          <Icons.Lock size={14} className="mt-0.5 flex-shrink-0" />
+          <span>
+            {canEditProp != null
+              ? t(
+                  'pages.training.scorecard.notAssigned',
+                  'This operator is not assigned to you, so you cannot score this call.'
+                )
+              : t(
+                  'pages.training.scorecard.readOnlyNotOwner',
+                  'Read-only — only the trainer who created this scorecard can edit it.'
+                )}
+          </span>
+        </div>
       ) : null}
 
       <div className="bg-primary-50 text-primary-700 flex items-center justify-between gap-2 rounded-lg p-3 text-sm">
@@ -379,26 +429,37 @@ export function ScorecardPanel({
               disabled={!draft.isDirty || draft.isSaving}
               className="rounded-full"
             >
-              {t('pages.training.scorecard.saveDraft', 'Save draft')}
+              {status === 'draft'
+                ? t('pages.training.scorecard.saveDraft', 'Save draft')
+                : t('pages.training.scorecard.saveChanges', 'Save changes')}
             </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleMarkCompleted}
-              disabled={updateMutation.isPending || !isComplete}
-              title={
-                isComplete
-                  ? undefined
-                  : t('pages.training.scorecard.completeIncomplete', 'Score every criterion first')
-              }
-              className="rounded-full"
-            >
-              {t('pages.training.scorecard.markCompleted', 'Mark completed')}
-            </Button>
+            {status === 'draft' ? (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleMarkCompleted}
+                disabled={updateMutation.isPending || !isComplete}
+                title={
+                  isComplete
+                    ? undefined
+                    : t(
+                        'pages.training.scorecard.completeIncomplete',
+                        'Score every criterion first'
+                      )
+                }
+                className="rounded-full"
+              >
+                {t('pages.training.scorecard.markCompleted', 'Mark completed')}
+              </Button>
+            ) : null}
           </>
         ) : null}
 
-        {status === 'draft' && locked ? (
+        {(
+          canEditProp != null
+            ? canEditProp && locked
+            : status === 'draft' && locked && isOriginatingTrainer
+        ) ? (
           <Button
             variant="primary"
             size="md"
@@ -409,7 +470,11 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {status === 'completed' ? (
+        {(
+          canEditProp != null
+            ? canEditProp && (status === 'completed' || status === 'sent')
+            : status === 'completed' && isOriginatingTrainer
+        ) ? (
           <Button
             variant="primary"
             size="md"
@@ -417,7 +482,9 @@ export function ScorecardPanel({
             disabled={sendMutation.isPending}
             className="rounded-full"
           >
-            {t('pages.training.scorecard.sendToOperator', 'Send to operator')}
+            {status === 'sent'
+              ? t('pages.training.scorecard.resend', 'Re-send')
+              : t('pages.training.scorecard.sendToOperator', 'Send to operator')}
           </Button>
         ) : null}
       </footer>
@@ -571,7 +638,9 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
-            <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+            <span className="ml-1.5 text-xs text-gray-400">
+              · {criterion.weight} {t('pages.training.scorecard.pts', 'pts')}
+            </span>
           ) : null}
           {needsScore ? (
             <span className="ml-1.5 text-xs font-medium text-amber-600">
@@ -598,7 +667,7 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
       ) : null}
       <input
         type="text"
-        placeholder="Comment (optional)"
+        placeholder={t('pages.training.scorecard.commentOptional', 'Comment (optional)')}
         defaultValue={entry?.comment ?? ''}
         disabled={disabled}
         onBlur={(e) => onChange(criterion.key, entry?.value ?? null, e.target.value)}
@@ -617,13 +686,14 @@ function BinaryInput({
   disabled: boolean
   onChange: (next: boolean | null) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <div className="flex gap-1">
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === true ? null : true)}
-        aria-label="Yes"
+        aria-label={t('common.yes', 'Yes')}
         aria-pressed={value === true}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === true
@@ -637,7 +707,7 @@ function BinaryInput({
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === false ? null : false)}
-        aria-label="No"
+        aria-label={t('common.no', 'No')}
         aria-pressed={value === false}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === false

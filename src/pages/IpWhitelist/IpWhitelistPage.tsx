@@ -9,7 +9,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { TbInfoTriangle, TbTrash, TbEdit, TbCheck, TbX } from 'react-icons/tb'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
@@ -19,13 +18,14 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 
 import {
   ipWhitelistFormSchema,
   type IpWhitelistFormData,
   useIpWhitelist,
   useCreateIpWhitelistEntry,
-  useDeleteIpWhitelistEntry,
   useUpdateIpWhitelistEntry,
   type IpWhitelistEntry,
 } from '@/features/ipWhitelist'
@@ -33,7 +33,7 @@ import {
   useIpWhitelistSettings,
   useUpdateIpWhitelistSettings,
 } from '@/features/users/hooks/useIpWhitelistSettings'
-import { CallQaSettingsSection } from '@/features/quality'
+import { DeleteIpWhitelistEntryModal } from './DeleteIpWhitelistEntryModal'
 
 function extractApiError(err: unknown, fallback: string): string {
   const e = err as { response?: { data?: { detail?: unknown } } }
@@ -50,12 +50,12 @@ function extractApiError(err: unknown, fallback: string): string {
 
 interface EntryRowProps {
   entry: IpWhitelistEntry
+  onRequestDelete: (entry: IpWhitelistEntry) => void
 }
 
-function EntryRow({ entry }: EntryRowProps) {
+function EntryRow({ entry, onRequestDelete }: EntryRowProps) {
   const { t } = useTranslation('common')
   const updateMutation = useUpdateIpWhitelistEntry()
-  const deleteMutation = useDeleteIpWhitelistEntry()
 
   const [editing, setEditing] = useState(false)
   const [ipValue, setIpValue] = useState(entry.ip_address)
@@ -98,40 +98,28 @@ function EntryRow({ entry }: EntryRowProps) {
     }
   }
 
-  const handleDelete = async () => {
-    if (!window.confirm(t('pages.ipWhitelist.confirmDelete', { ip: entry.ip_address }))) {
-      return
-    }
-    try {
-      await deleteMutation.mutateAsync(entry.id)
-      toast.success(t('pages.ipWhitelist.toastDeleted'))
-    } catch (err) {
-      toast.error(extractApiError(err, t('pages.ipWhitelist.errorDelete')))
-    }
-  }
-
   if (editing) {
     return (
-      <tr className="border-b border-gray-100">
-        <td className="px-3 py-2">
+      <tr className="border-border border-b">
+        <td className="px-4 py-3">
           <Input
             value={ipValue}
             onChange={(e) => setIpValue(e.target.value)}
             placeholder="203.0.113.5"
           />
         </td>
-        <td className="px-3 py-2">
+        <td className="px-4 py-3">
           <Input
             value={labelValue}
             onChange={(e) => setLabelValue(e.target.value)}
             placeholder={t('pages.ipWhitelist.labelPlaceholder')}
           />
         </td>
-        <td className="px-3 py-2 text-xs text-gray-500">
+        <td className="text-muted-foreground px-4 py-3 text-xs">
           {new Date(entry.updated_at).toLocaleString()}
         </td>
-        <td className="px-3 py-2">
-          <div className="flex items-center gap-1">
+        <td className="px-4 py-3">
+          <div className="flex items-center justify-end gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -139,8 +127,9 @@ function EntryRow({ entry }: EntryRowProps) {
               aria-label={t('pages.ipWhitelist.saveAria')}
               disabled={updateMutation.isPending}
               onClick={handleSave}
+              className="text-success-600 hover:bg-success-100"
             >
-              <TbCheck className="text-success-500 h-4 w-4" />
+              <Icons.Tick01 size={16} strokeWidth={2} />
             </Button>
             <Button
               type="button"
@@ -148,8 +137,9 @@ function EntryRow({ entry }: EntryRowProps) {
               size="icon-sm"
               aria-label={t('pages.ipWhitelist.cancelAria')}
               onClick={handleCancel}
+              className="text-muted-foreground hover:bg-muted"
             >
-              <TbX className="h-4 w-4 text-gray-500" />
+              <Icons.Cancel01 size={16} strokeWidth={2} />
             </Button>
           </div>
         </td>
@@ -158,32 +148,33 @@ function EntryRow({ entry }: EntryRowProps) {
   }
 
   return (
-    <tr className="border-b border-gray-100">
-      <td className="text-dark-500 px-3 py-2 font-mono text-sm">{entry.ip_address}</td>
-      <td className="px-3 py-2 text-sm text-gray-700">{entry.label || '—'}</td>
-      <td className="px-3 py-2 text-xs text-gray-500">
+    <tr className="border-border hover:bg-muted/40 border-b transition-colors">
+      <td className="text-foreground px-4 py-3 font-mono text-sm">{entry.ip_address}</td>
+      <td className="text-foreground px-4 py-3 text-sm">{entry.label || '—'}</td>
+      <td className="text-muted-foreground px-4 py-3 text-xs">
         {new Date(entry.updated_at).toLocaleString()}
       </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-1">
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1">
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             aria-label={t('pages.ipWhitelist.editAria', { ip: entry.ip_address })}
             onClick={handleStartEdit}
+            className="text-foreground hover:bg-muted"
           >
-            <TbEdit className="h-4 w-4 text-gray-600" />
+            <Icons.PencilEdit size={16} strokeWidth={1.5} />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             aria-label={t('pages.ipWhitelist.deleteAria', { ip: entry.ip_address })}
-            disabled={deleteMutation.isPending}
-            onClick={handleDelete}
+            onClick={() => onRequestDelete(entry)}
+            className="text-error-600 hover:bg-error-100"
           >
-            <TbTrash className="text-error-500 h-4 w-4" />
+            <Icons.Delete size={16} strokeWidth={1.5} />
           </Button>
         </div>
       </td>
@@ -198,6 +189,7 @@ export function IpWhitelistPage() {
   const { data: settings } = useIpWhitelistSettings()
   const createMutation = useCreateIpWhitelistEntry()
   const settingsMutation = useUpdateIpWhitelistSettings()
+  const [deletingEntry, setDeletingEntry] = useState<IpWhitelistEntry | null>(null)
 
   const enforcementEnabled = !!settings?.enabled
   const entries = data?.entries ?? []
@@ -238,26 +230,38 @@ export function IpWhitelistPage() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-      <div className="space-y-4">
-        {/* Page header */}
+      <div className="flex w-full flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.ipWhitelist.title')}
           </h1>
-          <p className="text-sm text-gray-500">{t('pages.ipWhitelist.helper')}</p>
+          <p className="text-muted-foreground text-sm font-light">
+            {t('pages.ipWhitelist.helper')}
+          </p>
         </div>
 
         {/* Global enforcement gate */}
-        <div className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2">
-            {enforcementEnabled ? null : (
-              <TbInfoTriangle className="text-warning-500 mt-0.5 h-4 w-4 flex-shrink-0" />
+        <div
+          className={cn(
+            'border-border bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between',
+            !enforcementEnabled && 'border-warning-200 bg-warning-100/40'
+          )}
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            {!enforcementEnabled ? (
+              <div className="bg-warning-100 text-warning-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                <Icons.Warning size={16} strokeWidth={2} />
+              </div>
+            ) : (
+              <div className="bg-success-100 text-success-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                <Icons.Tick01 size={16} strokeWidth={2} />
+              </div>
             )}
-            <div>
-              <div className="text-dark-500 text-sm font-medium">
+            <div className="min-w-0">
+              <div className="text-foreground text-sm font-medium">
                 {t('pages.ipWhitelist.gateTitle')}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-muted-foreground mt-0.5 text-xs">
                 {enforcementEnabled
                   ? t('pages.ipWhitelist.gateDescriptionEnabled')
                   : t('pages.ipWhitelist.gateDescriptionDisabled')}
@@ -272,17 +276,13 @@ export function IpWhitelistPage() {
           />
         </div>
 
-        {/* Global Call QA (AI call analysis) switch — the second system-wide
-            admin toggle, guarded by manage_call_qa on its own. */}
-        <CallQaSettingsSection />
-
         {/* Add new entry */}
         <form
           onSubmit={onAdd}
-          className="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]"
+          className="border-border bg-card grid grid-cols-1 gap-3 rounded-xl border p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto]"
         >
-          <div>
-            <Label htmlFor="new-ip" className="text-xs">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="new-ip" className="text-muted-foreground text-xs font-medium">
               {t('pages.ipWhitelist.ipLabel')}
             </Label>
             <Input
@@ -291,21 +291,16 @@ export function IpWhitelistPage() {
               {...register('ip_address')}
               aria-invalid={!!errors.ip_address}
               variant={errors.ip_address ? 'error' : 'default'}
-              className="mt-1"
             />
-            {errors.ip_address && (
-              <p className="mt-1 text-xs text-red-500">{errors.ip_address.message}</p>
-            )}
           </div>
-          <div>
-            <Label htmlFor="new-label" className="text-xs">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="new-label" className="text-muted-foreground text-xs font-medium">
               {t('pages.ipWhitelist.labelHeading')}
             </Label>
             <Input
               id="new-label"
               placeholder={t('pages.ipWhitelist.labelPlaceholder')}
               {...register('label')}
-              className="mt-1"
             />
           </div>
           <div className="flex items-end">
@@ -314,51 +309,67 @@ export function IpWhitelistPage() {
               variant="primary"
               size="md"
               disabled={isSubmitting || createMutation.isPending}
+              className="h-[45px] w-full sm:w-auto"
             >
+              <Icons.Add size={16} strokeWidth={2} className="mr-1" />
               {t('pages.ipWhitelist.addButton')}
             </Button>
           </div>
         </form>
 
         {/* Entries table */}
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="px-3 py-2">{t('pages.ipWhitelist.colIp')}</th>
-                <th className="px-3 py-2">{t('pages.ipWhitelist.colLabel')}</th>
-                <th className="px-3 py-2">{t('pages.ipWhitelist.colUpdated')}</th>
-                <th className="w-32 px-3 py-2">{t('pages.ipWhitelist.colActions')}</th>
+        <div className="border-border bg-card overflow-x-auto rounded-xl border shadow-sm">
+          <table className="w-full min-w-[560px] text-left">
+            <thead>
+              <tr className="border-border bg-muted border-b">
+                <th className="text-muted-foreground px-4 py-3 text-xs font-semibold tracking-wide uppercase">
+                  {t('pages.ipWhitelist.colIp')}
+                </th>
+                <th className="text-muted-foreground px-4 py-3 text-xs font-semibold tracking-wide uppercase">
+                  {t('pages.ipWhitelist.colLabel')}
+                </th>
+                <th className="text-muted-foreground px-4 py-3 text-xs font-semibold tracking-wide uppercase">
+                  {t('pages.ipWhitelist.colUpdated')}
+                </th>
+                <th className="text-muted-foreground w-28 px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
+                  {t('pages.ipWhitelist.colActions')}
+                </th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td className="px-3 py-3 text-sm text-gray-500" colSpan={4}>
+                  <td className="text-muted-foreground px-4 py-6 text-sm" colSpan={4}>
                     {t('pages.ipWhitelist.loading')}
                   </td>
                 </tr>
               )}
               {isError && (
                 <tr>
-                  <td className="text-error-500 px-3 py-3 text-sm" colSpan={4}>
+                  <td className="text-error-700 px-4 py-6 text-sm" colSpan={4}>
                     {t('pages.ipWhitelist.errorLoading')}
                   </td>
                 </tr>
               )}
               {!isLoading && !isError && entries.length === 0 && (
                 <tr>
-                  <td className="px-3 py-3 text-sm text-gray-500" colSpan={4}>
+                  <td className="text-muted-foreground px-4 py-6 text-center text-sm" colSpan={4}>
                     {t('pages.ipWhitelist.emptyState')}
                   </td>
                 </tr>
               )}
               {entries.map((entry) => (
-                <EntryRow key={entry.id} entry={entry} />
+                <EntryRow key={entry.id} entry={entry} onRequestDelete={setDeletingEntry} />
               ))}
             </tbody>
           </table>
         </div>
+
+        <DeleteIpWhitelistEntryModal
+          open={!!deletingEntry}
+          entry={deletingEntry}
+          onClose={() => setDeletingEntry(null)}
+        />
       </div>
     </PermissionGuard>
   )

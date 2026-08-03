@@ -2,18 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { legalApi } from '../api/legalApi'
-import type { EdoType, LegalStagedAttachment } from '../api/types'
+import type { LegalStagedAttachment } from '../api/types'
 import { getErrorMessage } from '@/lib/errors'
 
 export function useReplyComposerState(options: {
   messageId: string | null
   selectedMailboxId: string | null
-  edoType: EdoType
   body: string
   enabled?: boolean
 }) {
   const { t } = useTranslation('common')
-  const { messageId, selectedMailboxId, edoType, body, enabled = true } = options
+  const { messageId, selectedMailboxId, body, enabled = true } = options
   const [stagedAttachments, setStagedAttachments] = useState<LegalStagedAttachment[]>([])
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false)
@@ -50,7 +49,6 @@ export function useReplyComposerState(options: {
       await legalApi.saveReplyDraft(messageId, {
         body_text: body,
         mailbox_id: selectedMailboxId,
-        edo_type: edoType,
       })
       toast.success(t('pages.lawyerWorkplace.reply.draftSaved', 'Draft saved'))
     } catch (error) {
@@ -58,13 +56,13 @@ export function useReplyComposerState(options: {
     } finally {
       setIsSavingDraft(false)
     }
-  }, [body, edoType, messageId, selectedMailboxId, t])
+  }, [body, messageId, selectedMailboxId, t])
 
   const uploadAttachment = useCallback(
-    async (file: File) => {
+    async (file: File): Promise<LegalStagedAttachment | null> => {
       if (!messageId || !selectedMailboxId) {
         toast.error(t('pages.lawyerWorkplace.reply.noMailbox', 'Select a mailbox to send from'))
-        return
+        return null
       }
       setIsUploadingAttachment(true)
       try {
@@ -74,8 +72,10 @@ export function useReplyComposerState(options: {
           file
         )
         setStagedAttachments((current) => [...current, uploaded])
+        return uploaded
       } catch (error) {
         toast.error(getErrorMessage(error))
+        return null
       } finally {
         setIsUploadingAttachment(false)
       }
@@ -116,7 +116,6 @@ export function useReplyComposerState(options: {
 export async function loadReplyDraftForMessage(messageId: string): Promise<{
   body: string
   mailboxId: string | null
-  edoType: EdoType
 } | null> {
   const draft = await legalApi.getReplyDraft(messageId)
   if (!draft.exists) {
@@ -125,6 +124,5 @@ export async function loadReplyDraftForMessage(messageId: string): Promise<{
   return {
     body: draft.body_text,
     mailboxId: draft.mailbox_id,
-    edoType: draft.edo_type,
   }
 }

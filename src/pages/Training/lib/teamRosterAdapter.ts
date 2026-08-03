@@ -53,19 +53,24 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function formatLastActive(isoTimestamp: string | null, online: boolean): string {
-  if (online) return 'Online'
-  if (!isoTimestamp) return 'Offline'
+type TFn = (key: string, opts?: Record<string, unknown>) => string
+
+function formatLastActive(t: TFn, isoTimestamp: string | null, online: boolean): string {
+  const offline = t('pages.training.inbox.detail.offline', { defaultValue: 'Offline' })
+  if (online) return t('pages.training.inbox.detail.online', { defaultValue: 'Online' })
+  if (!isoTimestamp) return offline
   const then = new Date(isoTimestamp).getTime()
-  if (Number.isNaN(then)) return 'Offline'
+  if (Number.isNaN(then)) return offline
   const diffMs = Date.now() - then
-  if (diffMs < 0) return 'Offline'
+  if (diffMs < 0) return offline
   const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 60) return `Offline · ${minutes}m ago`
+  if (minutes < 60)
+    return `${offline} · ${t('pages.training.time.minutesAgo', { count: minutes, defaultValue: '{{count}}m ago' })}`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `Offline · ${hours}h ago`
+  if (hours < 24)
+    return `${offline} · ${t('pages.training.time.hoursAgo', { count: hours, defaultValue: '{{count}}h ago' })}`
   const days = Math.floor(hours / 24)
-  return `Offline · ${days}d ago`
+  return `${offline} · ${t('pages.training.time.daysAgo', { count: days, defaultValue: '{{count}}d ago' })}`
 }
 
 /** Default a missing band off the score so the FE never receives null. */
@@ -91,6 +96,7 @@ function deriveWorkStatus(op: TeamRosterOperator): OperatorWorkStatus {
 }
 
 function deriveOperator(
+  t: TFn,
   op: TeamRosterOperator,
   teamName: string,
   departmentName: string
@@ -110,15 +116,15 @@ function deriveOperator(
     scoreBand: bandFor(op.composite_score, op.score_band),
     hasScore,
     hiredAt: op.hired_at ?? null,
-    lastActiveLabel: formatLastActive(op.last_active_at, online),
+    lastActiveLabel: formatLastActive(t, op.last_active_at, online),
     presenceStatus: online ? 'online' : 'offline',
     dailyPlanPct: 0,
     workStatus: deriveWorkStatus(op),
   }
 }
 
-function deriveTeam(team: TeamRosterTeam, departmentName: string): TeamGroupRow {
-  const operators = team.operators.map((op) => deriveOperator(op, team.name, departmentName))
+function deriveTeam(t: TFn, team: TeamRosterTeam, departmentName: string): TeamGroupRow {
+  const operators = team.operators.map((op) => deriveOperator(t, op, team.name, departmentName))
   return {
     id: `group-${team.group_id}`,
     name: team.name,
@@ -131,8 +137,8 @@ function deriveTeam(team: TeamRosterTeam, departmentName: string): TeamGroupRow 
   }
 }
 
-function deriveDepartment(dept: TeamRosterDepartment): TeamDepartmentRow {
-  const teams = dept.teams.map((team) => deriveTeam(team, dept.name))
+function deriveDepartment(t: TFn, dept: TeamRosterDepartment): TeamDepartmentRow {
+  const teams = dept.teams.map((team) => deriveTeam(t, team, dept.name))
   const managerName = dept.manager_name ?? '—'
   const managerInitials = dept.manager_name ? initialsFor(dept.manager_name) : '—'
   return {
@@ -149,8 +155,8 @@ function deriveDepartment(dept: TeamRosterDepartment): TeamDepartmentRow {
   }
 }
 
-export function deriveTeamRoster(roster: TeamRosterResponse): TeamDepartmentRow[] {
-  return roster.departments.map(deriveDepartment)
+export function deriveTeamRoster(t: TFn, roster: TeamRosterResponse): TeamDepartmentRow[] {
+  return roster.departments.map((d) => deriveDepartment(t, d))
 }
 
 /** Department chip strip — `{id, label, count}` derived from the response. */

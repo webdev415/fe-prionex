@@ -45,16 +45,16 @@ function FilterSelect({
 }: FilterSelectProps) {
   return (
     <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:max-w-[220px] sm:min-w-[160px]">
-      <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+      <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
         {label}
       </span>
       <Select value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectTrigger
-          className={cn('h-[45px] w-full', isActive && 'border-primary-500 bg-primary-50')}
+          className={cn('h-[45px] w-full', isActive && 'border-primary bg-primary/10')}
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="bg-white">{children}</SelectContent>
+        <SelectContent>{children}</SelectContent>
       </Select>
     </div>
   )
@@ -122,7 +122,7 @@ export function UserFiltersBar({ filters, onFilterChange, onReset }: UserFilters
     filters.sortOrder !== DEFAULT_USER_FILTERS.sortOrder
 
   return (
-    <div className="mb-4 flex w-full flex-col gap-3">
+    <div className="bg-filter-bar mb-4 flex w-full flex-col gap-3 rounded-xl p-3 sm:p-4">
       <div className="flex flex-wrap items-end gap-3">
         <FilterSelect
           label={t('pages.users.filters.role')}
@@ -218,7 +218,7 @@ export function UserFiltersBar({ filters, onFilterChange, onReset }: UserFilters
           type="button"
           onClick={onReset}
           disabled={!hasNonDefaultFilters}
-          className="text-dark-500 hover:text-primary-700 mb-0.5 h-[45px] px-2 text-sm font-medium whitespace-nowrap underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+          className="text-foreground hover:text-primary-700 disabled:text-muted-foreground mb-0.5 h-[45px] px-2 text-sm font-medium whitespace-nowrap underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:no-underline"
         >
           {t('pages.users.filters.resetToDefault')}
         </button>

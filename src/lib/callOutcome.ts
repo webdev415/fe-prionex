@@ -29,6 +29,20 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
         fallback: 'No answer',
         palette: 'error',
       }
+    // Inbound-only, and deliberately distinct: nobody picked up, versus the
+    // operator actively declining. call-service writes both.
+    case 'MISSED':
+      return {
+        labelKey: 'pages.clients.statuses.missed',
+        fallback: 'Missed',
+        palette: 'error',
+      }
+    case 'REJECTED':
+      return {
+        labelKey: 'pages.clients.statuses.rejected',
+        fallback: 'Rejected',
+        palette: 'warning',
+      }
     case 'BUSY':
       return {
         labelKey: 'pages.clients.statuses.busy',
@@ -118,6 +132,8 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
 const NON_ANSWERED_OUTCOMES = new Set([
   'NO_ANSWER',
   'NO ANSWER',
+  'MISSED',
+  'REJECTED',
   'BUSY',
   'CANCEL',
   'UNAVAILABLE',

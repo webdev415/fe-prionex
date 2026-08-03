@@ -535,7 +535,7 @@ export function DebtSummaryPage() {
     // Find payment by ID
     const payment = debtSummary?.payments.find((p) => p.id.toString() === paymentId)
     if (!payment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -628,161 +628,158 @@ export function DebtSummaryPage() {
         {/* Header — matches loaded row: back + title | record payment */}
         <div className="flex flex-row items-center justify-between gap-3 self-stretch">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-gray-200" />
-            <div className="h-7 max-w-md min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-8" />
+            <div className="bg-muted-foreground/25 h-10 w-10 shrink-0 animate-pulse rounded-full" />
+            <div className="bg-muted-foreground/25 h-7 max-w-md min-w-0 flex-1 animate-pulse rounded sm:h-8" />
           </div>
-          <div className="h-10 w-36 shrink-0 animate-pulse rounded-full bg-gray-200 sm:w-44" />
+          <div className="bg-muted-foreground/25 h-10 w-36 shrink-0 animate-pulse rounded-full sm:w-44" />
         </div>
 
         {/* Main content — xl row, left 35%, right flex-1 + min-w-0 (same as loaded) */}
         <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
           <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
             {/* Client card — no min-height (matches loaded debt summary card) */}
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
+            <div className="border-border flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border p-4 sm:p-6">
               <div className="flex flex-col items-center justify-center gap-4 self-stretch">
                 <div className="flex items-center justify-center gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2.5 rounded-full bg-white/80 p-2">
-                    <div className="h-5 w-5 animate-pulse rounded-full bg-gray-200 sm:h-6 sm:w-6" />
+                  <div className="bg-card/80 flex items-center gap-2.5 rounded-full p-2">
+                    <div className="bg-muted-foreground/25 h-5 w-5 animate-pulse rounded-full sm:h-6 sm:w-6" />
                   </div>
-                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+                  <div className="bg-muted-foreground/25 h-5 w-36 animate-pulse rounded sm:h-6 sm:w-48" />
                 </div>
-                <div className="h-6 w-28 animate-pulse rounded-full bg-gray-200 sm:h-7 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-6 w-28 animate-pulse rounded-full sm:h-7 sm:w-32" />
               </div>
 
               <div className="mb-6 flex justify-center">
                 <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
-                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
-                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
+                  <div className="bg-muted-foreground/25 h-[120px] w-[120px] animate-pulse rounded-full sm:h-[150px] sm:w-[150px]" />
+                  <div className="bg-border absolute h-10 w-10 animate-pulse rounded-full sm:h-12 sm:w-12" />
                 </div>
               </div>
 
               <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-5 w-40 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+                <div className="bg-muted-foreground/25 h-5 w-40 animate-pulse rounded sm:h-6 sm:w-48" />
               </div>
 
               {/* View payment history / generate plan — pill shapes like LinkButtons */}
               <div className="flex w-full flex-col items-center gap-3 self-stretch">
-                <div className="h-10 w-full max-w-[280px] animate-pulse rounded-full bg-gray-200" />
-                <div className="h-10 w-full max-w-[280px] animate-pulse rounded-full bg-gray-200" />
+                <div className="bg-muted-foreground/25 h-10 w-full max-w-[280px] animate-pulse rounded-full" />
+                <div className="bg-muted-foreground/25 h-10 w-full max-w-[280px] animate-pulse rounded-full" />
               </div>
 
               <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto sm:flex-1" />
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto sm:flex-1" />
+                <div className="bg-muted-foreground/25 h-10 w-full flex-1 animate-pulse rounded-full sm:w-auto sm:flex-1" />
+                <div className="bg-muted-foreground/25 h-10 w-full flex-1 animate-pulse rounded-full sm:w-auto sm:flex-1" />
               </div>
             </div>
 
             {/* Last payment — p-4 like loaded */}
-            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4">
+            <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border p-4">
               <div className="flex flex-row items-start justify-between gap-2 self-stretch">
                 <div className="flex items-center gap-3">
-                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
-                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 shrink-0 animate-pulse rounded sm:h-[18px] sm:w-[18px]" />
+                  <div className="bg-muted-foreground/25 h-3 w-24 animate-pulse rounded sm:h-4 sm:w-28" />
                 </div>
-                <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
+                <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded sm:h-4 sm:w-14" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch">
-                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                <div className="h-4 w-24 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-28" />
+                <div className="bg-muted-foreground/25 h-5 w-28 animate-pulse rounded sm:h-6 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded sm:h-5 sm:w-28" />
               </div>
             </div>
 
             {/* Total debt — icon row + gradient accent strip */}
-            <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="border-border bg-card/50 relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
               <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 sm:px-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                  <div className="bg-muted-foreground/25 h-4 w-4 shrink-0 animate-pulse rounded sm:h-[18px] sm:w-[18px]" />
+                  <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                 </div>
-                <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                <div className="bg-muted-foreground/25 h-3 w-24 animate-pulse rounded sm:h-4 sm:w-28" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 sm:px-6 sm:py-0">
-                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                <div className="h-4 w-10 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-12" />
+                <div className="bg-muted-foreground/25 h-5 w-28 animate-pulse rounded sm:h-6 sm:w-32" />
+                <div className="bg-muted-foreground/25 h-4 w-10 animate-pulse rounded sm:h-5 sm:w-12" />
               </div>
               <div className="from-primary-300 to-secondary-800 absolute bottom-0 h-[3px] w-full bg-gradient-to-r opacity-60" />
             </div>
           </div>
 
           {/* Right: payment history panel */}
-          <div className="flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+          <div className="bg-card/50 flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-4 w-48 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-56" />
+              <div className="bg-muted-foreground/25 h-4 w-48 animate-pulse rounded sm:h-5 sm:w-56" />
 
-              <div className="w-full overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+              <div className="border-border bg-border w-full overflow-hidden rounded-xl border shadow-sm">
                 <div className="data-table-scroll mx-0 w-full overflow-x-auto px-0">
                   <table className="min-w-full border-collapse">
                     <thead>
-                      <tr className="bg-white">
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                      <tr className="bg-card">
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-24 animate-pulse rounded sm:h-4 sm:w-28" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                          <div className="ml-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                        <th className="border-border h-[49px] border-r px-3 text-right sm:px-6">
+                          <div className="bg-muted-foreground/25 ml-auto h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                        <th className="border-border h-[49px] border-r px-3 text-left sm:px-6">
+                          <div className="bg-muted-foreground/25 h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                         </th>
-                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-center sm:px-6">
-                          <div className="mx-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                        <th className="border-border h-[49px] border-r px-3 text-center sm:px-6">
+                          <div className="bg-muted-foreground/25 mx-auto h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                         </th>
                         <th className="h-[49px] px-3 text-center sm:px-6">
-                          <div className="mx-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                          <div className="bg-muted-foreground/25 mx-auto h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.from({ length: 10 }).map((_, rowIndex) => (
-                        <tr
-                          key={rowIndex}
-                          className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
-                        >
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}>
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
+                            <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
                             <div className="flex flex-col gap-0.5">
-                              <div className="h-2.5 w-16 animate-pulse rounded bg-gray-200 sm:h-3 sm:w-20" />
-                              <div className="h-2 w-12 animate-pulse rounded bg-gray-200 sm:h-2.5 sm:w-14" />
+                              <div className="bg-muted-foreground/25 h-2.5 w-16 animate-pulse rounded sm:h-3 sm:w-20" />
+                              <div className="bg-muted-foreground/25 h-2 w-12 animate-pulse rounded sm:h-2.5 sm:w-14" />
                             </div>
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
+                            <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                            <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          <td className="border-border h-[49px] border-r px-3 text-right sm:px-6">
+                            <div className="bg-muted-foreground/25 ml-auto h-3 w-16 animate-pulse rounded sm:h-4 sm:w-20" />
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                            <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
+                            <div className="bg-muted-foreground/25 h-3 w-12 animate-pulse rounded sm:h-4 sm:w-16" />
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                            <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
+                            <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <td className="border-border h-[49px] border-r px-3 sm:px-6">
                             <div className="flex items-center gap-2">
-                              <div className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-200" />
-                              <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                              <div className="bg-muted-foreground/25 h-3 w-3 shrink-0 animate-pulse rounded-full" />
+                              <div className="bg-muted-foreground/25 h-3 w-14 animate-pulse rounded sm:h-4 sm:w-16" />
                             </div>
                           </td>
-                          <td className="h-[49px] border-r border-[#EBECE8] px-3 text-center sm:px-6">
-                            <div className="mx-auto h-5 w-12 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-14" />
+                          <td className="border-border h-[49px] border-r px-3 text-center sm:px-6">
+                            <div className="bg-muted-foreground/25 mx-auto h-5 w-12 animate-pulse rounded sm:h-6 sm:w-14" />
                           </td>
                           <td className="h-[49px] px-3 text-center sm:px-6">
                             <div className="mx-auto flex justify-center gap-1">
-                              <div className="h-5 w-9 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-10" />
-                              <div className="hidden h-5 w-9 animate-pulse rounded bg-gray-200 sm:flex sm:h-6 sm:w-10" />
+                              <div className="bg-muted-foreground/25 h-5 w-9 animate-pulse rounded sm:h-6 sm:w-10" />
+                              <div className="bg-muted-foreground/25 hidden h-5 w-9 animate-pulse rounded sm:flex sm:h-6 sm:w-10" />
                             </div>
                           </td>
                         </tr>
@@ -791,20 +788,20 @@ export function DebtSummaryPage() {
                   </table>
                 </div>
 
-                <div className="flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
-                  <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
-                    <div className="h-4 w-28 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-32" />
+                <div className="border-border flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x">
+                  <div className="bg-muted flex min-h-[49px] flex-1 items-center justify-center gap-1 p-2 px-4">
+                    <div className="bg-muted-foreground/25 h-4 w-28 animate-pulse rounded sm:h-5 sm:w-32" />
                   </div>
                 </div>
 
-                <div className="flex w-full flex-col items-stretch border-[#EBECE8] bg-white sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex w-full flex-1 flex-col items-start gap-1 border-r-0 border-b border-[#EBECE8] px-4 py-3 sm:flex-row sm:items-center sm:border-r sm:border-b-0 sm:px-6 sm:py-4">
-                    <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
-                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                <div className="border-border bg-card flex w-full flex-col items-stretch sm:flex-row sm:items-center sm:justify-between">
+                  <div className="border-border flex w-full flex-1 flex-col items-start gap-1 border-r-0 border-b px-4 py-3 sm:flex-row sm:items-center sm:border-r sm:border-b-0 sm:px-6 sm:py-4">
+                    <div className="bg-muted-foreground/25 h-3 w-28 animate-pulse rounded sm:h-4 sm:w-32" />
+                    <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                   </div>
                   <div className="flex flex-1 flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
-                    <div className="h-3 w-36 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-40" />
-                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                    <div className="bg-muted-foreground/25 h-3 w-36 animate-pulse rounded sm:h-4 sm:w-40" />
+                    <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded sm:h-4 sm:w-24" />
                   </div>
                 </div>
               </div>
@@ -820,10 +817,10 @@ export function DebtSummaryPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">
+        <p className="text-foreground font-medium">
           {t('pages.clients.debtSummary.failedToLoadClient')}
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-muted-foreground text-sm">
           {clientError?.message || t('pages.clients.debtSummary.errorOccurred')}
         </p>
         <Button
@@ -840,12 +837,12 @@ export function DebtSummaryPage() {
   const getStatusDot = (status: Payment['status']) => {
     const statusColors = {
       verified: 'bg-success-500',
-      pending: 'bg-gray-500',
+      pending: 'bg-muted-foreground',
       cancelled: 'bg-error-500',
     }
     const borderStatusColors = {
       verified: 'bg-success-200',
-      pending: 'bg-gray-200',
+      pending: 'bg-muted',
       cancelled: 'bg-error-200',
     }
     return (
@@ -874,7 +871,7 @@ export function DebtSummaryPage() {
           >
             <Icons.ArrowLeft02 size={24} />
           </LinkButton>
-          <span className="text-dark-500 flex-1 text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+          <span className="text-foreground flex-1 text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.clients.debtSummary.title')}
           </span>
         </div>
@@ -886,7 +883,7 @@ export function DebtSummaryPage() {
             onClick={() => setIsRecordPaymentModalOpen(true)}
             className="rounded-full sm:hidden"
           >
-            <Icons.Add size={20} className="text-dark-500" />
+            <Icons.Add size={20} className="text-foreground" />
           </Button>
           {/* Desktop: Full button with text */}
           <DoubleButton
@@ -904,17 +901,17 @@ export function DebtSummaryPage() {
       <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
         {/* Left Panel - Customer Info and Summary */}
         <div className="flex w-full flex-col items-start gap-5 xl:w-[35%]">
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
+          <div className="border-border flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border p-4 sm:p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
               <div className="flex items-center justify-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                  <Icons.User size={20} className="text-dark-500 sm:size-[24px]" />
+                <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                  <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-dark-500 text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                   {debtSummary.customerName}
                 </span>
               </div>
-              <div className="flex items-center gap-1 rounded-full bg-white px-3 py-1">
+              <div className="bg-card flex items-center gap-1 rounded-full px-3 py-1">
                 <div className="flex items-center justify-center gap-1">
                   <span
                     className={cn(
@@ -953,7 +950,7 @@ export function DebtSummaryPage() {
                         : 'text-error-500'
                     )}
                   >
-                    {debtSummary.status}
+                    {t(`debtSummaryStatuses.${debtSummary.status}`, debtSummary.status)}
                   </span>
                 </div>
               </div>
@@ -972,9 +969,9 @@ export function DebtSummaryPage() {
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="#FFF"
+                    stroke="currentColor"
                     strokeWidth="10"
-                    className="transition-all duration-300"
+                    className="text-muted-foreground/25 transition-all duration-300"
                   />
                   {/* Progress circle */}
                   <circle
@@ -982,21 +979,21 @@ export function DebtSummaryPage() {
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="#A0F229"
+                    stroke="currentColor"
                     strokeWidth="10"
                     strokeDasharray={2 * Math.PI * 45}
                     strokeDashoffset={2 * Math.PI * 45 * (1 - debtSummary.progressPercentage / 100)}
                     strokeLinecap="round"
-                    className="transition-all duration-500 ease-in-out"
+                    className="text-primary-700 transition-all duration-500 ease-in-out"
                   />
                 </svg>
-                <span className="text-secondary-800 absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
+                <span className="text-foreground absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
                   {Math.round(debtSummary.progressPercentage)}%
                 </span>
               </div>
             </div>
             <div className="flex flex-col items-center gap-5 self-stretch">
-              <span className="text-dark-500 text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
+              <span className="text-foreground text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.debtSummary.totalPaid')}{' '}
                 <span className="font-medium">
                   {formatMoneyUAHTwoDecimals(debtSummary.totalPaid)}
@@ -1039,7 +1036,7 @@ export function DebtSummaryPage() {
                   onClick={() => {
                     const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
-                      toast.error('Client has no phone number')
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                       return
                     }
 
@@ -1076,46 +1073,46 @@ export function DebtSummaryPage() {
           </div>
 
           {/* Last Payment Card */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4">
+          <div className="border-border bg-card/50 flex flex-col items-start gap-1 self-stretch rounded-xl border p-4">
             <div className="flex flex-row items-start justify-between gap-2 self-stretch">
               <div className="flex items-center gap-3">
-                <Icons.Money01 size={16} className="text-gray-700 sm:size-[18px]" />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <Icons.Money01 size={16} className="text-foreground sm:size-[18px]" />
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.debtSummary.lastPayment')}
                 </span>
               </div>
-              <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.debtSummary.date')}
               </span>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch">
-              <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+              <span className="text-foreground text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                 {formatMoneyUAHTwoDecimals(debtSummary.lastPayment.amount)}
               </span>
-              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+              <span className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {convertUTCToUserTimezone(debtSummary.lastPayment.date, userTimezone)}
               </span>
             </div>
           </div>
 
           {/* Total Debt Card */}
-          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+          <div className="border-border bg-card/50 relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border px-0 pt-4 pb-6 sm:pt-5">
             <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 sm:px-6">
               <div className="flex items-center gap-2">
-                <Icons.Wallet01 size={16} className="text-gray-700 sm:size-[18px]" />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+                <Icons.Wallet01 size={16} className="text-foreground sm:size-[18px]" />
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.debtSummary.totalDebt')}
                 </span>
               </div>
-              <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.debtSummary.daysPastDue')}
               </span>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 sm:px-6 sm:py-0">
-              <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+              <span className="text-foreground text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                 {formatMoneyUAHTwoDecimals(debtSummary.totalDebt)}
               </span>
-              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+              <span className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {debtSummary.daysPastDue}
               </span>
             </div>
@@ -1124,9 +1121,9 @@ export function DebtSummaryPage() {
         </div>
 
         {/* Right Panel - Payment History */}
-        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+        <div className="bg-card/50 flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
-            <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+            <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.clients.debtSummary.paymentHistory')}
               {debtSummary.payments.length > 0 && (
                 <>
@@ -1143,39 +1140,39 @@ export function DebtSummaryPage() {
             </span>
 
             {/* Custom Table */}
-            <div className="w-full overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+            <div className="border-border bg-border w-full overflow-hidden rounded-xl border shadow-sm">
               <div className="data-table-scroll mx-0 w-full overflow-x-auto px-0">
                 <table className="min-w-full border-collapse">
                   <thead>
-                    <tr className="bg-white">
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                    <tr className="bg-card">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.paymentDate')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.date')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.paymentConfirmationDate')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-right text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.amount')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t(
                           'pages.clients.paymentHistory.tableHeaders.contractNumber',
                           'Contract #'
                         )}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.method')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.status')}
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-center text-xs font-medium sm:px-6">
+                      <th className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.receipt')}
                       </th>
-                      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                      <th className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.actions')}
                       </th>
                     </tr>
@@ -1190,7 +1187,7 @@ export function DebtSummaryPage() {
                         <tr>
                           <td
                             colSpan={9}
-                            className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
+                            className="text-foreground h-[49px] px-6 text-center text-xs font-medium"
                           >
                             {t('pages.clients.debtSummary.noPaymentHistory')}
                           </td>
@@ -1200,16 +1197,16 @@ export function DebtSummaryPage() {
                           <tr
                             key={payment.id}
                             className={`transition-colors ${
-                              index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                              index % 2 === 0 ? 'bg-muted' : 'bg-card'
                             }`}
                           >
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatIsoDate(
                                 paymentHistoryData?.payments.find((p) => p.id === payment.id)
                                   ?.payment_date
                               )}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium whitespace-nowrap sm:px-6">
                               {(() => {
                                 const formatted = convertUTCToUserTimezone(
                                   payment.date,
@@ -1222,29 +1219,31 @@ export function DebtSummaryPage() {
                                 return (
                                   <div className="flex flex-col leading-tight">
                                     <span>{datePart}</span>
-                                    {timePart && <span className="text-dark-400">{timePart}</span>}
+                                    {timePart && (
+                                      <span className="text-foreground">{timePart}</span>
+                                    )}
                                   </div>
                                 )
                               })()}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatIsoDate(
                                 paymentHistoryData?.payments.find((p) => p.id === payment.id)
                                   ?.payment_confirmation_date
                               )}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium whitespace-nowrap sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-right text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatMoneyUAHTwoDecimals(payment.amount)}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {payment.contractNumber || '-'}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
                                 defaultValue: payment.method,
                               })}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">
                                 {getStatusDot(payment.status)}
                                 <span
@@ -1252,7 +1251,7 @@ export function DebtSummaryPage() {
                                     payment.status === 'verified'
                                       ? 'text-success-500'
                                       : payment.status === 'pending'
-                                        ? 'text-gray-500'
+                                        ? 'text-muted-foreground'
                                         : 'text-error-500'
                                   )}
                                 >
@@ -1262,7 +1261,7 @@ export function DebtSummaryPage() {
                                 </span>
                               </div>
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-center text-xs font-medium sm:px-6">
+                            <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-medium sm:px-6">
                               {payment.status === 'verified' && (
                                 <LinkButton
                                   variant="regular-secondary"
@@ -1300,7 +1299,7 @@ export function DebtSummaryPage() {
                                         format: 'pdf',
                                       })
                                     } else {
-                                      toast.error('Payment not found')
+                                      toast.error(t('errors.paymentNotFound', 'Payment not found'))
                                     }
                                   }}
                                   className="text-xs"
@@ -1309,7 +1308,7 @@ export function DebtSummaryPage() {
                                 </LinkButton>
                               )}
                             </td>
-                            <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                            <td className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                               <div className="flex items-center justify-center gap-1 sm:gap-2">
                                 {payment.status === 'pending' &&
                                   isPaymentLessThan7DaysOld(payment.date) && (
@@ -1375,8 +1374,8 @@ export function DebtSummaryPage() {
 
               {/* View All / Show Less when there are payments */}
               {debtSummary.payments.length > 0 && (
-                <div className="flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
-                  <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
+                <div className="border-border flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x">
+                  <div className="bg-muted flex min-h-[49px] flex-1 items-center justify-center gap-1 p-2 px-4">
                     <LinkButton
                       variant="regular-secondary"
                       leftIcon={<Icons.Reload size={16} />}
@@ -1393,20 +1392,20 @@ export function DebtSummaryPage() {
               )}
 
               {/* Summary Row - Part of table structure */}
-              <div className="flex w-full flex-col items-stretch border-[#EBECE8] bg-white sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex w-full flex-1 flex-col items-start gap-1 border-r-0 border-b border-[#EBECE8] px-4 py-3 sm:flex-row sm:items-center sm:border-r sm:border-b-0 sm:px-6 sm:py-4">
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+              <div className="border-border bg-card flex w-full flex-col items-stretch sm:flex-row sm:items-center sm:justify-between">
+                <div className="border-border flex w-full flex-1 flex-col items-start gap-1 border-r-0 border-b px-4 py-3 sm:flex-row sm:items-center sm:border-r sm:border-b-0 sm:px-6 sm:py-4">
+                  <span className="text-foreground line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.debtSummary.summary.totalVerified')}
                   </span>
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {formatMoneyUAHTwoDecimals(totalVerifiedFullHistory)}
                   </span>
                 </div>
                 <div className="flex flex-1 flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.debtSummary.summary.pendingVerification')}
                   </span>
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {formatMoneyUAHTwoDecimals(debtSummary.pendingVerification)}
                   </span>
                 </div>
@@ -1563,7 +1562,7 @@ export function DebtSummaryPage() {
               (p) => p.id === selectedPayment.id
             )
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1648,7 +1647,7 @@ export function DebtSummaryPage() {
                 (p) => p.id === selectedPayment.id
               )
               if (!backendPayment) {
-                toast.error('Payment not found')
+                toast.error(t('errors.paymentNotFound', 'Payment not found'))
                 return
               }
 

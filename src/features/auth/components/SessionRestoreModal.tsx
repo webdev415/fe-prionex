@@ -31,16 +31,16 @@ export function SessionRestoreModal({ count, isExecuting, onRestore, onStartFres
   // modal can ONLY be dismissed by clicking one of the two buttons.
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="session-restore-modal-title"
     >
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl sm:p-8">
-        <h2 id="session-restore-modal-title" className="text-dark-500 mb-3 text-lg font-medium">
+      <div className="bg-card text-card-foreground w-full max-w-md rounded-xl p-6 shadow-xl sm:p-8">
+        <h2 id="session-restore-modal-title" className="text-foreground mb-3 text-lg font-medium">
           {t(`${p}.title`, 'Resume previous session?')}
         </h2>
-        <p className="mb-6 text-sm text-gray-600">
+        <p className="text-muted-foreground mb-6 text-sm">
           {t(`${p}.body`, {
             defaultValue:
               'You have {{count}} open tabs from your previous session. Would you like to continue?',

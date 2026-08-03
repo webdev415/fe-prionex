@@ -1,4 +1,5 @@
 ﻿import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { TeamOperatorRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 import {
   operatorPresence,
@@ -21,6 +22,7 @@ const PLAN_BAR: Record<ScoreBand, string> = {
 
 /** Figma operator tile — #F7F7F7 card, lime avatar, daily plan bar, score ring */
 function OperatorRowImpl({ operator, onSelect }: OperatorRowProps) {
+  const { t } = useTranslation('common')
   const presence = operatorPresence(operator)
   const planPct = operator.dailyPlanPct ?? 0
   const radius = 17
@@ -54,7 +56,7 @@ function OperatorRowImpl({ operator, onSelect }: OperatorRowProps) {
           </span>
           {operator.extension ? (
             <span className="text-[10px] leading-[15px] text-[#6B7280]">
-              ext {operator.extension}
+              {t('pages.training.team.ext', 'ext')} {operator.extension}
             </span>
           ) : null}
         </div>

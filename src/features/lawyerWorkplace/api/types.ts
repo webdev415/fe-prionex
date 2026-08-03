@@ -224,6 +224,8 @@ export interface LegalOutgoingLetterRequest {
   client_id?: number | null
   assigned_to_user_id?: number | null
   contract_number?: string | null
+  /** Recipient institution name (required when the recipient is an institution). */
+  institution_name?: string | null
   attachment_ids?: string[]
   staging_session_id?: string | null
 }
@@ -278,10 +280,50 @@ export interface LegalKanbanTaskItem {
   assigned_to_username: string | null
   completed_at: string | null
   updated_at: string | null
+  /**
+   * Number of letters grouped into this task (same client + lawyer + day).
+   * Absent/1 means a single-letter task. Drives the "N листів" card badge.
+   */
+  letter_count?: number
 }
 
 export interface LegalKanbanResponse {
   items: LegalKanbanTaskItem[]
+  total: number
+}
+
+/**
+ * One letter of a grouped legal task. A trimmed inbox row plus message bodies
+ * and attachments, so the drawer can render the whole group as a single thread
+ * without extra per-letter message/thread requests.
+ */
+export interface LegalTaskLetter {
+  id: string
+  thread_id: string
+  mailbox_id: string | null
+  mailbox_email: string | null
+  subject: string | null
+  from_address: string
+  to_addresses: string[]
+  direction: string
+  processing_status: string
+  received_at: string | null
+  sent_at: string | null
+  is_quarantined: boolean
+  needs_manual_review: boolean
+  source_mailbox_disabled: boolean
+  letter_type_id: string | null
+  client_id: number | null
+  client_name: string | null
+  body_text: string | null
+  body_html: string | null
+  attachments: LegalAttachmentItem[]
+}
+
+/** Letters grouped into one legal task, ordered chronologically (received_at ASC). */
+export interface LegalTaskLettersResponse {
+  legal_task_id: number
+  items: LegalTaskLetter[]
   total: number
 }
 
@@ -319,6 +361,8 @@ export interface LegalLetterType {
   name: string
   color_id: string
   sla_days: number
+  /** How SLA days are counted; omitted by older backends → treat as calendar. */
+  sla_day_type?: 'working' | 'calendar'
   description: string | null
   keyword_hints: string[]
   is_active: boolean
@@ -337,6 +381,7 @@ export interface LegalLetterTypeCreate {
   name: string
   color_id: string
   sla_days: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   slug?: string | null
@@ -346,6 +391,7 @@ export interface LegalLetterTypeUpdate {
   name?: string
   color_id?: string
   sla_days?: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   is_active?: boolean
@@ -479,6 +525,10 @@ export interface LegalMailboxRoutingRule {
   match_type: LegalRoutingMatchType
   value: string
   letter_type_id: string
+  /** Whether the rule participates in identification. Older backends omit it → treat as active. */
+  is_active?: boolean
+  /** Tie-break order within the same match type. Older backends omit it → treat as 0. */
+  priority?: number
 }
 
 export interface LegalSettingsMailbox {
@@ -504,6 +554,8 @@ export interface LegalMailboxRoutingRuleInput {
   match_type: LegalRoutingMatchType
   value: string
   letter_type_id: string
+  is_active?: boolean
+  priority?: number
 }
 
 export type LegalMailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'
@@ -586,6 +638,7 @@ export interface LegalPollAllMailboxesResponse {
 export interface LegalReplyTemplate {
   id: string
   name: string
+  subject: string | null
   body: string
   letter_type_ids: string[]
   is_active: boolean
@@ -598,6 +651,7 @@ export interface LegalReplyTemplateListResponse {
 
 export interface LegalReplyTemplateCreate {
   name: string
+  subject?: string | null
   body: string
   letter_type_ids?: string[]
   is_active?: boolean
@@ -605,6 +659,7 @@ export interface LegalReplyTemplateCreate {
 
 export interface LegalReplyTemplateUpdate {
   name?: string
+  subject?: string | null
   body?: string
   letter_type_ids?: string[]
   is_active?: boolean
@@ -632,4 +687,21 @@ export interface LegalClientContractItem {
 
 export interface LegalClientContractListResponse {
   items: LegalClientContractItem[]
+}
+
+export interface LegalSenderHistoryItem {
+  id: string
+  subject: string | null
+  direction: string
+  received_at: string | null
+  sent_at: string | null
+  letter_type_id: string | null
+  is_current: boolean
+}
+
+export interface LegalSenderHistoryResponse {
+  sender_address: string
+  total: number
+  position: number
+  items: LegalSenderHistoryItem[]
 }

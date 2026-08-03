@@ -26,7 +26,6 @@ export function ImpersonationBanner({
     return null
   }
 
-  // Find the active project name
   const activeProject = impersonatedUser.projects?.find(
     (p) => p.id === impersonatedUser.active_project_id
   )
@@ -35,27 +34,27 @@ export function ImpersonationBanner({
 
   return (
     <div className="flex w-full items-center justify-center">
-      <div className="text-dark-500 flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white pr-5 pl-6 text-base xl:w-[60%]">
-        <div className="font-medimun text-secondary-800 flex items-center gap-2">
-          <Icons.UserCircle02Icon size={20} className="text-secondary-700" strokeWidth={1.5} />
+      <div className="border-border bg-card text-foreground flex h-[65px] w-[80%] items-center justify-between rounded-md border pr-5 pl-6 text-base xl:w-[60%]">
+        <div className="text-primary-600 flex items-center gap-2 font-medium">
+          <Icons.UserCircle02Icon size={20} className="text-primary-600" strokeWidth={1.5} />
           Impersonation mode
         </div>
-        <div className="font-light">
+        <div className="text-muted-foreground font-light">
           Viewing as:{' '}
-          <span className="font-medium">
+          <span className="text-foreground font-medium">
             {getUserDisplayName(impersonatedUser)}({roleName})
           </span>
         </div>
-        <div className="font-light">
-          Project: <span className="font-medium">{projectName}</span>
+        <div className="text-muted-foreground font-light">
+          Project: <span className="text-foreground font-medium">{projectName}</span>
         </div>
         <button
           onClick={onExitImpersonation}
           disabled={isLoading}
-          className="bg-primary-300 text-dark-500 flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary-300 text-primary-foreground flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? 'Exiting...' : 'Exit Impersonation'}
-          <Icons.LogoutSquare01 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.LogoutSquare01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
         </button>
       </div>
     </div>

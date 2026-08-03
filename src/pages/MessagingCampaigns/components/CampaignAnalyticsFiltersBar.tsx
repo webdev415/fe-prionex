@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -28,6 +29,7 @@ interface CampaignAnalyticsFiltersBarProps {
   onFilterChange: (filters: CampaignAnalyticsFilters) => void
   launcherOptions: LauncherOption[]
   isLoading?: boolean
+  timezone?: string | null
 }
 
 type PeriodOption = 'any' | 'today' | 'yesterday' | 'last_7' | 'last_30'
@@ -38,45 +40,33 @@ const DEFAULT_FILTERS: CampaignAnalyticsFilters = {
   launcher: 'all',
 }
 
-const formatDateLocal = (date: Date): string => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+const shiftDateStringInTimezone = (daysAgo: number, timezone?: string | null): string =>
+  getDateStringInTimezone(new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000), timezone)
+
+const calendarDaysBetween = (from: string, to: string): number => {
+  const start = new Date(`${from}T00:00:00`)
+  const end = new Date(`${to}T00:00:00`)
+  return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000))
 }
 
 const detectPeriodFromDates = (
   dateFrom: string | undefined,
-  dateTo: string | undefined
+  dateTo: string | undefined,
+  timezone?: string | null
 ): PeriodOption => {
   if (!dateFrom || !dateTo) return 'any'
 
-  const start = new Date(dateFrom)
-  const end = new Date(dateTo)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  start.setHours(0, 0, 0, 0)
-  end.setHours(0, 0, 0, 0)
-
-  const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  const isEndToday = end.toDateString() === today.toDateString()
-  const isStartToday = start.toDateString() === today.toDateString()
-
-  if (daysDiff === 0 && isStartToday && isEndToday) return 'today'
-
-  if (daysDiff === 0) {
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    if (
-      start.toDateString() === yesterday.toDateString() &&
-      end.toDateString() === yesterday.toDateString()
-    ) {
-      return 'yesterday'
-    }
+  const todayStr = getDateStringInTimezone(new Date(), timezone)
+  if (dateFrom === dateTo) {
+    if (dateFrom === todayStr) return 'today'
+    if (dateFrom === shiftDateStringInTimezone(1, timezone)) return 'yesterday'
   }
 
-  if (daysDiff === 7 && isEndToday) return 'last_7'
-  if (daysDiff === 30 && isEndToday) return 'last_30'
+  if (dateTo !== todayStr) return 'any'
+
+  const daysDiff = calendarDaysBetween(dateFrom, dateTo)
+  if (daysDiff === 7) return 'last_7'
+  if (daysDiff === 30) return 'last_30'
 
   return 'any'
 }
@@ -92,20 +82,21 @@ export function CampaignAnalyticsFiltersBar({
   onFilterChange,
   launcherOptions,
   isLoading = false,
+  timezone,
 }: CampaignAnalyticsFiltersBarProps) {
   const { t } = useTranslation('common')
   const [searchValue, setSearchValue] = useSyncedState(filters.search, '')
   const [localFilters, setLocalFilters] = useState<CampaignAnalyticsFilters>(filters)
 
   const initialPeriod = useMemo(
-    () => detectPeriodFromDates(filters.launched_from, filters.launched_to),
-    [filters.launched_from, filters.launched_to]
+    () => detectPeriodFromDates(filters.launched_from, filters.launched_to, timezone),
+    [filters.launched_from, filters.launched_to, timezone]
   )
 
   const periodManuallySetRef = useRef(false)
   const computedPeriod = useMemo(
-    () => detectPeriodFromDates(localFilters.launched_from, localFilters.launched_to),
-    [localFilters.launched_from, localFilters.launched_to]
+    () => detectPeriodFromDates(localFilters.launched_from, localFilters.launched_to, timezone),
+    [localFilters.launched_from, localFilters.launched_to, timezone]
   )
   const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
 
@@ -120,9 +111,9 @@ export function CampaignAnalyticsFiltersBar({
 
   useEffect(() => {
     setLocalFilters(filters)
-    setPeriod(detectPeriodFromDates(filters.launched_from, filters.launched_to))
+    setPeriod(detectPeriodFromDates(filters.launched_from, filters.launched_to, timezone))
     periodManuallySetRef.current = false
-  }, [filters])
+  }, [filters, timezone])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handlePeriodChange = useCallback(
@@ -130,37 +121,31 @@ export function CampaignAnalyticsFiltersBar({
       periodManuallySetRef.current = true
       setPeriod(value)
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      const todayStr = getDateStringInTimezone(new Date(), timezone)
 
       let launched_from: string | undefined
       let launched_to: string | undefined
 
       switch (value) {
         case 'today': {
-          launched_from = formatDateLocal(today)
-          launched_to = formatDateLocal(today)
+          launched_from = todayStr
+          launched_to = todayStr
           break
         }
         case 'yesterday': {
-          const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          launched_from = formatDateLocal(yesterday)
-          launched_to = formatDateLocal(yesterday)
+          const yesterdayStr = shiftDateStringInTimezone(1, timezone)
+          launched_from = yesterdayStr
+          launched_to = yesterdayStr
           break
         }
         case 'last_7': {
-          const from = new Date(today)
-          from.setDate(from.getDate() - 7)
-          launched_from = formatDateLocal(from)
-          launched_to = formatDateLocal(today)
+          launched_from = shiftDateStringInTimezone(7, timezone)
+          launched_to = todayStr
           break
         }
         case 'last_30': {
-          const from = new Date(today)
-          from.setDate(from.getDate() - 30)
-          launched_from = formatDateLocal(from)
-          launched_to = formatDateLocal(today)
+          launched_from = shiftDateStringInTimezone(30, timezone)
+          launched_to = todayStr
           break
         }
         case 'any':
@@ -176,12 +161,12 @@ export function CampaignAnalyticsFiltersBar({
         launched_to,
       })
     },
-    [localFilters]
+    [localFilters, timezone]
   )
 
   const handleDateFromChange = useCallback(
     (args: { value: Date | null }) => {
-      const dateStr = args.value ? formatDateLocal(args.value) : undefined
+      const dateStr = args.value ? formatPickerDateAsYMD(args.value) : undefined
       setLocalFilters({
         ...localFilters,
         launched_from: dateStr,
@@ -192,7 +177,7 @@ export function CampaignAnalyticsFiltersBar({
 
   const handleDateToChange = useCallback(
     (args: { value: Date | null }) => {
-      const dateStr = args.value ? formatDateLocal(args.value) : undefined
+      const dateStr = args.value ? formatPickerDateAsYMD(args.value) : undefined
       setLocalFilters({
         ...localFilters,
         launched_to: dateStr,
@@ -282,16 +267,16 @@ export function CampaignAnalyticsFiltersBar({
   )
 
   const filterDropdownClassName =
-    '[&_button]:max-h-[45px] [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-xs [&_button]:shadow-none'
+    '[&_button]:border-border [&_button]:bg-card [&_button]:max-h-[45px] [&_button]:rounded-md [&_button]:text-xs [&_button]:shadow-none'
 
   return (
-    <div className="mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 sm:p-6">
+    <div className="bg-card/50 mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl p-3 sm:p-6">
       <div className="flex flex-col items-center gap-4 self-stretch sm:gap-6">
         <div className="flex flex-col items-center gap-4 self-stretch sm:gap-7">
           <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:gap-10">
             <div className="flex flex-1 flex-col gap-2 self-stretch sm:items-end sm:gap-5">
               <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
-                <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+                <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                   {t('pages.auditLogs.searchFilters.dateRange')}:
                 </span>
                 <div className="flex flex-1 items-center gap-2">
@@ -306,7 +291,7 @@ export function CampaignAnalyticsFiltersBar({
                     format="dd.MM.yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
-                  <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                  <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
                     -
                   </span>
                   <DateSelect
@@ -324,7 +309,7 @@ export function CampaignAnalyticsFiltersBar({
               </div>
             </div>
             <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3 xl:flex-1">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.auditLogs.searchFilters.quickRanges')}:
               </span>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center sm:gap-2">
@@ -342,8 +327,8 @@ export function CampaignAnalyticsFiltersBar({
                     onClick={() => handlePeriodChange(key)}
                     disabled={isLoading}
                     className={cn(
-                      'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:px-4',
-                      period === key ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                      'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:px-4',
+                      period === key ? 'bg-primary-500 text-primary-foreground' : 'hover:bg-muted'
                     )}
                   >
                     {label}
@@ -353,11 +338,11 @@ export function CampaignAnalyticsFiltersBar({
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-200" />
+          <div className="bg-border h-px w-full" />
 
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.searchLabel', 'Search')}:
               </span>
               <Input
@@ -368,13 +353,13 @@ export function CampaignAnalyticsFiltersBar({
                 )}
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
-                className="max-h-[45px] flex-1 rounded-md border border-gray-200 bg-white text-xs"
+                className="border-border bg-card max-h-[45px] flex-1 rounded-md border text-xs"
                 disabled={isLoading}
               />
             </div>
 
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[180px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.status', 'Status')}:
               </span>
               <SearchableSelect
@@ -389,7 +374,7 @@ export function CampaignAnalyticsFiltersBar({
             </div>
 
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[180px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.channel', 'Channel')}:
               </span>
               <SearchableSelect
@@ -406,7 +391,7 @@ export function CampaignAnalyticsFiltersBar({
 
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.launcher', 'Launched by')}:
               </span>
               <SearchableSelect

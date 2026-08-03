@@ -26,6 +26,7 @@ import type {
   CreateContactRequest,
   CreateRestructuringAgreementRequest,
   GetClientsParams,
+  LoanCalculation,
   ManualPriorityRequest,
   PaginatedClientResponse,
   RestructuringAgreementDetail,
@@ -324,6 +325,20 @@ export async function getRestructuringAgreementDetail(
 }
 
 /**
+ * Get the detailed calculation (after sale) for a single loan (KAN-335).
+ * Chronological per-event-date balance history for the modal table.
+ */
+export async function getLoanCalculation(
+  clientId: number,
+  debtId: number
+): Promise<LoanCalculation> {
+  const response = await api.get<LoanCalculation>(
+    `${BASE_URL}/${clientId}/debts/${debtId}/detailed-calculation`
+  )
+  return response.data
+}
+
+/**
  * Create a restructuring agreement for a client
  */
 export async function createRestructuringAgreement(
@@ -471,6 +486,20 @@ export async function disconnectRestructuringAgreement(
   return response.data
 }
 
+export async function activateRestructuringAgreement(
+  clientId: number,
+  raId: number
+): Promise<RRStatusChangeResponse> {
+  const response = await api.patch<RRStatusChangeResponse>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/activate`
+  )
+  return response.data
+}
+
+export async function deleteRestructuringAgreement(clientId: number, raId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/restructuring-agreements/${raId}`)
+}
+
 /**
  * Newest-first audit log of status changes for one RR.
  */
@@ -592,6 +621,7 @@ export const clientApi = {
   updatePassport,
   getClientRestructuringAgreements,
   getRestructuringAgreementDetail,
+  getLoanCalculation,
   createRestructuringAgreement,
   closeDebt,
   reopenDebt,
@@ -599,6 +629,8 @@ export const clientApi = {
   completeRestructuringAgreement,
   transitionRestructuringAgreementStatus,
   disconnectRestructuringAgreement,
+  activateRestructuringAgreement,
+  deleteRestructuringAgreement,
   getRestructuringAgreementStatusHistory,
   recordRROverpayment,
   getRROverpayments,

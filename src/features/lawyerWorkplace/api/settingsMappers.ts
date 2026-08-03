@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
 import type { ReplyTemplateFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/ReplyTemplateModal'
 import type {
@@ -42,6 +43,7 @@ export function mapLegalLetterTypeToConfig(item: LegalLetterType): LetterTypeCon
     nameFallback: item.name,
     colorId: item.color_id,
     slaDays: item.sla_days,
+    slaDayType: item.sla_day_type ?? 'calendar',
     descriptionKey: `api:desc:${item.id}`,
     descriptionFallback: item.description ?? '',
     letterCount: item.letter_count,
@@ -63,7 +65,9 @@ export function mapLegalLawyerToSettings(lawyer: LegalLawyer): SettingsLawyer {
     nameKey: `api:lawyer:name:${lawyer.id}`,
     nameFallback: lawyer.display_name,
     roleKey: `api:lawyer:role:${lawyer.id}`,
-    roleFallback: lawyer.role_title ?? 'Legal department',
+    roleFallback:
+      lawyer.role_title ??
+      i18n.t('pages.lawyerWorkplace.settings.lawyers.defaultRole', 'Legal department'),
     letterTypeIds: [...lawyer.letter_type_ids],
     currentActive: lawyer.current_active,
     maxInFlight: lawyer.max_in_flight,
@@ -101,6 +105,7 @@ export function mapLetterTypeConfigToUpdate(draft: LetterTypeConfig) {
     name: draft.nameFallback,
     color_id: draft.colorId,
     sla_days: draft.slaDays,
+    sla_day_type: draft.slaDayType,
     description: draft.descriptionFallback || null,
     keyword_hints: draft.keywordHints,
   }
@@ -162,7 +167,20 @@ function mapRoutingRuleToInput(rule: MailboxRoutingRule): LegalMailboxRoutingRul
     match_type: rule.matchType,
     value: rule.value,
     letter_type_id: rule.letterTypeId,
+    is_active: rule.isActive,
+    priority: rule.priority,
   }
+}
+
+/**
+ * Build the PATCH mailbox-settings body for a full routing-rule replace.
+ * The backend applies replace semantics — the whole list is sent every time
+ * a rule is added, toggled, or removed.
+ */
+export function mapRoutingRulesToUpdate(rules: MailboxRoutingRule[]): {
+  routing_rules: LegalMailboxRoutingRuleInput[]
+} {
+  return { routing_rules: rules.map(mapRoutingRuleToInput) }
 }
 
 export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox): SettingsMailbox {
@@ -182,6 +200,9 @@ export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox)
       matchType: rule.match_type,
       value: rule.value,
       letterTypeId: rule.letter_type_id,
+      // Older backends omit these fields → a rule with no explicit flag is active.
+      isActive: rule.is_active ?? true,
+      priority: rule.priority ?? 0,
     })),
   }
 }
@@ -277,6 +298,8 @@ export function mapLegalReplyTemplateToSettings(
     id: template.id,
     nameKey: `api:reply-template:name:${template.id}`,
     nameFallback: template.name,
+    subjectKey: `api:reply-template:subject:${template.id}`,
+    subjectFallback: template.subject ?? '',
     bodyKey: `api:reply-template:body:${template.id}`,
     bodyFallback: template.body,
     letterTypeIds: [...template.letter_type_ids],
@@ -287,6 +310,7 @@ export function mapLegalReplyTemplateToSettings(
 export function mapReplyTemplateFormToCreate(values: ReplyTemplateFormValues) {
   return {
     name: values.name.trim(),
+    subject: values.subject.trim() || null,
     body: values.body,
     letter_type_ids: values.letterTypeIds,
     is_active: true,
@@ -296,6 +320,7 @@ export function mapReplyTemplateFormToCreate(values: ReplyTemplateFormValues) {
 export function mapReplyTemplateFormToUpdate(values: ReplyTemplateFormValues) {
   return {
     name: values.name.trim(),
+    subject: values.subject.trim() || null,
     body: values.body,
     letter_type_ids: values.letterTypeIds,
     is_active: true,

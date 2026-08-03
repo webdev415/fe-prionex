@@ -40,16 +40,16 @@ export function PendingFeatureDialog({
       <ModalHeader title={t(titleKey, titleFallback)} />
       <ModalContent>
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-gray-700">{t(descriptionKey, descriptionFallback)}</p>
+          <p className="text-foreground text-sm">{t(descriptionKey, descriptionFallback)}</p>
 
           {operatorName ? (
-            <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
-              <Icons.User size={14} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-800">{operatorName}</span>
+            <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2">
+              <Icons.User size={14} className="text-muted-foreground" />
+              <span className="text-foreground text-sm font-medium">{operatorName}</span>
             </div>
           ) : null}
 
-          <div className="border-primary-200 bg-primary-50 flex items-start gap-2 rounded-lg border px-3 py-2">
+          <div className="border-primary-200 bg-primary-100 flex items-start gap-2 rounded-lg border px-3 py-2">
             <Icons.Info size={16} className="text-primary-600 mt-0.5 flex-shrink-0" />
             <p className="text-primary-700 text-xs">
               {t(

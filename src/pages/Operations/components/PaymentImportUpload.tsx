@@ -84,16 +84,16 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.sectionTitle`)}</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="text-foreground text-lg font-medium">{t(`${p}.sectionTitle`)}</h3>
+          <p className="text-muted-foreground text-sm">
             {t(`${p}.descriptionIntro`)}{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">loan_number</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">tin</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_amount</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_date</code>.{' '}
+            <code className="bg-muted rounded px-1 text-xs">loan_number</code>,{' '}
+            <code className="bg-muted rounded px-1 text-xs">tin</code>,{' '}
+            <code className="bg-muted rounded px-1 text-xs">payment_amount</code>,{' '}
+            <code className="bg-muted rounded px-1 text-xs">payment_date</code>.{' '}
             {t(`${p}.optionalIntro`)}{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_method</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_type</code>
+            <code className="bg-muted rounded px-1 text-xs">payment_method</code>,{' '}
+            <code className="bg-muted rounded px-1 text-xs">payment_type</code>
           </p>
         </div>
         <Button
@@ -127,25 +127,23 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
             inputRef.current?.click()
           }
         }}
-        className={`focus:ring-secondary-500 relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-          dragActive
-            ? 'border-secondary-500 bg-secondary-50'
-            : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+        className={`focus:ring-primary-500 focus:ring-offset-card relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+          dragActive ? 'border-primary-500 bg-muted' : 'border-border hover:bg-muted/50'
         } ${isUploading ? 'pointer-events-none opacity-50' : ''}`}
       >
         {isUploading ? (
           <div className="flex flex-col items-center gap-2">
             <Icons.Spinner className="h-8 w-8" />
-            <p className="text-sm text-gray-600">{t(`${p}.validating`)}</p>
+            <p className="text-muted-foreground text-sm">{t(`${p}.validating`)}</p>
           </div>
         ) : (
           <>
-            <Icons.CloudDownload size={40} className="text-gray-400" />
-            <p className="text-dark-500 mt-2 text-sm">
-              <span className="text-secondary-700 font-medium">{t(`${p}.clickToUpload`)}</span>{' '}
+            <Icons.CloudDownload size={40} className="text-muted-foreground" />
+            <p className="text-foreground mt-2 text-sm">
+              <span className="text-primary-600 font-medium">{t(`${p}.clickToUpload`)}</span>{' '}
               {t(`${p}.orDragAndDrop`)}
             </p>
-            <p className="mt-1 text-xs text-gray-500">{t(`${p}.constraints`)}</p>
+            <p className="text-muted-foreground mt-1 text-xs">{t(`${p}.constraints`)}</p>
           </>
         )}
 

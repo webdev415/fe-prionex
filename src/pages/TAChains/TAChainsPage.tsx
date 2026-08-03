@@ -34,8 +34,8 @@ import {
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_BADGE: Record<string, string> = {
-  manual: 'bg-blue-100 text-blue-700',
-  automatic: 'bg-purple-100 text-purple-700',
+  manual: 'bg-info-100 text-info-700',
+  automatic: 'bg-secondary-100 text-secondary-700',
 }
 
 export function TAChainsPage() {
@@ -112,12 +112,12 @@ export function TAChainsPage() {
     <div className="flex w-full flex-col items-start gap-4">
       <div className="mb-4 flex w-full flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.taChains.title')}</h1>
-          <span className="text-sm text-gray-500">{filtered.length}</span>
+          <h1 className="text-foreground text-2xl font-light">{t('pages.taChains.title')}</h1>
+          <span className="text-muted-foreground text-sm">{filtered.length}</span>
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:flex-nowrap md:justify-end">
-          <label className="flex shrink-0 items-center gap-2 text-sm whitespace-nowrap text-gray-700">
+          <label className="text-foreground flex shrink-0 items-center gap-2 text-sm whitespace-nowrap">
             <input
               type="checkbox"
               checked={showInactive}
@@ -147,7 +147,7 @@ export function TAChainsPage() {
       </div>
 
       {!showListSkeleton && filtered.length === 0 && (
-        <div className="w-full rounded-lg border border-dashed border-gray-300 bg-white/60 p-10 text-center text-base text-gray-600">
+        <div className="border-border bg-card/60 text-muted-foreground w-full rounded-lg border border-dashed p-10 text-center text-base">
           {t('pages.taChains.empty')}
         </div>
       )}
@@ -160,18 +160,16 @@ export function TAChainsPage() {
             <li
               key={chain.id}
               className={`flex flex-col gap-3 rounded-md border p-4 transition ${
-                chain.is_active
-                  ? 'border-gray-200 bg-white'
-                  : 'border-gray-200 bg-gray-50 opacity-70'
+                chain.is_active ? 'border-border bg-card' : 'border-border bg-muted opacity-70'
               }`}
             >
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-dark-500 text-base font-semibold">{chain.name}</h3>
+                    <h3 className="text-foreground text-base font-semibold">{chain.name}</h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
-                        TYPE_BADGE[chain.chain_type] ?? 'bg-gray-100 text-gray-700'
+                        TYPE_BADGE[chain.chain_type] ?? 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {t(`pages.taChains.chainTypes.${chain.chain_type}`)}
@@ -179,8 +177,8 @@ export function TAChainsPage() {
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
                         chain.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-200 text-gray-700'
+                          ? 'bg-success-100 text-success-700'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {chain.is_active
@@ -188,29 +186,29 @@ export function TAChainsPage() {
                         : t('pages.taChains.status.deactivated')}
                     </span>
                     {chain.is_system_hidden && (
-                      <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+                      <span className="bg-warning-100 text-warning-700 rounded-full px-2 py-0.5 text-xs">
                         {t('pages.taChains.status.systemHidden')}
                       </span>
                     )}
                   </div>
 
                   {chain.description && (
-                    <p className="mt-2 text-xs text-gray-600">{chain.description}</p>
+                    <p className="text-muted-foreground mt-2 text-xs">{chain.description}</p>
                   )}
 
-                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-700">
+                  <div className="text-foreground mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs">
                     <span>
                       <strong>{chain.step_count}</strong> {t('pages.taChains.steps.label')}
                     </span>
                     <span className="flex flex-wrap items-center gap-1">
                       <span>{t('pages.taChains.table.department')}:</span>
                       {chain.department_ids.length === 0 ? (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         chain.department_ids.map((id) => (
                           <span
                             key={id}
-                            className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700"
+                            className="bg-info-100 text-info-700 rounded-full px-2 py-0.5 text-[11px]"
                           >
                             {deptNameById.get(id) ?? `#${id}`}
                           </span>

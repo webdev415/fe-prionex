@@ -2,11 +2,11 @@
  * Confirmation modal for deleting a document template (KAN-403 Tab 2).
  */
 
-import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Modal } from '@/components/ui/Modal'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
 import { useDeleteDocumentTemplate, type DocumentTemplate } from '@/features/documents'
 
 interface Props {
@@ -32,34 +32,53 @@ export function DeleteDocumentTemplateModal({ open, template, onClose }: Props) 
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
-      <div className="flex flex-col gap-4">
-        <DialogPrimitive.Title className="text-dark-500 text-lg font-semibold">
-          {t('pages.documentGeneration.templates.modals.deleteTitle', 'Delete template')}
-        </DialogPrimitive.Title>
-        <p className="text-sm text-gray-700">
-          {t(
-            'pages.documentGeneration.templates.modals.deleteConfirm',
-            'Are you sure you want to delete this template?'
-          )}{' '}
-          <span className="text-dark-500 font-medium">{template?.name}</span>
-        </p>
-        <p className="text-xs text-gray-500">
-          {t(
-            'pages.documentGeneration.templates.modals.deleteWarning',
-            'This action cannot be undone.'
-          )}
-        </p>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button variant="danger" onClick={handleDelete} disabled={mutation.isPending}>
-            {mutation.isPending
-              ? t('actions.deleting', 'Deleting…')
-              : t('actions.delete', 'Delete')}
-          </Button>
+      <ModalHeader
+        icon={
+          <div className="bg-destructive flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete
+              size={18}
+              className="text-destructive-foreground sm:size-5"
+              strokeWidth={2}
+            />
+          </div>
+        }
+        title={t('pages.documentGeneration.templates.modals.deleteTitle', 'Delete template')}
+      />
+      <ModalContent>
+        <div className="flex flex-col gap-2">
+          <p className="text-foreground text-xs sm:text-sm">
+            {t(
+              'pages.documentGeneration.templates.modals.deleteConfirm',
+              'Are you sure you want to delete this template?'
+            )}{' '}
+            <span className="text-foreground font-medium">{template?.name}</span>
+          </p>
+          <p className="text-muted-foreground text-xs">
+            {t(
+              'pages.documentGeneration.templates.modals.deleteWarning',
+              'This action cannot be undone.'
+            )}
+          </p>
         </div>
-      </div>
+      </ModalContent>
+      <ModalFooter className="flex-col-reverse gap-2 sm:flex-row">
+        <Button
+          variant="secondary"
+          onClick={onClose}
+          disabled={mutation.isPending}
+          className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {t('actions.cancel', 'Cancel')}
+        </Button>
+        <Button
+          variant="danger"
+          onClick={handleDelete}
+          disabled={mutation.isPending}
+          className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {mutation.isPending ? t('actions.deleting', 'Deleting…') : t('actions.delete', 'Delete')}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

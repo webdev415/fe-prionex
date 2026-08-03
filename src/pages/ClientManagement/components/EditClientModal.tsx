@@ -495,13 +495,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
 
       {/* Section 1: Personal Information */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
           {t('pages.clients.editModal.personalInfo')}
         </span>
-        <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+        <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-4 sm:p-5 sm:px-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.firstName')} <span className="text-error-500">*</span>
               </label>
               <Input
@@ -509,11 +509,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setFirstName(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.lastName')} <span className="text-error-500">*</span>
               </label>
               <Input
@@ -521,14 +521,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setLastName(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
 
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.middleName')}
               </label>
               <Input
@@ -536,11 +536,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setMiddleName(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.email')}
               </label>
               <Input
@@ -549,13 +549,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.dateOfBirth')}
               </label>
               <DateSelect
@@ -564,15 +564,15 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
                 format="yyyy-MM-dd"
-                className="border-gray-400"
+                className="border-border"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.maritalStatus')}
               </label>
               <Select value={maritalStatus} onValueChange={setMaritalStatus} disabled={!canEditAll}>
-                <SelectTrigger className="text-dark-500 h-[45px] rounded-md border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
+                <SelectTrigger className="text-foreground border-border bg-card disabled:bg-muted h-[45px] rounded-md border px-3 text-sm font-light disabled:cursor-not-allowed disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>
@@ -587,7 +587,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.taxId')}
               </label>
               <Input
@@ -595,14 +595,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setTaxId(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="hidden flex-1 sm:block" aria-hidden />
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.numberOfFamilyMembers')}
               </label>
               <Input
@@ -611,11 +611,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setFamilyMembers(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.incomeLevel')}
               </label>
               <Input
@@ -623,7 +623,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setIncomeLevel(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
@@ -651,13 +651,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
 
       {/* Passport / document */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
           {t('pages.clients.detail.tabs.passport')}
         </span>
-        <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+        <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-4 sm:p-5 sm:px-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.documentType')}
               </label>
               <Input
@@ -665,11 +665,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setDocumentType(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.passportSeries')}
               </label>
               <Input
@@ -677,13 +677,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setPassportSeries(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.passportNumber')}
               </label>
               <Input
@@ -691,14 +691,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setPassportNumber(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="hidden flex-1 sm:block" aria-hidden />
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.issuedBy')}
               </label>
               <Input
@@ -706,11 +706,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setIssuedBy(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.issuedDate')}
               </label>
               <DateSelect
@@ -719,13 +719,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
                 format="yyyy-MM-dd"
-                className="border-gray-400"
+                className="border-border"
               />
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.expiresDate')}
               </label>
               <DateSelect
@@ -734,11 +734,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
                 format="yyyy-MM-dd"
-                className="border-gray-400"
+                className="border-border"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.gender')}
               </label>
               <Input
@@ -746,7 +746,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setGender(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
@@ -769,13 +769,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
 
       {/* Section 3: Work Information */}
       <div className="flex flex-col items-start gap-2 self-stretch">
-        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
           {t('pages.clients.detail.tabs.work')}
         </span>
-        <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+        <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-4 sm:p-5 sm:px-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.organizationName')}
               </label>
               <Input
@@ -783,11 +783,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setCompanyName(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.position')}
               </label>
               <Input
@@ -795,13 +795,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setPosition(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.experience')}
               </label>
               <Input
@@ -810,11 +810,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setWorkExperience(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.managerFullName')}
               </label>
               <Input
@@ -822,13 +822,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setManagerFullName(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.employmentType')}
               </label>
               <Select
@@ -836,7 +836,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onValueChange={setEmploymentType}
                 disabled={!canEditAll}
               >
-                <SelectTrigger className="text-dark-500 h-[45px] rounded-md border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
+                <SelectTrigger className="text-foreground border-border bg-card disabled:bg-muted h-[45px] rounded-md border px-3 text-sm font-light disabled:cursor-not-allowed disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>
@@ -849,7 +849,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </Select>
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+              <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.workPhone')}
               </label>
               <Input
@@ -857,7 +857,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onChange={(e) => setWorkPhone(e.target.value)}
                 disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                className="disabled:bg-muted rounded-md"
               />
             </div>
           </div>
@@ -882,7 +882,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       {/* Section 4: Addresses */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <div className="flex w-full items-center justify-between">
-          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+          <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.editModal.addresses')}
           </span>
           {canEditAll && (
@@ -902,9 +902,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
           {profile.addresses?.map((address) => (
             <div key={address.id}>
               {editingAddressId === address.id ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
+                <div className="border-border bg-card/50 flex flex-col gap-3 rounded-xl border p-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <label className="text-foreground text-xs font-medium sm:text-sm">
                       {t('pages.clients.editModal.addressType')}
                     </label>
                     <Select
@@ -927,7 +927,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.region')}
                       </label>
                       <Input
@@ -940,7 +940,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       />
                     </div>
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.city')}
                       </label>
                       <Input
@@ -955,7 +955,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.district')}
                       </label>
                       <Input
@@ -968,7 +968,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       />
                     </div>
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.postalCode')}
                       </label>
                       <Input
@@ -983,7 +983,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.street')}
                       </label>
                       <Input
@@ -996,7 +996,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       />
                     </div>
                     <div className="flex w-24 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.building')}
                       </label>
                       <Input
@@ -1009,7 +1009,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       />
                     </div>
                     <div className="flex w-24 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.houseNumber')}
                       </label>
                       <Input
@@ -1022,7 +1022,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       />
                     </div>
                     <div className="flex w-24 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.apartment')}
                       </label>
                       <Input
@@ -1037,7 +1037,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <label className="text-foreground text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.housingType')}
                       </label>
                       <Input
@@ -1076,10 +1076,10 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-white bg-white/50 p-3 sm:p-4">
+                <div className="border-border bg-card/50 flex items-center justify-between gap-3 rounded-xl border p-3 sm:p-4">
                   <div className="flex flex-1 flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      <span className="text-foreground text-xs font-medium sm:text-sm">
                         {ADDRESS_TYPE_KEYS[address.address_type]
                           ? t(ADDRESS_TYPE_KEYS[address.address_type])
                           : address.address_type}
@@ -1090,7 +1090,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs font-light text-gray-700 sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {address.full_address ||
                         [address.city, address.street, address.building].filter(Boolean).join(', ')}
                     </span>
@@ -1102,7 +1102,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         data-testid="edit-address-btn"
                         aria-label={t('pages.clients.editModal.editAddress')}
                         onClick={() => handleStartEditAddress(address)}
-                        className="text-gray-600 transition-colors hover:text-blue-500"
+                        className="text-muted-foreground transition-colors hover:text-blue-500"
                       >
                         <Icons.PencilEdit size={16} strokeWidth={1.5} />
                       </button>
@@ -1111,7 +1111,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         data-testid="delete-address-btn"
                         aria-label={t('pages.clients.editModal.deleteAddress')}
                         onClick={() => handleDeleteAddress(address.id)}
-                        className="text-gray-600 transition-colors hover:text-red-500"
+                        className="text-muted-foreground transition-colors hover:text-red-500"
                       >
                         <Icons.Delete size={16} strokeWidth={1.5} />
                       </button>
@@ -1124,9 +1124,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
 
           {/* Add Address Form */}
           {showAddressForm && (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
+            <div className="border-border bg-card/50 flex flex-col gap-3 rounded-xl border p-4">
               <div className="flex flex-col gap-1">
-                <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                <label className="text-foreground text-xs font-medium sm:text-sm">
                   {t('pages.clients.editModal.addressType')}
                 </label>
                 <Select
@@ -1147,7 +1147,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.region')}
                   </label>
                   <Input
@@ -1158,7 +1158,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.city')}
                   </label>
                   <Input
@@ -1171,7 +1171,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.district')}
                   </label>
                   <Input
@@ -1182,7 +1182,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.postalCode')}
                   </label>
                   <Input
@@ -1195,7 +1195,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.street')}
                   </label>
                   <Input
@@ -1206,7 +1206,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   />
                 </div>
                 <div className="flex w-24 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.building')}
                   </label>
                   <Input
@@ -1217,7 +1217,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   />
                 </div>
                 <div className="flex w-24 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.houseNumber')}
                   </label>
                   <Input
@@ -1228,7 +1228,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   />
                 </div>
                 <div className="flex w-24 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.apartment')}
                   </label>
                   <Input
@@ -1241,7 +1241,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  <label className="text-foreground text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.housingType')}
                   </label>
                   <Input
@@ -1287,8 +1287,8 @@ export function EditClientModal({ open, clientId, onClose }: EditClientModalProp
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex items-center justify-center rounded-full p-2.5">
+            <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.editModal.title')}

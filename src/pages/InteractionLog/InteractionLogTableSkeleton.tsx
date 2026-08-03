@@ -36,7 +36,7 @@ export function InteractionLogTableSkeleton({
   return (
     <div
       className={cn(
-        'data-table-scroll overflow-x-auto rounded-xl border border-[#EBECE8] bg-[#EBECE8] pb-2 shadow-sm',
+        'data-table-scroll border-border bg-border overflow-x-auto rounded-xl border pb-2 shadow-sm',
         className
       )}
     >
@@ -48,14 +48,14 @@ export function InteractionLogTableSkeleton({
             ))}
           </colgroup>
           <thead className="sticky top-0 z-10">
-            <tr className="bg-white">
+            <tr className="bg-card">
               {headers.map((label, index) => (
                 <th
                   key={columnKeys[index]}
                   scope="col"
                   className={cn(
-                    'h-[49px] border-b border-[#EBECE8] bg-white px-4 text-left text-xs font-semibold text-[#05040D]',
-                    index < headers.length - 1 && 'border-r border-[#EBECE8]'
+                    'border-border bg-card text-foreground h-[49px] border-b px-4 text-left text-xs font-semibold',
+                    index < headers.length - 1 && 'border-border border-r'
                   )}
                 >
                   {label}
@@ -65,16 +65,16 @@ export function InteractionLogTableSkeleton({
           </thead>
           <tbody>
             {Array.from({ length: rows }).map((_, rowIndex) => (
-              <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}>
+              <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}>
                 {headers.map((_, colIndex) => (
                   <td
                     key={colIndex}
                     className={cn(
                       'h-[49px] px-4',
-                      colIndex < headers.length - 1 && 'border-r border-[#EBECE8]'
+                      colIndex < headers.length - 1 && 'border-border border-r'
                     )}
                   >
-                    <div className="h-4 w-full max-w-full animate-pulse rounded bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-4 w-full max-w-full animate-pulse rounded" />
                   </td>
                 ))}
               </tr>

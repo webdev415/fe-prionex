@@ -8,6 +8,8 @@ import type {
   TaskStatus,
   TaskTimeBucket,
 } from '../mocks/trainerWorkplaceMocks'
+import i18n from '@/lib/i18n'
+import { formatDate } from '@/lib/localeFormat'
 
 /** Map BE correction status → the 4-column Kanban the Figma frame uses. */
 export function statusToKanbanColumn(status: CorrectionTaskStatus): TaskKanbanColumn {
@@ -114,7 +116,7 @@ function formatDateLabel(iso: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString()
+  return formatDate(d, i18n.language)
 }
 
 export function deriveTaskRow(task: CorrectionTask, operators: OperatorUser[]): MockTaskRow {

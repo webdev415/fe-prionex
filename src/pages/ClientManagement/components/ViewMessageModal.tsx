@@ -58,13 +58,13 @@ function statusBadgeClasses(displayStatus: ReturnType<typeof messagingStatusForC
       }
     case 'Sent':
       return {
-        wrap: 'bg-secondary-800/10 text-secondary-800 ring-secondary-800/20',
-        dot: 'bg-secondary-800',
+        wrap: 'bg-primary/10 text-primary-700 ring-secondary-800/20',
+        dot: 'bg-primary-600',
       }
     case 'Skipped':
       return {
-        wrap: 'bg-gray-100 text-gray-700 ring-gray-200',
-        dot: 'bg-gray-400',
+        wrap: 'bg-muted text-foreground ring-border',
+        dot: 'bg-muted-foreground',
       }
     default:
       return {
@@ -76,11 +76,11 @@ function statusBadgeClasses(displayStatus: ReturnType<typeof messagingStatusForC
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-gray-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:gap-6">
-      <span className="text-dark-500 w-full shrink-0 text-xs font-light tracking-wide text-gray-500 sm:w-[7.5rem] sm:text-sm">
+    <div className="border-border flex flex-col gap-1 border-b py-3 last:border-b-0 sm:flex-row sm:items-start sm:gap-6">
+      <span className="text-foreground text-muted-foreground w-full shrink-0 text-xs font-light tracking-wide sm:w-[7.5rem] sm:text-sm">
         {label}
       </span>
-      <div className="text-dark-500 min-w-0 flex-1 text-sm leading-relaxed font-medium">
+      <div className="text-foreground min-w-0 flex-1 text-sm leading-relaxed font-medium">
         {children}
       </div>
     </div>
@@ -107,10 +107,10 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
         <div className="flex shrink-0 flex-col gap-2">
           <ModalHeader
             icon={
-              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
                 <Icons.ChatFeedback01
                   size={20}
-                  className="text-dark-500 sm:size-6"
+                  className="text-primary-foreground sm:size-6"
                   strokeWidth={1.5}
                 />
               </div>
@@ -122,13 +122,13 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
           />
           {messageData ? (
             <div className="-mt-1 flex flex-wrap items-center gap-2 pl-12 sm:pl-[3.75rem]">
-              <span className="font-mono text-xs tracking-tight text-gray-500">
+              <span className="text-muted-foreground font-mono text-xs tracking-tight">
                 {messageData.campaignCode}
               </span>
-              <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200/80 ring-inset">
+              <span className="bg-card/80 text-foreground ring-border/80 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                 {messageData.channel.toUpperCase()}
               </span>
-              <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200/80 ring-inset">
+              <span className="bg-card/80 text-muted-foreground ring-border/80 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                 {t(
                   `pages.messagingIntegrations.services.${messageData.service}`,
                   getMessagingServiceLabel(messageData.service)
@@ -141,7 +141,7 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
         <ModalContent className="max-h-none min-h-0 flex-1 overflow-y-auto py-2 sm:max-h-none sm:py-3 md:max-h-none">
           {messageData ? (
             <div className="flex flex-col gap-4 sm:gap-5">
-              <section className="rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/80 px-4 py-1 shadow-sm sm:px-5">
+              <section className="border-border/80 from-card to-muted/80 rounded-2xl border bg-gradient-to-b px-4 py-1 shadow-sm sm:px-5">
                 <DetailRow label={t('pages.clients.modals.viewMessage.source', 'Source')}>
                   {formatSourceLabel(messageData.source, t)}
                 </DetailRow>
@@ -152,7 +152,7 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
                   <span className="font-mono text-[0.8125rem] tracking-wide">
                     {messageData.destination || '—'}
                     {messageData.destinationOwner ? (
-                      <span className="font-sans text-gray-600">
+                      <span className="text-muted-foreground font-sans">
                         {' '}
                         · {messageData.destinationOwner}
                       </span>
@@ -177,24 +177,24 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
                 )}
               </section>
 
-              <section className="rounded-2xl border border-gray-200/80 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-                <h3 className="text-dark-500 mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              <section className="border-border/80 bg-card rounded-2xl border px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+                <h3 className="text-foreground text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
                   {t('pages.clients.modals.viewMessage.timeline', 'Delivery timeline')}
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 ring-inset">
-                    <div className="text-xs font-light text-gray-500">
+                  <div className="bg-muted ring-border rounded-xl px-3 py-2.5 ring-1 ring-inset">
+                    <div className="text-muted-foreground text-xs font-light">
                       {t('pages.clients.modals.viewMessage.sentAt', 'Sent')}
                     </div>
-                    <div className="text-dark-500 mt-1 text-sm font-medium">
+                    <div className="text-foreground mt-1 text-sm font-medium">
                       {formatDateTime(messageData.sentAt ?? undefined, userTimezone ?? undefined)}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 ring-inset">
-                    <div className="text-xs font-light text-gray-500">
+                  <div className="bg-muted ring-border rounded-xl px-3 py-2.5 ring-1 ring-inset">
+                    <div className="text-muted-foreground text-xs font-light">
                       {t('pages.clients.modals.viewMessage.deliveredAt', 'Delivered')}
                     </div>
-                    <div className="text-dark-500 mt-1 text-sm font-medium">
+                    <div className="text-foreground mt-1 text-sm font-medium">
                       {formatDateTime(
                         messageData.deliveredAt ?? undefined,
                         userTimezone ?? undefined
@@ -205,11 +205,11 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
               </section>
 
               <section className="flex flex-col gap-2">
-                <label className="text-dark-500 text-xs font-semibold tracking-wide text-gray-500 uppercase sm:text-sm">
+                <label className="text-foreground text-muted-foreground text-xs font-semibold tracking-wide uppercase sm:text-sm">
                   {t('pages.clients.modals.viewMessage.body', 'Message')}
                 </label>
                 <div
-                  className="text-dark-500 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap shadow-inner ring-1 ring-gray-100 ring-inset sm:px-5 sm:py-4"
+                  className="text-foreground border-border bg-card ring-border rounded-2xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap shadow-inner ring-1 ring-inset sm:px-5 sm:py-4"
                   role="article"
                 >
                   {messageData.body?.trim() ? messageData.body : '—'}
@@ -242,7 +242,7 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
           ) : null}
         </ModalContent>
 
-        <ModalFooter className="bg-light-50 mt-auto shrink-0 flex-col">
+        <ModalFooter className="bg-muted mt-auto shrink-0 flex-col">
           <Button type="button" variant="cancel" onClick={onClose} className="w-full">
             {t('actions.close', 'Close')}
           </Button>

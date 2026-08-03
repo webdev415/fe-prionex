@@ -32,9 +32,13 @@ export function MinimizedCallBubble() {
   const [isRestored, setIsRestored] = useState(false)
   const hangupMutation = useHangupCall()
 
+  // 'incoming' counts as active: the call is still ringing, so its timer must
+  // keep running and restoring must not be treated as reopening a dead call.
   const isActiveCall =
     minimizedCall?.type === 'call-dialog' &&
-    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+    (minimizedCall.callState === 'dialing' ||
+      minimizedCall.callState === 'connected' ||
+      minimizedCall.callState === 'incoming')
 
   // Poll backend call state while minimized and call is active
   const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
@@ -48,7 +52,9 @@ export function MinimizedCallBubble() {
     const base = minimizedCall.elapsedTime ?? 0
     const isLive =
       minimizedCall.type === 'call-dialog' &&
-      (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+      (minimizedCall.callState === 'dialing' ||
+        minimizedCall.callState === 'connected' ||
+        minimizedCall.callState === 'incoming')
     if (isLive && minimizedCall.timestamp) {
       return base + Math.floor((Date.now() - minimizedCall.timestamp) / 1000)
     }
@@ -174,6 +180,7 @@ export function MinimizedCallBubble() {
   const getStatusColor = () => {
     if (minimizedCall.type === 'call-dialog') {
       if (minimizedCall.callState === 'connected') return 'bg-success-500'
+      if (minimizedCall.callState === 'incoming') return 'bg-primary-500'
       if (minimizedCall.callState === 'dialing') return 'bg-primary-500'
       if (minimizedCall.callState === 'failed') return 'bg-danger-500'
       if (minimizedCall.callState === 'ended') return 'bg-gray-500'
@@ -184,6 +191,8 @@ export function MinimizedCallBubble() {
 
   const getStatusText = () => {
     if (minimizedCall.type === 'call-dialog') {
+      if (minimizedCall.callState === 'incoming')
+        return t('pages.clients.modals.callDialog.incomingCall')
       if (minimizedCall.callState === 'dialing') return t('pages.clients.modals.callDialog.calling')
       if (minimizedCall.callState === 'connected')
         return t('pages.clients.modals.callDialog.connected')
@@ -458,6 +467,9 @@ export function MinimizedCallBubble() {
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           callId={minimizedCall.callId}
+          loans={minimizedCall.loans}
+          incomingContext={minimizedCall.incomingContext}
+          incomingClients={minimizedCall.incomingClients}
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
           minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}

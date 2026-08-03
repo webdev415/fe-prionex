@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { Button } from '@/components/ui/Button'
@@ -12,11 +12,12 @@ import {
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { ANALYTICS_BAR_DEFAULT, type AnalyticsBarState } from '../lib/analyticsUrlState'
+import { analyticsRangeExceedsCap, MAX_ANALYTICS_RANGE_DAYS } from '../lib/dateRange'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 import type { AnalyticsPeriod } from '@/features/operatorAnalytics'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 interface Props<S extends AnalyticsBarState> {
   value: S
@@ -37,8 +38,10 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
 }: Props<S>) {
   const { t } = useTranslation('common')
   const [draft, setDraft] = useSyncedState<S>(value, value)
+  const [rangeError, setRangeError] = useState<string | null>(null)
 
   const update = (patch: Partial<S>) => {
+    setRangeError(null)
     setDraft((prev) => {
       const merged = { ...prev, ...patch } as S
       if (merged.period !== 'custom') {
@@ -57,8 +60,33 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
     update({ operator_ids: ids.length ? ids : undefined } as Partial<S>)
   }
 
-  const handleApply = () => onApply(draft)
+  const handleApply = () => {
+    if (draft.period === 'custom' && draft.customFromDate && draft.customToDate) {
+      if (draft.customFromDate > draft.customToDate) {
+        setRangeError(
+          t(
+            'pages.actionAnalysis.filters.rangeFromAfterTo',
+            'The start date must be on or before the end date.'
+          )
+        )
+        return
+      }
+      if (analyticsRangeExceedsCap(draft.customFromDate, draft.customToDate)) {
+        setRangeError(
+          t(
+            'pages.actionAnalysis.filters.rangeTooWide',
+            'Custom range is too wide; maximum is {{days}} days.',
+            { days: MAX_ANALYTICS_RANGE_DAYS }
+          )
+        )
+        return
+      }
+    }
+    setRangeError(null)
+    onApply(draft)
+  }
   const handleClear = () => {
+    setRangeError(null)
     setDraft({ ...ANALYTICS_BAR_DEFAULT } as S)
     onClear()
   }
@@ -74,7 +102,7 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <EmployeeFilterDropdown
@@ -85,7 +113,7 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.period', 'Period')}
             </span>
             <Select
@@ -119,6 +147,11 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
         </div>
 
         <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+          {rangeError && (
+            <span className="text-error-600 flex-1 text-xs sm:text-sm" role="alert">
+              {rangeError}
+            </span>
+          )}
           <Button
             type="button"
             variant="white-secondary"

@@ -105,7 +105,7 @@ export function DocumentTypesTab() {
         className: 'w-16 text-base',
         render: (row) => (
           <span
-            className="inline-block h-4 w-4 rounded-full border border-gray-300"
+            className="border-border inline-block h-4 w-4 rounded-full border"
             style={{ backgroundColor: row.color }}
             aria-label={row.color}
           />
@@ -118,11 +118,13 @@ export function DocumentTypesTab() {
         className: 'text-base',
         render: (row) => (
           <span
-            className={row.is_hidden ? 'text-base text-gray-400 italic' : 'text-base text-gray-800'}
+            className={
+              row.is_hidden ? 'text-muted-foreground text-base italic' : 'text-foreground text-base'
+            }
           >
             {row.name}
             {row.is_hidden && (
-              <span className="ml-2 text-sm text-gray-400">
+              <span className="text-muted-foreground ml-2 text-sm">
                 ({t('pages.documentGeneration.types.hiddenLabel', 'hidden')})
               </span>
             )}
@@ -135,7 +137,7 @@ export function DocumentTypesTab() {
         align: 'center',
         className: 'w-32 text-base',
         render: (row) => (
-          <span className="text-base text-gray-600">{row.doc_count.toLocaleString()}</span>
+          <span className="text-muted-foreground text-base">{row.doc_count.toLocaleString()}</span>
         ),
       },
       {
@@ -150,7 +152,7 @@ export function DocumentTypesTab() {
               size="sm"
               onClick={() => handleOpenEdit(row)}
               title={t('actions.edit', 'Edit')}
-              className="text-gray-800 hover:bg-gray-100"
+              className="text-foreground hover:bg-muted"
             >
               <Icons.PencilEdit size={16} strokeWidth={2} />
             </Button>
@@ -162,8 +164,8 @@ export function DocumentTypesTab() {
               disabled={visibilityMutation.isPending}
               className={
                 row.is_hidden
-                  ? 'text-gray-400 hover:bg-gray-100'
-                  : 'text-gray-800 hover:bg-gray-100'
+                  ? 'text-muted-foreground hover:bg-muted'
+                  : 'text-foreground hover:bg-muted'
               }
             >
               <Icons.Eye size={16} strokeWidth={2} />
@@ -182,7 +184,7 @@ export function DocumentTypesTab() {
                         variant="ghost"
                         size="sm"
                         disabled
-                        className="text-red-600 hover:bg-red-50 disabled:opacity-40"
+                        className="text-error-600 hover:bg-error-100 disabled:opacity-40"
                       >
                         <Icons.Delete size={16} strokeWidth={2} />
                       </Button>
@@ -204,7 +206,7 @@ export function DocumentTypesTab() {
                 onClick={() => handleDelete(row)}
                 disabled={deleteMutation.isPending}
                 title={t('actions.delete', 'Delete')}
-                className="text-red-600 hover:bg-red-50 disabled:opacity-40"
+                className="text-error-600 hover:bg-error-100 disabled:opacity-40"
               >
                 <Icons.Delete size={16} strokeWidth={2} />
               </Button>
@@ -218,22 +220,29 @@ export function DocumentTypesTab() {
   )
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {confirmDialog}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-800">
-          {t('pages.documentGeneration.types.title', 'Document Types')}
-        </h2>
-        <Button onClick={handleOpenCreate} variant="primary">
-          <Icons.Add size={16} strokeWidth={2} className="mr-1" />
-          {t('pages.documentGeneration.types.newButton', 'New type')}
-        </Button>
+      <div className="flex items-center justify-end">
+        <div className="hidden sm:block">
+          <Button onClick={handleOpenCreate} variant="primary">
+            <Icons.Add size={16} strokeWidth={2} className="mr-1" />
+            {t('pages.documentGeneration.types.newButton', 'New type')}
+          </Button>
+        </div>
+        <button
+          type="button"
+          onClick={handleOpenCreate}
+          className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+          aria-label={t('pages.documentGeneration.types.newButton', 'New type')}
+        >
+          <Icons.Add size={20} strokeWidth={2} />
+        </button>
       </div>
 
       {isLoading ? (
         <TableSkeleton rows={5} columns={4} />
       ) : isError ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="border-error-200 bg-error-50 text-error-700 rounded border p-4 text-sm">
           {t('pages.documentGeneration.types.loadError', 'Failed to load document types.')}
         </div>
       ) : (

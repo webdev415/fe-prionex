@@ -71,6 +71,11 @@ export interface Scorecard {
   created_at: string
   completed_at: string | null
   sent_at: string | null
+  // Denormalized call attributes (KAN-827): call date, talk time (seconds),
+  // dialing type (white/grey/unknown). Nullable until backfilled.
+  call_started_at: string | null
+  call_talk_duration: number | null
+  call_telephony_type: string | null
 }
 
 export interface ScorecardHistoryItem {
@@ -83,6 +88,15 @@ export interface ScorecardHistoryItem {
   sent_at: string | null
 }
 
+/** Bulk call → evaluation status (Dialogue Evaluation list badge). Only calls
+ *  that have ≥1 scorecard are returned; a missing call_id = "not evaluated". */
+export interface CallScorecardStatus {
+  call_id: string
+  count: number
+  latest_status: ScorecardStatus
+  latest_score: number | null
+}
+
 export interface ScorecardListFilters {
   operator_id?: number[]
   trainer_id?: number[]
@@ -90,6 +104,11 @@ export interface ScorecardListFilters {
   period?: string
   from_date?: string
   to_date?: string
+  // KAN-827 Dialogue Evaluation filters (call attributes).
+  telephony_type?: string
+  call_from?: string
+  call_to?: string
+  min_talk_duration?: number
   page?: number
   page_size?: number
 }

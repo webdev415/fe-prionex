@@ -62,7 +62,7 @@ export function MarkersSubTab() {
 
   if (scoped.isEmptyResolution) {
     return (
-      <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+      <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
         {t(
           'pages.actionAnalysis.errors.emptyScopeResolution',
           'The selected scope returned no operators.'
@@ -76,7 +76,7 @@ export function MarkersSubTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.markerType', 'Type')}
             </label>
             <select
@@ -85,7 +85,7 @@ export function MarkersSubTab() {
                 setTypeFilter(e.target.value as MarkerType | '')
                 setPage(1)
               }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               <option value="">
                 {t('pages.actionAnalysis.filters.allMarkerTypes', 'All types')}
@@ -99,7 +99,7 @@ export function MarkersSubTab() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.status', 'Status')}
             </label>
             <select
@@ -108,7 +108,7 @@ export function MarkersSubTab() {
                 setStatusFilter(e.target.value as MarkerStatus | '')
                 setPage(1)
               }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               <option value="">
                 {t('pages.actionAnalysis.filters.allStatuses', 'All statuses')}
@@ -127,7 +127,7 @@ export function MarkersSubTab() {
           size="md"
           onClick={() => exportMutation.mutate(filters)}
           disabled={exportMutation.isPending || total === 0}
-          leftIcon={<Icons.Download size={16} className="text-white" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
@@ -136,10 +136,10 @@ export function MarkersSubTab() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-gray-100 text-sm">
-          <thead className="bg-gray-50">
-            <tr className="text-left text-xs font-medium tracking-wide text-gray-500 uppercase">
+      <div className="bg-card overflow-x-auto rounded-xl shadow-sm">
+        <table className="divide-border min-w-full divide-y text-sm">
+          <thead className="bg-muted">
+            <tr className="text-muted-foreground text-left text-xs font-medium tracking-wide uppercase">
               <th className="px-3 py-2">{t('pages.actionAnalysis.columns.date', 'Date')}</th>
               <th className="px-3 py-2">
                 {t('pages.actionAnalysis.columns.operator', 'Operator')}
@@ -152,28 +152,28 @@ export function MarkersSubTab() {
               <th className="px-3 py-2">{t('pages.actionAnalysis.columns.status', 'Status')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-gray-700">
+          <tbody className="divide-border text-foreground divide-y">
             {isLoading ? (
               <tr>
-                <td className="px-3 py-6 text-center text-gray-400" colSpan={6}>
+                <td className="text-muted-foreground px-3 py-6 text-center" colSpan={6}>
                   {t('common.loading', 'Loading…')}
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td className="px-3 py-6 text-center text-red-500" colSpan={6}>
+                <td className="text-error-700 px-3 py-6 text-center" colSpan={6}>
                   {t('pages.actionAnalysis.errors.loadMarkersFailed', 'Failed to load markers')}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-gray-400" colSpan={6}>
+                <td className="text-muted-foreground px-3 py-6 text-center" colSpan={6}>
                   {t('pages.actionAnalysis.markersEmpty', 'No markers in scope.')}
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
+                <tr key={row.id} className="hover:bg-muted">
                   <td className="px-3 py-2">{new Date(row.created_at).toLocaleString()}</td>
                   <td className="px-3 py-2">
                     {operatorLookup.get(row.operator_id) ?? `#${row.operator_id}`}
@@ -196,15 +196,15 @@ export function MarkersSubTab() {
                   <td className="px-3 py-2 font-mono text-xs">
                     {formatTimestamp(row.timestamp_ms)}
                   </td>
-                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600">
+                  <td className="text-muted-foreground max-w-[24rem] truncate px-3 py-2">
                     {row.comment ?? '—'}
                   </td>
                   <td className="px-3 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         row.status === 'sent'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
+                          ? 'bg-success-100 text-success-700'
+                          : 'bg-muted text-foreground'
                       }`}
                     >
                       {t(`pages.actionAnalysis.markers.status.${row.status}`, row.status)}
@@ -218,7 +218,7 @@ export function MarkersSubTab() {
       </div>
 
       {totalPages > 1 ? (
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="text-muted-foreground flex items-center justify-between text-sm">
           <span>
             {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} · {total}{' '}
             {t('pages.actionAnalysis.markersTotalSuffix', 'markers')}

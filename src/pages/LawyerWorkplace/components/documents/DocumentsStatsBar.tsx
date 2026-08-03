@@ -34,7 +34,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
       <DocumentsStatCard
         compact={isCompact}
         icon={<Icons.MailSend01 size={18} strokeWidth={1.5} />}
-        iconClassName="bg-[#E0F2FE] text-[#0369A1]"
+        iconClassName="bg-sky-100 text-sky-700"
         label={t('pages.lawyerWorkplace.documents.stats.outgoing', 'OUT · outgoing')}
         value={t('pages.lawyerWorkplace.documents.stats.countOfYear', {
           count: stats.outgoingCount,

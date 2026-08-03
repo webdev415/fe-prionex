@@ -12,6 +12,7 @@ import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanFactoringInfo } from './components/LoanFactoringInfo'
+import { LoanCalculationModal } from './components/LoanCalculationModal'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import {
@@ -59,6 +60,9 @@ import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
 import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
+import { ReversalCreateModal, type ReversalEligiblePayment } from './components/ReversalCreateModal'
+import { ClientReversalsTable } from './components/ClientReversalsTable'
+import { useReversals } from '@/features/reversals/hooks/useReversals'
 import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
 import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -104,6 +108,8 @@ import {
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
   useDisconnectRR,
+  useActivateRR,
+  useDeleteRRDraft,
   useRecordRROverpayment,
   useRRStatusHistory,
   useRROverpayments,
@@ -116,10 +122,24 @@ import {
 } from '@/features/clients/hooks/useClients'
 import { useClientChainInstances } from '@/features/taInteractions/hooks/useTAInteractions'
 import {
-  contactTypeLabel,
+  contactTypesForSection,
   pickDefaultActiveContactTypeId,
+  pickDefaultActiveContactTypeIdForSection,
 } from '@/features/clients/utils/contactTypeLabel'
+import {
+  requiresDigitsOnly,
+  hasNonDigitChars,
+  isDuplicateContactValue,
+} from '@/features/clients/utils/contactValueValidation'
+import {
+  isCallBlocked,
+  isMessageBlocked,
+  callBlockReason,
+  messageBlockReason,
+} from '@/features/clients/utils/contactBlocking'
+import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import { RR_STATUS, rrBadgeClass } from '@/features/clients/constants/rrStatus'
 import {
   generateSchedule,
   PERIODICITY_EVERY_N_DAYS,
@@ -229,7 +249,7 @@ const formatDateAsISO = (d: Date): string => {
 // must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
 // The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
 // this flag to true.
-const ENABLE_BULK_UBKI_SUBMISSION = false
+const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
@@ -262,10 +282,18 @@ export function ClientDetailPage() {
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
   const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
-  const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
+  // KAN-335: loan whose "detailed calculation after sale" modal is open.
+  const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
+  // KAN-339: id of the single loan row currently selected (highlighted) in the
+  // unified loans grid. Drives the enable/disable state of the bottom action
+  // panel. null = no selection → all row-scoped actions disabled.
+  const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
+  // KAN-334 — Reversal (storno) modal open state + optional row preselect.
+  const [isReversalOpen, setIsReversalOpen] = useState(false)
+  const [reversalInitialPaymentId, setReversalInitialPaymentId] = useState<number | null>(null)
   const [connectRrForm, setConnectRrForm] = useState({
     debtId: '' as string,
     connectionDate: null as Date | null,
@@ -344,6 +372,7 @@ export function ClientDetailPage() {
       return next
     })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  const [deleteDraftConfirm, setDeleteDraftConfirm] = useState<number | null>(null)
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
   const [disconnectRrConfirm, setDisconnectRrConfirm] = useState<{
@@ -479,8 +508,10 @@ export function ClientDetailPage() {
     [loans]
   )
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
-  const { data: restructuringAgreements = [], isLoading: isRrLoading } =
-    useClientRestructuringAgreements(clientId, isValidClientId)
+  const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
+    clientId,
+    isValidClientId
+  )
   const { data: rrDetail } = useRestructuringAgreementDetail(
     clientId,
     selectedRaId ?? 0,
@@ -499,6 +530,116 @@ export function ClientDetailPage() {
     !!selectedRaId
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+
+  const submitConnectRr = (saveMode: 'draft' | 'active') => {
+    const d = 'pages.clients.detail'
+    setConnectRrError(null)
+    if (!connectRrForm.debtId) {
+      setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+      return
+    }
+    if (!connectRrForm.connectionDate) {
+      setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+      return
+    }
+    if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+      setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+      return
+    }
+    for (let i = 0; i < connectRrForm.payments.length; i++) {
+      if (!connectRrForm.payments[i].date) {
+        setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+        return
+      }
+      if (!connectRrForm.payments[i].amount || parseFloat(connectRrForm.payments[i].amount) <= 0) {
+        setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+        return
+      }
+    }
+    const totalAmount = parseFloat(connectRrForm.totalAmount)
+    const paymentsSum = connectRrForm.payments.reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0),
+      0
+    )
+    if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+      setConnectRrError(
+        t(`${d}.rrValidationSumMismatch`, {
+          sum: paymentsSum.toFixed(2),
+          total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    const formatDate = (dt: Date | null) => {
+      if (!dt) return null
+      const y = dt.getFullYear()
+      const m = String(dt.getMonth() + 1).padStart(2, '0')
+      const day = String(dt.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+    createRr(
+      {
+        clientId,
+        data: {
+          debt_id: parseInt(connectRrForm.debtId),
+          connection_date: formatDate(connectRrForm.connectionDate),
+          restructuring_amount: totalAmount,
+          num_payments: connectRrForm.numPayments,
+          save_mode: saveMode,
+          payments: connectRrForm.payments.map((p) => ({
+            payment_date: formatDate(p.date),
+            payment_amount: parseFloat(p.amount),
+          })),
+          penalty_amount:
+            connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+              ? parseFloat(connectRrForm.penaltyAmount)
+              : null,
+          periodicity: connectRrForm.frequency
+            ? {
+                frequency: connectRrForm.frequency,
+                interval_days: connectRrForm.intervalDays
+                  ? parseInt(connectRrForm.intervalDays, 10)
+                  : null,
+                day_of_month: connectRrForm.dayOfMonth || null,
+              }
+            : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (saveMode === 'draft') {
+            toast.success(t(`${d}.saveDraftRRSuccess`, 'Draft saved'))
+          } else {
+            toast.success(t(`${d}.connectRRSuccess`))
+          }
+          setIsConnectRrOpen(false)
+        },
+        onError: (error) => {
+          const detail = (
+            error as import('axios').AxiosError<{
+              detail?: string | Array<{ msg?: string }>
+            }>
+          )?.response?.data?.detail
+          let message = t(
+            `${d}.connectRRError`,
+            t('errors.somethingWentWrong', 'Something went wrong')
+          )
+          if (typeof detail === 'string') {
+            message = detail
+          } else if (Array.isArray(detail) && detail.length > 0) {
+            message = detail
+              .map((e) => e.msg || '')
+              .filter(Boolean)
+              .join('; ')
+          }
+          setConnectRrError(message)
+          toast.error(message)
+        },
+      }
+    )
+  }
+
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
@@ -537,10 +678,15 @@ export function ClientDetailPage() {
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
+  const { mutate: activateRr, isPending: isActivatingRr } = useActivateRR()
+  const { mutate: deleteRrDraft, isPending: isDeletingRrDraft } = useDeleteRRDraft()
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
-    isValidClientId && activeRightCardTab === 'payments'
+    // Also load when the Reversal modal is open — the header "Reversal" button
+    // lives on the Loans tab, so we must fetch payments even when the Payments
+    // tab isn't active, otherwise the modal's picker is empty (KAN-334).
+    isValidClientId && (activeRightCardTab === 'payments' || isReversalOpen)
   )
   const [showAllCalls, setShowAllCalls] = useState(false)
   // Reset the expansion when the user switches sub-tabs so they re-enter
@@ -633,7 +779,11 @@ export function ClientDetailPage() {
     if (contactTypeId == null) {
       return 'recommender'
     }
-    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+    // Only phone (client/recommender) contacts reach here — 'other' types are
+    // non-phone and have no call/interaction row — but coerce defensively so an
+    // unexpected source falls back to the existing default.
+    const source = contactTypesById.get(contactTypeId)?.contact_source
+    return source === 'client' ? 'client' : 'recommender'
   }
 
   const defaultNewContactTypeId = useMemo(
@@ -671,6 +821,54 @@ export function ClientDetailPage() {
   const canCreateWriteoff = useHasPermission(PERMISSIONS.WRITEOFFS.CREATE)
   // KAN-245 — gate the Payments → "Writes-off" sub-tab's per-loan list.
   const canViewWriteoffs = useHasPermission(PERMISSIONS.WRITEOFFS.VIEW)
+  // KAN-334 — gate the "Reversal" button (create) and Reversals sub-tab (view).
+  const canCreateReversal = useHasPermission(PERMISSIONS.REVERSALS.CREATE)
+  const canViewReversals = useHasPermission(PERMISSIONS.REVERSALS.VIEW)
+  // KAN-334 — reversals for this client (drives the Reversals sub-tab, the
+  // "Reversed" indicator on the payments table, and the eligible-payment list
+  // for the reversal modal). Fetched when the Payments card is open and the
+  // operator can see or create reversals.
+  const { data: reversalsData } = useReversals(
+    { client_id: clientId },
+    isValidClientId &&
+      (activeRightCardTab === 'payments' || isReversalOpen) &&
+      (canViewReversals || canCreateReversal)
+  )
+  const reversedPaymentIds = useMemo(
+    () => new Set((reversalsData?.items ?? []).map((r) => r.original_payment_id)),
+    [reversalsData]
+  )
+  // credit/debt id → loan (contract) number, for the Reversals table.
+  const loanNumberByCreditId = useMemo(
+    () => new Map((loans ?? []).map((d) => [d.id, d.contract_number ?? undefined])),
+    [loans]
+  )
+  // Verified, credit-backed payments the operator can reverse (per Screenshot_14).
+  const eligibleReversalPayments = useMemo<ReversalEligiblePayment[]>(
+    () =>
+      (paymentsSection?.payments ?? [])
+        // Only verified, credit-backed, NON primary-creditor payments are
+        // reversible (KAN-334: only payments made through Prionex).
+        .filter(
+          (p) => p.status === 'verified' && p.debt_id != null && p.is_pre_acquisition !== true
+        )
+        .map((p) => ({
+          id: p.id,
+          amount: Number(p.amount),
+          paymentDate: formatDate(p.payment_date ?? undefined),
+          contractNumber: p.debt_contract_number ?? undefined,
+          isReversed: !!p.reallocated_at || reversedPaymentIds.has(p.id),
+          // Original split — fees = commission, fines = fine.
+          original: {
+            principal: Number(p.allocated_principal ?? 0),
+            interest: Number(p.allocated_interest ?? 0),
+            fine: Number(p.allocated_fines ?? 0),
+            penalty: Number(p.allocated_penalties ?? 0),
+            commission: Number(p.allocated_fees ?? 0),
+          },
+        })),
+    [paymentsSection, reversedPaymentIds]
+  )
   const hasEligibleLoanForWriteoff = useMemo(
     () => (loans ?? []).some((d) => d.status === 'active'),
     [loans]
@@ -714,6 +912,8 @@ export function ClientDetailPage() {
   )
   const canDisconnectRR = useHasPermission(PERMISSIONS.RESTRUCTURING.DISCONNECT)
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
+  const canActivateRR = useHasPermission(PERMISSIONS.RESTRUCTURING.ACTIVATE)
+  const canDeleteRRDraft = useHasPermission(PERMISSIONS.RESTRUCTURING.DELETE_DRAFT)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real) — async; does not block profile render
@@ -913,6 +1113,7 @@ export function ClientDetailPage() {
           updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
+          contactTags: r.contact_tags ?? [],
           blocking: r.blocking ?? {
             blocks_calls: false,
             blocks_sms: false,
@@ -940,6 +1141,7 @@ export function ClientDetailPage() {
             updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
+            contactTags: p.contact_tags ?? [],
             blocking: p.blocking ?? {
               blocks_calls: false,
               blocks_sms: false,
@@ -1317,7 +1519,7 @@ export function ClientDetailPage() {
           <Link
             key={linkedContact.id}
             to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
             title={linkedContact.fullName}
           >
             <span aria-hidden="true">🔗</span>
@@ -1385,6 +1587,7 @@ export function ClientDetailPage() {
     spamOptionEnabled: boolean
   } | null>(null)
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
+  const [contactEditorIsPhone, setContactEditorIsPhone] = useState<boolean | null>(null)
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
   const [contactDeleteConfirmId, setContactDeleteConfirmId] = useState<number | null>(null)
   const [contactError, setContactError] = useState<string | null>(null)
@@ -1400,8 +1603,15 @@ export function ClientDetailPage() {
   // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
-    'payments' | 'writes-off' | 'primary-creditor'
+    'payments' | 'writes-off' | 'reversals' | 'primary-creditor'
   >('payments')
+  // KAN-334 — cross-navigation highlights: a payment id highlighted in the
+  // Payments table (from the Reversals table), and a source-payment id
+  // highlighted in the Reversals table (from the Payments table's badge).
+  const [highlightedPaymentId, setHighlightedPaymentId] = useState<number | null>(null)
+  const [highlightedReversalPaymentId, setHighlightedReversalPaymentId] = useState<number | null>(
+    null
+  )
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   // KAN-610: activeCallSmsTab moved up (near activeCommentTab) for lazy gating.
   const [selectedMessageData, setSelectedMessageData] = useState<{
@@ -1440,17 +1650,17 @@ export function ClientDetailPage() {
   }
 
   const contactTypesForRecommenderSelect = useMemo(() => {
-    return [...contactTypes]
-      .filter((ct) => !ct.is_hidden || ct.id === contactFormData.contact_type_id)
-      .sort((a, b) =>
-        a.sort_order !== b.sort_order
-          ? a.sort_order - b.sort_order
-          : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-      )
-  }, [contactTypes, contactFormData.contact_type_id])
+    if (contactEditorIsPhone === null) return []
+    return contactTypesForSection(
+      contactTypes,
+      contactEditorIsPhone,
+      contactFormData.contact_type_id
+    )
+  }, [contactTypes, contactEditorIsPhone, contactFormData.contact_type_id])
 
   const resetContactEditor = () => {
     setContactEditorMode(null)
+    setContactEditorIsPhone(null)
     setEditingContactId(null)
     setContactError(null)
     setContactFormData({
@@ -1460,15 +1670,16 @@ export function ClientDetailPage() {
     })
   }
 
-  const handleStartAddContact = async () => {
+  const handleStartAddContact = async (isPhone: boolean) => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
+    setContactEditorIsPhone(isPhone)
     const { data: freshTypes } = await refetchContactTypes()
     const types = freshTypes ?? contactTypes
     setContactFormData({
       contact_value: '',
-      contact_type_id: pickDefaultActiveContactTypeId(types),
+      contact_type_id: pickDefaultActiveContactTypeIdForSection(types, isPhone),
       comment: '',
     })
   }
@@ -1478,10 +1689,12 @@ export function ClientDetailPage() {
     contactValue: string
     contactTypeId: number | null
     comment: string
+    isPhone: boolean
   }) => {
     setContactError(null)
     setEditingContactId(contact.id)
     setContactEditorMode('edit')
+    setContactEditorIsPhone(contact.isPhone)
     setContactFormData({
       contact_value: contact.contactValue ?? '',
       contact_type_id: contact.contactTypeId ?? defaultNewContactTypeId,
@@ -1496,6 +1709,29 @@ export function ClientDetailPage() {
       comment: contactFormData.comment.trim() || undefined,
     }
     if (!payload.contact_value) return
+
+    // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
+    const source = contactTypesById.get(contactFormData.contact_type_id)?.contact_source
+    if (requiresDigitsOnly(source) && hasNonDigitChars(payload.contact_value)) {
+      setContactError(
+        t(
+          'pages.clients.editModal.contactDigitsOnly',
+          'Only digits are allowed for this contact type'
+        )
+      )
+      return
+    }
+
+    // Requirement 2 — duplicate value across every Contact Source of this client,
+    // excluding the contact being edited from the comparison against itself.
+    const excludeId = contactEditorMode === 'edit' ? editingContactId : null
+    if (isDuplicateContactValue(client?.recommenders ?? [], payload.contact_value, excludeId)) {
+      setContactError(
+        t('pages.clients.editModal.contactDuplicate', 'This value already exists for this client')
+      )
+      return
+    }
+
     setContactError(null)
     if (contactEditorMode === 'edit' && editingContactId !== null) {
       updateContact(
@@ -1681,8 +1917,10 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">Failed to load client</p>
-        <p className="text-sm text-gray-600">{profileError?.message || 'An error occurred'}</p>
+        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-muted-foreground text-sm">
+          {profileError?.message || 'An error occurred'}
+        </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
           Back to Clients
         </Button>
@@ -1693,7 +1931,7 @@ export function ClientDetailPage() {
   if (!client) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">{t('pages.clients.detail.clientNotFound')}</p>
+        <p className="text-muted-foreground">{t('pages.clients.detail.clientNotFound')}</p>
         <Button variant="outline" onClick={() => navigate('/dashboard')} className="mt-4">
           {t('pages.clients.detail.backToClients')}
         </Button>
@@ -1705,6 +1943,38 @@ export function ClientDetailPage() {
   // closed loan — otherwise it would be a column full of dashes.
   const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
 
+  // KAN-339: RR is NOT a Debt.status value — debt.status stays active/closed.
+  // Restructuring lives in the separate restructuring_agreements list, keyed by
+  // debt_id, with its own status lookup (1 Connected · 2 Violated · 3 Cancelled ·
+  // 4 Completed · 5 Completed-early). We derive three per-loan sets from it:
+  //   • rrDebtIds        — has an RR agreement of ANY status → purple RR tag +
+  //                        the inline RR detail line under the row.
+  //   • connectedRrDebtIds — has a Connected (1) agreement → an OPEN loan's
+  //                        status badge turns yellow.
+  //   • activeRrDebtIds  — has a Connected (1) or Violated (2) agreement →
+  //                        already-on-active-RR, so Connect RR is disabled.
+  // Plain consts (not useMemo) because this sits below the component's early
+  // returns; the list is small so recomputing per render is negligible.
+  const rrDebtIds = new Set<number>()
+  const connectedRrDebtIds = new Set<number>()
+  const activeRrDebtIds = new Set<number>()
+  const draftRrDebtIds = new Set<number>()
+  for (const ra of restructuringAgreements) {
+    if (ra.debt_id == null) continue
+    rrDebtIds.add(ra.debt_id)
+    if (ra.status_id === 1) connectedRrDebtIds.add(ra.debt_id)
+    if (ra.status_id === 1 || ra.status_id === 2) activeRrDebtIds.add(ra.debt_id)
+    if (ra.status_id === RR_STATUS.Draft) draftRrDebtIds.add(ra.debt_id)
+  }
+  const selectedDebtHasDraft = connectRrForm.debtId
+    ? draftRrDebtIds.has(parseInt(connectRrForm.debtId))
+    : false
+
+  // The single loan row currently selected in the grid (drives the bottom
+  // action panel). Null if nothing is selected or the id is no longer present.
+  const selectedLoan = client.loans.find((loan) => loan.id === selectedLoanId) ?? null
+  const selectedLoanOnRr = selectedLoan ? activeRrDebtIds.has(selectedLoan.id) : false
+
   // Show the "Eligible for Return" column (TABLE460.f53) only when at least
   // one loan has a populated value AND it diverges from the live Remaining
   // Debt. If every row matches, the column would carry no information beyond
@@ -1714,6 +1984,46 @@ export function ClientDetailPage() {
   )
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
+    {
+      // KAN-339: status is the first column. The badge shows the loan lifecycle
+      // (Open / Closed) and its COLOR encodes state:
+      //   • closed                     → green
+      //   • open + Connected RR        → yellow
+      //   • open (otherwise)           → red
+      // A separate always-purple "RR" tag marks any loan that has a
+      // restructuring agreement of ANY status (its details render inline below
+      // the row). So an open+violated loan is a red badge WITH a purple RR tag.
+      key: 'status',
+      header: t('pages.clients.detail.tableHeaders.status', 'Status'),
+      align: 'center',
+      render: (loan) => {
+        const isClosed = loan.status === 'closed'
+        const isConnectedRr = !isClosed && connectedRrDebtIds.has(loan.id)
+        return (
+          <div className="flex items-center justify-center gap-1.5">
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                isClosed
+                  ? 'bg-green-100 text-green-800'
+                  : isConnectedRr
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-red-100 text-red-800'
+              )}
+            >
+              {isClosed
+                ? t('pages.clients.detail.loanStatusBadge.closed', 'Closed')
+                : t('pages.clients.detail.loanStatusBadge.open', 'Open')}
+            </span>
+            {rrDebtIds.has(loan.id) && (
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                {t('pages.clients.detail.rrTag', 'RR')}
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
     {
@@ -1790,24 +2100,18 @@ export function ClientDetailPage() {
       ),
     },
     {
-      key: 'actions',
-      header: t('pages.clients.detail.tableHeaders.actions'),
+      // KAN-339: the former "Actions" column is now "Info". It carries only
+      // informational / non-mutating controls — the agreement-info expansion,
+      // the detailed-calculation (*dc) modal (replacing the old green-check
+      // close icon), and the per-loan UBKI submit (whose sent-state indicator
+      // is inherently row-level). All status-changing actions (close / reopen /
+      // edit closure date / connect RR) live in the selection-driven bottom
+      // action panel below the grid.
+      key: 'info',
+      header: t('pages.clients.detail.tableHeaders.info', 'Info'),
       align: 'center',
       render: (loan) => {
-        // "Info" button — always visible, opens expansion below.
-        const infoButton = (
-          <button
-            onClick={() => toggleDebtExpand(loan.id)}
-            className="p-1 text-gray-500 hover:text-gray-700"
-            title={t('pages.clients.detail.loanInfo', 'Agreement info')}
-            aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
-          >
-            <Icons.Info size={18} />
-          </button>
-        )
-
-        // Tooltip used when the UBKI send button is disabled because the
-        // client is opted out.
+        // Tooltip for the UBKI send button (disabled when the client opted out).
         const ubkiSendTitle = doNotSendToUbki
           ? t(
               'pages.clients.detail.ubki.optedOutTooltip',
@@ -1819,91 +2123,54 @@ export function ClientDetailPage() {
               })
             : t('pages.clients.detail.ubki.send', 'Send to UBKI')
 
-        // UBKI send button — shown for any loan when the operator can submit.
-        const ubkiButton = canSubmitToUbki ? (
-          <button
-            onClick={() => submitDebtToUbki({ debtId: loan.id, clientId })}
-            disabled={doNotSendToUbki || isSubmittingToUbki}
-            className={cn(
-              'p-1 disabled:opacity-50',
-              loan.sentToCreditBureau
-                ? 'text-secondary-800 hover:text-secondary-900'
-                : 'text-gray-500 hover:text-gray-700',
-              doNotSendToUbki ? 'cursor-not-allowed' : ''
-            )}
-            title={ubkiSendTitle}
-          >
-            {loan.sentToCreditBureau ? (
-              <Icons.Checkmark size={18} strokeWidth={1.5} />
-            ) : (
-              <Icons.MailSend01 size={18} strokeWidth={1.5} />
-            )}
-          </button>
-        ) : null
-
-        if (loan.status === 'active') {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              {infoButton}
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                <button
-                  onClick={() => {
-                    setCloseLoanConfirm(loan.id)
-                    setCloseLoanClosureDate(getTodayAtMidnight())
-                    setCloseLoanDateError(null)
-                    setCloseLoanReason('')
-                  }}
-                  disabled={isClosingDebt}
-                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                  title={t('pages.clients.detail.closeLoan')}
-                >
-                  <Icons.Success size={18} />
-                </button>
-              </PermissionGuard>
-              {ubkiButton}
-            </div>
-          )
-        }
-        if (loan.status === 'closed') {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              {infoButton}
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditClosureDateDebtId(loan.id)
-                      setEditClosureDateValue(
-                        loan.creditClosedDate
-                          ? parseISODateAtMidnight(loan.creditClosedDate)
-                          : getTodayAtMidnight()
-                      )
-                      setEditClosureDateError(null)
-                    }}
-                    disabled={isUpdatingClosureDate}
-                    className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                    title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-                  >
-                    <Icons.Edit size={18} />
-                  </button>
-                  <button
-                    onClick={() => setReopenLoanConfirm(loan.id)}
-                    disabled={isReopeningDebt}
-                    className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
-                    title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
-                  >
-                    <Icons.Reload size={18} />
-                  </button>
-                </div>
-              </PermissionGuard>
-              {ubkiButton}
-            </div>
-          )
-        }
         return (
           <div className="flex items-center justify-center gap-2">
-            {infoButton}
-            {ubkiButton}
+            <button
+              onClick={(e) => {
+                // Don't let an action click toggle the row selection.
+                e.stopPropagation()
+                toggleDebtExpand(loan.id)
+              }}
+              className="text-muted-foreground hover:text-foreground p-1"
+              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            >
+              <Icons.Info size={18} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })
+              }}
+              className="text-muted-foreground hover:text-foreground p-1"
+              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+            >
+              <Icons.Calculate size={18} />
+            </button>
+            {canSubmitToUbki && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  submitDebtToUbki({ debtId: loan.id, clientId })
+                }}
+                disabled={doNotSendToUbki || isSubmittingToUbki}
+                className={cn(
+                  'p-1 disabled:opacity-50',
+                  loan.sentToCreditBureau
+                    ? 'text-primary-700 hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                  doNotSendToUbki ? 'cursor-not-allowed' : ''
+                )}
+                title={ubkiSendTitle}
+              >
+                {loan.sentToCreditBureau ? (
+                  <Icons.Checkmark size={18} strokeWidth={1.5} />
+                ) : (
+                  <Icons.MailSend01 size={18} strokeWidth={1.5} />
+                )}
+              </button>
+            )}
           </div>
         )
       },
@@ -1911,190 +2178,191 @@ export function ClientDetailPage() {
   ]
 
   type RrRow = (typeof restructuringAgreements)[0]
-  const rrColumns: Column<RrRow>[] = [
-    {
-      key: 'contract_number',
-      header: t('pages.clients.detail.tableHeaders.loanNumber'),
-      align: 'left',
-    },
-    {
-      key: 'seller_company',
-      header: t('pages.clients.detail.tableHeaders.counterparty'),
-      align: 'left',
-    },
-    {
-      key: 'purchase_date',
-      header: t('pages.clients.detail.tableHeaders.saleDate'),
-      align: 'left',
-      render: (row) => formatDate(row.purchase_date ?? undefined),
-    },
-    {
-      key: 'restructuring_amount',
-      header: t('pages.clients.detail.tableHeaders.rrAmount'),
-      align: 'right',
-      render: (row) => formatMoneyUAHTwoDecimals(Number(row.restructuring_amount ?? 0)),
-    },
-    {
-      key: 'first_payment_date',
-      header: t('pages.clients.detail.tableHeaders.rrConnectionDate'),
-      align: 'left',
-      render: (row) => formatDate(row.first_payment_date ?? undefined),
-    },
-    {
-      key: 'remaining_debt_amount',
-      header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
-      align: 'right',
-      render: (row) => formatMoneyUAHTwoDecimals(Number(row.remaining_debt_amount ?? 0)),
-    },
-    {
-      key: 'status_name',
-      header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
-      align: 'center',
-      render: (row) => {
-        // restructuring_statuses lookup ids:
-        //   1 Connected, 2 Violated, 3 Cancelled,
-        //   4 Completed, 5 Completed Early
-        // Pick a colour per status so all five are visually distinct.
-        // Backend `status_name` is rendered as-is; localisation of the
-        // label is the server's responsibility.
-        const sid = row.status_id
-        const label = row.status_name ?? '-'
-        const cls =
-          sid === 1
-            ? 'bg-blue-100 text-blue-800' // Connected — paying on time
-            : sid === 2
-              ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
-              : sid === 3
-                ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
-                : sid === 4
-                  ? 'bg-green-100 text-green-800' // Completed
-                  : sid === 5
-                    ? 'bg-emerald-100 text-emerald-800' // Completed Early
-                    : 'bg-gray-100 text-gray-600'
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
-          >
-            {label}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'id',
-      header: t('pages.clients.detail.tableHeaders.actions'),
-      align: 'center',
-      render: (row) => {
-        // Allowed-transition matrix mirrors the backend's
-        // ALLOWED_MANUAL_TRANSITIONS in rr_status_service.py:
-        //   1 Connected  → 2 Violated
-        //   2 Violated   → 1 Connected (restore)
-        //   3 Cancelled  → 1 Connected (restore)
-        // Terminal statuses (4 Completed / 5 Completed Early) get
-        // "view only". Disconnect is offered for any non-terminal
-        // status; it goes through a dedicated endpoint that records a
-        // mandatory reason.
-        const sid = row.status_id
-        const isTerminal = sid === 3 || sid === 4 || sid === 5
-        const isCompleted = sid === 4 || sid === 5
-        // Status eligibility: which transitions does the row's *current
-        // status* allow at all? (Independent of the operator's role.)
-        const showMarkViolated = sid === 1
-        const showRestore = sid === 2 || sid === 3
-        // Role permission for the "Restore" button depends on whether we're
-        // coming from Violated or Cancelled (two separate permissions).
-        const canRestoreFromHere =
-          (sid === 2 && canRestoreFromViolated) || (sid === 3 && canRestoreFromCancelled)
-        const transitionBusy = isTransitioningRr || isDisconnectingRr
-        const noPermTip = t(
-          'pages.clients.detail.noTransitionPermission',
-          "Your role doesn't allow this transition."
-        )
-        return (
-          <div className="flex items-center justify-center gap-1">
+  // KAN-339: the standalone "Loans on RR" grid was removed; RR details now
+  // render inline beneath each loan row (see renderRrInlineDetails). These
+  // helpers were lifted verbatim out of the old rrColumns so the RR status
+  // badge and lifecycle actions behave exactly as they did in the grid.
+  const renderRrStatusBadge = (row: RrRow) => {
+    const label = row.status_name ?? '-'
+    return (
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${rrBadgeClass(
+          row.status_id
+        )}`}
+      >
+        {label}
+      </span>
+    )
+  }
+  const renderRrActions = (row: RrRow) => {
+    // Allowed-transition matrix mirrors the backend's
+    // ALLOWED_MANUAL_TRANSITIONS in rr_status_service.py:
+    //   1 Connected  → 2 Violated
+    //   2 Violated   → 1 Connected (restore)
+    //   3 Cancelled  → 1 Connected (restore)
+    // Terminal statuses (4 Completed / 5 Completed Early) get "view only".
+    // Disconnect is offered for any non-terminal status; it goes through a
+    // dedicated endpoint that records a mandatory reason.
+    const sid = row.status_id
+    const isTerminal = sid === 3 || sid === 4 || sid === 5
+    const isCompleted = sid === 4 || sid === 5
+    const isDraft = sid === RR_STATUS.Draft
+    const draftBusy = isActivatingRr || isDeletingRrDraft
+    const showMarkViolated = sid === 1
+    const showRestore = sid === 2 || sid === 3
+    const canRestoreFromHere =
+      (sid === 2 && canRestoreFromViolated) || (sid === 3 && canRestoreFromCancelled)
+    const transitionBusy = isTransitioningRr || isDisconnectingRr
+    const noPermTip = t(
+      'pages.clients.detail.noTransitionPermission',
+      "Your role doesn't allow this transition."
+    )
+    return (
+      <div className="flex items-center justify-center gap-1">
+        <button
+          onClick={() => setSelectedRaId(row.id)}
+          className="text-primary-700 hover:text-muted-foreground p-1"
+          title={t('pages.clients.detail.viewDetail')}
+        >
+          <Icons.Eye size={18} />
+        </button>
+        {isDraft && (
+          <>
             <button
-              onClick={() => setSelectedRaId(row.id)}
-              className="text-secondary-800 hover:text-secondary-600 p-1"
-              title={t('pages.clients.detail.viewDetail')}
+              onClick={() => activateRr({ clientId, raId: row.id })}
+              disabled={draftBusy || !canActivateRR}
+              className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={canActivateRR ? t('pages.clients.detail.activateRR', 'Activate') : noPermTip}
             >
-              <Icons.Eye size={18} />
+              <Icons.Checkmark size={18} />
             </button>
-            {showMarkViolated && (
-              <button
-                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
-                disabled={transitionBusy || !canMarkViolated}
-                className="p-1 text-amber-600 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canMarkViolated
-                    ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
-                    : noPermTip
-                }
-              >
-                <Icons.Warning size={18} />
-              </button>
-            )}
-            {showRestore && (
-              <button
-                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
-                disabled={transitionBusy || !canRestoreFromHere}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canRestoreFromHere
-                    ? t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')
-                    : noPermTip
-                }
-              >
-                <Icons.Reload size={18} />
-              </button>
-            )}
-            {!isTerminal && (
-              <button
-                onClick={() => setCompleteRrConfirm(row.id)}
-                disabled={isCompletingRa || transitionBusy || !canCompleteRR}
-                className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip
-                }
-              >
-                <Icons.Success size={18} />
-              </button>
-            )}
-            {!isTerminal && (
-              <button
-                onClick={() =>
-                  setOverpaymentModal({
-                    raId: row.id,
-                    amount: '',
-                    allocationTarget: 'next',
-                    reason: '',
-                  })
-                }
-                disabled={transitionBusy || isRecordingOverpayment}
-                className="p-1 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
-                title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
-              >
-                <Icons.MoneyReceive01 size={18} />
-              </button>
-            )}
-            {!isCompleted && sid !== 3 && (
-              <button
-                onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
-                disabled={transitionBusy || !canDisconnectRR}
-                className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canDisconnectRR
-                    ? t('pages.clients.detail.disconnectRR', 'Disconnect RR')
-                    : noPermTip
-                }
-              >
-                <Icons.CancelCircle size={18} />
-              </button>
-            )}
+            <button
+              onClick={() => setDeleteDraftConfirm(row.id)}
+              disabled={draftBusy || !canDeleteRRDraft}
+              className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={
+                canDeleteRRDraft
+                  ? t('pages.clients.detail.deleteDraftRR', 'Delete draft')
+                  : noPermTip
+              }
+            >
+              <Icons.Delete size={18} />
+            </button>
+          </>
+        )}
+        {showMarkViolated && (
+          <button
+            onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
+            disabled={transitionBusy || !canMarkViolated}
+            className="text-warning-600 p-1 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canMarkViolated
+                ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
+                : noPermTip
+            }
+          >
+            <Icons.Warning size={18} />
+          </button>
+        )}
+        {showRestore && (
+          <button
+            onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
+            disabled={transitionBusy || !canRestoreFromHere}
+            className="p-1 text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canRestoreFromHere
+                ? t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')
+                : noPermTip
+            }
+          >
+            <Icons.Reload size={18} />
+          </button>
+        )}
+        {!isTerminal && !isDraft && (
+          <button
+            onClick={() => setCompleteRrConfirm(row.id)}
+            disabled={isCompletingRa || transitionBusy || !canCompleteRR}
+            className="text-success-600 p-1 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip}
+          >
+            <Icons.Success size={18} />
+          </button>
+        )}
+        {!isTerminal && !isDraft && (
+          <button
+            onClick={() =>
+              setOverpaymentModal({
+                raId: row.id,
+                amount: '',
+                allocationTarget: 'next',
+                reason: '',
+              })
+            }
+            disabled={transitionBusy || isRecordingOverpayment}
+            className="text-primary-700 hover:text-primary-700/80 p-1 disabled:opacity-50"
+            title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
+          >
+            <Icons.MoneyReceive01 size={18} />
+          </button>
+        )}
+        {!isCompleted && sid !== 3 && !isDraft && (
+          <button
+            onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
+            disabled={transitionBusy || !canDisconnectRR}
+            className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canDisconnectRR ? t('pages.clients.detail.disconnectRR', 'Disconnect RR') : noPermTip
+            }
+          >
+            <Icons.CancelCircle size={18} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // KAN-339: the inline RR detail line rendered under a loan row for every
+  // restructuring agreement it has (any status). Replaces the removed RR grid —
+  // same fields (amount / connection date / total to repay / status) plus the
+  // full lifecycle actions.
+  const renderRrInlineDetails = (debtId: number) => {
+    const agreements = restructuringAgreements.filter((ra) => ra.debt_id === debtId)
+    if (agreements.length === 0) return null
+    return (
+      <div className="flex flex-col gap-2">
+        {agreements.map((ra) => (
+          <div
+            key={ra.id}
+            className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border border-purple-200 bg-purple-50/60 px-3 py-2 text-xs"
+          >
+            <span className="font-semibold text-purple-800">
+              {t('pages.clients.detail.rrTag', 'RR')}
+            </span>
+            <span className="text-muted-foreground">
+              {t('pages.clients.detail.tableHeaders.rrAmount')}:{' '}
+              <span className="text-foreground font-medium">
+                {formatMoneyUAHTwoDecimals(Number(ra.restructuring_amount ?? 0))}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              {t('pages.clients.detail.tableHeaders.rrConnectionDate')}:{' '}
+              <span className="text-foreground font-medium">
+                {formatDate(ra.first_payment_date ?? undefined)}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              {t('pages.clients.detail.tableHeaders.totalToBeRepaid')}:{' '}
+              <span className="text-foreground font-medium">
+                {formatMoneyUAHTwoDecimals(Number(ra.remaining_debt_amount ?? 0))}
+              </span>
+            </span>
+            {renderRrStatusBadge(ra)}
+            <div className="ml-auto">{renderRrActions(ra)}</div>
           </div>
-        )
-      },
-    },
-  ]
+        ))}
+      </div>
+    )
+  }
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
     {
@@ -2185,9 +2453,11 @@ export function ClientDetailPage() {
       className: 'w-[200px] whitespace-normal',
       render: (activity) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          <span className="text-foreground text-xs font-medium">{activity.employee}</span>
           {activity.updated_at && (
-            <span className="text-[10px] text-gray-400">{formatDateTime(activity.updated_at)}</span>
+            <span className="text-muted-foreground text-[10px]">
+              {formatDateTime(activity.updated_at)}
+            </span>
           )}
         </div>
       ),
@@ -2205,7 +2475,7 @@ export function ClientDetailPage() {
               setEditingInteraction(activity._raw)
               setIsEditInteractionModalOpen(true)
             }}
-            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center rounded-full p-1 transition-colors"
           >
             <Icons.PencilEdit size={16} strokeWidth={1.5} />
           </button>
@@ -2284,24 +2554,24 @@ export function ClientDetailPage() {
         const dotInner = isVerified
           ? 'bg-success-500'
           : isPending
-            ? 'bg-gray-500'
+            ? 'bg-muted-foreground'
             : isCancelled
               ? 'bg-error-500'
-              : 'bg-gray-400'
+              : 'bg-muted-foreground'
         const dotOuter = isVerified
           ? 'bg-success-200'
           : isPending
-            ? 'bg-gray-200'
+            ? 'bg-muted'
             : isCancelled
               ? 'bg-error-200'
-              : 'bg-gray-200'
+              : 'bg-muted'
         const textClass = isVerified
           ? 'text-success-500'
           : isPending
-            ? 'text-gray-500'
+            ? 'text-muted-foreground'
             : isCancelled
               ? 'text-error-500'
-              : 'text-gray-500'
+              : 'text-muted-foreground'
 
         // Use debtSummary.paymentStatus keys (verified/pending/cancelled) for consistency
         const labelKey = isVerified
@@ -2310,6 +2580,11 @@ export function ClientDetailPage() {
             ? 'pages.clients.debtSummary.paymentStatus.pending'
             : 'pages.clients.debtSummary.paymentStatus.cancelled'
         const label = t(labelKey)
+
+        // KAN-334 — surface the "Reversed" indicator inline in the always-
+        // visible Status column (the per-row Reverse action / badge lives in
+        // the far-right Actions column, which can scroll off-screen).
+        const isReversed = reversedPaymentIds.has(payment.id)
 
         return (
           <div className="flex items-center gap-2">
@@ -2322,6 +2597,27 @@ export function ClientDetailPage() {
               <span className={cn('h-1.5 w-1.5 rounded-full', dotInner)} />
             </span>
             <span className={cn('text-xs font-medium', textClass)}>{label}</span>
+            {isReversed &&
+              (canViewReversals ? (
+                <button
+                  type="button"
+                  title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
+                  className="bg-primary-100 text-primary-700 inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setHighlightedReversalPaymentId(payment.id)
+                    setActivePaymentTab('reversals')
+                  }}
+                >
+                  <Icons.Reload size={10} strokeWidth={2} />
+                  {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                </button>
+              ) : (
+                <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                  <Icons.Reload size={10} strokeWidth={2} />
+                  {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                </span>
+              ))}
           </div>
         )
       },
@@ -2336,6 +2632,62 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.fixationOnEmployee'),
       align: 'left',
     },
+    // KAN-334 — Reversal indicator + action. Reversed payments show a badge
+    // and the Reverse button is disabled; eligible ones get an active button.
+    ...(canCreateReversal || canViewReversals
+      ? [
+          {
+            key: 'reversalActions',
+            header: '',
+            align: 'right' as const,
+            render: (payment: (typeof client.payments)[0]) => {
+              const isReversed = reversedPaymentIds.has(payment.id)
+              const isVerified = (payment.status ?? '').toLowerCase().trim() === 'verified'
+              if (isReversed) {
+                // Clicking the badge cross-navigates to this payment's row in
+                // the Reversals tab (the "vice versa" direction of KAN-334).
+                const badge = (
+                  <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
+                    <Icons.Reload size={12} strokeWidth={2} />
+                    {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                  </span>
+                )
+                if (!canViewReversals) return badge
+                return (
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80"
+                    title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setHighlightedReversalPaymentId(payment.id)
+                      setActivePaymentTab('reversals')
+                    }}
+                  >
+                    {badge}
+                  </button>
+                )
+              }
+              if (!canCreateReversal) return null
+              return (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={!isVerified}
+                  leftIcon={<Icons.Reload size={14} strokeWidth={1.5} />}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setReversalInitialPaymentId(payment.id)
+                    setIsReversalOpen(true)
+                  }}
+                >
+                  {t('pages.clients.detail.reversal')}
+                </Button>
+              )
+            },
+          },
+        ]
+      : []),
   ]
 
   const writeOffColumns: Column<(typeof client.writesOffs)[0]>[] = [
@@ -2470,14 +2822,14 @@ export function ClientDetailPage() {
       render: (item) => (
         <span
           className={cn(
-            'inline-block rounded px-2 py-0.5 text-[10px] font-medium capitalize',
+            'inline-block rounded px-2 py-0.5 text-[10px] font-medium',
             item.status === 'pending' && 'bg-yellow-100 text-yellow-600',
             item.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-            item.status === 'completed' && 'bg-green-100 text-green-600',
-            item.status === 'cancelled' && 'bg-gray-100 text-gray-500'
+            item.status === 'completed' && 'text-success-600 bg-green-100',
+            item.status === 'cancelled' && 'bg-muted text-muted-foreground'
           )}
         >
-          {item.status.replace(/_/g, ' ')}
+          {t(`taskStatuses.${item.status}`, item.status.replace(/_/g, ' '))}
         </span>
       ),
     },
@@ -2492,7 +2844,7 @@ export function ClientDetailPage() {
                 {item.status !== 'completed' && item.status !== 'cancelled' && (
                   <button
                     type="button"
-                    title="Complete task"
+                    title={t('pages.clients.tasks.completeTask', 'Complete task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2500,7 +2852,7 @@ export function ClientDetailPage() {
                         data: { status: 'completed' },
                       })
                     }}
-                    className="flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-50 hover:text-green-700"
+                    className="hover:text-success-700 flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-50"
                   >
                     <Icons.Tick02 size={14} strokeWidth={2} />
                   </button>
@@ -2508,7 +2860,7 @@ export function ClientDetailPage() {
                 {item.status !== 'cancelled' && item.status !== 'completed' && (
                   <button
                     type="button"
-                    title="Cancel task"
+                    title={t('pages.clients.tasks.cancelTask', 'Cancel task')}
                     onClick={(e) => {
                       e.stopPropagation()
                       updateTaskMutation.mutate({
@@ -2523,14 +2875,21 @@ export function ClientDetailPage() {
                 )}
                 <button
                   type="button"
-                  title="Delete task"
+                  title={t('pages.clients.tasks.deleteTask', 'Delete task')}
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (window.confirm('Are you sure you want to delete this task?')) {
+                    if (
+                      window.confirm(
+                        t(
+                          'pages.clients.tasks.confirmDelete',
+                          'Are you sure you want to delete this task?'
+                        )
+                      )
+                    ) {
                       deleteTaskMutation.mutate(item.id)
                     }
                   }}
-                  className="flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  className="hover:bg-error-100 flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:text-red-600"
                 >
                   <Icons.Delete size={14} strokeWidth={2} />
                 </button>
@@ -2554,10 +2913,10 @@ export function ClientDetailPage() {
                 onClick={() => navigate('/dashboard')}
                 className="flex h-6 w-6 shrink-0 items-center justify-center"
               >
-                <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+                <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
               </button>
               <div className="flex min-w-0 items-center gap-2">
-                <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                <h1 className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl">
                   {client.fullName}
                 </h1>
                 <button
@@ -2566,14 +2925,14 @@ export function ClientDetailPage() {
                   disabled={!client.fullName}
                   aria-label={t('pages.clients.detail.copyName', 'Copy name')}
                   title={t('pages.clients.detail.copyName', 'Copy name')}
-                  className="text-dark-500 hover:text-secondary-800 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-foreground hover:text-primary-700 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icons.Copy size={18} strokeWidth={1.5} />
                 </button>
               </div>
             </div>
             <div className="flex flex-row items-center gap-2">
-              <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+              <span className="text-foreground bg-card/10 flex items-center rounded-[16px] px-3 py-0 text-sm">
                 {client.score} {t('pages.clients.activity.score')}
               </span>
               {/* Same three rules as the client list, in the same order. They
@@ -2627,7 +2986,7 @@ export function ClientDetailPage() {
                 onClick={() => {
                   const phoneNumber = client.phones?.[0]?.number
                   if (!phoneNumber) {
-                    toast.error('Client has no phone number')
+                    toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                     return
                   }
 
@@ -2651,13 +3010,13 @@ export function ClientDetailPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100"
-                  aria-label="More actions"
+                  className="text-foreground flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+                  aria-label={t('pages.clients.detail.moreActions', 'More actions')}
                 >
                   <Icons.FilterVertical size={18} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuContent align="end" className="border-border bg-card w-48">
                 <DropdownMenuItem
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="flex cursor-pointer items-center gap-2 text-sm text-red-600 hover:text-red-700"
@@ -2677,14 +3036,14 @@ export function ClientDetailPage() {
         />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
-          <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
+          <div className="client-panel-scroll bg-card/50 flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
             {/* Credit Details (top part of card) */}
             <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
               <div className="flex flex-col gap-2 self-stretch">
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {isClientTagsLoading ? (
-                      <span className="inline-block h-5 w-24 animate-pulse rounded-full bg-gray-200" />
+                      <span className="bg-muted-foreground/25 inline-block h-5 w-24 animate-pulse rounded-full" />
                     ) : clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
@@ -2714,7 +3073,7 @@ export function ClientDetailPage() {
                           <button
                             type="button"
                             onClick={() => setIsTagModalOpen(true)}
-                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                            className="bg-muted text-muted-foreground hover:bg-muted rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
                           >
                             {t('pages.tags.showMore', '+{{count}} more', {
                               count: clientTags.length - 3,
@@ -2734,7 +3093,7 @@ export function ClientDetailPage() {
                         </button>
                       </>
                     ) : (
-                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                      <span className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                         {t('pages.clients.detail.noTagsAssigned')}
                       </span>
                     )}
@@ -2742,8 +3101,8 @@ export function ClientDetailPage() {
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                     <button
                       onClick={() => setIsTagModalOpen(true)}
-                      className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -2753,20 +3112,20 @@ export function ClientDetailPage() {
               </div>
               <div className="flex flex-col gap-1 self-stretch">
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.detail.department')}
                   </label>
-                  <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {client.department || '-'}
                   </p>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleEmployee')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_employee_id && (
-                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.responsibleEmployee}
                       </p>
                     )}
@@ -2774,8 +3133,8 @@ export function ClientDetailPage() {
                         the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <button
                       onClick={() => setAssignRoleModalMode('employee')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign employee"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.assignEmployee', 'Assign employee')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -2783,12 +3142,12 @@ export function ClientDetailPage() {
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleSearcher')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_searcher_id && (
-                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.responsibleResearcher}
                       </p>
                     )}
@@ -2796,8 +3155,8 @@ export function ClientDetailPage() {
                         the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <button
                       onClick={() => setAssignRoleModalMode('searcher')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign searcher"
+                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title={t('pages.clients.detail.assignSearcher', 'Assign searcher')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
@@ -2807,7 +3166,7 @@ export function ClientDetailPage() {
                 {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
                 <div className="flex min-h-8 items-center self-stretch p-0">
                   <label
-                    className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700"
+                    className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]"
                     title={t(
                       'pages.clients.detail.ubki.doNotSendHint',
                       'When enabled, this client is excluded from all UBKI submissions.'
@@ -2830,7 +3189,7 @@ export function ClientDetailPage() {
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
                 <div className="flex flex-1 shrink-0 items-center gap-2.5">
-                  <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.detail.phones')}
                   </label>
                 </div>
@@ -2842,7 +3201,7 @@ export function ClientDetailPage() {
                           <div className="flex min-w-0 flex-col items-end gap-1">
                             <span
                               className={cn(
-                                'text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                                'text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
                                 phone.blocking.blocks_calls && 'line-through opacity-70'
                               )}
                             >
@@ -2854,8 +3213,7 @@ export function ClientDetailPage() {
                                   <button
                                     key={tag.value_id}
                                     type="button"
-                                    className="rounded-full px-1.5 py-0.5 text-[10px] text-white"
-                                    style={{ backgroundColor: tag.color || '#64748b' }}
+                                    className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                                     title={tag.category_name}
                                     onClick={() =>
                                       phone.contactId > 0 &&
@@ -2865,7 +3223,13 @@ export function ClientDetailPage() {
                                       })
                                     }
                                   >
-                                    {tag.name}
+                                    <TagBadge
+                                      name={tag.name}
+                                      color={tag.color || '#64748b'}
+                                      size="xs"
+                                      isProtected={tag.is_protected}
+                                      isSystem={tag.is_system}
+                                    />
                                   </button>
                                 ))}
                               </div>
@@ -2877,7 +3241,7 @@ export function ClientDetailPage() {
                               <button
                                 type="button"
                                 className={cn(
-                                  'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
+                                  'text-muted-foreground hover:text-foreground flex h-[20px] w-[20px] shrink-0 items-center justify-center',
                                   phone.contactId > 0 && 'cursor-pointer'
                                 )}
                                 onClick={() => {
@@ -2953,7 +3317,7 @@ export function ClientDetailPage() {
                                   disabled={
                                     !user?.is_agent ||
                                     !user?.asterisk_extension ||
-                                    phone.blocking.blocks_calls
+                                    isCallBlocked(phone.blocking)
                                   }
                                   onClick={() => {
                                     openOutboundCall(
@@ -2964,16 +3328,16 @@ export function ClientDetailPage() {
                                   }}
                                   className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                                 >
-                                  {phone.blocking.blocks_calls ? (
+                                  {isCallBlocked(phone.blocking) ? (
                                     <Icons.Lock size={16} className="flex-shrink-0" />
                                   ) : (
                                     <Icons.Headset size={16} className="flex-shrink-0" />
                                   )}
                                 </button>
                               </TooltipTrigger>
-                              {phone.blocking.blocks_calls && (
+                              {isCallBlocked(phone.blocking) && (
                                 <TooltipContent>
-                                  {phone.blocking.reasons.join('; ') ||
+                                  {callBlockReason(phone.blocking) ||
                                     t('pages.contactTags.callsBlocked', 'Calls blocked')}
                                 </TooltipContent>
                               )}
@@ -2981,29 +3345,33 @@ export function ClientDetailPage() {
                           </PermissionGuard>
                           <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForSMS(phone.number)
                                 setIsSendSMSModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              title={
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
+                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                  : t('pages.clients.detail.sendSms', 'Send SMS')
+                              }
                             >
                               <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                             </button>
                           </PermissionGuard>
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForMessage(phone.number)
                                 setIsSendMessageModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                               title={
-                                phone.blocking.blocks_sms
-                                  ? phone.blocking.reasons
-                                      .filter((r) => r.toLowerCase().includes('sms'))
-                                      .join('; ') ||
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
                                     t('pages.contactTags.smsBlocked', 'SMS blocked')
                                   : t('pages.clients.detail.sendMessage', 'Send message')
                               }
@@ -3046,21 +3414,21 @@ export function ClientDetailPage() {
               </div>
             </div>
 
-            <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+            <div className="bg-muted mx-2 flex h-px flex-col items-start gap-2.5 self-stretch p-0"></div>
 
             {/* Personal & Contact Details - 4 left tabs inside client card */}
             <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
               {/* Vertical tab icons - horizontal scroll on mobile */}
-              <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
+              <div className="border-border relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
                 {/* Left Arrow Button - only show on mobile when scrolling */}
                 {showClientCardLeftArrow && (
                   <button
                     onClick={() => scrollClientCardTabs('left')}
-                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs left"
+                    className="from-card via-card/95 absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3068,11 +3436,11 @@ export function ClientDetailPage() {
                 {showClientCardRightArrow && (
                   <button
                     onClick={() => scrollClientCardTabs('right')}
-                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                    aria-label="Scroll tabs right"
+                    className="from-card via-card/95 absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3091,9 +3459,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('related')}
                     title={t('pages.clients.detail.tabs.relatedTags', 'Related tags')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'related'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3101,7 +3469,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'related' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'related' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3111,9 +3479,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('personal')}
                     title={t('pages.clients.detail.tabs.personal')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'personal'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3121,7 +3489,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'personal' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3131,9 +3499,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('work')}
                     title={t('pages.clients.detail.tabs.work')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'work'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3141,7 +3509,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'work' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3151,9 +3519,9 @@ export function ClientDetailPage() {
                     onClick={() => setActiveClientCardTab('passport')}
                     title={t('pages.clients.detail.tabs.passport')}
                     className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                       activeClientCardTab === 'passport'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
                         : 'md:border-transparent'
                     )}
                   >
@@ -3161,7 +3529,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
+                        activeClientCardTab === 'passport' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3198,80 +3566,82 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.tin')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.tin}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.dateOfBirth')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.dateOfBirth}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.age')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.age}
                       </p>
                     </div>
-                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    <div className="bg-muted mx-2 h-px self-stretch"></div>
                     {client.addresses.map((address) => (
                       <React.Fragment key={address.id}>
                         <div className="flex items-start self-stretch p-0">
                           <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                               {address.addressType === 'registration'
                                 ? t('pages.clients.detail.registrationAddress')
                                 : t('pages.clients.detail.personalAddress')}
                             </label>
                           </div>
-                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          <p className="text-foreground min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
                             {address.fullAddress}
                           </p>
                         </div>
                       </React.Fragment>
                     ))}
-                    {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
-                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    {client.addresses.length === 0 && (
+                      <p className="text-muted-foreground text-xs">-</p>
+                    )}
+                    <div className="bg-muted mx-2 h-px self-stretch"></div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.maritalStatus')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.maritalStatus}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.numberOfFamilyMembers')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.familyMembers}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.incomeLevel')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.incomeLevel}
                       </p>
                     </div>
@@ -3282,71 +3652,71 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.documentType')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.documentType}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.passportSeries')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.passportSeries}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.passportNumber')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.passportNumber}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.issuedBy')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.issuedBy}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.issuedDate')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.issuedDate}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.expiresDate')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.expiresDate}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.gender')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.gender}
                       </p>
                     </div>
@@ -3357,63 +3727,63 @@ export function ClientDetailPage() {
                   <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.organizationName')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.organizationName || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.position')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.position || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.experience')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.experience || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.managerFullName')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.managerFullName || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.employmentType')}
                         </label>
                       </div>
-                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.work?.employmentType || '-'}
                       </p>
                     </div>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
                           {t('pages.clients.detail.workPhone')}
                         </label>
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
                         <div className="flex min-w-0 flex-col items-end gap-1">
-                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          <span className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                             {client.work?.workPhone || '-'}
                           </span>
                           {client.work?.workPhone &&
@@ -3484,18 +3854,18 @@ export function ClientDetailPage() {
 
           {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
           <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
-            <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
+            <div className="bg-card/50 flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg p-0">
               {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
-              <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+              <div className="border-border relative mx-3 flex items-center gap-0 self-stretch border-b">
                 {/* Left Arrow Button */}
                 {showLeftArrow && (
                   <button
                     onClick={() => scrollTabs('left')}
-                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs left"
+                    className="from-card via-card/95 absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3503,11 +3873,11 @@ export function ClientDetailPage() {
                 {showRightArrow && (
                   <button
                     onClick={() => scrollTabs('right')}
-                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                    aria-label="Scroll tabs right"
+                    className="from-card via-card/95 absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3528,8 +3898,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'loans'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Folder size={20} className="shrink-0 text-current" />
@@ -3545,8 +3915,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'payments'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Wallet01 size={20} className="shrink-0 text-current" />
@@ -3572,7 +3942,7 @@ export function ClientDetailPage() {
                             setIsRecordPaymentModalOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3586,8 +3956,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'recommenders'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
@@ -3603,8 +3973,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'operators'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
@@ -3630,7 +4000,7 @@ export function ClientDetailPage() {
                             setIsAssignClientOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3644,8 +4014,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'call-sms-history'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Clock01 size={20} className="shrink-0 text-current" />
@@ -3661,8 +4031,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'tasks'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
@@ -3689,7 +4059,7 @@ export function ClientDetailPage() {
                             setIsTaskModalOpen(true)
                           }
                         }}
-                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                        className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                       >
                         +
                       </span>
@@ -3705,8 +4075,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'documents'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.File size={20} className="shrink-0 text-current" />
@@ -3731,7 +4101,7 @@ export function ClientDetailPage() {
                           setIsUploadDocModalOpen(true)
                         }
                       }}
-                      className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                      className="bg-primary-300 text-primary-foreground ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold group-hover:flex"
                     >
                       +
                     </span>
@@ -3744,193 +4114,271 @@ export function ClientDetailPage() {
                 {/* Tab 1: Loans */}
                 {activeRightCardTab === 'loans' && (
                   <div className="flex w-full flex-col gap-0">
-                    {/* Secondary filters below primary tabs */}
-                    <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
-                      <button
-                        onClick={() => setActiveLoanTab('process')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'process'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.loansInProcess')}
-                      </button>
-                      <button
-                        onClick={() => setActiveLoanTab('closed')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'closed'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.closedLoans')}
-                      </button>
-                      <button
-                        onClick={() => setActiveLoanTab('rr')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'rr'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.loansOnRR')}
-                      </button>
-                    </div>
-                    {/* Data table filtered by sub-tab */}
+                    {/* KAN-339: single unified loans grid — no sub-tabs. Status
+                        is the first column (Open/Closed badge + purple RR tag).
+                        Open loans sort before closed ones. Clicking a row selects
+                        (highlights) it, driving the bottom action panel; clicking
+                        it again clears the selection. Every loan that has a
+                        restructuring agreement shows an always-visible RR detail
+                        line beneath its row; the Info button additionally toggles
+                        the factoring-agreement panel. */}
                     <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                      {activeLoanTab === 'rr' ? (
-                        isRrLoading ? (
-                          <TableSkeleton columns={7} rows={3} />
-                        ) : (
-                          <DataTable
-                            columns={rrColumns}
-                            data={restructuringAgreements}
-                            className="w-full"
-                          />
-                        )
-                      ) : isLoansLoading ? (
+                      {isLoansLoading ? (
                         <TableSkeleton columns={7} rows={3} />
                       ) : (
                         <DataTable
                           columns={loanColumns}
-                          data={client.loans.filter((loan) => {
-                            if (activeLoanTab === 'process') return loan.status === 'active'
-                            if (activeLoanTab === 'closed') return loan.status === 'closed'
-                            return true
-                          })}
+                          data={[...client.loans].sort(
+                            (a, b) =>
+                              (a.status === 'closed' ? 1 : 0) - (b.status === 'closed' ? 1 : 0)
+                          )}
                           className="w-full"
-                          expandedIds={expandedDebtIds}
+                          onRowClick={(loan) =>
+                            setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
+                          }
+                          rowClassName={(loan) =>
+                            selectedLoanId === loan.id
+                              ? 'ring-information-400 !bg-information-50 ring-1 ring-inset'
+                              : undefined
+                          }
+                          expandedIds={new Set<number>([...rrDebtIds, ...expandedDebtIds])}
                           renderExpanded={(loan) => (
-                            <LoanFactoringInfo
-                              legalName={loan.sellerLegalName}
-                              previousLender={loan.factoringAgreementPreviousLender}
-                              purchaseDate={loan.factoringAgreementPurchaseDate}
-                            />
+                            <div className="flex flex-col gap-3">
+                              {rrDebtIds.has(loan.id) && renderRrInlineDetails(loan.id)}
+                              {expandedDebtIds.has(loan.id) && (
+                                <LoanFactoringInfo
+                                  legalName={loan.sellerLegalName}
+                                  previousLender={loan.factoringAgreementPreviousLender}
+                                  purchaseDate={loan.factoringAgreementPurchaseDate}
+                                />
+                              )}
+                            </div>
                           )}
                         />
                       )}
                     </div>
-                    {/* Action buttons at the bottom */}
-                    <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
-                      {/* <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MoneyRemove01 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.writeOff')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MoneyNotFound04 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.reversal')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.CancelCircle size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.closeLoan')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MailSend01 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.sendToUBCI')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.Calculate size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.rrCalculator')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.PlusSignCircle size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.makePayment')}
-                    </Button> */}
-                      <Button
-                        variant="secondary"
-                        leftIcon={<Icons.Calculate size={20} />}
-                        className="rounded text-xs md:text-sm"
-                        size="sm"
-                        onClick={() => {
-                          setConnectRrForm({
-                            debtId: eligibleLoansForRr[0] ? String(eligibleLoansForRr[0].id) : '',
-                            connectionDate: null,
-                            totalAmount: '',
-                            numPayments: 1,
-                            frequency: '',
-                            intervalDays: '',
-                            dayOfMonth: '',
-                            clampedRows: [],
-                            penaltyAmount: '',
-                            payments: [{ date: null, amount: '' }],
-                          })
-                          setConnectRrError(null)
-                          setIsConnectRrOpen(true)
-                        }}
-                      >
-                        {t('pages.clients.detail.connectRR')}
-                      </Button>
-                      {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
-                      {canCreateWriteoff && hasEligibleLoanForWriteoff && (
+                    {/* KAN-339: selection-driven action panel. Row-scoped
+                        actions (Close / Reopen / Edit closure date / Connect RR)
+                        enable only when a single loan row is selected AND its
+                        status permits the action; otherwise they are disabled with
+                        an explanatory tooltip. Write-off / Reversal remain
+                        client-scoped (their own modals carry a picker). */}
+                    <div className="flex flex-col gap-2 self-stretch px-3 py-4 md:px-6">
+                      {!selectedLoan && (
+                        <p className="text-muted-foreground text-xs">
+                          {t(
+                            'pages.clients.detail.selectLoanHint',
+                            'Select a loan row to enable actions.'
+                          )}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        {/* Close loan — only for a selected active (open/rr) loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Success size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan || selectedLoan.status !== 'active' || isClosingDebt
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'active'
+                                  ? t(
+                                      'pages.clients.detail.closeLoanDisabledHint',
+                                      'Only an open loan can be closed.'
+                                    )
+                                  : t('pages.clients.detail.closeLoan')
+                            }
+                            onClick={() => {
+                              if (!selectedLoan) return
+                              setCloseLoanConfirm(selectedLoan.id)
+                              setCloseLoanClosureDate(getTodayAtMidnight())
+                              setCloseLoanDateError(null)
+                              setCloseLoanReason('')
+                            }}
+                          >
+                            {t('pages.clients.detail.closeLoan')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Reopen loan — only for a selected closed loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Reload size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan || selectedLoan.status !== 'closed' || isReopeningDebt
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'closed'
+                                  ? t(
+                                      'pages.clients.detail.reopenLoanDisabledHint',
+                                      'Only a closed loan can be reopened.'
+                                    )
+                                  : t('pages.clients.detail.reopenLoan', 'Reopen loan')
+                            }
+                            onClick={() => selectedLoan && setReopenLoanConfirm(selectedLoan.id)}
+                          >
+                            {t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Edit closure date — only for a selected closed loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Edit size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan ||
+                              selectedLoan.status !== 'closed' ||
+                              isUpdatingClosureDate
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'closed'
+                                  ? t(
+                                      'pages.clients.detail.editClosureDateDisabledHint',
+                                      'Only a closed loan has a closure date to edit.'
+                                    )
+                                  : t('pages.clients.detail.editClosureDate', 'Edit closure date')
+                            }
+                            onClick={() => {
+                              if (!selectedLoan) return
+                              setEditClosureDateDebtId(selectedLoan.id)
+                              setEditClosureDateValue(
+                                selectedLoan.creditClosedDate
+                                  ? parseISODateAtMidnight(selectedLoan.creditClosedDate)
+                                  : getTodayAtMidnight()
+                              )
+                              setEditClosureDateError(null)
+                            }}
+                          >
+                            {t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Connect RR — for a selected non-closed loan that is not
+                            already on an active restructuring agreement. */}
                         <Button
                           variant="secondary"
-                          leftIcon={<Icons.MoneyRemove01 size={20} />}
+                          leftIcon={<Icons.Calculate size={20} />}
                           className="rounded text-xs md:text-sm"
                           size="sm"
-                          onClick={() => setIsWriteoffOpen(true)}
+                          disabled={
+                            !selectedLoan || selectedLoan.status === 'closed' || selectedLoanOnRr
+                          }
+                          title={
+                            !selectedLoan
+                              ? t(
+                                  'pages.clients.detail.selectLoanHint',
+                                  'Select a loan row to enable actions.'
+                                )
+                              : selectedLoan.status === 'closed'
+                                ? t(
+                                    'pages.clients.detail.connectRRClosedHint',
+                                    'A closed loan cannot be restructured.'
+                                  )
+                                : selectedLoanOnRr
+                                  ? t(
+                                      'pages.clients.detail.connectRROnRrHint',
+                                      'This loan is already on an active restructuring.'
+                                    )
+                                  : t('pages.clients.detail.connectRR')
+                          }
+                          onClick={() => {
+                            if (!selectedLoan) return
+                            setConnectRrForm({
+                              debtId: String(selectedLoan.id),
+                              connectionDate: null,
+                              totalAmount: '',
+                              numPayments: 1,
+                              frequency: '',
+                              intervalDays: '',
+                              dayOfMonth: '',
+                              clampedRows: [],
+                              penaltyAmount: '',
+                              payments: [{ date: null, amount: '' }],
+                            })
+                            setConnectRrError(null)
+                            setIsConnectRrOpen(true)
+                          }}
                         >
-                          {t('pages.clients.detail.writeOff')}
+                          {t('pages.clients.detail.connectRR')}
                         </Button>
-                      )}
-                      {/* Bulk "Send all loans to UBKI" — gated by the same
+                        {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
+                        {canCreateWriteoff && hasEligibleLoanForWriteoff && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.MoneyRemove01 size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={() => setIsWriteoffOpen(true)}
+                          >
+                            {t('pages.clients.detail.writeOff')}
+                          </Button>
+                        )}
+                        {/* KAN-334 — Reversal (storno) button, right of Write-off
+                          per Screenshot_14.png. Opens the reallocation modal. */}
+                        {canCreateReversal && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Reload size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={() => setIsReversalOpen(true)}
+                          >
+                            {t('pages.clients.detail.reversal')}
+                          </Button>
+                        )}
+                        {/* Bulk "Send all loans to UBKI" — gated by the same
                           submit_to_ubki permission as the per-loan send button.
                           Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
                           (see the flag definition above). */}
-                      {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.MailSend01 size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          onClick={handleBulkSubmitToUbki}
-                          disabled={
-                            doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
-                          }
-                          title={
-                            doNotSendToUbki
-                              ? t(
-                                  'pages.clients.detail.ubki.optedOutTooltip',
-                                  'Client is opted out of UBKI; submission is disabled.'
-                                )
-                              : ubkiLoanIds.length === 0
+                        {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.MailSend01 size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={handleBulkSubmitToUbki}
+                            disabled={
+                              doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
+                            }
+                            title={
+                              doNotSendToUbki
                                 ? t(
-                                    'pages.clients.detail.ubki.noLoansTooltip',
-                                    'This client has no loans to submit.'
+                                    'pages.clients.detail.ubki.optedOutTooltip',
+                                    'Client is opted out of UBKI; submission is disabled.'
                                   )
-                                : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
-                          }
-                        >
-                          {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
-                        </Button>
-                      )}
+                                : ubkiLoanIds.length === 0
+                                  ? t(
+                                      'pages.clients.detail.ubki.noLoansTooltip',
+                                      'This client has no loans to submit.'
+                                    )
+                                  : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
+                            }
+                          >
+                            {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {/* UBKI submission history — scoped to this client's loans. */}
                     <div className="px-3 pb-4 md:px-6">
@@ -3946,10 +4394,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActivePaymentTab('payments')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'payments'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.payments')}
@@ -3957,21 +4405,35 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActivePaymentTab('writes-off')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'writes-off'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.writesOff')}
                       </button>
+                      {/* KAN-334 — Reversals sub-tab (gated on view_reversals). */}
+                      {canViewReversals && (
+                        <button
+                          onClick={() => setActivePaymentTab('reversals')}
+                          className={cn(
+                            'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                            activePaymentTab === 'reversals'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
+                          )}
+                        >
+                          {t('pages.clients.detail.reversals')}
+                        </button>
+                      )}
                       <button
                         onClick={() => setActivePaymentTab('primary-creditor')}
                         className={cn(
-                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'primary-creditor'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.paymentToPrimaryCreditor')}
@@ -3987,6 +4449,11 @@ export function ClientDetailPage() {
                               columns={paymentColumns}
                               data={client.payments}
                               className="w-full"
+                              rowClassName={(row) =>
+                                highlightedPaymentId != null && row.id === highlightedPaymentId
+                                  ? 'bg-primary-100/60 ring-primary-300 ring-1'
+                                  : undefined
+                              }
                             />
                           )}
                           {activePaymentTab === 'writes-off' && (
@@ -4018,6 +4485,18 @@ export function ClientDetailPage() {
                               )}
                             </div>
                           )}
+                          {activePaymentTab === 'reversals' && canViewReversals && (
+                            <ClientReversalsTable
+                              clientId={clientId}
+                              clientFullName={client.fullName}
+                              resolveLoanNumber={(creditId) => loanNumberByCreditId.get(creditId)}
+                              highlightPaymentId={highlightedReversalPaymentId}
+                              onPaymentClick={(paymentId) => {
+                                setHighlightedPaymentId(paymentId)
+                                setActivePaymentTab('payments')
+                              }}
+                            />
+                          )}
                           {activePaymentTab === 'primary-creditor' && (
                             <DataTable
                               columns={primaryCreditorPaymentColumns}
@@ -4033,337 +4512,46 @@ export function ClientDetailPage() {
 
                 {/* Tab 3: Recommenders */}
                 {activeRightCardTab === 'recommenders' && (
-                  <div className="self-stretch overflow-x-auto p-3 md:p-6">
-                    {contactError && <p className="text-error-500 mb-3 text-sm">{contactError}</p>}
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactValue')}
-                          </th>
-                          <th className="pb-2"></th>
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactType')}
-                          </th>
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.comment')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {client.recommenders.map((contact, index) => (
-                          <tr
-                            key={contact.id ?? `recommender-${index}-${contact.contactValue}`}
-                            className="border-b border-gray-100 last:border-0"
-                          >
-                            <td className="py-2 pr-3">
-                              <div className="flex flex-col items-start gap-1">
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
-                                    {contact.contactValue}
-                                  </span>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
-                                          contact.id > 0 && 'cursor-pointer'
-                                        )}
-                                        onClick={() => {
-                                          if (contact.id > 0) {
-                                            setContactTagHistoryModal({
-                                              contactId: contact.id,
-                                              phone: contact.contactValue,
-                                            })
-                                          }
-                                        }}
-                                      >
-                                        <Icons.Info size={14} strokeWidth={1.5} />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                      {contact.added_by_user_name && (
-                                        <div>
-                                          {t('pages.clients.detail.addedBy')}:{' '}
-                                          {contact.added_by_user_name}
-                                        </div>
-                                      )}
-                                      {contact.created_at && (
-                                        <div>
-                                          {t('pages.clients.detail.addedDate')}:{' '}
-                                          {formatDate(contact.created_at ?? undefined)}
-                                        </div>
-                                      )}
-                                      {contact.updated_by_user_name && (
-                                        <>
-                                          <div>
-                                            {t('pages.clients.detail.updatedBy')}:{' '}
-                                            {contact.updated_by_user_name}
-                                          </div>
-                                          {contact.updated_at && (
-                                            <div>
-                                              {t('pages.clients.detail.updatedDate')}:{' '}
-                                              {formatDate(contact.updated_at ?? undefined)}
-                                            </div>
-                                          )}
-                                        </>
-                                      )}
-                                      {!contact.added_by_user_name && !contact.created_at && (
-                                        <div>-</div>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                  renderLinkedContactBadges(contact.contactValue, 'start')}
-                              </div>
-                            </td>
-                            <td className="py-2 pr-3">
-                              {contact.contactValue &&
-                                contact.id > 0 &&
-                                (contact.isPhone || looksLikePhone(contact.contactValue)) && (
-                                  <div className="flex items-center gap-1 md:gap-2">
-                                    {(contact.isPhone || looksLikePhone(contact.contactValue)) && (
-                                      <>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
-                                        >
-                                          <button
-                                            disabled={!user?.is_agent || !user?.asterisk_extension}
-                                            onClick={() => {
-                                              openOutboundCall(
-                                                contact.contactValue,
-                                                contact.contactTypeId
-                                              )
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                          >
-                                            <Icons.Headset size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
-                                        >
-                                          <button
-                                            disabled={contact.blocking?.blocks_sms}
-                                            onClick={() => {
-                                              setSelectedPhoneForSMS(contact.contactValue)
-                                              setIsSendSMSModalOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                          >
-                                            <Icons.ChatFeedback01
-                                              size={16}
-                                              className="flex-shrink-0"
-                                            />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permissions={ALL_MESSAGING_SEND_PERMISSIONS}
-                                          mode="any"
-                                        >
-                                          <button
-                                            disabled={contact.blocking?.blocks_sms}
-                                            onClick={() => {
-                                              setSelectedPhoneForMessage(contact.contactValue)
-                                              setIsSendMessageModalOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title={
-                                              contact.blocking?.blocks_sms
-                                                ? contact.blocking.reasons
-                                                    .filter((r) => r.toLowerCase().includes('sms'))
-                                                    .join('; ') ||
-                                                  t('pages.contactTags.smsBlocked', 'SMS blocked')
-                                                : t(
-                                                    'pages.clients.detail.sendMessage',
-                                                    'Send message'
-                                                  )
-                                            }
-                                          >
-                                            <Icons.Message01 size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                        >
-                                          <button
-                                            onClick={() => {
-                                              // Classify by the phone's actual contact_type_id
-                                              // rather than by which tab the row lives in: a
-                                              // "Mobile phone from registers" (type 29) sits
-                                              // in the Recommenders tab but the backend treats
-                                              // it as a client phone.
-                                              setChainExecutorContactSource(
-                                                classifyContactSource(contact.contactTypeId)
-                                              )
-                                              setChainExecutorPrefilledPhone(contact.contactValue)
-                                              setIsChainExecutorOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                          >
-                                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        {contact.isPhone && (
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              setContactTagModal({
-                                                contactId: contact.id,
-                                                phone: contact.contactValue,
-                                              })
-                                            }
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                            title={t('pages.contactTags.tags', 'Tags')}
-                                          >
-                                            <Icons.Tag01 size={16} className="flex-shrink-0" />
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-                                    {canEditClient && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleStartEditContact(contact)}
-                                          className="flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                          title={t(
-                                            'pages.clients.editModal.editContact',
-                                            'Edit contact'
-                                          )}
-                                        >
-                                          <Icons.Edit size={14} className="flex-shrink-0" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setContactDeleteConfirmId(contact.id)}
-                                          className="text-error-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-red-200 hover:bg-red-50"
-                                          title={t(
-                                            'pages.clients.editModal.deleteContact',
-                                            'Delete contact'
-                                          )}
-                                        >
-                                          <Icons.Delete size={14} className="flex-shrink-0" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                            </td>
-                            <td className="py-2 pr-3">
-                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {i18n.language === 'uk'
-                                  ? contact.contactType
-                                  : contact.contactTypeCode
-                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
-                                        defaultValue: contact.contactType,
-                                      })
-                                    : contact.contactType}
-                              </span>
-                            </td>
-                            <td className="py-2 pr-3">
-                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {contact.comment}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        {client.recommenders.length === 0 && contactEditorMode === null && (
-                          <tr>
-                            <td colSpan={4} className="py-3 text-xs text-gray-500">
-                              -
-                            </td>
-                          </tr>
-                        )}
-                        {contactEditorMode !== null && (
-                          <tr className="border-b border-gray-100">
-                            <td colSpan={4} className="py-3">
-                              <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-3">
-                                <Input
-                                  value={contactFormData.contact_value}
-                                  onChange={(e) =>
-                                    setContactFormData((prev) => ({
-                                      ...prev,
-                                      contact_value: e.target.value,
-                                    }))
-                                  }
-                                  label={t('pages.clients.detail.contactValue')}
-                                />
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                                    {t('pages.clients.detail.contactType')}
-                                  </label>
-                                  <Select
-                                    value={String(contactFormData.contact_type_id)}
-                                    onValueChange={(value) =>
-                                      setContactFormData((prev) => ({
-                                        ...prev,
-                                        contact_type_id: Number(value),
-                                      }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-[42px] rounded-lg border border-gray-300 bg-white">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {contactTypesForRecommenderSelect.map((ct) => (
-                                        <SelectItem key={ct.id} value={String(ct.id)}>
-                                          {contactTypeLabel(ct, t, i18n.language)}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Input
-                                  value={contactFormData.comment}
-                                  onChange={(e) =>
-                                    setContactFormData((prev) => ({
-                                      ...prev,
-                                      comment: e.target.value,
-                                    }))
-                                  }
-                                  label={t('pages.clients.detail.comment')}
-                                />
-                              </div>
-                              <div className="mt-3 flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleSaveContact}
-                                  disabled={
-                                    isCreatingContact ||
-                                    isUpdatingContact ||
-                                    !contactFormData.contact_value.trim()
-                                  }
-                                >
-                                  {isCreatingContact || isUpdatingContact
-                                    ? t('actions.saving', 'Saving...')
-                                    : t('pages.clients.editModal.save', 'Save')}
-                                </Button>
-                                <Button size="sm" variant="cancel" onClick={resetContactEditor}>
-                                  {t('actions.cancel')}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                    {canEditClient && (
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.PlusSignCircle size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          onClick={handleStartAddContact}
-                        >
-                          {t('pages.clients.editModal.addContact', 'Add Contact')}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <RecommendersTab
+                    contacts={client.recommenders}
+                    contactTypesForSelect={contactTypesForRecommenderSelect}
+                    contactTypesById={contactTypesById}
+                    contactError={contactError}
+                    contactEditorMode={contactEditorMode}
+                    contactEditorIsPhone={contactEditorIsPhone}
+                    editingContactId={editingContactId}
+                    contactFormData={contactFormData}
+                    isCreatingContact={isCreatingContact}
+                    isUpdatingContact={isUpdatingContact}
+                    canEditClient={canEditClient}
+                    canMakeCalls={Boolean(user?.is_agent && user?.asterisk_extension)}
+                    linkedContactsByPhone={linkedContactsByPhone}
+                    normalizePhoneForLookup={normalizePhoneForLookup}
+                    onFormChange={(patch) => setContactFormData((prev) => ({ ...prev, ...patch }))}
+                    onStartAdd={handleStartAddContact}
+                    onStartEdit={handleStartEditContact}
+                    onSave={handleSaveContact}
+                    onCancelEditor={resetContactEditor}
+                    onDelete={setContactDeleteConfirmId}
+                    onOpenTagHistory={(contactId, phone) =>
+                      setContactTagHistoryModal({ contactId, phone })
+                    }
+                    onOpenTagModal={(contactId, phone) => setContactTagModal({ contactId, phone })}
+                    onCall={(phone, contactTypeId) => openOutboundCall(phone, contactTypeId)}
+                    onSendSms={(phone) => {
+                      setSelectedPhoneForSMS(phone)
+                      setIsSendSMSModalOpen(true)
+                    }}
+                    onSendMessage={(phone) => {
+                      setSelectedPhoneForMessage(phone)
+                      setIsSendMessageModalOpen(true)
+                    }}
+                    onStartInteraction={(phone, contactTypeId) => {
+                      setChainExecutorContactSource(classifyContactSource(contactTypeId))
+                      setChainExecutorPrefilledPhone(phone)
+                      setIsChainExecutorOpen(true)
+                    }}
+                  />
                 )}
 
                 {/* Tab 4: Operators/Searchers */}
@@ -4373,10 +4561,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveOperatorTab('operators')}
                         className={cn(
-                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'operators'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.operators')}
@@ -4384,10 +4572,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveOperatorTab('searchers')}
                         className={cn(
-                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'searchers'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.searchers')}
@@ -4423,7 +4611,7 @@ export function ClientDetailPage() {
                   <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
                     <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
                       <div className="flex flex-1 items-center gap-2.5">
-                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {activeCallSmsTab === 'calls'
                             ? t('pages.clients.detail.latestCalls')
                             : activeCallSmsTab === 'sms'
@@ -4433,14 +4621,14 @@ export function ClientDetailPage() {
                                 : t('pages.clients.detail.latestCallsAndSms')}
                         </span>
                       </div>
-                      <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
+                      <div className="bg-card/50 flex w-full flex-1 items-center justify-between gap-1 rounded-lg p-1 shadow-sm md:w-auto">
                         <button
                           onClick={() => setActiveCallSmsTab('all')}
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'all'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.all')}
@@ -4450,8 +4638,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'calls'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.calls')}
@@ -4461,8 +4649,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'sms'
-                              ? 'bg-secondary-800/10 text-secondary-800'
-                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.sms')}
@@ -4473,8 +4661,8 @@ export function ClientDetailPage() {
                             className={cn(
                               'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                               activeCallSmsTab === 'messaging'
-                                ? 'bg-secondary-800/10 text-secondary-800'
-                                : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                             )}
                           >
                             {t('pages.clients.activity.messaging', 'Messaging')}
@@ -4485,7 +4673,7 @@ export function ClientDetailPage() {
                         <div className="flex w-full flex-col gap-2 md:w-auto">
                           <Button
                             leftIcon={<Icons.Download size={20} />}
-                            className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                            className="bg-primary-600 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
                             size="sm"
                             disabled={
                               (activeCallSmsTab !== 'messaging' && activeCallSmsTab !== 'all') ||
@@ -4625,7 +4813,7 @@ export function ClientDetailPage() {
                                 )
                                 .map(([date, items]) => (
                                   <div key={date} className="w-full space-y-4">
-                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                    <h3 className="text-foreground text-sm font-semibold md:text-base">
                                       {date}
                                     </h3>
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -4662,7 +4850,7 @@ export function ClientDetailPage() {
                                               : null
                                           }
                                           icon={
-                                            <Icons.Play size={24} className="text-secondary-800" />
+                                            <Icons.Play size={24} className="text-primary-700" />
                                           }
                                           setSelectedCallData={setSelectedCallData}
                                           setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
@@ -4684,7 +4872,7 @@ export function ClientDetailPage() {
                                           sent_at={sms.sent_at}
                                           delivered_at={sms.delivered_at}
                                           icon={
-                                            <Icons.Chat size={24} className="text-secondary-800" />
+                                            <Icons.Chat size={24} className="text-primary-700" />
                                           }
                                           setSelectedSMSData={setSelectedSMSData}
                                           setIsViewSMSModalOpen={setIsViewSMSModalOpen}
@@ -4739,7 +4927,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             onSelect={() => {
@@ -4779,7 +4967,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -4796,29 +4984,29 @@ export function ClientDetailPage() {
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             {/* Summary Statistics */}
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.Call02 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.Call02 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.detail.totalCalls')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {client.callSmsHistory.calls.length}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.CallDone02 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.CallDone02 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.statuses.answered')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const answered = client.callSmsHistory.calls.filter(
                                       (c) => c.status === 'COMPLETED'
@@ -4830,16 +5018,16 @@ export function ClientDetailPage() {
                                   })()}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-2 pl-3 md:w-auto md:px-5">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                    <Icons.Clock01 size={24} className="text-gray-700" />
+                                  <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
+                                    <Icons.Clock01 size={24} className="text-foreground" />
                                   </div>
-                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                     {t('pages.clients.detail.avgDuration')}
                                   </div>
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const durations = client.callSmsHistory.calls
                                       .filter((c) => c.duration && c.duration !== '-')
@@ -4898,7 +5086,7 @@ export function ClientDetailPage() {
                                   )
                                   .map(([date, calls]) => (
                                     <div key={date} className="space-y-4">
-                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      <h3 className="text-foreground text-sm font-semibold md:text-base">
                                         {date}
                                       </h3>
                                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -4938,7 +5126,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.PlayCircle02
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedCallData={setSelectedCallData}
@@ -4955,7 +5143,7 @@ export function ClientDetailPage() {
                             {!showAllCalls &&
                               client.callSmsHistory.calls.length === 0 &&
                               client.callSmsHistory.callsTotal > 0 && (
-                                <p className="self-center text-sm text-gray-600">
+                                <p className="text-muted-foreground self-center text-sm">
                                   {t(
                                     'pages.clients.detail.noCallsLast7Days',
                                     'No call records in the last 7 days — click View All to see older records.'
@@ -4969,7 +5157,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -4986,12 +5174,12 @@ export function ClientDetailPage() {
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             {/* Summary Statistics */}
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.totalCost')}
                                 </div>
 
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const totalCost = client.callSmsHistory.sms.reduce(
                                       (sum, s) => sum + (s.cost || 0),
@@ -5001,12 +5189,12 @@ export function ClientDetailPage() {
                                   })()}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.deliveryRate')}
                                 </div>
 
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const delivered = client.callSmsHistory.sms.filter(
                                       (s) => s.status === 'Delivered'
@@ -5060,7 +5248,7 @@ export function ClientDetailPage() {
                                   )
                                   .map(([date, smsList]) => (
                                     <div key={date} className="space-y-4">
-                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      <h3 className="text-foreground text-sm font-semibold md:text-base">
                                         {date}
                                       </h3>
                                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -5081,7 +5269,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-secondary-800"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedSMSData={setSelectedSMSData}
@@ -5098,19 +5286,19 @@ export function ClientDetailPage() {
                         {activeCallSmsTab === 'messaging' && (
                           <div className="flex flex-col items-start gap-4 self-stretch">
                             <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.totalMessages', 'Total messages')}
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {messagingHistory.length}
                                 </div>
                               </div>
-                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              <div className="border-border bg-card/50 flex w-full flex-1 items-center justify-between rounded-xl border px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.deliveryRate')}
                                 </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                <div className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                                   {(() => {
                                     const { delivered, failed, pending, total } =
                                       countMessagingHistoryByOutcome(messagingHistory)
@@ -5163,7 +5351,7 @@ export function ClientDetailPage() {
                                     )
                                     .map(([date, items]) => (
                                       <div key={date} className="space-y-4">
-                                        <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        <h3 className="text-foreground text-sm font-semibold md:text-base">
                                           {date}
                                         </h3>
                                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -5221,7 +5409,7 @@ export function ClientDetailPage() {
                                                 icon={
                                                   <Icons.ChatFeedback01
                                                     size={20}
-                                                    className="text-secondary-800"
+                                                    className="text-primary-700"
                                                   />
                                                 }
                                                 onSelect={() => {
@@ -5294,18 +5482,18 @@ export function ClientDetailPage() {
         </div>
 
         {/* Comments / Activity Section - Merged per Marina's request */}
-        <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        <div className="bg-card/50 flex flex-col items-start gap-3 self-stretch rounded-xl p-3 md:p-6">
           {/* Header with tabs and View All */}
           <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             {/* Tabs */}
-            <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
+            <div className="border-border bg-card flex items-center rounded-lg border p-1 shadow-sm">
               <button
                 onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'ta-chains'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
@@ -5313,10 +5501,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('comments')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'comments'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.comments')}
@@ -5324,10 +5512,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'primary'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.commentsFromPrimaryCreditor')}
@@ -5335,10 +5523,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('searcher')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'searcher'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.tabs.searcherComments')}
@@ -5346,10 +5534,10 @@ export function ClientDetailPage() {
               <button
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
-                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'dial-history'
-                    ? 'bg-secondary-800 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-primary/10 hover:text-foreground'
                 )}
               >
                 {t('pages.clients.detail.spamCallHistory')}
@@ -5388,10 +5576,10 @@ export function ClientDetailPage() {
             <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
               <button
                 onClick={() => chainExecutorMinimizeRef.current?.()}
-                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
-                aria-label="Minimize modal"
+                className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+                aria-label={t('pages.clients.detail.minimizeModal', 'Minimize modal')}
               >
-                <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => {
@@ -5399,10 +5587,10 @@ export function ClientDetailPage() {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
               >
-                <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
+                <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
             </div>
             <ModalContent>
@@ -5434,12 +5622,12 @@ export function ClientDetailPage() {
             ) : displayedActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noHistoryYet')}
                   </p>
                 </div>
-                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                <p className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
                   {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
                 </p>
                 <button
@@ -5448,13 +5636,13 @@ export function ClientDetailPage() {
                     setChainExecutorPrefilledPhone(null)
                     setIsChainExecutorOpen(true)
                   }}
-                  className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                  className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
                   aria-label={t('pages.clientChains.logInteraction')}
                 >
-                  <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                    <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                  <div className="bg-primary-foreground/20 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                    <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
                   </div>
-                  <span className="px-4 py-3 text-sm font-medium text-white">
+                  <span className="text-primary-foreground px-4 py-3 text-sm font-medium">
                     {t('pages.clientChains.logInteraction')}
                   </span>
                 </button>
@@ -5478,8 +5666,8 @@ export function ClientDetailPage() {
             ) : displayedSearcherActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noSearcherComments', 'No searcher comments yet')}
                   </p>
                 </div>
@@ -5501,8 +5689,8 @@ export function ClientDetailPage() {
             ) : dialHistory.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+                  <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                     {t('pages.clients.detail.noSpamCallHistory')}
                   </p>
                 </div>
@@ -5577,6 +5765,7 @@ export function ClientDetailPage() {
           currentDebt={Number(clientDetail?.total_debt ?? 0)}
           debts={loans}
           canVerify={canVerifyPayment}
+          clientId={client.id}
           onSave={handleRecordPayment}
         />
 
@@ -5802,12 +5991,27 @@ export function ClientDetailPage() {
           />
         )}
 
+        {/* KAN-335: Detailed calculation (after sale) modal */}
+        {calcLoan && (
+          <LoanCalculationModal
+            open={!!calcLoan}
+            onClose={() => setCalcLoan(null)}
+            clientId={clientId}
+            debtId={calcLoan.id}
+            loanNumber={calcLoan.loanNumber}
+          />
+        )}
+
         {/* RR Detail Modal */}
         <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
           <ModalHeader
             icon={
-              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate
+                  size={20}
+                  className="text-primary-foreground sm:size-6"
+                  strokeWidth={1.5}
+                />
               </div>
             }
             title={t('pages.clients.detail.rrDetail')}
@@ -5818,50 +6022,50 @@ export function ClientDetailPage() {
                 {/* Two fields per row */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrLoanNumber')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.contract_number ?? '-'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrClientNumber')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.client_id ?? '-'}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrRestructuringAmount')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatMoneyUAHTwoDecimals(Number(rrDetail.restructuring_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrFirstPaymentDate')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatDate(rrDetail.first_payment_date ?? undefined)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrFirstPaymentAmount')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {formatMoneyUAHTwoDecimals(Number(rrDetail.first_payment_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm">
                       {t('pages.clients.detail.rrResponsibleEmployee')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {rrDetail.responsible_user_name ?? '-'}
                     </span>
                   </div>
@@ -5873,7 +6077,7 @@ export function ClientDetailPage() {
                     which installments are paid / partial / unpaid. */}
                 {rrDetail.payments.length > 0 && (
                   <div className="pt-2">
-                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrPaymentSchedule')}
                     </h3>
                     <div className="max-h-60 overflow-y-auto">
@@ -5923,10 +6127,10 @@ export function ClientDetailPage() {
                               const s = p.status ?? 'unpaid'
                               const cls =
                                 s === 'paid'
-                                  ? 'bg-green-100 text-green-700'
+                                  ? 'bg-green-100 text-success-700'
                                   : s === 'partially_paid'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-gray-100 text-gray-600'
+                                    ? 'bg-amber-100 text-warning-700'
+                                    : 'bg-muted text-muted-foreground'
                               const label =
                                 s === 'paid'
                                   ? t('pages.clients.detail.rrPaid', 'Paid')
@@ -5954,12 +6158,12 @@ export function ClientDetailPage() {
                     the most common case (debtor pays exactly the schedule). */}
                 {(isOverpaymentsLoading || rrOverpayments.length > 0) && (
                   <div className="pt-2">
-                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrOverpayments', 'Overpayments')}
                     </h3>
                     {isOverpaymentsLoading ? (
                       <div className="flex justify-center py-4">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                        <div className="border-border h-5 w-5 animate-spin rounded-full border-2 border-t-blue-600" />
                       </div>
                     ) : (
                       <div className="max-h-48 overflow-y-auto">
@@ -6011,15 +6215,15 @@ export function ClientDetailPage() {
                     so an operator can see whether the daily job or a person
                     flipped the RR. */}
                 <div className="pt-2">
-                  <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                  <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                     {t('pages.clients.detail.rrStatusHistory', 'Status history')}
                   </h3>
                   {isStatusHistoryLoading ? (
                     <div className="flex justify-center py-4">
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                      <div className="border-border h-5 w-5 animate-spin rounded-full border-2 border-t-blue-600" />
                     </div>
                   ) : rrStatusHistory.length === 0 ? (
-                    <p className="text-dark-300 py-2 text-sm">
+                    <p className="text-muted-foreground py-2 text-sm">
                       {t(
                         'pages.clients.detail.rrStatusHistoryEmpty',
                         'No status changes recorded yet.'
@@ -6064,7 +6268,7 @@ export function ClientDetailPage() {
               </div>
             ) : (
               <div className="flex justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                <div className="border-border h-6 w-6 animate-spin rounded-full border-2 border-t-blue-600" />
               </div>
             )}
           </ModalContent>
@@ -6088,14 +6292,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Delete size={18} className="text-dark-500" strokeWidth={1.8} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Delete size={18} className="text-primary-foreground" strokeWidth={1.8} />
               </div>
             }
             title={t('pages.clients.editModal.deleteContact', 'Delete contact')}
           />
           <ModalContent>
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-foreground text-base font-light">
               {t(
                 'pages.clients.editModal.confirmDeleteContact',
                 'Are you sure you want to delete this contact?'
@@ -6155,14 +6359,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.CancelCircle size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.CancelCircle size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.closeLoan')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-4 text-base font-light">
+            <p className="text-foreground mb-4 text-base font-light">
               {t(
                 'pages.clients.detail.confirmCloseLoan',
                 'Are you sure you want to close this loan? This action cannot be undone.'
@@ -6199,7 +6403,7 @@ export function ClientDetailPage() {
                   'pages.clients.detail.closureReasonPlaceholder',
                   'Add a note explaining why this loan is being closed'
                 )}
-                className="focus:border-primary-400 w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none"
+                className="focus:border-primary-400 border-border w-full resize-y rounded-md border px-3 py-2 text-sm outline-none"
               />
             </div>
           </ModalContent>
@@ -6279,14 +6483,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-4 text-base font-light">
+            <p className="text-foreground mb-4 text-base font-light">
               {t(
                 'pages.clients.detail.confirmReopenLoan',
                 'Are you sure you want to reopen this credit?'
@@ -6344,8 +6548,8 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Edit size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Edit size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
@@ -6428,14 +6632,14 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-                <Icons.Success size={20} className="text-dark-500" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Success size={20} className="text-primary-foreground" strokeWidth={2} />
               </div>
             }
             title={t('pages.clients.detail.completeRR', 'Complete RR')}
           />
           <ModalContent>
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-foreground text-base font-light">
               {t(
                 'pages.clients.detail.confirmCompleteRR',
                 'Are you sure you want to mark this restructuring agreement as completed?'
@@ -6470,6 +6674,59 @@ export function ClientDetailPage() {
           </ModalFooter>
         </Modal>
 
+        {/* Delete Draft RR Confirmation Modal */}
+        <Modal
+          open={deleteDraftConfirm !== null}
+          onClose={() => setDeleteDraftConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <Icons.Delete size={20} className="text-red-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmDeleteDraftRR',
+                'Are you sure you want to delete this draft restructuring agreement? This cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setDeleteDraftConfirm(null)}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (deleteDraftConfirm !== null) {
+                  deleteRrDraft(
+                    { clientId, raId: deleteDraftConfirm },
+                    { onSettled: () => setDeleteDraftConfirm(null) }
+                  )
+                }
+              }}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isDeletingRrDraft
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
         {/* Disconnect RR Confirmation Modal — reason required */}
         <Modal
           open={disconnectRrConfirm !== null}
@@ -6485,7 +6742,7 @@ export function ClientDetailPage() {
             title={t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-3 text-base font-light">
+            <p className="text-foreground mb-3 text-base font-light">
               {t(
                 'pages.clients.detail.confirmDisconnectRR',
                 'Disconnecting will mark this restructuring agreement as Cancelled. Please provide a reason — it will be recorded in the audit log.'
@@ -6504,7 +6761,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-dark-500 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:ring-1"
+              className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground border-border w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>
@@ -6554,21 +6811,25 @@ export function ClientDetailPage() {
         >
           <ModalHeader
             icon={
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-                <Icons.MoneyReceive01 size={20} className="text-emerald-600" strokeWidth={2} />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.MoneyReceive01
+                  size={20}
+                  className="text-primary-foreground"
+                  strokeWidth={2}
+                />
               </div>
             }
             title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
           />
           <ModalContent>
-            <p className="text-dark-500 mb-3 text-base font-light">
+            <p className="text-foreground mb-3 text-base font-light">
               {t(
                 'pages.clients.detail.recordOverpaymentHelp',
                 'Record an excess payment above the scheduled amount. Choose where to allocate the excess.'
               )}
             </p>
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.overpaymentAmount', 'Overpayment amount')}
             </label>
             <input
@@ -6580,14 +6841,14 @@ export function ClientDetailPage() {
                 setOverpaymentModal((prev) => (prev ? { ...prev, amount: e.target.value } : prev))
               }
               placeholder="0.00"
-              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+              className="bg-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary border-border mb-3 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.allocationTarget', 'Allocate excess to')}
             </label>
-            <div className="mb-3 flex gap-4">
-              <label className="text-dark-500 flex items-center gap-2 text-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:gap-4">
+              <label className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name="allocation_target"
@@ -6598,13 +6859,14 @@ export function ClientDetailPage() {
                       prev ? { ...prev, allocationTarget: 'next' } : prev
                     )
                   }
+                  className="accent-primary border-muted-foreground/50 bg-card h-4 w-4 border-2"
                 />
                 {t(
                   'pages.clients.detail.allocateToNext',
                   'Next scheduled payment (reduces next installment)'
                 )}
               </label>
-              <label className="text-dark-500 flex items-center gap-2 text-sm">
+              <label className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name="allocation_target"
@@ -6615,13 +6877,14 @@ export function ClientDetailPage() {
                       prev ? { ...prev, allocationTarget: 'last' } : prev
                     )
                   }
+                  className="accent-primary border-muted-foreground/50 bg-card h-4 w-4 border-2"
                 />
                 {t('pages.clients.detail.allocateToLast', 'Final payment (RR closes earlier)')}
               </label>
             </div>
 
-            <label className="text-dark-500 mb-1 block text-sm font-medium">
-              {t('pages.clients.detail.overpaymentReason', 'Reason (optional)')}
+            <label className="text-foreground mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.overpaymentReasonOptional', 'Reason (optional)')}
             </label>
             <textarea
               value={overpaymentModal?.reason ?? ''}
@@ -6634,7 +6897,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+              className="bg-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary border-border w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>
@@ -6692,12 +6955,28 @@ export function ClientDetailPage() {
           debts={loans ?? []}
         />
 
+        {/* KAN-334 — Reversal (storno) Create Modal (per Screenshot_14.png) */}
+        <ReversalCreateModal
+          open={isReversalOpen}
+          onClose={() => {
+            setIsReversalOpen(false)
+            setReversalInitialPaymentId(null)
+          }}
+          payments={eligibleReversalPayments}
+          initialPaymentId={reversalInitialPaymentId}
+          isLoading={isPaymentsLoading}
+        />
+
         {/* Connect RR Modal */}
         <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
           <ModalHeader
             icon={
-              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate
+                  size={20}
+                  className="text-primary-foreground sm:size-6"
+                  strokeWidth={1.5}
+                />
               </div>
             }
             title={t('pages.clients.detail.connectRR')}
@@ -6706,7 +6985,7 @@ export function ClientDetailPage() {
             <div className="flex flex-col gap-4">
               {/* Loan Selection */}
               <div>
-                <label className="text-dark-500 mb-1 block text-sm font-medium">
+                <label className="text-foreground mb-1 block text-sm font-medium">
                   {t('pages.clients.detail.rrSelectLoan')} *
                 </label>
                 <Select
@@ -6725,7 +7004,7 @@ export function ClientDetailPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="text-dark-300 px-2 py-1 text-sm">
+                      <div className="text-muted-foreground px-2 py-1 text-sm">
                         {t(
                           'pages.clients.detail.rrNoEligibleCredits',
                           'No active credits available for restructuring'
@@ -6745,7 +7024,7 @@ export function ClientDetailPage() {
                   }
                   format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
-                  className="rounded-lg border-gray-400"
+                  className="border-border rounded-lg"
                 />
                 <Input
                   label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
@@ -6785,7 +7064,7 @@ export function ClientDetailPage() {
                       })
                     }}
                   />
-                  <p className="text-dark-300 mt-1 text-xs">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {t('pages.clients.detail.rrNumPaymentsHint', {
                       max: MAX_RR_PAYMENTS,
                       defaultValue: 'Up to {{max}} payments.',
@@ -6798,7 +7077,7 @@ export function ClientDetailPage() {
                 <div className="flex flex-col gap-2">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div>
-                      <label className="text-dark-500 mb-1 block text-sm font-medium">
+                      <label className="text-foreground mb-1 block text-sm font-medium">
                         {t('pages.clients.detail.rrFrequency', 'Payment Frequency')}
                       </label>
                       <Select
@@ -6852,7 +7131,7 @@ export function ClientDetailPage() {
 
                     {connectRrForm.frequency === PERIODICITY_MONTHLY_NTH_DAY && (
                       <div>
-                        <label className="text-dark-500 mb-1 block text-sm font-medium">
+                        <label className="text-foreground mb-1 block text-sm font-medium">
                           {t('pages.clients.detail.rrDayOfMonth', 'Day of month')}
                         </label>
                         <Select
@@ -6902,12 +7181,12 @@ export function ClientDetailPage() {
                           'pages.clients.detail.rrFirstPaymentDate',
                           'First Payment Date'
                         )}
-                        className="rounded-lg border-gray-400"
+                        className="border-border rounded-lg"
                       />
                     )}
                   </div>
                   {connectRrForm.frequency && (
-                    <p className="text-dark-300 text-xs">
+                    <p className="text-muted-foreground text-xs">
                       {t(
                         'pages.clients.detail.rrPeriodicityHint',
                         'The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.'
@@ -6918,7 +7197,7 @@ export function ClientDetailPage() {
               )}
               {/* Payment Schedule */}
               <div className="pt-2">
-                <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                <h3 className="text-foreground mb-2 text-sm font-medium sm:text-base">
                   {t('pages.clients.detail.rrPaymentSchedule')}
                 </h3>
                 <div className="flex flex-col gap-3">
@@ -6940,7 +7219,7 @@ export function ClientDetailPage() {
                         }}
                         format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
-                        className="rounded-lg border-gray-400"
+                        className="border-border rounded-lg"
                       />
                       <Input
                         label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
@@ -6961,7 +7240,7 @@ export function ClientDetailPage() {
                   ))}
                 </div>
                 {connectRrForm.clampedRows.length > 0 && (
-                  <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  <div className="bg-warning-100 text-warning-700 mt-2 rounded-md px-3 py-2 text-xs">
                     {t('pages.clients.detail.rrClampNotice', {
                       rows: connectRrForm.clampedRows.map((i) => i + 1).join(', '),
                       defaultValue:
@@ -6971,7 +7250,7 @@ export function ClientDetailPage() {
                 )}
               </div>
               {/* Overdue Penalty (optional) — KAN-785 Part 2 */}
-              <div className="border-t border-gray-100 pt-3">
+              <div className="border-border border-t pt-3">
                 <Input
                   label={t('pages.clients.detail.rrPenaltyAmount', 'Overdue Penalty (optional)')}
                   type="number"
@@ -6983,7 +7262,7 @@ export function ClientDetailPage() {
                   }
                   placeholder="0.00"
                 />
-                <p className="text-dark-300 mt-1 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.clients.detail.rrPenaltyHint',
                     'If any payment goes 3+ days overdue, this amount is charged once as an extra payment at the end of the schedule.'
@@ -6994,6 +7273,14 @@ export function ClientDetailPage() {
             {connectRrError && (
               <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
                 {connectRrError}
+              </div>
+            )}
+            {selectedDebtHasDraft && (
+              <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                {t(
+                  'pages.clients.detail.rrDraftAlreadyExists',
+                  'This credit already has a draft restructuring agreement.'
+                )}
               </div>
             )}
           </ModalContent>
@@ -7007,120 +7294,22 @@ export function ClientDetailPage() {
               {t('actions.cancel')}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              disabled={isCreatingRr || !hasEligibleLoansForRr || selectedDebtHasDraft}
+              onClick={() => submitConnectRr('draft')}
+              className="w-full rounded-md"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveDraftRR', 'Save draft')}
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               disabled={isCreatingRr || !hasEligibleLoansForRr}
-              onClick={() => {
-                const d = 'pages.clients.detail'
-                setConnectRrError(null)
-                // Validation
-                if (!connectRrForm.debtId) {
-                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
-                  return
-                }
-                if (!connectRrForm.connectionDate) {
-                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
-                  return
-                }
-                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
-                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
-                  return
-                }
-                for (let i = 0; i < connectRrForm.payments.length; i++) {
-                  if (!connectRrForm.payments[i].date) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
-                    return
-                  }
-                  if (
-                    !connectRrForm.payments[i].amount ||
-                    parseFloat(connectRrForm.payments[i].amount) <= 0
-                  ) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
-                    return
-                  }
-                }
-                const totalAmount = parseFloat(connectRrForm.totalAmount)
-                const paymentsSum = connectRrForm.payments.reduce(
-                  (sum, p) => sum + (parseFloat(p.amount) || 0),
-                  0
-                )
-                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-                  setConnectRrError(
-                    t(`${d}.rrValidationSumMismatch`, {
-                      sum: paymentsSum.toFixed(2),
-                      total: totalAmount.toFixed(2),
-                    })
-                  )
-                  return
-                }
-
-                const formatDate = (dt: Date | null) => {
-                  if (!dt) return null
-                  const y = dt.getFullYear()
-                  const m = String(dt.getMonth() + 1).padStart(2, '0')
-                  const day = String(dt.getDate()).padStart(2, '0')
-                  return `${y}-${m}-${day}`
-                }
-                createRr(
-                  {
-                    clientId,
-                    data: {
-                      debt_id: parseInt(connectRrForm.debtId),
-                      connection_date: formatDate(connectRrForm.connectionDate),
-                      restructuring_amount: totalAmount,
-                      num_payments: connectRrForm.numPayments,
-                      payments: connectRrForm.payments.map((p) => ({
-                        payment_date: formatDate(p.date),
-                        payment_amount: parseFloat(p.amount),
-                      })),
-                      // KAN-785 Part 2 — optional penalty + persisted periodicity
-                      // (so the backend can date the penalty by this RR's cadence).
-                      penalty_amount:
-                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
-                          ? parseFloat(connectRrForm.penaltyAmount)
-                          : null,
-                      periodicity: connectRrForm.frequency
-                        ? {
-                            frequency: connectRrForm.frequency,
-                            interval_days: connectRrForm.intervalDays
-                              ? parseInt(connectRrForm.intervalDays, 10)
-                              : null,
-                            day_of_month: connectRrForm.dayOfMonth || null,
-                          }
-                        : null,
-                    },
-                  },
-                  {
-                    onSuccess: () => {
-                      toast.success(t(`${d}.connectRRSuccess`))
-                      setIsConnectRrOpen(false)
-                    },
-                    onError: (error) => {
-                      const detail = (
-                        error as import('axios').AxiosError<{
-                          detail?: string | Array<{ msg?: string }>
-                        }>
-                      )?.response?.data?.detail
-                      let message = t(
-                        `${d}.connectRRError`,
-                        t('errors.somethingWentWrong', 'Something went wrong')
-                      )
-                      if (typeof detail === 'string') {
-                        message = detail
-                      } else if (Array.isArray(detail) && detail.length > 0) {
-                        message = detail
-                          .map((e) => e.msg || '')
-                          .filter(Boolean)
-                          .join('; ')
-                      }
-                      setConnectRrError(message)
-                    },
-                  }
-                )
-              }}
+              onClick={() => submitConnectRr('active')}
               className="w-full rounded-md"
             >
-              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveActivateRR', 'Save & activate')}
             </Button>
           </ModalFooter>
         </Modal>

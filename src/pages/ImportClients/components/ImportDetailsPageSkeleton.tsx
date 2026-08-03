@@ -15,23 +15,23 @@ export function ImportDetailsPageSkeleton() {
       <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Back Button Skeleton */}
-          <div className="h-10 w-24 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-32" />
+          <div className="bg-muted h-10 w-24 animate-pulse rounded-full sm:h-12 sm:w-32" />
           {/* Title Skeleton */}
-          <div className="h-7 w-40 animate-pulse rounded bg-gray-300 sm:h-8 sm:w-48" />
+          <div className="bg-muted h-7 w-40 animate-pulse rounded sm:h-8 sm:w-48" />
         </div>
         {/* Download Button Skeleton */}
-        <div className="h-10 w-full animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-40" />
+        <div className="bg-muted h-10 w-full animate-pulse rounded-full sm:h-12 sm:w-40" />
       </div>
 
       {/* Content Cards Skeleton */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left Card: Last Import Summary Skeleton */}
-        <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+        <div className="border-border bg-card/50 flex flex-1 flex-col gap-3 rounded-xl border p-4 shadow-sm sm:p-6">
           {/* Title Skeleton */}
-          <div className="h-6 w-48 animate-pulse rounded bg-gray-300 sm:h-7" />
+          <div className="bg-muted h-6 w-48 animate-pulse rounded sm:h-7" />
 
           {/* Divider */}
-          <div className="mb-4 h-px w-full bg-gray-200" />
+          <div className="bg-border mb-4 h-px w-full" />
 
           {/* File Info Rows Skeleton */}
           <div className="flex flex-col items-start gap-3 self-stretch">
@@ -40,14 +40,14 @@ export function ImportDetailsPageSkeleton() {
                 key={index}
                 className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6"
               >
-                <div className="h-4 w-full animate-pulse rounded bg-gray-300 sm:h-[22px] sm:w-24" />
-                <div className="h-4 flex-1 animate-pulse rounded bg-gray-300 sm:h-[22px]" />
+                <div className="bg-muted h-4 w-full animate-pulse rounded sm:h-[22px] sm:w-24" />
+                <div className="bg-muted h-4 flex-1 animate-pulse rounded sm:h-[22px]" />
               </div>
             ))}
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px w-full bg-gray-200" />
+          <div className="bg-border my-4 h-px w-full" />
 
           {/* Statistics Rows Skeleton */}
           <div className="flex flex-col items-start gap-3 self-stretch">
@@ -56,8 +56,8 @@ export function ImportDetailsPageSkeleton() {
                 key={index}
                 className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6"
               >
-                <div className="h-4 w-full animate-pulse rounded bg-gray-300 sm:h-[22px] sm:w-24" />
-                <div className="h-4 flex-1 animate-pulse rounded bg-gray-300 sm:h-[22px]" />
+                <div className="bg-muted h-4 w-full animate-pulse rounded sm:h-[22px] sm:w-24" />
+                <div className="bg-muted h-4 flex-1 animate-pulse rounded sm:h-[22px]" />
               </div>
             ))}
           </div>
@@ -65,9 +65,9 @@ export function ImportDetailsPageSkeleton() {
 
         {/* Right Card: Errors/Progress Skeleton */}
         {/* This skeleton works for both Errors panel and Progress panel cases */}
-        <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+        <div className="border-border bg-card/50 rounded-xl border p-4 shadow-sm sm:p-6">
           {/* Title Skeleton */}
-          <div className="mb-4 h-6 w-40 animate-pulse rounded bg-gray-300 sm:mb-6 sm:h-7" />
+          <div className="bg-muted mb-4 h-6 w-40 animate-pulse rounded sm:mb-6 sm:h-7" />
 
           {/* Table Skeleton - works for Errors case */}
           {/* For Progress cases, this will just show as a generic loading state */}
@@ -75,13 +75,13 @@ export function ImportDetailsPageSkeleton() {
 
           {/* Pagination Skeleton - shown for Errors case */}
           <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:mt-6 sm:flex-row">
-            <div className="h-10 w-32 animate-pulse rounded bg-gray-300" />
+            <div className="bg-muted h-10 w-32 animate-pulse rounded" />
             <div className="flex items-center gap-2">
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="h-10 w-10 animate-pulse rounded bg-gray-300" />
+                <div key={index} className="bg-muted h-10 w-10 animate-pulse rounded" />
               ))}
             </div>
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-300" />
+            <div className="bg-muted h-4 w-24 animate-pulse rounded" />
           </div>
         </div>
       </div>

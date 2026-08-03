@@ -36,7 +36,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.Add size={18} className="text-dark-500" strokeWidth={2} />
+            <Icons.Add size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.users.modals.create.title')}
