@@ -3898,12 +3898,38 @@
             "projectCode": "Введіть код проєкту",
             "clientCompany": "Компанія клієнта",
             "contractNumber": "Номер контракту",
-            "description": "Текст-заповнювач"
+            "description": "Текст-заповнювач",
+            "fullCompanyName": "Введіть повну назву компанії",
+            "address": "Введіть адресу",
+            "edrpouCode": "Введіть ЄДРПОУ",
+            "website": "Введіть сайт",
+            "email": "Введіть електронну пошту",
+            "hotlinePhone": "Введіть номер телефону підтримки",
+            "directorName": "Введіть ПІБ директора",
+            "iban": "Введіть IBAN",
+            "bankName": "Введіть назву банку",
+            "bankCode": "Введіть код банку"
           },
           "errors": {
             "nameMinLength": "Назва має містити щонайменше 3 символи",
             "codeMinLength": "Код має містити щонайменше 2 символи",
             "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          },
+          "companyDetails": {
+            "title": "Дані компанії",
+            "fullCompanyName": "Повна назва компанії",
+            "address": "Адреса",
+            "edrpouCode": "ЄДРПОУ",
+            "website": "Сайт",
+            "email": "Електронна пошта",
+            "hotlinePhone": "Номер телефону підтримки",
+            "directorName": "Директор"
+          },
+          "bankingDetails": {
+            "title": "Банківські реквізити",
+            "iban": "IBAN",
+            "bankName": "Банк",
+            "bankCode": "Код банку"
           }
         },
         "edit": {
@@ -3932,11 +3958,37 @@
             "projectName": "Введіть назву проєкту",
             "clientCompany": "Компанія клієнта",
             "contractNumber": "Номер контракту",
-            "description": "Текст-заповнювач"
+            "description": "Текст-заповнювач",
+            "fullCompanyName": "Введіть повну назву компанії",
+            "address": "Введіть адресу",
+            "edrpouCode": "Введіть ЄДРПОУ",
+            "website": "Введіть сайт",
+            "email": "Введіть електронну пошту",
+            "hotlinePhone": "Введіть номер телефону підтримки",
+            "directorName": "Введіть ПІБ директора",
+            "iban": "Введіть IBAN",
+            "bankName": "Введіть назву банку",
+            "bankCode": "Введіть код банку"
           },
           "errors": {
             "nameMinLength": "Назва має містити щонайменше 3 символи",
             "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          },
+          "companyDetails": {
+            "title": "Дані компанії",
+            "fullCompanyName": "Повна назва компанії",
+            "address": "Адреса",
+            "edrpouCode": "ЄДРПОУ",
+            "website": "Сайт",
+            "email": "Електронна пошта",
+            "hotlinePhone": "Номер телефону підтримки",
+            "directorName": "Директор"
+          },
+          "bankingDetails": {
+            "title": "Банківські реквізити",
+            "iban": "IBAN",
+            "bankName": "Банк",
+            "bankCode": "Код банку"
           }
         },
         "delete": {
@@ -3944,6 +3996,12 @@
           "confirmMessage": "Ви впевнені, що хочете видалити цей проєкт? Цю дію неможливо скасувати.",
           "deleting": "Видалення...",
           "deleteProject": "Видалити проєкт"
+        },
+        "errors": {
+          "edrpouCodeFormat": "ЄДРПОУ має містити рівно 8 цифр",
+          "ibanFormat": "IBAN має починатися з 2 великих латинських літер, далі до 32 цифр (макс. 34 символи)",
+          "hotlinePhoneFormat": "Номер телефону може містити лише цифри та пробіли",
+          "emailFormat": "Введіть коректну електронну адресу"
         }
       }
     },
