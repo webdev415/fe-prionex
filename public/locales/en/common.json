@@ -1163,7 +1163,7 @@
         "noLawyers": "No active lawyers configured",
         "loading": "Loading settings…",
         "loadError": "Could not load settings",
-        "readOnlyNotice": "View only — you do not have permission to change department settings.",
+        "readOnlyNotice": "View only — you do not have permission to change department settings. If you should have access, sign out and sign in again to refresh your permissions.",
         "lawyer": "Lawyer",
         "status": "Status",
         "subTabs": {
@@ -1577,7 +1577,8 @@
             "error": "Could not add lawyer",
             "searchLawyer": "Search lawyers…"
           }
-        }
+        },
+        "readOnlyFooterNotice": "Saving is unavailable — you do not have permission to change department settings. If you should have access, sign out and sign in again to refresh your permissions."
       },
       "workspaceBanner": {
         "lawBadge": "Law",
