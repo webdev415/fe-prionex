@@ -2,6 +2,17 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Pin the test-run locale so number/date formatting is reproducible on every
+// machine. Components render values with the locale-less `Number#toLocaleString()`,
+// which resolves to the *OS* locale (`LANG`/`LC_ALL`) at process start — comma
+// grouping on an en-US CI runner (`156,228`), but a non-breaking space on a dev
+// box set to `ru_RU`/`uk_UA` (`156 228`). That divergence makes locale-sensitive
+// assertions pass in CI yet fail the identical pre-commit run locally, breaking
+// the hook's "clean local run ⇒ green CI" contract. We force `C.UTF-8` here (in
+// the parent process, before Vitest forks its `pool: 'forks'` workers, which
+// inherit this env) so ICU resolves to en-US everywhere — matching CI exactly.
+process.env.LC_ALL = 'C.UTF-8'
+
 export default defineConfig({
   plugins: [react()],
   test: {
