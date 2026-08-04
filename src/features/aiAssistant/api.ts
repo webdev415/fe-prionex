@@ -36,7 +36,10 @@ export interface AssistantChatRequest {
    * ships support, so it is safe to send today (forward-compatible).
    */
   deep_research?: boolean
-  /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */
+  /**
+   * Images (screenshot paste), documents (pdf/xlsx/xls/csv) and/or one voice
+   * note; at most {@link MAX_ATTACHMENTS} in total.
+   */
   attachments?: ChatAttachmentPayload[]
 }
 
@@ -156,13 +159,45 @@ export interface SendChatMessageCallbacks {
 export class AssistantChatStreamError extends Error {
   readonly status?: number
   readonly code?: string
+  /**
+   * The server's own wording, when it sent any. Kept apart from `message`
+   * (which falls back to a generic English string) so the UI can tell "the
+   * server explained the rejection" from "the request just failed" — a
+   * rejected attachment must surface the backend's text, not «щось пішло не
+   * так».
+   */
+  readonly serverDetail?: string
 
   constructor(payload: SseErrorPayload) {
     super(payload.message ?? 'Assistant stream error')
     this.name = 'AssistantChatStreamError'
     this.status = payload.status
     this.code = payload.code
+    this.serverDetail = payload.message?.trim() || undefined
   }
+}
+
+/**
+ * Readable text out of an error body. FastAPI answers a schema violation with
+ * `detail` as a **list** of `{msg, loc}` objects, so the naive `body.detail`
+ * ends up rendered as "[object Object]" — that list is flattened here.
+ */
+export function extractErrorDetail(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined
+  const raw = (body as { detail?: unknown; message?: unknown }).detail
+  const detail = raw ?? (body as { message?: unknown }).message
+  if (typeof detail === 'string') return detail.trim() || undefined
+  const readItem = (item: unknown): string | null => {
+    if (typeof item === 'string') return item
+    const msg = (item as { msg?: unknown } | null)?.msg
+    return typeof msg === 'string' ? msg : null
+  }
+  if (Array.isArray(detail)) {
+    const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
+    return parts.length > 0 ? parts.join('; ') : undefined
+  }
+  const single = readItem(detail)
+  return single ?? undefined
 }
 
 /**
@@ -195,14 +230,15 @@ export async function sendChatMessage(
     body: JSON.stringify(payload),
   })
 
-  // HTTP-level failure (e.g. 503 before the stream starts, 422 image-only).
+  // HTTP-level failure (e.g. 503 before the stream starts, 422 image-only,
+  // 413 from the proxy when an attachment exceeds the body limit — the latter
+  // answers with HTML, hence the tolerant parsing).
   if (!response.ok) {
     let message: string | undefined
     try {
-      const body = await response.json()
-      message = body?.detail ?? body?.message
+      message = extractErrorDetail(await response.json())
     } catch {
-      /* non-JSON error body — fall back to status text */
+      /* non-JSON error body — the caller falls back to a status-based text */
     }
     throw new AssistantChatStreamError({ status: response.status, message })
   }

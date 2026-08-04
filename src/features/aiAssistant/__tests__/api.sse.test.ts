@@ -229,6 +229,48 @@ describe('sendChatMessage SSE transport', () => {
     expect(error).toBeInstanceOf(AssistantChatStreamError)
     expect(error.status).toBe(422)
     expect(error.message).toBe('image needs text')
+    expect(error.serverDetail).toBe('image needs text')
+  })
+
+  it('flattens the FastAPI validation detail list into readable text', async () => {
+    // Pydantic answers a rejected attachment with detail: [{loc, msg, type}] —
+    // rendering that object as-is would show the operator "[object Object]".
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: [
+              {
+                loc: ['body', 'attachments', 0, 'data_b64'],
+                msg: 'документ 62914560 байт перевищує ліміт 52428800 байт (50MB)',
+                type: 'value_error',
+              },
+            ],
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.serverDetail).toBe('документ 62914560 байт перевищує ліміт 52428800 байт (50MB)')
+  })
+
+  it('leaves serverDetail unset when the error body is not JSON (proxy 413)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('<html><body><h1>413 Request Entity Too Large</h1></body></html>', {
+          status: 413,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.status).toBe(413)
+    expect(error.serverDetail).toBeUndefined()
   })
 
   it('ignores unknown event frames in the stream (forward-compat)', async () => {

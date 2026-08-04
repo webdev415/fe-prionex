@@ -30,11 +30,13 @@ import {
 import { normalizeCitations } from '@/features/aiAssistant/sse'
 import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
 import {
+  ATTACHMENT_ACCEPT,
   blobToBase64,
-  extractImageFiles,
+  extractFileEntries,
+  formatAttachmentSize,
   MAX_ATTACHMENTS,
   toChatAttachmentPayload,
-  validateImageFile,
+  validateAttachmentFile,
   type AttachmentType,
   type PendingAttachment,
 } from '@/features/aiAssistant/attachments'
@@ -98,6 +100,16 @@ type LocalAttachment = {
   type: AttachmentType
   mime: string
   url: string
+  /** File name — the whole card for a document, absent for a voice note. */
+  name?: string
+  sizeBytes?: number
+}
+
+/** A picked file being encoded into base64 — a placeholder card in the composer. */
+type PreparingAttachment = {
+  id: string
+  name: string
+  sizeBytes: number
 }
 
 type ChatMessage = {
@@ -297,6 +309,19 @@ function resolveSpeechLang(language?: string): string {
   if (!language) return 'en-US'
   if (language.startsWith('uk')) return 'uk-UA'
   return 'en-US'
+}
+
+/** Icon for a non-image attachment: a sheet for tabular data, a page otherwise. */
+function AttachmentIcon({ mime }: { mime: string }) {
+  const isSpreadsheet =
+    mime === 'text/csv' ||
+    mime === 'application/vnd.ms-excel' ||
+    mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  return isSpreadsheet ? (
+    <Icons.Csv02 size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+  ) : (
+    <Icons.File size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+  )
 }
 
 function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDropdownProps) {
@@ -682,7 +707,8 @@ export function AiAssistantBetaPage() {
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [dictationDraft, setDictationDraft] = useState('')
-  const [pendingImages, setPendingImages] = useState<PendingAttachment[]>([])
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const [preparingAttachments, setPreparingAttachments] = useState<PreparingAttachment[]>([])
   const [showScrollToLatest, setShowScrollToLatest] = useState(false)
   const [dockHeight, setDockHeight] = useState(320)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
@@ -693,13 +719,19 @@ export function AiAssistantBetaPage() {
   const scrollContainerRef = useRef<HTMLElement | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const dictationGhostRef = useRef<HTMLDivElement>(null)
   const lastDictationFinalRef = useRef('')
   const longPressTimerRef = useRef<number | null>(null)
   const longPressFiredRef = useRef(false)
   /** Every object URL minted for attachments — revoked on reset/unmount. */
   const attachmentUrlsRef = useRef<string[]>([])
+  /**
+   * How many attachments the next message already carries, staged and still
+   * encoding. Held in a ref, not derived from state, so two picks in the same
+   * tick cannot both see an empty composer and together overflow the cap.
+   */
+  const attachmentCountRef = useRef(0)
   const responseTokenRef = useRef(0)
   const hasConversation = chatMessages.length > 0
 
@@ -928,8 +960,8 @@ export function AiAssistantBetaPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [recorderStatus, cancelVoiceMessage])
 
-  const clearPendingImages = useCallback(() => {
-    setPendingImages((current) => {
+  const clearPendingAttachments = useCallback(() => {
+    setPendingAttachments((current) => {
       // Object URLs stay alive while a sent message still shows them in the
       // feed; pending chips that never left the composer are revoked here.
       current.forEach((item) => {
@@ -940,7 +972,14 @@ export function AiAssistantBetaPage() {
       })
       return current.length > 0 ? [] : current
     })
+    setPreparingAttachments((current) => (current.length > 0 ? [] : current))
   }, [])
+
+  // Reconcile the cap counter with what is actually staged: `addFiles` bumps it
+  // synchronously when it admits files, removals only land through state.
+  useEffect(() => {
+    attachmentCountRef.current = pendingAttachments.length + preparingAttachments.length
+  }, [pendingAttachments.length, preparingAttachments.length])
 
   useEffect(() => {
     const recordingActive =
@@ -1152,7 +1191,7 @@ export function AiAssistantBetaPage() {
     cancelVoiceMessage()
     stopTts()
     setDictationDraft('')
-    clearPendingImages()
+    clearPendingAttachments()
     responseTokenRef.current += 1
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
@@ -1161,7 +1200,7 @@ export function AiAssistantBetaPage() {
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setFocusedCitation(null)
     setIsAssistantResponding(false)
-  }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
+  }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingAttachments])
 
   const clientOptions = useMemo(
     () => [
@@ -1489,7 +1528,12 @@ export function AiAssistantBetaPage() {
       }
 
       setMessage('')
-      setPendingImages((current) => (current.length > 0 ? [] : current))
+      // Only the attachments that went out with this turn leave the composer —
+      // a quick action fired while a file is staged must not discard it.
+      if (attachmentList.length > 0) {
+        const sentIds = new Set(attachmentList.map((item) => item.id))
+        setPendingAttachments((current) => current.filter((item) => !sentIds.has(item.id)))
+      }
       appendChatMessage({
         role: 'user',
         content: prompt,
@@ -1499,6 +1543,8 @@ export function AiAssistantBetaPage() {
                 type: item.type,
                 mime: item.mime,
                 url: item.previewUrl,
+                name: item.name,
+                sizeBytes: item.sizeBytes,
               }))
             : undefined,
       })
@@ -1656,12 +1702,27 @@ export function AiAssistantBetaPage() {
               ? error.response?.status
               : undefined
         const isThinkingUnavailable = isThinking && status === 503
+        // A rejected attachment (too large / wrong type / malformed body) is
+        // something the operator can fix — show what the server said instead of
+        // the catch-all. 413 usually comes from the proxy with an HTML body and
+        // no readable text, hence its own fallback wording.
+        const serverDetail =
+          error instanceof AssistantChatStreamError ? error.serverDetail : undefined
+        const isRejectedRequest =
+          status === 400 || status === 413 || status === 415 || status === 422
         const errorMessage = isThinkingUnavailable
           ? t('pages.aiAssistant.thinkingUnavailable')
-          : t('pages.aiAssistant.apiError')
+          : isRejectedRequest && serverDetail
+            ? serverDetail
+            : status === 413
+              ? t('pages.aiAssistant.attachRejectedTooLarge')
+              : t('pages.aiAssistant.apiError')
         if (isThinkingUnavailable) {
           setAssistantSettings((s) => ({ ...s, mode: 'fast' }))
         }
+        // Give the typed text back so a failed send is one Enter away from a
+        // retry — unless the user has already started typing something else.
+        if (prompt) setMessage((current) => (current.trim() ? current : prompt))
         toast.error(errorMessage)
         patchLoadingMessage({
           content: errorMessage,
@@ -1724,53 +1785,86 @@ export function AiAssistantBetaPage() {
     }
   }, [submitPrompt, t])
 
-  const addImageFiles = useCallback(
+  /**
+   * Stage picked files (picker / paste / drop): screenshots and documents alike.
+   * Each file is validated against the contract first, then encoded to base64 —
+   * a 50MB workbook takes a moment, so admitted files show a "preparing" card
+   * until their bytes are ready.
+   */
+  const addFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return
-      const room = MAX_ATTACHMENTS - pendingImages.length
       let unsupported = false
-      let tooLarge = false
-      let overflow = files.length > Math.max(room, 0)
-      const accepted: PendingAttachment[] = []
-      for (const file of files.slice(0, Math.max(room, 0))) {
-        const error = validateImageFile(file, 0)
-        if (error === 'unsupportedType') {
-          unsupported = true
-          continue
-        }
-        if (error === 'tooLarge') {
-          tooLarge = true
-          continue
-        }
-        try {
-          const data_b64 = await blobToBase64(file)
-          const previewUrl = URL.createObjectURL(file)
-          attachmentUrlsRef.current.push(previewUrl)
-          accepted.push({
-            id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            type: 'image',
-            mime: file.type,
-            data_b64,
-            previewUrl,
-            sizeBytes: file.size,
+      let overflow = false
+      let readFailed = false
+      // The cap that was hit — it differs by type, so the message must quote
+      // the one belonging to the rejected file.
+      let exceededLimit: number | null = null
+      const admitted: { file: File; id: string; type: AttachmentType; mime: string }[] = []
+
+      for (const file of files) {
+        const verdict = validateAttachmentFile(file, attachmentCountRef.current + admitted.length)
+        if (verdict.ok) {
+          admitted.push({
+            file,
+            id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: verdict.type,
+            mime: verdict.mime,
           })
+          continue
+        }
+        if (verdict.error === 'unsupportedType') unsupported = true
+        else if (verdict.error === 'tooLarge') exceededLimit ??= verdict.limit
+        else overflow = true
+      }
+
+      if (overflow) toast.error(t('pages.aiAssistant.attachTooMany', { count: MAX_ATTACHMENTS }))
+      if (unsupported) toast.error(t('pages.aiAssistant.attachUnsupported'))
+      if (exceededLimit != null) {
+        toast.error(
+          t('pages.aiAssistant.attachTooLarge', { limit: formatAttachmentSize(exceededLimit) })
+        )
+      }
+      if (admitted.length === 0) return
+
+      // Claim the slots before the first `await` so a second pick in the same
+      // tick sees them taken.
+      attachmentCountRef.current += admitted.length
+      setPreparingAttachments((current) => [
+        ...current,
+        ...admitted.map(({ id, file }) => ({ id, name: file.name, sizeBytes: file.size })),
+      ])
+
+      for (const item of admitted) {
+        try {
+          const data_b64 = await blobToBase64(item.file)
+          const previewUrl = URL.createObjectURL(item.file)
+          attachmentUrlsRef.current.push(previewUrl)
+          setPendingAttachments((current) => [
+            ...current,
+            {
+              id: item.id,
+              type: item.type,
+              mime: item.mime,
+              name: item.file.name,
+              data_b64,
+              previewUrl,
+              sizeBytes: item.file.size,
+            },
+          ])
         } catch {
-          unsupported = true
+          readFailed = true
+        } finally {
+          setPreparingAttachments((current) => current.filter((entry) => entry.id !== item.id))
         }
       }
-      if (room <= 0) overflow = true
-      if (overflow) toast.error(t('pages.aiAssistant.attachImageTooMany'))
-      if (unsupported) toast.error(t('pages.aiAssistant.attachImageUnsupported'))
-      if (tooLarge) toast.error(t('pages.aiAssistant.attachImageTooLarge'))
-      if (accepted.length > 0) {
-        setPendingImages((current) => [...current, ...accepted].slice(0, MAX_ATTACHMENTS))
-      }
+      if (readFailed) toast.error(t('pages.aiAssistant.attachReadFailed'))
     },
-    [pendingImages.length, t]
+    [t]
   )
 
-  const removePendingImage = useCallback((id: string) => {
-    setPendingImages((current) => {
+  const removePendingAttachment = useCallback((id: string) => {
+    setPendingAttachments((current) => {
       const target = current.find((item) => item.id === id)
       if (target) {
         URL.revokeObjectURL(target.previewUrl)
@@ -1784,40 +1878,35 @@ export function AiAssistantBetaPage() {
 
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const files = extractImageFiles(event.clipboardData.items)
+      const files = extractFileEntries(event.clipboardData.items)
       if (files.length === 0) return
       event.preventDefault()
-      void addImageFiles(files)
+      void addFiles(files)
     },
-    [addImageFiles]
+    [addFiles]
   )
 
-  const handleImageInputChange = useCallback(
+  const handleFileInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files
       if (files && files.length > 0) {
-        void addImageFiles(Array.from(files))
+        void addFiles(Array.from(files))
       }
       // Reset so picking the same file again still fires onChange.
       event.target.value = ''
     },
-    [addImageFiles]
+    [addFiles]
   )
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       if (event.dataTransfer.files.length === 0) return
       // Always swallow file drops — otherwise the browser navigates to the
-      // dropped file; non-image files surface the unsupported-type toast.
+      // dropped file. Unsupported ones are rejected by addFiles with a toast.
       event.preventDefault()
-      const files = extractImageFiles(event.dataTransfer.files)
-      if (files.length === 0) {
-        toast.error(t('pages.aiAssistant.attachImageUnsupported'))
-        return
-      }
-      void addImageFiles(files)
+      void addFiles(extractFileEntries(event.dataTransfer.files))
     },
-    [addImageFiles, t]
+    [addFiles]
   )
 
   const clearLongPressTimer = useCallback(() => {
@@ -2332,15 +2421,44 @@ export function AiAssistantBetaPage() {
                       >
                         {item.attachments && item.attachments.length > 0 && (
                           <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
-                            {item.attachments.map((attachment, index) =>
-                              attachment.type === 'image' ? (
-                                <img
-                                  key={index}
-                                  src={attachment.url}
-                                  alt={t('pages.aiAssistant.attachedImageAlt')}
-                                  className="max-h-48 max-w-full rounded-lg object-contain"
-                                />
-                              ) : (
+                            {item.attachments.map((attachment, index) => {
+                              if (attachment.type === 'image') {
+                                return (
+                                  <img
+                                    key={index}
+                                    src={attachment.url}
+                                    alt={t('pages.aiAssistant.attachedImageAlt')}
+                                    className="max-h-48 max-w-full rounded-lg object-contain"
+                                  />
+                                )
+                              }
+                              if (attachment.type === 'document') {
+                                // The card is the record that the operator sent
+                                // this file — the parsed content lives server-side.
+                                return (
+                                  <div
+                                    key={index}
+                                    data-testid="message-attachment-document"
+                                    className="border-border/60 bg-background/10 flex max-w-full items-center gap-2 rounded-lg border px-2.5 py-2"
+                                  >
+                                    <AttachmentIcon mime={attachment.mime} />
+                                    <div className="min-w-0">
+                                      <p
+                                        className="max-w-[14rem] truncate text-xs font-medium"
+                                        title={attachment.name}
+                                      >
+                                        {attachment.name}
+                                      </p>
+                                      {attachment.sizeBytes != null && (
+                                        <p className="text-[11px] opacity-70">
+                                          {formatAttachmentSize(attachment.sizeBytes)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return (
                                 // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
                                 <audio
                                   key={index}
@@ -2350,7 +2468,7 @@ export function AiAssistantBetaPage() {
                                   className="h-10 max-w-full"
                                 />
                               )
-                            )}
+                            })}
                           </div>
                         )}
                         {/* Live "Ход рассуждения": shown above the answer both
@@ -2474,27 +2592,82 @@ export function AiAssistantBetaPage() {
               if (e.dataTransfer.types.includes('Files')) e.preventDefault()
             }}
             onDrop={handleDrop}
+            data-testid="pending-attachments-dropzone"
           >
-            {pendingImages.length > 0 && (
+            {(pendingAttachments.length > 0 || preparingAttachments.length > 0) && (
               <div className="mb-2 flex flex-wrap gap-2" data-testid="pending-attachments">
-                {pendingImages.map((image) => (
-                  <div
-                    key={image.id}
-                    className="border-border bg-card relative h-16 w-16 overflow-hidden rounded-lg border"
-                  >
-                    <img
-                      src={image.previewUrl}
-                      alt={t('pages.aiAssistant.attachedImageAlt')}
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      aria-label={t('pages.aiAssistant.attachImageRemove')}
-                      onClick={() => removePendingImage(image.id)}
-                      className="absolute top-0.5 right-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                {pendingAttachments.map((attachment) =>
+                  attachment.type === 'image' ? (
+                    <div
+                      key={attachment.id}
+                      className="border-border bg-card relative h-16 w-16 overflow-hidden rounded-lg border"
+                      data-testid="pending-attachment-image"
                     >
-                      <Icons.Cancel01 size={12} strokeWidth={2} />
-                    </button>
+                      <img
+                        src={attachment.previewUrl}
+                        alt={t('pages.aiAssistant.attachedImageAlt')}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label={t('pages.aiAssistant.attachImageRemove')}
+                        onClick={() => removePendingAttachment(attachment.id)}
+                        className="absolute top-0.5 right-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                      >
+                        <Icons.Cancel01 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      key={attachment.id}
+                      className="border-border bg-muted/40 flex h-16 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2"
+                      data-testid="pending-attachment-document"
+                    >
+                      <AttachmentIcon mime={attachment.mime} />
+                      <div className="min-w-0">
+                        <p
+                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                          title={attachment.name}
+                        >
+                          {attachment.name}
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          {formatAttachmentSize(attachment.sizeBytes)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={t('pages.aiAssistant.attachmentRemove', {
+                          name: attachment.name,
+                        })}
+                        onClick={() => removePendingAttachment(attachment.id)}
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+                      >
+                        <Icons.Cancel01 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+                  )
+                )}
+                {preparingAttachments.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border-border bg-muted/40 flex h-16 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2"
+                    data-testid="pending-attachment-preparing"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="border-primary-500 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
+                    <div className="min-w-0">
+                      <p
+                        className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {t('pages.aiAssistant.attachPreparing')}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2509,7 +2682,12 @@ export function AiAssistantBetaPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
-                    void submitPrompt(message, pendingImages)
+                    // Sending now would leave the still-encoding files behind.
+                    if (preparingAttachments.length > 0) {
+                      toast.error(t('pages.aiAssistant.attachStillPreparing'))
+                      return
+                    }
+                    void submitPrompt(message, pendingAttachments)
                   }
                 }}
                 // The grey draft ghost is drawn over the textarea — the
@@ -2607,7 +2785,7 @@ export function AiAssistantBetaPage() {
                 {/* Composer "+" hub: attach / CRM actions / deep research /
                     context — Claude / ChatGPT "+" pattern. */}
                 <ComposerHubMenu
-                  onAttach={() => imageInputRef.current?.click()}
+                  onAttach={() => fileInputRef.current?.click()}
                   onQuickAction={(key) => void submitPrompt(quickActionPrompts[key])}
                   quickActionDisabled={isAssistantResponding}
                   deepResearch={assistantSettings.deepResearch}
@@ -2619,13 +2797,13 @@ export function AiAssistantBetaPage() {
                   onClientScopeChange={setClientScope}
                 />
                 <input
-                  ref={imageInputRef}
+                  ref={fileInputRef}
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={ATTACHMENT_ACCEPT}
                   multiple
                   className="hidden"
                   data-testid="attach-image-input"
-                  onChange={handleImageInputChange}
+                  onChange={handleFileInputChange}
                 />
 
                 <div className="relative shrink-0">
