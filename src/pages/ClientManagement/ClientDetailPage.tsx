@@ -44,6 +44,14 @@ import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPayment
 import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
 import { PriorityBadge } from './components/PriorityBadge'
+import { V3ClientPriorityPanel } from '@/features/scoring/components/V3ClientPriorityPanel'
+import { NotScoredBadge } from './components/NotScoredBadge'
+import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
+import {
+  currentMonthStart,
+  useV3ClientRollup,
+  useV3UiEnabled,
+} from '@/features/scoring/hooks/useV3Scores'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
@@ -702,6 +710,25 @@ export function ClientDetailPage() {
       isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+
+  // v3 priority for the card header (KAN-791): the header badge is the "stub"
+  // the ticket replaces. Only for brands cut over after the KAN-794 sign-off —
+  // elsewhere the legacy PriorityBadge stays.
+  const v3UiEnabled = useV3UiEnabled()
+  const { data: v3Rollup } = useV3ClientRollup(
+    activeProjectId ? Number(activeProjectId) : undefined,
+    clientId ? [clientId] : [],
+    currentMonthStart(),
+    { enabled: v3UiEnabled && !!clientId }
+  )
+  const v3ClientBucket = v3UiEnabled ? v3Rollup?.get(clientId)?.bucket_v3 : undefined
+  // Compliance needs no model — see the badge below.
+  const complianceBlocked = !!(
+    profile?.is_deceased ||
+    profile?.is_fraudster ||
+    profile?.lawsuit_filed
+  )
+
   const { data: messagingOperators = [] } = useOperators(
     activeProjectId ? Number(activeProjectId) : null
   )
@@ -2908,7 +2935,21 @@ export function ClientDetailPage() {
               <span className="text-foreground bg-card/10 flex items-center rounded-[16px] px-3 py-0 text-sm">
                 {client.score} {t('pages.clients.activity.score')}
               </span>
-              <PriorityBadge priority={client.priority as Priority} />
+              {/* Same three rules as the client list, in the same order. They
+                  used to live only in the list, so one client showed "Not
+                  scored" there and "Critical" here — the card contradicting the
+                  list it was opened from. Compliance is checked FIRST because it
+                  needs no model: a deceased debtor is do-not-call whether or not
+                  v3 covers them. */}
+              {v3UiEnabled && complianceBlocked ? (
+                <V3BucketBadge bucket="EXIT" />
+              ) : v3ClientBucket ? (
+                <V3BucketBadge bucket={v3ClientBucket} />
+              ) : v3UiEnabled ? (
+                <NotScoredBadge />
+              ) : (
+                <PriorityBadge priority={client.priority as Priority} />
+              )}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
@@ -2988,6 +3029,11 @@ export function ClientDetailPage() {
           )} */}
           </div>
         </div>
+        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag */}
+        <V3ClientPriorityPanel
+          projectId={activeProjectId ? Number(activeProjectId) : undefined}
+          clientId={clientId}
+        />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
           <div className="client-panel-scroll bg-card/50 flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
