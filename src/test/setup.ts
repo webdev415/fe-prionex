@@ -334,6 +334,17 @@ vi.mock('react-i18next', () => ({
         'pages.aiAssistant.codeCopied': 'Copied',
         'pages.aiAssistant.showAllRows': 'Show all ({{count}})',
         'pages.aiAssistant.collapseRows': 'Collapse',
+        // Assistant-generated files (charts, exports) rendered in the bubble
+        'pages.aiAssistant.filePreview.loading': 'Loading…',
+        'pages.aiAssistant.filePreview.loadFailed': 'Could not load the file',
+        'pages.aiAssistant.filePreview.imageFailed': 'Could not load the image “{{name}}”',
+        'pages.aiAssistant.filePreview.openFull': 'Open “{{name}}” full size',
+        'pages.aiAssistant.filePreview.close': 'Close',
+        'pages.aiAssistant.filePreview.download': 'Download',
+        'pages.aiAssistant.filePreview.downloadFailed': 'Download failed — try again',
+        'pages.aiAssistant.filePreview.openPreview': 'Open preview',
+        'pages.aiAssistant.filePreview.externalLink': 'external link',
+        'pages.aiAssistant.filePreview.blocked': 'Attachment not shown',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {

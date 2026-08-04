@@ -729,7 +729,19 @@
       "showReasoningFastHint": "У швидкому режимі міркувань немає",
       "voiceSilenceTimeout": "Тайм-аут тиші (авто-стоп)",
       "voiceMaxDuration": "Макс. довжина запису",
-      "voiceSeconds": "{{count}} с"
+      "voiceSeconds": "{{count}} с",
+      "filePreview": {
+        "loading": "Завантаження…",
+        "loadFailed": "Не вдалося завантажити файл",
+        "imageFailed": "Не вдалося завантажити зображення «{{name}}»",
+        "openFull": "Відкрити «{{name}}» на весь екран",
+        "close": "Закрити",
+        "download": "Завантажити",
+        "downloadFailed": "Не вдалося завантажити — спробуйте ще раз",
+        "openPreview": "Відкрити перегляд",
+        "externalLink": "зовнішнє посилання",
+        "blocked": "Вкладення не показано"
+      }
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",

@@ -722,7 +722,19 @@
       "showReasoningFastHint": "Fast mode produces no reasoning",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
-      "voiceSeconds": "{{count}}s"
+      "voiceSeconds": "{{count}}s",
+      "filePreview": {
+        "loading": "Loading…",
+        "loadFailed": "Could not load the file",
+        "imageFailed": "Could not load the image “{{name}}”",
+        "openFull": "Open “{{name}}” full size",
+        "close": "Close",
+        "download": "Download",
+        "downloadFailed": "Download failed — try again",
+        "openPreview": "Open preview",
+        "externalLink": "external link",
+        "blocked": "Attachment not shown"
+      }
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
