@@ -6,11 +6,33 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import type { AssistantFileKind } from './assistantFiles'
-import { useAssistantFileBlob } from './useAssistantFileBlob'
+import {
+  readAssistantFileErrorCode,
+  useAssistantFileBlob,
+  type AssistantFileErrorCode,
+} from './useAssistantFileBlob'
 
 /** Files the operator can look at without leaving the chat. */
 function isPreviewable(kind: AssistantFileKind): boolean {
   return kind === 'image' || kind === 'pdf'
+}
+
+/**
+ * Locale key for a gateway failure. The gateway's own `message` is Russian
+ * prose, and this UI runs in English/Ukrainian, so the `code` is mapped to a
+ * translated sentence instead of showing the server's text.
+ */
+function errorKey(code: AssistantFileErrorCode | undefined, fallback: string): string {
+  switch (code) {
+    case 'file_not_found':
+      return 'pages.aiAssistant.filePreview.errorNotFound'
+    case 'file_too_large':
+      return 'pages.aiAssistant.filePreview.errorTooLarge'
+    case 'brain_unavailable':
+      return 'pages.aiAssistant.filePreview.errorBrainUnavailable'
+    default:
+      return fallback
+  }
 }
 
 type PreviewModalProps = {
@@ -76,7 +98,7 @@ function AssistantFilePreviewModal({ onClose, url, name, kind }: PreviewModalPro
             )}
             {state.status === 'error' && (
               <span className="text-danger-400 text-sm">
-                {t('pages.aiAssistant.filePreview.loadFailed')}
+                {t(errorKey(state.code, 'pages.aiAssistant.filePreview.loadFailed'))}
               </span>
             )}
             {state.status === 'ready' && kind === 'image' && (
@@ -122,7 +144,9 @@ export function AssistantImage({ url, name, alt }: AssistantImageProps) {
       >
         <Icons.Error size={14} strokeWidth={1.5} className="shrink-0" />
         <span className="truncate">
-          {t('pages.aiAssistant.filePreview.imageFailed', { name: label })}
+          {state.code
+            ? t(errorKey(state.code, ''))
+            : t('pages.aiAssistant.filePreview.imageFailed', { name: label })}
         </span>
       </span>
     )
@@ -185,7 +209,7 @@ export function AssistantFileCard({ url, name, kind, label }: AssistantFileCardP
   const { t } = useTranslation('common')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failure, setFailure] = useState<{ code?: AssistantFileErrorCode } | null>(null)
   const previewable = isPreviewable(kind)
   // The icon states what the click does, which is the only thing that differs
   // between kinds here: look at it in place, or pull it down.
@@ -197,13 +221,13 @@ export function AssistantFileCard({ url, name, kind, label }: AssistantFileCardP
       setPreviewOpen(true)
       return
     }
-    setFailed(false)
+    setFailure(null)
     setDownloading(true)
     try {
       const response = await api.get<Blob>(url, { responseType: 'blob' })
       downloadBlob(response.data, name)
-    } catch {
-      setFailed(true)
+    } catch (error) {
+      setFailure({ code: await readAssistantFileErrorCode(error) })
     } finally {
       setDownloading(false)
     }
@@ -230,8 +254,8 @@ export function AssistantFileCard({ url, name, kind, label }: AssistantFileCardP
         <span className="min-w-0">
           <span className="text-foreground block truncate text-[13px] font-medium">{title}</span>
           <span className="text-muted-foreground block text-[11px]">
-            {failed
-              ? t('pages.aiAssistant.filePreview.downloadFailed')
+            {failure
+              ? t(errorKey(failure.code, 'pages.aiAssistant.filePreview.downloadFailed'))
               : previewable
                 ? t('pages.aiAssistant.filePreview.openPreview')
                 : t('pages.aiAssistant.filePreview.download')}
@@ -273,6 +297,34 @@ export function AssistantExternalRef({ href, text }: { href: string; text?: stri
         ({t('pages.aiAssistant.filePreview.externalLink')})
       </span>
     </a>
+  )
+}
+
+/**
+ * A file the assistant says it built, but whose link cannot be resolved —
+ * almost always because the model retyped its own answer and dropped the
+ * one-time token that scopes the file to this operator.
+ *
+ * Rendered as a dead card rather than an `<img>`: a request without the token
+ * can only 400, and a broken image icon would read as "the CRM is broken"
+ * instead of "ask the assistant to send the link again".
+ */
+export function AssistantUnresolvableRef({ text }: { text?: string }) {
+  const { t } = useTranslation('common')
+  const label = text?.trim()
+  return (
+    <span
+      data-testid="assistant-unresolvable-ref"
+      className="text-muted-foreground bg-muted/40 my-1 inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-left"
+    >
+      <Icons.FileRemove size={16} strokeWidth={1.5} className="shrink-0" />
+      <span className="min-w-0">
+        {label && (
+          <span className="text-foreground block truncate text-[13px] font-medium">{label}</span>
+        )}
+        <span className="block text-[11px]">{t('pages.aiAssistant.filePreview.linkLost')}</span>
+      </span>
+    </span>
   )
 }
 

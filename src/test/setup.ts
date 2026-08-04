@@ -345,6 +345,13 @@ vi.mock('react-i18next', () => ({
         'pages.aiAssistant.filePreview.openPreview': 'Open preview',
         'pages.aiAssistant.filePreview.externalLink': 'external link',
         'pages.aiAssistant.filePreview.blocked': 'Attachment not shown',
+        'pages.aiAssistant.filePreview.linkLost':
+          'The link to this file was lost — ask the assistant to send it again',
+        'pages.aiAssistant.filePreview.errorNotFound': 'The file is no longer available',
+        'pages.aiAssistant.filePreview.errorTooLarge':
+          'The file is too large to open here — ask for a smaller export',
+        'pages.aiAssistant.filePreview.errorBrainUnavailable':
+          'The assistant is unavailable — try again in a moment',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {

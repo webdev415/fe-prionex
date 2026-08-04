@@ -2,9 +2,9 @@ import { API_BASE_URL } from '@/lib/api'
 
 /**
  * CRM route that streams files the assistant produced (charts, CSV/XLSX
- * exports, PDF reports). The brain writes only the tail of the path into its
- * markdown (`<token>/<name>`), so the frontend is what turns it into a real,
- * authenticated URL.
+ * exports, PDF reports). It proxies the brain's own `/api/files/…` under the
+ * same right as the chat, so the frontend rewrites onto it rather than letting
+ * the browser resolve the path against the current CRM page.
  */
 export const ASSISTANT_FILES_ROUTE = '/api/v1/ai-assistant/files'
 
@@ -17,31 +17,53 @@ export type AssistantFileKind = 'image' | 'pdf' | 'sheet' | 'document' | 'other'
  * same field can carry a tracking pixel or a `javascript:` URL. So every
  * reference is classified before anything is rendered.
  *
- * - `internal` — a bridge-relative path, rewritten onto {@link ASSISTANT_FILES_ROUTE}
+ * - `internal` — a real file reference, rewritten onto {@link ASSISTANT_FILES_ROUTE}
  * - `external` — an `http(s)` URL: shown as a link the operator must click,
  *   never auto-loaded (auto-loading would leak "operator read this message,
  *   at this time, from this IP" to whoever the model named)
- * - `blocked` — anything else (`data:`, `javascript:`, path traversal, …)
+ * - `unresolvable` — looks like a path but is not a file reference. In practice
+ *   this is the model having dropped the token while retyping its own answer
+ *   (`![](payments_2026.png)`). Nothing can be fetched: the token *is* the
+ *   capability that scopes the file to this operator, and there is no lookup
+ *   by bare name — that would hand every operator everyone else's exports.
+ * - `blocked` — actively unsafe (`data:`, `javascript:`, …)
  */
 export type ResolvedAssistantSource =
   | { type: 'internal'; url: string; name: string; kind: AssistantFileKind }
   | { type: 'external'; href: string }
+  | { type: 'unresolvable' }
   | { type: 'blocked' }
 
 const SCHEME_RE = /^[a-z][a-z\d+\-.]*:/i
 const HTTP_SCHEME_RE = /^https?:$/i
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'])
+/**
+ * The one path shape that becomes a fetchable file.
+ *
+ * The brain emits `/api/files/<token>/<name>`; the `/api/files/` prefix is
+ * optional here because the model routinely retypes the link when it composes
+ * the final answer. The token is `secrets.token_urlsafe(12)` — 16 chars today,
+ * and the gateway accepts 16–64, so matching that same range keeps both sides
+ * in step if the length is ever changed.
+ *
+ * Matching one strict shape, rather than accepting any relative path, is what
+ * stops the model from aiming the browser at some other CRM endpoint.
+ */
+const FILE_REFERENCE_RE = /^(?:\/?api\/files\/)?([A-Za-z0-9_-]{16,64})\/([^/]+)$/
+
+// Extensions the gateway actually serves; anything else it refuses with 400
+// before the brain is even asked. Images list only the formats it sends
+// inline — `svg`/`gif`/`bmp` are absent on purpose and fall through to a
+// download card instead of an <img> that would fail.
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp'])
 const SHEET_EXTENSIONS = new Set(['csv', 'tsv', 'xls', 'xlsx'])
-const DOCUMENT_EXTENSIONS = new Set(['doc', 'docx', 'odt', 'rtf', 'txt'])
+const DOCUMENT_EXTENSIONS = new Set(['txt', 'md', 'json'])
 
 /**
- * File family behind a name, used to pick the icon and whether the file can be
- * previewed inline. Driven by the extension rather than by a server
- * `Content-Type`, because the decision has to be made before the fetch.
- *
- * `svg` is deliberately absent from the image set: an SVG is a document, not a
- * bitmap, and it lands in the download card instead of an inline preview.
+ * File family behind a name: picks the icon and decides whether the file can be
+ * previewed inline. Driven by the extension, because the gateway derives its
+ * `Content-Type` from the extension too (ignoring what the brain claimed), so
+ * the two agree by construction and the choice can be made before the fetch.
  */
 export function classifyAssistantFile(name: string): AssistantFileKind {
   const dot = name.lastIndexOf('.')
@@ -65,14 +87,18 @@ function filesBase(): string {
   return `${API_BASE_URL.replace(/\/+$/, '')}${ASSISTANT_FILES_ROUTE}`
 }
 
+/** `decodeURI`, or `null` when the string carries a malformed escape. */
+function decodePathOrNull(path: string): string | null {
+  try {
+    return decodeURI(path)
+  } catch {
+    return null
+  }
+}
+
 /**
- * Classify a `src`/`href` emitted by the assistant and, for bridge-relative
- * paths, rewrite it onto the CRM file endpoint.
- *
- * A path is accepted only when it cannot address anything but a file under the
- * bridge: no scheme, no leading `/` (that would reach any other CRM endpoint),
- * no `..`/`.` segments, no backslashes (browsers fold those into `/`), and no
- * `?`/`#` (which would rewrite the request instead of naming a file).
+ * Classify a `src`/`href` emitted by the assistant and, for real file
+ * references, rewrite it onto the CRM file endpoint.
  */
 export function resolveAssistantSource(raw: string | null | undefined): ResolvedAssistantSource {
   const src = (raw ?? '').trim()
@@ -89,35 +115,35 @@ export function resolveAssistantSource(raw: string | null | undefined): Resolved
     return HTTP_SCHEME_RE.test(scheme) ? { type: 'external', href: src } : { type: 'blocked' }
   }
 
-  // Decode before validating: an escaped `%2E%2E` would otherwise sail past the
-  // traversal check and turn back into `..` at the server. Decoding first also
-  // means a name that arrived already-escaped is not escaped a second time
-  // (`encodeURI` does escape a literal `%`). A malformed escape — a real `%` in
-  // the name — fails to decode, and the raw string is validated instead.
+  // Decode before matching, so an escaped `%2E%2E` cannot reach the server as
+  // `..`. Decoding first also means a name that arrived already escaped is not
+  // escaped twice (`encodeURI`/`encodeURIComponent` escape a literal `%`).
+  // A malformed escape — a real `%` in the name — is matched raw instead.
   const path = decodePathOrNull(src) ?? src
 
-  if (path.startsWith('/')) return { type: 'blocked' }
-  if (path.includes('\\') || path.includes('?') || path.includes('#')) return { type: 'blocked' }
-
-  const segments = path.split('/')
-  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
+  // These rewrite the request rather than name a file; browsers also fold
+  // backslashes into `/`, which would smuggle an extra path segment.
+  if (path.includes('\\') || path.includes('?') || path.includes('#')) {
     return { type: 'blocked' }
   }
 
-  const name = segments[segments.length - 1]
+  const match = FILE_REFERENCE_RE.exec(path)
+  if (!match) {
+    // A path-shaped string that is not a file reference. Absolute paths and
+    // traversal land here too: `/api/v1/clients/1` and `../secrets` simply do
+    // not match, so there is no way to aim this at another endpoint.
+    return { type: 'unresolvable' }
+  }
+
+  const [, token, name] = match
+  if (name === '.' || name === '..') return { type: 'blocked' }
+
   return {
     type: 'internal',
-    url: `${filesBase()}/${encodeURI(path)}`,
+    // The token matched `[A-Za-z0-9_-]`, so it is already URL-safe; only the
+    // name can carry spaces or Cyrillic.
+    url: `${filesBase()}/${token}/${encodeURIComponent(name)}`,
     name,
     kind: classifyAssistantFile(name),
-  }
-}
-
-/** `decodeURI`, or `null` when the string carries a malformed escape. */
-function decodePathOrNull(path: string): string | null {
-  try {
-    return decodeURI(path)
-  } catch {
-    return null
   }
 }

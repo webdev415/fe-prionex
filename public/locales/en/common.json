@@ -733,7 +733,11 @@
         "downloadFailed": "Download failed — try again",
         "openPreview": "Open preview",
         "externalLink": "external link",
-        "blocked": "Attachment not shown"
+        "blocked": "Attachment not shown",
+        "linkLost": "The link to this file was lost — ask the assistant to send it again",
+        "errorNotFound": "The file is no longer available",
+        "errorTooLarge": "The file is too large to open here — ask for a smaller export",
+        "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
       }
     },
     "lawyerWorkplace": {

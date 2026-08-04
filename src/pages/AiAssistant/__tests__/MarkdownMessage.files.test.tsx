@@ -15,10 +15,24 @@ vi.mock('@/features/messaging/utils/downloadBlob', () => ({
 
 const mockGet = vi.mocked(api.get)
 const FILES = 'https://api.dev.crm-prionex.online/api/v1/ai-assistant/files'
+/** Токен мозга — `secrets.token_urlsafe(12)`, ровно 16 символов. */
+const TOKEN = 'HcQ2vN8pLr4xTb_e'
 
 /** The bridge answers with a Blob; the component turns it into an object URL. */
 function respondWithBlob(type = 'image/png') {
   mockGet.mockResolvedValue({ data: new Blob(['binary'], { type }) })
+}
+
+/** The gateway's failure envelope: `{"detail": {"code", "message"}}` as a Blob. */
+function respondWithError(code: string, status = 404) {
+  mockGet.mockRejectedValue({
+    response: {
+      status,
+      data: new Blob([JSON.stringify({ detail: { code, message: 'что-то пошло не так' } })], {
+        type: 'application/json',
+      }),
+    },
+  })
 }
 
 beforeEach(() => {
@@ -28,13 +42,15 @@ beforeEach(() => {
 })
 
 describe('MarkdownMessage — предпросмотр графиков ассистента', () => {
-  it('относительный путь картинки уходит на CRM-эндпоинт файлов, а не на текущий URL', async () => {
+  it('канонический путь мозга уходит на CRM-эндпоинт файлов, а не на текущий URL', async () => {
     respondWithBlob()
-    render(<MarkdownMessage>{'![Графік платежів](a1b2c3/payments_2026.png)'}</MarkdownMessage>)
+    render(
+      <MarkdownMessage>{`![Графік платежів](/api/files/${TOKEN}/payments_2026.png)`}</MarkdownMessage>
+    )
 
     await waitFor(() => expect(mockGet).toHaveBeenCalled())
     expect(mockGet).toHaveBeenCalledWith(
-      `${FILES}/a1b2c3/payments_2026.png`,
+      `${FILES}/${TOKEN}/payments_2026.png`,
       expect.objectContaining({ responseType: 'blob' })
     )
 
@@ -47,31 +63,61 @@ describe('MarkdownMessage — предпросмотр графиков асси
 
   it('подставляет имя файла в alt, когда модель его не написала', async () => {
     respondWithBlob()
-    render(<MarkdownMessage>{'![](a1b2c3/chart.png)'}</MarkdownMessage>)
+    render(<MarkdownMessage>{`![](/api/files/${TOKEN}/chart.png)`}</MarkdownMessage>)
 
     expect(await screen.findByRole('img', { name: 'chart.png' })).toBeInTheDocument()
   })
 
   it('клик по картинке открывает крупный просмотр', async () => {
     respondWithBlob()
-    render(<MarkdownMessage>{'![Графік](a1b2c3/payments_2026.png)'}</MarkdownMessage>)
+    render(<MarkdownMessage>{`![Графік](/api/files/${TOKEN}/payments_2026.png)`}</MarkdownMessage>)
 
     expect(screen.queryByTestId('assistant-file-preview-modal')).not.toBeInTheDocument()
 
     fireEvent.click(await screen.findByTestId('assistant-image'))
 
-    const modal = await screen.findByTestId('assistant-file-preview-modal')
-    expect(modal).toBeInTheDocument()
+    expect(await screen.findByTestId('assistant-file-preview-modal')).toBeInTheDocument()
     expect(await screen.findByRole('img', { name: 'payments_2026.png' })).toBeInTheDocument()
   })
 
   it('битая картинка даёт плейсхолдер, а не сломанную иконку', async () => {
-    mockGet.mockRejectedValue(new Error('404 — токен протух'))
-    render(<MarkdownMessage>{'![Графік](a1b2c3/gone.png)'}</MarkdownMessage>)
+    mockGet.mockRejectedValue(new Error('сеть отвалилась'))
+    render(<MarkdownMessage>{`![Графік](/api/files/${TOKEN}/gone.png)`}</MarkdownMessage>)
 
     const placeholder = await screen.findByTestId('assistant-image-placeholder')
     expect(placeholder).toHaveTextContent('Could not load the image “Графік”')
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('код ошибки шлюза превращается в осмысленную фразу, а не в общее «не удалось»', async () => {
+    respondWithError('file_too_large', 413)
+    render(<MarkdownMessage>{`![Графік](/api/files/${TOKEN}/huge.png)`}</MarkdownMessage>)
+
+    const placeholder = await screen.findByTestId('assistant-image-placeholder')
+    expect(placeholder).toHaveTextContent('The file is too large to open here')
+  })
+})
+
+describe('MarkdownMessage — модель потеряла токен', () => {
+  it('`![](payments_2026.png)` без токена не даёт битой картинки и не шлёт запрос', () => {
+    // Симптом из задачи. Токен — это capability: без него скачивать нечего,
+    // подставлять роут под голое имя нельзя (отдало бы чужие выгрузки).
+    render(<MarkdownMessage>{'![Графік](payments_2026.png)'}</MarkdownMessage>)
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(mockGet).not.toHaveBeenCalled()
+
+    const card = screen.getByTestId('assistant-unresolvable-ref')
+    expect(card).toHaveTextContent('Графік')
+    expect(card).toHaveTextContent('ask the assistant to send it again')
+  })
+
+  it('ссылка без токена оставляет текст, но не создаёт ссылку', () => {
+    render(<MarkdownMessage>{'[Завантажити звіт](payments_2026.xlsx)'}</MarkdownMessage>)
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-file-card')).not.toBeInTheDocument()
+    expect(screen.getByText('Завантажити звіт')).toBeInTheDocument()
   })
 })
 
@@ -106,11 +152,21 @@ describe('MarkdownMessage — внешние ссылки не загружаю�
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
     expect(screen.getByText('Натисни')).toBeInTheDocument()
   })
+
+  it('ссылка на чужой эндпоинт CRM не превращается в запрос', () => {
+    render(<MarkdownMessage>{'[Клієнти](/api/v1/clients/1)'}</MarkdownMessage>)
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(screen.getByText('Клієнти')).toBeInTheDocument()
+  })
 })
 
 describe('MarkdownMessage — выгрузки показываются карточкой', () => {
   it('ссылка на xlsx рендерится карточкой с именем, а не голым URL', () => {
-    render(<MarkdownMessage>{'[Завантажити звіт](a1b2c3/payments_2026.xlsx)'}</MarkdownMessage>)
+    render(
+      <MarkdownMessage>{`[Завантажити звіт](/api/files/${TOKEN}/payments_2026.xlsx)`}</MarkdownMessage>
+    )
 
     const card = screen.getByTestId('assistant-file-card')
     expect(card).toHaveAttribute('data-file-kind', 'sheet')
@@ -123,13 +179,13 @@ describe('MarkdownMessage — выгрузки показываются карт
   it('клик по карточке скачивает файл через авторизованный клиент', async () => {
     const blob = new Blob(['id,sum'], { type: 'text/csv' })
     mockGet.mockResolvedValue({ data: blob })
-    render(<MarkdownMessage>{'[Виписка](a1b2c3/export.csv)'}</MarkdownMessage>)
+    render(<MarkdownMessage>{`[Виписка](/api/files/${TOKEN}/export.csv)`}</MarkdownMessage>)
 
     fireEvent.click(screen.getByTestId('assistant-file-card'))
 
     await waitFor(() =>
       expect(mockGet).toHaveBeenCalledWith(
-        `${FILES}/a1b2c3/export.csv`,
+        `${FILES}/${TOKEN}/export.csv`,
         expect.objectContaining({ responseType: 'blob' })
       )
     )
@@ -137,18 +193,18 @@ describe('MarkdownMessage — выгрузки показываются карт
   })
 
   it('сорванное скачивание сообщает об ошибке в самой карточке', async () => {
-    mockGet.mockRejectedValue(new Error('503'))
-    render(<MarkdownMessage>{'[Виписка](a1b2c3/export.csv)'}</MarkdownMessage>)
+    respondWithError('file_not_found')
+    render(<MarkdownMessage>{`[Виписка](/api/files/${TOKEN}/export.csv)`}</MarkdownMessage>)
 
     fireEvent.click(screen.getByTestId('assistant-file-card'))
 
-    expect(await screen.findByText('Download failed — try again')).toBeInTheDocument()
+    expect(await screen.findByText('The file is no longer available')).toBeInTheDocument()
     expect(downloadBlob).not.toHaveBeenCalled()
   })
 
   it('pdf открывается предпросмотром в модалке, а не скачиванием', async () => {
     respondWithBlob('application/pdf')
-    render(<MarkdownMessage>{'[Акт звірки](a1b2c3/act.pdf)'}</MarkdownMessage>)
+    render(<MarkdownMessage>{`[Акт звірки](/api/files/${TOKEN}/act.pdf)`}</MarkdownMessage>)
 
     const card = screen.getByTestId('assistant-file-card')
     expect(card).toHaveAttribute('data-file-kind', 'pdf')
@@ -159,7 +215,7 @@ describe('MarkdownMessage — выгрузки показываются карт
   })
 
   it('картинка, присланная ссылкой (а не ![]), тоже становится карточкой', () => {
-    render(<MarkdownMessage>{'[Графік](a1b2c3/chart.png)'}</MarkdownMessage>)
+    render(<MarkdownMessage>{`[Графік](/api/files/${TOKEN}/chart.png)`}</MarkdownMessage>)
 
     expect(screen.getByTestId('assistant-file-card')).toHaveAttribute('data-file-kind', 'image')
     expect(mockGet).not.toHaveBeenCalled()
