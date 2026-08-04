@@ -144,6 +144,8 @@ export interface LegalLetterConfirmRequest {
   due_date: string
   assigned_to_user_id: number
   contract_number?: string | null
+  /** Record the letter sender's address into the client's email contacts. */
+  save_sender_email_to_client?: boolean
 }
 
 export interface LegalLetterConfirmResponse {
