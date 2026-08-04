@@ -138,7 +138,9 @@ export function CallDialogModal({
 
   // Hangup mutation
   const hangupMutation = useHangupCall(clientId)
-  const rejectMutation = useRejectCall(clientId)
+  // The operator's own extension identifies which of the queue's ringing legs
+  // to drop; without it the backend can only guess at the first one rung.
+  const rejectMutation = useRejectCall(clientId, agentExtension)
   const callDetailsState = callDetails?.state
 
   // Track modal open state
