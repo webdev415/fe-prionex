@@ -24,11 +24,7 @@ vi.mock('sonner', () => ({
 
 import { toast } from 'sonner'
 import { AssistantChatStreamError, sendChatMessage } from '@/features/aiAssistant/api'
-import {
-  MAX_ATTACHMENTS,
-  MAX_DOCUMENT_BYTES,
-  MAX_IMAGE_BYTES,
-} from '@/features/aiAssistant/attachments'
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS } from '@/features/aiAssistant/attachments'
 
 const mockedSendChatMessage = vi.mocked(sendChatMessage)
 
@@ -157,7 +153,7 @@ describe('AiAssistantBetaPage attachments', () => {
     )
 
     const big = makeImageFile('big.png')
-    Object.defineProperty(big, 'size', { value: MAX_IMAGE_BYTES + 1 })
+    Object.defineProperty(big, 'size', { value: MAX_ATTACHMENT_BYTES + 1 })
     pasteFiles([big])
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTooLarge')
@@ -226,7 +222,7 @@ describe('AiAssistantBetaPage attachments', () => {
   it('rejects a document above the size limit before sending it', async () => {
     renderPage()
     const huge = makeFile('huge.xlsx', 'application/vnd.ms-excel')
-    Object.defineProperty(huge, 'size', { value: MAX_DOCUMENT_BYTES + 1 })
+    Object.defineProperty(huge, 'size', { value: MAX_ATTACHMENT_BYTES + 1 })
     pickFiles([huge])
 
     await waitFor(() =>

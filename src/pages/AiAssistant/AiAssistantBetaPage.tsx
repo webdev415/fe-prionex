@@ -34,6 +34,7 @@ import {
   blobToBase64,
   extractFileEntries,
   formatAttachmentSize,
+  MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
   toChatAttachmentPayload,
   validateAttachmentFile,
@@ -1797,9 +1798,7 @@ export function AiAssistantBetaPage() {
       let unsupported = false
       let overflow = false
       let readFailed = false
-      // The cap that was hit — it differs by type, so the message must quote
-      // the one belonging to the rejected file.
-      let exceededLimit: number | null = null
+      let tooLarge = false
       const admitted: { file: File; id: string; type: AttachmentType; mime: string }[] = []
 
       for (const file of files) {
@@ -1814,15 +1813,17 @@ export function AiAssistantBetaPage() {
           continue
         }
         if (verdict.error === 'unsupportedType') unsupported = true
-        else if (verdict.error === 'tooLarge') exceededLimit ??= verdict.limit
+        else if (verdict.error === 'tooLarge') tooLarge = true
         else overflow = true
       }
 
       if (overflow) toast.error(t('pages.aiAssistant.attachTooMany', { count: MAX_ATTACHMENTS }))
       if (unsupported) toast.error(t('pages.aiAssistant.attachUnsupported'))
-      if (exceededLimit != null) {
+      if (tooLarge) {
         toast.error(
-          t('pages.aiAssistant.attachTooLarge', { limit: formatAttachmentSize(exceededLimit) })
+          t('pages.aiAssistant.attachTooLarge', {
+            limit: formatAttachmentSize(MAX_ATTACHMENT_BYTES),
+          })
         )
       }
       if (admitted.length === 0) return

@@ -4,11 +4,12 @@ import {
   classifyAttachmentMime,
   extractFileEntries,
   formatAttachmentSize,
+  MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
-  MAX_DOCUMENT_BYTES,
-  MAX_IMAGE_BYTES,
+  MAX_FILENAME_LENGTH,
   resolveAttachmentMime,
   toChatAttachmentPayload,
+  truncateFilename,
   validateAttachmentFile,
   type PendingAttachment,
 } from '../attachments'
@@ -54,24 +55,26 @@ describe('validateAttachmentFile', () => {
     ).toEqual({ ok: false, error: 'unsupportedType' })
   })
 
-  it('rejects a file above the size limit and reports the cap for its own type', () => {
-    // The backend caps documents and images differently — quoting the image
-    // limit for a rejected document would send the operator on a wrong hunt.
+  it('rejects a file above the size limit, whatever its type', () => {
     expect(
       validateAttachmentFile(
-        { name: 'huge.pdf', type: 'application/pdf', size: MAX_DOCUMENT_BYTES + 1 },
+        { name: 'huge.pdf', type: 'application/pdf', size: MAX_ATTACHMENT_BYTES + 1 },
         0
       )
-    ).toEqual({ ok: false, error: 'tooLarge', limit: MAX_DOCUMENT_BYTES })
+    ).toEqual({ ok: false, error: 'tooLarge' })
     expect(
       validateAttachmentFile(
-        { name: 'big.pdf', type: 'application/pdf', size: MAX_DOCUMENT_BYTES },
+        { name: 'big.png', type: 'image/png', size: MAX_ATTACHMENT_BYTES + 1 },
+        0
+      )
+    ).toEqual({ ok: false, error: 'tooLarge' })
+    // Exactly at the cap is still allowed.
+    expect(
+      validateAttachmentFile(
+        { name: 'big.pdf', type: 'application/pdf', size: MAX_ATTACHMENT_BYTES },
         0
       )
     ).toMatchObject({ ok: true })
-    expect(
-      validateAttachmentFile({ name: 'big.png', type: 'image/png', size: MAX_IMAGE_BYTES + 1 }, 0)
-    ).toEqual({ ok: false, error: 'tooLarge', limit: MAX_IMAGE_BYTES })
   })
 
   it('rejects the attachment past the per-message cap', () => {
@@ -148,6 +151,48 @@ describe('formatAttachmentSize', () => {
     expect(formatAttachmentSize(512)).toBe('512 B')
     expect(formatAttachmentSize(2048)).toBe('2 KB')
     expect(formatAttachmentSize(3 * 1024 * 1024)).toBe('3.0 MB')
+  })
+})
+
+describe('truncateFilename', () => {
+  it('leaves a name that already fits untouched', () => {
+    expect(truncateFilename('договір Іванова.pdf')).toBe('договір Іванова.pdf')
+    const exact = `${'a'.repeat(MAX_FILENAME_LENGTH - 4)}.pdf`
+    expect(truncateFilename(exact)).toBe(exact)
+  })
+
+  it('fits an over-long name into the field and keeps the extension', () => {
+    const long = `${'a'.repeat(400)}.pdf`
+    const fitted = truncateFilename(long)
+    expect(Array.from(fitted)).toHaveLength(MAX_FILENAME_LENGTH)
+    expect(fitted.endsWith('.pdf')).toBe(true)
+    expect(fitted).toContain('…')
+  })
+
+  it('keeps both ends of the base name, so the file stays recognisable', () => {
+    const fitted = truncateFilename(`contract-${'x'.repeat(400)}-signed.docx`)
+    expect(fitted.startsWith('contract-')).toBe(true)
+    expect(fitted.endsWith('-signed.docx')).toBe(true)
+  })
+
+  it('counts code points, never splitting a surrogate pair', () => {
+    // JS length would count each emoji twice and could cut one in half; the
+    // backend counts Python characters, so code points are the honest unit.
+    const fitted = truncateFilename(`${'😀'.repeat(300)}.pdf`)
+    expect(Array.from(fitted)).toHaveLength(MAX_FILENAME_LENGTH)
+    expect(fitted).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/)
+    expect(fitted).not.toMatch(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+  })
+
+  it('hard-truncates when the extension alone would eat the budget', () => {
+    const absurd = `name.${'z'.repeat(400)}`
+    expect(Array.from(truncateFilename(absurd))).toHaveLength(MAX_FILENAME_LENGTH)
+  })
+
+  it('handles a dotfile without treating the leading dot as an extension', () => {
+    const fitted = truncateFilename(`.${'a'.repeat(400)}`)
+    expect(Array.from(fitted)).toHaveLength(MAX_FILENAME_LENGTH)
+    expect(fitted.startsWith('.')).toBe(true)
   })
 })
 

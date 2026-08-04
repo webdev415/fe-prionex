@@ -22,22 +22,22 @@ export const ALLOWED_DOCUMENT_MIMES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ] as const
 
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-/** Also the recorder-side cap for a voice note. */
-export const MAX_AUDIO_BYTES = 10 * 1024 * 1024
-export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
+/** Cap on the decoded bytes of one attachment — the same for all three types. */
+export const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024
 /** Attachments per message, all types together. */
-export const MAX_ATTACHMENTS = 3
+export const MAX_ATTACHMENTS = 10
+/**
+ * How large a *recorded* voice note may get before the recorder drops it. A
+ * device-side guard, deliberately not {@link MAX_ATTACHMENT_BYTES}: two minutes
+ * of opus is about a megabyte, so anything near this means the recording ran
+ * away. Conflating the two is what makes "the limit" ambiguous.
+ */
+export const MAX_VOICE_MESSAGE_BYTES = 10 * 1024 * 1024
 export const MAX_VOICE_MESSAGE_SECONDS = 120
+/** Width of the backend's `filename` field (`Field(max_length=255)`). */
+export const MAX_FILENAME_LENGTH = 255
 
 export type AttachmentType = 'image' | 'audio' | 'document'
-
-/** Cap on the decoded bytes, per type — mirrors the backend, which differs by type. */
-export const MAX_ATTACHMENT_BYTES: Record<AttachmentType, number> = {
-  image: MAX_IMAGE_BYTES,
-  audio: MAX_AUDIO_BYTES,
-  document: MAX_DOCUMENT_BYTES,
-}
 
 /** Wire format of one attachment in POST /chat. */
 export interface ChatAttachmentPayload {
@@ -69,9 +69,7 @@ export type AttachmentValidationError = 'unsupportedType' | 'tooLarge' | 'tooMan
 
 export type AttachmentVerdict =
   | { ok: true; type: AttachmentType; mime: string }
-  | { ok: false; error: 'unsupportedType' | 'tooMany' }
-  /** `limit` is the cap for *this* file's type — the message must name the right one. */
-  | { ok: false; error: 'tooLarge'; limit: number }
+  | { ok: false; error: AttachmentValidationError }
 
 /**
  * Extension → mime, used when the OS reports nothing usable. Windows without
@@ -138,8 +136,7 @@ export function validateAttachmentFile(
   const mime = resolveAttachmentMime(file)
   const type = mime ? classifyAttachmentMime(mime) : null
   if (!mime || !type) return { ok: false, error: 'unsupportedType' }
-  const limit = MAX_ATTACHMENT_BYTES[type]
-  if (file.size > limit) return { ok: false, error: 'tooLarge', limit }
+  if (file.size > MAX_ATTACHMENT_BYTES) return { ok: false, error: 'tooLarge' }
   if (currentCount >= MAX_ATTACHMENTS) return { ok: false, error: 'tooMany' }
   return { ok: true, type, mime }
 }
@@ -191,10 +188,36 @@ export function formatAttachmentSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/**
+ * Fit a file name into the backend's 255-character field.
+ *
+ * The extension is what tells the operator (and the gateway's log) what kind of
+ * file this was, so the middle of the base name is what gives way — chopping
+ * the tail would turn `contract….pdf` into a nameless blob and cost a 422 for
+ * nothing. Counting is by code point, matching Python's `len()`, which also
+ * keeps a surrogate pair from being split into an invalid lone half.
+ */
+export function truncateFilename(name: string, maxLength = MAX_FILENAME_LENGTH): string {
+  const chars = Array.from(name)
+  if (chars.length <= maxLength) return name
+
+  const dot = name.lastIndexOf('.')
+  const extension = dot > 0 ? Array.from(name.slice(dot)) : []
+  // An extension that eats the whole budget is not an extension worth keeping.
+  const budget = maxLength - extension.length
+  if (budget <= 1) return chars.slice(0, maxLength).join('')
+
+  const base = chars.slice(0, chars.length - extension.length)
+  const keep = budget - 1 // one code point goes to the ellipsis
+  const head = base.slice(0, Math.ceil(keep / 2)).join('')
+  const tail = keep > 1 ? base.slice(base.length - Math.floor(keep / 2)).join('') : ''
+  return `${head}…${tail}${extension.join('')}`
+}
+
 export function toChatAttachmentPayload(pending: PendingAttachment[]): ChatAttachmentPayload[] {
   return pending.map(({ type, mime, data_b64, name }) =>
     type === 'document' && name
-      ? { type, mime, data_b64, filename: name }
+      ? { type, mime, data_b64, filename: truncateFilename(name) }
       : { type, mime, data_b64 }
   )
 }
