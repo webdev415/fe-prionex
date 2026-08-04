@@ -17,6 +17,7 @@ const baseTask: KanbanTask = {
   title: 'Legal: Complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
+  clientId: 10,
   deadline: legalDefaultDueDateIso(TZ),
   closedAt: null,
   priority: 'medium',

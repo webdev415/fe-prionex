@@ -1690,7 +1690,8 @@
         "position": "Letter {{position}} of {{total}} from this address",
         "current": "current",
         "noSubject": "(no subject)"
-      }
+      },
+      "openClientCard": "Open client card"
     },
     "training": {
       "title": "Action Analysis",

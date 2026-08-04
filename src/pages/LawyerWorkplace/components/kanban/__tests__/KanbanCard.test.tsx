@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import type { KanbanTask } from '../../../kanban/kanbanData'
 import { KanbanCard } from '../KanbanCard'
 
@@ -34,6 +35,7 @@ const baseTask: KanbanTask = {
   title: 'Grouped complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
+  clientId: 10,
   deadline: null,
   closedAt: null,
   priority: 'medium',
@@ -48,7 +50,11 @@ const baseTask: KanbanTask = {
 }
 
 function renderCard(task: KanbanTask) {
-  render(<KanbanCard task={task} lawyers={[]} letterTypes={[]} editableLetterTypes={[]} />)
+  render(
+    <MemoryRouter>
+      <KanbanCard task={task} lawyers={[]} letterTypes={[]} editableLetterTypes={[]} />
+    </MemoryRouter>
+  )
 }
 
 describe('KanbanCard — grouped letters badge', () => {
