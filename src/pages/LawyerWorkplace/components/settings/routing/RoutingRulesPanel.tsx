@@ -10,6 +10,7 @@ import {
 import { Icons } from '@/lib/icons'
 import type { LetterTypeConfig, MailboxRoutingRule, SettingsMailbox } from '../../../settings/types'
 import { createRoutingRule, sortRoutingRules } from '../../../settings/utils/mailboxHelpers'
+import { MOVE_TO_WORKING_VALUE } from '../constants'
 import { RoutingRulesTable, type RoutingRuleDraft } from './RoutingRulesTable'
 
 interface RoutingRulesPanelProps {
@@ -55,13 +56,29 @@ export function RoutingRulesPanel({
   const handleDelete = (rule: MailboxRoutingRule) =>
     save(rules.filter((item) => item.id !== rule.id))
 
-  const handleChangeLetterType = (rule: MailboxRoutingRule, letterTypeId: string) => {
-    if (rule.letterTypeId === letterTypeId) return
-    save(rules.map((item) => (item.id === rule.id ? { ...item, letterTypeId } : item)))
+  const handleChangeLetterType = (rule: MailboxRoutingRule, value: string) => {
+    const toWorking = value === MOVE_TO_WORKING_VALUE
+    const nextLetterTypeId = toWorking ? '' : value
+    const nextAction: MailboxRoutingRule['action'] = toWorking ? 'move_to_working' : 'assign_type'
+    if (rule.letterTypeId === nextLetterTypeId && rule.action === nextAction) return
+    save(
+      rules.map((item) =>
+        item.id === rule.id
+          ? { ...item, letterTypeId: nextLetterTypeId, action: nextAction }
+          : item
+      )
+    )
   }
 
   const handleAdd = (draft: RoutingRuleDraft) => {
-    const rule = createRoutingRule(draft.letterTypeId, draft.matchType, draft.value, draft.isActive)
+    const toWorking = draft.letterTypeId === MOVE_TO_WORKING_VALUE
+    const rule = createRoutingRule(
+      toWorking ? '' : draft.letterTypeId,
+      draft.matchType,
+      draft.value,
+      draft.isActive,
+      toWorking ? 'move_to_working' : 'assign_type'
+    )
     save([...rules, rule])
   }
 

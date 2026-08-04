@@ -112,6 +112,7 @@ function LawyerWorkplacePageContent() {
     countNew,
     countInProgress,
     countDone,
+    countWork,
     isLoading: inboxLoading,
     isError: inboxError,
     refetch: refetchInbox,
@@ -247,6 +248,7 @@ function LawyerWorkplacePageContent() {
                 countNew={countNew}
                 countInProgress={countInProgress}
                 countDone={countDone}
+                countWork={countWork}
                 committedSearch={committedSearch}
                 onFolderChange={handleFolderChange}
                 onFilterChange={handleFilterChange}
