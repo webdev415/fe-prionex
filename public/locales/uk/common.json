@@ -1684,7 +1684,8 @@
         "position": "{{position}}-е з {{total}} звернень з цієї адреси",
         "current": "поточний",
         "noSubject": "(без теми)"
-      }
+      },
+      "openClientCard": "Відкрити картку клієнта"
     },
     "training": {
       "title": "Аналіз дій",

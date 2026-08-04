@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { LetterDetail } from '@/pages/LawyerWorkplace/types'
@@ -227,7 +228,9 @@ function renderPanel() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
-      <Harness />
+      <MemoryRouter>
+        <Harness />
+      </MemoryRouter>
     </QueryClientProvider>
   )
 }

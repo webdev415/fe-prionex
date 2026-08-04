@@ -1,5 +1,6 @@
 import { type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import '@/components/ui/DateSelect.theme.css'
@@ -230,14 +231,30 @@ export function KanbanCard({
       {/* Client */}
       <div className="mb-3 flex min-w-0 items-center gap-1.5">
         {clientCode ? (
-          <>
-            <KanbanClientChip code={clientCode} />
-            {clientName ? (
-              <span className="text-muted-foreground min-w-0 truncate text-[11px]">
-                {clientName}
-              </span>
-            ) : null}
-          </>
+          task.clientId ? (
+            <Link
+              to={`/dashboard/clients/${task.clientId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex min-w-0 items-center gap-1.5 hover:underline"
+              title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
+            >
+              <KanbanClientChip code={clientCode} />
+              {clientName ? (
+                <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                  {clientName}
+                </span>
+              ) : null}
+            </Link>
+          ) : (
+            <>
+              <KanbanClientChip code={clientCode} />
+              {clientName ? (
+                <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                  {clientName}
+                </span>
+              ) : null}
+            </>
+          )
         ) : (
           <span className="text-muted-foreground text-[11px] italic">
             {t('pages.lawyerWorkplace.letterItem.unidentified', 'unidentified')}

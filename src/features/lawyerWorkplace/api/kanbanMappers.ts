@@ -200,6 +200,7 @@ export function applyKanbanTaskPatch(
   if (patch.clientId !== undefined) {
     next.clientCode = formatClientCode(patch.clientId)
     next.clientName = patch.clientName ?? null
+    next.clientId = patch.clientId ?? null
   }
 
   return next
@@ -279,6 +280,7 @@ export function mapLegalKanbanItemToTask(
     title: item.title,
     clientCode: formatClientCode(item.client_id),
     clientName: item.client_name,
+    clientId: item.client_id ?? null,
     deadline: item.due_date,
     closedAt: item.completed_at ?? (item.status === 'completed' ? item.updated_at : null),
     priority: TASK_PRIORITY_TO_KANBAN[item.priority] ?? 'medium',

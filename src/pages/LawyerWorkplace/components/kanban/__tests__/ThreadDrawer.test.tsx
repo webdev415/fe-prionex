@@ -121,6 +121,7 @@ const groupedTask: KanbanTask = {
   title: 'Grouped complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
+  clientId: 10,
   deadline: null,
   closedAt: null,
   priority: 'medium',
