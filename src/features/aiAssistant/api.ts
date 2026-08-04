@@ -177,27 +177,46 @@ export class AssistantChatStreamError extends Error {
   }
 }
 
+/** The chat refuses a turn whose attachments are too large *in total* with this code. */
+export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
+
 /**
- * Readable text out of an error body. FastAPI answers a schema violation with
- * `detail` as a **list** of `{msg, loc}` objects, so the naive `body.detail`
- * ends up rendered as "[object Object]" — that list is flattened here.
+ * The readable text and the machine code inside an error body. Three shapes
+ * arrive here, and only the first is the obvious one:
+ *
+ * - `detail` as a plain string — the service's own `HTTPException`;
+ * - `detail` as a **list** of `{msg, loc}` — FastAPI's answer to a schema
+ *   violation, which rendered naively shows the operator "[object Object]";
+ * - `detail` as an object `{code, message, …}` — a refusal the service wants
+ *   the client to be able to tell apart, e.g. the total-attachments cap
+ *   ({@link ATTACHMENTS_TOTAL_TOO_LARGE}). Its `message` is already written for
+ *   the operator, so it is shown as it stands.
  */
-export function extractErrorDetail(body: unknown): string | undefined {
-  if (!body || typeof body !== 'object') return undefined
-  const raw = (body as { detail?: unknown; message?: unknown }).detail
+export function extractErrorDetail(body: unknown): { message?: string; code?: string } {
+  if (!body || typeof body !== 'object') return {}
+  const raw = (body as { detail?: unknown }).detail
   const detail = raw ?? (body as { message?: unknown }).message
-  if (typeof detail === 'string') return detail.trim() || undefined
-  const readItem = (item: unknown): string | null => {
-    if (typeof item === 'string') return item
-    const msg = (item as { msg?: unknown } | null)?.msg
-    return typeof msg === 'string' ? msg : null
+  const clean = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim() : undefined
+
+  if (typeof detail === 'string') return { message: clean(detail) }
+
+  // `message` is the structured-refusal wording, `msg` is FastAPI's per-field one.
+  const readItem = (item: unknown): string | undefined => {
+    if (typeof item === 'string') return clean(item)
+    const entry = item as { message?: unknown; msg?: unknown } | null
+    return clean(entry?.message) ?? clean(entry?.msg)
   }
+
   if (Array.isArray(detail)) {
     const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
-    return parts.length > 0 ? parts.join('; ') : undefined
+    return { message: parts.length > 0 ? parts.join('; ') : undefined }
   }
-  const single = readItem(detail)
-  return single ?? undefined
+
+  return {
+    message: readItem(detail),
+    code: clean((detail as { code?: unknown } | null)?.code),
+  }
 }
 
 /**
@@ -235,12 +254,13 @@ export async function sendChatMessage(
   // answers with HTML, hence the tolerant parsing).
   if (!response.ok) {
     let message: string | undefined
+    let code: string | undefined
     try {
-      message = extractErrorDetail(await response.json())
+      ;({ message, code } = extractErrorDetail(await response.json()))
     } catch {
       /* non-JSON error body — the caller falls back to a status-based text */
     }
-    throw new AssistantChatStreamError({ status: response.status, message })
+    throw new AssistantChatStreamError({ status: response.status, message, code })
   }
 
   if (!response.body) {

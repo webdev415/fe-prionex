@@ -260,10 +260,10 @@ describe('AiAssistantBetaPage attachments', () => {
     expect(bubbleCard).toHaveTextContent('borg.pdf')
   })
 
-  it('shows the server wording when the backend rejects the attachment', async () => {
+  it('shows the server wording when the backend rejects this particular file (422)', async () => {
     mockedSendChatMessage.mockRejectedValueOnce(
       new AssistantChatStreamError({
-        status: 413,
+        status: 422,
         message: 'документ 62914560 байт перевищує ліміт 52428800 байт (50MB)',
       })
     )
@@ -286,15 +286,60 @@ describe('AiAssistantBetaPage attachments', () => {
     await waitFor(() => expect(getTextarea().value).toBe('розбери документ'))
   })
 
-  it('falls back to its own wording when a 413 carries no readable body', async () => {
+  it('shows the total-cap wording on a 413, not the single-file one', async () => {
+    // Different rejection, different advice: 422 means "fix this file", 413
+    // means "send fewer at a time". Collapsing them sends the operator hunting
+    // for an oversized file that does not exist.
+    const totalCapMessage =
+      'Сумарний розмір вкладень перевищує ліміт — надішліть файли меншими партіями.'
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({
+        status: 413,
+        code: 'attachments_total_too_large',
+        message: totalCapMessage,
+      })
+    )
+    renderPage()
+    pickFiles([makeFile('borg.pdf', 'application/pdf'), makeFile('rows.csv', 'text/csv')])
+    await waitFor(() =>
+      expect(screen.getAllByTestId('pending-attachment-document')).toHaveLength(2)
+    )
+
+    fireEvent.change(getTextarea(), { target: { value: 'розбери документи' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(totalCapMessage))
+    expect(await screen.findByText(totalCapMessage)).toBeInTheDocument()
+    await waitFor(() => expect(getTextarea().value).toBe('розбери документи'))
+  })
+
+  it('falls back to the batch wording when a 413 carries no readable body', async () => {
     mockedSendChatMessage.mockRejectedValueOnce(new AssistantChatStreamError({ status: 413 }))
     renderPage()
     fireEvent.change(getTextarea(), { target: { value: 'привіт' } })
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachRejectedTooLarge')
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTotalTooLarge')
     )
+  })
+
+  it('does not show the gateway wording when the size limit fires before our service', async () => {
+    // Kong's request-size-limiting answers `kong.response.error(413, "Request
+    // size limit exceeded")` — English, phrased in bytes, and with no machine
+    // code. Passing it through would leave the operator with a message that
+    // neither names the problem in their language nor says what to do.
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({ status: 413, message: 'Request size limit exceeded' })
+    )
+    renderPage()
+    fireEvent.change(getTextarea(), { target: { value: 'привіт' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTotalTooLarge')
+    )
+    expect(toast.error).not.toHaveBeenCalledWith('Request size limit exceeded')
   })
 
   it('does not send an image without text and explains why', async () => {

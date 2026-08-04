@@ -698,7 +698,7 @@
       "attachReadFailed": "Could not read the file — try attaching it again.",
       "attachPreparing": "Preparing…",
       "attachStillPreparing": "Wait until the attachments are ready.",
-      "attachRejectedTooLarge": "The server rejected the attachment: the file is too large.",
+      "attachTotalTooLarge": "Too many attachments at once — send the files in smaller batches.",
       "attachmentRemove": "Remove “{{name}}”",
       "attachImageRemove": "Remove image",
       "attachedImageAlt": "Attached image",

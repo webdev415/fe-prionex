@@ -1703,20 +1703,29 @@ export function AiAssistantBetaPage() {
               ? error.response?.status
               : undefined
         const isThinkingUnavailable = isThinking && status === 503
-        // A rejected attachment (too large / wrong type / malformed body) is
-        // something the operator can fix — show what the server said instead of
-        // the catch-all. 413 usually comes from the proxy with an HTML body and
-        // no readable text, hence its own fallback wording.
+        // A rejected attachment is something the operator can fix, so the
+        // server's own wording goes on screen instead of the catch-all. The two
+        // rejections need different advice and must not be collapsed:
+        //   422 — *this file* is wrong (type, size, faked signature);
+        //   413 — *too much at once*, the fix is to send in smaller batches.
         const serverDetail =
           error instanceof AssistantChatStreamError ? error.serverDetail : undefined
-        const isRejectedRequest =
-          status === 400 || status === 413 || status === 415 || status === 422
+        const errorCode = error instanceof AssistantChatStreamError ? error.code : undefined
+        // A 413 has two possible authors and only one of them speaks to the
+        // operator. Ours carries a machine code next to its Ukrainian wording;
+        // the gateway's own size limit answers `{"message": "Request size limit
+        // exceeded"}` — English, about bytes, and useless at the keyboard. So
+        // the text is trusted here only when the code proves it is ours;
+        // otherwise the localised batch wording stands in.
+        const isOurRefusal = Boolean(errorCode)
+        const showsServerText =
+          status === 400 || status === 415 || status === 422 || (status === 413 && isOurRefusal)
         const errorMessage = isThinkingUnavailable
           ? t('pages.aiAssistant.thinkingUnavailable')
-          : isRejectedRequest && serverDetail
+          : showsServerText && serverDetail
             ? serverDetail
             : status === 413
-              ? t('pages.aiAssistant.attachRejectedTooLarge')
+              ? t('pages.aiAssistant.attachTotalTooLarge')
               : t('pages.aiAssistant.apiError')
         if (isThinkingUnavailable) {
           setAssistantSettings((s) => ({ ...s, mode: 'fast' }))

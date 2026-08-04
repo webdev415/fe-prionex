@@ -705,7 +705,7 @@
       "attachReadFailed": "Не вдалося прочитати файл — спробуйте прикріпити ще раз.",
       "attachPreparing": "Готуємо…",
       "attachStillPreparing": "Зачекайте, доки вкладення будуть готові.",
-      "attachRejectedTooLarge": "Сервер відхилив вкладення: файл завеликий.",
+      "attachTotalTooLarge": "Забагато вкладень за один раз — надішліть файли меншими партіями.",
       "attachmentRemove": "Видалити «{{name}}»",
       "attachImageRemove": "Видалити зображення",
       "attachedImageAlt": "Прикріплене зображення",
