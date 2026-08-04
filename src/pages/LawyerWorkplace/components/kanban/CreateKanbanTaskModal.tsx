@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -185,17 +185,24 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [lawyers]
   )
 
-  useEffect(() => {
-    if (!open) return
-    requestAnimationFrame(() => {
-      setLawyerUserId(assignableLawyers[0]?.user_id ?? null)
-      setLetterTypeId(letterTypes[0]?.id ?? null)
+  // Reset the form only when the modal transitions closed → open, adjusting state
+  // during render (React's recommended pattern) rather than in an effect. The
+  // previous effect re-ran on every assignableLawyers/letterTypes reference change
+  // (any background refetch of lawyers/letter-types), which wiped the client and
+  // other fields the user had already picked — read as "the form keeps resetting
+  // / errors while I fill it in".
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
       setClientId('')
       setClientSearch('')
       setPriority('normal')
       setDeadline(getTomorrowAtDefaultTime())
-    })
-  }, [assignableLawyers, letterTypes, open])
+      setLawyerUserId(assignableLawyers[0]?.user_id ?? null)
+      setLetterTypeId(letterTypes[0]?.id ?? null)
+    }
+  }
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
