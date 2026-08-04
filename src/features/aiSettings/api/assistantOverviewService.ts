@@ -59,10 +59,26 @@ export interface OverviewPromptAppend {
   apply: AssistantApplyMode
 }
 
+/**
+ * A brain skill as the admin scope reports it.
+ *
+ * `enabled` and `description` are optional because the read-only stage of
+ * this endpoint predates them (it returned name/text/apply only). A skill
+ * arriving without `enabled` is treated as ON — the brain only ever omitted
+ * the field back when every listed skill was active, so defaulting to OFF
+ * would misreport a live skill as disabled.
+ */
 export interface OverviewSkill {
   name: string
   text: string
   apply: AssistantApplyMode
+  enabled?: boolean
+  description?: string
+}
+
+/** Whether a skill is active, resolving the optional `enabled` field. */
+export function isSkillEnabled(skill: OverviewSkill): boolean {
+  return skill.enabled !== false
 }
 
 export interface OverviewKnowledge {

@@ -3767,6 +3767,48 @@
       "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
       "accessToggleAria": "Toggle assistant access for role {{role}}",
       "disabledBanner": "The AI assistant is temporarily disabled by an administrator.",
+      "management": {
+        "title": "Assistant management",
+        "helper": "Persona, the system prompt add-on and skills. Changes apply to the assistant for every operator.",
+        "persona": {
+          "title": "Persona",
+          "description": "Name, role, tone and language the assistant introduces itself with.",
+          "save": "Save persona",
+          "toastSaved": "Persona saved",
+          "fields": {
+            "name": "Name",
+            "role": "Role",
+            "tone": "Tone",
+            "language": "Language"
+          }
+        },
+        "prompt": {
+          "title": "System prompt add-on",
+          "description": "Text appended to the assistant's base prompt on every request.",
+          "warning": "Edits affect answers for every operator. The previous version is backed up automatically on the server.",
+          "inputAria": "System prompt add-on",
+          "save": "Save",
+          "toastSaved": "System prompt add-on saved"
+        },
+        "skills": {
+          "title": "Skills",
+          "description": "Turn individual assistant skills on or off. A disabled skill stays in the list.",
+          "empty": "The brain reported no skills.",
+          "disabledBadge": "off",
+          "toggleAria": "Toggle skill {{skill}}",
+          "showText": "Show prompt",
+          "hideText": "Hide prompt",
+          "toastEnabled": "Skill {{skill}} enabled",
+          "toastDisabled": "Skill {{skill}} disabled"
+        },
+        "errors": {
+          "validation": "The server rejected the value. Check it and try again.",
+          "forbidden": "You do not have permission to change assistant settings.",
+          "notFound": "This skill no longer exists. Refresh the page.",
+          "unavailable": "The assistant service is unavailable.",
+          "unknown": "Could not save. Try again."
+        }
+      },
       "internals": {
         "title": "Assistant internals",
         "configTitle": "Configuration",
