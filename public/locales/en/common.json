@@ -67,6 +67,12 @@
     "contactTags": "Contact Tags"
   },
   "dialer": {
+    "phone": {
+      "offline": "Offline",
+      "connecting": "Connecting",
+      "ready": "Ready",
+      "error": "Phone error"
+    },
     "title": "Dialer",
     "comingSoon": "{{section}} — coming soon",
     "tabs": {
