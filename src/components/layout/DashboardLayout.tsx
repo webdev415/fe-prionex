@@ -2,6 +2,7 @@
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
+import { useV3UiEnabled } from '@/features/scoring/hooks/useV3Scores'
 import { useAuthStore } from '@/stores/authStore'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
@@ -736,6 +737,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     enabled: canViewLegalWorkplace,
   })
 
+  // v3 work list is per brand: only brands cut over after the KAN-794 sign-off
+  // get the nav entry.
+  const v3UiEnabled = useV3UiEnabled()
+
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
   const navItemsResult = useMemo(() => {
@@ -964,6 +969,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
           },
           {
+            // Shadow-run report (KAN-794) — always visible to anyone who can see
+            // scoring config. It is how the brand is reviewed BEFORE cutover, so
+            // it must NOT be behind the cutover switch.
+            path: '/dashboard/system-settings/scoring-v3-monitoring',
+            label: t('navigation.scoringV3Monitoring', 'v3 Shadow-Run Report'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          {
+            // v3 tunables (KAN-792). Sits next to the shadow-run report because
+            // that is where tau actually gets decided.
+            path: '/dashboard/system-settings/scoring-v3-settings',
+            label: t('navigation.scoringV3Settings', 'v3 Scoring Settings'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          // Scoring v3 operator work list (KAN-791). Hidden until THIS brand has
+          // passed the shadow-run sign-off (KAN-794) — flipped per brand from the
+          // scoring config, no rebuild.
+          ...(v3UiEnabled
+            ? [
+                {
+                  path: '/dashboard/operator-work-list',
+                  label: t('navigation.operatorWorkList', 'Priority Work List'),
+                  icon: 'chart-01',
+                  // operators' own queue — see routes/index.tsx
+                  requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW_PRIORITY_SCORES,
+                },
+              ]
+            : []),
+          {
             path: '/dashboard/system-settings/repayment-configuration',
             label: t('navigation.repaymentConfiguration'),
             icon: 'chart-01',
@@ -1070,7 +1106,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount])
+  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

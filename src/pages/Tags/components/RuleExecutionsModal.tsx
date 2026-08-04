@@ -20,15 +20,15 @@ interface RuleExecutionsModalProps {
 }
 
 const STATUS_BADGE_COLORS: Record<string, string> = {
-  action_done: 'bg-green-100 text-green-800',
-  action_skipped: 'bg-gray-100 text-gray-700',
-  matched: 'bg-blue-100 text-blue-800',
-  not_matched: 'bg-gray-100 text-gray-500',
-  error: 'bg-red-100 text-red-800',
-  duplicate_skipped: 'bg-yellow-100 text-yellow-800',
-  malformed: 'bg-red-100 text-red-800',
-  received: 'bg-blue-50 text-blue-700',
-  dispatched: 'bg-blue-50 text-blue-700',
+  action_done: 'bg-success-100 text-success-800',
+  action_skipped: 'bg-muted text-foreground',
+  matched: 'bg-information-100 text-information-800',
+  not_matched: 'bg-muted text-muted-foreground',
+  error: 'bg-error-100 text-error-800',
+  duplicate_skipped: 'bg-warning-100 text-warning-800',
+  malformed: 'bg-error-100 text-error-800',
+  received: 'bg-information-50 text-information-700',
+  dispatched: 'bg-information-50 text-information-700',
 }
 
 function formatTimestamp(value: string): string {
@@ -48,9 +48,9 @@ function formatTimestamp(value: string): string {
 
 function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
   const status = entry.processing_status as ProcessingStatus
-  const badge = STATUS_BADGE_COLORS[status] || 'bg-gray-100 text-gray-700'
+  const badge = STATUS_BADGE_COLORS[status] || 'bg-muted text-foreground'
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-3 text-sm">
+    <div className="border-border bg-card rounded-md border p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +58,7 @@ function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
               {status}
             </span>
             {entry.matched && (
-              <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+              <span className="bg-information-50 text-information-700 rounded px-1.5 py-0.5 text-[10px] font-medium">
                 matched
               </span>
             )}
@@ -69,18 +69,18 @@ function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
             )}
           </div>
           {entry.action_taken && (
-            <div className="text-xs text-gray-700">action: {entry.action_taken}</div>
+            <div className="text-foreground text-xs">action: {entry.action_taken}</div>
           )}
           {entry.error_message && (
-            <div className="text-xs text-red-600">⚠️ {entry.error_message}</div>
+            <div className="text-error-600 text-xs">⚠️ {entry.error_message}</div>
           )}
           {entry.correlation_id && (
-            <div className="font-mono text-[10px] text-gray-400">
+            <div className="text-muted-foreground font-mono text-[10px]">
               correlation_id: {entry.correlation_id}
             </div>
           )}
         </div>
-        <div className="text-[11px] whitespace-nowrap text-gray-500">
+        <div className="text-muted-foreground text-[11px] whitespace-nowrap">
           {formatTimestamp(entry.created_at)}
         </div>
       </div>
@@ -110,12 +110,12 @@ export function RuleExecutionsModal({ open, ruleId, ruleName, onClose }: RuleExe
       />
       <ModalContent>
         {isLoading && (
-          <div className="py-12 text-center text-sm text-gray-500">
+          <div className="text-muted-foreground py-12 text-center text-sm">
             {t('common.loading', 'Loading...')}
           </div>
         )}
         {isError && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
             <p className="mb-2 font-medium">
               {t('pages.tags.rules.executions.loadFailed', 'Failed to load executions')}
             </p>
@@ -128,7 +128,7 @@ export function RuleExecutionsModal({ open, ruleId, ruleName, onClose }: RuleExe
           </div>
         )}
         {!isLoading && !isError && data && data.length === 0 && (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="text-muted-foreground py-10 text-center text-sm">
             {t(
               'pages.tags.rules.executions.empty',
               'No executions yet — the rule has not fired since execution log was added.'
@@ -137,7 +137,7 @@ export function RuleExecutionsModal({ open, ruleId, ruleName, onClose }: RuleExe
         )}
         {!isLoading && !isError && data && data.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               {t(
                 'pages.tags.rules.executions.count',
                 `${data.length} run${data.length === 1 ? '' : 's'} (newest first)`,

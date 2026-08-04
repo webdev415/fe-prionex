@@ -63,6 +63,8 @@ export interface DateSelectProps {
   min?: Date | string
   max?: Date | string
   format?: string
+  /** Month-year picker: a grid of months + year navigation, no day grid. */
+  showMonthYearPicker?: boolean
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
@@ -151,6 +153,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       min,
       max,
       format = 'MM/dd/yyyy',
+      showMonthYearPicker = false,
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
@@ -344,6 +347,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               maxTime={maxTime}
               filterTime={filterTime}
               calendarStartDay={1}
+              showMonthYearPicker={showMonthYearPicker}
               showYearDropdown
               scrollableYearDropdown
               yearDropdownItemNumber={10}

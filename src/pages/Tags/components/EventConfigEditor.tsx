@@ -196,7 +196,7 @@ function EventOptionRow({
   const displayLabel = getOptionDisplayLabel(eventValue, fieldValue, option, t)
 
   return (
-    <div className="rounded-md border border-gray-200 bg-gray-50 px-2 py-2">
+    <div className="border-border bg-muted rounded-md border px-2 py-2">
       {editing ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -209,7 +209,7 @@ function EventOptionRow({
             <button
               type="button"
               onClick={handleSave}
-              className="flex h-7 w-7 items-center justify-center rounded text-green-600 hover:bg-green-50"
+              className="text-success-600 hover:bg-success-50 flex h-7 w-7 items-center justify-center rounded"
               aria-label={t('actions.save', 'Save')}
             >
               <Icons.CheckmarkBadge02 size={14} strokeWidth={2} />
@@ -217,7 +217,7 @@ function EventOptionRow({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+              className="text-muted-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded"
               aria-label={t('actions.cancel', 'Cancel')}
             >
               <Icons.Cancel01 size={14} strokeWidth={2} />
@@ -227,14 +227,16 @@ function EventOptionRow({
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <code className="rounded bg-white px-1.5 py-0.5 text-xs text-gray-700">
+          <code className="bg-card text-foreground rounded px-1.5 py-0.5 text-xs">
             {option.value}
           </code>
-          <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{displayLabel}</span>
+          <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+            {displayLabel}
+          </span>
           <button
             type="button"
             onClick={handleStartEdit}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.edit', 'Edit')}
           >
             <Icons.PencilEdit size={12} strokeWidth={1.5} />
@@ -253,7 +255,7 @@ function EventOptionRow({
                 removeEventFieldOption(eventValue, fieldValue, option.value)
               }
             }}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+            className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Cancel01 size={12} strokeWidth={1.5} />
@@ -310,7 +312,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-gray-200 bg-white p-3">
+    <div className="border-border bg-card space-y-3 rounded-md border p-3">
       {editing ? (
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -322,7 +324,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
           <select
             value={draftType}
             onChange={(event) => setDraftType(event.target.value as EventField['type'])}
-            className="h-8 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700"
+            className="border-border bg-card text-foreground h-8 rounded-md border px-2 text-xs"
           >
             {FIELD_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -333,7 +335,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
           <button
             type="button"
             onClick={handleSaveField}
-            className="flex h-7 w-7 items-center justify-center rounded text-green-600 hover:bg-green-50"
+            className="text-success-600 hover:bg-success-50 flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.save', 'Save')}
           >
             <Icons.CheckmarkBadge02 size={14} strokeWidth={2} />
@@ -345,7 +347,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
               setDraftType(field.type)
               setEditing(false)
             }}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+            className="text-muted-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.cancel', 'Cancel')}
           >
             <Icons.Cancel01 size={14} strokeWidth={2} />
@@ -353,18 +355,18 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded bg-gray-50 px-1.5 py-0.5 text-xs text-gray-700">
+          <code className="bg-muted text-foreground rounded px-1.5 py-0.5 text-xs">
             {field.value}
           </code>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
+          <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]">
             {field.type}
           </span>
           {sourceBadge && (
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
+            <span className="bg-information-50 text-information-700 rounded-full px-2 py-0.5 text-[11px]">
               {sourceBadge}
             </span>
           )}
-          <span className="ml-auto text-[11px] text-gray-400">
+          <span className="text-muted-foreground ml-auto text-[11px]">
             {field.type === 'select'
               ? t('pages.tags.settings.valuesCount', '{{count}} values', {
                   count: (field.options ?? []).length,
@@ -374,7 +376,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.edit', 'Edit')}
           >
             <Icons.PencilEdit size={12} strokeWidth={1.5} />
@@ -393,7 +395,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
                 removeEventField(eventValue, field.value)
               }
             }}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+            className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Cancel01 size={12} strokeWidth={1.5} />
@@ -402,13 +404,13 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
       )}
 
       {field.type === 'select' && (
-        <div className="space-y-2 border-t border-gray-100 pt-3">
-          <div className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
+        <div className="border-border space-y-2 border-t pt-3">
+          <div className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
             {t('pages.tags.settings.values', 'Values')}
           </div>
 
           {(field.options ?? []).length === 0 && (
-            <p className="text-xs text-gray-400">
+            <p className="text-muted-foreground text-xs">
               {sourceBadge
                 ? t(
                     'pages.tags.settings.liveValuesFallback',
@@ -427,7 +429,7 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
             />
           ))}
 
-          <div className="space-y-2 rounded-md border border-dashed border-gray-200 p-2">
+          <div className="border-border space-y-2 rounded-md border border-dashed p-2">
             <div className="flex items-center gap-2">
               <Input
                 value={newOptionValue}
@@ -519,7 +521,7 @@ function EventCard({ event }: { event: EventConfig }) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-3">
+    <div className="border-border bg-card space-y-3 rounded-lg border p-3">
       {editing ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -532,7 +534,7 @@ function EventCard({ event }: { event: EventConfig }) {
             <button
               type="button"
               onClick={handleSaveEvent}
-              className="flex h-7 w-7 items-center justify-center rounded text-green-600 hover:bg-green-50"
+              className="text-success-600 hover:bg-success-50 flex h-7 w-7 items-center justify-center rounded"
               aria-label={t('actions.save', 'Save')}
             >
               <Icons.CheckmarkBadge02 size={14} strokeWidth={2} />
@@ -543,7 +545,7 @@ function EventCard({ event }: { event: EventConfig }) {
                 setDraftValue(event.value)
                 setEditing(false)
               }}
-              className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+              className="text-muted-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded"
               aria-label={t('actions.cancel', 'Cancel')}
             >
               <Icons.Cancel01 size={14} strokeWidth={2} />
@@ -553,13 +555,13 @@ function EventCard({ event }: { event: EventConfig }) {
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded bg-gray-50 px-1.5 py-0.5 text-xs text-gray-700">
+          <code className="bg-muted text-foreground rounded px-1.5 py-0.5 text-xs">
             {event.value}
           </code>
-          <span className="min-w-0 flex-1 truncate text-sm text-gray-700">
+          <span className="text-foreground min-w-0 flex-1 truncate text-sm">
             {getEventDisplayLabel(event, t)}
           </span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500">
+          <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]">
             {t('pages.tags.settings.fieldsCount', '{{count}} fields', {
               count: event.fields.length,
             })}
@@ -567,7 +569,7 @@ function EventCard({ event }: { event: EventConfig }) {
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 items-center justify-center rounded"
             aria-label={
               expanded ? t('actions.collapse', 'Collapse') : t('actions.expand', 'Expand')
             }
@@ -581,7 +583,7 @@ function EventCard({ event }: { event: EventConfig }) {
           <button
             type="button"
             onClick={handleStartEdit}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.edit', 'Edit')}
           >
             <Icons.PencilEdit size={12} strokeWidth={1.5} />
@@ -600,7 +602,7 @@ function EventCard({ event }: { event: EventConfig }) {
                 removeEvent(event.value)
               }
             }}
-            className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+            className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-7 w-7 items-center justify-center rounded"
             aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Cancel01 size={12} strokeWidth={1.5} />
@@ -609,13 +611,13 @@ function EventCard({ event }: { event: EventConfig }) {
       )}
 
       {expanded && (
-        <div className="space-y-3 border-t border-gray-100 pt-3">
-          <div className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
+        <div className="border-border space-y-3 border-t pt-3">
+          <div className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
             {t('pages.tags.settings.eventFields', 'Fields')}
           </div>
 
           {event.fields.length === 0 && (
-            <p className="text-xs text-gray-400">
+            <p className="text-muted-foreground text-xs">
               {t('pages.tags.settings.noFields', 'No fields configured for this event')}
             </p>
           )}
@@ -624,7 +626,7 @@ function EventCard({ event }: { event: EventConfig }) {
             <EventFieldCard key={field.value} eventValue={event.value} field={field} />
           ))}
 
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-gray-200 p-2">
+          <div className="border-border flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
             <Input
               value={newFieldValue}
               onChange={(event) => setNewFieldValue(event.target.value)}
@@ -634,7 +636,7 @@ function EventCard({ event }: { event: EventConfig }) {
             <select
               value={newFieldType}
               onChange={(event) => setNewFieldType(event.target.value as EventField['type'])}
-              className="h-8 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700"
+              className="border-border bg-card text-foreground h-8 rounded-md border px-2 text-xs"
             >
               {FIELD_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -695,10 +697,10 @@ export function EventConfigEditor() {
   return (
     <div className="space-y-3">
       <div>
-        <h4 className="text-sm font-medium text-gray-900">
+        <h4 className="text-foreground text-sm font-medium">
           {t('pages.tags.settings.events', 'Available events')}
         </h4>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="text-muted-foreground mt-0.5 text-xs">
           {t(
             'pages.tags.settings.eventsDesc',
             'Configure event schema for the rule builder: event code, payload fields, and selectable values.'
@@ -706,7 +708,7 @@ export function EventConfigEditor() {
         </p>
       </div>
 
-      <div className="space-y-2 rounded-md border border-dashed border-gray-200 p-2">
+      <div className="border-border space-y-2 rounded-md border border-dashed p-2">
         <div className="flex items-center gap-2">
           <Input
             value={newEventValue}
@@ -735,7 +737,7 @@ export function EventConfigEditor() {
         ))}
 
         {events.length === 0 && (
-          <p className="rounded-md border border-gray-200 px-3 py-4 text-center text-xs text-gray-400">
+          <p className="border-border text-muted-foreground rounded-md border px-3 py-4 text-center text-xs">
             {t('pages.tags.settings.noItems', 'No items')}
           </p>
         )}

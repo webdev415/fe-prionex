@@ -4,6 +4,7 @@ import { vi, beforeAll, afterAll } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
 import './mocks/assistantOverview'
+import './mocks/assistantAdmin'
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
@@ -333,6 +334,24 @@ vi.mock('react-i18next', () => ({
         'pages.aiAssistant.codeCopied': 'Copied',
         'pages.aiAssistant.showAllRows': 'Show all ({{count}})',
         'pages.aiAssistant.collapseRows': 'Collapse',
+        // Assistant-generated files (charts, exports) rendered in the bubble
+        'pages.aiAssistant.filePreview.loading': 'Loading…',
+        'pages.aiAssistant.filePreview.loadFailed': 'Could not load the file',
+        'pages.aiAssistant.filePreview.imageFailed': 'Could not load the image “{{name}}”',
+        'pages.aiAssistant.filePreview.openFull': 'Open “{{name}}” full size',
+        'pages.aiAssistant.filePreview.close': 'Close',
+        'pages.aiAssistant.filePreview.download': 'Download',
+        'pages.aiAssistant.filePreview.downloadFailed': 'Download failed — try again',
+        'pages.aiAssistant.filePreview.openPreview': 'Open preview',
+        'pages.aiAssistant.filePreview.externalLink': 'external link',
+        'pages.aiAssistant.filePreview.blocked': 'Attachment not shown',
+        'pages.aiAssistant.filePreview.linkLost':
+          'The link to this file was lost — ask the assistant to send it again',
+        'pages.aiAssistant.filePreview.errorNotFound': 'The file is no longer available',
+        'pages.aiAssistant.filePreview.errorTooLarge':
+          'The file is too large to open here — ask for a smaller export',
+        'pages.aiAssistant.filePreview.errorBrainUnavailable':
+          'The assistant is unavailable — try again in a moment',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {
