@@ -99,14 +99,17 @@ export function createRoutingRule(
   letterTypeId: string,
   matchType: MailboxRoutingRule['matchType'],
   value: string,
-  isActive = true
+  isActive = true,
+  action: MailboxRoutingRule['action'] = 'assign_type'
 ): MailboxRoutingRule {
   return {
     id: `rule-${nextRuleId++}`,
     matchType,
     // Default rules carry no value; only domain/keyword rules have one.
     value: matchType === 'default' ? '' : value.trim(),
-    letterTypeId,
+    // A move_to_working rule carries no letter type.
+    letterTypeId: action === 'move_to_working' ? '' : letterTypeId,
+    action,
     isActive,
     priority: 0,
   }

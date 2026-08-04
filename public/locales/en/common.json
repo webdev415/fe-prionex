@@ -748,7 +748,8 @@
         "allMailboxes": "All mailboxes",
         "new": "New",
         "inProgress": "In progress",
-        "done": "Done"
+        "done": "Done",
+        "work": "Work letters"
       },
       "incoming": {
         "title": "Incoming",
@@ -1411,6 +1412,7 @@
           "matchType": "Match",
           "value": "Value",
           "letterType": "Letter type",
+          "moveToWorking": "Move to work letters",
           "active": "Active",
           "valueDomainPlaceholder": "e.g. vchasno.ua",
           "valueKeywordPlaceholder": "e.g. statement of claim",

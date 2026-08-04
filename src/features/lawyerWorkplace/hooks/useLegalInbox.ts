@@ -228,7 +228,7 @@ export function useLegalTrainingExamples(
 function filterToProcessingStatus(filter: IncomingMailboxFilter): string | undefined {
   if (filter === 'all') return undefined
   if (filter === 'done') return 'done'
-  return filter // 'new' | 'in_progress'
+  return filter // 'new' | 'in_progress' | 'work'
 }
 
 // ── Paginated server-side inbox hook ─────────────────────────────────────────
@@ -290,6 +290,7 @@ export function useMappedLegalInbox(options: {
     countNew: data?.count_new ?? 0,
     countInProgress: data?.count_in_progress ?? 0,
     countDone: data?.count_done ?? 0,
+    countWork: data?.count_work ?? 0,
     isLoading: inboxQuery.isLoading,
     isError: inboxQuery.isError,
     refetch: inboxQuery.refetch,

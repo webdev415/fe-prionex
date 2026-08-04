@@ -755,7 +755,8 @@
         "allMailboxes": "Усі скриньки",
         "new": "Нові",
         "inProgress": "В роботі",
-        "done": "Оброблені"
+        "done": "Оброблені",
+        "work": "Робочі листи"
       },
       "incoming": {
         "title": "Вхідні",
@@ -1420,6 +1421,7 @@
           "matchType": "Умова",
           "value": "Значення",
           "letterType": "Тип листа",
+          "moveToWorking": "Перемістити в Робочі листи",
           "active": "Активне",
           "valueDomainPlaceholder": "напр. vchasno.ua",
           "valueKeywordPlaceholder": "напр. позовна заява",

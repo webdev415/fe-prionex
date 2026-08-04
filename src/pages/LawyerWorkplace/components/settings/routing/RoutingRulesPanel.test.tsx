@@ -52,6 +52,7 @@ function rule(
     matchType: 'sender_domain',
     value: 'example.ua',
     letterTypeId: 'court',
+    action: 'assign_type',
     isActive: true,
     priority: 0,
     ...partial,
@@ -119,7 +120,22 @@ describe('RoutingRulesPanel', () => {
 
     await user.click(screen.getByRole('combobox', { name: 'Letter type' }))
     const optionLabels = screen.getAllByRole('option').map((option) => option.textContent)
-    expect(optionLabels).toEqual(['Court letters', 'NBU letters'])
+    // The "Move to work letters" action is offered alongside the letter types.
+    expect(optionLabels).toEqual(['Move to work letters', 'Court letters', 'NBU letters'])
+  })
+
+  it('switches a rule to move_to_working via the letter-type select', async () => {
+    const user = userEvent.setup()
+    const { onSaveRoutingRules } = renderPanel([DOMAIN_RULE])
+
+    await user.click(screen.getByRole('combobox', { name: 'Letter type' }))
+    await user.click(screen.getByRole('option', { name: 'Move to work letters' }))
+
+    expect(onSaveRoutingRules).toHaveBeenCalledTimes(1)
+    const [, savedRules] = onSaveRoutingRules.mock.calls[0]
+    const domainRule = savedRules.find((item: MailboxRoutingRule) => item.id === 'r-domain')
+    expect(domainRule.action).toBe('move_to_working')
+    expect(domainRule.letterTypeId).toBe('')
   })
 
   it('adds a rule and saves the full updated list', async () => {
