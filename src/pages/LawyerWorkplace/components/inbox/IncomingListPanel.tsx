@@ -36,6 +36,7 @@ const FILTERS: { id: IncomingMailboxFilter; labelKey: string; fallback: string }
     fallback: 'In progress',
   },
   { id: 'done', labelKey: 'pages.lawyerWorkplace.filters.done', fallback: 'Done' },
+  { id: 'work', labelKey: 'pages.lawyerWorkplace.filters.work', fallback: 'Work letters' },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -182,6 +183,7 @@ export interface IncomingListPanelProps {
   countNew: number
   countInProgress: number
   countDone: number
+  countWork: number
   // Committed search (already sent to backend)
   committedSearch: string
   onFolderChange: (folder: IncomingFolder) => void
@@ -208,6 +210,7 @@ export function IncomingListPanel({
   countNew,
   countInProgress,
   countDone,
+  countWork,
   committedSearch,
   onFolderChange,
   onFilterChange,
@@ -248,6 +251,7 @@ export function IncomingListPanel({
     if (id === 'new') return countNew
     if (id === 'in_progress') return countInProgress
     if (id === 'done') return countDone
+    if (id === 'work') return countWork
     return countAll
   }
 

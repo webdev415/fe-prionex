@@ -771,7 +771,8 @@
         "allMailboxes": "All mailboxes",
         "new": "New",
         "inProgress": "In progress",
-        "done": "Done"
+        "done": "Done",
+        "work": "Work letters"
       },
       "incoming": {
         "title": "Incoming",
@@ -937,6 +938,7 @@
         "auto": "Auto",
         "managerConfirmation": "Manager confirmation",
         "parametersCount": "{{confirmed}}/{{total}} parameters",
+        "saveSenderEmail": "Record mail to client profile",
         "confirmAndCreate": "Confirm & create task",
         "confirming": "Confirming…",
         "confirmSuccess": "Task created on kanban board",
@@ -1171,7 +1173,7 @@
         "noLawyers": "No active lawyers configured",
         "loading": "Loading settings…",
         "loadError": "Could not load settings",
-        "readOnlyNotice": "View only — you do not have permission to change department settings.",
+        "readOnlyNotice": "View only — you do not have permission to change department settings. If you should have access, sign out and sign in again to refresh your permissions.",
         "lawyer": "Lawyer",
         "status": "Status",
         "subTabs": {
@@ -1433,6 +1435,7 @@
           "matchType": "Match",
           "value": "Value",
           "letterType": "Letter type",
+          "moveToWorking": "Move to work letters",
           "active": "Active",
           "valueDomainPlaceholder": "e.g. vchasno.ua",
           "valueKeywordPlaceholder": "e.g. statement of claim",
@@ -1585,7 +1588,8 @@
             "error": "Could not add lawyer",
             "searchLawyer": "Search lawyers…"
           }
-        }
+        },
+        "readOnlyFooterNotice": "Saving is unavailable — you do not have permission to change department settings. If you should have access, sign out and sign in again to refresh your permissions."
       },
       "workspaceBanner": {
         "lawBadge": "Law",
@@ -1697,7 +1701,8 @@
         "position": "Letter {{position}} of {{total}} from this address",
         "current": "current",
         "noSubject": "(no subject)"
-      }
+      },
+      "openClientCard": "Open client card"
     },
     "training": {
       "title": "Action Analysis",

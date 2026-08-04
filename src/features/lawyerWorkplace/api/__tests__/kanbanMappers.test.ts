@@ -17,6 +17,7 @@ const baseTask: KanbanTask = {
   title: 'Legal: Complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
+  clientId: 10,
   deadline: legalDefaultDueDateIso(TZ),
   closedAt: null,
   priority: 'medium',
@@ -85,5 +86,36 @@ describe('mapLegalKanbanItemToTask — letter grouping', () => {
   it('keeps a standalone letter_count of 0 as-is (no letter linked)', () => {
     const task = mapLegalKanbanItemToTask({ ...baseItem, letter_count: 0 }, [], TZ)
     expect(task.letterCount).toBe(0)
+  })
+})
+
+describe('mapLegalKanbanItemToTask — column resolution', () => {
+  it('routes a real non-legacy prod letter type to in_progress, not "Не визначено"', () => {
+    // Regression: prod letter types (e.g. type_1785239278754 / УБКІ) are not in
+    // the legacy KNOWN_TYPES set. They must NOT collapse to the "not_defined" column.
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: 'type_1785239278754', status: 'pending', is_overdue: false },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('in_progress')
+  })
+
+  it('routes a real non-legacy letter type to overdue when past due', () => {
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: 'type_1785239278754', status: 'pending', is_overdue: true },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('overdue')
+  })
+
+  it('keeps letters with no letter type at all in "not_defined"', () => {
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: null, status: 'pending' },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('not_defined')
   })
 })

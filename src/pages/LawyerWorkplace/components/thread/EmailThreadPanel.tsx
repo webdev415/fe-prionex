@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -549,6 +550,20 @@ export function EmailThreadPanel({
               {letter.subject}
             </h3>
           </div>
+          {letter.clientId && letter.clientCode ? (
+            <Link
+              to={`/dashboard/clients/${letter.clientId}`}
+              className="text-secondary-800 hover:text-secondary-700 flex shrink-0 items-center gap-1 text-[11px] font-medium hover:underline"
+              title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
+            >
+              <Icons.User size={12} strokeWidth={1.5} />
+              <span className="max-w-[160px] truncate">
+                {letter.clientName
+                  ? `${letter.clientName} · ${letter.clientCode}`
+                  : letter.clientCode}
+              </span>
+            </Link>
+          ) : null}
         </div>
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">

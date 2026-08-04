@@ -30,6 +30,7 @@ describe('mapRoutingRulesToUpdate', () => {
         letterTypeId: 'court',
         isActive: true,
         priority: 0,
+        action: 'assign_type',
       },
       {
         id: 'rule-1001',
@@ -38,6 +39,7 @@ describe('mapRoutingRulesToUpdate', () => {
         letterTypeId: 'other',
         isActive: false,
         priority: 1,
+        action: 'assign_type',
       },
     ]
 
@@ -50,6 +52,7 @@ describe('mapRoutingRulesToUpdate', () => {
           letter_type_id: 'court',
           is_active: true,
           priority: 0,
+          action: 'assign_type',
         },
         {
           match_type: 'default',
@@ -57,6 +60,7 @@ describe('mapRoutingRulesToUpdate', () => {
           letter_type_id: 'other',
           is_active: false,
           priority: 1,
+          action: 'assign_type',
         },
       ],
     })
@@ -83,6 +87,7 @@ describe('mapLegalSettingsMailboxToSettings routing rules', () => {
       matchType: 'subject_keyword',
       value: 'позовна заява',
       letterTypeId: 'court',
+      action: 'assign_type',
       isActive: false,
       priority: 3,
     })
@@ -102,5 +107,47 @@ describe('mapLegalSettingsMailboxToSettings routing rules', () => {
 
     expect(result.routingRules[0].isActive).toBe(true)
     expect(result.routingRules[0].priority).toBe(0)
+  })
+})
+
+describe('routing rule move_to_working action', () => {
+  it('serializes a move_to_working rule with null letter_type_id', () => {
+    const rules: MailboxRoutingRule[] = [
+      {
+        id: UUID,
+        matchType: 'sender_domain',
+        value: 'parked.example.com',
+        letterTypeId: '',
+        action: 'move_to_working',
+        isActive: true,
+        priority: 0,
+      },
+    ]
+
+    expect(mapRoutingRulesToUpdate(rules).routing_rules[0]).toMatchObject({
+      match_type: 'sender_domain',
+      value: 'parked.example.com',
+      action: 'move_to_working',
+      letter_type_id: null,
+    })
+  })
+
+  it('maps a move_to_working response rule to an empty letterTypeId', () => {
+    const result = mapLegalSettingsMailboxToSettings(
+      baseMailbox([
+        {
+          id: UUID,
+          match_type: 'sender_domain',
+          value: 'parked.example.com',
+          letter_type_id: null,
+          action: 'move_to_working',
+        },
+      ])
+    )
+
+    expect(result.routingRules[0]).toMatchObject({
+      action: 'move_to_working',
+      letterTypeId: '',
+    })
   })
 })

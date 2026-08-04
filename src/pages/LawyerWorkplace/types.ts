@@ -6,7 +6,7 @@ export type LawyerWorkplaceTab =
   | 'outgoing-registry'
   | 'settings'
 
-export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress' | 'done'
+export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress' | 'done' | 'work'
 
 export type IncomingFolder = 'inbox' | 'quarantine' | 'sent'
 

@@ -48,6 +48,7 @@ export interface LegalInboxResponse {
   count_new: number
   count_in_progress: number
   count_done: number
+  count_work: number
 }
 
 export interface LegalMailbox {
@@ -144,6 +145,8 @@ export interface LegalLetterConfirmRequest {
   due_date: string
   assigned_to_user_id: number
   contract_number?: string | null
+  /** Record the letter sender's address into the client's email contacts. */
+  save_sender_email_to_client?: boolean
 }
 
 export interface LegalLetterConfirmResponse {
@@ -523,8 +526,11 @@ export type LegalRoutingMatchType = 'sender_domain' | 'subject_keyword' | 'defau
 export interface LegalMailboxRoutingRule {
   id: string
   match_type: LegalRoutingMatchType
+  /** NULL for a 'move_to_working' rule. */
+  letter_type_id: string | null
   value: string
-  letter_type_id: string
+  /** 'assign_type' (default) or 'move_to_working'. Older backends omit it. */
+  action?: 'assign_type' | 'move_to_working'
   /** Whether the rule participates in identification. Older backends omit it → treat as active. */
   is_active?: boolean
   /** Tie-break order within the same match type. Older backends omit it → treat as 0. */
@@ -553,7 +559,9 @@ export interface LegalMailboxRoutingRuleInput {
   id?: string
   match_type: LegalRoutingMatchType
   value: string
-  letter_type_id: string
+  /** NULL for a 'move_to_working' rule. */
+  letter_type_id: string | null
+  action?: 'assign_type' | 'move_to_working'
   is_active?: boolean
   priority?: number
 }

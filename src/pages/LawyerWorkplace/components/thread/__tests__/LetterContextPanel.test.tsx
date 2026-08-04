@@ -87,6 +87,7 @@ const task: KanbanTask = {
   title: 'Complaint',
   clientCode: 'CL-10',
   clientName: 'Тест Клієнт',
+  clientId: 10,
   deadline: '2026-07-25T09:00:00Z',
   closedAt: null,
   priority: 'high',
