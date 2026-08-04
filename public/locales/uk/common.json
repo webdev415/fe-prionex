@@ -7156,6 +7156,7 @@
         "variableGroups": {
           "client": "Клієнт",
           "credit": "Кредит",
+          "project": "Проєкт",
           "system": "Система",
           "promise": "Обіцянка",
           "restructuring": "Реструктуризація"
@@ -7174,6 +7175,16 @@
           "debtCurrency": "Валюта боргу",
           "contractDate": "Дата підписання договору",
           "dueDate": "Наступна дата платежу",
+          "projectFullCompanyName": "Повна назва компанії",
+          "projectAddress": "Адреса",
+          "projectEdrpouCode": "ЄДРПОУ",
+          "projectWebsite": "Сайт",
+          "projectEmail": "Електронна пошта",
+          "projectHotlinePhone": "Номер телефону підтримки",
+          "projectDirectorName": "Директор",
+          "projectIban": "IBAN",
+          "projectBankName": "Банк",
+          "projectBankCode": "Код банку",
           "today": "Сьогоднішня дата",
           "operatorName": "Повне імʼя оператора"
         },

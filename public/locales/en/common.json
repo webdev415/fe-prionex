@@ -6896,6 +6896,7 @@
         "variableGroups": {
           "client": "Client",
           "credit": "Credit",
+          "project": "Project",
           "system": "System",
           "promise": "Promise",
           "restructuring": "Restructuring"
@@ -6914,6 +6915,16 @@
           "debtCurrency": "Debt currency",
           "contractDate": "Contract sign date",
           "dueDate": "Next payment due date",
+          "projectFullCompanyName": "Full company name",
+          "projectAddress": "Company address",
+          "projectEdrpouCode": "EDRPOU code",
+          "projectWebsite": "Website",
+          "projectEmail": "Contact email",
+          "projectHotlinePhone": "Support hotline phone",
+          "projectDirectorName": "Director's name",
+          "projectIban": "IBAN",
+          "projectBankName": "Bank name",
+          "projectBankCode": "Bank code",
           "today": "Today's date",
           "operatorName": "Operator full name"
         },
