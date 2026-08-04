@@ -21,12 +21,23 @@ import {
   useLegalLetterTypes,
 } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
+import type { SearchType } from '@/api/clientSearchApi'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { LegalLetterType } from '@/features/lawyerWorkplace'
 import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
+
+// Same client-search criteria as the "New outgoing letter" modal so a lawyer can
+// look a client up by phone / name / email / TIN / contract — not only by name.
+const CLIENT_SEARCH_TYPES: { value: SearchType; labelKey: string; fallback: string }[] = [
+  { value: 'phone', labelKey: 'search.phoneNumber', fallback: 'Phone number' },
+  { value: 'name', labelKey: 'search.fullName', fallback: 'Full name' },
+  { value: 'email', labelKey: 'search.email', fallback: 'Email' },
+  { value: 'tin', labelKey: 'search.tin', fallback: 'TIN' },
+  { value: 'contract_number', labelKey: 'search.contractNumber', fallback: 'Contract number' },
+]
 
 interface CreateKanbanTaskModalProps {
   open: boolean
@@ -143,14 +154,16 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
+  const [clientSearchType, setClientSearchType] = useState<SearchType>('phone')
   const [priority, setPriority] = useState<TaskPriority>('normal')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowAtDefaultTime())
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
     debouncedClientSearch,
-    { enabled: open && debouncedClientSearch.length >= 2 }
+    { enabled: open && debouncedClientSearch.length >= 2, searchType: clientSearchType }
   )
+  const activeClientSearchType = CLIENT_SEARCH_TYPES.find((o) => o.value === clientSearchType)
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
   const letterTypes = useMemo(
@@ -302,7 +315,40 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                 >
                   {t('pages.lawyerWorkplace.kanban.createTask.clearClient', 'Clear')}
                 </button>
-              ) : null}
+              ) : (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-foreground border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
+                    >
+                      <Icons.Search size={12} strokeWidth={1.5} className="text-muted-foreground" />
+                      {activeClientSearchType
+                        ? t(activeClientSearchType.labelKey, activeClientSearchType.fallback)
+                        : ''}
+                      <Icons.ArrowDown
+                        size={13}
+                        strokeWidth={1.5}
+                        className="text-muted-foreground"
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    {CLIENT_SEARCH_TYPES.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        className="cursor-pointer text-[13px]"
+                        onClick={() => {
+                          setClientSearchType(opt.value)
+                          setClientSearch('')
+                        }}
+                      >
+                        {t(opt.labelKey, opt.fallback)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <SearchableSelect
               options={clientOptions}
