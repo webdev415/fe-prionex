@@ -914,6 +914,7 @@
         "auto": "Auto",
         "managerConfirmation": "Manager confirmation",
         "parametersCount": "{{confirmed}}/{{total}} parameters",
+        "saveSenderEmail": "Record mail to client profile",
         "confirmAndCreate": "Confirm & create task",
         "confirming": "Confirming…",
         "confirmSuccess": "Task created on kanban board",

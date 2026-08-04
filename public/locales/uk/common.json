@@ -918,6 +918,7 @@
         "auto": "Авто",
         "managerConfirmation": "Підтвердження менеджера",
         "parametersCount": "{{confirmed}}/{{total}} параметрів",
+        "saveSenderEmail": "Записати пошту до профілю клієнта",
         "confirmAndCreate": "Підтвердити та створити задачу",
         "confirming": "Підтвердження…",
         "confirmSuccess": "Задачу створено на канбан-дошці",
