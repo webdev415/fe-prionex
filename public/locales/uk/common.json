@@ -4843,7 +4843,8 @@
         "skipped": "Пропущено",
         "bounced": "Відхилено",
         "missed": "Пропущений",
-        "rejected": "Відхилений"
+        "rejected": "Відхилений",
+        "droppedByClient": "Клієнт поклав слухавку"
       },
       "messageHistory": {
         "destinationOwner": {

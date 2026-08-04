@@ -55,7 +55,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       key: 'status',
       header: t('pages.actionAnalysis.columns.status', 'Status'),
       render: (r) => {
-        const outcome = classifyCallOutcome(r.outcome ?? r.state)
+        const outcome = classifyCallOutcome(r.outcome ?? r.state, r.direction)
         const palette = OUTCOME_PALETTE_CLASSES[outcome.palette]
         return (
           <span

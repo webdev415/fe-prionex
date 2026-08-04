@@ -4832,7 +4832,8 @@
         "skipped": "Skipped",
         "bounced": "Bounced",
         "missed": "Missed",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "droppedByClient": "Dropped by client"
       },
       "messageHistory": {
         "destinationOwner": {
