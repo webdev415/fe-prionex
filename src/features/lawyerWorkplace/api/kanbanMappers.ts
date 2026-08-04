@@ -256,7 +256,10 @@ function resolveKanbanColumn(
   if (item.status === 'completed' || item.status === 'cancelled') {
     return 'completed'
   }
-  if (taskType === 'unclassified' || taskType === 'type_pending') {
+  // "Не визначено" only for letters with NO letter type at all (letter_type_id null).
+  // A real letter type — including non-legacy prod types not in KNOWN_TYPES
+  // (e.g. type_1785239278754 / УБКІ) — must route by status/deadline, not collapse here.
+  if (taskType === 'unclassified') {
     return 'not_defined'
   }
   if (item.is_overdue || isLegalDueDateOverdue(item.due_date, timezone)) {
