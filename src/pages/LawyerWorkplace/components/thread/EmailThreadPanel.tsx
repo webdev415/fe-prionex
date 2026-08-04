@@ -558,7 +558,9 @@ export function EmailThreadPanel({
             >
               <Icons.User size={12} strokeWidth={1.5} />
               <span className="max-w-[160px] truncate">
-                {letter.clientName ? `${letter.clientName} · ${letter.clientCode}` : letter.clientCode}
+                {letter.clientName
+                  ? `${letter.clientName} · ${letter.clientCode}`
+                  : letter.clientCode}
               </span>
             </Link>
           ) : null}

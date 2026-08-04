@@ -63,9 +63,7 @@ export function RoutingRulesPanel({
     if (rule.letterTypeId === nextLetterTypeId && rule.action === nextAction) return
     save(
       rules.map((item) =>
-        item.id === rule.id
-          ? { ...item, letterTypeId: nextLetterTypeId, action: nextAction }
-          : item
+        item.id === rule.id ? { ...item, letterTypeId: nextLetterTypeId, action: nextAction } : item
       )
     )
   }
