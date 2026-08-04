@@ -1,17 +1,22 @@
 /**
  * Write hooks for the assistant admin section.
  *
- * All three endpoints answer with a full overview body, so every success
- * seeds `assistantOverviewKey` from the response rather than invalidating:
- * the server state is already in hand, and a refetch would briefly show the
- * pre-edit value through the read-only cards rendered from the same key.
+ * All three endpoints answer with the `prompts` object alone, so every
+ * success MERGES it into the cached overview — replacing the cache entry
+ * outright would drop `config` (model, flags, limits) and blank the
+ * read-only internals card rendered off the same key.
+ *
+ * Merging beats invalidating: the server state is already in hand, and a
+ * refetch would briefly repaint the pre-edit value. If the cache is somehow
+ * empty (a write racing the very first load), there is no `config` to merge
+ * into, so that case falls back to a refetch.
  *
  * Only the skill toggle is optimistic. A switch that waits a round trip
  * before moving reads as broken, and the rollback is exact (the whole
  * previous overview is restored). Prompt and persona edits keep the user's
  * own text on screen while saving, so there is nothing to anticipate.
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 import {
   updateAssistantPersona,
@@ -19,7 +24,22 @@ import {
   updateAssistantSkill,
   type PersonaPatch,
 } from '../api/assistantAdminService'
-import { assistantOverviewKey, type AssistantOverview } from '../api/assistantOverviewService'
+import {
+  assistantOverviewKey,
+  type AssistantOverview,
+  type OverviewPrompts,
+} from '../api/assistantOverviewService'
+
+function applyPrompts(queryClient: QueryClient, prompts: OverviewPrompts) {
+  const current = queryClient.getQueryData<AssistantOverview>(assistantOverviewKey)
+
+  if (!current) {
+    void queryClient.invalidateQueries({ queryKey: assistantOverviewKey })
+    return
+  }
+
+  queryClient.setQueryData<AssistantOverview>(assistantOverviewKey, { ...current, prompts })
+}
 
 interface SkillToggleVars {
   name: string
@@ -33,7 +53,7 @@ interface SkillToggleContext {
 export function useUpdateAssistantSkill() {
   const queryClient = useQueryClient()
 
-  return useMutation<AssistantOverview, unknown, SkillToggleVars, SkillToggleContext>({
+  return useMutation<OverviewPrompts, unknown, SkillToggleVars, SkillToggleContext>({
     mutationFn: ({ name, enabled }) => updateAssistantSkill(name, enabled),
     onMutate: async ({ name, enabled }) => {
       // Without this an in-flight overview refetch could land after the
@@ -60,30 +80,24 @@ export function useUpdateAssistantSkill() {
         queryClient.setQueryData(assistantOverviewKey, context.previous)
       }
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(assistantOverviewKey, data)
-    },
+    onSuccess: (prompts) => applyPrompts(queryClient, prompts),
   })
 }
 
 export function useUpdateAssistantPromptAppend() {
   const queryClient = useQueryClient()
 
-  return useMutation<AssistantOverview, unknown, string>({
-    mutationFn: (text) => updateAssistantPromptAppend(text),
-    onSuccess: (data) => {
-      queryClient.setQueryData(assistantOverviewKey, data)
-    },
+  return useMutation<OverviewPrompts, unknown, string>({
+    mutationFn: (template) => updateAssistantPromptAppend(template),
+    onSuccess: (prompts) => applyPrompts(queryClient, prompts),
   })
 }
 
 export function useUpdateAssistantPersona() {
   const queryClient = useQueryClient()
 
-  return useMutation<AssistantOverview, unknown, PersonaPatch>({
+  return useMutation<OverviewPrompts, unknown, PersonaPatch>({
     mutationFn: (patch) => updateAssistantPersona(patch),
-    onSuccess: (data) => {
-      queryClient.setQueryData(assistantOverviewKey, data)
-    },
+    onSuccess: (prompts) => applyPrompts(queryClient, prompts),
   })
 }

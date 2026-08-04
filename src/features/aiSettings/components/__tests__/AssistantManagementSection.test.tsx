@@ -5,21 +5,26 @@
  * The overview GET and the three admin PUTs are mocked at the API layer
  * (src/test/mocks/*); the hooks, the react-query cache and the components
  * are real, so a test that says "the toggle updates state" is actually
- * exercising the optimistic write + response reseed, not a stub.
+ * exercising the optimistic write + response merge, not a stub.
+ *
+ * The PUT stubs resolve with a bare `prompts` object, matching the bridge
+ * (api-prionex#1113) — the endpoints do NOT echo the `{config, prompts}`
+ * envelope that GET /overview returns.
  *
  * The i18n mock in src/test/setup.ts returns the key for anything it does
  * not know, so assertions on our strings assert keys.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { AssistantManagementSection } from '../AssistantManagementSection'
+import { AssistantInternalsSection } from '../AssistantInternalsSection'
 import { assistantOverviewTestMocks } from '@/test/mocks/assistantOverview'
 import { assistantAdminTestMocks } from '@/test/mocks/assistantAdmin'
 import { useHasPermission } from '@/hooks'
-import type { AssistantOverview } from '../../api/assistantOverviewService'
+import type { AssistantOverview, OverviewPrompts } from '../../api/assistantOverviewService'
 
 const { mockGetAssistantOverview } = assistantOverviewTestMocks
 const { mockUpdateAssistantSkill, mockUpdateAssistantPromptAppend, mockUpdateAssistantPersona } =
@@ -40,6 +45,33 @@ vi.mock('sonner', () => ({
 }))
 
 const mockUseHasPermission = vi.mocked(useHasPermission)
+
+function prompts(): OverviewPrompts {
+  return {
+    persona: {
+      name: 'Роша',
+      role: 'operator assistant',
+      tone: 'formal',
+      language: 'uk',
+      apply: 'gw-restart',
+      overridden: false,
+    },
+    prompt0_append: {
+      template: 'Ти — {name}, {role}.',
+      text: 'Ти — Роша, operator assistant.',
+      length: 30,
+      limit: 4000,
+      apply: 'hot-reload',
+      overridden: true,
+      error: null,
+    },
+    skills: [
+      { name: 'search_clients', text: 'skill body 1', apply: 'hot-reload', enabled: true },
+      { name: 'draft_tools', text: 'skill body 2', apply: 'gw-restart', enabled: false },
+    ],
+    knowledge: { apply: 'reseed', files: ['assistant_knowledge.md'] },
+  }
+}
 
 function overview(): AssistantOverview {
   return {
@@ -64,36 +96,11 @@ function overview(): AssistantOverview {
         max_turns: 12,
         turn_deadline_s: 45,
         sql_max_rows: 500,
-        prompt_append_limit: 2000,
+        prompt_append_limit: 4000,
       },
       manifest: { skills: ['draft_tools'] },
     },
-    prompts: {
-      persona: {
-        name: 'Роша',
-        role: 'operator assistant',
-        tone: 'formal',
-        language: 'uk',
-        apply: 'gw-restart',
-      },
-      prompt0_append: {
-        text: 'Базовая надстройка',
-        length: 18,
-        limit: 120,
-        apply: 'hot-reload',
-      },
-      skills: [
-        {
-          name: 'search_clients',
-          text: 'skill body 1',
-          apply: 'hot-reload',
-          enabled: true,
-          description: 'Поиск клиентов',
-        },
-        { name: 'draft_tools', text: 'skill body 2', apply: 'gw-restart', enabled: false },
-      ],
-      knowledge: { apply: 'reseed', files: ['assistant_knowledge.md'] },
-    },
+    prompts: prompts(),
   }
 }
 
@@ -101,13 +108,14 @@ function httpError(status: number, data: unknown) {
   return Object.assign(new Error(`HTTP ${status}`), { response: { status, data } })
 }
 
-function renderSection() {
+function renderSection(extra?: React.ReactNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
       <AssistantManagementSection />
+      {extra}
     </QueryClientProvider>
   )
 }
@@ -137,7 +145,6 @@ describe('AssistantManagementSection', () => {
 
     expect(screen.getByTestId('assistant-skill-row-search_clients')).toBeInTheDocument()
     expect(screen.getByTestId('assistant-skill-row-draft_tools')).toBeInTheDocument()
-    expect(screen.getByText('Поиск клиентов')).toBeInTheDocument()
 
     // Only the disabled skill carries the badge.
     expect(screen.getByTestId('assistant-skill-off-badge-draft_tools')).toBeInTheDocument()
@@ -149,8 +156,8 @@ describe('AssistantManagementSection', () => {
   })
 
   it('sends the PUT on toggle and repaints from the response', async () => {
-    const after = overview()
-    after.prompts.skills[0].enabled = false
+    const after = prompts()
+    after.skills[0].enabled = false
     mockUpdateAssistantSkill.mockResolvedValue(after)
 
     renderSection()
@@ -167,9 +174,29 @@ describe('AssistantManagementSection', () => {
     expect(screen.getAllByRole('switch')[0]).toHaveAttribute('aria-checked', 'false')
   })
 
+  it('keeps config intact when merging a write response', async () => {
+    // The PUTs answer with `prompts` alone. Overwriting the cache entry with
+    // that body would drop `config` and blank the internals card, which
+    // reads the same query key.
+    mockUpdateAssistantPersona.mockResolvedValue(prompts())
+
+    renderSection(<AssistantInternalsSection />)
+    await waitFor(() => expect(screen.getByTestId('assistant-persona-card')).toBeInTheDocument())
+    expect(screen.getByText('31b-thinking')).toBeInTheDocument()
+
+    const tone = screen.getByTestId('assistant-persona-field-tone')
+    await userEvent.clear(tone)
+    await userEvent.type(tone, 'friendly')
+    await userEvent.click(screen.getByText('pages.aiSettings.management.persona.save'))
+
+    await waitFor(() => expect(mockUpdateAssistantPersona).toHaveBeenCalled())
+    expect(screen.getByTestId('assistant-internals-config')).toBeInTheDocument()
+    expect(screen.getByText('31b-thinking')).toBeInTheDocument()
+  })
+
   it('rolls the toggle back when the PUT fails', async () => {
     mockUpdateAssistantSkill.mockRejectedValue(
-      httpError(404, { detail: { code: 'unknown_skill' } })
+      httpError(404, { detail: 'навык не найден: nosuch' })
     )
 
     renderSection()
@@ -184,52 +211,9 @@ describe('AssistantManagementSection', () => {
     expect(screen.queryByTestId('assistant-skill-off-badge-search_clients')).not.toBeInTheDocument()
   })
 
-  it('shows the server 422 text and keeps the typed prompt', async () => {
-    mockUpdateAssistantPromptAppend.mockRejectedValue(
-      httpError(422, { detail: 'Шаблон містить заборонену інструкцію' })
-    )
-
-    renderSection()
-    await waitFor(() =>
-      expect(screen.getByTestId('assistant-prompt-append-card')).toBeInTheDocument()
-    )
-
-    const textarea = screen.getByTestId('assistant-prompt-append-input')
-    await userEvent.clear(textarea)
-    await userEvent.type(textarea, 'Новый текст')
-
-    await userEvent.click(screen.getByText('pages.aiSettings.management.prompt.save'))
-
-    await waitFor(() =>
-      expect(screen.getByText('Шаблон містить заборонену інструкцію')).toBeInTheDocument()
-    )
-    expect(textarea).toHaveValue('Новый текст')
-  })
-
-  it('counts characters against the server-supplied limit and blocks saving past it', async () => {
-    renderSection()
-    await waitFor(() =>
-      expect(screen.getByTestId('assistant-prompt-append-card')).toBeInTheDocument()
-    )
-
-    // limit 120 comes from prompt0_append.limit, not from config.limits
-    // (2000) and not from a constant in the component.
-    expect(screen.getByTestId('assistant-prompt-append-counter')).toHaveTextContent('18/120')
-
-    const textarea = screen.getByTestId('assistant-prompt-append-input')
-    await userEvent.clear(textarea)
-    await userEvent.paste('x'.repeat(121))
-
-    expect(screen.getByTestId('assistant-prompt-append-counter')).toHaveTextContent('121/120')
-    expect(
-      screen.getByText('pages.aiSettings.management.prompt.save').closest('button')
-    ).toBeDisabled()
-    expect(mockUpdateAssistantPromptAppend).not.toHaveBeenCalled()
-  })
-
-  it('saves the prompt and repaints from the response', async () => {
-    const after = overview()
-    after.prompts.prompt0_append.text = 'Новый текст'
+  it('edits and sends the raw template, not the rendered text', async () => {
+    const after = prompts()
+    after.prompt0_append.template = 'Новый шаблон'
     mockUpdateAssistantPromptAppend.mockResolvedValue(after)
 
     renderSection()
@@ -237,21 +221,85 @@ describe('AssistantManagementSection', () => {
       expect(screen.getByTestId('assistant-prompt-append-card')).toBeInTheDocument()
     )
 
+    // The editor is seeded from `template` — the rendered `text` would bake
+    // the substituted persona name into the stored template on save.
     const textarea = screen.getByTestId('assistant-prompt-append-input')
+    expect(textarea).toHaveValue('Ти — {name}, {role}.')
+
     await userEvent.clear(textarea)
-    await userEvent.type(textarea, 'Новый текст')
+    await userEvent.type(textarea, 'Новый шаблон')
     await userEvent.click(screen.getByText('pages.aiSettings.management.prompt.save'))
 
-    await waitFor(() => expect(mockUpdateAssistantPromptAppend).toHaveBeenCalledWith('Новый текст'))
     await waitFor(() =>
-      expect(
-        screen.getByText('pages.aiSettings.management.prompt.save').closest('button')
-      ).toBeDisabled()
+      expect(mockUpdateAssistantPromptAppend).toHaveBeenCalledWith('Новый шаблон')
     )
   })
 
+  it('shows the server 422 text and keeps the typed prompt', async () => {
+    mockUpdateAssistantPromptAppend.mockRejectedValue(
+      httpError(422, { detail: 'надстройка длиннее лимита: 4200 > 4000' })
+    )
+
+    renderSection()
+    await waitFor(() =>
+      expect(screen.getByTestId('assistant-prompt-append-card')).toBeInTheDocument()
+    )
+
+    const textarea = screen.getByTestId('assistant-prompt-append-input')
+    await userEvent.clear(textarea)
+    await userEvent.type(textarea, 'Новый текст')
+
+    await userEvent.click(screen.getByText('pages.aiSettings.management.prompt.save'))
+
+    await waitFor(() =>
+      expect(screen.getByText('надстройка длиннее лимита: 4200 > 4000')).toBeInTheDocument()
+    )
+    expect(textarea).toHaveValue('Новый текст')
+  })
+
+  it('reports the rendered length from the server and never blocks Save locally', async () => {
+    renderSection()
+    await waitFor(() =>
+      expect(screen.getByTestId('assistant-prompt-append-card')).toBeInTheDocument()
+    )
+
+    // 30 is the RENDERED length reported by the brain, not the 20-character
+    // template in the box — the limit is checked after substitution.
+    expect(screen.getByTestId('assistant-prompt-append-counter')).toHaveTextContent('30/4000')
+
+    const textarea = screen.getByTestId('assistant-prompt-append-input')
+    await userEvent.clear(textarea)
+    await userEvent.paste('x'.repeat(4200))
+
+    // Over the limit by any local measure, yet Save stays live: only the
+    // brain can measure the render, and it answers 422 with a reason.
+    expect(
+      screen.getByText('pages.aiSettings.management.prompt.save').closest('button')
+    ).toBeEnabled()
+    expect(screen.getByTestId('assistant-prompt-append-counter')).toHaveTextContent(
+      'pages.aiSettings.management.prompt.counterStale'
+    )
+  })
+
+  it('surfaces the render error when the stored template is broken', async () => {
+    const broken = overview()
+    broken.prompts.prompt0_append.error = "KeyError: 'nome'"
+    mockGetAssistantOverview.mockResolvedValue(broken)
+
+    renderSection()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('assistant-prompt-append-render-error')).toBeInTheDocument()
+    )
+    expect(
+      within(screen.getByTestId('assistant-prompt-append-render-error')).getByText(
+        "KeyError: 'nome'"
+      )
+    ).toBeInTheDocument()
+  })
+
   it('patches only the persona fields that changed', async () => {
-    mockUpdateAssistantPersona.mockResolvedValue(overview())
+    mockUpdateAssistantPersona.mockResolvedValue(prompts())
 
     renderSection()
     await waitFor(() => expect(screen.getByTestId('assistant-persona-card')).toBeInTheDocument())
@@ -261,6 +309,7 @@ describe('AssistantManagementSection', () => {
     await userEvent.type(tone, 'friendly')
     await userEvent.click(screen.getByText('pages.aiSettings.management.persona.save'))
 
+    // Derived fields must not ride along — the endpoint rejects extras.
     await waitFor(() =>
       expect(mockUpdateAssistantPersona).toHaveBeenCalledWith({ tone: 'friendly' })
     )
@@ -268,7 +317,7 @@ describe('AssistantManagementSection', () => {
 
   it('surfaces a plain unavailable message when the brain is down', async () => {
     mockUpdateAssistantPersona.mockRejectedValue(
-      httpError(503, { detail: { code: 'brain_unreachable' } })
+      httpError(502, { detail: { code: 'brain_unreachable' } })
     )
 
     renderSection()

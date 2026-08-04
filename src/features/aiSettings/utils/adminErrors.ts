@@ -34,11 +34,17 @@ function readStatus(error: unknown): number | undefined {
 /**
  * Pull a readable string out of a FastAPI error body.
  *
- * Covers the three shapes the CRM backends actually emit: a plain
- * `{"detail": "text"}`, the Pydantic `{"detail": [{"msg": ...}]}` array, and
- * the structured `{"detail": {"code": ..., "message": ...}}` used by the
- * assistant proxy. A `detail` object with only a `code` yields nothing —
- * the caller falls back to a localized message rather than printing a slug.
+ * Covers every shape the bridge emits (api-prionex#1113): a plain
+ * `{"detail": "text"}` (the brain's own refusal, human-readable), the
+ * Pydantic `{"detail": [{"msg": ...}]}` array (our request body failed the
+ * input schema — effectively an FE bug), and the structured
+ * `{"detail": {"code": ..., "message": ...}}`.
+ *
+ * A `detail` object with only a `code` yields nothing — the caller falls
+ * back to a localized message rather than printing a slug at an admin. Any
+ * other object is serialized: the bridge forwards an unrecognized brain
+ * body verbatim under `detail`, and raw JSON beats a generic "try again"
+ * when it is the only diagnostic that exists.
  */
 function readDetailMessage(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('response' in error)) return undefined
@@ -64,14 +70,39 @@ function readDetailMessage(error: unknown): string | undefined {
   if (detail && typeof detail === 'object') {
     const message = (detail as { message?: unknown }).message
     if (typeof message === 'string' && message.trim()) return message
+
+    const keys = Object.keys(detail as Record<string, unknown>)
+    if (keys.length > 0 && !(keys.length === 1 && keys[0] === 'code')) {
+      return JSON.stringify(detail)
+    }
   }
 
   const message = (data as { message?: unknown }).message
   return typeof message === 'string' && message.trim() ? message : undefined
 }
 
+/**
+ * The brain-unreachable marker, checked before the status number.
+ *
+ * The bridge answers 502 for this today, but the code in the body is the
+ * stable part of the contract — keying on it means a later switch to 503
+ * (or anything else) does not silently degrade this into "unknown error".
+ */
+function isBrainUnreachable(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('response' in error)) return false
+  const data = (error as { response?: { data?: unknown } }).response?.data
+  if (!data || typeof data !== 'object') return false
+
+  const detail = (data as { detail?: unknown }).detail
+  if (!detail || typeof detail !== 'object') return false
+
+  return (detail as { code?: unknown }).code === 'brain_unreachable'
+}
+
 export function classifyAssistantAdminError(error: unknown): AssistantAdminError {
   const status = readStatus(error)
+
+  if (isBrainUnreachable(error)) return { kind: 'unavailable' }
 
   if (status === 422 || status === 400) {
     return { kind: 'validation', message: readDetailMessage(error) }

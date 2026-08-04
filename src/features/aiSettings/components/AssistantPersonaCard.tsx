@@ -2,9 +2,11 @@
  * «Персона» — the assistant's name / role / tone / language.
  *
  * The editable fields are whatever string-valued keys the overview actually
- * returns, minus the derived `apply` tag. Hardcoding the four current ones
- * would silently hide a field the brain adds later; labels fall back to the
- * raw key so a new field is at least reachable before it gets a translation.
+ * returns. Hardcoding the four current ones would silently hide a field the
+ * brain adds later; labels fall back to the raw key so a new field is at
+ * least reachable before it gets a translation. Both derived fields stay
+ * out of the form — `apply` by name, `overridden` by not being a string —
+ * because the endpoint rejects them as extra inputs.
  *
  * Saves send only the changed keys — the endpoint is a partial patch, and
  * echoing untouched fields back would overwrite a concurrent edit by
@@ -22,6 +24,7 @@ import type { OverviewPersona } from '../api/assistantOverviewService'
 import { useUpdateAssistantPersona } from '../hooks/useAssistantAdmin'
 import { classifyAssistantAdminError } from '../utils/adminErrors'
 import { ApplyBadge } from './ApplyBadge'
+import { OverriddenBadge } from './OverriddenBadge'
 
 type PersonaFields = Record<string, string>
 
@@ -90,6 +93,7 @@ export function AssistantPersonaCard({ persona }: { persona: OverviewPersona }) 
               {t('pages.aiSettings.management.persona.title')}
             </span>
             <ApplyBadge apply={persona.apply} />
+            <OverriddenBadge overridden={persona.overridden} />
           </div>
           <div className="text-muted-foreground mt-0.5 text-xs">
             {t('pages.aiSettings.management.persona.description')}

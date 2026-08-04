@@ -5,6 +5,10 @@
  * admin has to be able to find a skill again to turn it back on, and a
  * shrinking list would read as "the skill was deleted".
  *
+ * The brain reports no short description — `text` is the whole SKILL.md
+ * body — so the row is name + a disclosure for that body rather than the
+ * name + subtitle a settings list would normally use.
+ *
  * The switch is optimistic (see useUpdateAssistantSkill) — on failure the
  * previous overview is restored and the reason is toasted, so the row
  * snapping back is never silent.
@@ -68,9 +72,6 @@ function SkillRow({ skill }: { skill: OverviewSkill }) {
             )}
             <ApplyBadge apply={skill.apply} />
           </div>
-          {skill.description && (
-            <div className="text-muted-foreground mt-0.5 text-xs">{skill.description}</div>
-          )}
           {skill.text && (
             <button
               type="button"

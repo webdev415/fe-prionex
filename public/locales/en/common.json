@@ -3796,11 +3796,14 @@
         },
         "prompt": {
           "title": "System prompt add-on",
-          "description": "Text appended to the assistant's base prompt on every request.",
+          "description": "Text appended to the assistant's base prompt on every request. Supports {name}, {role} and {tone} placeholders; the limit applies to the text after substitution.",
           "warning": "Edits affect answers for every operator. The previous version is backed up automatically on the server.",
           "inputAria": "System prompt add-on",
           "save": "Save",
-          "toastSaved": "System prompt add-on saved"
+          "toastSaved": "System prompt add-on saved",
+          "counterStale": "recalculated on save",
+          "renderErrorTitle": "The stored template does not render — the assistant is serving the last working version.",
+          "counterLabel": "rendered characters"
         },
         "skills": {
           "title": "Skills",
@@ -3819,7 +3822,8 @@
           "notFound": "This skill no longer exists. Refresh the page.",
           "unavailable": "The assistant service is unavailable.",
           "unknown": "Could not save. Try again."
-        }
+        },
+        "overridden": "overridden"
       },
       "internals": {
         "title": "Assistant internals",

@@ -59,4 +59,42 @@ describe('classifyAssistantAdminError', () => {
   it('ignores a whitespace-only detail', () => {
     expect(classifyAssistantAdminError(httpError(422, { detail: '   ' })).message).toBeUndefined()
   })
+
+  it('serializes an unrecognized detail object rather than dropping it', () => {
+    // The bridge forwards a brain body it does not recognize verbatim under
+    // `detail`; raw JSON is ugly but it is the only diagnostic there is.
+    const result = classifyAssistantAdminError(
+      httpError(422, { detail: { reason: 'template unparsable', line: 3 } })
+    )
+    expect(result.kind).toBe('validation')
+    expect(result.message).toBe('{"reason":"template unparsable","line":3}')
+  })
+
+  it('treats brain_unreachable as unavailable regardless of the status number', () => {
+    // The bridge answers 502 today; the code in the body is the stable part
+    // of the contract, so a later switch to 503 must not degrade this to
+    // "unknown error".
+    expect(
+      classifyAssistantAdminError(httpError(502, { detail: { code: 'brain_unreachable' } })).kind
+    ).toBe('unavailable')
+    expect(
+      classifyAssistantAdminError(httpError(503, { detail: { code: 'brain_unreachable' } })).kind
+    ).toBe('unavailable')
+    expect(
+      classifyAssistantAdminError(httpError(500, { detail: { code: 'brain_unreachable' } })).kind
+    ).toBe('unavailable')
+  })
+
+  it('keeps 403 and 404 server prose out of the UI', () => {
+    // Both arrive as readable strings, but in the backend's own language —
+    // the UI shows its own localized copy instead.
+    const forbidden = classifyAssistantAdminError(
+      httpError(403, { detail: 'AI settings management is not granted for this role' })
+    )
+    const missing = classifyAssistantAdminError(
+      httpError(404, { detail: 'навык не найден: nosuch' })
+    )
+    expect(forbidden).toEqual({ kind: 'forbidden' })
+    expect(missing).toEqual({ kind: 'notFound' })
+  })
 })

@@ -1,14 +1,20 @@
 /**
  * «Системная надстройка» — the prompt0 append template, editable.
  *
- * The character limit is server-owned (`prompt0_append.limit`, falling back
- * to `config.limits.prompt_append_limit`): the brain truncates past it, and
- * a hardcoded number here would drift the moment the brain's own limit
- * moves. Over-limit disables Save, but the text is never trimmed for the
- * user — losing what someone typed is worse than a blocked button.
+ * The textarea holds `template` (raw, with `{name}` / `{role}` / `{tone}`
+ * placeholders), never the rendered `text` — editing the render would bake
+ * the substituted values in permanently on the next save.
  *
- * A 422 keeps the draft on screen and shows the server's message verbatim:
- * that text is the only place the admin learns what the brain rejected.
+ * The counter is deliberately NOT `template.length`. The brain checks its
+ * limit against the RENDERED text, and a 6-character `{name}` expands to
+ * whatever the persona name is, so a local character count would confidently
+ * report a number nobody validates against. Instead the card shows the
+ * server's own `length`/`limit` from the last response and marks it stale
+ * while there are unsaved edits — and never blocks Save on a local guess.
+ * The brain validates and answers 422 with a readable reason.
+ *
+ * A 422 keeps the draft on screen and shows that message verbatim: it is
+ * the only place the admin learns what was rejected.
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -17,12 +23,12 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
 
 import type { AssistantOverview } from '../api/assistantOverviewService'
 import { useUpdateAssistantPromptAppend } from '../hooks/useAssistantAdmin'
 import { classifyAssistantAdminError } from '../utils/adminErrors'
 import { ApplyBadge } from './ApplyBadge'
+import { OverriddenBadge } from './OverriddenBadge'
 
 export function AssistantPromptAppendCard({ overview }: { overview: AssistantOverview }) {
   const { t } = useTranslation('common')
@@ -30,25 +36,24 @@ export function AssistantPromptAppendCard({ overview }: { overview: AssistantOve
 
   const append = overview.prompts.prompt0_append
   const limit = append.limit || overview.config.limits.prompt_append_limit
-  const serverText = append.text ?? ''
+  const serverTemplate = append.template ?? ''
 
-  const [draft, setDraft] = useState(serverText)
+  const [draft, setDraft] = useState(serverTemplate)
   const [error, setError] = useState<string | null>(null)
-  const [seededFrom, setSeededFrom] = useState(serverText)
+  const [seededFrom, setSeededFrom] = useState(serverTemplate)
 
   // Re-seed only when the stored template actually changes (our own save,
   // or a first load). A 422 leaves the server value untouched, so a
   // rejected draft survives on screen — which is the point. Adjusted during
   // render rather than in an effect: the effect version cascades a second
   // render pass on every save (react-hooks/set-state-in-effect).
-  if (seededFrom !== serverText) {
-    setSeededFrom(serverText)
-    setDraft(serverText)
+  if (seededFrom !== serverTemplate) {
+    setSeededFrom(serverTemplate)
+    setDraft(serverTemplate)
     setError(null)
   }
 
-  const overLimit = draft.length > limit
-  const dirty = draft !== serverText
+  const dirty = draft !== serverTemplate
 
   const handleSave = async () => {
     setError(null)
@@ -78,6 +83,7 @@ export function AssistantPromptAppendCard({ overview }: { overview: AssistantOve
               {t('pages.aiSettings.management.prompt.title')}
             </span>
             <ApplyBadge apply={append.apply} />
+            <OverriddenBadge overridden={append.overridden} />
           </div>
           <div className="text-muted-foreground mt-0.5 text-xs">
             {t('pages.aiSettings.management.prompt.description')}
@@ -95,6 +101,21 @@ export function AssistantPromptAppendCard({ overview }: { overview: AssistantOve
         </div>
       </div>
 
+      {append.error && (
+        <div
+          data-testid="assistant-prompt-append-render-error"
+          className="border-error-500/40 bg-error-100/60 flex items-start gap-2 rounded-lg border p-3"
+        >
+          <Icons.Warning className="text-error-700 mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+          <div className="text-error-700 min-w-0 text-xs">
+            <div className="font-medium">
+              {t('pages.aiSettings.management.prompt.renderErrorTitle')}
+            </div>
+            <div className="mt-0.5 break-words">{append.error}</div>
+          </div>
+        </div>
+      )}
+
       <Textarea
         data-testid="assistant-prompt-append-input"
         value={draft}
@@ -108,19 +129,12 @@ export function AssistantPromptAppendCard({ overview }: { overview: AssistantOve
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span
           data-testid="assistant-prompt-append-counter"
-          className={cn(
-            'text-xs',
-            overLimit ? 'text-error-500 font-medium' : 'text-muted-foreground'
-          )}
+          className="text-muted-foreground text-xs"
         >
-          {draft.length}/{limit}
+          {append.length}/{limit} · {t('pages.aiSettings.management.prompt.counterLabel')}
+          {dirty && ` · ${t('pages.aiSettings.management.prompt.counterStale')}`}
         </span>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!dirty || overLimit}
-          isLoading={mutation.isPending}
-        >
+        <Button size="sm" onClick={handleSave} disabled={!dirty} isLoading={mutation.isPending}>
           {t('pages.aiSettings.management.prompt.save')}
         </Button>
       </div>

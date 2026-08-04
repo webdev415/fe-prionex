@@ -64,6 +64,7 @@ const OVERVIEW: AssistantOverview = {
       apply: 'gw-restart',
     },
     prompt0_append: {
+      template: 'Дополнительный контекст оператора',
       text: 'Дополнительный контекст оператора',
       length: 34,
       limit: 2000,
