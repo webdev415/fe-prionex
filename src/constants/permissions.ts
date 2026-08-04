@@ -215,15 +215,23 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Scoring Configuration Category (4 permissions)
+   * Scoring Configuration Category (5 permissions)
    * Controls access to scoring algorithm configuration
-   * Note: View permissions restricted to Admin and Supervisor
+   * Note: config permissions are restricted to Admin and Supervisor.
+   *
+   * VIEW_PRIORITY_SCORES is the exception and is deliberately separate (KAN-791,
+   * auth migration 057): it grants read access to a debt's v3 priority BUCKET —
+   * the client-card badge, list badges and the Priority Work List — and is held
+   * by Operator as well, because operators are the audience for a work queue.
+   * It does NOT grant any access to model configuration, and it is not what
+   * gates the shadow-run report (that stays on VIEW).
    */
   SCORING_CONFIG: {
     VIEW: 'view_scoring_config',
     EDIT: 'edit_scoring_config',
     MANAGE_SELLER_CONFIG: 'manage_seller_scoring_config',
     VIEW_HISTORY: 'view_scoring_config_history',
+    VIEW_PRIORITY_SCORES: 'view_priority_scores',
   },
 
   /**
@@ -562,6 +570,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+  view_priority_scores:
+    'View v3 priority buckets and work ordering (client card, lists, work list)',
 
   // Repayment Configuration (KAN-246)
   view_repayment_config: 'View global repayment order and write-off rule configuration',

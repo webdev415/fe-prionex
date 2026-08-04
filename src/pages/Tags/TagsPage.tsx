@@ -190,7 +190,9 @@ export function TagsPage() {
         key: 'code',
         header: t('pages.tags.tableHeaders.code', 'Code'),
         render: (tag) => (
-          <code className="text-xs text-gray-600">{(tag as TagDefinition).code || '-'}</code>
+          <code className="text-muted-foreground text-xs">
+            {(tag as TagDefinition).code || '-'}
+          </code>
         ),
       },
       {
@@ -198,11 +200,11 @@ export function TagsPage() {
         header: t('pages.tags.tableHeaders.category', 'Category'),
         render: (tag) => (
           <div>
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            <span className="bg-muted text-foreground rounded px-2 py-0.5 text-xs">
               {tag.category ? t(`pages.tags.categories.${tag.category}`, tag.category) : '-'}
             </span>
             {(tag as TagDefinition).mutex_group && (
-              <div className="mt-0.5 text-xs text-gray-400">
+              <div className="text-muted-foreground mt-0.5 text-xs">
                 {(tag as TagDefinition).mutex_group}
               </div>
             )}
@@ -215,7 +217,7 @@ export function TagsPage() {
         render: (tag) => {
           const vis = (tag as TagDefinition).visibility
           return (
-            <span className="text-xs text-gray-600">
+            <span className="text-muted-foreground text-xs">
               {vis ? t(`pages.tags.visibilities.${vis}`, vis) : '-'}
             </span>
           )
@@ -231,7 +233,7 @@ export function TagsPage() {
               {t('pages.tags.origins.system', 'System')}
             </span>
           ) : (
-            <span className="text-xs text-gray-500">
+            <span className="text-muted-foreground text-xs">
               {t('pages.tags.origins.custom', 'Custom')}
             </span>
           )
@@ -254,7 +256,7 @@ export function TagsPage() {
               permission={PERMISSIONS.TAGS.EDIT}
               fallback={
                 <span
-                  className={`text-xs font-medium ${active ? 'text-success-600' : 'text-gray-400'}`}
+                  className={`text-xs font-medium ${active ? 'text-success-600' : 'text-muted-foreground'}`}
                 >
                   {active ? t('common.yes', 'Yes') : t('common.no', 'No')}
                 </span>
@@ -286,7 +288,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleEdit(tag)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
               >
                 {t('pages.tags.actions.edit', 'Редактировать')}
               </LinkButton>
@@ -296,7 +298,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => setDeleteTagId(tag.id)}
-                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Cancel01 size={16} strokeWidth={1.5} />}
               >
                 {t('actions.delete', 'Удалить')}
               </LinkButton>
@@ -320,7 +322,7 @@ export function TagsPage() {
       {
         key: 'code',
         header: t('pages.tags.segments.code', 'Code'),
-        render: (s) => <code className="text-xs text-gray-600">{s.code}</code>,
+        render: (s) => <code className="text-muted-foreground text-xs">{s.code}</code>,
       },
       {
         key: 'conditions',
@@ -365,7 +367,7 @@ export function TagsPage() {
                 type: 'or',
                 key: `or-${groupIdx}`,
                 node: (
-                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">
+                  <span className="bg-warning-50 text-warning-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
                     {t('pages.tags.segments.orLabel', 'OR')}
                   </span>
                 ),
@@ -378,7 +380,7 @@ export function TagsPage() {
                   type: 'and',
                   key: `and-${groupIdx}-${condIdx}`,
                   node: (
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-muted-foreground text-[10px]">
                       {t('pages.tags.segments.andLabel', 'AND')}
                     </span>
                   ),
@@ -390,7 +392,7 @@ export function TagsPage() {
                   type: 'pill',
                   key: `pill-${groupIdx}-${condIdx}`,
                   node: (
-                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
+                    <span className="bg-information-50 text-information-700 rounded px-1.5 py-0.5 text-[10px]">
                       {condition.tag_code ?? '—'}
                     </span>
                   ),
@@ -400,7 +402,7 @@ export function TagsPage() {
                   type: 'pill',
                   key: `pill-${groupIdx}-${condIdx}`,
                   node: (
-                    <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">
+                    <span className="bg-error-50 text-error-700 rounded px-1.5 py-0.5 text-[10px]">
                       {t('pages.tags.segments.conditionTypes.not_has_tag', 'NOT')}{' '}
                       {condition.tag_code ?? '—'}
                     </span>
@@ -413,7 +415,7 @@ export function TagsPage() {
                   type: 'pill',
                   key: `pill-${groupIdx}-${condIdx}`,
                   node: (
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">
+                    <span className="bg-muted text-foreground rounded px-1.5 py-0.5 text-[10px]">
                       {label} {op} {condition.value ?? '—'}
                     </span>
                   ),
@@ -453,7 +455,7 @@ export function TagsPage() {
                 <span key={entry.key}>{entry.node}</span>
               ))}
               {overflow && (
-                <span className="text-[10px] text-gray-400">
+                <span className="text-muted-foreground text-[10px]">
                   {t('pages.tags.showMore', '+{{count}} more', {
                     count: totalConditions - shownConditions,
                   })}
@@ -470,7 +472,7 @@ export function TagsPage() {
         render: (s) => (
           <button
             onClick={() => setSegmentClientsDrawer(s)}
-            className="rounded px-2 py-0.5 font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800"
+            className="text-information-600 hover:bg-information-50 hover:text-information-800 rounded px-2 py-0.5 font-medium transition-colors"
             title={t('pages.tags.segments.viewClients', 'View clients')}
           >
             {s.cached_client_count}
@@ -481,7 +483,7 @@ export function TagsPage() {
         key: 'refresh_mode',
         header: t('pages.tags.segments.refreshMode', 'Refresh'),
         render: (s) => (
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">
+          <span className="bg-muted rounded px-2 py-0.5 text-xs">
             {t(`pages.tags.segments.refreshModes.${s.refresh_mode}`, s.refresh_mode)}
           </span>
         ),
@@ -495,7 +497,7 @@ export function TagsPage() {
             permission={PERMISSIONS.TAGS.EDIT}
             fallback={
               <span
-                className={`text-xs font-medium ${s.is_active ? 'text-success-600' : 'text-gray-400'}`}
+                className={`text-xs font-medium ${s.is_active ? 'text-success-600' : 'text-muted-foreground'}`}
               >
                 {s.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
               </span>
@@ -527,7 +529,7 @@ export function TagsPage() {
                 size="xs"
                 onClick={() => refreshSegmentMutation.mutate(s.id)}
                 disabled={refreshSegmentMutation.isPending}
-                leftIcon={<Icons.Reload size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Reload size={16} strokeWidth={1.5} />}
               >
                 {t('pages.tags.actions.refresh', 'Refresh')}
               </LinkButton>
@@ -537,7 +539,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => setEditSegment(s)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
               >
                 {t('pages.tags.actions.edit', 'Edit')}
               </LinkButton>
@@ -547,7 +549,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => setDeleteSegmentId(s.id)}
-                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Cancel01 size={16} strokeWidth={1.5} />}
               >
                 {t('actions.delete', 'Delete')}
               </LinkButton>
@@ -571,7 +573,7 @@ export function TagsPage() {
         key: 'description',
         header: t('pages.tags.rules.description', 'Description'),
         render: (r) => (
-          <span className="line-clamp-1 text-xs text-gray-600">{r.description || '—'}</span>
+          <span className="text-muted-foreground line-clamp-1 text-xs">{r.description || '—'}</span>
         ),
       },
       {
@@ -589,10 +591,12 @@ export function TagsPage() {
 
           return (
             <div className="flex flex-col gap-0.5">
-              <span className="w-fit rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+              <span className="bg-information-50 text-information-700 w-fit rounded px-2 py-0.5 text-xs">
                 {t(`pages.tags.rules.triggerTypes.${r.trigger_type}`, r.trigger_type)}
               </span>
-              {triggerDetail && <span className="text-[10px] text-gray-500">{triggerDetail}</span>}
+              {triggerDetail && (
+                <span className="text-muted-foreground text-[10px]">{triggerDetail}</span>
+              )}
             </div>
           )
         },
@@ -602,7 +606,7 @@ export function TagsPage() {
         header: t('pages.tags.rules.conditions', 'Conditions'),
         render: (r) => {
           if (!r.conditions || r.conditions.length === 0) {
-            return <span className="text-xs text-gray-400">—</span>
+            return <span className="text-muted-foreground text-xs">—</span>
           }
 
           const OPERATOR_SYMBOLS: Record<string, string> = {
@@ -624,10 +628,10 @@ export function TagsPage() {
             .join(` ${t('pages.tags.segments.andLabel', 'AND')} `)
 
           return (
-            <span className="line-clamp-2 text-xs text-gray-600">
+            <span className="text-muted-foreground line-clamp-2 text-xs">
               {summary}
               {r.conditions.length > 2 && (
-                <span className="text-gray-400">
+                <span className="text-muted-foreground">
                   {' '}
                   {t('pages.tags.showMore', '+{{count}} more', {
                     count: r.conditions.length - 2,
@@ -642,7 +646,7 @@ export function TagsPage() {
         key: 'action_type',
         header: t('pages.tags.rules.action', 'Action'),
         render: (r) => (
-          <span className="bg-secondary-50 text-secondary-700 rounded px-2 py-0.5 text-xs">
+          <span className="bg-muted text-foreground rounded px-2 py-0.5 text-xs">
             {t(`pages.tags.rules.actionTypes.${r.action_type}`, r.action_type)}
           </span>
         ),
@@ -662,7 +666,7 @@ export function TagsPage() {
         key: 'last_executed_at',
         header: t('pages.tags.rules.lastExecuted', 'Last Run'),
         render: (r) => (
-          <span className="text-xs text-gray-500">
+          <span className="text-muted-foreground text-xs">
             {r.last_executed_at
               ? new Date(r.last_executed_at).toLocaleString(dateLocale, {
                   day: '2-digit',
@@ -683,7 +687,7 @@ export function TagsPage() {
             permission={PERMISSIONS.TAGS.EDIT}
             fallback={
               <span
-                className={`text-xs font-medium ${r.is_active ? 'text-success-600' : 'text-gray-400'}`}
+                className={`text-xs font-medium ${r.is_active ? 'text-success-600' : 'text-muted-foreground'}`}
               >
                 {r.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
               </span>
@@ -714,7 +718,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => setEditRule(r)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
               >
                 {t('pages.tags.actions.edit', 'Edit')}
               </LinkButton>
@@ -724,7 +728,7 @@ export function TagsPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => setDeleteRuleId(r.id)}
-                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Cancel01 size={16} strokeWidth={1.5} />}
               >
                 {t('actions.delete', 'Delete')}
               </LinkButton>
@@ -741,7 +745,7 @@ export function TagsPage() {
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.tags.title', 'Tags')}
           </h1>
         </div>
@@ -764,7 +768,7 @@ export function TagsPage() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
               aria-label={t('pages.tags.createTag', 'Create')}
             >
               <Icons.Add size={20} strokeWidth={2} />
@@ -774,7 +778,7 @@ export function TagsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 border-b border-gray-200">
+      <div className="border-border mb-4 border-b">
         <nav className="-mb-px flex gap-6">
           {TABS.map((tab) => (
             <button
@@ -782,12 +786,12 @@ export function TagsPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'text-muted-foreground hover:border-border hover:text-foreground border-transparent'
               }`}
             >
               {t(tab.labelKey, tab.fallback)}
-              <span className="ml-2 text-xs text-gray-400">
+              <span className="text-muted-foreground ml-2 text-xs">
                 {tab.id === 'dictionary'
                   ? activeTab === 'dictionary'
                     ? filteredTags.length
@@ -823,8 +827,8 @@ export function TagsPage() {
                 onClick={() => setCategoryFilter(cat)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   categoryFilter === cat
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
                 {cat === 'all'
@@ -854,8 +858,8 @@ export function TagsPage() {
       {/* Tab Content: Segments */}
       {activeTab === 'segments' && (
         <>
-          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-xs text-blue-700">
+          <div className="border-information-100 bg-information-50 mb-4 rounded-lg border px-4 py-3">
+            <p className="text-information-700 text-xs">
               {t(
                 'pages.tags.emptyStates.segmentsBanner',
                 'Segments are saved client groups based on tag conditions. Example: "High Risk + Active Debt" = all clients with both tags. Conditions in a group are combined with AND, groups — with OR.'
@@ -864,12 +868,12 @@ export function TagsPage() {
           </div>
           {segmentsLoading && <TableSkeleton columns={6} rows={5} />}
           {!segmentsLoading && segments.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-              <Icons.Users size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />
-              <h3 className="mb-1 text-sm font-medium text-gray-900">
+            <div className="border-border bg-muted flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-12 text-center">
+              <Icons.Users size={40} className="text-muted-foreground mb-3" strokeWidth={1.5} />
+              <h3 className="text-foreground mb-1 text-sm font-medium">
                 {t('pages.tags.emptyStates.segmentsTitle', 'No segments yet')}
               </h3>
-              <p className="mb-4 max-w-sm text-xs text-gray-500">
+              <p className="text-muted-foreground mb-4 max-w-sm text-xs">
                 {t(
                   'pages.tags.emptyStates.segmentsDescription',
                   'Segments group clients by tag conditions. For example: "All clients with high risk and active debt".'
@@ -899,8 +903,8 @@ export function TagsPage() {
       {/* Tab Content: Rules */}
       {activeTab === 'rules' && (
         <>
-          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-xs text-blue-700">
+          <div className="border-information-100 bg-information-50 mb-4 rounded-lg border px-4 py-3">
+            <p className="text-information-700 text-xs">
               {t(
                 'pages.tags.emptyStates.rulesBanner',
                 'Rules automatically add or remove tags when conditions are met. They can trigger on events (payment received), schedules (daily at 9:00), or scoring changes.'
@@ -909,12 +913,12 @@ export function TagsPage() {
           </div>
           {rulesLoading && <TableSkeleton columns={8} rows={5} />}
           {!rulesLoading && rules.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-              <Icons.Settings size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />
-              <h3 className="mb-1 text-sm font-medium text-gray-900">
+            <div className="border-border bg-muted flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-12 text-center">
+              <Icons.Settings size={40} className="text-muted-foreground mb-3" strokeWidth={1.5} />
+              <h3 className="text-foreground mb-1 text-sm font-medium">
                 {t('pages.tags.emptyStates.rulesTitle', 'No automation rules yet')}
               </h3>
-              <p className="mb-4 max-w-sm text-xs text-gray-500">
+              <p className="text-muted-foreground mb-4 max-w-sm text-xs">
                 {t(
                   'pages.tags.emptyStates.rulesDescription',
                   'Rules automatically assign or remove tags on events. For example: auto-tag high risk when scoring changes.'

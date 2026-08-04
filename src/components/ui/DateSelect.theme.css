@@ -109,6 +109,60 @@
   opacity: 0.5;
 }
 
+/* Month-year picker grid (showMonthYearPicker): operator work list, v3
+   monitoring. react-datepicker renders these cells as __month-text, so none of
+   the __day rules above reach them and its own defaults take over — a blue
+   (#216ba5) selected month that appears nowhere else in the product. Mirrors
+   the day rules so the two grids behave identically. */
+.date-select-calendar .react-datepicker__month-text {
+  color: var(--foreground) !important;
+  border-radius: 0.375rem;
+  padding: 6px 4px;
+  transition: all 0.15s;
+}
+
+.date-select-calendar
+  .react-datepicker__month-text:hover:not(
+    .react-datepicker__month-text--selected,
+    .react-datepicker__month-text--keyboard-selected
+  ) {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-radius: 0.375rem;
+}
+
+.date-select-calendar .react-datepicker__month-text--selected,
+.date-select-calendar .react-datepicker__month-text--keyboard-selected,
+.date-select-calendar .react-datepicker__month-text--today.react-datepicker__month-text--selected,
+.date-select-calendar
+  .react-datepicker__month-text--today.react-datepicker__month-text--keyboard-selected {
+  background-color: var(--color-primary-500) !important;
+  color: #ffffff !important;
+  border-radius: 0.375rem;
+}
+
+.date-select-calendar .react-datepicker__month-text--selected:not([aria-disabled='true']):hover,
+.date-select-calendar
+  .react-datepicker__month-text--keyboard-selected:not([aria-disabled='true']):hover {
+  background-color: var(--color-primary-600, var(--color-primary-500)) !important;
+  color: #ffffff !important;
+}
+
+.date-select-calendar
+  .react-datepicker__month-text--today:not(
+    .react-datepicker__month-text--selected,
+    .react-datepicker__month-text--keyboard-selected
+  ) {
+  font-weight: 600;
+  color: var(--color-primary-500) !important;
+  background-color: transparent;
+}
+
+.date-select-calendar .react-datepicker__month-text--disabled {
+  color: var(--muted-foreground) !important;
+  opacity: 0.5;
+}
+
 .date-select-calendar .react-datepicker__navigation {
   top: 12px;
 }

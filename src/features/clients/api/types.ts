@@ -268,6 +268,12 @@ export interface Client {
   // UBKI outbound submission opt-out (credit bureau).
   // When true, this client's data is never sent to UBKI (manual or scheduled).
   do_not_send_to_ubki?: boolean
+
+  // Compliance exclusions. Present on the list so a do-not-call client is marked
+  // as such even when the v3 model has no score for them.
+  is_deceased?: boolean
+  is_fraudster?: boolean
+  lawsuit_filed?: boolean
 }
 
 export interface ClientDetail extends Client {
@@ -512,6 +518,9 @@ export interface ClientProfileResponse {
   is_bankrupt: boolean
   is_deceased: boolean
   is_fraudster: boolean
+  /** Compliance exclusion — the client card marks these do-not-call with or
+   *  without a v3 score. */
+  lawsuit_filed?: boolean
   is_military: boolean
   has_nbu_complaint: boolean
   do_not_send_to_ubki?: boolean
