@@ -30,6 +30,7 @@ describe('mapRoutingRulesToUpdate', () => {
         letterTypeId: 'court',
         isActive: true,
         priority: 0,
+        action: 'assign_type',
       },
       {
         id: 'rule-1001',
@@ -38,6 +39,7 @@ describe('mapRoutingRulesToUpdate', () => {
         letterTypeId: 'other',
         isActive: false,
         priority: 1,
+        action: 'assign_type',
       },
     ]
 
@@ -50,6 +52,7 @@ describe('mapRoutingRulesToUpdate', () => {
           letter_type_id: 'court',
           is_active: true,
           priority: 0,
+          action: 'assign_type',
         },
         {
           match_type: 'default',
@@ -57,6 +60,7 @@ describe('mapRoutingRulesToUpdate', () => {
           letter_type_id: 'other',
           is_active: false,
           priority: 1,
+          action: 'assign_type',
         },
       ],
     })
