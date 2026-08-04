@@ -56,7 +56,7 @@ import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
-import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
+import { ContactTagDropdown } from './components/ContactTagDropdown'
 import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
@@ -1573,9 +1573,9 @@ export function ClientDetailPage() {
   const [isSendMessageModalOpen, setIsSendMessageModalOpen] = useState(false)
   const [selectedPhoneForMessage, setSelectedPhoneForMessage] = useState<string>('')
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
-  const [contactTagModal, setContactTagModal] = useState<{
+  const [openContactDropdown, setOpenContactDropdown] = useState<{
+    section: 'phones' | 'recommenders'
     contactId: number
-    phone: string
   } | null>(null)
   const [contactTagHistoryModal, setContactTagHistoryModal] = useState<{
     contactId: number
@@ -3217,9 +3217,9 @@ export function ClientDetailPage() {
                                     title={tag.category_name}
                                     onClick={() =>
                                       phone.contactId > 0 &&
-                                      setContactTagModal({
+                                      setOpenContactDropdown({
+                                        section: 'phones',
                                         contactId: phone.contactId,
-                                        phone: phone.number,
                                       })
                                     }
                                   >
@@ -3392,19 +3392,21 @@ export function ClientDetailPage() {
                             </button>
                           </PermissionGuard>
                           {phone.contactId > 0 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setContactTagModal({
+                            <ContactTagDropdown
+                              clientId={client.id}
+                              contactId={phone.contactId}
+                              isOpen={
+                                openContactDropdown?.section === 'phones' &&
+                                openContactDropdown.contactId === phone.contactId
+                              }
+                              onOpen={() =>
+                                setOpenContactDropdown({
+                                  section: 'phones',
                                   contactId: phone.contactId,
-                                  phone: phone.number,
                                 })
                               }
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              title={t('pages.contactTags.tags', 'Tags')}
-                            >
-                              <Icons.Tag01 size={16} className="flex-shrink-0" />
-                            </button>
+                              onClose={() => setOpenContactDropdown(null)}
+                            />
                           )}
                         </div>
                       </div>
@@ -4513,6 +4515,7 @@ export function ClientDetailPage() {
                 {/* Tab 3: Recommenders */}
                 {activeRightCardTab === 'recommenders' && (
                   <RecommendersTab
+                    clientId={client.id}
                     contacts={client.recommenders}
                     contactTypesForSelect={contactTypesForRecommenderSelect}
                     contactTypesById={contactTypesById}
@@ -4536,7 +4539,15 @@ export function ClientDetailPage() {
                     onOpenTagHistory={(contactId, phone) =>
                       setContactTagHistoryModal({ contactId, phone })
                     }
-                    onOpenTagModal={(contactId, phone) => setContactTagModal({ contactId, phone })}
+                    openContactId={
+                      openContactDropdown?.section === 'recommenders'
+                        ? openContactDropdown.contactId
+                        : null
+                    }
+                    onOpenContactTagDropdown={(contactId) =>
+                      setOpenContactDropdown({ section: 'recommenders', contactId })
+                    }
+                    onCloseContactTagDropdown={() => setOpenContactDropdown(null)}
                     onCall={(phone, contactTypeId) => openOutboundCall(phone, contactTypeId)}
                     onSendSms={(phone) => {
                       setSelectedPhoneForSMS(phone)
@@ -5798,16 +5809,6 @@ export function ClientDetailPage() {
           onRetry={handleClearCallError}
           onSpamCall={(phone) => addSpamCall(phone)}
         />
-
-        {contactTagModal && (
-          <ContactTagSelectorModal
-            open
-            onClose={() => setContactTagModal(null)}
-            clientId={client.id}
-            contactId={contactTagModal.contactId}
-            phoneNumber={contactTagModal.phone}
-          />
-        )}
 
         {contactTagHistoryModal && (
           <ContactTagHistoryModal
