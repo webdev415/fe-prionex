@@ -109,9 +109,11 @@ export interface CallStateEventData {
   total_duration?: number
   hangup_cause?: number
   /**
-   * The agent the call ended up with. Every rung operator receives this event,
-   * so each frontend needs it to tell "I took this call" from "a colleague
-   * did" — the two have opposite outcomes for the incoming-call popup.
+   * The agent associated with the call — but its meaning depends on `state`.
+   * On `ACTIVE` it is whoever answered; while `RINGING` it is only whoever was
+   * rung first. Every rung operator receives this event, so it is what lets a
+   * client tell "I took this call" from "a colleague did" — but only once the
+   * call is ACTIVE.
    */
   agent_extension?: string
   [key: string]: unknown
