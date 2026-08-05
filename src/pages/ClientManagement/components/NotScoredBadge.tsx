@@ -19,7 +19,7 @@ export function NotScoredBadge({ className }: { className?: string }) {
     <span
       title="This client's debts are outside the scoring model's range, so they have no priority yet."
       className={cn(
-        'inline-flex h-[25px] min-w-[90px] items-center justify-center rounded-[16px] border border-dashed border-gray-300 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500',
+        'border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center rounded-[16px] border border-dashed px-3 py-1 text-xs font-medium',
         className
       )}
     >

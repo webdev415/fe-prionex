@@ -69,13 +69,13 @@ export interface OperatorDetailPanelProps {
 }
 
 const SCORE_RING: Record<ScoreBand, string> = {
-  red: 'stroke-[#EF4444]',
+  red: 'stroke-error-500',
   amber: 'stroke-amber-400',
   green: 'stroke-emerald-500',
 }
 
 const SCORE_TEXT: Record<ScoreBand, string> = {
-  red: 'text-[#EF4444]',
+  red: 'text-error-600',
   amber: 'text-amber-600',
   green: 'text-emerald-600',
 }
@@ -85,16 +85,16 @@ const QUEUE_CARD: Record<
   { bg: string; border: string; title: string; icon: string }
 > = {
   red: {
-    bg: 'bg-[#FEF2F2]',
-    border: 'border-[#FECACA]',
-    title: 'text-[#EF4444]',
-    icon: 'text-[#EF4444]',
+    bg: 'bg-error-50',
+    border: 'border-error-200',
+    title: 'text-error-700',
+    icon: 'text-error-600',
   },
   amber: {
-    bg: 'bg-[#FEFCE8]',
-    border: 'border-[#FEF08A]',
-    title: 'text-[#A16207]',
-    icon: 'text-[#CA8A04]',
+    bg: 'bg-warning-50',
+    border: 'border-warning-200',
+    title: 'text-warning-700',
+    icon: 'text-warning-600',
   },
   green: {
     bg: 'bg-emerald-50',
@@ -218,7 +218,7 @@ export function OperatorDetailPanel({
 
   if (!enabled) {
     return (
-      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+      <div className="border-border bg-card text-muted-foreground w-full max-w-[360px] rounded-xl border p-6 text-center text-xs">
         {t('pages.training.inbox.detail.empty', 'Select an operator from the list')}
       </div>
     )
@@ -226,7 +226,7 @@ export function OperatorDetailPanel({
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+      <div className="border-border bg-card text-muted-foreground w-full max-w-[360px] rounded-xl border p-6 text-center text-xs">
         {t('pages.training.inbox.detail.loading', 'Loading…')}
       </div>
     )
@@ -234,7 +234,7 @@ export function OperatorDetailPanel({
 
   if (isError || !data) {
     return (
-      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-red-500">
+      <div className="border-border bg-card text-error-600 w-full max-w-[360px] rounded-xl border p-6 text-center text-xs">
         {t('pages.training.inbox.detail.error', 'Could not load operator details.')}
       </div>
     )
@@ -348,19 +348,19 @@ export function OperatorDetailPanel({
   const computedInitials = initials ?? initialsFor(displayName)
 
   return (
-    <div className="flex w-full max-w-[360px] flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white">
+    <div className="border-border bg-card flex w-full max-w-[360px] flex-col overflow-hidden rounded-xl border">
       {showTabs ? (
-        <div className="relative flex border-b border-[#EBECE8]">
+        <div className="border-border relative flex border-b">
           <button
             type="button"
             onClick={() => onTabChange?.('details')}
             className={`flex flex-1 items-center gap-2 px-4 py-3 text-xs font-medium ${
-              activeTab === 'details' ? 'text-[#204E4D]' : 'text-[#676767]'
+              activeTab === 'details' ? 'text-secondary' : 'text-muted-foreground'
             }`}
           >
             <Icons.UserStatus
               size={16}
-              className={activeTab === 'details' ? 'text-[#204E4D]' : ''}
+              className={activeTab === 'details' ? 'text-secondary' : ''}
             />
             {t('pages.training.inbox.detail.tabDetails', 'Details')}
           </button>
@@ -368,22 +368,22 @@ export function OperatorDetailPanel({
             type="button"
             onClick={() => onTabChange?.('feed')}
             className={`flex flex-1 items-center justify-between gap-2 px-4 py-3 text-xs font-medium ${
-              activeTab === 'feed' ? 'text-[#204E4D]' : 'text-[#676767]'
+              activeTab === 'feed' ? 'text-secondary' : 'text-muted-foreground'
             }`}
           >
             <span className="flex items-center gap-2">
               <Icons.Activity01
                 size={16}
-                className={activeTab === 'feed' ? 'text-[#204E4D]' : ''}
+                className={activeTab === 'feed' ? 'text-secondary' : ''}
               />
               {t('pages.training.inbox.detail.tabFeed', 'Event Feed')}
             </span>
-            <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[11px] font-medium text-[#05040D]">
+            <span className="bg-muted text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
               {eventFeedCount}
             </span>
           </button>
           <span
-            className={`absolute bottom-0 h-0.5 w-1/2 bg-[#80D80A] transition-transform ${
+            className={`bg-primary-500 absolute bottom-0 h-0.5 w-1/2 transition-transform ${
               activeTab === 'feed' ? 'translate-x-full' : 'translate-x-0'
             }`}
             aria-hidden
@@ -394,7 +394,7 @@ export function OperatorDetailPanel({
       {activeTab === 'feed' && showTabs ? (
         <div className="max-h-[min(720px,calc(100vh-280px))] overflow-y-auto">
           {feedSlot ?? (
-            <p className="px-4 py-8 text-center text-xs text-gray-500">
+            <p className="text-muted-foreground px-4 py-8 text-center text-xs">
               {t(
                 'pages.training.inbox.detail.feedComingSoon',
                 'Team event feed lands with the next round.'
@@ -404,25 +404,25 @@ export function OperatorDetailPanel({
         </div>
       ) : (
         <div className="flex max-h-[min(720px,calc(100vh-280px))] flex-col overflow-y-auto">
-          <div className="bg-gradient-to-b from-[#F2F3F0] to-white px-4 pt-4 pb-3">
+          <div className="from-background to-card bg-gradient-to-b px-4 pt-4 pb-3">
             <div className="flex gap-3">
               <div className="relative flex-shrink-0">
                 <div
-                  className="flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold text-[#05040D]"
+                  className="text-foreground flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold"
                   style={{ backgroundColor: avatarColor }}
                 >
                   {computedInitials}
                 </div>
                 <span
-                  className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                    online ? 'bg-[#22C55E]' : 'bg-[#A1A1A1]'
+                  className={`border-card absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 ${
+                    online ? 'bg-success-500' : 'bg-muted-foreground'
                   }`}
                 />
               </div>
 
               <div className="min-w-0 flex-1 pt-0.5">
-                <h2 className="text-sm font-semibold text-[#05040D]">{displayName}</h2>
-                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#676767]">
+                <h2 className="text-foreground text-sm font-semibold">{displayName}</h2>
+                <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4">
                   {[department, segment, effectiveGroupName]
                     .filter((v): v is string => Boolean(v))
                     .map((seg, idx, arr) => (
@@ -434,7 +434,7 @@ export function OperatorDetailPanel({
                   {effectiveExtension ? (
                     <>
                       <span className="mx-1">·</span>
-                      <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[10px] font-medium text-[#05040D]">
+                      <span className="bg-muted text-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
                         ext {effectiveExtension}
                       </span>
                     </>
@@ -462,7 +462,7 @@ export function OperatorDetailPanel({
                     r={scoreRadius}
                     strokeWidth="4"
                     fill="none"
-                    className="stroke-[#EDEDED]"
+                    className="stroke-border"
                   />
                   {hasScore ? (
                     <circle
@@ -480,7 +480,7 @@ export function OperatorDetailPanel({
                 </svg>
                 <span
                   className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${
-                    hasScore ? SCORE_TEXT[band] : 'text-gray-400'
+                    hasScore ? SCORE_TEXT[band] : 'text-muted-foreground'
                   }`}
                 >
                   {hasScore ? score : '—'}
@@ -496,18 +496,18 @@ export function OperatorDetailPanel({
                   key={stat.label}
                   className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
                     index === 0 || stat.cardTone === 'red'
-                      ? 'border-[#FEE2E2] bg-[#FEF2F2]'
-                      : 'border-[#EBECE8] bg-white'
+                      ? 'border-error-100 bg-error-50'
+                      : 'border-border bg-card'
                   }`}
                 >
-                  <span className="text-[10px] leading-3 font-medium tracking-wide text-[#676767] uppercase">
+                  <span className="text-muted-foreground text-[10px] leading-3 font-medium tracking-wide uppercase">
                     {stat.label}
                   </span>
-                  <span className="mt-1 text-base leading-5 font-semibold text-[#05040D]">
+                  <span className="text-foreground mt-1 text-base leading-5 font-semibold">
                     {stat.value}
                   </span>
                   {stat.subValue ? (
-                    <span className="text-[11px] leading-[15px] text-[#676767]">
+                    <span className="text-muted-foreground text-[11px] leading-[15px]">
                       {stat.subValue}
                     </span>
                   ) : null}
@@ -517,18 +517,18 @@ export function OperatorDetailPanel({
 
             <div>
               <div className="flex flex-row justify-between">
-                <span className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+                <span className="text-foreground mb-3 text-sm font-medium tracking-[-0.02em]">
                   {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
                 </span>
                 {band === 'red' ? (
-                  <span className="inline-flex rounded-full bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#EF4444]">
+                  <span className="bg-error-50 text-error-700 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium">
                     {t('pages.training.inbox.detail.critical', 'Critical')}
                   </span>
                 ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
                 {whyInQueue.length === 0 ? (
-                  <p className="text-[11px] text-[#676767]">
+                  <p className="text-muted-foreground text-[11px]">
                     {t(
                       'pages.training.inbox.detail.noTriggers',
                       'No triggers fired in the current window.'
@@ -542,7 +542,7 @@ export function OperatorDetailPanel({
                         key={item.id}
                         className={`flex min-h-[53px] items-center gap-3 rounded-lg border px-3 py-2.5 ${tone.bg} ${tone.border}`}
                       >
-                        <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full bg-white">
+                        <span className="bg-card flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full">
                           {WHY_QUEUE_ICONS[item.icon](tone.icon)}
                         </span>
                         <div className="flex min-w-0 flex-col gap-0.5">
@@ -550,7 +550,9 @@ export function OperatorDetailPanel({
                             {item.label}
                           </p>
                           {item.meta ? (
-                            <p className="text-[11px] leading-[15px] text-[#676767]">{item.meta}</p>
+                            <p className="text-muted-foreground text-[11px] leading-[15px]">
+                              {item.meta}
+                            </p>
                           ) : null}
                         </div>
                       </div>
@@ -563,7 +565,7 @@ export function OperatorDetailPanel({
             {badgesSlot ? <div>{badgesSlot}</div> : null}
 
             <div>
-              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+              <h3 className="text-foreground mb-3 text-sm font-medium tracking-[-0.02em]">
                 {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
               </h3>
               {/* Figma — 8 actions in a 2-col grid. Buttons without a
@@ -574,7 +576,7 @@ export function OperatorDetailPanel({
                   Team tab. */}
               <div className="grid grid-cols-2 gap-1.5">
                 <TrainerAction
-                  icon={<Icons.Mic02 size={16} className="text-[#05040D]" />}
+                  icon={<Icons.Mic02 size={16} className="text-foreground" />}
                   label={t(
                     'pages.training.inbox.detail.actions.listenRealtime',
                     'Listen in real-time'
@@ -582,37 +584,37 @@ export function OperatorDetailPanel({
                   onClick={onListenRealtime}
                 />
                 <TrainerAction
-                  icon={<Icons.Phone size={16} className="text-[#05040D]" />}
+                  icon={<Icons.Phone size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.listen', 'Listen to the call')}
                   onClick={onListen}
                 />
                 <TrainerAction
-                  icon={<Icons.ChartRing size={16} className="text-[#05040D]" />}
+                  icon={<Icons.ChartRing size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.rate', 'Rate')}
                   onClick={onRate}
                 />
                 <TrainerAction
-                  icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                  icon={<Icons.Brochure size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.assignCourse', 'Assign course')}
                   onClick={onAssignCourse}
                 />
                 <TrainerAction
-                  icon={<Icons.PieChart02 size={16} className="text-[#05040D]" />}
+                  icon={<Icons.PieChart02 size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.assignDrill', 'Assign drill')}
                   onClick={onAssignDrill}
                 />
                 <TrainerAction
-                  icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
+                  icon={<Icons.Calendar size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.planOneOnOne', '1-on-1 session')}
                   onClick={onPlanOneOnOne}
                 />
                 <TrainerAction
-                  icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
+                  icon={<Icons.ChatFeedback01 size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.leaveComment', 'Leave a comment')}
                   onClick={onLeaveComment}
                 />
                 <TrainerAction
-                  icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
+                  icon={<Icons.CheckmarkSquare03 size={16} className="text-foreground" />}
                   label={t('pages.training.inbox.detail.actions.task', 'Task / checklist')}
                   onClick={onAssignTask}
                 />
@@ -621,7 +623,7 @@ export function OperatorDetailPanel({
                 <button
                   type="button"
                   onClick={onTakeCharge}
-                  className="mt-2 flex h-[34.5px] w-full items-center justify-center gap-1 rounded-md border border-[#204E4D] bg-[#204E4D] text-xs font-medium tracking-[-0.02em] text-white"
+                  className="border-secondary bg-secondary text-secondary-foreground mt-2 flex h-[34.5px] w-full items-center justify-center gap-1 rounded-md border text-xs font-medium tracking-[-0.02em]"
                 >
                   {t('pages.training.inbox.detail.actions.takeCharge', 'Take charge')}
                 </button>
@@ -648,10 +650,10 @@ function TrainerAction({
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className="flex h-[34.5px] items-center gap-1 rounded-md border border-[#DFDFDF] bg-white px-3 text-left disabled:opacity-60"
+      className="border-border bg-card flex h-[34.5px] items-center gap-1 rounded-md border px-3 text-left disabled:opacity-60"
     >
       <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center">{icon}</span>
-      <span className="truncate text-xs leading-4 font-medium tracking-[-0.02em] text-[#05040D]">
+      <span className="text-foreground truncate text-xs leading-4 font-medium tracking-[-0.02em]">
         {label}
       </span>
     </button>
