@@ -8421,7 +8421,14 @@
           "new_status": "Новий статус",
           "inbound": "Вхідний",
           "outbound": "Вихідний",
-          "system": "Системний"
+          "system": "Системний",
+          "chain_name": "Назва ланцюжка",
+          "chain_id": "ID ланцюжка",
+          "credit_id": "ID кредиту",
+          "result_code": "Код результату",
+          "promise_date": "Дата обіцянки",
+          "promise_amount": "Сума обіцянки",
+          "next_action_date": "Дата наступної дії"
         },
         "validation": {
           "nameRequired": "Назва обов'язкова",
@@ -8500,6 +8507,10 @@
               "inbound": "Вхідний",
               "outbound": "Вихідний",
               "system": "Системний"
+            },
+            "source": {
+              "legacy": "Журнал взаємодій",
+              "target_action": "Цільова дія"
             }
           }
         },

@@ -7746,7 +7746,14 @@
           "new_status": "New status",
           "inbound": "Inbound",
           "outbound": "Outbound",
-          "system": "System"
+          "system": "System",
+          "chain_name": "Chain name",
+          "chain_id": "Chain ID",
+          "credit_id": "Credit ID",
+          "result_code": "Result code",
+          "promise_date": "Promise date",
+          "promise_amount": "Promise amount",
+          "next_action_date": "Next action date"
         },
         "validation": {
           "nameRequired": "Name is required",
@@ -7825,6 +7832,10 @@
               "inbound": "Inbound",
               "outbound": "Outbound",
               "system": "System"
+            },
+            "source": {
+              "legacy": "Interaction Log",
+              "target_action": "Target Action"
             }
           }
         },
