@@ -36,6 +36,7 @@ import {
 import type { V3Bucket, V3ClientRollup, V3ScoreResult } from '@/features/scoring/api/types'
 import { V3BucketBadge } from './components/V3BucketBadge'
 import { exitReasonLabel } from '@/features/scoring/lib/exitReason'
+import { OperatorWorkListTableSkeleton } from './OperatorWorkListPageSkeleton'
 
 const PAGE_SIZE = 50
 
@@ -76,6 +77,25 @@ function fmtMoney(v: number | null): string {
 
 function fmtPct(v: number | null): string {
   return v == null ? '—' : `${(v * 100).toFixed(2)}%`
+}
+
+function FilterField({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={`text-foreground flex min-w-0 flex-col gap-1.5 text-xs font-medium sm:flex-row sm:items-center sm:gap-2 ${className ?? ''}`}
+    >
+      <span className="shrink-0">{label}</span>
+      {children}
+    </div>
+  )
 }
 
 export function OperatorWorkListPage() {
@@ -155,7 +175,7 @@ export function OperatorWorkListPage() {
       header: 'Why',
       // EXIT rows get the compliance ground, not the generic "terminal".
       render: (r) => (
-        <span className="text-gray-600">
+        <span className="text-muted-foreground">
           {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
         </span>
       ),
@@ -174,7 +194,7 @@ export function OperatorWorkListPage() {
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}
-          className="text-information-600 hover:underline"
+          className="text-information-700 hover:underline"
         >
           Client {r.client_id}
         </Link>
@@ -190,12 +210,15 @@ export function OperatorWorkListPage() {
 
   const resetPage = () => setPage(0)
 
+  const fieldInput =
+    'h-[45px] w-full rounded-lg border border-input-border bg-input px-3 text-sm font-light text-foreground outline-none placeholder:text-muted-foreground sm:w-auto'
+
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold text-[#05040D]">Priority Work List</h1>
-          <p className="text-xs text-gray-500">
+    <div className="flex w-full min-w-0 flex-col gap-4 p-4 md:p-6">
+      <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-foreground text-lg font-semibold sm:text-xl">Priority Work List</h1>
+          <p className="text-muted-foreground text-xs leading-relaxed">
             {view === 'client' ? 'Clients' : 'Debts'} ranked by the v3 model — call the top of the
             list first. Shadow-run preview.
           </p>
@@ -204,15 +227,15 @@ export function OperatorWorkListPage() {
           type="button"
           onClick={() => projectId && trigger.mutate({ projectId, asOf: monthStart })}
           disabled={!projectId || trigger.isPending}
-          className="bg-primary-600 hover:bg-primary-700 shrink-0 rounded-md px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+          className="bg-primary-600 text-primary-foreground hover:bg-primary-700 w-full shrink-0 rounded-md px-4 py-2 text-xs font-medium disabled:opacity-50 sm:w-auto"
         >
           {trigger.isPending ? 'Starting…' : 'Run now'}
         </button>
       </div>
 
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-0.5 rounded-lg border border-gray-300 p-0.5 text-xs font-medium">
+      <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+        <div className="border-border flex w-full items-center gap-0.5 rounded-lg border p-0.5 text-xs font-medium sm:w-auto">
           {(['debt', 'client'] as const).map((v) => (
             <button
               key={v}
@@ -223,17 +246,17 @@ export function OperatorWorkListPage() {
               }}
               className={
                 view === v
-                  ? 'bg-primary-600 rounded-md px-3 py-1.5 text-white'
-                  : 'rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-100'
+                  ? 'bg-primary-600 text-primary-foreground min-w-0 flex-1 rounded-md px-3 py-1.5 sm:flex-none'
+                  : 'text-muted-foreground hover:bg-muted min-w-0 flex-1 rounded-md px-3 py-1.5 sm:flex-none'
               }
             >
               {v === 'debt' ? 'By debt' : 'By client'}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-          Month
-          <div className="w-[190px]">
+
+        <FilterField label="Month" className="w-full sm:w-auto">
+          <div className="w-full min-w-0 sm:w-[190px]">
             <DateSelect
               showMonthYearPicker
               format="MMMM yyyy"
@@ -246,12 +269,12 @@ export function OperatorWorkListPage() {
               }}
             />
           </div>
-        </div>
+        </FilterField>
+
         {view === 'debt' && (
           <>
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-              Priority
-              <div className="w-[160px]">
+            <FilterField label="Priority" className="w-full sm:w-auto">
+              <div className="w-full min-w-0 sm:w-[160px]">
                 <Select
                   value={bucket}
                   onValueChange={(v) => {
@@ -271,39 +294,39 @@ export function OperatorWorkListPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </FilterField>
 
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-              Debt ID
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="Search…"
-                value={debtId}
-                onChange={(e) => {
-                  setDebtId(e.target.value.replace(/[^0-9]/g, ''))
-                  resetPage()
-                }}
-                className="h-[45px] w-[140px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
-              />
-              {debtId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDebtId('')
+            <FilterField label="Debt ID" className="w-full sm:w-auto">
+              <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Search…"
+                  value={debtId}
+                  onChange={(e) => {
+                    setDebtId(e.target.value.replace(/[^0-9]/g, ''))
                     resetPage()
                   }}
-                  className="text-gray-400 hover:text-gray-600"
-                  aria-label="Clear debt ID"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+                  className={`${fieldInput} sm:w-[140px]`}
+                />
+                {debtId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDebtId('')
+                      resetPage()
+                    }}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                    aria-label="Clear debt ID"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </FilterField>
 
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-              Min pay-chance
-              <div className="flex items-center gap-1">
+            <FilterField label="Min pay-chance" className="w-full sm:w-auto">
+              <div className="flex w-full items-center gap-1 sm:w-auto">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -313,60 +336,65 @@ export function OperatorWorkListPage() {
                     setMinPct(e.target.value.replace(/[^0-9.]/g, ''))
                     resetPage()
                   }}
-                  className="h-[45px] w-[80px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+                  className={`${fieldInput} sm:w-[80px]`}
                 />
-                <span className="text-gray-500">%</span>
+                <span className="text-muted-foreground shrink-0">%</span>
               </div>
-            </div>
+            </FilterField>
           </>
         )}
-        <span className="ml-auto text-xs text-gray-500">
+
+        <span className="text-muted-foreground w-full text-xs sm:ml-auto sm:w-auto sm:text-right">
           {total.toLocaleString()} {view === 'client' ? 'clients' : 'debts'}
         </span>
       </div>
 
       {isError ? (
-        <div className="border-error-600 text-error-600 rounded-xl border bg-[#FCEAEA] px-4 py-3 text-xs">
+        <div className="border-error-600 bg-error-50 text-error-700 w-full min-w-0 rounded-xl border px-4 py-3 text-xs leading-relaxed">
           Could not load the work list. The scoring service may be unavailable.
         </div>
+      ) : isLoading ? (
+        <OperatorWorkListTableSkeleton columns={view === 'client' ? 3 : 5} />
       ) : view === 'client' ? (
-        <DataTable
-          columns={clientColumns}
-          data={clientRows}
-          emptyMessage={isLoading ? 'Loading…' : 'No scored clients for this month yet.'}
-        />
+        <div className="w-full min-w-0">
+          <DataTable
+            columns={clientColumns}
+            data={clientRows}
+            emptyMessage="No scored clients for this month yet."
+          />
+        </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={rows}
-          emptyMessage={
-            isLoading
-              ? 'Loading…'
-              : debtIdNum
+        <div className="w-full min-w-0">
+          <DataTable
+            columns={columns}
+            data={rows}
+            emptyMessage={
+              debtIdNum
                 ? `No debt with ID ${debtIdNum} in this month.`
                 : 'No scored debts match these filters.'
-          }
-        />
+            }
+          />
+        </div>
       )}
 
       {/* Pagination */}
-      <div className="flex items-center justify-end gap-3 text-xs">
+      <div className="flex w-full min-w-0 items-center justify-between gap-2 text-xs sm:justify-end sm:gap-3">
         <button
           type="button"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="rounded-md border border-[#EBECE8] px-3 py-1 disabled:opacity-40"
+          disabled={page === 0 || isLoading}
+          className="border-border text-foreground hover:bg-muted min-w-0 flex-1 rounded-md border px-3 py-2 disabled:opacity-40 sm:flex-none sm:py-1"
         >
           Prev
         </button>
-        <span className="text-gray-500">
+        <span className="text-muted-foreground shrink-0 px-1 tabular-nums">
           Page {page + 1} of {pageCount}
         </span>
         <button
           type="button"
           onClick={() => setPage((p) => (p + 1 < pageCount ? p + 1 : p))}
-          disabled={page + 1 >= pageCount}
-          className="rounded-md border border-[#EBECE8] px-3 py-1 disabled:opacity-40"
+          disabled={page + 1 >= pageCount || isLoading}
+          className="border-border text-foreground hover:bg-muted min-w-0 flex-1 rounded-md border px-3 py-2 disabled:opacity-40 sm:flex-none sm:py-1"
         >
           Next
         </button>

@@ -24,11 +24,11 @@ import {
 import { AnalyticsFiltersBar } from './AnalyticsFiltersBar'
 
 const STATE_COLORS: Record<HeatmapState, string> = {
-  active_call: '#16a34a',
-  post_call: '#65a30d',
-  waiting: '#facc15',
-  idle: '#94a3b8',
-  break: '#f87171',
+  active_call: 'var(--color-success-600)',
+  post_call: 'var(--color-primary-600)',
+  waiting: 'var(--color-warning-400)',
+  idle: 'var(--muted-foreground)',
+  break: 'var(--color-error-400)',
 }
 
 export function HeatmapTab() {
@@ -214,7 +214,7 @@ export function HeatmapTab() {
                     </td>
                     {allHours.map((hour) => {
                       const bucket = byHour.get(hour)
-                      const color = bucket ? STATE_COLORS[bucket.dominant_state] : '#f3f4f6'
+                      const color = bucket ? STATE_COLORS[bucket.dominant_state] : 'var(--muted)'
                       const tooltip = bucket
                         ? `${bucket.dominant_state} • a:${bucket.minute_breakdown.active_call} p:${bucket.minute_breakdown.post_call} w:${bucket.minute_breakdown.waiting} i:${bucket.minute_breakdown.idle} b:${bucket.minute_breakdown.break}`
                         : 'no data'

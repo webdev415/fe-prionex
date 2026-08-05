@@ -247,13 +247,15 @@ export const MARKER_TYPES: MarkerType[] = [
 
 // Default color palette for marker dots. KAN-412 will let admins reshape
 // this; v1 ships a fixed scheme so the timeline is readable from day one.
+// Values reference theme CSS vars (remapped per data-theme in themes.css)
+// rather than hardcoded light-mode hex, so dots stay visible in dark themes.
 export const MARKER_COLORS: Record<MarkerType, string> = {
-  error: '#ef4444',
-  good_moment: '#22c55e',
-  script_violation: '#f97316',
-  stop_word: '#a855f7',
-  unmotivated_pause: '#eab308',
-  note: '#0ea5e9',
+  error: 'var(--color-error-500)',
+  good_moment: 'var(--color-success-500)',
+  script_violation: 'var(--color-orange-500)',
+  stop_word: 'var(--color-purple-500)',
+  unmotivated_pause: 'var(--color-warning-500)',
+  note: 'var(--color-information-500)',
 }
 
 export interface CallMarker {

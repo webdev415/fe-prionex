@@ -15,7 +15,8 @@
  * hue (colour here would be decoration, not encoding — the bucket name is on the
  * axis and the coloured badge lives in the table below). Calibration is two
  * series in the same unit, so one y-axis, two hues validated for colour-vision
- * deficiency (primary-700 #4a8308 vs information-700 #1d4ed8, ΔE 31.5 protan).
+ * deficiency (primary-700 vs information-700). Paint values are read from live
+ * CSS vars so charts follow data-theme / data-accent.
  */
 
 import { useMemo, useState } from 'react'
@@ -49,16 +50,33 @@ import {
   useSetV3UiEnabled,
 } from '@/features/scoring/hooks/useV3Scores'
 import type { V3Bucket } from '@/features/scoring/api/types'
+import { useThemeStore } from '@/stores/themeStore'
+import { isDarkBase } from '@/theme/constants'
+import { ScoringV3MonitoringPageSkeleton } from './ScoringV3MonitoringPageSkeleton'
 
 // Severity order — never sorted by value, so the shape is comparable month to month.
 const BUCKET_ORDER: V3Bucket[] = ['CRIT', 'HIGH', 'AVG', 'LOW', 'EXIT']
 
-// Single-series hue + the validated two-series pair. Both from the app's ramps.
-const SERIES_ONE = '#4a8308' // primary-700
-const SERIES_TWO = '#1d4ed8' // information-700
-const MUTED = '#adadad' // gray-400 — EXIT is "out of scope", not a severity
-const AXIS = '#7b7b7b' // gray-700
-const GRID = '#EBECE8'
+/** Read live theme CSS vars so Recharts (which needs concrete paint values) follows data-theme. */
+function useChartTheme() {
+  const themeKey = useThemeStore((s) => `${s.base}:${s.accent}`)
+  return useMemo(() => {
+    const base = themeKey.split(':')[0] as Parameters<typeof isDarkBase>[0]
+    const styles = getComputedStyle(document.documentElement)
+    const read = (name: string, fallback: string) =>
+      styles.getPropertyValue(name).trim() || fallback
+    return {
+      // Validated CVD pair (primary-700 vs information-700); values track accent + dark remaps.
+      seriesOne: read('--color-primary-700', '#4a8308'),
+      seriesTwo: read('--color-information-700', '#1d4ed8'),
+      muted: read('--muted-foreground', '#adadad'),
+      axis: read('--muted-foreground', '#7b7b7b'),
+      grid: read('--border', '#EBECE8'),
+      barStroke: read('--card', '#fcfcfb'),
+      tooltipCursor: isDarkBase(base) ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    }
+  }, [themeKey])
+}
 
 /** tau is tuned so ~25% of workable debts land in AVG (see TAU_CAPACITY_GUIDE). */
 const AVG_SHARE_TARGET = 0.25
@@ -106,12 +124,14 @@ function StatTile({
   tone?: 'neutral' | 'good' | 'warn'
 }) {
   const toneClass =
-    tone === 'good' ? 'text-primary-700' : tone === 'warn' ? 'text-[#B36F00]' : 'text-dark-500'
+    tone === 'good' ? 'text-primary-700' : tone === 'warn' ? 'text-warning-700' : 'text-foreground'
   return (
-    <div className="flex min-w-[160px] flex-1 flex-col gap-1 rounded-xl border border-[#EBECE8] bg-white/50 p-4">
-      <span className="text-xs font-medium text-gray-600">{label}</span>
-      <span className={`text-2xl font-semibold ${toneClass}`}>{value}</span>
-      {hint && <span className="text-xs text-gray-500">{hint}</span>}
+    <div className="border-border bg-card flex min-w-0 flex-col gap-1 rounded-xl border p-4">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className={`text-2xl font-semibold break-words tabular-nums ${toneClass}`}>
+        {value}
+      </span>
+      {hint && <span className="text-muted-foreground text-xs break-words">{hint}</span>}
     </div>
   )
 }
@@ -126,10 +146,10 @@ function Panel({
   children: React.ReactNode
 }) {
   return (
-    <section className="flex w-full flex-col gap-3 rounded-xl border border-[#EBECE8] bg-white/50 p-4 sm:p-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="text-dark-500 text-base font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-600">{subtitle}</p>}
+    <section className="border-border bg-card flex w-full min-w-0 flex-col gap-3 rounded-xl border p-4 sm:p-6">
+      <header className="flex min-w-0 flex-col gap-1">
+        <h2 className="text-foreground text-base font-semibold">{title}</h2>
+        {subtitle && <p className="text-muted-foreground text-xs">{subtitle}</p>}
       </header>
       {children}
     </section>
@@ -138,8 +158,19 @@ function Panel({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed border-[#EBECE8] p-6 text-center text-sm text-gray-500">
+    <div className="border-border text-muted-foreground w-full min-w-0 rounded-lg border border-dashed p-4 text-center text-sm sm:p-6">
       {children}
+    </div>
+  )
+}
+
+/** Horizontal scroll wrapper so wide tables/charts never blow out the page. */
+function ScrollX({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
+  return (
+    <div className="w-full min-w-0 overflow-x-auto">
+      <div className="w-full" style={minWidth ? { minWidth } : undefined}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -247,15 +278,18 @@ export function ScoringV3MonitoringPage() {
     [summary]
   )
 
+  const chart = useChartTheme()
+  const reportLoading = monthsLoading || (isLoading && !!month)
+
   return (
     <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.VIEW}>
-      <div className="flex w-full flex-col items-start gap-4">
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+      <div className="flex w-full min-w-0 flex-col items-stretch gap-4">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-foreground text-xl font-light sm:text-2xl">
               Scoring v3 — <span className="font-semibold">shadow-run report</span>
             </h1>
-            <p className="text-xs text-gray-600">
+            <p className="text-muted-foreground text-xs">
               Review these numbers before turning v3 on for operators.
             </p>
           </div>
@@ -268,26 +302,29 @@ export function ScoringV3MonitoringPage() {
               renderYearHeader prints the year as text and ignores
               showYearDropdown. Months with no snapshot say so rather than being
               hidden, so browsing ahead is harmless. */}
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
             {canRun && (
               <Button
                 variant="outline"
                 size="md"
                 onClick={() => projectId && trigger.mutate({ projectId, asOf: month || undefined })}
                 disabled={!projectId || trigger.isPending}
+                className="w-full shrink-0 sm:w-auto"
               >
                 {trigger.isPending ? 'Starting…' : 'Run now'}
               </Button>
             )}
-            <span className="text-gray-600">Month</span>
-            <DateSelect
-              value={month ? parseMonthStart(month) : null}
-              onChange={({ value }) => setPicked(value ? toMonthStart(value) : null)}
-              showMonthYearPicker
-              format="MMMM yyyy"
-              placeholder="Select month"
-              className="w-[190px] [&_input]:h-10 [&_input]:text-sm"
-            />
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+              <span className="text-muted-foreground shrink-0 text-sm">Month</span>
+              <DateSelect
+                value={month ? parseMonthStart(month) : null}
+                onChange={({ value }) => setPicked(value ? toMonthStart(value) : null)}
+                showMonthYearPicker
+                format="MMMM yyyy"
+                placeholder="Select month"
+                className="min-w-0 flex-1 sm:w-[190px] sm:flex-none [&_input]:h-10 [&_input]:text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -295,13 +332,13 @@ export function ScoringV3MonitoringPage() {
             client approves or does not — and this is where that decision is
             recorded into the system, audited with who flipped it and why. */}
         <div
-          className={`flex w-full flex-col gap-3 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${
+          className={`flex w-full min-w-0 flex-col gap-3 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${
             cutoverOn
-              ? 'border-primary-600 text-primary-700 bg-[#F0F7E6]'
-              : 'border-[#FF9D00] bg-[#FFF6E6] text-[#B36F00]'
+              ? 'border-primary-600 bg-primary/10 text-primary-700'
+              : 'border-warning-500 bg-warning-50 text-warning-700'
           }`}
         >
-          <span>
+          <span className="min-w-0 leading-relaxed">
             {cutoverOn
               ? 'Live — operators are seeing v3 priorities for this brand.'
               : 'Shadow run — scores are being calculated and stored, but operators do NOT see them yet.'}
@@ -312,7 +349,7 @@ export function ScoringV3MonitoringPage() {
               size="sm"
               disabled={setCutover.isPending || !projectId}
               onClick={handleCutover}
-              className="shrink-0"
+              className="w-full shrink-0 sm:w-auto"
             >
               {setCutover.isPending
                 ? 'Saving…'
@@ -324,33 +361,35 @@ export function ScoringV3MonitoringPage() {
         </div>
         {confirmDialog}
 
-        {(monthsLoading || (isLoading && !!month)) && <Empty>Loading…</Empty>}
-        {isError && <Empty>Could not load the report. Is the scoring service running?</Empty>}
+        {reportLoading && <ScoringV3MonitoringPageSkeleton />}
+        {!reportLoading && isError && (
+          <Empty>Could not load the report. Is the scoring service running?</Empty>
+        )}
 
-        {!monthsLoading && months.length === 0 && (
+        {!reportLoading && months.length === 0 && (
           <Empty>
             Nothing scored yet for this brand. The v3 job runs on the 1st of each month — once it
             has run, the results appear here.
           </Empty>
         )}
 
-        {month && months.length > 0 && !months.includes(month) && (
+        {!reportLoading && month && months.length > 0 && !months.includes(month) && (
           <Empty>
             {monthLabel(month)} was never scored. Months with data:{' '}
             {months.map(monthLabel).join(', ')}.
           </Empty>
         )}
 
-        {summary && summary.total === 0 && months.includes(month) && (
+        {!reportLoading && summary && summary.total === 0 && months.includes(month) && (
           <Empty>
             No debts scored for {monthLabel(month)} yet. The job runs on the 1st of each month, or
             can be started manually.
           </Empty>
         )}
 
-        {summary && summary.total > 0 && (
+        {!reportLoading && summary && summary.total > 0 && (
           <>
-            <div className="flex w-full flex-wrap gap-3">
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <StatTile label="Debts scored" value={num(summary.total)} hint={monthLabel(month)} />
               <StatTile
                 label="Worth calling (AVG or higher)"
@@ -371,7 +410,7 @@ export function ScoringV3MonitoringPage() {
             </div>
 
             {avgShareOff && (
-              <div className="rounded-xl border border-[#FF9D00] bg-[#FFF6E6] px-4 py-3 text-sm text-[#8A5500]">
+              <div className="border-warning-500 bg-warning-50 text-warning-800 w-full min-w-0 rounded-xl border px-4 py-3 text-sm leading-relaxed">
                 The AVG share is off target. tau is the knob that moves it —{' '}
                 <Link
                   to="/dashboard/system-settings/scoring-v3-settings"
@@ -387,30 +426,30 @@ export function ScoringV3MonitoringPage() {
               title="How debts were split"
               subtitle="Ordered by urgency. Compare the shape month to month — one bucket holding almost everything is a problem."
             >
-              <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[220px] w-full min-w-0 sm:h-[260px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart
                     data={bucketRows}
                     layout="vertical"
-                    margin={{ top: 4, right: 56, bottom: 4, left: 8 }}
+                    margin={{ top: 4, right: 24, bottom: 4, left: 0 }}
                   >
-                    <CartesianGrid horizontal={false} stroke={GRID} />
+                    <CartesianGrid horizontal={false} stroke={chart.grid} />
                     <XAxis
                       type="number"
-                      tick={{ fill: AXIS, fontSize: 12 }}
+                      tick={{ fill: chart.axis, fontSize: 12 }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
                       type="category"
                       dataKey="bucket"
-                      width={54}
-                      tick={{ fill: AXIS, fontSize: 12 }}
+                      width={48}
+                      tick={{ fill: chart.axis, fontSize: 12 }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <Tooltip
-                      cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                      cursor={{ fill: chart.tooltipCursor }}
                       formatter={(v: number, _n, p) => [
                         `${v.toLocaleString()} debts (${pct(p.payload.pct)})`,
                         'Count',
@@ -421,8 +460,8 @@ export function ScoringV3MonitoringPage() {
                         // EXIT is not a severity step — muted so it reads as "set aside".
                         <Cell
                           key={r.bucket}
-                          fill={r.bucket === 'EXIT' ? MUTED : SERIES_ONE}
-                          stroke="#fcfcfb"
+                          fill={r.bucket === 'EXIT' ? chart.muted : chart.seriesOne}
+                          stroke={chart.barStroke}
                           strokeWidth={2}
                         />
                       ))}
@@ -431,34 +470,36 @@ export function ScoringV3MonitoringPage() {
                 </ResponsiveContainer>
               </div>
 
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-600">
-                    <th className="py-2 font-medium">Bucket</th>
-                    <th className="py-2 font-medium">Meaning</th>
-                    <th className="py-2 text-right font-medium">Debts</th>
-                    <th className="py-2 text-right font-medium">Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bucketRows.map((r) => (
-                    <tr key={r.bucket} className="border-t border-[#EBECE8]">
-                      <td className="py-2">
-                        <V3BucketBadge bucket={r.bucket} />
-                      </td>
-                      <td className="py-2 text-gray-600">
-                        {r.bucket === 'CRIT' && 'Call today'}
-                        {r.bucket === 'HIGH' && 'Call this week'}
-                        {r.bucket === 'AVG' && 'Normal cadence'}
-                        {r.bucket === 'LOW' && 'Only with spare capacity'}
-                        {r.bucket === 'EXIT' && 'Do not call'}
-                      </td>
-                      <td className="py-2 text-right tabular-nums">{num(r.count)}</td>
-                      <td className="py-2 text-right tabular-nums">{pct(r.pct)}</td>
+              <ScrollX minWidth="28rem">
+                <table className="text-foreground w-full text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground text-left text-xs">
+                      <th className="py-2 pr-3 font-medium">Bucket</th>
+                      <th className="py-2 pr-3 font-medium">Meaning</th>
+                      <th className="py-2 pl-3 text-right font-medium">Debts</th>
+                      <th className="py-2 pl-3 text-right font-medium">Share</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {bucketRows.map((r) => (
+                      <tr key={r.bucket} className="border-border border-t">
+                        <td className="py-2 pr-3">
+                          <V3BucketBadge bucket={r.bucket} />
+                        </td>
+                        <td className="text-muted-foreground py-2 pr-3">
+                          {r.bucket === 'CRIT' && 'Call today'}
+                          {r.bucket === 'HIGH' && 'Call this week'}
+                          {r.bucket === 'AVG' && 'Normal cadence'}
+                          {r.bucket === 'LOW' && 'Only with spare capacity'}
+                          {r.bucket === 'EXIT' && 'Do not call'}
+                        </td>
+                        <td className="py-2 pl-3 text-right tabular-nums">{num(r.count)}</td>
+                        <td className="py-2 pl-3 text-right tabular-nums">{pct(r.pct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollX>
             </Panel>
 
             <Panel
@@ -473,12 +514,12 @@ export function ScoringV3MonitoringPage() {
               ) : (
                 <>
                   <div
-                    className={`rounded-lg border p-3 text-sm ${
+                    className={`rounded-lg border p-3 text-sm leading-relaxed ${
                       !hasOutcomes
-                        ? 'border-gray-300 bg-gray-50 text-gray-600'
+                        ? 'border-border bg-muted text-muted-foreground'
                         : rankingHolds
-                          ? 'border-primary-600 text-primary-700 bg-[#F0F7E6]'
-                          : 'border-[#FF9D00] bg-[#FFF6E6] text-[#B36F00]'
+                          ? 'border-primary-600 bg-primary/10 text-primary-700'
+                          : 'border-warning-500 bg-warning-50 text-warning-700'
                     }`}
                   >
                     {!hasOutcomes ? (
@@ -498,69 +539,78 @@ export function ScoringV3MonitoringPage() {
                       </>
                     )}
                   </div>
-                  <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={calibrationRows}
-                        margin={{ top: 8, right: 8, bottom: 4, left: 8 }}
-                      >
-                        <CartesianGrid vertical={false} stroke={GRID} />
-                        <XAxis
-                          dataKey="bin"
-                          tick={{ fill: AXIS, fontSize: 12 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`}
-                          tick={{ fill: AXIS, fontSize: 12 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip
-                          cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-                          formatter={(v: number, name) => [pct(v, 2), name]}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 12, color: AXIS }} />
-                        <Bar
-                          dataKey="predicted"
-                          name="Predicted"
-                          fill={SERIES_TWO}
-                          radius={[4, 4, 0, 0]}
-                          stroke="#fcfcfb"
-                          strokeWidth={2}
-                        />
-                        <Bar
-                          dataKey="actual"
-                          name="Actually paid"
-                          fill={SERIES_ONE}
-                          radius={[4, 4, 0, 0]}
-                          stroke="#fcfcfb"
-                          strokeWidth={2}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs text-gray-600">
-                        <th className="py-2 font-medium">Group</th>
-                        <th className="py-2 text-right font-medium">Debts</th>
-                        <th className="py-2 text-right font-medium">Predicted</th>
-                        <th className="py-2 text-right font-medium">Actually paid</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {calibrationRows.map((r) => (
-                        <tr key={r.bin} className="border-t border-[#EBECE8]">
-                          <td className="py-2">{r.bin}</td>
-                          <td className="py-2 text-right tabular-nums">{num(r.n)}</td>
-                          <td className="py-2 text-right tabular-nums">{pct(r.predicted, 2)}</td>
-                          <td className="py-2 text-right tabular-nums">{pct(r.actual, 2)}</td>
+                  <ScrollX minWidth="32rem">
+                    <div className="h-[240px] w-full min-w-0 sm:h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <BarChart
+                          data={calibrationRows}
+                          margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+                        >
+                          <CartesianGrid vertical={false} stroke={chart.grid} />
+                          <XAxis
+                            dataKey="bin"
+                            tick={{ fill: chart.axis, fontSize: 12 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            width={48}
+                            tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                            tick={{ fill: chart.axis, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            cursor={{ fill: chart.tooltipCursor }}
+                            formatter={(v: number, name) => [pct(v, 2), name]}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12, color: chart.axis }} />
+                          <Bar
+                            dataKey="predicted"
+                            name="Predicted"
+                            fill={chart.seriesTwo}
+                            radius={[4, 4, 0, 0]}
+                            stroke={chart.barStroke}
+                            strokeWidth={2}
+                          />
+                          <Bar
+                            dataKey="actual"
+                            name="Actually paid"
+                            fill={chart.seriesOne}
+                            radius={[4, 4, 0, 0]}
+                            stroke={chart.barStroke}
+                            strokeWidth={2}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </ScrollX>
+                  <ScrollX minWidth="24rem">
+                    <table className="text-foreground w-full text-sm">
+                      <thead>
+                        <tr className="text-muted-foreground text-left text-xs">
+                          <th className="py-2 pr-3 font-medium">Group</th>
+                          <th className="py-2 pl-3 text-right font-medium">Debts</th>
+                          <th className="py-2 pl-3 text-right font-medium">Predicted</th>
+                          <th className="py-2 pl-3 text-right font-medium">Actually paid</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {calibrationRows.map((r) => (
+                          <tr key={r.bin} className="border-border border-t">
+                            <td className="py-2 pr-3">{r.bin}</td>
+                            <td className="py-2 pl-3 text-right tabular-nums">{num(r.n)}</td>
+                            <td className="py-2 pl-3 text-right tabular-nums">
+                              {pct(r.predicted, 2)}
+                            </td>
+                            <td className="py-2 pl-3 text-right tabular-nums">
+                              {pct(r.actual, 2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollX>
                 </>
               )}
             </Panel>
@@ -569,26 +619,28 @@ export function ScoringV3MonitoringPage() {
               title="Why each debt got its priority"
               subtitle="Which rule decided. A healthy mix has most debts decided by the model (ml_low / ml_avg) and a minority by events."
             >
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-600">
-                    <th className="py-2 font-medium">Rule</th>
-                    <th className="py-2 text-right font-medium">Debts</th>
-                    <th className="py-2 text-right font-medium">Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ruleRows.map(([rule, count]) => (
-                    <tr key={rule} className="border-t border-[#EBECE8]">
-                      <td className="py-2 font-mono text-xs">{rule}</td>
-                      <td className="py-2 text-right tabular-nums">{num(count)}</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {pct(summary.total ? count / summary.total : 0)}
-                      </td>
+              <ScrollX minWidth="22rem">
+                <table className="text-foreground w-full text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground text-left text-xs">
+                      <th className="py-2 pr-3 font-medium">Rule</th>
+                      <th className="py-2 pl-3 text-right font-medium">Debts</th>
+                      <th className="py-2 pl-3 text-right font-medium">Share</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {ruleRows.map(([rule, count]) => (
+                      <tr key={rule} className="border-border border-t">
+                        <td className="py-2 pr-3 font-mono text-xs break-all">{rule}</td>
+                        <td className="py-2 pl-3 text-right tabular-nums">{num(count)}</td>
+                        <td className="py-2 pl-3 text-right tabular-nums">
+                          {pct(summary.total ? count / summary.total : 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollX>
             </Panel>
 
             <Panel
@@ -602,31 +654,35 @@ export function ScoringV3MonitoringPage() {
                   both have data.
                 </Empty>
               ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    <tr className="border-t border-[#EBECE8]">
-                      <td className="py-2 text-gray-600">Debts scored</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {drift.deltas.total_delta >= 0 ? '+' : ''}
-                        {num(drift.deltas.total_delta)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-[#EBECE8]">
-                      <td className="py-2 text-gray-600">Worth calling (AVG or higher)</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {drift.deltas.avg_or_higher_share_delta >= 0 ? '+' : ''}
-                        {pct(drift.deltas.avg_or_higher_share_delta)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-[#EBECE8]">
-                      <td className="py-2 text-gray-600">Excluded (EXIT)</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {drift.deltas.exit_rate_delta >= 0 ? '+' : ''}
-                        {pct(drift.deltas.exit_rate_delta)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <ScrollX minWidth="20rem">
+                  <table className="text-foreground w-full text-sm">
+                    <tbody>
+                      <tr className="border-border border-t">
+                        <td className="text-muted-foreground py-2 pr-3">Debts scored</td>
+                        <td className="py-2 pl-3 text-right tabular-nums">
+                          {drift.deltas.total_delta >= 0 ? '+' : ''}
+                          {num(drift.deltas.total_delta)}
+                        </td>
+                      </tr>
+                      <tr className="border-border border-t">
+                        <td className="text-muted-foreground py-2 pr-3">
+                          Worth calling (AVG or higher)
+                        </td>
+                        <td className="py-2 pl-3 text-right tabular-nums">
+                          {drift.deltas.avg_or_higher_share_delta >= 0 ? '+' : ''}
+                          {pct(drift.deltas.avg_or_higher_share_delta)}
+                        </td>
+                      </tr>
+                      <tr className="border-border border-t">
+                        <td className="text-muted-foreground py-2 pr-3">Excluded (EXIT)</td>
+                        <td className="py-2 pl-3 text-right tabular-nums">
+                          {drift.deltas.exit_rate_delta >= 0 ? '+' : ''}
+                          {pct(drift.deltas.exit_rate_delta)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </ScrollX>
               )}
             </Panel>
           </>

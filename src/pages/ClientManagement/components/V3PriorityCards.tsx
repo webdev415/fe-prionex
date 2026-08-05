@@ -25,10 +25,10 @@ const ORDER: V3Bucket[] = ['CRIT', 'HIGH', 'AVG', 'LOW', 'EXIT']
 
 const BORDER: Record<V3Bucket, string> = {
   CRIT: 'border-error-500',
-  HIGH: 'border-[#FF9D00]',
+  HIGH: 'border-warning-500',
   AVG: 'border-primary-600',
-  LOW: 'border-gray-300',
-  EXIT: 'border-gray-400',
+  LOW: 'border-border',
+  EXIT: 'border-muted-foreground/40',
 }
 
 function compactMoney(n: number): string {
@@ -79,15 +79,15 @@ export function V3PriorityCards({
                   onToggle(bucket)
                 }
               }}
-              className={`flex flex-col gap-2 rounded-lg border bg-white p-3 ${BORDER[bucket]} ${
-                onToggle ? 'cursor-pointer hover:bg-gray-50' : ''
+              className={`border-border bg-card flex flex-col gap-2 rounded-lg border p-3 ${BORDER[bucket]} ${
+                onToggle ? 'hover:bg-muted cursor-pointer' : ''
               } ${isSelected ? 'ring-primary-400/50 shadow-sm ring-2' : ''}`}
             >
               <V3BucketBadge bucket={bucket} className="self-start" />
-              <span className="text-dark-500 text-xl font-semibold tabular-nums">
+              <span className="text-foreground text-xl font-semibold tabular-nums">
                 {(counts?.[bucket] ?? row?.clients ?? 0).toLocaleString()}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {bucket === 'EXIT'
                   ? 'not to be called'
                   : `≈ ${compactMoney(row?.priority_dollar ?? 0)} UAH expected`}
@@ -107,17 +107,17 @@ export function V3PriorityCards({
                 onToggle('NONE')
               }
             }}
-            className={`flex flex-col gap-2 rounded-lg border border-dashed border-gray-300 bg-white p-3 ${
-              onToggle ? 'cursor-pointer hover:bg-gray-50' : ''
+            className={`border-border bg-card flex flex-col gap-2 rounded-lg border border-dashed p-3 ${
+              onToggle ? 'hover:bg-muted cursor-pointer' : ''
             } ${selected.includes('NONE') ? 'ring-primary-400/50 shadow-sm ring-2' : ''}`}
           >
-            <span className="inline-flex h-[25px] min-w-[90px] items-center justify-center self-start rounded-[16px] border border-gray-300 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500">
+            <span className="border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center self-start rounded-[16px] border px-3 py-1 text-xs font-medium">
               Not scored
             </span>
-            <span className="text-dark-500 text-xl font-semibold tabular-nums">
+            <span className="text-foreground text-xl font-semibold tabular-nums">
               {notScored.toLocaleString()}
             </span>
-            <span className="text-xs text-gray-500">outside the model&apos;s range</span>
+            <span className="text-muted-foreground text-xs">outside the model&apos;s range</span>
           </div>
         )}
       </div>

@@ -38,9 +38,9 @@ export function V3ClientPriorityPanel({
   // panel had failed to load; saying so is short and removes the doubt.
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[#EBECE8] bg-white p-4">
-        <h3 className="mb-1 text-sm font-semibold text-[#05040D]">v3 Priority</h3>
-        <p className="text-xs text-gray-500">
+      <div className="border-border bg-card rounded-xl border border-dashed p-4">
+        <h3 className="text-foreground mb-1 text-sm font-semibold">v3 Priority</h3>
+        <p className="text-muted-foreground text-xs">
           Not scored — this client&apos;s debts are outside the scoring model&apos;s range, so v3
           gives them no priority.
         </p>
@@ -49,23 +49,25 @@ export function V3ClientPriorityPanel({
   }
 
   return (
-    <div className="rounded-xl border border-[#EBECE8] bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-[#05040D]">v3 Priority</h3>
+    <div className="border-border bg-card rounded-xl border p-4">
+      <h3 className="text-foreground mb-3 text-sm font-semibold">v3 Priority</h3>
       <div className="flex flex-col gap-2">
         {rows.map((r) => (
           <div key={r.debt_id} className="flex flex-wrap items-center gap-3 text-xs">
             <V3BucketBadge bucket={r.bucket_v3} />
-            <span className="text-gray-500">Debt {r.debt_id}</span>
+            <span className="text-muted-foreground">Debt {r.debt_id}</span>
             {/* The pay-chance is shown for EXIT debts too. An operator told only
                 "do not call" on a debt that is plainly owed will assume the
                 system is wrong; seeing the score AND the ground makes the
                 exclusion something they can act on rather than argue with. */}
             {r.hazard != null && (
-              <span className="text-gray-600">{(r.hazard * 100).toFixed(1)}% pay chance</span>
+              <span className="text-muted-foreground">
+                {(r.hazard * 100).toFixed(1)}% pay chance
+              </span>
             )}
-            <span className="ml-auto text-gray-500">
+            <span className="text-muted-foreground ml-auto">
               Why:{' '}
-              <span className="text-gray-700">
+              <span className="text-foreground">
                 {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
               </span>
             </span>

@@ -1,16 +1,32 @@
 /**
  * V3 bucket badge — the five priority buckets (EXIT/LOW/AVG/HIGH/CRIT).
+ * Colours use semantic status tokens so light/dark themes stay readable.
  */
 
 import { cn } from '@/lib/utils'
 import type { V3Bucket } from '@/features/scoring/api/types'
 
 const CONFIG: Record<V3Bucket, { label: string; className: string }> = {
-  CRIT: { label: 'Call first', className: 'bg-[#FCEAEA] border-error-600 text-error-600' },
-  HIGH: { label: 'High', className: 'bg-[#FFF6E6] border-[#FF9D00] text-[#B36F00]' },
-  AVG: { label: 'Average', className: 'bg-[#F0F7E6] border-primary-600 text-primary-600' },
-  LOW: { label: 'Low', className: 'bg-[#F8F8F8] border-gray-200 text-gray-500' },
-  EXIT: { label: 'Do not call', className: 'bg-[#ECECEC] border-gray-400 text-gray-600' },
+  CRIT: {
+    label: 'Call first',
+    className: 'bg-error-50 border-error-600 text-error-700',
+  },
+  HIGH: {
+    label: 'High',
+    className: 'bg-warning-50 border-warning-500 text-warning-700',
+  },
+  AVG: {
+    label: 'Average',
+    className: 'bg-primary/10 border-primary-600 text-primary-700',
+  },
+  LOW: {
+    label: 'Low',
+    className: 'bg-muted border-border text-muted-foreground',
+  },
+  EXIT: {
+    label: 'Do not call',
+    className: 'bg-muted border-muted-foreground/40 text-muted-foreground',
+  },
 }
 
 export function V3BucketBadge({ bucket, className }: { bucket: V3Bucket; className?: string }) {
