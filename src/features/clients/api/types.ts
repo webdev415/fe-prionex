@@ -416,7 +416,16 @@ export interface GetClientsParams {
   // by ``ta_chain_steps.id`` (not target_action_id) so a chain with two
   // steps that share the same target_action stays independently
   // filterable. Ignored without ``chain_id``.
+  /** @deprecated KAN-821 — use ``chain_ids``. Folded in when that is absent. */
   chain_id?: number
+  /** Comma-separated ta_chains.id values (KAN-821 multi-select). */
+  chain_ids?: string
+  /**
+   * KAN-821. True (default): match only clients whose MOST RECENT interaction —
+   * across every chain, not per selected chain — is in the selected set.
+   * False: match any historical interaction (pre-KAN-821 behaviour).
+   */
+  only_last_chain?: boolean
   step_ids?: string // Comma-separated ta_chain_steps.id values
 
   // Filter: Per-step value bounds. Format: ``<step_id>:<value>`` items
