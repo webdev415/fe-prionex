@@ -200,6 +200,7 @@ export function applyKanbanTaskPatch(
   if (patch.clientId !== undefined) {
     next.clientCode = formatClientCode(patch.clientId)
     next.clientName = patch.clientName ?? null
+    next.clientId = patch.clientId ?? null
   }
 
   return next
@@ -255,7 +256,10 @@ function resolveKanbanColumn(
   if (item.status === 'completed' || item.status === 'cancelled') {
     return 'completed'
   }
-  if (taskType === 'unclassified' || taskType === 'type_pending') {
+  // "Не визначено" only for letters with NO letter type at all (letter_type_id null).
+  // A real letter type — including non-legacy prod types not in KNOWN_TYPES
+  // (e.g. type_1785239278754 / УБКІ) — must route by status/deadline, not collapse here.
+  if (taskType === 'unclassified') {
     return 'not_defined'
   }
   if (item.is_overdue || isLegalDueDateOverdue(item.due_date, timezone)) {
@@ -279,6 +283,7 @@ export function mapLegalKanbanItemToTask(
     title: item.title,
     clientCode: formatClientCode(item.client_id),
     clientName: item.client_name,
+    clientId: item.client_id ?? null,
     deadline: item.due_date,
     closedAt: item.completed_at ?? (item.status === 'completed' ? item.updated_at : null),
     priority: TASK_PRIORITY_TO_KANBAN[item.priority] ?? 'medium',

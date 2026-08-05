@@ -162,11 +162,13 @@ function isUuid(value: string): boolean {
 }
 
 function mapRoutingRuleToInput(rule: MailboxRoutingRule): LegalMailboxRoutingRuleInput {
+  const isWork = rule.action === 'move_to_working'
   return {
     ...(isUuid(rule.id) ? { id: rule.id } : {}),
     match_type: rule.matchType,
     value: rule.value,
-    letter_type_id: rule.letterTypeId,
+    letter_type_id: isWork ? null : rule.letterTypeId,
+    action: rule.action,
     is_active: rule.isActive,
     priority: rule.priority,
   }
@@ -199,7 +201,8 @@ export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox)
       id: rule.id,
       matchType: rule.match_type,
       value: rule.value,
-      letterTypeId: rule.letter_type_id,
+      letterTypeId: rule.letter_type_id ?? '',
+      action: rule.action ?? 'assign_type',
       // Older backends omit these fields → a rule with no explicit flag is active.
       isActive: rule.is_active ?? true,
       priority: rule.priority ?? 0,

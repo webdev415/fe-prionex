@@ -16,7 +16,7 @@ import type {
   MailboxRoutingRule,
   RoutingMatchType,
 } from '../../../settings/types'
-import { ROUTING_MATCH_OPTIONS } from '../constants'
+import { MOVE_TO_WORKING_VALUE, ROUTING_MATCH_OPTIONS } from '../constants'
 import { LetterTypeDot } from '../LetterTypeDot'
 
 export interface RoutingRuleDraft {
@@ -227,6 +227,12 @@ export function RoutingRulesTable({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={MOVE_TO_WORKING_VALUE}>
+                    {t(
+                      'pages.lawyerWorkplace.settings.routing.moveToWorking',
+                      'Move to work letters'
+                    )}
+                  </SelectItem>
                   {selectableLetterTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {t(type.nameKey, type.nameFallback)}
@@ -330,7 +336,11 @@ export function RoutingRulesTable({
                         colorId={letterTypeById[rule.letterTypeId]?.colorId ?? 'teal'}
                       />
                       <Select
-                        value={rule.letterTypeId}
+                        value={
+                          rule.action === 'move_to_working'
+                            ? MOVE_TO_WORKING_VALUE
+                            : rule.letterTypeId
+                        }
                         disabled={readOnly}
                         onValueChange={(value) => onChangeLetterType(rule, value)}
                       >
@@ -344,6 +354,12 @@ export function RoutingRulesTable({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value={MOVE_TO_WORKING_VALUE}>
+                            {t(
+                              'pages.lawyerWorkplace.settings.routing.moveToWorking',
+                              'Move to work letters'
+                            )}
+                          </SelectItem>
                           {letterTypeOptions(rule.letterTypeId).map((type) => (
                             <SelectItem key={type.id} value={type.id}>
                               {t(type.nameKey, type.nameFallback)}

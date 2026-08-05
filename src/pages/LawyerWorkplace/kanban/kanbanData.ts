@@ -20,6 +20,8 @@ export interface KanbanTask {
   title: string
   clientCode: string | null
   clientName: string | null
+  /** Numeric client id for linking to the client profile card. */
+  clientId: number | null
   /** ISO date: when the task response is / was due */
   deadline: string | null
   /** ISO date: when the task was closed (COMPLETED column) */

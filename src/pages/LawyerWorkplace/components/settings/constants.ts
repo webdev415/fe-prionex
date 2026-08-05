@@ -98,6 +98,10 @@ export const ROUTING_MATCH_OPTIONS: {
   },
 ]
 
+// Sentinel value for the letter-type dropdown option that turns a routing rule
+// into a 'move_to_working' rule (parks matched letters into «Робочі листи»).
+export const MOVE_TO_WORKING_VALUE = '__move_to_working__'
+
 export const LETTER_TYPE_COLOR_OPTIONS: LetterTypeColorOption[] = [
   {
     id: 'teal',
