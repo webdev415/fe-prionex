@@ -117,19 +117,19 @@ function ChainBuilderMainSkeleton() {
       aria-busy="true"
     >
       <div className="border-border bg-muted flex-1 animate-pulse rounded-lg border" />
-      <div className="border-border bg-card w-full space-y-4 rounded-lg border p-4 lg:w-[360px]">
-        <div className="bg-muted h-6 w-56 animate-pulse rounded-md" />
+      <div className="border-border bg-card w-full animate-pulse space-y-4 rounded-lg border p-4 lg:w-[360px]">
+        <div className="bg-muted h-6 w-56 rounded-md" />
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-24 animate-pulse rounded" />
-          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-24 rounded" />
+          <div className="bg-muted h-14 w-full rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-20 animate-pulse rounded" />
-          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-20 rounded" />
+          <div className="bg-muted h-14 w-full rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-16 animate-pulse rounded" />
-          <div className="bg-muted h-24 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-16 rounded" />
+          <div className="bg-muted h-24 w-full rounded-md" />
         </div>
       </div>
     </div>
@@ -138,22 +138,22 @@ function ChainBuilderMainSkeleton() {
 
 function ChainBuilderConfigPanelSkeleton() {
   return (
-    <div className="flex flex-col gap-5" role="status" aria-busy="true">
+    <div className="flex animate-pulse flex-col gap-5" role="status" aria-busy="true">
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-28 animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
-        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-28 rounded" />
+        <div className="bg-muted h-10 w-full rounded-md" />
+        <div className="bg-muted h-8 w-full rounded-md" />
       </div>
       <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-24 animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
-        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-24 rounded" />
+        <div className="bg-muted h-10 w-full rounded-md" />
+        <div className="bg-muted h-8 w-full rounded-md" />
       </div>
       <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-20 animate-pulse rounded" />
-        <div className="bg-muted h-20 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-20 rounded" />
+        <div className="bg-muted h-20 w-full rounded-md" />
       </div>
     </div>
   )

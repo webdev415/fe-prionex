@@ -30,11 +30,11 @@ function SectionSkeleton() {
   return (
     <div
       data-testid="assistant-management-skeleton"
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-sm"
+      className="border-border bg-card flex animate-pulse flex-col gap-3 rounded-xl border p-4 shadow-sm"
     >
-      <div className="bg-border h-4 w-40 animate-pulse rounded" />
-      <div className="bg-border h-4 w-full animate-pulse rounded" />
-      <div className="bg-border h-16 w-full animate-pulse rounded" />
+      <div className="bg-border h-4 w-40 rounded" />
+      <div className="bg-border h-4 w-full rounded" />
+      <div className="bg-border h-16 w-full rounded" />
     </div>
   )
 }
