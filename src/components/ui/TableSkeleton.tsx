@@ -30,7 +30,7 @@ export function TableSkeleton({
 }: TableSkeletonProps) {
   return (
     <div
-      className={`border-border bg-card animate-pulse overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
+      className={`border-border bg-card animate-pulse overflow-hidden rounded-xl border shadow-sm [will-change:opacity] ${className || ''}`}
     >
       {showBulkHeader && (
         <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">

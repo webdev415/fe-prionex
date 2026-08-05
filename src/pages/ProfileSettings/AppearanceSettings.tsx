@@ -55,7 +55,7 @@ function ThemePreviewCard({
         <div
           aria-hidden
           className={cn(
-            'pointer-events-none absolute inset-0 rounded-xl border-2 transition-opacity',
+            'pointer-events-none absolute inset-0 rounded-xl border-2 transition-opacity [will-change:opacity]',
             selected
               ? 'border-primary-300 opacity-100'
               : 'border-border opacity-0 group-hover:opacity-100'
