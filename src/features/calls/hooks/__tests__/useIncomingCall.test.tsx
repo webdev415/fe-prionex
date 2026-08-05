@@ -297,4 +297,79 @@ describe('useIncomingCall', () => {
 
     expect(mockSocket.off).toHaveBeenCalled()
   })
+
+  describe('a queue rings several operators at once', () => {
+    const popup = (): IncomingCallEvent => ({
+      event_type: 'call.incoming',
+      data: {
+        call_id: 'shared-call',
+        customer_phone: '+380971234567',
+        agent_extension: mockAgentExtension,
+        loan_count: 0,
+        total_debt: '0',
+        loans: [],
+      },
+    })
+
+    async function openPopup(result: { current: { hasIncomingCall: boolean } }) {
+      const handler = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+      act(() => handler(popup()))
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    }
+
+    function stateHandler() {
+      return mockSocket.on.mock.calls.find((c) => c[0] === 'call.state_changed')?.[1]
+    }
+
+    it('closes the window when a colleague answers', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', agent_extension: '2094' },
+        })
+      })
+
+      // Leaving it open would show a live Answer button for a call already taken.
+      await waitFor(() => expect(result.current.incomingCall).toBeNull())
+    })
+
+    it('keeps the window when this operator is the one who answered', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'ACTIVE',
+            agent_extension: mockAgentExtension,
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('keeps the window when the event says nothing about who answered', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE' },
+        })
+      })
+
+      // Closing on an ambiguous event would drop a call the operator may hold.
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+  })
 })

@@ -60,6 +60,18 @@ export function useIncomingCall(agentExtension: string | null) {
       // Dismiss popup when call is completed, failed, or cancelled
       if (state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
         setIncomingCall(null)
+        return
+      }
+
+      // A queue rings several operators at once. Once one of them answers, the
+      // others are looking at a call they can no longer take — close it for
+      // them, but leave it open for whoever actually took it.
+      if (state === 'ACTIVE') {
+        const answeredBy = event.data?.agent_extension
+        const someoneElseAnswered = typeof answeredBy === 'string' && answeredBy !== agentExtension
+        if (someoneElseAnswered) {
+          setIncomingCall(null)
+        }
       }
     }
 

@@ -108,6 +108,12 @@ export interface CallStateEventData {
   project_id?: number
   total_duration?: number
   hangup_cause?: number
+  /**
+   * The agent the call ended up with. Every rung operator receives this event,
+   * so each frontend needs it to tell "I took this call" from "a colleague
+   * did" — the two have opposite outcomes for the incoming-call popup.
+   */
+  agent_extension?: string
   [key: string]: unknown
 }
 
