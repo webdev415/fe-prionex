@@ -58,6 +58,47 @@ describe('classifyCallOutcome', () => {
   })
 })
 
+describe('classifyCallOutcome — direction-sensitive outcomes', () => {
+  // 'cancel' and 'no_answer' describe opposite events depending on direction,
+  // so labelling them the same way would misreport one of the two.
+  it.each([
+    ['cancel', 'inbound', 'Dropped by client'],
+    ['cancelled', 'inbound', 'Dropped by client'],
+    ['cancel', 'outbound', 'Cancelled'],
+    ['no_answer', 'inbound', 'Missed'],
+    ['no_answer', 'outbound', 'No answer'],
+  ])('%s on an %s call reads as "%s"', (status, direction, expected) => {
+    expect(classifyCallOutcome(status, direction).fallback).toBe(expected)
+  })
+
+  it('keeps the outbound wording when the direction is unknown', () => {
+    // Existing call sites that never pass a direction must not change meaning.
+    expect(classifyCallOutcome('cancel').fallback).toBe('Cancelled')
+    expect(classifyCallOutcome('no_answer', null).fallback).toBe('No answer')
+    expect(classifyCallOutcome('no_answer', '').fallback).toBe('No answer')
+  })
+
+  it('is unaffected by direction casing or padding', () => {
+    expect(classifyCallOutcome('cancel', ' Inbound ').fallback).toBe('Dropped by client')
+  })
+
+  it.each(['inbound', 'outbound', undefined])(
+    'leaves rejected and answered alone for direction=%s',
+    (direction) => {
+      expect(classifyCallOutcome('rejected', direction).fallback).toBe('Rejected')
+      expect(classifyCallOutcome('answered', direction).fallback).toBe('Answered')
+    }
+  )
+
+  it('gives inbound no_answer and the missed fallback the same label', () => {
+    // 'missed' is only written when DialEnd was lost, so the two must not read
+    // as different things to an operator.
+    expect(classifyCallOutcome('no_answer', 'inbound').fallback).toBe(
+      classifyCallOutcome('missed', 'inbound').fallback
+    )
+  })
+})
+
 describe('isNonAnsweredOutcome', () => {
   it.each([
     ['no_answer', true],
