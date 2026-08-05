@@ -997,9 +997,10 @@ export function ClientManagementPage() {
     // stay independently filterable.
     if (filters.chainIds && filters.chainIds.length > 0) {
       params.chain_ids = filters.chainIds.join(',')
-      // KAN-821: sent explicitly on every chain-filtered request. The BE
-      // default is also true, but being explicit keeps the URL and the query
-      // in agreement when a bookmark is shared.
+      // KAN-821: sent explicitly on every chain-filtered request, and it has
+      // to be — the API parameter defaults to FALSE (the pre-KAN-821
+      // behaviour) so that callers which predate the flag keep their results.
+      // The pre-ticked checkbox is a UI default, expressed here.
       params.only_last_chain = filters.onlyLastChain ?? true
       if (filters.chainStepIds && filters.chainStepIds.length > 0) {
         params.step_ids = filters.chainStepIds.join(',')
