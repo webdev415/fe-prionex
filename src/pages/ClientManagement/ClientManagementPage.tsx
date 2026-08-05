@@ -220,16 +220,23 @@ export interface ClientFilters {
 
   rrStatusIds?: number[]
 
-  // Chain filter — TA Chain ID. Narrows to clients with at least one
-  // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
-  // that chain) and ``stepValues`` (per-step value bounds).
-  chainId?: number
+  // Chain filter — TA Chain IDs (KAN-821: multi-select). Narrows to clients
+  // with at least one ta_interaction in ANY of these chains. Pairs with
+  // ``chainStepIds`` (steps belonging to the picked chains) and ``stepValues``
+  // (per-step value bounds).
+  chainIds?: number[]
+
+  // KAN-821 — "Only last TA chain". When true (the default), a client matches
+  // only if their MOST RECENT interaction, across every chain rather than per
+  // selected chain, belongs to the picked set: "where the client is now", not
+  // "where they have ever been". Ignored when no chain is picked.
+  onlyLastChain?: boolean
 
   // Step filter — multi-select chain step IDs (``ta_chain_steps.id``)
-  // within the selected chain. Keyed per-step (not per-target_action)
+  // within the selected chains. Keyed per-step (not per-target_action)
   // so a chain with two steps that share the same TA — e.g.
   // Contact → Credit → Credit — toggles each independently. Ignored
-  // unless ``chainId`` is set.
+  // unless at least one chain is picked.
   chainStepIds?: number[]
 
   // Step value bounds keyed by chain step ID. ``eq`` for dropdown /
@@ -358,11 +365,14 @@ export function ClientManagementPage() {
     'assignmentDateTo',
     ''
   )
-  // Chain + Step filter URL state. ``chainIdFilter === 0`` is the "no
-  // chain picked" sentinel (matches the placeholder option). When the
-  // chain changes we wipe ``chainSteps`` and ``stepValues`` because both
-  // belong to the previously-selected chain.
-  const [chainIdFilter, setChainIdFilter] = useURLState<number>('chainId', 0)
+  // Chain + Step filter URL state. An empty ``chainIdsFilter`` is "no chain
+  // picked". When the selection changes we wipe ``chainSteps`` and
+  // ``stepValues`` because both belong to the previously-selected chains.
+  const [chainIdsFilter, setChainIdsFilter] = useURLState<number[]>('chainIds', [])
+  // KAN-821: default ON, so a request that omits it still means "only last".
+  // Bookmarks saved before this shipped therefore adopt the new default, which
+  // is the intended behaviour change.
+  const [onlyLastChainFilter, setOnlyLastChainFilter] = useURLState<boolean>('onlyLastChain', true)
   const [chainStepIdsFilter, setChainStepIdsFilter] = useURLState<number[]>('chainSteps', [])
   // Step-value sub-filters are a nested object (step_id → {eq,min,max}).
   // useURLState can't serialize objects directly, so we round-trip it
@@ -400,7 +410,8 @@ export function ClientManagementPage() {
       interactionDateTo: interactionDateToFilter || undefined,
       assignmentDateFrom: assignmentDateFromFilter || undefined,
       assignmentDateTo: assignmentDateToFilter || undefined,
-      chainId: chainIdFilter || undefined,
+      chainIds: chainIdsFilter,
+      onlyLastChain: onlyLastChainFilter,
       chainStepIds: chainStepIdsFilter,
       stepValues: stepValuesFilter,
     }),
@@ -429,7 +440,8 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
-      chainIdFilter,
+      chainIdsFilter,
+      onlyLastChainFilter,
       chainStepIdsFilter,
       stepValuesFilter,
     ]
@@ -531,7 +543,8 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
-      chainIdFilter,
+      chainIdsFilter,
+      onlyLastChainFilter,
       chainStepIdsFilter,
       stepValuesRawFilter,
       searchQuery,
@@ -565,7 +578,7 @@ export function ClientManagementPage() {
       principalRangeToFilter > 0 ||
       dpdRangeFromFilter > 0 ||
       dpdRangeToFilter > 0 ||
-      chainIdFilter > 0 ||
+      chainIdsFilter.length > 0 ||
       chainStepIdsFilter.length > 0 ||
       stepValuesRawFilter !== ''
 
@@ -607,7 +620,8 @@ export function ClientManagementPage() {
     interactionDateToFilter,
     assignmentDateFromFilter,
     assignmentDateToFilter,
-    chainIdFilter,
+    chainIdsFilter,
+    onlyLastChainFilter,
     chainStepIdsFilter,
     stepValuesRawFilter,
     searchQuery,
@@ -731,7 +745,12 @@ export function ClientManagementPage() {
               setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
             if (parsed.assignmentDateToFilter)
               setAssignmentDateToFilter(parsed.assignmentDateToFilter)
-            if (parsed.chainIdFilter) setChainIdFilter(parsed.chainIdFilter)
+            // KAN-821: a stored single chainIdFilter is upgraded to the array
+            // so saved filter sets survive the multi-select change.
+            if (Array.isArray(parsed.chainIdsFilter)) setChainIdsFilter(parsed.chainIdsFilter)
+            else if (parsed.chainIdFilter) setChainIdsFilter([parsed.chainIdFilter])
+            if (typeof parsed.onlyLastChainFilter === 'boolean')
+              setOnlyLastChainFilter(parsed.onlyLastChainFilter)
             if (Array.isArray(parsed.chainStepIdsFilter))
               setChainStepIdsFilter(parsed.chainStepIdsFilter)
             if (parsed.stepValuesRawFilter) setStepValuesRawFilter(parsed.stepValuesRawFilter)
@@ -976,8 +995,13 @@ export function ClientManagementPage() {
     // point sending them. Step selection is keyed by
     // ``ta_chain_steps.id`` (not target_action_id) so duplicate-TA chains
     // stay independently filterable.
-    if (filters.chainId) {
-      params.chain_id = filters.chainId
+    if (filters.chainIds && filters.chainIds.length > 0) {
+      params.chain_ids = filters.chainIds.join(',')
+      // KAN-821: sent explicitly on every chain-filtered request, and it has
+      // to be — the API parameter defaults to FALSE (the pre-KAN-821
+      // behaviour) so that callers which predate the flag keep their results.
+      // The pre-ticked checkbox is a UI default, expressed here.
+      params.only_last_chain = filters.onlyLastChain ?? true
       if (filters.chainStepIds && filters.chainStepIds.length > 0) {
         params.step_ids = filters.chainStepIds.join(',')
       }
@@ -1143,7 +1167,7 @@ export function ClientManagementPage() {
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
-    if (filters.chainId) count++
+    if (filters.chainIds && filters.chainIds.length > 0) count++
     if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
     if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
     if (selectedPriorities.length > 0) count++
@@ -1616,11 +1640,19 @@ export function ClientManagementPage() {
     if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
       setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
     }
+    if (
+      newFilters.onlyLastChain !== undefined &&
+      newFilters.onlyLastChain !== onlyLastChainFilter
+    ) {
+      setOnlyLastChainFilter(newFilters.onlyLastChain)
+    }
     // Chain change resets the step picks and their per-step values —
-    // both belong to the previously-selected chain and their IDs would
-    // be orphans on the BE otherwise.
-    if (newFilters.chainId !== chainIdFilter) {
-      setChainIdFilter(newFilters.chainId || 0)
+    // both belong to the previously-selected chains and their IDs would
+    // be orphans on the BE otherwise. Compared by value: the bar hands back
+    // a fresh array on every render, so identity would reset on every keystroke.
+    const nextChainIds = newFilters.chainIds ?? []
+    if (JSON.stringify(nextChainIds) !== JSON.stringify(chainIdsFilter)) {
+      setChainIdsFilter(nextChainIds)
       setChainStepIdsFilter([])
       setStepValuesRawFilter('')
     } else {
@@ -1677,7 +1709,9 @@ export function ClientManagementPage() {
     setInteractionDateToFilter('')
     setAssignmentDateFromFilter('')
     setAssignmentDateToFilter('')
-    setChainIdFilter(0)
+    setChainIdsFilter([])
+    // Back to the default, not to false — Clear All restores defaults.
+    setOnlyLastChainFilter(true)
     setChainStepIdsFilter([])
     setStepValuesRawFilter('')
 
