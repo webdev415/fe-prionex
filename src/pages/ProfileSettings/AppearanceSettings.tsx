@@ -45,17 +45,21 @@ function ThemePreviewCard({
         'focus-visible:ring-primary-500 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:outline-none'
       )}
     >
-      <div
-        className={cn(
-          'bg-card overflow-hidden rounded-xl border-2 transition-colors',
-          selected ? 'border-primary-300' : 'group-hover:border-border border-transparent'
-        )}
-      >
+      <div className="bg-card relative overflow-hidden rounded-xl">
         <img
           src={BASE_PREVIEW_SRC[base]}
           alt=""
           draggable={false}
           className="aspect-[16/10] h-auto w-full object-cover object-top"
+        />
+        <div
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-0 rounded-xl border-2 transition-opacity',
+            selected
+              ? 'border-primary-300 opacity-100'
+              : 'border-border opacity-0 group-hover:opacity-100'
+          )}
         />
       </div>
       <span className="text-foreground text-center text-xs leading-[150%] font-medium tracking-[-0.2px] sm:text-sm">

@@ -29,12 +29,6 @@ export function TableSkeleton({
   showTableHeaderActions = false,
 }: TableSkeletonProps) {
   return (
-    // `animate-pulse` lives on this single wrapper instead of on every placeholder
-    // below (KAN-989): with rows x columns cells each running their own CSS
-    // animation, a large table put 100-200+ concurrent animations on one shared
-    // compositor layer, which forced full-layer software raster on every pulse
-    // tick and froze the main thread for seconds. One shared animation gives the
-    // same visual effect at a fraction of the cost.
     <div
       className={`border-border bg-card animate-pulse overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
     >
