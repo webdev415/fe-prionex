@@ -155,7 +155,7 @@ export function OperatorWorkListPage() {
       header: 'Why',
       // EXIT rows get the compliance ground, not the generic "terminal".
       render: (r) => (
-        <span className="text-gray-600">
+        <span className="text-muted-foreground">
           {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
         </span>
       ),
@@ -174,7 +174,7 @@ export function OperatorWorkListPage() {
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}
-          className="text-information-600 hover:underline"
+          className="text-information-700 hover:underline"
         >
           Client {r.client_id}
         </Link>
@@ -190,12 +190,15 @@ export function OperatorWorkListPage() {
 
   const resetPage = () => setPage(0)
 
+  const fieldInput =
+    'h-[45px] rounded-lg border border-input-border bg-input px-3 text-sm font-light text-foreground outline-none placeholder:text-muted-foreground'
+
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold text-[#05040D]">Priority Work List</h1>
-          <p className="text-xs text-gray-500">
+          <h1 className="text-foreground text-lg font-semibold">Priority Work List</h1>
+          <p className="text-muted-foreground text-xs">
             {view === 'client' ? 'Clients' : 'Debts'} ranked by the v3 model — call the top of the
             list first. Shadow-run preview.
           </p>
@@ -204,7 +207,7 @@ export function OperatorWorkListPage() {
           type="button"
           onClick={() => projectId && trigger.mutate({ projectId, asOf: monthStart })}
           disabled={!projectId || trigger.isPending}
-          className="bg-primary-600 hover:bg-primary-700 shrink-0 rounded-md px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+          className="bg-primary-600 text-primary-foreground hover:bg-primary-700 shrink-0 rounded-md px-4 py-2 text-xs font-medium disabled:opacity-50"
         >
           {trigger.isPending ? 'Starting…' : 'Run now'}
         </button>
@@ -212,7 +215,7 @@ export function OperatorWorkListPage() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-0.5 rounded-lg border border-gray-300 p-0.5 text-xs font-medium">
+        <div className="border-border flex items-center gap-0.5 rounded-lg border p-0.5 text-xs font-medium">
           {(['debt', 'client'] as const).map((v) => (
             <button
               key={v}
@@ -223,15 +226,15 @@ export function OperatorWorkListPage() {
               }}
               className={
                 view === v
-                  ? 'bg-primary-600 rounded-md px-3 py-1.5 text-white'
-                  : 'rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-100'
+                  ? 'bg-primary-600 text-primary-foreground rounded-md px-3 py-1.5'
+                  : 'text-muted-foreground hover:bg-muted rounded-md px-3 py-1.5'
               }
             >
               {v === 'debt' ? 'By debt' : 'By client'}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+        <div className="text-foreground flex items-center gap-2 text-xs font-medium">
           Month
           <div className="w-[190px]">
             <DateSelect
@@ -249,7 +252,7 @@ export function OperatorWorkListPage() {
         </div>
         {view === 'debt' && (
           <>
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+            <div className="text-foreground flex items-center gap-2 text-xs font-medium">
               Priority
               <div className="w-[160px]">
                 <Select
@@ -273,7 +276,7 @@ export function OperatorWorkListPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+            <div className="text-foreground flex items-center gap-2 text-xs font-medium">
               Debt ID
               <input
                 type="text"
@@ -284,7 +287,7 @@ export function OperatorWorkListPage() {
                   setDebtId(e.target.value.replace(/[^0-9]/g, ''))
                   resetPage()
                 }}
-                className="h-[45px] w-[140px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+                className={`${fieldInput} w-[140px]`}
               />
               {debtId && (
                 <button
@@ -293,7 +296,7 @@ export function OperatorWorkListPage() {
                     setDebtId('')
                     resetPage()
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                   aria-label="Clear debt ID"
                 >
                   ✕
@@ -301,7 +304,7 @@ export function OperatorWorkListPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+            <div className="text-foreground flex items-center gap-2 text-xs font-medium">
               Min pay-chance
               <div className="flex items-center gap-1">
                 <input
@@ -313,20 +316,20 @@ export function OperatorWorkListPage() {
                     setMinPct(e.target.value.replace(/[^0-9.]/g, ''))
                     resetPage()
                   }}
-                  className="h-[45px] w-[80px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+                  className={`${fieldInput} w-[80px]`}
                 />
-                <span className="text-gray-500">%</span>
+                <span className="text-muted-foreground">%</span>
               </div>
             </div>
           </>
         )}
-        <span className="ml-auto text-xs text-gray-500">
+        <span className="text-muted-foreground ml-auto text-xs">
           {total.toLocaleString()} {view === 'client' ? 'clients' : 'debts'}
         </span>
       </div>
 
       {isError ? (
-        <div className="border-error-600 text-error-600 rounded-xl border bg-[#FCEAEA] px-4 py-3 text-xs">
+        <div className="border-error-600 bg-error-50 text-error-700 rounded-xl border px-4 py-3 text-xs">
           Could not load the work list. The scoring service may be unavailable.
         </div>
       ) : view === 'client' ? (
@@ -355,18 +358,18 @@ export function OperatorWorkListPage() {
           type="button"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
-          className="rounded-md border border-[#EBECE8] px-3 py-1 disabled:opacity-40"
+          className="border-border text-foreground hover:bg-muted rounded-md border px-3 py-1 disabled:opacity-40"
         >
           Prev
         </button>
-        <span className="text-gray-500">
+        <span className="text-muted-foreground">
           Page {page + 1} of {pageCount}
         </span>
         <button
           type="button"
           onClick={() => setPage((p) => (p + 1 < pageCount ? p + 1 : p))}
           disabled={page + 1 >= pageCount}
-          className="rounded-md border border-[#EBECE8] px-3 py-1 disabled:opacity-40"
+          className="border-border text-foreground hover:bg-muted rounded-md border px-3 py-1 disabled:opacity-40"
         >
           Next
         </button>
