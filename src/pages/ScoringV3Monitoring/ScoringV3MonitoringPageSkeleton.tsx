@@ -4,7 +4,7 @@
  */
 
 function Pulse({ className }: { className?: string }) {
-  return <div className={`bg-muted animate-pulse rounded ${className ?? ''}`} />
+  return <div className={`bg-muted rounded ${className ?? ''}`} />
 }
 
 function StatTileSkeleton() {
@@ -60,7 +60,7 @@ function PanelSkeleton({
 export function ScoringV3MonitoringPageSkeleton() {
   return (
     <div
-      className="flex w-full min-w-0 flex-col gap-4"
+      className="flex w-full min-w-0 animate-pulse flex-col gap-4"
       aria-busy="true"
       aria-live="polite"
       role="status"

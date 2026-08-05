@@ -6,12 +6,12 @@
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 function Pulse({ className }: { className?: string }) {
-  return <div className={`bg-muted animate-pulse rounded ${className ?? ''}`} />
+  return <div className={`bg-muted rounded ${className ?? ''}`} />
 }
 
 function ValueCardSkeleton() {
   return (
-    <div className="border-border bg-card rounded-xl border p-3">
+    <div className="border-border bg-card animate-pulse rounded-xl border p-3">
       <Pulse className="mb-3 h-4 w-40" />
       <div className="flex flex-wrap gap-2">
         <Pulse className="h-6 w-20 rounded-full" />

@@ -30,27 +30,27 @@ export function OperatorWorkListPageSkeleton() {
     >
       <span className="sr-only">Loading priority work list…</span>
 
-      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex w-full animate-pulse flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
-          <div className="bg-muted h-6 w-48 max-w-full animate-pulse rounded" />
-          <div className="bg-muted h-3 w-full max-w-md animate-pulse rounded" />
+          <div className="bg-muted h-6 w-48 max-w-full rounded" />
+          <div className="bg-muted h-3 w-full max-w-md rounded" />
         </div>
-        <div className="bg-muted h-9 w-full animate-pulse rounded-md sm:w-24" />
+        <div className="bg-muted h-9 w-full rounded-md sm:w-24" />
       </div>
 
-      <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="bg-muted h-10 w-full animate-pulse rounded-lg sm:w-44" />
-        <div className="bg-muted h-11 w-full animate-pulse rounded-lg sm:w-[190px]" />
-        <div className="bg-muted h-11 w-full animate-pulse rounded-lg sm:w-[160px]" />
-        <div className="bg-muted ml-auto hidden h-3 w-24 animate-pulse rounded sm:block" />
+      <div className="flex w-full animate-pulse flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="bg-muted h-10 w-full rounded-lg sm:w-44" />
+        <div className="bg-muted h-11 w-full rounded-lg sm:w-[190px]" />
+        <div className="bg-muted h-11 w-full rounded-lg sm:w-[160px]" />
+        <div className="bg-muted ml-auto hidden h-3 w-24 rounded sm:block" />
       </div>
 
       <OperatorWorkListTableSkeleton columns={5} rows={8} />
 
-      <div className="flex items-center justify-end gap-3">
-        <div className="bg-muted h-7 w-14 animate-pulse rounded-md" />
-        <div className="bg-muted h-3 w-24 animate-pulse rounded" />
-        <div className="bg-muted h-7 w-14 animate-pulse rounded-md" />
+      <div className="flex animate-pulse items-center justify-end gap-3">
+        <div className="bg-muted h-7 w-14 rounded-md" />
+        <div className="bg-muted h-3 w-24 rounded" />
+        <div className="bg-muted h-7 w-14 rounded-md" />
       </div>
     </div>
   )

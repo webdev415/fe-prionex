@@ -79,7 +79,7 @@ export function V3PriorityCards({
                   onToggle(bucket)
                 }
               }}
-              className={`border-border bg-card flex flex-col gap-2 rounded-lg border p-3 ${BORDER[bucket]} ${
+              className={`bg-card flex flex-col gap-2 rounded-lg border p-3 ${BORDER[bucket]} ${
                 onToggle ? 'hover:bg-muted cursor-pointer' : ''
               } ${isSelected ? 'ring-primary-400/50 shadow-sm ring-2' : ''}`}
             >

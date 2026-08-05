@@ -136,17 +136,17 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
 
 function TraceModalSkeleton() {
   return (
-    <div className="space-y-3" aria-hidden="true">
-      <div className="bg-muted h-4 w-52 animate-pulse rounded" />
+    <div className="animate-pulse space-y-3" aria-hidden="true">
+      <div className="bg-muted h-4 w-52 rounded" />
       {Array.from({ length: 4 }).map((_, idx) => (
         <div key={idx} className="border-border bg-card rounded-md border p-3">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="bg-muted h-5 w-28 animate-pulse rounded-full" />
-            <div className="bg-muted h-3 w-32 animate-pulse rounded" />
+            <div className="bg-muted h-5 w-28 rounded-full" />
+            <div className="bg-muted h-3 w-32 rounded" />
           </div>
           <div className="space-y-2">
-            <div className="bg-muted h-3 w-11/12 animate-pulse rounded" />
-            <div className="bg-muted h-3 w-8/12 animate-pulse rounded" />
+            <div className="bg-muted h-3 w-11/12 rounded" />
+            <div className="bg-muted h-3 w-8/12 rounded" />
           </div>
         </div>
       ))}

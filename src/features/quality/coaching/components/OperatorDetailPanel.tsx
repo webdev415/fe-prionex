@@ -408,8 +408,8 @@ export function OperatorDetailPanel({
             <div className="flex gap-3">
               <div className="relative flex-shrink-0">
                 <div
-                  className="text-foreground flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold"
-                  style={{ backgroundColor: avatarColor }}
+                  className="flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold"
+                  style={{ backgroundColor: avatarColor, color: '#05040D' }}
                 >
                   {computedInitials}
                 </div>
