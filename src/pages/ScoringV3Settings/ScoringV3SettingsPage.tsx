@@ -35,6 +35,7 @@ import {
   useV3Settings,
 } from '@/features/scoring/hooks/useV3Scores'
 import type { TauCapacityPoint, V3Settings } from '@/features/scoring/api/types'
+import { ScoringV3SettingsPageSkeleton } from './ScoringV3SettingsPageSkeleton'
 
 type FieldSpec = {
   key: keyof V3Settings
@@ -171,7 +172,19 @@ const FIELD_INPUT =
 
 /** Shared by the header and the rows so the labels stay over their own numbers:
  *  as two independent grids their `auto` columns sized to their own content. */
-const QUEUE_GRID = 'grid grid-cols-[1rem_1fr_6.5rem_6.5rem_6.5rem] items-center gap-x-6'
+const QUEUE_GRID =
+  'grid grid-cols-[1rem_minmax(6.5rem,1fr)_5.5rem_5.5rem_5.5rem] items-center gap-x-3 md:grid-cols-[1rem_1fr_6.5rem_6.5rem_6.5rem] md:gap-x-6'
+
+/** Horizontal scroll so the queue grid never blows out narrow viewports. */
+function ScrollX({ children, minWidth }: { children: React.ReactNode; minWidth: string }) {
+  return (
+    <div className="w-full min-w-0 overflow-x-auto">
+      <div className="w-full" style={{ minWidth }}>
+        {children}
+      </div>
+    </div>
+  )
+}
 
 /** Queue size is the decision; tau is the implementation detail. */
 function QueuePicker({
@@ -194,57 +207,63 @@ function QueuePicker({
   const measured = guide.some((p) => p.debts != null)
 
   return (
-    <div className="flex flex-col gap-2">
-      <div
-        className={`${QUEUE_GRID} text-muted-foreground border border-transparent px-4 text-xs font-medium`}
-      >
-        <span className="w-4" />
-        <span>Queue size</span>
-        <span className="text-right">Debts to work</span>
-        {/* The two numbers the ticket asks for: the BENEFIT of a bigger queue
-            (more payers reached) and its COST in efficiency (each call is less
-            likely to find one). Ops trade these off against each other. */}
-        <span className="text-right">Payers reached</span>
-        <span className="text-right">Calls that pay</span>
-      </div>
-      {guide.map((p) => {
-        const selected = p.tau === closest.tau
-        return (
-          <button
-            key={p.tau}
-            type="button"
-            disabled={!canEdit}
-            onClick={() => onPick(p.tau)}
-            className={`${QUEUE_GRID} rounded-lg border px-4 py-3 text-left transition-colors ${
-              selected ? 'border-primary-600 bg-primary/10' : 'border-border bg-card hover:bg-muted'
-            } ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+    <div className="flex min-w-0 flex-col gap-2">
+      <ScrollX minWidth="40rem">
+        <div className="flex flex-col gap-2">
+          <div
+            className={`${QUEUE_GRID} text-muted-foreground border border-transparent px-3 text-xs font-medium md:px-4`}
           >
-            <span
-              className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                selected ? 'border-primary-600' : 'border-border'
-              }`}
-            >
-              {selected && <span className="bg-primary-600 h-2 w-2 rounded-full" />}
-            </span>
-            <span className="text-foreground text-sm font-medium">
-              {pct(p.avg_share)} of debts
-              {selected && (
-                <span className="text-muted-foreground ml-2 text-xs font-normal">current</span>
-              )}
-            </span>
-            <span className="text-foreground text-right text-sm tabular-nums">
-              {p.debts != null ? num(p.debts) : '—'}
-            </span>
-            <span className="text-foreground text-right text-sm tabular-nums">
-              {p.payers_captured != null ? pct(p.payers_captured) : '—'}
-            </span>
-            <span className="text-foreground text-right text-sm tabular-nums">
-              {p.pay_lift != null ? `${p.pay_lift.toFixed(2)}×` : '—'}
-            </span>
-          </button>
-        )
-      })}
-      <p className="text-muted-foreground text-xs">
+            <span className="w-4" />
+            <span>Queue size</span>
+            <span className="text-right">Debts to work</span>
+            {/* The two numbers the ticket asks for: the BENEFIT of a bigger queue
+                (more payers reached) and its COST in efficiency (each call is less
+                likely to find one). Ops trade these off against each other. */}
+            <span className="text-right">Payers reached</span>
+            <span className="text-right">Calls that pay</span>
+          </div>
+          {guide.map((p) => {
+            const selected = p.tau === closest.tau
+            return (
+              <button
+                key={p.tau}
+                type="button"
+                disabled={!canEdit}
+                onClick={() => onPick(p.tau)}
+                className={`${QUEUE_GRID} rounded-lg border px-3 py-3 text-left transition-colors md:px-4 ${
+                  selected
+                    ? 'border-primary-600 bg-primary/10'
+                    : 'border-border bg-card hover:bg-muted'
+                } ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                    selected ? 'border-primary-600' : 'border-border'
+                  }`}
+                >
+                  {selected && <span className="bg-primary-600 h-2 w-2 rounded-full" />}
+                </span>
+                <span className="text-foreground text-sm font-medium">
+                  {pct(p.avg_share)} of debts
+                  {selected && (
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">current</span>
+                  )}
+                </span>
+                <span className="text-foreground text-right text-sm tabular-nums">
+                  {p.debts != null ? num(p.debts) : '—'}
+                </span>
+                <span className="text-foreground text-right text-sm tabular-nums">
+                  {p.payers_captured != null ? pct(p.payers_captured) : '—'}
+                </span>
+                <span className="text-foreground text-right text-sm tabular-nums">
+                  {p.pay_lift != null ? `${p.pay_lift.toFixed(2)}×` : '—'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </ScrollX>
+      <p className="text-muted-foreground text-xs leading-relaxed">
         <strong className="text-foreground">Payers reached</strong> = how many of the people who
         will pay this month end up in the queue.{' '}
         <strong className="text-foreground">Calls that pay</strong> = how much more often a call
@@ -277,7 +296,11 @@ export function ScoringV3SettingsPage() {
   const dirty = draft !== null && !!saved && JSON.stringify(draft) !== JSON.stringify(saved)
 
   if (isLoading || !form) {
-    return <div className="text-muted-foreground p-6 text-sm">Loading settings…</div>
+    return (
+      <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+        <ScoringV3SettingsPageSkeleton />
+      </PermissionGuard>
+    )
   }
 
   const defaults = data?.defaults
@@ -292,12 +315,12 @@ export function ScoringV3SettingsPage() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.VIEW}>
-      <div className="flex w-full min-w-0 flex-col gap-6 pb-28">
-        <header className="flex flex-col gap-2">
+      <div className="flex w-full min-w-0 flex-col gap-4 pb-36 sm:gap-6 sm:pb-28">
+        <header className="flex min-w-0 flex-col gap-2">
           <h1 className="text-foreground text-xl font-light sm:text-2xl">
             Scoring v3 — <span className="font-semibold">settings</span>
           </h1>
-          <p className="text-muted-foreground max-w-3xl text-sm">
+          <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
             These rules decide who your operators call first. Changes apply to the{' '}
             <strong className="text-foreground">next scoring run</strong> — nothing already scored
             is redone — and every change is saved in{' '}
@@ -317,11 +340,11 @@ export function ScoringV3SettingsPage() {
         </header>
 
         {/* ── the one decision that matters ── */}
-        <section className="border-border bg-card rounded-xl border p-5 sm:p-6">
+        <section className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6">
           <h2 className="text-foreground text-base font-semibold">
             How many debts should operators work?
           </h2>
-          <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm">
+          <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
             Every debt gets a predicted chance of paying this month. The most likely payers go into
             the working queue; the rest are left for spare capacity. A bigger queue reaches more
             payers but spends more calls finding each one — pick the size your team can handle.
@@ -346,7 +369,7 @@ export function ScoringV3SettingsPage() {
             {showAdvanced ? 'Hide' : 'Show'} the exact cut-off value
           </button>
           {showAdvanced && (
-            <label className="mt-3 flex max-w-xs flex-col gap-1">
+            <label className="mt-3 flex w-full max-w-xs flex-col gap-1">
               <span className="text-foreground text-sm font-medium">
                 Cut-off (tau)
                 {isChanged('tau') && (
@@ -361,9 +384,9 @@ export function ScoringV3SettingsPage() {
                 value={form.tau}
                 disabled={!canEdit}
                 onChange={(e) => setField('tau', e.target.value)}
-                className={`${FIELD_INPUT} px-3 py-2 text-sm tabular-nums`}
+                className={`${FIELD_INPUT} w-full px-3 py-2 text-sm tabular-nums`}
               />
-              <span className="text-muted-foreground text-xs">
+              <span className="text-muted-foreground text-xs leading-relaxed">
                 A debt is worked when its pay-chance reaches this number.
                 {defaults && ` Standard setup: ${defaults.tau}.`}
               </span>
@@ -375,10 +398,12 @@ export function ScoringV3SettingsPage() {
         {SECTIONS.map((section) => (
           <section
             key={section.title}
-            className="border-border bg-card rounded-xl border p-5 sm:p-6"
+            className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6"
           >
             <h2 className="text-foreground text-base font-semibold">{section.title}</h2>
-            <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm">{section.blurb}</p>
+            <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
+              {section.blurb}
+            </p>
 
             <div className="divide-border flex flex-col divide-y">
               {section.fields.map((f) => {
@@ -389,16 +414,18 @@ export function ScoringV3SettingsPage() {
                     key={String(f.key)}
                     className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
                   >
-                    <div className="flex flex-col gap-0.5 sm:max-w-md">
+                    <div className="flex min-w-0 flex-col gap-0.5 sm:max-w-md">
                       <span className="text-foreground text-sm font-medium">
                         {f.label}
                         {isChanged(f.key) && (
                           <span className="text-warning-700 ml-2 text-xs font-normal">changed</span>
                         )}
                       </span>
-                      <span className="text-muted-foreground text-xs">{f.hint}</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed">
+                        {f.hint}
+                      </span>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
                       {f.derived ? (
                         <span className="border-border bg-muted text-foreground w-24 rounded-lg border border-dashed px-3 py-2 text-right text-sm tabular-nums">
                           {isEmpty ? '—' : String(value)}
@@ -417,7 +444,7 @@ export function ScoringV3SettingsPage() {
                         />
                       )}
                       {f.unit && (
-                        <span className="text-muted-foreground w-24 text-xs">
+                        <span className="text-muted-foreground min-w-0 flex-1 text-xs sm:w-24 sm:flex-none">
                           {isEmpty && f.nullLabel ? f.nullLabel : f.unit}
                         </span>
                       )}
@@ -431,18 +458,18 @@ export function ScoringV3SettingsPage() {
 
         {/* ── per-outcome cooldowns ── */}
         {data?.rule_table && (
-          <section className="border-border bg-card rounded-xl border p-5 sm:p-6">
+          <section className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6">
             <h2 className="text-foreground text-base font-semibold">
               How long a call outcome counts for
             </h2>
-            <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm">
+            <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
               After a call, what the operator recorded decides the debt&apos;s priority for a while.
               &ldquo;Refused to pay&rdquo; keeps them low for a month; &ldquo;payment
               possible&rdquo; keeps them high for a week. Leave a row blank to keep the standard
               number.
             </p>
-            <div className="border-border max-h-[420px] overflow-y-auto rounded-lg border">
-              <table className="text-foreground w-full text-sm">
+            <div className="border-border max-h-[420px] overflow-auto rounded-lg border">
+              <table className="text-foreground w-full min-w-[32rem] text-sm">
                 <thead className="bg-muted sticky top-0">
                   <tr className="text-muted-foreground text-left text-xs font-medium">
                     <th className="px-3 py-2">Call outcome</th>
@@ -454,7 +481,7 @@ export function ScoringV3SettingsPage() {
                 <tbody>
                   {Object.entries(data.rule_table).map(([code, spec]) => (
                     <tr key={code} className="border-border border-t">
-                      <td className="px-3 py-1.5 font-mono text-xs">{code}</td>
+                      <td className="px-3 py-1.5 font-mono text-xs break-all">{code}</td>
                       <td className="px-3 py-1.5 text-xs">{spec.bucket}</td>
                       <td className="text-muted-foreground px-3 py-1.5 text-right text-xs tabular-nums">
                         {spec.ttl_days} days
@@ -486,7 +513,7 @@ export function ScoringV3SettingsPage() {
         {/* ── save ── */}
         {canEdit && (
           <div className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-10 border-t px-4 py-3 backdrop-blur sm:px-8">
-            <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
               <span className="text-muted-foreground shrink-0 text-sm">
                 {dirty ? 'You have unsaved changes.' : 'Everything is saved.'}
               </span>
@@ -495,13 +522,14 @@ export function ScoringV3SettingsPage() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Why are you changing this? (saved in history)"
-                className={`${FIELD_INPUT} flex-1 px-3 py-2 text-sm`}
+                className={`${FIELD_INPUT} w-full min-w-0 flex-1 px-3 py-2 text-sm`}
               />
-              <div className="flex gap-2">
+              <div className="flex w-full gap-2 sm:w-auto">
                 <Button
                   variant="outline"
                   disabled={!dirty || save.isPending}
                   onClick={() => setDraft(null)}
+                  className="min-w-0 flex-1 sm:flex-none"
                 >
                   Discard
                 </Button>
@@ -523,6 +551,7 @@ export function ScoringV3SettingsPage() {
                       }
                     )
                   }
+                  className="min-w-0 flex-1 sm:flex-none"
                 >
                   {save.isPending ? 'Saving…' : 'Save'}
                 </Button>
