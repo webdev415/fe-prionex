@@ -79,6 +79,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       language: (user?.language as 'en' | 'uk') || 'uk',
       timezone: user?.timezone || 'Europe/Kyiv',
       asterisk_extension: user?.asterisk_extension || '',
+      dialer_extension: user?.dialer_extension || '',
       is_agent: user?.is_agent || false,
     },
   })
@@ -95,6 +96,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         language: (user.language as 'en' | 'uk') || 'uk',
         timezone: user.timezone || 'Europe/Kyiv',
         asterisk_extension: user.asterisk_extension || '',
+        dialer_extension: user.dialer_extension || '',
         is_agent: user.is_agent || false,
       })
     }
@@ -116,6 +118,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       language: data.language,
       timezone: data.timezone,
       asterisk_extension: data.asterisk_extension || undefined,
+      dialer_extension: data.dialer_extension || undefined,
       is_agent: data.is_agent,
     }
 
@@ -328,6 +331,24 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             )}
             <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.asteriskExtension')}
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="dialer_extension">{t('pages.users.forms.dialerExtension')}</Label>
+            <Input
+              id="dialer_extension"
+              placeholder="9001"
+              {...register('dialer_extension')}
+              aria-invalid={!!errors.dialer_extension}
+              variant={errors.dialer_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.dialer_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.dialer_extension.message}</p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('pages.users.forms.helpers.dialerExtension')}
             </p>
           </div>
 

@@ -51,6 +51,7 @@ export interface ApiUser {
   updated_at?: string
   projects?: ProjectRole[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent: boolean
   agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
   two_factor_enabled: boolean
@@ -119,6 +120,7 @@ export interface CreateUserInput {
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
 }
 
@@ -136,6 +138,7 @@ export interface UpdateUserInput {
   status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
 }
 
