@@ -8,11 +8,11 @@ const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
 /**
- * How many recently-taken calls to remember, so a screen-pop that arrives after
- * the call was already answered elsewhere is ignored rather than opening a
- * window nothing will ever close.
+ * How many recently-settled calls to remember, so a screen-pop that arrives
+ * after the call was already answered elsewhere or already over is ignored
+ * rather than opening a window nothing will ever close.
  */
-const TAKEN_CALL_MEMORY = 32
+const SETTLED_CALL_MEMORY = 32
 
 /**
  * How long that memory is allowed to suppress a screen-pop.
@@ -23,7 +23,7 @@ const TAKEN_CALL_MEMORY = 32
  * and a call_id that is ever offered to this operator again is silently
  * swallowed. Bounded by count alone, a low-volume operator never evicts.
  */
-const TAKEN_CALL_TTL_MS = 30_000
+const SETTLED_CALL_TTL_MS = 30_000
 
 /**
  * The extension inside an identifier that may or may not be decorated.
@@ -58,7 +58,7 @@ function extensionOf(value: unknown): string | null {
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
-  const takenByOthersRef = useRef<Map<string, number>>(new Map())
+  const settledCallsRef = useRef<Map<string, number>>(new Map())
   const shownCallRef = useRef<string | null>(null)
   const loggedMissingAnswererRef = useRef<string | null>(null)
 
@@ -116,25 +116,30 @@ export function useIncomingCall(agentExtension: string | null) {
       setIncomingCall((current) => (current && current.call_id !== callId ? current : null))
     }
 
-    const rememberTakenByOther = (callId: string) => {
-      const seen = takenByOthersRef.current
+    /**
+     * Record that this call is over for this operator — answered by a colleague
+     * or ended outright. Either way a screen-pop for it is stale on arrival.
+     */
+    const rememberSettled = (callId?: string) => {
+      if (!callId) return
+      const seen = settledCallsRef.current
       const now = Date.now()
       for (const [id, at] of seen) {
-        if (now - at > TAKEN_CALL_TTL_MS) seen.delete(id)
+        if (now - at > SETTLED_CALL_TTL_MS) seen.delete(id)
       }
       seen.set(callId, now)
       // Map iterates in insertion order, so the first key is the oldest.
-      while (seen.size > TAKEN_CALL_MEMORY) {
+      while (seen.size > SETTLED_CALL_MEMORY) {
         seen.delete(seen.keys().next().value!)
       }
     }
 
-    const wasTakenByOther = (callId?: string) => {
+    const wasSettled = (callId?: string) => {
       if (!callId) return false
-      const at = takenByOthersRef.current.get(callId)
+      const at = settledCallsRef.current.get(callId)
       if (at === undefined) return false
-      if (Date.now() - at > TAKEN_CALL_TTL_MS) {
-        takenByOthersRef.current.delete(callId)
+      if (Date.now() - at > SETTLED_CALL_TTL_MS) {
+        settledCallsRef.current.delete(callId)
         return false
       }
       return true
@@ -143,10 +148,10 @@ export function useIncomingCall(agentExtension: string | null) {
     // Listen for incoming call events
     const handleIncomingCall = (event: IncomingCallEvent) => {
       // The screen-pop carries enriched client data and so can be emitted after
-      // the bare state event. If a colleague already took this call, opening a
-      // window now would strand it: the events that would have closed it have
-      // been and gone.
-      if (wasTakenByOther(event.data?.call_id)) return
+      // the bare state event. If this call is already settled, opening a window
+      // now would strand it: the events that would have closed it have been and
+      // gone.
+      if (wasSettled(event.data?.call_id)) return
       setIncomingCall(event.data)
     }
 
@@ -159,6 +164,11 @@ export function useIncomingCall(agentExtension: string | null) {
       // and the backend cannot emit it; it is kept as a literal so a future
       // state by that name is still treated as terminal rather than ignored.
       if (state === CallState.COMPLETED || state === CallState.FAILED || state === 'CANCELLED') {
+        // Remembered for the same reason an answer is: a caller who gives up
+        // during ringing ends the call before the screen-pop has finished its
+        // client lookup, and the pop then opens a window for a call that is
+        // already over with nothing left to close it.
+        rememberSettled(callId)
         dismissIfSameCall(callId)
         return
       }
@@ -174,7 +184,11 @@ export function useIncomingCall(agentExtension: string | null) {
       // `state` only reaches ACTIVE on a later Newstate from the answering leg,
       // so waiting for it would leave everyone else's window open for the whole
       // conversation. The answer itself is visible earlier, on the outcome.
-      const taken = state === CallState.ACTIVE || event.data?.outcome === CallOutcome.ANSWERED
+      // Normalised for the same reason `state` is: the call-service records
+      // outcomes as free-form strings, and this one is the earlier and more
+      // load-bearing of the two signals.
+      const outcome = event.data?.outcome?.toLowerCase()
+      const taken = state === CallState.ACTIVE || outcome === CallOutcome.ANSWERED
       if (taken) {
         // Only `answered_by`, never `agent_extension`. The latter is the
         // record's current agent — the first-rung operator until the answering
@@ -185,7 +199,7 @@ export function useIncomingCall(agentExtension: string | null) {
         const mine = extensionOf(agentExtension)
         const someoneElseAnswered = answeredBy !== null && mine !== null && answeredBy !== mine
         if (someoneElseAnswered) {
-          if (callId) rememberTakenByOther(callId)
+          rememberSettled(callId)
           dismissIfSameCall(callId)
         } else if (
           answeredBy === null &&

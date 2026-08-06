@@ -111,8 +111,15 @@ export interface CallStateEventData {
   /**
    * Set as soon as the answer is seen, ahead of `state` reaching ACTIVE — so
    * this, not `state`, is what tells you a call has been taken.
+   *
+   * Deliberately not `CallOutcome`: the call-service records this as a free
+   * string and emits values outside that union — `rejected`, `missed`, and the
+   * Asterisk dispositions rendered in `lib/callOutcome.ts` (`cancel`,
+   * `unavailable`, `congestion`, …). Typing it as the union would promise an
+   * exhaustiveness that does not hold on the wire. Compare against
+   * `CallOutcome.ANSWERED` after lower-casing.
    */
-  outcome?: CallOutcome | null
+  outcome?: string | null
   /**
    * The operator who picked up, present only when that is actually known —
    * i.e. the answering leg's channel was identifiable. Absent means "somebody

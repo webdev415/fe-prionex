@@ -717,6 +717,74 @@ describe('useIncomingCall', () => {
       expect(logged).not.toHaveBeenCalled()
     })
 
+    it('ignores a screen-pop for a call that already ended', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+
+      // A caller who gives up during ringing ends the call before the pop has
+      // finished its client lookup. Opening a window here strands it exactly as
+      // a late pop for a call a colleague took would.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'COMPLETED' },
+        })
+      })
+
+      const incoming = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+      act(() => incoming(popup()))
+
+      expect(result.current.hasIncomingCall).toBe(false)
+    })
+
+    it('still pops a call that ended long ago and is being offered afresh', async () => {
+      vi.useFakeTimers()
+      try {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'COMPLETED' },
+          })
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(60_000)
+        })
+
+        const incoming = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+        act(() => incoming(popup()))
+
+        expect(result.current.hasIncomingCall).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('reads the answer signal regardless of how the outcome is cased', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // The call-service records outcomes as free strings; `state` is already
+      // normalised, and this signal arrives earlier than `state` does.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'RINGING',
+            outcome: 'ANSWERED',
+            answered_by: '2094',
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.incomingCall).toBeNull())
+    })
+
     it('suppresses a late screen-pop only briefly, not for the rest of the session', async () => {
       vi.useFakeTimers()
       try {
