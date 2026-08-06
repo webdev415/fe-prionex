@@ -1,9 +1,12 @@
 /**
  * SegmentedTabs Component
  *
- * Small segmented tab strip (pill buttons inside a card container) with
- * proper tablist/tab semantics. Visual style follows the existing
- * PeriodTabs on the Reports page.
+ * Small tab strip with proper tablist/tab semantics, in two visual variants:
+ *
+ * - `segmented` (default) — pill buttons inside a card container; visual
+ *   style follows the existing PeriodTabs on the Reports page.
+ * - `underline` — bottom-border tabs on a divider line, as used for
+ *   page-level tab strips (e.g. the Reports page tabs).
  */
 
 import { cn } from '@/lib/utils'
@@ -17,6 +20,7 @@ export interface SegmentedTabsProps<T extends string> {
   items: SegmentedTabItem<T>[]
   value: T
   onChange: (id: T) => void
+  variant?: 'segmented' | 'underline'
   /** Accessible name for the tablist. */
   ariaLabel?: string
   className?: string
@@ -26,9 +30,43 @@ export function SegmentedTabs<T extends string>({
   items,
   value,
   onChange,
+  variant = 'segmented',
   ariaLabel,
   className,
 }: SegmentedTabsProps<T>) {
+  if (variant === 'underline') {
+    return (
+      <div className={cn('border-border border-b', className)}>
+        <div
+          role="tablist"
+          aria-label={ariaLabel}
+          className="-mb-px flex flex-wrap items-center gap-1"
+        >
+          {items.map((item) => {
+            const isActive = item.id === value
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onChange(item.id)}
+                className={cn(
+                  'cursor-pointer border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm',
+                  isActive
+                    ? 'border-secondary text-foreground'
+                    : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
+                )}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       role="tablist"

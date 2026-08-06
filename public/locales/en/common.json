@@ -8256,6 +8256,8 @@
         },
         "empty": "No data for the selected period",
         "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",

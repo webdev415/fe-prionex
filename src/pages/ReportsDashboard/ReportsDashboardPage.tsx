@@ -38,7 +38,7 @@ import {
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ClientProcessingTab } from '@/features/clientProcessing'
-import { cn } from '@/lib/utils'
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
 // Error State Component
@@ -491,30 +491,14 @@ export function ReportsDashboardPage() {
       </h1>
 
       {/* Tab strip */}
-      <div className="border-border self-stretch border-b">
-        <div className="-mb-px flex flex-wrap items-center gap-1" role="tablist">
-          {REPORT_TABS.map((tab) => {
-            const isActive = tab === activeTab
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => handleTabChange(tab)}
-                className={cn(
-                  'cursor-pointer border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm',
-                  isActive
-                    ? 'border-secondary text-foreground'
-                    : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
-                )}
-              >
-                {t(`pages.reports.tabs.${tab}`)}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <SegmentedTabs<ReportsTab>
+        variant="underline"
+        className="self-stretch"
+        items={REPORT_TABS.map((tab) => ({ id: tab, label: t(`pages.reports.tabs.${tab}`) }))}
+        value={activeTab}
+        onChange={handleTabChange}
+        ariaLabel={t('pages.reports.title')}
+      />
 
       {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
     </div>

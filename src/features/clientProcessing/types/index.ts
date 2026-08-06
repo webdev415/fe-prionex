@@ -11,36 +11,37 @@ export type {
 } from '../api/types'
 
 /**
- * One department sub-tab.
- *
- * `id` is the URL-safe value stored in `?dept=` (stable slug for known
- * departments, the raw backend name otherwise); `departmentName` is the exact
- * `department_name` string rows are filtered by; `labelKey` is set only for
- * known departments (display mapping lives in i18n — e.g. «Стягнення» shows
- * as "Collection" in en), unknown departments display their raw name.
+ * One department sub-tab. `id` is the URL-safe value stored in `?dept=`
+ * (a stable slug for known departments, the numeric `department_id` for
+ * others, `none` for rows without a department). Exactly one of
+ * `labelKey` (i18n, known departments) / `label` (raw name) is set.
  */
 export interface DepartmentTabDef {
   id: string
-  departmentName: string
+  label?: string
   labelKey?: string
+}
+
+/** A department with a canonical slug/label ("Стягнення" shows as "Collection" in en). */
+export interface KnownDepartment {
+  slug: string
+  name: string
+  labelKey: string
 }
 
 /**
  * Known departments in canonical display order (ТП → Дайлер → Стягнення).
- * Sub-tabs are otherwise built dynamically from the response's distinct
- * `department_name` values, so renaming/adding a department on the backend
- * shows up as a tab instead of silently losing rows.
+ * This is only a display overlay (slug + i18n label) matched by name —
+ * sub-tabs themselves are keyed by `department_id` and built dynamically
+ * from the response, so renaming/adding a department on the backend shows
+ * up as its own tab instead of silently losing rows.
  */
-export const KNOWN_DEPARTMENT_TABS: DepartmentTabDef[] = [
-  { id: 'tp', departmentName: 'ТП', labelKey: 'pages.reports.processing.departments.tp' },
+export const KNOWN_DEPARTMENTS: KnownDepartment[] = [
+  { slug: 'tp', name: 'ТП', labelKey: 'pages.reports.processing.departments.tp' },
+  { slug: 'dialer', name: 'Дайлер', labelKey: 'pages.reports.processing.departments.dialer' },
   {
-    id: 'dialer',
-    departmentName: 'Дайлер',
-    labelKey: 'pages.reports.processing.departments.dialer',
-  },
-  {
-    id: 'collection',
-    departmentName: 'Стягнення',
+    slug: 'collection',
+    name: 'Стягнення',
     labelKey: 'pages.reports.processing.departments.collection',
   },
 ]
