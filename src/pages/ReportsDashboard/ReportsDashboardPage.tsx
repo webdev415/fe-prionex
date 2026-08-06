@@ -1,12 +1,14 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports dashboard with KPIs and agent performance metrics.
- * Integrates with Report Service backend API.
+ * Main page for viewing reports. Hosts two tabs (active tab in the URL via
+ * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
+ * (default), and the "Відпрацювання за ЦД" client processing report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import {
   KPICard,
   PeriodTabs,
@@ -35,6 +37,8 @@ import {
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { ClientProcessingTab } from '@/features/clientProcessing'
+import { cn } from '@/lib/utils'
 
 // ============================================================================
 // Error State Component
@@ -58,10 +62,10 @@ function ErrorState({ message }: { message: string }) {
 }
 
 // ============================================================================
-// Main Component
+// Dashboard Tab (the pre-tabs page content, unchanged)
 // ============================================================================
 
-export function ReportsDashboardPage() {
+function DashboardTab() {
   const { t } = useTranslation('common')
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('today')
 
@@ -449,6 +453,61 @@ export function ReportsDashboardPage() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Main Component — tab host
+// ============================================================================
+
+const REPORT_TABS = ['dashboard', 'processing'] as const
+type ReportsTab = (typeof REPORT_TABS)[number]
+
+export function ReportsDashboardPage() {
+  const { t } = useTranslation('common')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const rawTab = searchParams.get('tab')
+  const activeTab: ReportsTab = rawTab === 'processing' ? 'processing' : 'dashboard'
+
+  const handleTabChange = (tab: ReportsTab) => {
+    const next = new URLSearchParams(searchParams)
+    // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
+    if (tab === 'dashboard') next.delete('tab')
+    else next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 self-stretch">
+      {/* Tab strip */}
+      <div className="border-border self-stretch border-b">
+        <div className="-mb-px flex flex-wrap items-center gap-1" role="tablist">
+          {REPORT_TABS.map((tab) => {
+            const isActive = tab === activeTab
+            return (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => handleTabChange(tab)}
+                className={cn(
+                  'cursor-pointer border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm',
+                  isActive
+                    ? 'border-secondary text-foreground'
+                    : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
+                )}
+              >
+                {t(`pages.reports.tabs.${tab}`)}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
     </div>
   )
 }

@@ -7592,6 +7592,34 @@
     "reports": {
       "title": "Панель звітів",
       "exporting": "Експортується...",
+      "tabs": {
+        "dashboard": "Дашборд",
+        "processing": "Відпрацювання за ЦД"
+      },
+      "processing": {
+        "dateFrom": "Дата з",
+        "dateTo": "Дата по",
+        "departments": {
+          "tp": "ТП",
+          "dialer": "Дайлер",
+          "collection": "Стягнення"
+        },
+        "columns": {
+          "employee": "Співробітник",
+          "group": "Група",
+          "assignedClients": "Закріплено клієнтів",
+          "processed": "З ЦД за період",
+          "processedClient": "З ЦД по клієнту",
+          "processedContact": "З ЦД по 3-й особі",
+          "percent": "%"
+        },
+        "empty": "Немає даних за вибраний період",
+        "unavailable": "Дані про співробітників тимчасово недоступні. Спробуйте пізніше.",
+        "error": {
+          "title": "Не вдалося завантажити звіт",
+          "retry": "Повторити"
+        }
+      },
       "periods": {
         "today": "Сьогодні",
         "thisWeek": "Цей тиждень",

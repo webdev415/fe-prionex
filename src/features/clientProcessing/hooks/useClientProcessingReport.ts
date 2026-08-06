@@ -1,0 +1,48 @@
+/**
+ * Client Processing Report Hook
+ *
+ * React Query hook for fetching the "Відпрацювання за ЦД" report.
+ */
+
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { getClientProcessingReport } from '../api/clientProcessingApi'
+import type { ProcessingReportParams, ProcessingReportResponse } from '../api/types'
+
+/** Query keys for the processing report (dates + project in the key). */
+export const clientProcessingKeys = {
+  all: ['clientProcessing'] as const,
+  report: (params: ProcessingReportParams) =>
+    [...clientProcessingKeys.all, 'report', params] as const,
+}
+
+export interface UseClientProcessingReportParams {
+  projectId: number
+  dateStart: string // YYYY-MM-DD
+  dateEnd: string // YYYY-MM-DD
+  enabled?: boolean
+}
+
+export function useClientProcessingReport({
+  projectId,
+  dateStart,
+  dateEnd,
+  enabled = true,
+}: UseClientProcessingReportParams) {
+  const params: ProcessingReportParams = {
+    project_id: projectId,
+    date_start: dateStart,
+    date_end: dateEnd,
+  }
+
+  return useQuery<ProcessingReportResponse>({
+    queryKey: clientProcessingKeys.report(params),
+    queryFn: () => getClientProcessingReport(params),
+    placeholderData: keepPreviousData,
+    enabled: enabled && !!projectId && !!dateStart && !!dateEnd,
+    staleTime: 60_000,
+    // No query-level retry: the axios layer already retries transient
+    // 502/503/504 GETs, and 4xx/503 responses should surface immediately
+    // (503 has a dedicated "employee data unavailable" message).
+    retry: false,
+  })
+}

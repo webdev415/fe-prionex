@@ -8233,6 +8233,34 @@
     "reports": {
       "title": "Reports Dashboard",
       "exporting": "Exporting...",
+      "tabs": {
+        "dashboard": "Dashboard",
+        "processing": "Client Processing"
+      },
+      "processing": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "departments": {
+          "tp": "TP",
+          "dialer": "Dialer",
+          "collection": "Collection"
+        },
+        "columns": {
+          "employee": "Employee",
+          "group": "Group",
+          "assignedClients": "Assigned clients",
+          "processed": "With TA in period",
+          "processedClient": "With TA by client",
+          "processedContact": "With TA via 3rd party",
+          "percent": "%"
+        },
+        "empty": "No data for the selected period",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
       "periods": {
         "today": "Today",
         "thisWeek": "This Week",
