@@ -93,7 +93,7 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
   )
 }
 
-function usePreviewColumns(isAssign: boolean): Column<RowWithId>[] {
+function usePreviewColumns(): Column<RowWithId>[] {
   const { t } = useTranslation('common')
   const p = 'pages.imports.contactTagAssignment.preview.columns'
 
@@ -190,11 +190,11 @@ function usePreviewColumns(isAssign: boolean): Column<RowWithId>[] {
         key: 'error',
         header: t(`${p}.note`, 'Note'),
         render: (row: RowWithId) => {
-          // A single-select assign always replaces whatever is on the contact,
-          // and the old value survives only in the audit log. Derived from
-          // selection_type so the warning does not depend on the backend
-          // populating currently_assigned.
-          const replaces = isAssign && row.selection_type === 'single' && row.status === 'ready'
+          // The backend compares the file against what is currently stored, so
+          // this fires only when a value would genuinely be destroyed — not
+          // merely because the category is single-select and the row happens to
+          // repeat the value already there.
+          const replaces = row.replaces_existing && row.status === 'ready'
           if (!replaces) {
             return <span className="text-xs text-gray-600">{row.error || ''}</span>
           }
@@ -212,7 +212,7 @@ function usePreviewColumns(isAssign: boolean): Column<RowWithId>[] {
         },
       },
     ],
-    [t, p, isAssign]
+    [t, p]
   )
 }
 
@@ -221,7 +221,7 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
   const b = 'pages.imports.contactTagAssignment.preview'
   const { summary } = preview
   const isAssign = preview.mode === 'assign'
-  const columns = usePreviewColumns(isAssign)
+  const columns = usePreviewColumns()
 
   const previewRows: RowWithId[] = useMemo(
     () => preview.preview_rows.map((row) => ({ ...row, id: row.row_number })),
@@ -233,12 +233,8 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
   )
 
   const replacingRows = useMemo(
-    () =>
-      isAssign
-        ? preview.preview_rows.filter((r) => r.selection_type === 'single' && r.status === 'ready')
-            .length
-        : 0,
-    [preview.preview_rows, isAssign]
+    () => preview.preview_rows.filter((r) => r.replaces_existing && r.status === 'ready').length,
+    [preview.preview_rows]
   )
 
   const fansOut = summary.contacts_affected > summary.ready
@@ -315,7 +311,11 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* The four row counts (ready + no change + invalid + overridden) add up
+          to total_rows, so an operator can check nothing was silently dropped.
+          Contacts affected is deliberately last: it counts CONTACTS, not rows,
+          and would break that arithmetic if read as part of the same set. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <SummaryCard
           label={t(
             isAssign ? `${b}.readyToAssign` : `${b}.readyToRemove`,
@@ -325,9 +325,9 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
           color="bg-success-50 border-success-200 text-success-700"
         />
         <SummaryCard
-          label={t(`${b}.contactsAffected`, 'Contacts affected')}
-          value={summary.contacts_affected}
-          color="bg-information-50 border-information-200 text-information-700"
+          label={t(`${b}.noChange`, 'Already up to date')}
+          value={summary.no_change}
+          color="bg-gray-50 border-gray-200 text-dark-500"
         />
         <SummaryCard
           label={t(`${b}.invalid`, 'Invalid')}
@@ -344,6 +344,11 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
               ? 'bg-warning-50 border-warning-200 text-warning-700'
               : 'bg-gray-50 border-gray-200 text-dark-500'
           }
+        />
+        <SummaryCard
+          label={t(`${b}.contactsAffected`, 'Contacts affected')}
+          value={summary.contacts_affected}
+          color="bg-information-50 border-information-200 text-information-700"
         />
       </div>
 

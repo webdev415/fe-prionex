@@ -133,9 +133,18 @@ describe('ContactTagAssignmentPreview', () => {
     expect(screen.queryByText(/contact records/i)).not.toBeInTheDocument()
   })
 
-  it('warns that a single-select assign replaces the current value', () => {
+  it('warns when the backend says a value will be destroyed', () => {
+    // Driven by replaces_existing, not by the category being single-select: a
+    // row that merely repeats the value already stored destroys nothing.
     const p = preview({
-      preview_rows: [row({ selection_type: 'single', category: 'Verification' })],
+      preview_rows: [
+        row({
+          selection_type: 'single',
+          category: 'Verification',
+          replaces_existing: true,
+          currently_assigned: ['Verified'],
+        }),
+      ],
     })
     render(
       <ContactTagAssignmentPreview
@@ -149,12 +158,14 @@ describe('ContactTagAssignmentPreview', () => {
       }
     )
     expect(screen.getByText(/will REPLACE the current value/i)).toBeInTheDocument()
+    expect(screen.getByText(/Replaces current value: Verified/i)).toBeInTheDocument()
   })
 
-  it('does not warn about replacement in remove mode', () => {
+  it('does not warn when a single-select row replaces nothing', () => {
     const p = preview({
-      mode: 'remove',
-      preview_rows: [row({ selection_type: 'single', category: 'Verification' })],
+      preview_rows: [
+        row({ selection_type: 'single', category: 'Verification', replaces_existing: false }),
+      ],
     })
     render(
       <ContactTagAssignmentPreview
@@ -313,6 +324,34 @@ describe('ContactTagAssignmentPreview', () => {
     )
     expect(screen.getByText('Duplicate rows overridden')).toBeInTheDocument()
     expect(screen.queryByText(/were discarded/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the no-change count, and the row counts reconcile to the total', () => {
+    // ready + no_change + invalid + overridden == total_rows, so an operator
+    // can confirm no row was silently dropped.
+    const p = preview({
+      summary: {
+        ...preview().summary,
+        total_rows: 15,
+        ready: 4,
+        no_change: 6,
+        invalid: 2,
+        duplicates_overridden: 3,
+      },
+    })
+    render(
+      <ContactTagAssignmentPreview
+        preview={p}
+        onConfirm={noop}
+        onCancel={noop}
+        isExecuting={false}
+      />,
+      { wrapper: createWrapper() }
+    )
+    expect(screen.getByText('Already up to date')).toBeInTheDocument()
+    expect(screen.getByText('6')).toBeInTheDocument()
+    const s = p.summary
+    expect(s.ready + s.no_change + s.invalid + s.duplicates_overridden).toBe(s.total_rows)
   })
 
   it('renders parser warnings', () => {

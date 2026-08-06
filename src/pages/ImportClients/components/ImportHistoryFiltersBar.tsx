@@ -287,6 +287,12 @@ export function ImportHistoryFiltersBar({
                         <SelectItem value="tag_assignment">
                           {t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
                         </SelectItem>
+                        <SelectItem value="contact_tag_assignment">
+                          {t(
+                            'pages.imports.history.importTypes.contactTagAssignment',
+                            'Contact tag assignment'
+                          )}
+                        </SelectItem>
                         <SelectItem value="payment_import">
                           {t('pages.imports.history.importTypes.paymentImport', 'Payment Import')}
                         </SelectItem>
@@ -418,6 +424,12 @@ export function ImportHistoryFiltersBar({
                     </SelectItem>
                     <SelectItem value="tag_assignment">
                       {t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
+                    </SelectItem>
+                    <SelectItem value="contact_tag_assignment">
+                      {t(
+                        'pages.imports.history.importTypes.contactTagAssignment',
+                        'Contact tag assignment'
+                      )}
                     </SelectItem>
                     <SelectItem value="payment_import">
                       {t('pages.imports.history.importTypes.paymentImport', 'Payment Import')}

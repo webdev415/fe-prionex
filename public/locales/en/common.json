@@ -3045,7 +3045,8 @@
             "replacesNamed": "Replaces current value: {{names}}"
           },
           "duplicatesOverridden": "Duplicate rows overridden",
-          "overriddenNotice": "{{count}} rows were discarded. A later row in the file names the same contact and category, and only the last row applies. To set several values at once, list them in one cell: \"Telegram,WhatsApp\"."
+          "overriddenNotice": "{{count}} rows were discarded. A later row in the file names the same contact and category, and only the last row applies. To set several values at once, list them in one cell: \"Telegram,WhatsApp\".",
+          "noChange": "Already up to date"
         },
         "progress": {
           "jobStarted": "Contact tag operation started"
