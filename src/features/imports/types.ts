@@ -14,6 +14,7 @@ export type ImportType =
   | 'operator_assignment'
   | 'payment_import'
   | 'tag_assignment'
+  | 'contact_tag_assignment'
   | 'sale_notes'
 
 // Mode for tag_assignment imports

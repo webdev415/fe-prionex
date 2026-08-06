@@ -171,6 +171,10 @@ export function ImportDetailsPage() {
 
   const isVendor = jobDetail?.import_type === 'vendor'
   const isTagAssignment = jobDetail?.import_type === 'tag_assignment'
+  // Contact tags create and update nothing at client level, so the generic
+  // "New / Updated clients" labels describe the wrong entity. The two counters
+  // are also in different units: rows applied vs contact records written.
+  const isContactTagAssignment = jobDetail?.import_type === 'contact_tag_assignment'
 
   // Convert API data to component format
   const importDetail = jobDetail
@@ -200,10 +204,19 @@ export function ImportDetailsPage() {
           jobDetail.progress_percentage !== undefined
             ? jobDetail.progress_percentage
             : jobDetail.status === 'cancelled' && jobDetail.total_rows > 0
-              ? Math.round(
-                  ((jobDetail.new_clients + jobDetail.updated_clients + jobDetail.errors_count) /
-                    jobDetail.total_rows) *
-                    100
+              ? // Contact tags report updated_clients in CONTACTS while the other
+                // two terms and the denominator are in rows, so including it can
+                // push a cancelled job past 100%. new_clients already carries the
+                // row-unit applied count for that import type.
+                Math.min(
+                  100,
+                  Math.round(
+                    ((jobDetail.new_clients +
+                      (isContactTagAssignment ? 0 : jobDetail.updated_clients) +
+                      jobDetail.errors_count) /
+                      jobDetail.total_rows) *
+                      100
+                  )
                 )
               : 0,
         processingRow: jobDetail.processing_row || 0,
@@ -360,7 +373,9 @@ export function ImportDetailsPage() {
                 {!isTagAssignment && (
                   <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                     <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                      {t('pages.imports.details.newClients')}
+                      {isContactTagAssignment
+                        ? t('pages.imports.details.rowsApplied', 'Rows Applied')
+                        : t('pages.imports.details.newClients')}
                     </span>
                     <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                       {importDetail.newClients.toLocaleString()}
@@ -372,7 +387,9 @@ export function ImportDetailsPage() {
                   <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                     {isTagAssignment
                       ? t('pages.imports.details.tagsApplied', 'Tags Applied')
-                      : t('pages.imports.details.updatedClients')}
+                      : isContactTagAssignment
+                        ? t('pages.imports.details.contactsTagged', 'Contacts Tagged')
+                        : t('pages.imports.details.updatedClients')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.updatedClients.toLocaleString()}

@@ -156,17 +156,24 @@ function ImportTypeBadge({
     },
   }
 
-  if (importType === 'tag_assignment') {
+  if (importType === 'tag_assignment' || importType === 'contact_tag_assignment') {
     const isRemove = tagMode === 'remove'
+    const isContact = importType === 'contact_tag_assignment'
+    const labels = {
+      remove: isContact
+        ? t('pages.imports.history.importTypes.contactTagRemoval', 'Contact tag removal')
+        : t('pages.imports.history.importTypes.tagRemoval', 'Tag removal'),
+      assign: isContact
+        ? t('pages.imports.history.importTypes.contactTagAssignment', 'Contact tag assignment')
+        : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment'),
+    }
     return (
       <span
         className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${
           isRemove ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
         }`}
       >
-        {isRemove
-          ? t('pages.imports.history.importTypes.tagRemoval', 'Tag removal')
-          : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
+        {isRemove ? labels.remove : labels.assign}
       </span>
     )
   }
@@ -588,6 +595,9 @@ export function ImportHistoryPage() {
     switch (importTypeFilter) {
       case 'tag_assignment':
         navigate('/dashboard/import/bulk-tag-assignment')
+        return
+      case 'contact_tag_assignment':
+        navigate('/dashboard/import/bulk-contact-tag-assignment')
         return
       case 'operator_assignment':
         navigate('/dashboard/import/bulk-operator-assignment')

@@ -150,8 +150,10 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
   const metadata = extractMetadata(backend.import_options)
   const importType =
     (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  // Both tag imports store the chosen mode the same way, so the badge can
+  // distinguish assign from remove for either one.
   const tagMode =
-    importType === 'tag_assignment'
+    importType === 'tag_assignment' || importType === 'contact_tag_assignment'
       ? (backend.import_options?.mode as TagAssignmentMode | undefined)
       : undefined
 
@@ -309,8 +311,10 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
   const status = mapStatus(backend.status)
   const importType =
     (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  // Both tag imports store the chosen mode the same way, so the badge can
+  // distinguish assign from remove for either one.
   const tagMode =
-    importType === 'tag_assignment'
+    importType === 'tag_assignment' || importType === 'contact_tag_assignment'
       ? (backend.import_options?.mode as TagAssignmentMode | undefined)
       : undefined
 
@@ -331,7 +335,17 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
       importType === 'tag_assignment' ? backend.successful_records : backend.updated_records,
     // For tag_assignment, the worker stores the unique successful client count
     // in updated_records (otherwise unused for this import type).
-    successful_clients: importType === 'tag_assignment' ? backend.updated_records : undefined,
+    //
+    // Contact tags use successful_records instead, which counts FILE ROWS. It
+    // sits beside total_rows and failed_records on the progress tiles, and
+    // updated_records there counts CONTACTS — one row can touch several, so
+    // mixing the two makes applied + failed exceed the total.
+    successful_clients:
+      importType === 'tag_assignment'
+        ? backend.updated_records
+        : importType === 'contact_tag_assignment'
+          ? backend.successful_records
+          : undefined,
     // Tag imports stash the validation summary on import_options.summary; the
     // unique_clients figure (distinct tax_ids in the file) is what we subtract
     // successful_clients from to get the "Failed" client count.

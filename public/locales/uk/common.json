@@ -42,6 +42,7 @@
     "bulkOperatorAssignment": "Масове призначення операторів",
     "bulkPaymentVerification": "Масова верифікація платежів",
     "bulkTagAssignment": "Масове призначення тегів",
+    "bulkContactTagAssignment": "Масове призначення тегів контактів",
     "bulkWriteoffImport": "Масовий імпорт списань",
     "bulkSaleNotesImport": "Масовий імпорт коментарів",
     "auditLogs": "Журнал аудиту",
@@ -2736,7 +2737,9 @@
           "writeoffImport": "Імпорт списань",
           "tagAssignment": "Призначення тегів",
           "tagRemoval": "Видалення тегів",
-          "saleNotes": "Нотатки про продаж"
+          "saleNotes": "Нотатки про продаж",
+          "contactTagAssignment": "Призначення тегів контактів",
+          "contactTagRemoval": "Видалення тегів контактів"
         },
         "uploadedBy": "Завантажено:",
         "view": "Перегляд",
@@ -2799,7 +2802,9 @@
           "failed": "Не вдалося",
           "pending": "Очікування",
           "cancelled": "Скасовано"
-        }
+        },
+        "rowsApplied": "Рядків застосовано",
+        "contactsTagged": "Контактів позначено"
       },
       "modal": {
         "lastImportSummary": "Підсумок останнього імпорту",
@@ -2968,6 +2973,83 @@
           "downloadErrors": "Завантажити помилки",
           "startNew": "Нова операція",
           "jobStarted": "Операцію з тегами запущено"
+        }
+      },
+      "contactTagAssignment": {
+        "title": "Масове призначення тегів контактів",
+        "viewHistory": "Історія імпорту",
+        "bannerInProgress": "Триває операція з тегами контактів",
+        "noProjectToast": "Оберіть проєкт перед завантаженням.",
+        "upload": {
+          "sectionTitle": "Завантажте файл тегів контактів",
+          "description": "Кожен рядок: tin, contact_value, category, tag. Комірка tag може містити кілька значень через кому, усі з категорії цього рядка.",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження…",
+          "modeLabel": "Операція",
+          "modeAssign": "Призначити значення",
+          "modeRemove": "Видалити значення",
+          "modeAssignHint": "Категорії з множинним вибором додають значення до наявних. Категорії з одиничним вибором замінюють поточне значення.",
+          "modeRemoveHint": "Видаляються лише вказані значення. Інші значення тієї самої категорії залишаються без змін.",
+          "clickToUpload": "Натисніть, щоб завантажити",
+          "orDragAndDrop": "або перетягніть файл",
+          "constraints": "CSV або Excel (.xlsx). Максимум 10 МБ, 10 000 рядків.",
+          "validating": "Перевірка файлу…",
+          "errors": {
+            "onlyCsvOrXlsx": "Приймаються лише файли CSV або Excel (.xlsx).",
+            "fileTooLarge": "Файл занадто великий ({{size}} МБ). Максимум — 10 МБ."
+          }
+        },
+        "preview": {
+          "title": "Перевірте операцію з тегами",
+          "fileInfo": "{{filename}} • {{totalRecords}} рядків • Пакет {{batchId}}",
+          "modeAssign": "Режим: призначення значень",
+          "modeRemove": "Режим: видалення значень",
+          "fanOutNotice": "{{rows}} рядків оновлять {{contacts}} контактних записів. Один і той самий номер може зберігатися кілька разів у клієнта, і оновлюється кожна копія.",
+          "replaceNotice": "{{count}} рядків стосуються категорій з одиничним вибором і ЗАМІНЯТЬ поточне значення. Попереднє значення зберігається лише в аудит-лозі.",
+          "readyToAssign": "Рядків до призначення",
+          "readyToRemove": "Рядків до видалення",
+          "contactsAffected": "Контактів зачіплено",
+          "invalid": "Некоректні",
+          "previewRows": "Попередній перегляд ({{count}} рядків)",
+          "emptyPreview": "Немає рядків для застосування.",
+          "errors": "Помилки ({{count}})",
+          "emptyErrors": "Помилок немає.",
+          "cancel": "Скасувати",
+          "starting": "Запуск…",
+          "confirmAssign": "Призначити {{count}} контактам",
+          "confirmRemove": "Видалити в {{count}} контактів",
+          "statuses": {
+            "ready": "Готово",
+            "noChange": "Без змін",
+            "contactNotFound": "Контакт не знайдено",
+            "tagNotFound": "Значення не знайдено",
+            "protected": "Потрібен дозвіл",
+            "system": "Системна категорія",
+            "multipleValuesSingleSelect": "Забагато значень",
+            "duplicate": "Дублікат",
+            "invalid": "Некоректний"
+          },
+          "columns": {
+            "rowNumber": "Рядок",
+            "contact": "Контакт",
+            "tinPrefix": "ІПН",
+            "category": "Категорія",
+            "singleSelect": "одиничний вибір",
+            "multiSelect": "множинний вибір",
+            "values": "Значення",
+            "unknownValueTitle": "Такого значення немає в цій категорії",
+            "contacts": "Контакти",
+            "fanOutTitle": "Цей номер зберігається {{count}} разів у цього клієнта. Оновлюються усі копії.",
+            "status": "Статус",
+            "note": "Примітка",
+            "replaces": "Замінює поточне значення в цій категорії",
+            "replacesNamed": "Замінює поточне значення: {{names}}"
+          },
+          "duplicatesOverridden": "Дублікатів рядків перезаписано",
+          "overriddenNotice": "{{count}} рядків відхилено. Пізніший рядок файлу вказує той самий контакт і категорію, і застосовується лише останній. Щоб задати кілька значень одразу, перелічіть їх в одній комірці: \"Telegram,WhatsApp\"."
+        },
+        "progress": {
+          "jobStarted": "Операцію з тегами розпочато"
         }
       },
       "bulkPaymentVerification": {
@@ -3381,7 +3463,6 @@
         "rrPenaltyTag": "штраф (тригер прострочення)",
         "rrNumPaymentsHint": "До {{max}} платежів.",
         "rrFrequency": "Періодичність платежів",
-        "rrFirstPaymentDate": "Дата першого платежу",
         "rrPeriodicityHint": "Графік нижче заповнюється автоматично на основі дати першого платежу, кількості платежів і періодичності. Ви можете відредагувати будь-який рядок.",
         "rrFrequencyManual": "Вручну (без автозаповнення)",
         "rrFrequencyOptions": {
