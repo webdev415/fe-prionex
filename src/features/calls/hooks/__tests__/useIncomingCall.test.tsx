@@ -39,6 +39,9 @@ describe('useIncomingCall', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getAccessToken).mockReturnValue('test-jwt-token')
+    // Several cases deliberately exercise the missing-answered_by path, which
+    // logs by design; keep the run output readable.
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -333,7 +336,8 @@ describe('useIncomingCall', () => {
         })
       })
 
-      // Leaving it open would show a live Answer button for a call already taken.
+      // Leaving it open would keep a call this operator can no longer take on
+      // screen, with nothing left to arrive that would close it.
       await waitFor(() => expect(result.current.incomingCall).toBeNull())
     })
 
@@ -465,8 +469,8 @@ describe('useIncomingCall', () => {
       const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
       await openPopup(result)
 
-      // The queue rang 1004 first, then this operator, who answered. Until the
-      // answering leg is adopted the record still says 1004 — reading that as
+      // The queue rang 2093 first, then this operator, who answered. Until the
+      // answering leg is adopted the record still says 2093 — reading that as
       // "who answered" would close the window of the person holding the call.
       act(() => {
         stateHandler()({
@@ -525,42 +529,51 @@ describe('useIncomingCall', () => {
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
     })
 
-    it('keeps the answering operator window when the extension is decorated', async () => {
-      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
-      await openPopup(result)
+    // The contract is a bare extension. If the emitter ever sends a channel
+    // instead, the operator holding the call must still be recognised as
+    // themselves — anything else closes the window of the person on the call.
+    // The suffixes are what make these realistic: a hex channel id on PJSIP, a
+    // context and leg number on Local.
+    const DECORATED = [
+      ['a PJSIP channel', (ext: string) => `PJSIP/${ext}-0000001a`],
+      ['a Local channel', (ext: string) => `Local/${ext}@from-queue-0001;2`],
+      ['a bare tech prefix', (ext: string) => `SIP/${ext}`],
+    ] as const
 
-      // The contract is a bare extension. If the emitter ever decorates it, an
-      // exact comparison would read "somebody else" and close the window of the
-      // operator holding the call — which, once answering works, is the live
-      // conversation.
-      act(() => {
-        stateHandler()({
-          event_type: 'call.state_changed',
-          timestamp: '',
-          data: {
-            call_id: 'shared-call',
-            state: 'ACTIVE',
-            answered_by: `SIP/${mockAgentExtension}`,
-          },
+    describe.each(DECORATED)('when answered_by arrives as %s', (_label, decorate) => {
+      it('keeps the window of the operator who answered', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: {
+              call_id: 'shared-call',
+              state: 'ACTIVE',
+              answered_by: decorate(mockAgentExtension),
+            },
+          })
         })
+
+        await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
       })
 
-      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
-    })
+      it('still closes the window when a colleague answered', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
 
-    it('still closes for colleagues when the extension is decorated', async () => {
-      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
-      await openPopup(result)
-
-      act(() => {
-        stateHandler()({
-          event_type: 'call.state_changed',
-          timestamp: '',
-          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: 'SIP/2094' },
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: decorate('2094') },
+          })
         })
-      })
 
-      await waitFor(() => expect(result.current.incomingCall).toBeNull())
+        await waitFor(() => expect(result.current.incomingCall).toBeNull())
+      })
     })
 
     it('leaves every window open when answered_by carries no extension', async () => {
@@ -576,6 +589,80 @@ describe('useIncomingCall', () => {
       })
 
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('leaves every window open when answered_by names a trunk, not an operator', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'ACTIVE',
+            answered_by: 'PJSIP/goip50056-line04-0000012a',
+          },
+        })
+      })
+
+      // A trunk is nobody's extension. Reading one as "a colleague answered"
+      // would close every window on the queue at once.
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('says so when an answered call carries no usable answered_by', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'RINGING', outcome: 'answered' },
+        })
+      })
+
+      // An emitter that never sends the field is indistinguishable from a call
+      // nobody answered, and both leave the window open. Only the log tells
+      // them apart.
+      expect(logged).toHaveBeenCalledWith(
+        expect.stringContaining('answered_by'),
+        expect.objectContaining({ call_id: 'shared-call' })
+      )
+      expect(result.current.hasIncomingCall).toBe(true)
+    })
+
+    it('suppresses a late screen-pop only briefly, not for the rest of the session', async () => {
+      vi.useFakeTimers()
+      try {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: '2094' },
+          })
+        })
+
+        const incoming = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+        act(() => incoming(popup()))
+        expect(result.current.hasIncomingCall).toBe(false)
+
+        // Long enough that this can only be a fresh offer of the same id, not
+        // the screen-pop that lost its race by a fraction of a second.
+        act(() => {
+          vi.advanceTimersByTime(60_000)
+        })
+        act(() => incoming(popup()))
+
+        expect(result.current.hasIncomingCall).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 })

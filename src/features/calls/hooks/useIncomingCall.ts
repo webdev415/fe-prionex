@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getAccessToken } from '@/lib/api'
-import { CALL_STATE_CHANGED_EVENT } from '../types'
-import { CallOutcome, CallState } from '../types'
+import { CALL_STATE_CHANGED_EVENT, CallOutcome, CallState } from '../types'
 import type { CallStateEvent, IncomingCallData, IncomingCallEvent } from '../types'
 
 const WS_URL =
@@ -11,30 +10,43 @@ const WS_URL =
 /**
  * How many recently-taken calls to remember, so a screen-pop that arrives after
  * the call was already answered elsewhere is ignored rather than opening a
- * window nothing will ever close. A queue rings a handful of members and the
- * entries matter for seconds, so this only needs to outlive one burst.
+ * window nothing will ever close.
  */
 const TAKEN_CALL_MEMORY = 32
 
 /**
- * Reduce an extension to the digits that identify it.
+ * How long that memory is allowed to suppress a screen-pop.
  *
- * The wire contract is a bare extension, but a decorated form would compare
- * unequal to the operator's own and close the window of whoever is holding the
- * call — and once answering works, that window is the live conversation. An
- * unrecognisable value yields null, which callers treat as "we don't know who
- * answered" and leave every window alone.
+ * It exists only to cover the screen-pop losing a race it should win by a
+ * comfortable margin — the pop waits on a cross-service client lookup, the
+ * state event does not. Without an expiry the entry outlives the call by hours,
+ * and a call_id that is ever offered to this operator again is silently
+ * swallowed. Bounded by count alone, a low-volume operator never evicts.
  */
-function extensionDigits(value: unknown): string | null {
+const TAKEN_CALL_TTL_MS = 30_000
+
+/**
+ * The extension inside an identifier that may or may not be decorated.
+ *
+ * The wire contract is a bare extension, but a decorated form compared as-is
+ * would read as "somebody else" and close the window of whoever is holding the
+ * call. Take the extension token, not every digit: `PJSIP/2094-0000001a`
+ * carries a hex channel suffix, and stripping non-digits would fold it into
+ * `20940000001`, matching nobody. A value with no leading extension — a trunk
+ * like `PJSIP/goip50056-line04`, or anything unparsed — yields null, which
+ * callers treat as "we don't know who answered" and leave every window alone.
+ */
+const EXTENSION_PATTERN = /^(?:[A-Za-z0-9]+\/)?(\d+)/
+
+function extensionOf(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  const digits = value.replace(/\D/g, '')
-  return digits === '' ? null : digits
+  return EXTENSION_PATTERN.exec(value)?.[1] ?? null
 }
 
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
-  const takenByOthersRef = useRef<Set<string>>(new Set())
+  const takenByOthersRef = useRef<Map<string, number>>(new Map())
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
@@ -84,13 +96,37 @@ export function useIncomingCall(agentExtension: string | null) {
       setIncomingCall((current) => (current && current.call_id !== callId ? current : null))
     }
 
+    const rememberTakenByOther = (callId: string) => {
+      const seen = takenByOthersRef.current
+      const now = Date.now()
+      for (const [id, at] of seen) {
+        if (now - at > TAKEN_CALL_TTL_MS) seen.delete(id)
+      }
+      seen.set(callId, now)
+      // Map iterates in insertion order, so the first key is the oldest.
+      while (seen.size > TAKEN_CALL_MEMORY) {
+        seen.delete(seen.keys().next().value!)
+      }
+    }
+
+    const wasTakenByOther = (callId?: string) => {
+      if (!callId) return false
+      const at = takenByOthersRef.current.get(callId)
+      if (at === undefined) return false
+      if (Date.now() - at > TAKEN_CALL_TTL_MS) {
+        takenByOthersRef.current.delete(callId)
+        return false
+      }
+      return true
+    }
+
     // Listen for incoming call events
     const handleIncomingCall = (event: IncomingCallEvent) => {
       // The screen-pop carries enriched client data and so can be emitted after
       // the bare state event. If a colleague already took this call, opening a
       // window now would strand it: the events that would have closed it have
       // been and gone.
-      if (takenByOthersRef.current.has(event.data?.call_id)) return
+      if (wasTakenByOther(event.data?.call_id)) return
       setIncomingCall(event.data)
     }
 
@@ -99,8 +135,10 @@ export function useIncomingCall(agentExtension: string | null) {
       const state = event.data?.state?.toUpperCase()
       const callId = event.data?.call_id
 
-      // Dismiss popup when call is completed, failed, or cancelled
-      if (state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
+      // Dismiss popup when the call is over. 'CANCELLED' is not in `CallState`
+      // and the backend cannot emit it; it is kept as a literal so a future
+      // state by that name is still treated as terminal rather than ignored.
+      if (state === CallState.COMPLETED || state === CallState.FAILED || state === 'CANCELLED') {
         dismissIfSameCall(callId)
         return
       }
@@ -123,17 +161,22 @@ export function useIncomingCall(agentExtension: string | null) {
         // leg is adopted — so falling back to it would close the window of
         // whoever is actually holding the call. Absent means the answerer is
         // unknown, and nobody's window should close on a guess.
-        const answeredBy = extensionDigits(event.data?.answered_by)
-        const mine = extensionDigits(agentExtension)
+        const answeredBy = extensionOf(event.data?.answered_by)
+        const mine = extensionOf(agentExtension)
         const someoneElseAnswered = answeredBy !== null && mine !== null && answeredBy !== mine
         if (someoneElseAnswered) {
-          if (callId) {
-            takenByOthersRef.current.add(callId)
-            if (takenByOthersRef.current.size > TAKEN_CALL_MEMORY) {
-              takenByOthersRef.current.delete(takenByOthersRef.current.values().next().value!)
-            }
-          }
+          if (callId) rememberTakenByOther(callId)
           dismissIfSameCall(callId)
+        } else if (answeredBy === null) {
+          // Keeping every window open is the safe reading, but it is also what
+          // an emitter that never sends the field looks like — identical, and
+          // otherwise completely silent. This is the only thing that tells a
+          // broken contract apart from an answerer we genuinely cannot name.
+          console.error(
+            '[useIncomingCall] call answered but answered_by is missing or unparseable; ' +
+              'no window will close',
+            { call_id: callId, answered_by: event.data?.answered_by }
+          )
         }
       }
     }
