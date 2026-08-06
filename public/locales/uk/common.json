@@ -4955,7 +4955,8 @@
         "stepValuePlaceholder": "Пошук…",
         "lastInteractionResultSearchPlaceholder": "Пошук...",
         "stepValueUnsupported": "Для цього кроку фільтр за значенням недоступний.",
-        "selectedCount": "Вибрано: {{count}}"
+        "selectedCount": "Вибрано: {{count}}",
+        "onlyLastChain": "Тільки остання взаємодія"
       },
       "statuses": {
         "active": "Активний",

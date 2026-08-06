@@ -4944,7 +4944,8 @@
         "stepValuePlaceholder": "Search…",
         "lastInteractionResultSearchPlaceholder": "Search...",
         "stepValueUnsupported": "No value filter available for this step.",
-        "selectedCount": "{{count}} selected"
+        "selectedCount": "{{count}} selected",
+        "onlyLastChain": "Only the last interaction"
       },
       "statuses": {
         "active": "Active",
