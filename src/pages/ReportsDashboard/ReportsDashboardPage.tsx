@@ -201,36 +201,6 @@ function DashboardTab() {
     })
   }
 
-  // Check token expiry in useEffect to avoid impure operations during render
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      const token = localStorage.getItem(SESSION.TOKEN_KEY)
-
-      // Decode and check token expiry
-      if (token) {
-        try {
-          const base64Url = token.split('.')[1]
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-          const payload = JSON.parse(atob(base64))
-          const now = Math.floor(Date.now() / 1000)
-          const isExpired = payload.exp && payload.exp < now
-
-          if (isExpired) {
-            console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
-            // Clear expired token
-            localStorage.removeItem(SESSION.TOKEN_KEY)
-            // Force logout
-            setTimeout(() => {
-              window.location.href = '/login'
-            }, 1000)
-          }
-        } catch (e) {
-          console.error('[ReportsDashboard] Failed to decode token:', e)
-        }
-      }
-    }
-  }, [isAuthenticated, projectId, user])
-
   // Check if user is authenticated
   if (!isAuthenticated || !user) {
     return (
@@ -283,11 +253,11 @@ function DashboardTab() {
 
   return (
     <div className="flex flex-1 flex-col items-start gap-4 self-stretch sm:gap-5">
-      {/* Page Header */}
+      {/* Tab header: period tabs + export. The page title (h1) lives in the
+          tab host so it renders on every tab; an empty first grid cell keeps
+          the PeriodTabs centered on lg screens. */}
       <div className="flex flex-col gap-3 self-stretch lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4">
-        <span className="text-foreground text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl lg:justify-self-start">
-          {t('pages.reports.title')}
-        </span>
+        <div className="hidden lg:block" aria-hidden />
         <div className="flex w-full justify-center lg:w-auto">
           <div className="bg-card flex w-full max-w-md items-center justify-center gap-1 rounded-lg p-1 shadow-sm sm:w-auto sm:max-w-none">
             <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
@@ -468,8 +438,42 @@ export function ReportsDashboardPage() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
+
   const rawTab = searchParams.get('tab')
   const activeTab: ReportsTab = rawTab === 'processing' ? 'processing' : 'dashboard'
+
+  // DEV-only token expiry check, at the host level so it covers every tab.
+  // Kept in useEffect to avoid impure operations during render.
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const token = localStorage.getItem(SESSION.TOKEN_KEY)
+
+      // Decode and check token expiry
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const payload = JSON.parse(atob(base64))
+          const now = Math.floor(Date.now() / 1000)
+          const isExpired = payload.exp && payload.exp < now
+
+          if (isExpired) {
+            console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
+            // Clear expired token
+            localStorage.removeItem(SESSION.TOKEN_KEY)
+            // Force logout
+            setTimeout(() => {
+              window.location.href = '/login'
+            }, 1000)
+          }
+        } catch (e) {
+          console.error('[ReportsDashboard] Failed to decode token:', e)
+        }
+      }
+    }
+  }, [isAuthenticated, user])
 
   const handleTabChange = (tab: ReportsTab) => {
     const next = new URLSearchParams(searchParams)
@@ -481,6 +485,11 @@ export function ReportsDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 self-stretch">
+      {/* Page title — shared by every tab */}
+      <h1 className="text-foreground text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+        {t('pages.reports.title')}
+      </h1>
+
       {/* Tab strip */}
       <div className="border-border self-stretch border-b">
         <div className="-mb-px flex flex-wrap items-center gap-1" role="tablist">

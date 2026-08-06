@@ -10,22 +10,37 @@ export type {
   ProcessingReportResponse,
 } from '../api/types'
 
-/** Department sub-tab ids (stable, URL-safe; labels come from i18n). */
-export const PROCESSING_DEPARTMENT_TABS = ['tp', 'dialer', 'collection'] as const
-
-export type ProcessingDepartmentTab = (typeof PROCESSING_DEPARTMENT_TABS)[number]
+/**
+ * One department sub-tab.
+ *
+ * `id` is the URL-safe value stored in `?dept=` (stable slug for known
+ * departments, the raw backend name otherwise); `departmentName` is the exact
+ * `department_name` string rows are filtered by; `labelKey` is set only for
+ * known departments (display mapping lives in i18n — e.g. «Стягнення» shows
+ * as "Collection" in en), unknown departments display their raw name.
+ */
+export interface DepartmentTabDef {
+  id: string
+  departmentName: string
+  labelKey?: string
+}
 
 /**
- * Sub-tab → backend `department_name` value. The backend stores department
- * names in Ukrainian ("Стягнення" is shown as «Взыск» in the TF reference UI),
- * so the filter compares against those exact strings.
+ * Known departments in canonical display order (ТП → Дайлер → Стягнення).
+ * Sub-tabs are otherwise built dynamically from the response's distinct
+ * `department_name` values, so renaming/adding a department on the backend
+ * shows up as a tab instead of silently losing rows.
  */
-export const PROCESSING_TAB_TO_DEPARTMENT: Record<ProcessingDepartmentTab, string> = {
-  tp: 'ТП',
-  dialer: 'Дайлер',
-  collection: 'Стягнення',
-}
-
-export function isProcessingDepartmentTab(value: string | null): value is ProcessingDepartmentTab {
-  return value !== null && (PROCESSING_DEPARTMENT_TABS as readonly string[]).includes(value)
-}
+export const KNOWN_DEPARTMENT_TABS: DepartmentTabDef[] = [
+  { id: 'tp', departmentName: 'ТП', labelKey: 'pages.reports.processing.departments.tp' },
+  {
+    id: 'dialer',
+    departmentName: 'Дайлер',
+    labelKey: 'pages.reports.processing.departments.dialer',
+  },
+  {
+    id: 'collection',
+    departmentName: 'Стягнення',
+    labelKey: 'pages.reports.processing.departments.collection',
+  },
+]

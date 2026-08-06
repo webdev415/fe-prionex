@@ -13,15 +13,12 @@ export {
   type UseClientProcessingReportParams,
 } from './hooks'
 export { getClientProcessingReport } from './api/clientProcessingApi'
-export {
-  PROCESSING_DEPARTMENT_TABS,
-  PROCESSING_TAB_TO_DEPARTMENT,
-  isProcessingDepartmentTab,
-} from './types'
+export { KNOWN_DEPARTMENT_TABS } from './types'
 export type {
-  ProcessingDepartmentTab,
+  DepartmentTabDef,
   ProcessingReportParams,
   ProcessingReportRow,
   ProcessingReportResponse,
 } from './types'
+export { buildDepartmentTabs, resolveActiveDepartmentTab } from './utils/departmentTabs'
 export { formatPercent, gradientRedToGreen, percentCellBackground } from './utils/percentGradient'

@@ -8255,6 +8255,7 @@
           "percent": "%"
         },
         "empty": "No data for the selected period",
+        "invalidRange": "Start date is later than end date",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",

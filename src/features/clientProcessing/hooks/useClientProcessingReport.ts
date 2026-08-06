@@ -40,9 +40,12 @@ export function useClientProcessingReport({
     placeholderData: keepPreviousData,
     enabled: enabled && !!projectId && !!dateStart && !!dateEnd,
     staleTime: 60_000,
-    // No query-level retry: the axios layer already retries transient
-    // 502/503/504 GETs, and 4xx/503 responses should surface immediately
-    // (503 has a dedicated "employee data unavailable" message).
+    // No query-level retry: the axios client (src/lib/api.ts) already retries
+    // transient 502/503/504 and network failures on GET requests twice with
+    // backoff (~1.5s total). An error reaching React Query has therefore
+    // either survived those retries or is non-transient (4xx) — retrying
+    // again here would only delay the error state (which has its own
+    // user-facing "temporarily unavailable" message + Retry button).
     retry: false,
   })
 }

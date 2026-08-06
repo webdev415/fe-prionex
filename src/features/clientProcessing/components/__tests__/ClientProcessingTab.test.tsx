@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -20,10 +20,26 @@ vi.mock('@/stores/authStore', () => ({
     }),
 }))
 
-// The real DateSelect drags react-datepicker into jsdom; the tab tests only
-// exercise filtering/error states, so a light stub keeps them focused.
+// The real DateSelect drags react-datepicker into jsdom; a functional stub
+// keeps the tests focused while still driving value/onChange like the real
+// component (onChange receives a Date or null, mirroring DateSelect's API).
 vi.mock('@/components/ui/DateSelect', () => ({
-  DateSelect: () => <input data-testid="date-select" readOnly />,
+  DateSelect: ({
+    value,
+    onChange,
+  }: {
+    value?: string | Date | null
+    onChange?: (args: { value: Date | null }) => void
+  }) => (
+    <input
+      data-testid="date-select"
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) =>
+        // Noon avoids the parsed UTC date rolling into the previous local day
+        onChange?.({ value: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })
+      }
+    />
+  ),
 }))
 
 const mockGetReport = vi.mocked(getClientProcessingReport)
@@ -55,6 +71,14 @@ function makeResponse(rows: ProcessingReportRow[]): ProcessingReportResponse {
     rows,
     generated_at: '2026-08-06T12:00:00Z',
   }
+}
+
+/** Error shaped like an AxiosError so lib/errors' getErrorStatus reads the status. */
+function makeHttpError(status: number) {
+  return Object.assign(new Error(`HTTP ${status}`), {
+    isAxiosError: true,
+    response: { status },
+  })
 }
 
 function renderTab() {
@@ -115,6 +139,32 @@ describe('ClientProcessingTab', () => {
     expect(mockGetReport).toHaveBeenCalledTimes(1)
   })
 
+  it('builds an extra sub-tab for unknown department names from the response', async () => {
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow(),
+        makeRow({ employee_id: 2, full_name: 'Новенко Новак', department_name: 'Новий відділ' }),
+      ])
+    )
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+
+    // The unknown department shows up as a tab labelled by its raw name,
+    // after the three known tabs
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'pages.reports.processing.departments.tp',
+      'pages.reports.processing.departments.dialer',
+      'pages.reports.processing.departments.collection',
+      'Новий відділ',
+    ])
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Новий відділ' }))
+    expect(await screen.findByText('Новенко Новак')).toBeInTheDocument()
+    expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
+  })
+
   it('formats percents as XX.XX% in the table', async () => {
     mockGetReport.mockResolvedValue(makeResponse([makeRow({ percent_processed: 76.6 })]))
 
@@ -131,11 +181,45 @@ describe('ClientProcessingTab', () => {
     expect(await screen.findByText('pages.reports.processing.empty')).toBeInTheDocument()
   })
 
+  it('blocks the request and shows an inline hint for an inverted date range', async () => {
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+
+    // Manual input can bypass the pickers' min/max — set start far after end
+    const [startInput] = screen.getAllByTestId('date-select')
+    fireEvent.change(startInput, { target: { value: '2030-01-05' } })
+
+    expect(await screen.findByText('pages.reports.processing.invalidRange')).toBeInTheDocument()
+    // The table is hidden and no request was issued for the inverted range
+    expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+  })
+
+  it('restores the previous date when a manual input is cleared', async () => {
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+
+    const [startInput] = screen.getAllByTestId('date-select')
+    const initialValue = (startInput as HTMLInputElement).value
+    expect(initialValue).not.toBe('')
+
+    fireEvent.change(startInput, { target: { value: '' } })
+
+    // The field resyncs to the kept filter value instead of staying empty
+    const [resyncedInput] = screen.getAllByTestId('date-select')
+    expect((resyncedInput as HTMLInputElement).value).toBe(initialValue)
+    // Filter state unchanged — no new request
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+  })
+
   it('shows an error state with retry and recovers after a successful refetch', async () => {
     mockGetReport
-      .mockRejectedValueOnce(
-        Object.assign(new Error('Server error'), { response: { status: 500 } })
-      )
+      .mockRejectedValueOnce(makeHttpError(500))
       .mockResolvedValueOnce(makeResponse([makeRow()]))
 
     renderTab()
@@ -149,13 +233,14 @@ describe('ClientProcessingTab', () => {
     expect(await screen.findByText('Іваненко Іван')).toBeInTheDocument()
   })
 
-  it('shows the dedicated unavailability message on 503', async () => {
-    mockGetReport.mockRejectedValue(
-      Object.assign(new Error('Service unavailable'), { response: { status: 503 } })
-    )
+  it.each([502, 503, 504])(
+    'shows the dedicated unavailability message on transient %d errors',
+    async (status) => {
+      mockGetReport.mockRejectedValue(makeHttpError(status))
 
-    renderTab()
+      renderTab()
 
-    expect(await screen.findByText('pages.reports.processing.unavailable')).toBeInTheDocument()
-  })
+      expect(await screen.findByText('pages.reports.processing.unavailable')).toBeInTheDocument()
+    }
+  )
 })

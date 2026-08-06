@@ -23,7 +23,9 @@ export const api = axios.create({
 // endpoints don't yet have idempotency keys — a retried POST would risk
 // double-writes. Mutation-level retry is configured separately in main.tsx
 // (network-error only, count=1) where the React Query layer can deduplicate.
-const TRANSIENT_RETRY_STATUSES = new Set([502, 503, 504])
+// Exported so feature code can classify the same statuses as "transient
+// backend unavailability" when choosing user-facing error messages.
+export const TRANSIENT_RETRY_STATUSES = new Set([502, 503, 504])
 const TRANSIENT_RETRY_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ERR_NETWORK'])
 const TRANSIENT_RETRY_MAX = 2
 const TRANSIENT_RETRY_BASE_MS = 500

@@ -3,8 +3,9 @@
  *
  * "Відпрацювання за ЦД" report tab for the Reports page: a date-range filter
  * (defaults to today–today, matching the backend default window), department
- * sub-tabs (ТП / Дайлер / Стягнення — filtered on the client by
- * `department_name`, one request per period), and the per-employee table.
+ * sub-tabs built dynamically from the response's `department_name` values
+ * (one request per period, client-side filtering), and the per-employee
+ * table.
  *
  * The active department lives in the URL (`?dept=…`) so refresh/bookmark
  * keeps the selection, following the tab-state-in-URL convention.
@@ -15,17 +16,15 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { SegmentedTabs, type SegmentedTabItem } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { TRANSIENT_RETRY_STATUSES } from '@/lib/api'
+import { getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useClientProcessingReport } from '../hooks'
-import {
-  PROCESSING_DEPARTMENT_TABS,
-  PROCESSING_TAB_TO_DEPARTMENT,
-  isProcessingDepartmentTab,
-} from '../types'
+import { buildDepartmentTabs, resolveActiveDepartmentTab } from '../utils/departmentTabs'
 import { ProcessingTable } from './ProcessingTable'
 
 export function ClientProcessingTab() {
@@ -46,27 +45,51 @@ export function ClientProcessingTab() {
   const [dateEnd, setDateEnd] = useState<string>(() =>
     getDateStringInTimezone(new Date(), userTimezone)
   )
+  // Bumped when a manual date input is cleared: remounting the DateSelects
+  // resyncs them back to the kept state values, so the field never looks
+  // empty while the filter is still active.
+  const [dateSyncNonce, setDateSyncNonce] = useState(0)
 
-  const rawDept = searchParams.get('dept')
-  const activeDept = isProcessingDepartmentTab(rawDept) ? rawDept : 'tp'
+  const handleDateChange =
+    (setter: (value: string) => void) =>
+    ({ value }: { value: Date | null }) => {
+      if (value) setter(formatPickerDateAsYMD(value))
+      else setDateSyncNonce((nonce) => nonce + 1)
+    }
 
-  const handleDeptChange = (dept: (typeof PROCESSING_DEPARTMENT_TABS)[number]) => {
+  // ISO YYYY-MM-DD strings compare correctly as strings. Manual input can
+  // bypass the pickers' min/max, so an inverted range must not reach the API.
+  const isRangeInvalid = dateStart > dateEnd
+
+  const query = useClientProcessingReport({
+    projectId,
+    dateStart,
+    dateEnd,
+    enabled: !isRangeInvalid,
+  })
+
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data])
+  const departmentTabs = useMemo(() => buildDepartmentTabs(rows), [rows])
+  const activeTab = resolveActiveDepartmentTab(departmentTabs, searchParams.get('dept'))
+
+  const handleDeptChange = (deptId: string) => {
     const next = new URLSearchParams(searchParams)
-    next.set('dept', dept)
+    next.set('dept', deptId)
     setSearchParams(next, { replace: true })
   }
 
-  const query = useClientProcessingReport({ projectId, dateStart, dateEnd })
+  const tabItems: SegmentedTabItem<string>[] = departmentTabs.map((tab) => ({
+    id: tab.id,
+    label: tab.labelKey ? t(tab.labelKey) : tab.departmentName,
+  }))
 
   const filteredRows = useMemo(
-    () =>
-      (query.data?.rows ?? []).filter(
-        (row) => row.department_name === PROCESSING_TAB_TO_DEPARTMENT[activeDept]
-      ),
-    [query.data, activeDept]
+    () => rows.filter((row) => row.department_name === activeTab.departmentName),
+    [rows, activeTab.departmentName]
   )
 
-  const errorStatus = (query.error as { response?: { status?: number } } | null)?.response?.status
+  const errorStatus = getErrorStatus(query.error)
+  const isTransientlyUnavailable = errorStatus !== null && TRANSIENT_RETRY_STATUSES.has(errorStatus)
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -77,11 +100,10 @@ export function ClientProcessingTab() {
             {t('pages.reports.processing.dateFrom')}
           </span>
           <DateSelect
+            key={`processing-date-start-${dateSyncNonce}`}
             value={dateStart}
             max={dateEnd}
-            onChange={({ value }) => {
-              if (value) setDateStart(formatPickerDateAsYMD(value))
-            }}
+            onChange={handleDateChange(setDateStart)}
             allowManualInput
             format="dd.MM.yyyy"
             className="w-full min-w-0 sm:w-44"
@@ -92,53 +114,38 @@ export function ClientProcessingTab() {
             {t('pages.reports.processing.dateTo')}
           </span>
           <DateSelect
+            key={`processing-date-end-${dateSyncNonce}`}
             value={dateEnd}
             min={dateStart}
-            onChange={({ value }) => {
-              if (value) setDateEnd(formatPickerDateAsYMD(value))
-            }}
+            onChange={handleDateChange(setDateEnd)}
             allowManualInput
             format="dd.MM.yyyy"
             className="w-full min-w-0 sm:w-44"
           />
         </div>
+        {isRangeInvalid && (
+          <p className="text-error-500 w-full text-xs font-medium" role="alert">
+            {t('pages.reports.processing.invalidRange')}
+          </p>
+        )}
       </div>
 
-      {/* Department sub-tabs */}
-      <div
-        role="tablist"
-        className="bg-card flex w-full items-center gap-1 rounded-lg p-1 shadow-sm sm:w-fit"
-      >
-        {PROCESSING_DEPARTMENT_TABS.map((dept) => {
-          const isActive = dept === activeDept
-          return (
-            <button
-              key={dept}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => handleDeptChange(dept)}
-              className={cn(
-                'flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:w-[120px] sm:flex-none sm:px-4 sm:text-sm',
-                isActive
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'bg-card text-muted-foreground hover:bg-muted'
-              )}
-            >
-              {t(`pages.reports.processing.departments.${dept}`)}
-            </button>
-          )
-        })}
-      </div>
+      {/* Department sub-tabs (dynamic: known departments + any others found in data) */}
+      <SegmentedTabs<string>
+        items={tabItems}
+        value={activeTab.id}
+        onChange={handleDeptChange}
+        ariaLabel={t('pages.reports.tabs.processing')}
+      />
 
-      {/* Content: skeleton / error / table */}
-      {query.isLoading ? (
+      {/* Content: invalid range shows only the hint above */}
+      {isRangeInvalid ? null : query.isLoading ? (
         <TableSkeleton columns={9} rows={6} />
       ) : query.isError ? (
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />
           <p className="text-foreground text-center text-sm font-medium">
-            {errorStatus === 503
+            {isTransientlyUnavailable
               ? t('pages.reports.processing.unavailable')
               : t('pages.reports.processing.error.title')}
           </p>
