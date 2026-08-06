@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getAccessToken } from '@/lib/api'
 import { CALL_STATE_CHANGED_EVENT } from '../types'
+import { CallOutcome, CallState } from '../types'
 import type { CallStateEvent, IncomingCallData, IncomingCallEvent } from '../types'
 
 const WS_URL =
@@ -58,11 +59,14 @@ export function useIncomingCall(agentExtension: string | null) {
 
     const socket = socketRef.current
 
-    /** Close the window only if the event is about the call it is showing. */
+    /**
+     * Close the window only if the event is about the call it is showing.
+     * An event with no `call_id` names no call, so it closes nothing — the same
+     * bias as the rest of this handler, which never acts on an ambiguous event.
+     */
     const dismissIfSameCall = (callId?: string) => {
-      setIncomingCall((current) =>
-        current && callId && current.call_id !== callId ? current : null
-      )
+      if (!callId) return
+      setIncomingCall((current) => (current && current.call_id !== callId ? current : null))
     }
 
     // Listen for incoming call events
@@ -94,13 +98,17 @@ export function useIncomingCall(agentExtension: string | null) {
       // `agent_extension`, and `agentExtension` is `authUser.asterisk_extension`.
       // A decorated form on either side would make the answering operator's own
       // window vanish instead, so this is a contract rather than a coincidence.
-      // Both signals matter. `state` only reaches ACTIVE on a later Newstate
-      // from the answering leg, whereas `outcome` is set the instant the answer
-      // is seen — so waiting for ACTIVE alone would leave everyone else's window
-      // open for the whole conversation.
-      const taken = state === 'ACTIVE' || event.data?.outcome === 'answered'
+      // `state` only reaches ACTIVE on a later Newstate from the answering leg,
+      // so waiting for it would leave everyone else's window open for the whole
+      // conversation. The answer itself is visible earlier, on the outcome.
+      const taken = state === CallState.ACTIVE || event.data?.outcome === CallOutcome.ANSWERED
       if (taken) {
-        const answeredBy = event.data?.agent_extension
+        // Only `answered_by`, never `agent_extension`. The latter is the
+        // record's current agent — the first-rung operator until the answering
+        // leg is adopted — so falling back to it would close the window of
+        // whoever is actually holding the call. Absent means the answerer is
+        // unknown, and nobody's window should close on a guess.
+        const answeredBy = event.data?.answered_by
         const someoneElseAnswered = typeof answeredBy === 'string' && answeredBy !== agentExtension
         if (someoneElseAnswered) {
           if (callId) {

@@ -329,7 +329,7 @@ describe('useIncomingCall', () => {
         stateHandler()({
           event_type: 'call.state_changed',
           timestamp: '',
-          data: { call_id: 'shared-call', state: 'ACTIVE', agent_extension: '2094' },
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: '2094' },
         })
       })
 
@@ -380,7 +380,7 @@ describe('useIncomingCall', () => {
         stateHandler()({
           event_type: 'call.state_changed',
           timestamp: '',
-          data: { call_id: 'a-different-call', state: 'ACTIVE', agent_extension: '2094' },
+          data: { call_id: 'a-different-call', state: 'ACTIVE', answered_by: '2094' },
         })
       })
 
@@ -414,7 +414,7 @@ describe('useIncomingCall', () => {
         stateHandler()({
           event_type: 'call.state_changed',
           timestamp: '',
-          data: { call_id: 'shared-call', state: 'ACTIVE', agent_extension: '2094' },
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: '2094' },
         })
       })
 
@@ -438,7 +438,7 @@ describe('useIncomingCall', () => {
             call_id: 'shared-call',
             state: 'RINGING',
             outcome: 'answered',
-            agent_extension: '2094',
+            answered_by: '2094',
           },
         })
       })
@@ -454,7 +454,71 @@ describe('useIncomingCall', () => {
         stateHandler()({
           event_type: 'call.state_changed',
           timestamp: '',
-          data: { call_id: 'shared-call', state: 'RINGING', agent_extension: '2094' },
+          data: { call_id: 'shared-call', state: 'RINGING', answered_by: '2094' },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it("does not close the answerer's own window when the record still names the first leg", async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // The queue rang 1004 first, then this operator, who answered. Until the
+      // answering leg is adopted the record still says 1004 — reading that as
+      // "who answered" would close the window of the person holding the call.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'RINGING',
+            outcome: 'answered',
+            // Stale: the queue rang 2093 first; this operator answered.
+            agent_extension: '2093',
+            answered_by: mockAgentExtension,
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('leaves every window open when the answerer cannot be identified', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // No answered_by: somebody picked up but the channel did not parse.
+      // Guessing here would close the wrong window.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'RINGING',
+            outcome: 'answered',
+            // Names a colleague, but only as the record's current agent — which
+            // is the first-rung leg, not necessarily who picked up.
+            agent_extension: '2093',
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('closes nothing when the event names no call', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { state: 'COMPLETED' },
         })
       })
 
