@@ -109,6 +109,11 @@ export interface CallStateEventData {
   total_duration?: number
   hangup_cause?: number
   /**
+   * Set as soon as the answer is seen, ahead of `state` reaching ACTIVE — so
+   * this, not `state`, is what tells you a call has been taken.
+   */
+  outcome?: string | null
+  /**
    * The agent associated with the call — but its meaning depends on `state`.
    * On `ACTIVE` it is whoever answered; while `RINGING` it is only whoever was
    * rung first. Every rung operator receives this event, so it is what lets a

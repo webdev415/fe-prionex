@@ -94,7 +94,12 @@ export function useIncomingCall(agentExtension: string | null) {
       // `agent_extension`, and `agentExtension` is `authUser.asterisk_extension`.
       // A decorated form on either side would make the answering operator's own
       // window vanish instead, so this is a contract rather than a coincidence.
-      if (state === 'ACTIVE') {
+      // Both signals matter. `state` only reaches ACTIVE on a later Newstate
+      // from the answering leg, whereas `outcome` is set the instant the answer
+      // is seen — so waiting for ACTIVE alone would leave everyone else's window
+      // open for the whole conversation.
+      const taken = state === 'ACTIVE' || event.data?.outcome === 'answered'
+      if (taken) {
         const answeredBy = event.data?.agent_extension
         const someoneElseAnswered = typeof answeredBy === 'string' && answeredBy !== agentExtension
         if (someoneElseAnswered) {

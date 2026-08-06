@@ -423,5 +423,42 @@ describe('useIncomingCall', () => {
 
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(false))
     })
+
+    it('closes on the answer signal even while the state still says ringing', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // This is what the backend actually emits at DialEnd(ANSWER): the outcome
+      // is already 'answered' but the record has not reached ACTIVE yet.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'RINGING',
+            outcome: 'answered',
+            agent_extension: '2094',
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.incomingCall).toBeNull())
+    })
+
+    it('stays open while ringing with no answer recorded', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'RINGING', agent_extension: '2094' },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
   })
 })
