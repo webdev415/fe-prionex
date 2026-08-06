@@ -348,7 +348,7 @@ describe('useIncomingCall', () => {
           data: {
             call_id: 'shared-call',
             state: 'ACTIVE',
-            agent_extension: mockAgentExtension,
+            answered_by: mockAgentExtension,
           },
         })
       })
@@ -519,6 +519,59 @@ describe('useIncomingCall', () => {
           event_type: 'call.state_changed',
           timestamp: '',
           data: { state: 'COMPLETED' },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('keeps the answering operator window when the extension is decorated', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // The contract is a bare extension. If the emitter ever decorates it, an
+      // exact comparison would read "somebody else" and close the window of the
+      // operator holding the call — which, once answering works, is the live
+      // conversation.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'ACTIVE',
+            answered_by: `SIP/${mockAgentExtension}`,
+          },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('still closes for colleagues when the extension is decorated', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: 'SIP/2094' },
+        })
+      })
+
+      await waitFor(() => expect(result.current.incomingCall).toBeNull())
+    })
+
+    it('leaves every window open when answered_by carries no extension', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: 'unknown' },
         })
       })
 

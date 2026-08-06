@@ -16,6 +16,21 @@ const WS_URL =
  */
 const TAKEN_CALL_MEMORY = 32
 
+/**
+ * Reduce an extension to the digits that identify it.
+ *
+ * The wire contract is a bare extension, but a decorated form would compare
+ * unequal to the operator's own and close the window of whoever is holding the
+ * call — and once answering works, that window is the live conversation. An
+ * unrecognisable value yields null, which callers treat as "we don't know who
+ * answered" and leave every window alone.
+ */
+function extensionDigits(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const digits = value.replace(/\D/g, '')
+  return digits === '' ? null : digits
+}
+
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
@@ -108,8 +123,9 @@ export function useIncomingCall(agentExtension: string | null) {
         // leg is adopted — so falling back to it would close the window of
         // whoever is actually holding the call. Absent means the answerer is
         // unknown, and nobody's window should close on a guess.
-        const answeredBy = event.data?.answered_by
-        const someoneElseAnswered = typeof answeredBy === 'string' && answeredBy !== agentExtension
+        const answeredBy = extensionDigits(event.data?.answered_by)
+        const mine = extensionDigits(agentExtension)
+        const someoneElseAnswered = answeredBy !== null && mine !== null && answeredBy !== mine
         if (someoneElseAnswered) {
           if (callId) {
             takenByOthersRef.current.add(callId)
