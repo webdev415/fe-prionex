@@ -139,6 +139,15 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="text-muted-foreground text-sm font-light">
+              Predictive Dialer Extension:
+            </span>
+            <span className="text-foreground text-sm font-semibold break-words">
+              {user.dialer_extension || '—'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             <span className="text-muted-foreground text-sm font-light">Is Agent:</span>
             <span className="text-foreground text-sm font-semibold break-words">
               {user.is_agent ? 'Yes' : 'No'}

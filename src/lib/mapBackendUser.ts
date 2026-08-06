@@ -146,6 +146,7 @@ export function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
     createdAt: backendUser.created_at,
     updatedAt: backendUser.created_at,
     asterisk_extension: backendUser.asterisk_extension,
+    dialer_extension: backendUser.dialer_extension,
     is_agent: backendUser.is_agent ?? false,
     agent_status: backendUser.agent_status ?? 'offline',
     timezone: backendUser.timezone,
