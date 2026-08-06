@@ -32,21 +32,41 @@ const TAKEN_CALL_TTL_MS = 30_000
  * would read as "somebody else" and close the window of whoever is holding the
  * call. Take the extension token, not every digit: `PJSIP/2094-0000001a`
  * carries a hex channel suffix, and stripping non-digits would fold it into
- * `20940000001`, matching nobody. A value with no leading extension — a trunk
- * like `PJSIP/goip50056-line04`, or anything unparsed — yields null, which
- * callers treat as "we don't know who answered" and leave every window alone.
+ * `20940000001`, matching nobody.
+ *
+ * Anything that is not shaped like an extension yields null, and callers treat
+ * that as "we don't know who answered" and leave every window alone — the safe
+ * direction, since the alternative closes every window on the queue at once.
+ * That covers a trunk named like `PJSIP/goip50056-line04` and a full number,
+ * but NOT a trunk named as a short digit run; nothing on this side can tell one
+ * of those from an operator.
  */
 const EXTENSION_PATTERN = /^(?:[A-Za-z0-9]+\/)?(\d+)/
 
+// Matches the extension the app itself enforces on users (userSchemas.ts).
+const EXTENSION_LENGTH = { min: 3, max: 10 }
+
 function extensionOf(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  return EXTENSION_PATTERN.exec(value)?.[1] ?? null
+  const extension = EXTENSION_PATTERN.exec(value)?.[1]
+  if (!extension) return null
+  return extension.length >= EXTENSION_LENGTH.min && extension.length <= EXTENSION_LENGTH.max
+    ? extension
+    : null
 }
 
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
   const takenByOthersRef = useRef<Map<string, number>>(new Map())
+  const shownCallRef = useRef<string | null>(null)
+  const loggedMissingAnswererRef = useRef<string | null>(null)
+
+  // The state handler is registered once per connection and would otherwise
+  // close over the first render's value.
+  useEffect(() => {
+    shownCallRef.current = incomingCall?.call_id ?? null
+  }, [incomingCall])
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
@@ -167,14 +187,29 @@ export function useIncomingCall(agentExtension: string | null) {
         if (someoneElseAnswered) {
           if (callId) rememberTakenByOther(callId)
           dismissIfSameCall(callId)
-        } else if (answeredBy === null) {
-          // Keeping every window open is the safe reading, but it is also what
-          // an emitter that never sends the field looks like — identical, and
+        } else if (
+          answeredBy === null &&
+          callId &&
+          // Only calls this operator is actually looking at. The socket joins
+          // the agent's own room, so this handler also sees the operator's
+          // outbound calls — which answer with no answering operator by
+          // definition, and would otherwise log on every one of them and bury
+          // the signal this exists to give. Scoped to the open window, it fires
+          // only where a missing answerer has a consequence: the window that
+          // should have closed and did not.
+          shownCallRef.current === callId &&
+          // `outcome` stays 'answered' through the later ACTIVE, so the same
+          // call reports twice.
+          loggedMissingAnswererRef.current !== callId
+        ) {
+          loggedMissingAnswererRef.current = callId
+          // Keeping the window open is the safe reading, but it is also what an
+          // emitter that never sends the field looks like — identical, and
           // otherwise completely silent. This is the only thing that tells a
           // broken contract apart from an answerer we genuinely cannot name.
           console.error(
             '[useIncomingCall] call answered but answered_by is missing or unparseable; ' +
-              'no window will close',
+              'the window will stay open',
             { call_id: callId, answered_by: event.data?.answered_by }
           )
         }

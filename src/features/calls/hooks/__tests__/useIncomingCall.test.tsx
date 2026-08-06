@@ -393,6 +393,26 @@ describe('useIncomingCall', () => {
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
     })
 
+    it.each(['COMPLETED', 'FAILED'] as const)(
+      'closes the window when this call reaches %s',
+      async (state) => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state },
+          })
+        })
+
+        // The original reason this hook listens to state changes at all: the
+        // caller gives up or the call ends and the window has to go.
+        await waitFor(() => expect(result.current.incomingCall).toBeNull())
+      }
+    )
+
     it('leaves a different call alone when another call ends', async () => {
       const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
       await openPopup(result)
@@ -612,6 +632,27 @@ describe('useIncomingCall', () => {
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
     })
 
+    it('leaves every window open when answered_by is too long to be an extension', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: {
+            call_id: 'shared-call',
+            state: 'ACTIVE',
+            answered_by: 'PJSIP/380442334455-00000001',
+          },
+        })
+      })
+
+      // A numerically named trunk parses as digits, so the token match alone
+      // cannot reject it; the extension length the app enforces on users can.
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
     it('says so when an answered call carries no usable answered_by', async () => {
       const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
@@ -633,6 +674,47 @@ describe('useIncomingCall', () => {
         expect.objectContaining({ call_id: 'shared-call' })
       )
       expect(result.current.hasIncomingCall).toBe(true)
+    })
+
+    it('says it once, not again when the same call reaches ACTIVE', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      // `outcome` stays 'answered' once set, so the answered branch is entered
+      // again by the ACTIVE that follows.
+      for (const state of ['RINGING', 'ACTIVE'] as const) {
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state, outcome: 'answered' },
+          })
+        })
+      }
+
+      expect(logged).toHaveBeenCalledTimes(1)
+      expect(result.current.hasIncomingCall).toBe(true)
+    })
+
+    it('stays quiet about the operator’s own outbound calls', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      renderHook(() => useIncomingCall(mockAgentExtension))
+
+      // This hook shares the agent room with useCallWebSocket, so it sees the
+      // operator's outbound calls too. Those answer with no answering operator
+      // by definition — the callee is a customer on a trunk, which does not
+      // parse as an extension — so treating one as a broken contract would log
+      // on every outbound call and bury the signal.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'an-outbound-call', state: 'ACTIVE', outcome: 'answered' },
+        })
+      })
+
+      expect(logged).not.toHaveBeenCalled()
     })
 
     it('suppresses a late screen-pop only briefly, not for the rest of the session', async () => {
