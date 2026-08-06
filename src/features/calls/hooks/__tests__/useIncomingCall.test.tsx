@@ -371,5 +371,57 @@ describe('useIncomingCall', () => {
       // Closing on an ambiguous event would drop a call the operator may hold.
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
     })
+
+    it('leaves a different call alone when a colleague answers this one', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'a-different-call', state: 'ACTIVE', agent_extension: '2094' },
+        })
+      })
+
+      // Two queue calls can be in flight; the hook shows the latest. Closing on
+      // any ACTIVE would drop a call that is still ringing for this operator.
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('leaves a different call alone when another call ends', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'a-different-call', state: 'COMPLETED' },
+        })
+      })
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    })
+
+    it('ignores a screen-pop for a call a colleague already took', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+
+      // The state event can outrun the screen-pop, which waits on a client
+      // lookup. Opening a window here would strand it — the events that would
+      // have closed it have already been delivered.
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', agent_extension: '2094' },
+        })
+      })
+
+      const incoming = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+      act(() => incoming(popup()))
+
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(false))
+    })
   })
 })

@@ -7,9 +7,18 @@ import type { CallStateEvent, IncomingCallData, IncomingCallEvent } from '../typ
 const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
+/**
+ * How many recently-taken calls to remember, so a screen-pop that arrives after
+ * the call was already answered elsewhere is ignored rather than opening a
+ * window nothing will ever close. A queue rings a handful of members and the
+ * entries matter for seconds, so this only needs to outlive one burst.
+ */
+const TAKEN_CALL_MEMORY = 32
+
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
+  const takenByOthersRef = useRef<Set<string>>(new Set())
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
@@ -49,28 +58,53 @@ export function useIncomingCall(agentExtension: string | null) {
 
     const socket = socketRef.current
 
+    /** Close the window only if the event is about the call it is showing. */
+    const dismissIfSameCall = (callId?: string) => {
+      setIncomingCall((current) =>
+        current && callId && current.call_id !== callId ? current : null
+      )
+    }
+
     // Listen for incoming call events
     const handleIncomingCall = (event: IncomingCallEvent) => {
+      // The screen-pop carries enriched client data and so can be emitted after
+      // the bare state event. If a colleague already took this call, opening a
+      // window now would strand it: the events that would have closed it have
+      // been and gone.
+      if (takenByOthersRef.current.has(event.data?.call_id)) return
       setIncomingCall(event.data)
     }
 
     // Listen for call state changes to dismiss popup when call ends/rejected
     const handleCallStateChanged = (event: CallStateEvent) => {
       const state = event.data?.state?.toUpperCase()
+      const callId = event.data?.call_id
+
       // Dismiss popup when call is completed, failed, or cancelled
       if (state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
-        setIncomingCall(null)
+        dismissIfSameCall(callId)
         return
       }
 
       // A queue rings several operators at once. Once one of them answers, the
       // others are looking at a call they can no longer take — close it for
       // them, but leave it open for whoever actually took it.
+      //
+      // Both sides carry the bare extension: the payload is the call record's
+      // `agent_extension`, and `agentExtension` is `authUser.asterisk_extension`.
+      // A decorated form on either side would make the answering operator's own
+      // window vanish instead, so this is a contract rather than a coincidence.
       if (state === 'ACTIVE') {
         const answeredBy = event.data?.agent_extension
         const someoneElseAnswered = typeof answeredBy === 'string' && answeredBy !== agentExtension
         if (someoneElseAnswered) {
-          setIncomingCall(null)
+          if (callId) {
+            takenByOthersRef.current.add(callId)
+            if (takenByOthersRef.current.size > TAKEN_CALL_MEMORY) {
+              takenByOthersRef.current.delete(takenByOthersRef.current.values().next().value!)
+            }
+          }
+          dismissIfSameCall(callId)
         }
       }
     }
