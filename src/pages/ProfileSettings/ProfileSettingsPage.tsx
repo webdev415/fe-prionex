@@ -239,7 +239,7 @@ export function ProfileSettingsPage() {
               )}
               {user?.dialer_extension && (
                 <div className="text-muted-foreground text-xs">
-                  Dialer Extension: {user.dialer_extension}
+                  {t('pages.users.forms.dialerExtension')}: {user.dialer_extension}
                 </div>
               )}
               {user?.is_agent && user?.agent_status && (

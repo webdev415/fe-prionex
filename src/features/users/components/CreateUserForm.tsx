@@ -452,7 +452,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-7">
+          <div className="flex items-center gap-2 sm:pt-1">
             <Controller
               name="is_agent"
               control={control}

@@ -67,7 +67,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     handleSubmit,
     control,
     reset,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
@@ -118,7 +118,10 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       language: data.language,
       timezone: data.timezone,
       asterisk_extension: data.asterisk_extension || undefined,
-      dialer_extension: data.dialer_extension || undefined,
+      // Send the value only when it actually changed, so an emptied field is
+      // sent as '' (which the backend clears — and deprovisions the operator),
+      // while an untouched field is omitted (no redundant re-provision).
+      dialer_extension: dirtyFields.dialer_extension ? (data.dialer_extension ?? '') : undefined,
       is_agent: data.is_agent,
     }
 
@@ -352,7 +355,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-7">
+          <div className="flex items-center gap-2 sm:pt-1">
             <Controller
               name="is_agent"
               control={control}
