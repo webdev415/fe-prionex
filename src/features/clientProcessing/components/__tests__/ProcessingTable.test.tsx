@@ -42,10 +42,37 @@ describe('ProcessingTable', () => {
     expect(screen.getByText('60.00%')).toBeInTheDocument()
     expect(screen.getByText('76.60%')).toBeInTheDocument()
     expect(screen.getAllByText('45.00%')).toHaveLength(2)
-    // 9 header columns, three of them "%"
+    // 9 header columns, three of them visually just "%"
     expect(screen.getAllByText('pages.reports.processing.columns.percent')).toHaveLength(3)
     expect(screen.getByText('pages.reports.processing.columns.employee')).toBeInTheDocument()
     expect(screen.getByText('pages.reports.processing.columns.assignedClients')).toBeInTheDocument()
+  })
+
+  it('gives the three "%" columns distinct accessible names', () => {
+    render(<ProcessingTable rows={[makeRow()]} />)
+
+    // The visible "%" is aria-hidden and the sr-only span carries the name —
+    // dropping either would collapse all three into the same "%" for screen
+    // readers, so assert the computed names, not just the text.
+    expect(
+      screen.getByRole('columnheader', {
+        name: 'pages.reports.processing.columns.percentProcessedAria',
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', {
+        name: 'pages.reports.processing.columns.percentClientAria',
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', {
+        name: 'pages.reports.processing.columns.percentContactAria',
+      })
+    ).toBeInTheDocument()
+    // …and none of them is named by the visible "%" alone
+    expect(
+      screen.queryByRole('columnheader', { name: 'pages.reports.processing.columns.percent' })
+    ).not.toBeInTheDocument()
   })
 
   it('applies a gradient fill to percent cells but not to null cells', () => {

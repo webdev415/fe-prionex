@@ -242,11 +242,84 @@ describe('ClientProcessingTab', () => {
       screen.getByRole('tab', { name: 'pages.reports.processing.departments.dialer' })
     ).toHaveAttribute('aria-selected', 'true')
 
-    // The auto-selected tab is pinned into ?dept= so a later refetch with a
-    // different department set can't jump the tab under the user
+    // An auto-selected tab is NOT pinned into the URL: it would freeze the
+    // heuristic after the first load and put a department nobody chose into
+    // shared links.
+    expect(screen.getByTestId('location-search').textContent).not.toContain('dept=')
+  })
+
+  it('re-resolves the auto-selected sub-tab after the period changes', async () => {
+    mockGetReport
+      .mockResolvedValueOnce(
+        makeResponse([
+          makeRow({
+            employee_id: 2,
+            full_name: 'Петренко Петро',
+            department_id: 11,
+            department_name: 'Дайлер',
+          }),
+        ])
+      )
+      .mockResolvedValueOnce(
+        makeResponse([
+          makeRow({
+            employee_id: 3,
+            full_name: 'Сидоренко Сидір',
+            department_id: 12,
+            department_name: 'Стягнення',
+          }),
+        ])
+      )
+
+    renderTab()
+    await screen.findByText('Петренко Петро')
+
+    const [, endInput] = screen.getAllByTestId('date-select')
+    fireEvent.change(endInput, {
+      target: { value: isoPlusDays((endInput as HTMLInputElement).value, 1) },
+    })
+
+    // The new period's rows live in another department — the heuristic runs
+    // again instead of stranding the user on an empty Дайлер tab
+    expect(await screen.findByText('Сидоренко Сидір')).toBeInTheDocument()
     await waitFor(() =>
-      expect(screen.getByTestId('location-search').textContent).toContain('dept=dialer')
+      expect(
+        screen.getByRole('tab', { name: 'pages.reports.processing.departments.collection' })
+      ).toHaveAttribute('aria-selected', 'true')
     )
+  })
+
+  it('keeps an explicitly picked sub-tab across a period change', async () => {
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow(),
+        makeRow({
+          employee_id: 2,
+          full_name: 'Петренко Петро',
+          department_id: 11,
+          department_name: 'Дайлер',
+        }),
+      ])
+    )
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+
+    await userEvent.click(
+      screen.getByRole('tab', { name: 'pages.reports.processing.departments.dialer' })
+    )
+    await screen.findByText('Петренко Петро')
+
+    const [, endInput] = screen.getAllByTestId('date-select')
+    fireEvent.change(endInput, {
+      target: { value: isoPlusDays((endInput as HTMLInputElement).value, 1) },
+    })
+
+    // ТП has rows too, so the heuristic would have grabbed it — the user's
+    // pick (also pinned in ?dept=) wins
+    expect(await screen.findByText('Петренко Петро')).toBeInTheDocument()
+    expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
+    expect(screen.getByTestId('location-search').textContent).toContain('dept=dialer')
   })
 
   it('builds id-keyed extra sub-tabs and a «—» tab for rows without a department', async () => {

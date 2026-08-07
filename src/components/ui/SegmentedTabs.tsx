@@ -5,7 +5,8 @@
  *
  * Tab strip with full tablist semantics — roving tabIndex (0 on the active
  * tab, -1 elsewhere) and ArrowLeft / ArrowRight / Home / End keyboard
- * navigation (moving focus also selects the tab) — in two visual variants:
+ * navigation (selection follows focus by default, see `activation`) — in two
+ * visual variants:
  *
  * - `segmented` (default) — pill buttons inside a card container; visual
  *   style follows the existing PeriodTabs on the Reports page.
@@ -43,6 +44,15 @@ export interface SegmentedTabsProps<T extends string> {
   value: T
   onChange: (id: T) => void
   variant?: 'segmented' | 'underline'
+  /**
+   * How arrow keys relate to selection (ARIA APG "tabs" pattern):
+   * - `automatic` (default) — selection follows focus; fine when switching is
+   *   cheap (e.g. client-side filtering).
+   * - `manual` — arrows / Home / End only move focus, Enter or Space selects
+   *   (native button activation). Use it when a switch is expensive: it
+   *   unmounts the panel, refires requests or pushes a history entry.
+   */
+  activation?: 'automatic' | 'manual'
   /** Accessible name for the tablist. */
   ariaLabel?: string
   /** When set, tabs get stable ids and aria-controls (see the docblock example). */
@@ -71,11 +81,18 @@ export function SegmentedTabs<T extends string>({
   value,
   onChange,
   variant = 'segmented',
+  activation = 'automatic',
   ariaLabel,
   idPrefix,
   className,
 }: SegmentedTabsProps<T>) {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  // Roving tabIndex needs exactly one reachable tab. If `value` matches no
+  // item (stale/unknown selection) the whole strip would otherwise fall out
+  // of the tab order — the APG fallback is to make the first tab reachable.
+  const activeIndex = items.findIndex((item) => item.id === value)
+  const rovingIndex = activeIndex === -1 ? 0 : activeIndex
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     // Leave modified keystrokes to the browser (Alt+Arrow = history
@@ -88,7 +105,10 @@ export function SegmentedTabs<T extends string>({
     else if (event.key === 'End') next = items.length - 1
     if (next === null || items.length === 0) return
     event.preventDefault()
-    onChange(items[next].id)
+    // Manual activation moves focus only — Enter/Space then selects through
+    // the button's native activation (onClick), so no key handling is needed
+    // for it here (and none that could double-fire alongside the click).
+    if (activation === 'automatic') onChange(items[next].id)
     buttonRefs.current[next]?.focus()
   }
 
@@ -107,7 +127,7 @@ export function SegmentedTabs<T extends string>({
         // single tabpanel), so inactive tabs must not reference a missing id.
         aria-controls={idPrefix && isActive ? segmentedTabPanelId(idPrefix, item.id) : undefined}
         aria-selected={isActive}
-        tabIndex={isActive ? 0 : -1}
+        tabIndex={index === rovingIndex ? 0 : -1}
         onClick={() => onChange(item.id)}
         onKeyDown={(event) => handleKeyDown(event, index)}
         className={cn(

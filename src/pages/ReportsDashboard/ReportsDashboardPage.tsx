@@ -480,9 +480,8 @@ export function ReportsDashboardPage() {
   //
   // The processing tab's `?from/?to/?dept` params are deliberately KEPT when
   // switching tabs: the filters must survive a round-trip through the
-  // dashboard (documented contract of ClientProcessingTab), and with
-  // selection-follows-focus a single ArrowLeft would otherwise wipe them.
-  // A slightly "dirty" dashboard URL is accepted cosmetics.
+  // dashboard (documented contract of ClientProcessingTab). A slightly
+  // "dirty" dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
@@ -500,9 +499,12 @@ export function ReportsDashboardPage() {
         {t('pages.reports.title')}
       </h1>
 
-      {/* Tab strip */}
+      {/* Tab strip. Manual activation: switching a page tab unmounts the
+          panel, refires its requests and pushes a history entry — far too
+          expensive to happen on every arrow keypress. */}
       <SegmentedTabs<ReportsTab>
         variant="underline"
+        activation="manual"
         className="self-stretch"
         items={REPORT_TABS.map((tab) => ({ id: tab, label: t(`pages.reports.tabs.${tab}`) }))}
         value={activeTab}
@@ -515,6 +517,9 @@ export function ReportsDashboardPage() {
         role="tabpanel"
         id={segmentedTabPanelId('reports', activeTab)}
         aria-labelledby={segmentedTabId('reports', activeTab)}
+        // The panel holds no focusable wrapper of its own; per ARIA APG it
+        // must stay keyboard-reachable so it can be scrolled.
+        tabIndex={0}
         className="flex flex-1 flex-col self-stretch"
       >
         {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}

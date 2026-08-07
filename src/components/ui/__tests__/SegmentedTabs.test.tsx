@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '../SegmentedTabs'
 
 const ITEMS = [
@@ -39,6 +40,43 @@ describe('SegmentedTabs', () => {
     // Wrap-around from the last tab
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Three' }), { key: 'ArrowRight' })
     expect(onChange).toHaveBeenLastCalledWith('one')
+  })
+
+  it('keeps the strip reachable when `value` matches no item (roving fallback)', () => {
+    render(<SegmentedTabs items={ITEMS} value="missing" onChange={() => {}} />)
+
+    // Without the fallback every tab would be tabIndex=-1 and the whole strip
+    // would drop out of the tab order.
+    expect(screen.getByRole('tab', { name: 'One' })).toHaveAttribute('tabindex', '0')
+    expect(screen.getByRole('tab', { name: 'One' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'Two' })).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('activation="manual": arrows only move focus, Enter/Space selects', async () => {
+    const onChange = vi.fn()
+    render(<SegmentedTabs activation="manual" items={ITEMS} value="two" onChange={onChange} />)
+
+    const active = screen.getByRole('tab', { name: 'Two' })
+    active.focus()
+
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'Three' })).toHaveFocus()
+    expect(onChange).not.toHaveBeenCalled()
+
+    await userEvent.keyboard('{Home}')
+    expect(screen.getByRole('tab', { name: 'One' })).toHaveFocus()
+    expect(onChange).not.toHaveBeenCalled()
+
+    // Selection happens on explicit activation only
+    await userEvent.keyboard('{Enter}')
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenLastCalledWith('one')
+
+    await userEvent.keyboard('{End}')
+    expect(screen.getByRole('tab', { name: 'Three' })).toHaveFocus()
+    await userEvent.keyboard(' ')
+    expect(onChange).toHaveBeenLastCalledWith('three')
+    expect(onChange).toHaveBeenCalledTimes(2)
   })
 
   it('leaves modified keystrokes to the browser (Alt/Ctrl/Meta + Arrow)', () => {

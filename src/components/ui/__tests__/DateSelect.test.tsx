@@ -25,9 +25,40 @@ describe('DateSelect (manual input)', () => {
     expect(input).toHaveValue('05.08.2026')
   })
 
-  it('resyncs an abandoned partial entry from the committed value on blur', async () => {
+  it('keeps an abandoned partial entry (and its invalid state) on blur by default', async () => {
+    // Default behaviour for the 26 manual-input consumers: forms show the
+    // partial text together with `invalidText`, so blur must not wipe either.
+    const onValidityChange = vi.fn()
     render(
-      <DateSelect allowManualInput format="dd.MM.yyyy" value="2026-08-05" onChange={() => {}} />
+      <DateSelect
+        allowManualInput
+        format="dd.MM.yyyy"
+        value="2026-08-05"
+        onChange={() => {}}
+        onValidityChange={onValidityChange}
+      />
+    )
+
+    const input = screen.getByDisplayValue('05.08.2026')
+    await userEvent.clear(input)
+    await userEvent.type(input, '12.0')
+    expect(input).toHaveValue('12.0')
+    expect(onValidityChange).toHaveBeenLastCalledWith(true)
+
+    await userEvent.tab()
+    expect(input).toHaveValue('12.0')
+    expect(onValidityChange).toHaveBeenLastCalledWith(true)
+  })
+
+  it('resyncs an abandoned partial entry on blur when resyncInvalidOnBlur is set', async () => {
+    render(
+      <DateSelect
+        allowManualInput
+        resyncInvalidOnBlur
+        format="dd.MM.yyyy"
+        value="2026-08-05"
+        onChange={() => {}}
+      />
     )
 
     const input = screen.getByDisplayValue('05.08.2026')

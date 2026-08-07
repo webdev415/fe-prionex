@@ -7,13 +7,14 @@
  * (one request per period, client-side filtering), and the per-employee
  * table.
  *
- * All tab state lives in the URL (`?dept=`, `?from=`, `?to=`) so it survives
- * refresh, bookmarking and switching between the page tabs (panels unmount
- * on switch). Filter updates use `replace` — only page-tab changes create
- * history entries.
+ * All tab state the user set lives in the URL (`?dept=`, `?from=`, `?to=`) so
+ * it survives refresh, bookmarking and switching between the page tabs
+ * (panels unmount on switch). Filter updates use `replace` — only page-tab
+ * changes create history entries. An auto-selected department is deliberately
+ * NOT written to the URL (see the resolver below).
  */
 
-import { useEffect, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -120,22 +121,16 @@ export function ClientProcessingTab() {
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
   const departmentTabs = useMemo(() => buildDepartmentTabs(rows), [rows])
   const rawDept = searchParams.get('dept')
-  const activeTab = resolveActiveDepartmentTab(departmentTabs, rawDept, rows)
 
-  // Pin the auto-selected (first non-empty) tab into the URL once data is
-  // there, so a later refetch with a different department set can't jump the
-  // active tab under the user.
-  useEffect(() => {
-    if (rows.length === 0 || rawDept === activeTab.id) return
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        next.set('dept', activeTab.id)
-        return next
-      },
-      { replace: true }
-    )
-  }, [rows.length, rawDept, activeTab.id, setSearchParams])
+  // Only an EXPLICIT pick pins the department. Writing the auto-selected tab
+  // into the URL would freeze the "first non-empty tab" heuristic after the
+  // very first load, leaving the user on an empty tab once the period changes
+  // — and would put a department nobody chose into shared links. Seeded from
+  // the URL so a link shared *after* an explicit pick still honours it.
+  // (State, not a ref: the flag is read during render, and the pick already
+  // re-renders through the URL update anyway.)
+  const [hasPickedDept, setHasPickedDept] = useState(rawDept !== null)
+  const activeTab = resolveActiveDepartmentTab(departmentTabs, hasPickedDept ? rawDept : null, rows)
 
   const tabItems: SegmentedTabItem<string>[] = departmentTabs.map((tab) => ({
     id: tab.id,
@@ -177,6 +172,7 @@ export function ClientProcessingTab() {
           max={dateEnd}
           onChange={handleDateChange('from')}
           allowManualInput
+          resyncInvalidOnBlur
           format="dd.MM.yyyy"
           className="w-full min-w-0 sm:w-44"
         />
@@ -186,6 +182,7 @@ export function ClientProcessingTab() {
           min={dateStart}
           onChange={handleDateChange('to')}
           allowManualInput
+          resyncInvalidOnBlur
           format="dd.MM.yyyy"
           className="w-full min-w-0 sm:w-44"
         />
@@ -200,7 +197,10 @@ export function ClientProcessingTab() {
       <SegmentedTabs<string>
         items={tabItems}
         value={activeTab.id}
-        onChange={(deptId) => setUrlParam('dept', deptId)}
+        onChange={(deptId) => {
+          setHasPickedDept(true)
+          setUrlParam('dept', deptId)
+        }}
         ariaLabel={t('pages.reports.tabs.processing')}
         idPrefix={TABS_ID_PREFIX}
       />
@@ -210,6 +210,9 @@ export function ClientProcessingTab() {
         role="tabpanel"
         id={segmentedTabPanelId(TABS_ID_PREFIX, activeTab.id)}
         aria-labelledby={segmentedTabId(TABS_ID_PREFIX, activeTab.id)}
+        // No focusable wrapper inside; per ARIA APG the panel itself must be
+        // keyboard-reachable so a wide table can be scrolled.
+        tabIndex={0}
         className="w-full"
       >
         {rangeErrorKey ? null : query.isLoading ? (
