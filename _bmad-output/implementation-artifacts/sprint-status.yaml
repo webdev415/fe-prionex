@@ -22,6 +22,8 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
+#   - cancelled: Story will not be implemented; the reason is recorded in the epic
+#     and in the story file. Counts as resolved for sprint completion.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -50,11 +52,11 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   # Epic 1: Forgejo Delivery Foundation
   epic-1: in-progress
-  1-1-close-the-tag-based-production-gate-bypass-in-the-current-github-cd: in-progress
-  1-2-record-the-migration-decisions-and-the-option-c-technical-debt: backlog
+  1-1-close-the-tag-based-production-gate-bypass-in-the-current-github-cd: cancelled
+  1-2-record-the-migration-decisions-and-the-option-c-technical-debt: review
   1-3-verify-forgejo-actions-availability-and-concurrency-support: backlog
-  1-4-document-the-github-forgejo-synchronization-model: backlog
-  1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: backlog
+  1-4-document-the-github-forgejo-synchronization-model: cancelled
+  1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: cancelled
   1-6-secure-the-pre-prod-infrastructure-commitment: backlog
   1-7-provision-the-primary-forgejo-runner-with-both-labels: backlog
   1-8-prove-action-compatibility-with-a-smoke-workflow: backlog
@@ -109,9 +111,9 @@ development_status:
 
   # Epic 6: Production Release and Verified Rollback
   epic-6: backlog
-  6-1-disable-the-github-cd-deploy-job: backlog
+  6-1-disable-the-github-cd-deploy-job: cancelled
   6-2-publish-the-production-approval-regulation: backlog
-  6-3-import-the-running-production-image-into-the-forgejo-registry: backlog
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
@@ -120,11 +122,11 @@ development_status:
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   epic-6-retrospective: optional
 
-  # Epic 7: GitHub Decommissioning
+  # Epic 7: Forgejo as the Single Source of Delivery
   epic-7: backlog
-  7-1-observe-two-release-cycles-with-github-in-ci-only-mode: backlog
-  7-2-retire-the-github-workflows: backlog
+  7-1-observe-two-release-cycles-with-github-in-ci-only-mode: cancelled
+  7-2-delete-the-legacy-workflow-files: backlog
   7-3-publish-the-updated-deployment-process-documentation: backlog
-  7-4-revoke-github-deployment-credentials: backlog
+  7-4-revoke-github-deployment-credentials: cancelled
   7-5-rotate-the-ssh-keys-that-were-held-in-github-secrets: backlog
   epic-7-retrospective: optional
