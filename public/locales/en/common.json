@@ -8245,6 +8245,40 @@
     "reports": {
       "title": "Reports Dashboard",
       "exporting": "Exporting...",
+      "tabs": {
+        "dashboard": "Dashboard",
+        "processing": "Client Processing"
+      },
+      "processing": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "departments": {
+          "tp": "TP",
+          "dialer": "Dialer",
+          "collection": "Collection"
+        },
+        "columns": {
+          "employee": "Employee",
+          "group": "Group",
+          "assignedClients": "Assigned clients",
+          "processed": "With TA in period",
+          "processedClient": "With TA by client",
+          "processedContact": "With TA via 3rd party",
+          "percent": "%",
+          "percentProcessedAria": "% with TA in period",
+          "percentClientAria": "% with TA by client",
+          "percentContactAria": "% with TA via 3rd party"
+        },
+        "empty": "No data for the selected period",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
       "periods": {
         "today": "Today",
         "thisWeek": "This Week",

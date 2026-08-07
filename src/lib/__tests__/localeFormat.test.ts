@@ -7,6 +7,7 @@ import {
   formatMonthDay,
   formatNumber,
   formatTimeShort,
+  getNumberFormat,
 } from '../localeFormat'
 
 // Local-component construction keeps browser-TZ formatting deterministic
@@ -28,6 +29,32 @@ describe('localeFormat', () => {
       expect(formatMoneyAmount('12345.6', 'en')).toBe('12,345.60')
       expect(formatNumber(2500, 'en')).toBe('2,500')
       expect(formatNumber('1234567', 'en')).toBe('1,234,567')
+    })
+
+    it('renders "—" for missing or non-finite values, never "NaN"', () => {
+      expect(formatNumber(null, 'en')).toBe('—')
+      expect(formatNumber(undefined, 'en')).toBe('—')
+      expect(formatNumber(Number.NaN, 'en')).toBe('—')
+      expect(formatNumber(Number.POSITIVE_INFINITY, 'en')).toBe('—')
+      expect(formatNumber('not-a-number', 'en')).toBe('—')
+    })
+
+    it('reuses cached Intl.NumberFormat instances per locale+options', () => {
+      // Same input twice must format identically through the cache path.
+      expect(formatNumber(1234.5, 'en', { maximumFractionDigits: 1 })).toBe('1,234.5')
+      expect(formatNumber(1234.5, 'en', { maximumFractionDigits: 1 })).toBe('1,234.5')
+    })
+
+    it('cache key is option-order independent — one instance for {a,b} vs {b,a}', () => {
+      const first = getNumberFormat('en-US', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 3,
+      })
+      const reversed = getNumberFormat('en-US', {
+        maximumFractionDigits: 3,
+        minimumFractionDigits: 1,
+      })
+      expect(reversed).toBe(first)
     })
 
     it('uk-UA: matches the same-locale Intl output (ICU-version safe)', () => {
