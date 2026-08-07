@@ -187,6 +187,38 @@ export const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
           { value: 'system', label: 'system' },
         ],
       },
+      // KAN-835 — the eight fields added to the BE registry
+      // (services/tag/app/seed/system_event_registry.py). Order matches it so
+      // the two lists diff against each other by eye. Step 4 of the procedure
+      // in docs/domain-events-architecture.md: the registry and this constant
+      // ship as a pair, or operators cannot reference the payload in a rule.
+      //
+      // `source` is the one that matters most. `interaction.created` now has
+      // TWO publishers — the legacy Interaction Log and Target Actions — and
+      // rule_engine treats a NULL field as MATCHING ne/neq/not_in. So a rule
+      // written for the legacy screen, e.g. `direction ne inbound`, starts
+      // firing on Target Actions too. `source eq legacy` is the only way to pin
+      // such a rule back to one screen, and without this entry that condition
+      // cannot be built in the UI at all.
+      //
+      // datetime fields are `text`: EventField.type has no date variant, and
+      // rule conditions compare as strings either way.
+      {
+        value: 'source',
+        label: 'source',
+        type: 'select',
+        options: [
+          { value: 'legacy', label: 'legacy' },
+          { value: 'target_action', label: 'target_action' },
+        ],
+      },
+      { value: 'chain_name', label: 'chain_name', type: 'text' },
+      { value: 'chain_id', label: 'chain_id', type: 'number' },
+      { value: 'credit_id', label: 'credit_id', type: 'number' },
+      { value: 'result_code', label: 'result_code', type: 'text' },
+      { value: 'promise_date', label: 'promise_date', type: 'text' },
+      { value: 'promise_amount', label: 'promise_amount', type: 'number' },
+      { value: 'next_action_date', label: 'next_action_date', type: 'text' },
     ],
   },
   {
