@@ -1,0 +1,132 @@
+# generated: 2026-08-07
+# last_updated: 2026-08-07
+# project: fe-prionex
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#   - cancelled: Story will not be implemented; the reason is recorded in the epic
+#     and in the story file. Counts as resolved for sprint completion.
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-08-07
+last_updated: 2026-08-07
+project: fe-prionex
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Forgejo Delivery Foundation
+  epic-1: in-progress
+  1-1-close-the-tag-based-production-gate-bypass-in-the-current-github-cd: cancelled
+  1-2-record-the-migration-decisions-and-the-option-c-technical-debt: review
+  1-3-verify-forgejo-actions-availability-and-concurrency-support: backlog
+  1-4-document-the-github-forgejo-synchronization-model: cancelled
+  1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: cancelled
+  1-6-secure-the-pre-prod-infrastructure-commitment: backlog
+  1-7-provision-the-primary-forgejo-runner-with-both-labels: backlog
+  1-8-prove-action-compatibility-with-a-smoke-workflow: backlog
+  1-9-provision-the-second-runner: backlog
+  1-10-enable-the-forgejo-container-registry-with-scoped-credentials: backlog
+  1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: backlog
+  1-12-migrate-secrets-and-variables-into-forgejo: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Forgejo CI as the Quality Gate
+  epic-2: backlog
+  2-1-port-the-four-ci-jobs-to-forgejo: backlog
+  2-2-trigger-ci-on-pull-requests-and-feature-branches: backlog
+  2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: backlog
+  2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: backlog
+  2-5-validate-ci-stability-across-five-consecutive-real-pull-requests: backlog
+  2-6-enforce-required-status-checks-on-main: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Traceable Image Build and Publish
+  epic-3: backlog
+  3-1-build-and-publish-an-image-to-the-forgejo-registry: backlog
+  3-2-apply-the-image-tagging-scheme: backlog
+  3-3-build-per-environment-images-with-explicit-variables: backlog
+  3-4-trigger-builds-automatically-including-feature-branches: backlog
+  3-5-move-the-build-cache-to-the-registry: backlog
+  3-6-verify-commit-traceability-and-image-immutability: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: DEV Environment on Forgejo
+  epic-4: backlog
+  4-1-parameterize-the-compose-file-for-coexisting-stands: backlog
+  4-2-provision-the-new-dev-stand-on-s1: backlog
+  4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
+  4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
+  4-5-notify-slack-on-deploy-start-success-and-failure: backlog
+  4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
+  4-7-validate-dev-deploys-across-five-feature-branches: backlog
+  4-8-factor-out-the-shared-deploy-mechanics: backlog
+  4-9-cut-dev-over-to-the-new-stand: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: PRE-PROD Release Candidate Environment
+  epic-5: backlog
+  5-1-stand-up-the-isolated-pre-prod-backend-network: backlog
+  5-2-provision-the-pre-prod-stand-on-s1: backlog
+  5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
+  5-4-record-the-validated-candidate-in-the-registry: backlog
+  5-5-establish-the-release-validation-checklist: backlog
+  5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Production Release and Verified Rollback
+  epic-6: backlog
+  6-1-disable-the-github-cd-deploy-job: cancelled
+  6-2-publish-the-production-approval-regulation: backlog
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
+  6-4-deploy-to-production-by-dispatch: backlog
+  6-5-guard-promotion-by-commit-identity: backlog
+  6-6-record-the-deployed-production-image: backlog
+  6-7-smoke-check-production-after-deploy: backlog
+  6-8-roll-back-production-to-a-previous-release: backlog
+  6-9-cut-production-over-with-a-no-op-deploy: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Forgejo as the Single Source of Delivery
+  epic-7: backlog
+  7-1-observe-two-release-cycles-with-github-in-ci-only-mode: cancelled
+  7-2-delete-the-legacy-workflow-files: backlog
+  7-3-publish-the-updated-deployment-process-documentation: backlog
+  7-4-revoke-github-deployment-credentials: cancelled
+  7-5-rotate-the-ssh-keys-that-were-held-in-github-secrets: backlog
+  epic-7-retrospective: optional

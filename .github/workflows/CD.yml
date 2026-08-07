@@ -3,8 +3,6 @@ name: CD
 on:
   push:
     branches: [main, development]
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       environment:
@@ -119,9 +117,9 @@ jobs:
     name: Deploy Frontend
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development'
     environment:
-      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/development' && 'dev' || 'production') }}
 
     steps:
       - name: Notify Slack - Deployment Started
@@ -131,7 +129,7 @@ jobs:
           webhook: ${{ secrets.SLACK_CD_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            {"text": ":rocket: *Deployment Started*\nRepo: fe-prionex\nEnvironment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"}
+            {"text": ":rocket: *Deployment Started*\nRepo: fe-prionex\nEnvironment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/development' && 'dev' || 'production') }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"}
         continue-on-error: true
 
       - name: Checkout code
@@ -140,10 +138,11 @@ jobs:
       - name: Determine deployment environment
         id: set-env
         run: |
+          # Mirrors the `environment:` expression on this job exactly — same first
+          # condition, same single discriminator, same default. Keep them in step:
+          # if they diverge, the approval gate and the deploy target disagree.
           if [ -n "${{ github.event.inputs.environment }}" ]; then
             DEPLOY_ENV="${{ github.event.inputs.environment }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            DEPLOY_ENV="production"
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             DEPLOY_ENV="dev"
           else
