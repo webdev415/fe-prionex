@@ -13,6 +13,8 @@ export const legalWorkplaceKeys = {
   inboxList: (params: LegalInboxParams) => [...legalWorkplaceKeys.inbox(), params] as const,
   messages: () => [...legalWorkplaceKeys.all, 'messages'] as const,
   message: (messageId: string) => [...legalWorkplaceKeys.messages(), messageId] as const,
+  senderHistory: (messageId: string) =>
+    [...legalWorkplaceKeys.messages(), messageId, 'sender-history'] as const,
   threads: () => [...legalWorkplaceKeys.all, 'threads'] as const,
   thread: (threadId: string, includeQuarantined?: boolean) =>
     [...legalWorkplaceKeys.threads(), threadId, { includeQuarantined }] as const,
@@ -37,6 +39,8 @@ export const legalWorkplaceKeys = {
   lawyerMe: () => [...legalWorkplaceKeys.all, 'lawyer-me'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
+  taskLetters: (legalTaskId: number) =>
+    [...legalWorkplaceKeys.all, 'task-letters', legalTaskId] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
   documentsList: (params: LegalDocumentListParams) =>
     [...legalWorkplaceKeys.documents(), 'list', params] as const,
@@ -65,6 +69,15 @@ export function useLegalMessage(messageId: string | null, options?: { enabled?: 
   })
 }
 
+export function useLegalSenderHistory(messageId: string | null, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.senderHistory(messageId ?? ''),
+    queryFn: () => legalApi.getSenderHistory(messageId!),
+    enabled: options?.enabled !== false && Boolean(messageId),
+    staleTime: 30_000,
+  })
+}
+
 export function useLegalThread(
   threadId: string | null,
   options?: { enabled?: boolean; includeQuarantined?: boolean }
@@ -78,6 +91,15 @@ export function useLegalThread(
       }),
     enabled: options?.enabled !== false && Boolean(threadId),
     staleTime: 10_000,
+  })
+}
+
+export function useLegalTaskLetters(legalTaskId: number | null, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.taskLetters(legalTaskId ?? 0),
+    queryFn: () => legalApi.listTaskLetters(legalTaskId!),
+    enabled: options?.enabled !== false && legalTaskId != null && legalTaskId > 0,
+    staleTime: 15_000,
   })
 }
 

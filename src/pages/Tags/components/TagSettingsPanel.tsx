@@ -545,7 +545,9 @@ function GroupsSettings({
             ))}
           </div>
           {group.tags.length === 0 && (
-            <p className="text-xs text-gray-400">{t('pages.tags.groups.noTags', 'Нет тегов')}</p>
+            <p className="text-xs text-gray-400">
+              {t('pages.tags.groups.noTags', 'No tags available')}
+            </p>
           )}
         </div>
       ))}

@@ -24,8 +24,8 @@ interface UbkiSubmissionHistoryProps {
 }
 
 const STATUS_COLORS: Record<UbkiLogEntry['status'], string> = {
-  success: 'text-green-600',
-  skipped: 'text-gray-400',
+  success: 'text-success-600',
+  skipped: 'text-muted-foreground',
   error: 'text-red-600',
 }
 
@@ -99,10 +99,10 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-sm">
+    <div className="border-border bg-card overflow-hidden rounded-xl border shadow-sm">
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-4 py-3 text-left font-medium text-[#05040D] transition-colors hover:bg-[#F9FAF8]"
+        className="text-foreground hover:bg-muted flex w-full items-center gap-2 px-4 py-3 text-left font-medium transition-colors"
       >
         <Icons.ArrowRight
           size={16}
@@ -112,17 +112,17 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
         <span className="text-sm">
           {t('pages.clients.detail.ubki.history.title', 'UBKI submission history')}
         </span>
-        <span className="ml-auto text-sm font-normal text-[#374151]">{entries.length}</span>
+        <span className="text-muted-foreground ml-auto text-sm font-normal">{entries.length}</span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-[#EBECE8]">
+        <div className="border-border border-t">
           {isLoading ? (
-            <div className="px-4 py-6 text-center text-sm text-[#6B7280]">
+            <div className="text-muted-foreground px-4 py-6 text-center text-sm">
               {t('common.loading', 'Loading...')}
             </div>
           ) : entries.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-[#6B7280]">
+            <div className="text-muted-foreground px-4 py-6 text-center text-sm">
               {t('pages.clients.detail.ubki.history.empty', 'No UBKI submissions yet.')}
             </div>
           ) : (
@@ -135,7 +135,7 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                 <col />
               </colgroup>
               <thead>
-                <tr className="border-b border-[#EBECE8] text-xs font-medium text-[#05040D]">
+                <tr className="border-border text-foreground border-b text-xs font-medium">
                   <th className="px-3 py-2">
                     {t('pages.clients.detail.ubki.history.headers.date', 'Date')}
                   </th>
@@ -162,25 +162,25 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                         onClick={() =>
                           setExpandedId((prev) => (prev === entry.id ? null : entry.id))
                         }
-                        className="cursor-pointer border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]"
+                        className="border-border hover:bg-muted cursor-pointer border-b last:border-b-0"
                         title={t(
                           'pages.clients.detail.ubki.history.clickToExpand',
                           'Click to see full details'
                         )}
                       >
-                        <td className="px-3 py-2 text-sm text-[#6B7280]">
+                        <td className="text-muted-foreground px-3 py-2 text-sm">
                           {formatDateTime(entry.created_at)}
                         </td>
-                        <td className="px-3 py-2 text-sm text-[#05040D]">
+                        <td className="text-foreground px-3 py-2 text-sm">
                           {loanNumberById.get(entry.debt_id) ?? entry.debt_id}
                         </td>
-                        <td className="px-3 py-2 text-sm text-[#6B7280]">{entry.mode}</td>
+                        <td className="text-muted-foreground px-3 py-2 text-sm">{entry.mode}</td>
                         <td className="px-3 py-2">
                           <span className={cn('text-sm font-medium', STATUS_COLORS[entry.status])}>
                             {entry.status}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-sm text-[#6B7280]">
+                        <td className="text-muted-foreground px-3 py-2 text-sm">
                           <div className="flex items-center gap-1">
                             <Icons.ArrowRight
                               size={12}
@@ -195,12 +195,12 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr className="border-b border-[#EBECE8] bg-[#F9FAF8]">
+                        <tr className="border-border bg-muted border-b">
                           <td colSpan={5} className="px-9 py-3">
-                            <div className="space-y-1 text-sm text-[#374151]">
+                            <div className="text-muted-foreground space-y-1 text-sm">
                               {entry.ubki_request_id && (
                                 <div>
-                                  <span className="text-[#6B7280]">
+                                  <span className="text-muted-foreground">
                                     {t('pages.clients.detail.ubki.history.reqId', 'UBKI reference')}
                                     :{' '}
                                   </span>
@@ -222,7 +222,7 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
           )}
 
           {entries.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between border-t border-[#EBECE8] px-4 py-2 text-sm text-[#6B7280]">
+            <div className="border-border text-muted-foreground flex items-center justify-between border-t px-4 py-2 text-sm">
               <span>
                 {t('pages.clients.detail.ubki.history.pageInfo', 'Page {{page}} of {{total}}', {
                   page: currentPage + 1,
@@ -233,14 +233,14 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={currentPage === 0}
-                  className="rounded-md border border-[#EBECE8] px-3 py-1 hover:bg-[#F9FAF8] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="border-border hover:bg-muted rounded-md border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {t('common.previous', 'Previous')}
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={currentPage >= totalPages - 1}
-                  className="rounded-md border border-[#EBECE8] px-3 py-1 hover:bg-[#F9FAF8] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="border-border hover:bg-muted rounded-md border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {t('common.next', 'Next')}
                 </button>

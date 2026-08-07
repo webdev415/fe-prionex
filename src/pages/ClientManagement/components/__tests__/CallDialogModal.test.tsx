@@ -47,6 +47,7 @@ describe('CallDialogModal', () => {
   const mockOnReject = vi.fn()
   const mockOnMinimize = vi.fn()
 
+  const mockRejectMutate = vi.fn()
   const mockSetMinimizedCall = vi.fn()
   const mockSetOpenCallModal = vi.fn()
 
@@ -79,6 +80,13 @@ describe('CallDialogModal', () => {
     // Mock useHangupCall hook
     vi.mocked(useCallHook.useHangupCall).mockReturnValue({
       mutate: vi.fn(),
+      isPending: false,
+      reset: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    vi.mocked(useCallHook.useRejectCall).mockReturnValue({
+      mutate: mockRejectMutate,
       isPending: false,
       reset: vi.fn(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -445,17 +453,27 @@ describe('CallDialogModal', () => {
       expect(screen.getByText('Incoming Call')).toBeInTheDocument()
     })
 
-    it('should have answer and reject buttons in incoming state', () => {
+    it('hides Answer by default, because nothing reaches the softphone yet', () => {
       render(<CallDialogModal {...defaultProps} initialState="incoming" />, {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByRole('button', { name: 'Answer Call' })).toBeInTheDocument()
+      // Showing it would let the modal claim "connected" while the operator's
+      // phone is still ringing.
+      expect(screen.queryByRole('button', { name: 'Answer Call' })).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
     })
 
+    it('shows Answer once an answer path is enabled', () => {
+      render(<CallDialogModal {...defaultProps} initialState="incoming" answerEnabled />, {
+        wrapper: createWrapper(),
+      })
+
+      expect(screen.getByRole('button', { name: 'Answer Call' })).toBeInTheDocument()
+    })
+
     it('should call onAnswer when answer button is clicked', () => {
-      render(<CallDialogModal {...defaultProps} initialState="incoming" />, {
+      render(<CallDialogModal {...defaultProps} initialState="incoming" answerEnabled />, {
         wrapper: createWrapper(),
       })
 
@@ -465,16 +483,131 @@ describe('CallDialogModal', () => {
       expect(mockOnAnswer).toHaveBeenCalled()
     })
 
-    it('should call onReject when reject button is clicked', () => {
-      render(<CallDialogModal {...defaultProps} initialState="incoming" />, {
+    it('rejects via the reject endpoint rather than a plain hangup', () => {
+      render(<CallDialogModal {...defaultProps} initialState="incoming" callId="CALL-9" />, {
         wrapper: createWrapper(),
       })
 
-      const rejectButton = screen.getByRole('button', { name: 'Reject' })
-      fireEvent.click(rejectButton)
+      fireEvent.click(screen.getByRole('button', { name: 'Reject' }))
 
+      // A hangup would land in history as missed; reject records the decline.
+      expect(mockRejectMutate).toHaveBeenCalledWith('CALL-9')
       expect(mockOnReject).toHaveBeenCalled()
       expect(mockOnCallEnd).toHaveBeenCalledWith(0, 'rejected')
+    })
+
+    const candidate = (id: number, name: string) => ({
+      client_id: id,
+      client_name: name,
+      responsible_employee_id: null,
+      contact_comment: null,
+      contact_source: null,
+      contact_type_name: null,
+      recent_interactions: [],
+      loans: [],
+    })
+
+    it('offers a picker when the number belongs to several clients', () => {
+      const onSelect = vi.fn()
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[candidate(1, 'Іван Петренко'), candidate(2, 'Марія Коваль')]}
+          selectedIncomingClientId={1}
+          onSelectIncomingClient={onSelect}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('Several clients found')).toBeInTheDocument()
+      fireEvent.click(screen.getByLabelText('Марія Коваль'))
+
+      expect(onSelect).toHaveBeenCalledWith(2)
+    })
+
+    it('shows no picker when exactly one client matched', () => {
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[candidate(1, 'Іван Петренко')]}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.queryByText('Several clients found')).not.toBeInTheDocument()
+    })
+
+    it('shows the not-found state, with no picker, when nobody matched', () => {
+      const onSearch = vi.fn()
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingClients={[]}
+          onSearchByPhone={onSearch}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('Client not found')).toBeInTheDocument()
+      expect(screen.queryByText('Several clients found')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Search by this number' }))
+      expect(onSearch).toHaveBeenCalled()
+    })
+
+    it('still shows the number and reject control when the caller is unknown', () => {
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          phoneNumber="+380971234567"
+          incomingClients={[]}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('+380971234567')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
+    })
+
+    it('renders the caller context: annotation, responsible and history', () => {
+      render(
+        <CallDialogModal
+          {...defaultProps}
+          initialState="incoming"
+          incomingContext={{
+            client_id: 42,
+            client_name: 'Коваленко Іван',
+            responsible_employee_id: 7,
+            contact_comment: 'робочий номер',
+            contact_source: 'employer',
+            contact_type_name: 'Work phone',
+            recent_interactions: [
+              {
+                id: 1,
+                interaction_date: '2025-12-03T14:30:00',
+                type_name: 'Call',
+                result_name: 'Promise',
+                direction: null,
+                channel: null,
+                summary: null,
+                user_name: 'Operator One',
+              },
+            ],
+            loans: [],
+          }}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      expect(screen.getByText('Коваленко Іван')).toBeInTheDocument()
+      expect(screen.getByText('робочий номер')).toBeInTheDocument()
+      expect(screen.getByText('#7')).toBeInTheDocument()
+      expect(screen.getByText('Work phone (employer)')).toBeInTheDocument()
+      expect(screen.getByText('Operator One', { exact: false })).toBeInTheDocument()
     })
   })
 

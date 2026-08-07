@@ -27,8 +27,8 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'create') {
     return (
-      <span className="bg-success-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
+      <span className="bg-success-100 text-success-700 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium">
+        <span className="bg-success-500 h-2 w-2 rounded-full" />
         {t('pages.scoringConfiguration.history.changeTypes.created', 'Created')}
       </span>
     )
@@ -36,8 +36,8 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'update') {
     return (
-      <span className="bg-information-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
+      <span className="bg-information-100 text-information-700 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium">
+        <span className="bg-information-500 h-2 w-2 rounded-full" />
         {t('pages.scoringConfiguration.history.changeTypes.updated', 'Updated')}
       </span>
     )
@@ -45,16 +45,16 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'delete') {
     return (
-      <span className="bg-error-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
+      <span className="bg-error-100 text-error-700 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium">
+        <span className="bg-error-500 h-2 w-2 rounded-full" />
         {t('pages.scoringConfiguration.history.changeTypes.deleted', 'Deleted')}
       </span>
     )
   }
 
   return (
-    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-500 px-3 text-xs font-medium text-white">
-      <span className="h-2 w-2 rounded-full bg-white" />
+    <span className="bg-muted text-muted-foreground inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium">
+      <span className="bg-muted-foreground h-2 w-2 rounded-full" />
       {changeType}
     </span>
   )
@@ -188,7 +188,7 @@ export function ConfigurationHistoryPage() {
   }
 
   const handleGoBack = () => {
-    navigate('/dashboard/scoring-configuration')
+    navigate('/dashboard/system-settings/scoring-configuration')
   }
 
   // Commented out: CSV export feature
@@ -233,7 +233,7 @@ export function ConfigurationHistoryPage() {
         header: t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By'),
         sortable: true,
         render: (item) => (
-          <span className="text-dark-500 text-sm">
+          <span className="text-foreground text-sm">
             {item.changed_by_username || `User #${item.changed_by_user_id}`}
           </span>
         ),
@@ -243,7 +243,7 @@ export function ConfigurationHistoryPage() {
         header: t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason'),
         sortable: false,
         render: (item) => (
-          <span className="text-dark-600 text-sm font-medium">
+          <span className="text-foreground text-sm font-medium">
             {formatReason(item.change_reason, item.seller_id)}
           </span>
         ),
@@ -254,14 +254,14 @@ export function ConfigurationHistoryPage() {
         sortable: false,
         render: (item) => {
           if (!item.changes_summary || Object.keys(item.changes_summary).length === 0) {
-            return <span className="text-sm text-gray-500">-</span>
+            return <span className="text-muted-foreground text-sm">-</span>
           }
 
           // Display detailed JSON for changes
           try {
             const formattedJson = JSON.stringify(item.changes_summary, null, 2)
             return (
-              <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+              <div className="text-foreground border-border bg-muted my-2 max-h-48 max-w-xl overflow-auto rounded-md border p-4 font-mono text-xs shadow-sm">
                 <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
                   {formattedJson}
                 </pre>
@@ -270,7 +270,7 @@ export function ConfigurationHistoryPage() {
           } catch {
             // Fallback to string representation if JSON.stringify fails
             return (
-              <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+              <div className="text-foreground border-border bg-muted my-2 max-h-48 max-w-xl overflow-auto rounded-md border p-4 font-mono text-xs shadow-sm">
                 <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
                   {String(item.changes_summary)}
                 </pre>
@@ -295,12 +295,12 @@ export function ConfigurationHistoryPage() {
           <LinkButton
             variant="regular-black"
             onClick={handleGoBack}
-            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+            leftIcon={<Icons.ArrowLeft size={16} className="text-foreground" />}
             className="text-sm"
           >
             {t('actions.back', 'Back')}
           </LinkButton>
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.scoringConfiguration.history.title', 'Configuration History')}
           </h1>
         </div>
@@ -317,59 +317,57 @@ export function ConfigurationHistoryPage() {
       </div>
 
       {/* Data Table or Empty State */}
-      <div className="min-h-[400px] w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        {isLoading ? (
-          // Loading State - Show skeleton table while fetching data
-          <div className="p-4 sm:p-6">
-            <TableSkeleton columns={5} rows={rowsPerPage} />
+      {isLoading ? (
+        // Loading State - Show skeleton table while fetching data
+        <div className="p-4 sm:p-6">
+          <TableSkeleton columns={5} rows={rowsPerPage} />
+        </div>
+      ) : hasNoData ? (
+        // Empty State - No configuration history at all
+        <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-4 sm:p-6">
+          {/* Icon */}
+          <div className="flex h-20 w-20 items-center justify-center">
+            <Icons.FolderRemove size={48} className="text-muted-foreground" strokeWidth={1} />
           </div>
-        ) : hasNoData ? (
-          // Empty State - No configuration history at all
-          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-4 sm:p-6">
-            {/* Icon */}
-            <div className="flex h-20 w-20 items-center justify-center">
-              <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
-            </div>
 
-            {/* Primary Message */}
-            <h3 className="text-dark-500 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
-              {t('pages.scoringConfiguration.history.noHistoryYet', 'No configuration changes yet')}
-            </h3>
+          {/* Primary Message */}
+          <h3 className="text-foreground text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+            {t('pages.scoringConfiguration.history.noHistoryYet', 'No configuration changes yet')}
+          </h3>
 
-            {/* Secondary Message */}
-            <p className="text-dark-500 text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
-              {t(
-                'pages.scoringConfiguration.history.makeFirstChange',
-                'Make your first configuration change to see history here'
-              )}
-            </p>
+          {/* Secondary Message */}
+          <p className="text-foreground text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
+            {t(
+              'pages.scoringConfiguration.history.makeFirstChange',
+              'Make your first configuration change to see history here'
+            )}
+          </p>
 
-            {/* Go Back Button */}
-            <DoubleButton
-              icon={<Icons.Settings size={20} />}
-              iconPosition="left"
-              onClick={handleGoBack}
-              className="text-sm font-medium"
-            >
-              {t('pages.scoringConfiguration.history.goToConfig', 'Go to Configuration')}
-            </DoubleButton>
-          </div>
-        ) : (
-          // Data Table
-          <div className="overflow-x-auto">
-            <DataTable
-              columns={columns}
-              data={sortedData}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              emptyMessage={t(
-                'pages.scoringConfiguration.history.noHistoryFound',
-                'No history found'
-              )}
-            />
-          </div>
-        )}
-      </div>
+          {/* Go Back Button */}
+          <DoubleButton
+            icon={<Icons.Settings size={20} />}
+            iconPosition="left"
+            onClick={handleGoBack}
+            className="text-sm font-medium"
+          >
+            {t('pages.scoringConfiguration.history.goToConfig', 'Go to Configuration')}
+          </DoubleButton>
+        </div>
+      ) : (
+        // Data Table
+        <div className="w-full overflow-x-auto">
+          <DataTable
+            columns={columns}
+            data={sortedData}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            emptyMessage={t(
+              'pages.scoringConfiguration.history.noHistoryFound',
+              'No history found'
+            )}
+          />
+        </div>
+      )}
 
       {/* Pagination Footer - Only show if there's data */}
       {totalItems > 0 && (

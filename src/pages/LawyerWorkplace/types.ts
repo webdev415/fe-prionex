@@ -1,4 +1,10 @@
-export type LawyerWorkplaceTab = 'inbox' | 'kanban' | 'documents' | 'settings'
+export type LawyerWorkplaceTab =
+  | 'inbox'
+  | 'kanban'
+  | 'documents'
+  | 'incoming-registry'
+  | 'outgoing-registry'
+  | 'settings'
 
 export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress' | 'done'
 

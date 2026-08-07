@@ -15,28 +15,31 @@ export function TemplatesTabSkeleton() {
       aria-label={loadingLabel}
     >
       <span className="sr-only">{loadingLabel}</span>
-      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div className="bg-card border-border min-w-0 overflow-hidden rounded-xl border">
         <div
           className={cn(
-            'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',
+            'border-border flex gap-3 border-b px-4 py-4 sm:px-5 lg:px-6',
             isCompact ? 'flex-col' : 'flex-row items-center justify-between'
           )}
         >
           <div className="min-w-0 flex-1 space-y-2">
-            <div className="h-4 w-36 animate-pulse rounded bg-gray-200" />
-            <div className="h-3 w-full max-w-md animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted-foreground/25 h-4 w-36 animate-pulse rounded" />
+            <div className="bg-muted-foreground/25 h-3 w-full max-w-md animate-pulse rounded" />
           </div>
           <div
             className={cn(
-              'h-9 w-28 shrink-0 animate-pulse rounded-md bg-gray-200',
+              'bg-muted-foreground/25 h-9 w-28 shrink-0 animate-pulse rounded-md',
               isCompact && 'w-full'
             )}
           />
         </div>
         <div className="space-y-0 px-4 py-2 sm:px-5 lg:px-6">
-          <div className="flex gap-4 border-b border-gray-100 py-3">
+          <div className="border-border flex gap-4 border-b py-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-3 flex-1 animate-pulse rounded bg-gray-200" />
+              <div
+                key={index}
+                className="bg-muted-foreground/25 h-3 flex-1 animate-pulse rounded"
+              />
             ))}
           </div>
           {Array.from({ length: 3 }).map((_, rowIndex) => (
@@ -44,13 +47,13 @@ export function TemplatesTabSkeleton() {
               key={rowIndex}
               className={cn(
                 'flex items-center gap-4 py-4',
-                rowIndex < 2 && 'border-b border-gray-100'
+                rowIndex < 2 && 'border-border border-b'
               )}
             >
-              <div className="h-4 min-w-[120px] flex-1 animate-pulse rounded bg-gray-200" />
-              <div className="h-6 w-24 animate-pulse rounded-full bg-gray-200" />
-              <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-              <div className="h-8 w-16 animate-pulse rounded bg-gray-200" />
+              <div className="bg-muted-foreground/25 h-4 min-w-[120px] flex-1 animate-pulse rounded" />
+              <div className="bg-muted-foreground/25 h-6 w-24 animate-pulse rounded-full" />
+              <div className="bg-muted-foreground/25 h-4 w-40 animate-pulse rounded" />
+              <div className="bg-muted-foreground/25 h-8 w-16 animate-pulse rounded" />
             </div>
           ))}
         </div>

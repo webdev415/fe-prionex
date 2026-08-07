@@ -1,0 +1,227 @@
+/**
+ * Tests for the call-grain Dialogue Evaluation list: one row per call with the
+ * inline scorecard summary (category / rating / comment) + Trainer/Client cols.
+ * Data hooks are mocked; the i18n mock returns the key.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { OperatorUser } from '@/features/users/api/usersApi'
+import { useCallMonitoring } from '@/features/training'
+import { useMyOperators } from '@/features/quality/coaching/hooks'
+import { useOperators } from '@/features/users/hooks'
+import { useScopedUserIds } from '../../../lib/scope'
+import { DialogsListTab } from '../DialogsListTab'
+
+vi.mock('@/features/training', () => ({ useCallMonitoring: vi.fn() }))
+vi.mock('@/features/quality/coaching/hooks', () => ({
+  useMyOperators: vi.fn(),
+  useOperatorTrainers: () => ({
+    data: [{ operator_id: 41, trainer_id: 7, trainer_name: 'Trainer Ivan' }],
+  }),
+}))
+vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
+vi.mock('@/features/clients/hooks/useClients', () => ({
+  useClientNames: () => new Map([[99, 'Acme Corp']]),
+}))
+vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
+// Stubbed to just the quick-select shortcut, so these tests assert the wiring
+// (ids + disabled) rather than the dropdown's own behaviour.
+vi.mock('../EmployeeMultiSelect', () => ({
+  EmployeeMultiSelect: ({
+    onChange,
+    quickSelect,
+  }: {
+    onChange: (next: number[]) => void
+    quickSelect?: { label: string; ids: number[]; disabled?: boolean }
+  }) => (
+    <button
+      type="button"
+      disabled={quickSelect?.disabled}
+      onClick={() => onChange(quickSelect?.ids ?? [])}
+    >
+      {quickSelect?.label}
+    </button>
+  ),
+}))
+vi.mock('../CallReviewPanel', () => ({
+  CallReviewPanel: ({ callId }: { callId?: string }) => <div>panel:{callId ?? 'none'}</div>,
+}))
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
+}))
+
+const mockUseCallMonitoring = vi.mocked(useCallMonitoring)
+const mockUseMyOperators = vi.mocked(useMyOperators)
+const mockUseOperators = vi.mocked(useOperators)
+const mockUseScopedUserIds = vi.mocked(useScopedUserIds)
+
+const OPERATORS = [
+  { id: 41, full_name: 'Kateryna Antonova', asterisk_extension: '101' },
+  { id: 42, full_name: 'Oleh Bondar', asterisk_extension: '102' },
+] as unknown as OperatorUser[]
+
+function call(overrides: Record<string, unknown> = {}) {
+  return {
+    call_id: 'c1',
+    agent_extension: '101',
+    customer_number: '380501112233',
+    direction: 'outbound',
+    state: 'COMPLETED',
+    outcome: 'answered',
+    initiated_at: '2026-05-15T09:30:00Z',
+    answered_at: null,
+    ended_at: null,
+    ring_duration: null,
+    talk_duration: 75,
+    total_duration: 80,
+    client_id: 99,
+    campaign_id: null,
+    has_recording: true,
+    telephony_type: 'white',
+    has_scorecard: true,
+    scorecard_id: 5,
+    scorecard_status: 'completed',
+    scorecard_weighted_score: 4.5,
+    scorecard_category: 'high',
+    scorecard_comment: 'clear pitch',
+    ...overrides,
+  }
+}
+
+function setCalls(result: Partial<ReturnType<typeof useCallMonitoring>>) {
+  mockUseCallMonitoring.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    ...result,
+  } as ReturnType<typeof useCallMonitoring>)
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockUseMyOperators.mockReturnValue({ data: [41], isLoading: false } as ReturnType<
+    typeof useMyOperators
+  >)
+  mockUseOperators.mockReturnValue({ data: OPERATORS } as ReturnType<typeof useOperators>)
+  mockUseScopedUserIds.mockReturnValue({
+    scope: 'all',
+    userIds: undefined,
+    employeePickerDisabled: false,
+    departmentPickerDisabled: false,
+    disabledLabelKey: 'pages.training.scope.all',
+    isEmptyResolution: false,
+  })
+})
+
+describe('DialogsListTab (call-grain)', () => {
+  it('renders a call row with employee, trainer, client, category and rating', () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText('Kateryna Antonova')).toBeInTheDocument()
+    expect(screen.getByText('Trainer Ivan')).toBeInTheDocument()
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument()
+    // category label appears on the chip + the row cell; rating 4.5 × 20 = 90
+    expect(screen.getAllByText('pages.training.dialogue.category.high').length).toBeGreaterThan(1)
+    expect(screen.getByText('90')).toBeInTheDocument()
+    expect(screen.getByText('clear pitch')).toBeInTheDocument()
+  })
+
+  it('shows an unscored call with no rating', () => {
+    setCalls({
+      data: {
+        calls: [
+          call({
+            has_scorecard: false,
+            scorecard_id: null,
+            scorecard_status: null,
+            scorecard_weighted_score: null,
+            scorecard_category: null,
+            scorecard_comment: null,
+          }),
+        ],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    // chip + row cell both render the label; the row has no rating.
+    expect(screen.getAllByText('pages.training.dialogue.category.unscored').length).toBeGreaterThan(
+      1
+    )
+  })
+
+  it('narrows the query to assigned operators when "My employees" is clicked', () => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101', '102'])
+
+    fireEvent.click(screen.getByText('pages.training.dialogue.dialogs.myEmployees'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101'])
+  })
+
+  it('narrows the query by full-name search', async () => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    fireEvent.change(
+      screen.getByPlaceholderText('pages.training.dialogue.filters.namePlaceholder'),
+      { target: { value: 'Oleh' } }
+    )
+    await waitFor(() =>
+      expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['102'])
+    )
+  })
+
+  it('disables "My employees" when the trainer has no operators under control', () => {
+    mockUseMyOperators.mockReturnValue({ data: [] as number[], isLoading: false } as ReturnType<
+      typeof useMyOperators
+    >)
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+
+    const button = screen.getByText('pages.training.dialogue.dialogs.myEmployees')
+    expect(button).toBeDisabled()
+    // Clicking must not silently narrow to an empty selection.
+    fireEvent.click(button)
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101', '102'])
+  })
+
+  it('auto-selects the first reviewable dialog so the panel is not empty', () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
+  })
+
+  it('does not auto-select a call whose operator cannot be resolved', () => {
+    setCalls({
+      data: {
+        calls: [call({ agent_extension: '999' })],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:none/)).toBeInTheDocument()
+  })
+
+  it('renders loading + error + empty states', () => {
+    setCalls({ isLoading: true })
+    const { rerender } = render(<DialogsListTab />)
+    expect(screen.getByText('common.loading')).toBeInTheDocument()
+
+    setCalls({ isError: true })
+    rerender(<DialogsListTab />)
+    expect(screen.getByText('pages.training.dialogue.dialogs.loadError')).toBeInTheDocument()
+
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    rerender(<DialogsListTab />)
+    expect(screen.getByText('pages.training.dialogue.dialogs.empty')).toBeInTheDocument()
+  })
+})

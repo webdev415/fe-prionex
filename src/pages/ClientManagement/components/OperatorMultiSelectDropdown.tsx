@@ -131,9 +131,9 @@ export function OperatorMultiSelectDropdown({
         <DropdownMenuContent
           align="start"
           sideOffset={8}
-          className="w-[280px] rounded-lg border border-gray-200 bg-white p-0 shadow-lg"
+          className="border-border bg-card w-[280px] rounded-lg border p-0 shadow-lg"
         >
-          <div className="border-b border-gray-200 p-3">
+          <div className="border-border border-b p-3">
             <input
               type="text"
               value={searchQuery}
@@ -141,13 +141,13 @@ export function OperatorMultiSelectDropdown({
               placeholder={
                 searchPlaceholder ?? t('pages.clients.filters.searchPlaceholder', 'Search...')
               }
-              className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
+              className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none"
             />
           </div>
 
           <div className="max-h-[240px] overflow-y-auto p-2">
             {options.length === 0 && !specialOption ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="text-muted-foreground py-4 text-center text-sm">
                 {emptyText ?? t('pages.clients.filters.noUsersAvailable', 'No users available')}
               </div>
             ) : (
@@ -157,7 +157,7 @@ export function OperatorMultiSelectDropdown({
                   matching the reference EmployeeFilterDropdown on Action
                   Analysis. */}
                 {options.length > 0 && (
-                  <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
+                  <label className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2">
                     <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} />
                     <span className="text-sm font-medium">
                       {selectAllLabel ?? t('pages.clients.filters.selectAll', 'Select all')}
@@ -167,7 +167,7 @@ export function OperatorMultiSelectDropdown({
                 {/* Special "null" option, pinned below select-all and never
                   filtered by the search query. */}
                 {specialOption && (
-                  <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
+                  <label className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2">
                     <Checkbox
                       checked={selectedIds.includes(specialOption.id)}
                       onCheckedChange={() => handleToggle(specialOption.id)}
@@ -176,21 +176,21 @@ export function OperatorMultiSelectDropdown({
                   </label>
                 )}
                 {options.length > 0 && filteredOptions.length === 0 ? (
-                  <div className="py-4 text-center text-sm text-gray-500">
+                  <div className="text-muted-foreground py-4 text-center text-sm">
                     {t('pages.clients.filters.noMatchingUsers', 'No matches')}
                   </div>
                 ) : (
                   filteredOptions.map((opt) => (
                     <label
                       key={opt.id}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                      className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2"
                     >
                       <Checkbox
                         checked={selectedIds.includes(opt.id)}
                         onCheckedChange={() => handleToggle(opt.id)}
                       />
                       {opt.isInactive ? (
-                        <span className="text-sm text-gray-400">
+                        <span className="text-muted-foreground text-sm">
                           {opt.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
                         </span>
                       ) : (
@@ -213,7 +213,7 @@ export function OperatorMultiSelectDropdown({
             onClear?.()
           }}
           aria-label="Clear"
-          className="shrink-0 p-1 text-gray-400 hover:text-gray-600"
+          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
         >
           <Icons.Cancel01 size={14} />
         </button>

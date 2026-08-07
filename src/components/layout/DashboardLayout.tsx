@@ -14,8 +14,10 @@ import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
+import { ThemeModeToggle } from './ThemeModeToggle'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -25,6 +27,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +40,7 @@ import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSe
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
+import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -49,11 +53,22 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-function AiAssistantHeaderButton() {
+// Exported (in addition to being used inline below) so it can be unit-tested
+// without mounting the rest of DashboardLayout's auth/websocket/search stack.
+export function AiAssistantHeaderButton() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('common')
+  const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const { data: aiSettings } = useAiAssistantSettings()
   const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  // Entitlement + kill-switch: hide for users without use_ai_assistant and
+  // for everyone while the global switch is off. Fail-open: while settings
+  // are loading/unavailable the button stays (backend still enforces).
+  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
+    return null
+  }
 
   return (
     <button
@@ -61,14 +76,14 @@ function AiAssistantHeaderButton() {
       aria-label={t('pages.aiAssistant.headerButtonAria')}
       onClick={() => navigate('/dashboard/ai-assistant')}
       className={cn(
-        'relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none',
-        isActive && 'bg-gray-100'
+        'hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none',
+        isActive && 'bg-muted'
       )}
     >
       <Icons.AiBrain03
         size={20}
         strokeWidth={1.5}
-        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-gray-300')}
+        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-muted-foreground')}
       />
     </button>
   )
@@ -157,10 +172,13 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
     setIsRestored(false)
   }
 
-  // Determine if call is active (dialing or connected) for styling
+  // Determine if call is active for styling. 'incoming' counts: the call is
+  // still ringing, so its timer must keep running while minimized.
   const isActiveCall =
     minimizedCall?.type === 'call-dialog' &&
-    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+    (minimizedCall.callState === 'dialing' ||
+      minimizedCall.callState === 'connected' ||
+      minimizedCall.callState === 'incoming')
 
   // Format time helper
   const formatTime = (seconds: number): string => {
@@ -327,14 +345,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-white">
-          {/* User Profile */}
-          <DropdownMenuItem disabled className="text-dark-500 text-sm">
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem disabled className="text-foreground text-sm">
             <Icons.User02 size={16} className="mr-2" />
             <span className="truncate">{displayName}</span>
           </DropdownMenuItem>
 
-          {/* Minimized Call Bubble (if call is minimized) */}
           {minimizedCall && (
             <>
               <DropdownMenuSeparator />
@@ -364,7 +380,6 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
                           ? t('pages.clients.modals.callDialog.callClient')
                           : t('pages.clients.modals.callRecording.title')}
                       </span>
-                      {/* Active call indicator dot */}
                       {isActiveCall && (
                         <>
                           <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
@@ -385,20 +400,18 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             </>
           )}
 
-          {/* Settings */}
           <DropdownMenuItem
             onClick={() => {
               setIsOpen(false)
               navigate('/dashboard/profile')
             }}
-            className="text-dark-500 text-sm"
+            className="text-foreground text-sm"
           >
             <Icons.SlidersHorizontal size={16} className="mr-2" />
             <span>{t('navigation.profile')}</span>
           </DropdownMenuItem>
 
-          {/* Logout */}
-          <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
+          <DropdownMenuItem onClick={onLogoutClick} className="text-foreground text-sm">
             <Icons.Logout size={16} className="mr-2" />
             <span>{t('actions.logout')}</span>
           </DropdownMenuItem>
@@ -414,13 +427,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           callId={minimizedCall.callId}
+          loans={minimizedCall.loans}
+          incomingContext={minimizedCall.incomingContext}
+          incomingClients={minimizedCall.incomingClients}
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
-          minimizedAt={
-            minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected'
-              ? minimizedCall.timestamp
-              : undefined
-          }
+          minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
           initialCallType={minimizedCall.callType || 'white-line'}
           initialManualPhoneEnabled={minimizedCall.manualPhoneEnabled ?? false}
           initialManualPhoneDigits={minimizedCall.manualPhoneDigits ?? ''}
@@ -485,6 +497,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Handle incoming calls
   const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+
+  // One call window at a time: if a call modal is already open or minimized when
+  // the call arrives, the operator keeps only the bell. The decision is latched
+  // per call rather than subscribed, because the popup itself sets openCallModal
+  // on mount and a live read would make it suppress itself on the next render.
+  const [popupSuppressed, setPopupSuppressed] = useState(false)
+  const suppressionDecidedFor = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!incomingCall) {
+      suppressionDecidedFor.current = null
+      setPopupSuppressed(false)
+      return
+    }
+    if (suppressionDecidedFor.current === incomingCall.call_id) return
+    suppressionDecidedFor.current = incomingCall.call_id
+    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
+    setPopupSuppressed(openCallModal !== null || existing !== null)
+  }, [incomingCall])
+
+  // Which client the operator picked when the number is shared. Reset per call
+  // so a previous choice never leaks onto the next caller.
+  const [selectedIncomingClientId, setSelectedIncomingClientId] = useState<number | null>(null)
+  useEffect(() => {
+    setSelectedIncomingClientId(null)
+  }, [incomingCall?.call_id])
+
+  const primaryIncomingClient = useMemo(
+    () => resolvePrimaryClient(incomingCall, selectedIncomingClientId),
+    [incomingCall, selectedIncomingClientId]
+  )
+  const incomingCallLoans = useMemo(
+    () => buildIncomingCallLoans(incomingCall, selectedIncomingClientId),
+    [incomingCall, selectedIncomingClientId]
+  )
+
+  const handleSearchIncomingByPhone = useCallback(() => {
+    if (!incomingCall) return
+    // Mirrors the header search: the client list reads these off the store.
+    useSearchStore.getState().setSearchType('phone')
+    useSearchStore.getState().setSearchQuery(incomingCall.customer_phone)
+    navigate('/dashboard')
+  }, [incomingCall, navigate])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -737,10 +792,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
           {
+            path: '/dashboard/import/bulk-reversal-import',
+            label: t('navigation.bulkReversalImport', 'Bulk Reversal Import'),
+            icon: 'transaction-history',
+            requiredPermission: PERMISSIONS.REVERSALS.BULK,
+          },
+          {
             path: '/dashboard/import/bulk-sale-notes-import',
             label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
             icon: 'activity-01',
             requiredPermission: PERMISSIONS.SALE_NOTES.MANAGE,
+          },
+          {
+            path: '/dashboard/import/bulk-document-import',
+            label: t('navigation.bulkDocumentImport', 'Bulk Document Import'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.DATA.IMPORT_DOCUMENTS,
           },
         ],
       },
@@ -755,6 +822,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         icon: 'chart-ring',
         label: t('navigation.reports'),
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
+      },
+      {
+        path: '/dashboard/dialer',
+        icon: 'call-dialer',
+        label: t('navigation.dialer', 'Dialer'),
+        requiredPermission: PERMISSIONS.DIALER.VIEW,
       },
       {
         path: '/dashboard/messaging/campaigns',
@@ -851,9 +924,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           PERMISSIONS.CONTACT_TYPES.VIEW,
           PERMISSIONS.REPAYMENT_CONFIG.VIEW,
+          PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+          PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
         ],
         mode: 'any' as const,
         subItems: [
+          {
+            path: '/dashboard/system-settings/ai',
+            label: t('navigation.aiSettings', 'AI Settings'),
+            icon: 'ai-brain-03',
+            requiredPermissions: [
+              PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+              PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
+              PERMISSIONS.SYSTEM.MANAGE_ROLES,
+            ],
+            mode: 'any' as const,
+          },
+          {
+            // TODO(ubki): swap to a dedicated manage_integrations permission
+            // once it exists (reusing messaging integrations for now).
+            path: '/dashboard/system-settings/integrations/ubki',
+            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+            icon: 'briefcase-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
@@ -1003,29 +1097,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <RouteChangeTracker />
       <div
         className={cn(
-          'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
-          /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+          'bg-background bg-dashboard-light min-h-screen bg-cover bg-center',
           isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
         )}
       >
         {/* Sidebar */}
         <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
-        {/* Main Content Area with left margin for sidebar - no margin on mobile */}
+        {/* Main Content Area with left margin for sidebar - no margin below xl */}
         <div
           className={cn(
             'min-w-0 transition-all duration-300',
-            'lg:ml-18', // Desktop: always has margin for collapsed sidebar
-            isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
+            'xl:ml-18', // Desktop: always has margin for collapsed sidebar
+            isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
           )}
         >
           {/* Fixed Header */}
           <header
             className={cn(
-              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
               isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
-              'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
-              isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
+              'left-0 xl:left-18',
+              isOpenSideBar && 'xl:left-60'
             )}
           >
             {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
@@ -1041,14 +1134,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <button
                 onClick={toggleSidebar}
                 className={cn(
-                  'focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden',
+                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                   isLawyerWorkplaceRoute && 'self-center'
                 )}
                 aria-label="Toggle menu"
               >
                 <Icons.Menu11
                   size={20}
-                  className="text-gray-700 transition-transform duration-200 group-hover:scale-110"
+                  className="text-foreground transition-transform duration-200 group-hover:scale-110"
                   strokeWidth={1.5}
                 />
               </button>
@@ -1089,15 +1182,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
+              <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <UserProfile onLogoutClick={handleLogoutClick} />
             </div>
 
-            {/* Mobile: Notification bell + dropdown menu */}
             <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
+              <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
             </div>
@@ -1134,36 +1228,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isLoading={isLoggingOut}
         />
 
-        {/* Incoming Call Modal */}
-        {incomingCall && (
+        {/* Incoming Call Modal — suppressed while another call window is up */}
+        {incomingCall && !popupSuppressed && (
           <CallDialogModal
             open={true}
             onClose={dismissIncomingCall}
             initialState="incoming"
+            clientId={incomingCall.client_id ?? null}
             clientName={incomingCall.client_name || 'Unknown Caller'}
             phoneNumber={incomingCall.customer_phone}
             callId={incomingCall.call_id}
-            loans={incomingCall.loans?.map((loan) => ({
-              id: loan.loan_id.toString(),
-              clientName: incomingCall.client_name || 'Unknown',
-              loanNumber: loan.contract_number,
-              counterparty: '', // Not provided by backend
-              loanPrincipal: Number(loan.remaining_debt) || 0,
-              debt: Number(loan.remaining_debt) || 0,
-              status: loan.status,
-              saleDate: '', // Not provided by backend
-              lastContact: '', // Not provided by backend
-              priority: 'Medium' as const, // Default priority
-              score: 0, // Not provided by backend
-            }))}
-            onAnswer={() => {
-              // TODO: Handle answer call - send to backend
-              dismissIncomingCall()
-            }}
-            onReject={() => {
-              // TODO: Handle reject call - send to backend
-              dismissIncomingCall()
-            }}
+            loans={incomingCallLoans}
+            incomingContext={primaryIncomingClient}
+            incomingClients={incomingCall.clients ?? []}
+            selectedIncomingClientId={selectedIncomingClientId}
+            onSelectIncomingClient={setSelectedIncomingClientId}
+            onSearchByPhone={handleSearchIncomingByPhone}
+            onReject={dismissIncomingCall}
           />
         )}
       </div>

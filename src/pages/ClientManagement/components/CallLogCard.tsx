@@ -186,32 +186,32 @@ export function CallLogCard({
     <button
       onClick={handleCardClick}
       className={cn(
-        'group relative w-full cursor-pointer rounded-lg border border-[#E0E0E0] bg-white p-3 text-left transition-shadow hover:shadow-md md:p-4',
+        'group border-border bg-card relative w-full cursor-pointer rounded-lg border p-3 text-left transition-shadow hover:shadow-md md:p-4',
         className
       )}
     >
       <div className="flex h-full min-w-0 items-start gap-2 md:gap-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F0F0F0] md:h-10 md:w-10">
-          <div className="text-secondary-800/50 group-hover:text-secondary-800">{icon}</div>
+        <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md md:h-10 md:w-10">
+          <div className="text-primary-700/50 group-hover:text-primary-700">{icon}</div>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:gap-1">
           {isCall ? (
             <>
               <div className="flex min-w-0 items-center gap-2">
-                <span className="flex shrink-0 flex-row items-center gap-1 text-sm text-[#666666]">
+                <span className="text-muted-foreground flex shrink-0 flex-row items-center gap-1 text-sm">
                   <span>
                     {type === 'Incoming' ? (
                       <Icons.CallIncoming04
                         size={16}
-                        className="text-secondary-800"
+                        className="text-primary-700"
                         aria-hidden="true"
                         focusable="false"
                       />
                     ) : (
                       <Icons.CallOutgoing04
                         size={16}
-                        className="text-secondary-800"
+                        className="text-primary-700"
                         aria-hidden="true"
                         focusable="false"
                       />
@@ -237,15 +237,15 @@ export function CallLogCard({
               </div>
 
               <div className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-sm font-bold text-[#333333]">{time}</span>
-                <span className="shrink-0 text-sm text-[#666666]">
+                <span className="text-foreground shrink-0 text-sm font-bold">{time}</span>
+                <span className="text-muted-foreground shrink-0 text-sm">
                   {duration ? `(${duration})` : ''}
                 </span>
               </div>
 
-              <div className="truncate text-sm text-[#666666]">{phone}</div>
+              <div className="text-muted-foreground truncate text-sm">{phone}</div>
 
-              {line && <div className="truncate text-sm text-[#666666]">{line}</div>}
+              {line && <div className="text-muted-foreground truncate text-sm">{line}</div>}
             </>
           ) : (
             <>
@@ -263,18 +263,18 @@ export function CallLogCard({
                 </span>
               </div>
 
-              <div className="truncate text-sm font-bold text-[#333333]">
+              <div className="text-foreground truncate text-sm font-bold">
                 {template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
               </div>
 
-              <div className="line-clamp-2 overflow-hidden text-sm break-words text-[#666666]">
+              <div className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words">
                 {message}
               </div>
               {phone && phone !== '-' && (
-                <div className="truncate text-sm text-[#666666]">
+                <div className="text-muted-foreground truncate text-sm">
                   {phone}
                   {destinationOwnerLabel ? (
-                    <span className="text-[#888888]"> · {destinationOwnerLabel}</span>
+                    <span className="text-muted-foreground"> · {destinationOwnerLabel}</span>
                   ) : null}
                 </div>
               )}
@@ -284,15 +284,19 @@ export function CallLogCard({
 
         <div className="flex shrink-0 flex-col items-end gap-0.5 md:gap-1">
           {date && (
-            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{date}</div>
+            <div className="text-muted-foreground text-[10px] whitespace-nowrap md:text-xs">
+              {date}
+            </div>
           )}
 
           {time && (
-            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{time}</div>
+            <div className="text-muted-foreground text-[10px] whitespace-nowrap md:text-xs">
+              {time}
+            </div>
           )}
 
           {operator && (
-            <div className="mt-auto text-[10px] font-medium whitespace-nowrap text-[#333333] md:text-xs">
+            <div className="text-foreground mt-auto text-[10px] font-medium whitespace-nowrap md:text-xs">
               {operator}
             </div>
           )}

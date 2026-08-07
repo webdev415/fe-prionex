@@ -102,7 +102,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
   // Check if user data is available - AFTER all hooks
   if (!user) {
-    return <div className="py-8 text-center text-gray-600">No user data available</div>
+    return <div className="text-muted-foreground py-8 text-center">No user data available</div>
   }
 
   const onSubmit = (data: UpdateUserFormData) => {
@@ -154,8 +154,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="username">Username:</Label>
-            <Input id="username" value={user.username} disabled className="mt-1 bg-gray-50" />
-            <p className="mt-1 text-xs text-gray-500">Username cannot be changed</p>
+            <Input id="username" value={user.username} disabled className="bg-muted mt-1" />
+            <p className="text-muted-foreground mt-1 text-xs">Username cannot be changed</p>
           </div>
 
           <div>
@@ -258,7 +258,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'uk'} onValueChange={field.onChange}>
-                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+                  <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -282,7 +282,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'Europe/Kyiv'} onValueChange={field.onChange}>
-                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+                  <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -326,7 +326,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             {errors.asterisk_extension && (
               <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.asteriskExtension')}
             </p>
           </div>
@@ -352,14 +352,14 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3 className="text-dark-500 text-sm font-semibold">Assign Projects:</h3>
+        <h3 className="text-foreground text-sm font-semibold">Assign Projects:</h3>
         <div className="flex flex-wrap gap-4">
           {projects.map((project) => {
             const isChecked = selectedProjects.includes(project.id)
             return (
               <label
                 key={project.id}
-                className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm font-light"
+                className="text-foreground flex cursor-pointer items-center gap-2 text-sm font-light"
               >
                 <Checkbox
                   checked={isChecked}
@@ -392,7 +392,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       {/* Role per Project Section (editable) */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3 className="text-dark-500 text-sm font-semibold">
+          <h3 className="text-foreground text-sm font-semibold">
             {t('pages.users.forms.rolePerProject')}
           </h3>
           <div className="space-y-3">

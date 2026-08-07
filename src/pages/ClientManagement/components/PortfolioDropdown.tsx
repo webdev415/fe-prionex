@@ -103,7 +103,7 @@ export function PortfolioDropdown({
             type="button"
             onClick={onClear}
             aria-label="Clear"
-            className="flex shrink-0 items-center text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-foreground flex shrink-0 items-center"
           >
             <Icons.Cancel01 size={14} />
           </button>
@@ -112,23 +112,23 @@ export function PortfolioDropdown({
       <DropdownMenuContent
         align="start"
         sideOffset={8}
-        className="w-[280px] rounded-lg border border-gray-200 bg-white p-0 shadow-lg"
+        className="border-border bg-card w-[280px] rounded-lg border p-0 shadow-lg"
       >
         {/* Search Input */}
-        <div className="border-b border-gray-200 p-3">
+        <div className="border-border border-b p-3">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('pages.clients.modals.portfolioDropdown.searchPortfolios')}
-            className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
+            className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none"
           />
         </div>
 
         {/* Portfolio List */}
         <div className="max-h-[200px] overflow-y-auto p-2">
           {filteredPortfolios.length === 0 ? (
-            <div className="py-4 text-center text-sm text-gray-500">
+            <div className="text-muted-foreground py-4 text-center text-sm">
               {t('pages.clients.modals.portfolioDropdown.noPortfoliosFound')}
             </div>
           ) : (
@@ -136,7 +136,7 @@ export function PortfolioDropdown({
               {filteredPortfolios.map((portfolio) => (
                 <label
                   key={portfolio.id}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                  className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2"
                 >
                   <Checkbox
                     checked={tempSelection.includes(portfolio.id)}
@@ -150,7 +150,7 @@ export function PortfolioDropdown({
         </div>
 
         {/* Action Buttons */}
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-border border-t p-3">
           <div className="flex items-center gap-2">
             <Button variant="cancel" onClick={handleClear} className="flex flex-1">
               {t('pages.clients.modals.portfolioDropdown.clear')}

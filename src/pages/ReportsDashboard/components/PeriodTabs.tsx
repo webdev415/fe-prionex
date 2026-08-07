@@ -23,16 +23,16 @@ export function PeriodTabs({ selectedPeriod, onPeriodChange }: PeriodTabsProps) 
   ]
 
   return (
-    <div className="flex gap-2">
+    <div className="flex w-full gap-2 sm:w-auto">
       {periods.map((period) => (
         <button
           key={period.key}
           onClick={() => onPeriodChange(period.key)}
           className={cn(
-            'flex w-[120px] cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+            'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors sm:w-[120px] sm:flex-none sm:px-4 sm:text-sm',
             selectedPeriod === period.key
-              ? 'bg-secondary-800 text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-50'
+              ? 'bg-secondary text-secondary-foreground'
+              : 'bg-card text-muted-foreground hover:bg-muted'
           )}
         >
           {period.label}

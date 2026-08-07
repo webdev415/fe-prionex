@@ -100,8 +100,8 @@ describe('LeaksSubTab', () => {
   it('shows "No call" for a not-followed-up escalation and a timestamp for a followed-up one', () => {
     render(<LeaksSubTab />)
     expect(screen.getByText('pages.training.leaks.noCall')).toBeInTheDocument()
-    // last_call_after_escalation_at formatted as dd.MM HH:mm.
-    expect(screen.getByText('13.05 12:10')).toBeInTheDocument()
+    // last_call_after_escalation_at is now locale-aware (mocked i18n = en → MM/DD HH:mm).
+    expect(screen.getByText('05/13 12:10')).toBeInTheDocument()
   })
 
   it('renders the escalation info banner (the BE escalation definition)', () => {

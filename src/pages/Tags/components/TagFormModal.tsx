@@ -61,6 +61,7 @@ type TagFormData = {
   protected_removal_roles?: string[]
   expiry_type?: string
   is_related_tag?: boolean
+  sort_order?: number
 }
 
 /**
@@ -168,6 +169,23 @@ export function TagFormModal({
             )
             .optional(),
           default_expires_at: z.string().optional(),
+          sort_order: z
+            .number({
+              error: t('pages.tags.fields.validation.sortOrderRequired', 'Sort order is required'),
+            })
+            .int(
+              t(
+                'pages.tags.fields.validation.sortOrderPositiveInteger',
+                'Sort order must be a positive integer'
+              )
+            )
+            .min(
+              1,
+              t(
+                'pages.tags.fields.validation.sortOrderPositiveInteger',
+                'Sort order must be a positive integer'
+              )
+            ),
         })
         .passthrough(),
     // i18n.language is needed to recalculate schema when language changes
@@ -207,6 +225,7 @@ export function TagFormModal({
       protected_removal_roles: (tag as TagDefinition)?.protected_removal_roles ?? [],
       expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
       is_related_tag: (tag as TagDefinition)?.is_related_tag ?? false,
+      sort_order: (tag as TagDefinition)?.sort_order ?? 100,
     },
   })
 
@@ -244,6 +263,7 @@ export function TagFormModal({
         protected_removal_roles: tagDef?.protected_removal_roles ?? [],
         expiry_type: tagDef?.expiry_type ?? 'permanent',
         is_related_tag: tagDef?.is_related_tag ?? false,
+        sort_order: tagDef?.sort_order ?? 100,
       })
     }
   }, [open, tag, reset])
@@ -273,6 +293,7 @@ export function TagFormModal({
             ? data.default_ttl_hours
             : undefined,
         default_expires_at: data.default_expires_at || undefined,
+        sort_order: data.sort_order && !Number.isNaN(data.sort_order) ? data.sort_order : 100,
         department_ids: departmentIds.length > 0 ? departmentIds : null,
       }
 
@@ -428,6 +449,29 @@ export function TagFormModal({
                 error={errors.description?.message}
                 rows={3}
                 aria-label={t('pages.tags.fields.description', 'Description')}
+                disabled={isSystemTag}
+              />
+            </div>
+
+            {/* Sort Order */}
+            <div className="space-y-2">
+              <Label htmlFor="sort_order">
+                {t('pages.tags.fields.sortOrder', 'Sort Order')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.sortOrder',
+                    'Lower number = higher position in tag lists. Default is 100.'
+                  )}
+                />
+              </Label>
+              <Input
+                id="sort_order"
+                type="number"
+                min={1}
+                step={1}
+                {...register('sort_order', { valueAsNumber: true })}
+                placeholder={t('pages.tags.fields.sortOrderPlaceholder', 'e.g. 1, 10, 100')}
+                error={errors.sort_order?.message}
                 disabled={isSystemTag}
               />
             </div>

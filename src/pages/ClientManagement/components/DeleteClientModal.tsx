@@ -78,8 +78,8 @@ export function DeleteClientModal({
     <Modal open={open} onClose={handleClose} maxWidth="md">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Delete size={20} className="text-primary-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.clients.modals.deleteClient.title')}
@@ -96,30 +96,30 @@ export function DeleteClientModal({
 
         {/* Client Information Section */}
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+          <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.deleteClient.clientDetails')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border px-4 py-4 sm:px-6 sm:py-5">
             <div className="flex items-start gap-6 self-stretch">
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldName')}{' '}
                 <span className="font-medium">{client.full_name}</span>
               </span>
             </div>
             <div className="flex items-start gap-6 self-stretch">
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldTaxId')}{' '}
                 <span className="font-medium">{client.tax_id}</span>
               </span>
             </div>
             <div className="flex items-start gap-6 self-stretch">
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldPhone')}{' '}
                 <span className="font-medium">{client.phone_primary}</span>
               </span>
             </div>
             <div className="flex items-start gap-6 self-stretch">
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldTotalDebt')}{' '}
                 <span className="text-error-500 font-medium">
                   {formatCurrency(client.total_debt)}
@@ -131,10 +131,10 @@ export function DeleteClientModal({
 
         {/* Impact Warning Section */}
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+          <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.deleteClient.impactTitle')}
           </span>
-          <ul className="text-dark-500 list-disc space-y-2 pl-5 text-xs sm:text-sm">
+          <ul className="text-foreground list-disc space-y-2 pl-5 text-xs sm:text-sm">
             <li>{t('pages.clients.modals.deleteClient.impact1')}</li>
             <li>{t('pages.clients.modals.deleteClient.impact2')}</li>
             <li>{t('pages.clients.modals.deleteClient.impact3')}</li>
@@ -159,7 +159,7 @@ export function DeleteClientModal({
           />
           <label
             htmlFor="confirm-delete"
-            className="text-dark-500 cursor-pointer text-sm leading-[150%] font-medium"
+            className="text-foreground cursor-pointer text-sm leading-[150%] font-medium"
           >
             {t('pages.clients.modals.deleteClient.confirmCheckbox')}
           </label>

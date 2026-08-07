@@ -42,7 +42,10 @@ export function TestsTab() {
       </div>
 
       <TrainingFilterChips
-        items={FILTERS}
+        items={FILTERS.map((f) => ({
+          ...f,
+          label: t(`pages.training.tests.filters.${f.id}`, f.label),
+        }))}
         activeId={filter}
         onChange={(id) => setFilter(id as TestStatus | 'all')}
       />
@@ -98,7 +101,7 @@ function TestCard({ test }: { test: MockTest }) {
         <span
           className={`absolute top-3 right-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${status.tone}`}
         >
-          {status.label}
+          {t(`pages.training.tests.status.${test.status}`, status.label)}
         </span>
       </div>
       <div className="flex flex-col gap-3 p-4">

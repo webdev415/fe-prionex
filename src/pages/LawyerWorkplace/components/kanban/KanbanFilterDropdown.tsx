@@ -48,14 +48,14 @@ export function KanbanFilterDropdown<T extends string>({
         <button
           type="button"
           className={cn(
-            'text-dark-500 flex h-[38px] w-full items-center justify-between gap-2 rounded-[8px] border border-gray-200 bg-white px-3 text-[12px] font-normal hover:bg-gray-50',
+            'text-foreground border-border bg-input hover:bg-muted flex h-[38px] w-full items-center justify-between gap-2 rounded-[8px] border px-3 text-[12px] font-normal',
             className
           )}
         >
           <span className="flex min-w-0 flex-1 items-center truncate text-left">
             {renderValue ? renderValue(selected) : defaultLabel(selected, t)}
           </span>
-          <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          <Icons.ArrowDown size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -70,7 +70,7 @@ export function KanbanFilterDropdown<T extends string>({
             key={option.id}
             className={cn(
               'cursor-pointer rounded-md px-2.5 py-1.5 text-[13px]',
-              option.id === value && 'bg-gray-50 font-medium'
+              option.id === value && 'bg-muted font-medium'
             )}
             onClick={() => onChange(option.id)}
           >

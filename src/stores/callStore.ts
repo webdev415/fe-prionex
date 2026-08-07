@@ -6,7 +6,24 @@
 
 import { create } from 'zustand'
 
+import type { IncomingCallClient } from '@/features/calls/types'
+
 export type CallModalType = 'call-dialog' | 'call-recording'
+
+/** Loan card shape the call modal renders; mirrored here so it survives minimize. */
+export interface IncomingModalLoan {
+  id: string
+  clientName: string
+  loanNumber: string
+  counterparty: string
+  loanPrincipal: number
+  debt: number
+  status: string
+  saleDate: string
+  lastContact: string
+  priority: 'Critical' | 'High' | 'Medium' | 'Low'
+  score: number
+}
 
 export interface MinimizedCallInfo {
   id: string
@@ -22,6 +39,11 @@ export interface MinimizedCallInfo {
   elapsedTime?: number
   manualPhoneEnabled?: boolean
   manualPhoneDigits?: string
+  // Screen-pop payload, carried so restoring a minimized inbound call brings
+  // back the caller card rather than an empty modal.
+  loans?: IncomingModalLoan[]
+  incomingContext?: IncomingCallClient | null
+  incomingClients?: IncomingCallClient[]
   // For call recording
   callData?: {
     type: string

@@ -17,6 +17,19 @@ export async function getTAInteractions(
   return r.data
 }
 
+// Client-centric read: always the full history for the client, never clamped
+// by the Action Analysis access level.
+export async function getClientTAInteractions(
+  clientId: number,
+  params?: Omit<TAInteractionListParams, 'client_id'>
+): Promise<TAInteractionListResponse> {
+  const r = await api.get<TAInteractionListResponse>(
+    `/api/v1/clients/${clientId}/ta-interactions`,
+    { params }
+  )
+  return r.data
+}
+
 export async function createTAInteraction(payload: TAInteractionCreate): Promise<TAInteraction> {
   const r = await api.post<TAInteraction>('/api/v1/ta-interactions', payload)
   return r.data

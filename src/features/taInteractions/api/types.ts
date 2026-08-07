@@ -83,6 +83,11 @@ export interface TAInteractionCreate {
   promise_amount?: number | null
   notes?: string | null
   step_data?: Record<string, unknown> | null
+  // Values of steps the operator explicitly edited in the fill-in modal after
+  // confirming them (keyed by step_order). The backend mirrors ONLY these into
+  // the chain-instance snapshot so the completion reconciliation (KAN-744)
+  // preserves the edit instead of overwriting it with the pre-edit value.
+  edited_step_data?: Record<string, string> | null
   call_id?: number | null
   assigned_operator_id?: number | null
   notify_responsible?: boolean

@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import './theme/themes.css';
 
 @theme {
   /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
@@ -119,6 +120,19 @@
   --color-error-900: #7f1d1d;
   --color-error-950: #450a0a;
 
+  /* info-* aliases (Alert.tsx) — same scale as information */
+  --color-info-50: var(--color-information-50);
+  --color-info-100: var(--color-information-100);
+  --color-info-200: var(--color-information-200);
+  --color-info-300: var(--color-information-300);
+  --color-info-400: var(--color-information-400);
+  --color-info-500: var(--color-information-500);
+  --color-info-600: var(--color-information-600);
+  --color-info-700: var(--color-information-700);
+  --color-info-800: var(--color-information-800);
+  --color-info-900: var(--color-information-900);
+  --color-info-950: var(--color-information-950);
+
   /* Font Family */
   --font-family-sans: 'Noto Sans', sans-serif;
 
@@ -162,6 +176,40 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --shadow-card: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Semantic theme tokens (values from src/theme/themes.css via data-theme / data-accent) */
+  --color-background: var(--background);
+  --color-elevated: var(--elevated);
+  --color-nav-surface: var(--nav-surface);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-hover: var(--nav-hover);
+  --color-filter-bar: var(--filter-bar);
+  --color-search-bar: var(--search-bar);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
 @layer base {
@@ -174,14 +222,25 @@
   }
 
   body {
-    background-color: var(--color-light-50);
-    color: var(--color-dark-500);
+    background-color: var(--background);
+    color: var(--foreground);
     min-height: 100vh;
   }
 
   button {
     color: inherit;
   }
+}
+
+/*
+ * Theme switch performance: while data-theme / data-accent flip, suppress
+ * transitions so the whole tree snaps instead of animating every color.
+ * Class is added/removed by applyThemeToDocument.
+ */
+html.theme-switching,
+html.theme-switching * {
+  transition: none !important;
+  animation: none !important;
 }
 
 /* React Flow controls: force dark icons regardless of @layer ordering */
@@ -293,9 +352,34 @@
     background-color: #80d80a;
   }
 
-  /* Dashboard background image */
+  /* Dashboard background image — only for themes that define --dashboard-bg-image */
   .bg-dashboard-light {
-    background-image: url(/assets/images/dashboard-light-bg.svg);
+    background-image: none;
+  }
+
+  html[data-theme='light-classic'] .bg-dashboard-light,
+  html[data-theme='neutral-dim'] .bg-dashboard-light {
+    background-image: var(--dashboard-bg-image, url(/assets/images/dashboard-light-bg.svg));
+  }
+
+  /* Sidebar brand logos — CSS-only swap (no React theme subscription) */
+  .sidebar-brand-logo-light,
+  .sidebar-brand-logo-dark {
+    display: block;
+  }
+
+  .sidebar-brand-logo-dark {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-light,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-light {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-dark,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-dark {
+    display: block;
   }
 
   /* Button text color for light backgrounds */
@@ -397,30 +481,30 @@
     scrollbar-color: #d4d4d4 transparent;
   }
 
-  /* Data Table Scrollbar */
+  /* Data Table Scrollbar — follows active data-theme tokens */
   .data-table-scroll::-webkit-scrollbar {
     height: 8px;
   }
 
   .data-table-scroll::-webkit-scrollbar-track {
-    background: #ebece8;
+    background: var(--border);
     border-radius: 0 0 12px 12px;
   }
 
   .data-table-scroll::-webkit-scrollbar-thumb {
-    background: #90947b;
+    background: var(--muted-foreground);
     border-radius: 4px;
-    border: 1px solid #ebece8;
+    border: 1px solid var(--border);
   }
 
   .data-table-scroll::-webkit-scrollbar-thumb:hover {
-    background: #6f715d;
+    background: color-mix(in srgb, var(--muted-foreground) 70%, var(--foreground));
   }
 
   /* Firefox */
   .data-table-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #90947b transparent;
+    scrollbar-color: var(--muted-foreground) var(--border);
     margin: 0;
     padding: 0;
   }
@@ -499,6 +583,56 @@
   .sidebar-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #9ca3af transparent;
+  }
+
+  /* Dialer operator view — baseline is the remaining viewport height below
+     the fixed top bar + page title, so both columns match that height by
+     default. If the right-hand panel's content needs more room than the
+     screen, the row grows to fit it (grid stretch keeps the campaign list
+     column the same height) and the page scrolls instead of clipping the
+     panel. The campaign list's own row-list still scrolls internally via
+     `.dialer-campaign-list-scroll`, independent of this. */
+  /* On mobile the two panels stack, so don't force a tall empty min-height —
+     that only matters for the side-by-side desktop layout where both columns
+     share one row height. */
+  .dialer-operator-view {
+    min-height: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .dialer-operator-view {
+      min-height: max(560px, calc(100vh - 150px));
+    }
+  }
+
+  /* Dialer campaign list — thin, theme-aware scrollbar for the operator's
+     "My Campaigns" panel. No `scrollbar-gutter: stable` — that reserved a
+     permanent blank strip on the right even when the list does not overflow. */
+  .dialer-campaign-list-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent) transparent;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+
+  .dialer-campaign-list-scroll::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
@@ -631,4 +765,130 @@ input[type='week']::-webkit-calendar-picker-indicator {
 input[type='date']::-webkit-calendar-picker-indicator:hover,
 input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Dialer Queue List — Figma card (KAN-379)
+   The shared DataTable ships its own bordered card with a white header and a
+   grey-first-row zebra. Inside .dialer-queue-card we reset that card, recolour
+   the header to muted, and invert the zebra so the FIRST row uses --card.
+   Unlayered so it wins over Tailwind's layered utilities; scoped to the
+   class so no other table is affected.
+   --------------------------------------------------------------------------- */
+.dialer-queue-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-queue-card table thead tr,
+.dialer-queue-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-queue-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-queue-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+/* Header column dividers match the card surface; the body has no column dividers. */
+.dialer-queue-card table thead th {
+  border-right-color: var(--card);
+}
+.dialer-queue-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+/* Emphasise only Queue name (col 1) and Number of entries (col 4). */
+.dialer-queue-card table tbody td:nth-child(1),
+.dialer-queue-card table tbody td:nth-child(4) {
+  font-weight: 500;
+}
+/* Active toggle: Secondary-600 track with a themed knob (Figma),
+   overriding the shared ToggleSwitch's green primary track for this table only. */
+.dialer-queue-card button[role='switch'][aria-checked='true'] {
+  background-color: var(--color-secondary-600);
+}
+.dialer-queue-card button[role='switch'][aria-checked='true'] > span {
+  background-color: var(--background);
+}
+
+/* Add-from-CRM (KAN-379, design: supervisor-06): identical table look to the
+   Queue List card — reset the DataTable's own card chrome, muted column header
+   with card-colored column dividers (default height), first-row-card zebra, no body
+   column dividers, and weight-300 body content. Scoped so no other table is
+   affected. */
+.dialer-crm-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+/* Select row (bulk header: Selected N of Y + destination + Add-to-queue): keep
+   its vertical padding but drop the divider + shadow so it reads as one surface
+   with the column header. */
+.dialer-crm-card .data-table-scroll .min-w-full > div:first-child {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.dialer-crm-card table thead tr,
+.dialer-crm-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-crm-card table thead th {
+  border-right-color: var(--card);
+  border-bottom: 0;
+  /* The DataTable stamps the (padded) select-row height onto every column
+     header via an inline style; pin it back to the standard row height so the
+     header is not taller than the Queue List / the body rows. */
+  height: 49px !important;
+}
+.dialer-crm-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-crm-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.dialer-crm-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+
+/* Analysis operator table (KAN-379, design: supervisor-07) — same look as the
+   Queue List: card reset, muted header with card column dividers, first-row-
+   card zebra, no body dividers, weight-300 body with the Operator name (col 1)
+   emphasised. Scoped so no other table is affected. */
+.dialer-analysis-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-analysis-card table thead tr,
+.dialer-analysis-card table thead th {
+  background-color: var(--muted);
+}
+.dialer-analysis-card table thead th {
+  border-right-color: var(--card);
+}
+.dialer-analysis-card table tbody tr:nth-child(odd) {
+  background-color: var(--card);
+}
+.dialer-analysis-card table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.dialer-analysis-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+/* Emphasise Talk Time (col 5) and Processed (col 7); all other cells weight 300
+   (the operator name keeps its own medium weight via the cell's markup). */
+.dialer-analysis-card table tbody td:nth-child(5),
+.dialer-analysis-card table tbody td:nth-child(7) {
+  font-weight: 500;
 }

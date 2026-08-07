@@ -46,10 +46,10 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
       <Icons.Warning size={48} className="text-error-500" />
-      <h2 className="text-dark-500 text-xl font-medium">
+      <h2 className="text-foreground text-xl font-medium">
         {t('pages.reports.error.title', 'Failed to load reports')}
       </h2>
-      <p className="text-dark-300">{message}</p>
+      <p className="text-muted-foreground">{message}</p>
       <Button variant="secondary" onClick={() => window.location.reload()}>
         {t('pages.reports.error.retry', 'Retry')}
       </Button>
@@ -232,10 +232,10 @@ export function ReportsDashboardPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
         <Icons.Warning size={48} className="text-warning-500" />
-        <h2 className="text-dark-500 text-xl font-medium">
+        <h2 className="text-foreground text-xl font-medium">
           {t('pages.reports.error.notAuthenticated', 'Authentication Required')}
         </h2>
-        <p className="text-dark-300">
+        <p className="text-muted-foreground">
           {t('pages.reports.error.pleaseLogin', 'Please log in to view reports')}
         </p>
         <Button variant="primary" onClick={() => (window.location.href = '/login')}>
@@ -278,26 +278,26 @@ export function ReportsDashboardPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-start gap-4 self-stretch">
+    <div className="flex flex-1 flex-col items-start gap-4 self-stretch sm:gap-5">
       {/* Page Header */}
-      <div className="flex h-12 items-center justify-between gap-5 self-stretch">
-        <div className="flex flex-1 items-center gap-4 self-stretch">
-          <span className="text-dark-500 flex-1 text-2xl leading-tight font-light tracking-[-0.48px]">
-            {t('pages.reports.title')}
-          </span>
+      <div className="flex flex-col gap-3 self-stretch lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4">
+        <span className="text-foreground text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl lg:justify-self-start">
+          {t('pages.reports.title')}
+        </span>
+        <div className="flex w-full justify-center lg:w-auto">
+          <div className="bg-card flex w-full max-w-md items-center justify-center gap-1 rounded-lg p-1 shadow-sm sm:w-auto sm:max-w-none">
+            <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
+          </div>
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-white p-1 shadow-sm">
-          <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
-        </div>
-        <div className="flex h-12 flex-1 flex-col items-end gap-2.5">
+        <div className="flex w-full justify-center sm:justify-end lg:justify-self-end">
           <PermissionGuard permission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
             <Button
               variant="primary"
               size="md"
               onClick={handleExport}
               disabled={isExporting}
-              leftIcon={<Icons.Csv02 size={20} />}
-              className="rounded-full"
+              leftIcon={<Icons.Csv02 size={20} className="text-primary-foreground" />}
+              className="h-[45px] w-full max-w-sm rounded-full text-xs sm:w-auto sm:text-sm"
             >
               {isExporting
                 ? t('pages.reports.exporting', 'Exporting...')
@@ -308,9 +308,9 @@ export function ReportsDashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex items-start gap-5 self-stretch">
+      <div className="flex w-full flex-col items-stretch gap-5 lg:flex-row lg:items-start">
         {/* Left Column - KPI Cards */}
-        <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:w-[35%] lg:shrink-0 lg:flex-col lg:gap-5 lg:self-start">
           <KPICard
             title={t('pages.reports.kpi.callsMade')}
             value={(dashboardData.kpis.callsMade || callsFromOperators || 0).toString()}
@@ -350,6 +350,7 @@ export function ReportsDashboardPage() {
             onViewDetails={() => setShowMessagesModal(true)}
           />
           <KPICard
+            className="sm:col-span-2 lg:col-span-1"
             title={t('pages.reports.kpi.paymentsCollected')}
             value={dashboardData.kpis.paymentsCollected.toString()}
             change={dashboardData.kpis.paymentsTrend.change}
@@ -361,7 +362,7 @@ export function ReportsDashboardPage() {
         </div>
 
         {/* Right Column - Agent Performance Table */}
-        <div className="flex flex-1 self-stretch">
+        <div className="flex w-full min-w-0 flex-1">
           <AgentPerformanceTable
             data={agentPerformance || []}
             isLoading={isTableLoading}

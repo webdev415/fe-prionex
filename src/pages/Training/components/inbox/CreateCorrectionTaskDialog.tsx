@@ -12,6 +12,7 @@ import {
 } from '@/features/training'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { formatDateTime } from '@/lib/localeFormat'
 
 /**
  * Trainer creates a correction task linked to one of the operator's
@@ -81,7 +82,7 @@ export function CreateCorrectionTaskDialog({
   operatorId,
   callId: initialCallId,
 }: CreateCorrectionTaskDialogProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const operator = operatorId ? operators.find((o) => o.id === operatorId) : undefined
@@ -238,7 +239,7 @@ export function CreateCorrectionTaskDialog({
                 <option value="">{t('pages.training.correction.pickCall', 'Pick a call…')}</option>
                 {calls.map((call) => {
                   const initiated = call.initiated_at
-                    ? new Date(call.initiated_at).toLocaleString()
+                    ? formatDateTime(call.initiated_at, i18n.language)
                     : '—'
                   return (
                     <option key={call.call_id} value={call.call_id}>
@@ -265,7 +266,10 @@ export function CreateCorrectionTaskDialog({
                 min={0}
                 value={callTimestamp}
                 onChange={(e) => setCallTimestamp(e.target.value)}
-                placeholder="e.g. 83 (for 1:23)"
+                placeholder={t(
+                  'pages.training.correction.timestampPlaceholder',
+                  'e.g. 83 (for 1:23)'
+                )}
                 className="h-[40px] text-sm"
               />
             </div>
@@ -291,7 +295,7 @@ export function CreateCorrectionTaskDialog({
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="correction-priority" className="text-xs font-medium text-gray-600">
-                {t('pages.training.correction.priority', 'Priority')}
+                {t('pages.training.correction.priorityLabel', 'Priority')}
               </label>
               <select
                 id="correction-priority"

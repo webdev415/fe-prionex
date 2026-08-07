@@ -48,7 +48,12 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <HugeiconsIcon icon={UserIcon} size={18} color="#05040D" />
+            <HugeiconsIcon
+              icon={UserIcon}
+              size={18}
+              color="currentColor"
+              className="text-foreground"
+            />
           </div>
         }
         title={
@@ -61,33 +66,33 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
         {/* Account summary */}
         <div className="space-y-1 text-sm sm:space-y-2">
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.username')}
             </span>
-            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+            <span className="text-foreground text-sm font-light break-words sm:text-base">
               {user.username}
             </span>
           </p>
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.email')}
             </span>
-            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+            <span className="text-foreground text-sm font-light break-words sm:text-base">
               {user.email}
             </span>
           </p>
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.currentStatus')}
             </span>
-            <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
+            <span className="text-foreground text-sm font-medium break-words sm:text-base">
               {currentStatus === 'active'
                 ? t('pages.users.status.active')
                 : t('pages.users.status.inactive')}
             </span>
           </p>
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.newStatus')}
             </span>
             <span
@@ -102,17 +107,17 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
           </p>
         </div>
 
-        <hr className="border-light-50 border-t" />
+        <hr className="border-border border-t" />
 
         {/* Confirmation copy */}
         <div className="space-y-2 text-sm sm:space-y-3">
-          <p className="text-dark-500 text-base font-medium sm:text-lg">
+          <p className="text-foreground text-base font-medium sm:text-lg">
             {isActivating
               ? t('pages.users.modals.changeStatus.activateConfirmTitle')
               : t('pages.users.modals.changeStatus.deactivateConfirmTitle')}
           </p>
           <div className="space-y-2">
-            <p className="text-dark-500 text-sm font-light sm:text-base">
+            <p className="text-foreground text-sm font-light sm:text-base">
               {isActivating
                 ? t('pages.users.modals.changeStatus.activateWillAllow')
                 : t('pages.users.modals.changeStatus.deactivateWillPrevent')}
@@ -123,20 +128,20 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
                   <div className="flex items-start gap-2 sm:items-center">
                     <Icons.ArrowRight
                       size={14}
-                      className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                      className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                       strokeWidth={1.5}
                     />
-                    <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                    <span className="text-foreground text-sm font-light break-words sm:text-base">
                       {t('pages.users.modals.changeStatus.allowLogin')}
                     </span>
                   </div>
                   <div className="flex items-start gap-2 sm:items-center">
                     <Icons.ArrowRight
                       size={14}
-                      className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                      className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                       strokeWidth={1.5}
                     />
-                    <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                    <span className="text-foreground text-sm font-light break-words sm:text-base">
                       {t('pages.users.modals.changeStatus.accessSystem')}
                     </span>
                   </div>
@@ -146,20 +151,20 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
                   <div className="flex items-start gap-2 sm:items-center">
                     <Icons.ArrowRight
                       size={14}
-                      className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                      className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                       strokeWidth={1.5}
                     />
-                    <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                    <span className="text-foreground text-sm font-light break-words sm:text-base">
                       {t('pages.users.modals.changeStatus.preventLogin')}
                     </span>
                   </div>
                   <div className="flex items-start gap-2 sm:items-center">
                     <Icons.ArrowRight
                       size={14}
-                      className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                      className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                       strokeWidth={1.5}
                     />
-                    <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                    <span className="text-foreground text-sm font-light break-words sm:text-base">
                       {t('pages.users.modals.changeStatus.terminateSessions')}
                     </span>
                   </div>
@@ -168,10 +173,10 @@ export function ChangeStatusModal({ open, user, newStatus, onClose }: ChangeStat
               <div className="flex items-start gap-2 sm:items-center">
                 <Icons.ArrowRight
                   size={14}
-                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                   strokeWidth={1.5}
                 />
-                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                <span className="text-foreground text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.changeStatus.recordAudit')}
                 </span>
               </div>

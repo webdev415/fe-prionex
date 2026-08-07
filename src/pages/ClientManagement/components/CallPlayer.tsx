@@ -32,6 +32,9 @@ export interface CallPlayerProps {
   callId?: string
   /** Load/reset gate (e.g. the modal's open state). Defaults true. */
   active?: boolean
+  /** Defer the recording download until the first Play. Use where the player is
+   *  mounted without the user asking for audio (e.g. an auto-selected row). */
+  lazy?: boolean
   /** Overlay rendered on top of the scrub bar (marker timeline). */
   markerOverlay?: ReactNode
   /** Emits the recording duration (ms) once metadata loads. */
@@ -55,12 +58,15 @@ const recordingExtensionFromBlob = (blob: Blob): string => {
 }
 
 export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function CallPlayer(
-  { callId, active = true, markerOverlay, onDurationChange, className },
+  { callId, active = true, lazy = false, markerOverlay, onDurationChange, className },
   forwardedRef
 ) {
   const { t } = useTranslation('common')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isAudioLoading, setIsAudioLoading] = useState(true)
+  const [isAudioLoading, setIsAudioLoading] = useState(!lazy)
+  // Lazy players hold off the download until the trainer presses Play.
+  const [requested, setRequested] = useState(!lazy)
+  const [playWhenReady, setPlayWhenReady] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -108,7 +114,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   // Async data-loading effect: setState here is intentional (loading → blob).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!active || !callId) {
+    if (!active || !callId || !requested) {
       if (recordingObjectUrlRef.current) {
         URL.revokeObjectURL(recordingObjectUrlRef.current)
         recordingObjectUrlRef.current = null
@@ -159,8 +165,16 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
     }
-  }, [active, callId, t])
+  }, [active, callId, requested, t])
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // A new call re-arms the lazy gate so the next recording isn't pre-fetched.
+  const [trackedCallId, setTrackedCallId] = useState(callId)
+  if (callId !== trackedCallId) {
+    setTrackedCallId(callId)
+    setRequested(!lazy)
+    setPlayWhenReady(false)
+  }
 
   // Reset playback UI when deactivated (render-time adjustment per the React
   // docs — avoids the set-state-in-effect lint and an extra render).
@@ -177,6 +191,12 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   }
 
   const handlePlayPause = () => {
+    // First press on a lazy player kicks off the download and plays on arrival.
+    if (!requested) {
+      setRequested(true)
+      setPlayWhenReady(true)
+      return
+    }
     const audio = audioRef.current
     if (!audio) return
     if (isPlaying) {
@@ -237,7 +257,14 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
             }
             setIsAudioLoading(false)
           }}
-          onCanPlay={() => setIsAudioLoading(false)}
+          onCanPlay={(e) => {
+            setIsAudioLoading(false)
+            if (playWhenReady) {
+              setPlayWhenReady(false)
+              e.currentTarget.play()
+              setIsPlaying(true)
+            }
+          }}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onEnded={() => setIsPlaying(false)}
           onError={() => {
@@ -254,28 +281,32 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       <div className="relative">
         {loadError && <p className="text-error-600 mb-2 text-center text-sm">{loadError}</p>}
         {isAudioLoading && !loadError && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-white/80">
+          <div className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center rounded-full">
             <Icons.Spinner className="h-6 w-6" />
           </div>
         )}
-        <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
+        <div className="bg-card flex items-center gap-2 self-stretch rounded-full px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
           <button
             onClick={handlePlayPause}
             disabled={isAudioLoading || !!loadError}
             className="shrink-0 cursor-pointer disabled:opacity-40"
           >
             {isPlaying ? (
-              <Icons.Pause size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
+              <Icons.Pause size={18} className="text-foreground sm:size-5" strokeWidth={1.5} />
             ) : (
-              <Icons.PlayCircle02 size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
+              <Icons.PlayCircle02
+                size={18}
+                className="text-foreground sm:size-5"
+                strokeWidth={1.5}
+              />
             )}
           </button>
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+            <span className="text-foreground shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(currentTime))}
             </span>
             <div
-              className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
+              className="bg-muted relative h-1 min-w-0 flex-1 cursor-pointer rounded-full"
               onClick={handleProgressChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -291,16 +322,16 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
               aria-valuenow={currentTime}
             >
               <div
-                className="h-full rounded-full bg-gray-700 transition-all"
+                className="bg-muted-foreground h-full rounded-full transition-all"
                 style={{ width: `${progressPercentage}%` }}
               />
               {markerOverlay}
             </div>
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+            <span className="text-foreground shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(duration))}
             </span>
           </div>
-          <button className="text-dark-500 shrink-0 cursor-pointer hover:text-gray-800">
+          <button className="text-foreground hover:text-foreground shrink-0 cursor-pointer">
             <Icons.VolumeHigh size={18} className="sm:size-5" />
           </button>
         </div>
@@ -359,14 +390,14 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
             <Icons.ArrowDown size={14} className="ml-1 sm:size-4" />
           </Button>
           {showSpeedMenu && (
-            <div className="absolute top-full right-0 z-10 mt-1 rounded-md border border-gray-300 bg-white shadow-lg">
+            <div className="border-border bg-card absolute top-full right-0 z-10 mt-1 rounded-md border shadow-lg">
               {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) => (
                 <button
                   key={speed}
                   onClick={() => handleSpeedChange(speed)}
                   className={cn(
-                    'text-dark-500 w-full px-3 py-2 text-left text-xs hover:bg-gray-100 sm:px-4 sm:text-sm',
-                    playbackSpeed === speed && 'bg-primary-100 text-primary-700'
+                    'text-foreground hover:bg-muted w-full px-3 py-2 text-left text-xs sm:px-4 sm:text-sm',
+                    playbackSpeed === speed && 'bg-primary/10 text-primary-700'
                   )}
                 >
                   {speed.toFixed(1)}x

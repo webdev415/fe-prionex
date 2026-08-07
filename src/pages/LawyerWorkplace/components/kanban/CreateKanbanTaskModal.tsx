@@ -10,9 +10,11 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   useLegalLawyers,
@@ -31,10 +33,20 @@ interface CreateKanbanTaskModalProps {
   onClose: () => void
 }
 
-function getTomorrowDate(): Date {
+type TaskPriority = 'high' | 'normal' | 'low'
+
+const PRIORITIES: { value: TaskPriority; labelKey: string; fallback: string }[] = [
+  { value: 'high', labelKey: 'pages.clients.tasks.priority.high', fallback: 'High' },
+  { value: 'normal', labelKey: 'pages.clients.tasks.priority.normal', fallback: 'Normal' },
+  { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
+]
+
+const DUE_DATE_DEFAULT_TIME = '09:00'
+
+function getTomorrowAtDefaultTime(): Date {
   const date = new Date()
   date.setDate(date.getDate() + 1)
-  date.setHours(0, 0, 0, 0)
+  date.setHours(9, 0, 0, 0)
   return date
 }
 
@@ -42,6 +54,16 @@ function getTodayStart(): Date {
   const date = new Date()
   date.setHours(0, 0, 0, 0)
   return date
+}
+
+/** Same rule as Client Detail Add Task: block past times today only. */
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
 }
 
 function renderLetterTypeOption(letterType: LegalLetterType) {
@@ -61,19 +83,23 @@ interface FormSelectProps {
 function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormSelectProps) {
   return (
     <div className="flex w-full flex-col items-start gap-2">
-      <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
+      <Label className="text-foreground text-[12px] font-normal">{label}</Label>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild disabled={disabled}>
           <button
             type="button"
             disabled={disabled}
-            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-foreground focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-left">
               {leftIcon}
               {value}
             </span>
-            <Icons.ArrowDown size={16} className="ml-2 shrink-0 text-gray-400" strokeWidth={1.5} />
+            <Icons.ArrowDown
+              size={16}
+              className="text-muted-foreground ml-2 shrink-0"
+              strokeWidth={1.5}
+            />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -85,7 +111,7 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
               key={item.key}
               disabled={item.disabled}
               className={cn(
-                'rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50',
+                'focus:bg-muted rounded-md px-2 py-1.5 text-[13px]',
                 item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
               )}
               onClick={() => {
@@ -103,6 +129,7 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
 
 export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalProps) {
   const { t } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const createTask = useCreateLegalKanbanTask()
   const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({
     enabled: open,
@@ -116,7 +143,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
-  const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
+  const [priority, setPriority] = useState<TaskPriority>('normal')
+  const [deadline, setDeadline] = useState<Date | null>(getTomorrowAtDefaultTime())
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -151,7 +179,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       setLetterTypeId(letterTypes[0]?.id ?? null)
       setClientId('')
       setClientSearch('')
-      setDeadline(getTomorrowDate())
+      setPriority('normal')
+      setDeadline(getTomorrowAtDefaultTime())
     })
   }, [assignableLawyers, letterTypes, open])
 
@@ -187,7 +216,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         letter_type_id: letterTypeId,
         client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
-        due_date: legalDueDateToIso(deadline),
+        due_date: legalDueDateToIso(deadline, timezone),
+        priority,
       },
       {
         onSuccess: () => onClose(),
@@ -200,7 +230,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.CheckmarkSquare03 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.CheckmarkSquare03 size={18} className="text-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.lawyerWorkplace.kanban.createTask.title', 'Create a Task')}
@@ -230,7 +260,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                   <span className="flex min-w-0 flex-col">
                     <span>{lawyer.display_name}</span>
                     {!assignable ? (
-                      <span className="text-light-500 text-[11px]">
+                      <span className="text-muted-foreground text-[11px]">
                         {t('pages.lawyerWorkplace.lawyers.atCapacity', {
                           current: lawyer.current_active,
                           max: lawyer.max_in_flight,
@@ -261,14 +291,14 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
 
           <div className="flex w-full flex-col items-start gap-2">
             <div className="flex w-full items-center justify-between gap-2">
-              <Label className="text-dark-500 text-[12px] font-normal">
+              <Label className="text-foreground text-[12px] font-normal">
                 {t('pages.lawyerWorkplace.kanban.createTask.client', 'Client')}
               </Label>
               {clientId ? (
                 <button
                   type="button"
                   onClick={() => setClientId('')}
-                  className="text-light-600 hover:text-dark-500 text-[11px] font-light"
+                  className="text-muted-foreground hover:text-foreground text-[11px] font-light"
                 >
                   {t('pages.lawyerWorkplace.kanban.createTask.clearClient', 'Clear')}
                 </button>
@@ -300,8 +330,29 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             />
           </div>
 
+          <div className="flex w-full flex-col gap-2">
+            <Label className="text-foreground text-[12px] font-normal">
+              {t('pages.lawyerWorkplace.kanban.createTask.priority', 'Priority')}
+            </Label>
+            <RadioGroup value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <div className="flex flex-wrap gap-4">
+                {PRIORITIES.map((p) => (
+                  <div key={p.value} className="flex items-center gap-2">
+                    <RadioItem value={p.value} id={`kanban-priority-${p.value}`} />
+                    <Label
+                      htmlFor={`kanban-priority-${p.value}`}
+                      className="text-foreground cursor-pointer text-[13px] font-light"
+                    >
+                      {t(p.labelKey, p.fallback)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="flex w-full flex-col items-start gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.kanban.createTask.deadline', 'Deadline')}
             </Label>
             <DateSelect
@@ -312,9 +363,15 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                 'pages.lawyerWorkplace.kanban.createTask.selectDeadline',
                 'Select deadline'
               )}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
               min={getTodayStart()}
-              className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
+              filterTime={filterFromNow}
+              defaultTime={DUE_DATE_DEFAULT_TIME}
+              defaultTimeSkipsToday
+              className="border-border h-9 rounded-[8px] text-[14px] font-light"
             />
           </div>
         </div>

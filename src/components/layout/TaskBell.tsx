@@ -146,7 +146,7 @@ export function TaskBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div className="border-input-border bg-input absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <span className="text-dark-500 text-sm font-semibold">My Tasks</span>

@@ -1,6 +1,6 @@
 export type LegalDocumentType = 'incoming' | 'outgoing' | 'nbu_response'
 
-export type LegalDocumentAction = 'generated' | 'uploaded'
+export type LegalDocumentAction = 'generated' | 'uploaded' | 'received' | 'synced'
 
 export type LegalDocumentTypeFilter =
   | 'all'

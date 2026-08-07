@@ -45,6 +45,19 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Reversals Category (2 permissions, KAN-334)
+   * Payment reversal (storno) — reallocation of a payment's distribution.
+   * Split rights: VIEW (see the Reversals table) vs CREATE (single + bulk).
+   * Seeded by auth migration 056.
+   */
+  REVERSALS: {
+    VIEW: 'view_reversals',
+    CREATE: 'create_reversal',
+    // Bulk upload reuses CREATE — no separate bulk permission.
+    BULK: 'create_reversal',
+  },
+
+  /**
    * Sale Notes Category (1 permission)
    * Controls bulk upload + delete of primary creditor comments.
    * Seeded by auth migration 039.
@@ -54,13 +67,29 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Communication Category (3 permissions)
+   * Communication Category (4 permissions)
    * Controls access to calling and messaging features
    */
   COMMUNICATION: {
     MAKE_CALLS: 'make_calls',
+    RECEIVE_CALLS: 'receive_calls',
     SEND_SMS: 'send_sms',
     VIEW_CALL_HISTORY: 'view_call_history',
+  },
+
+  /**
+   * Dialer Category (KAN-379)
+   * Controls access to the aggressive/auto dialer.
+   * VIEW gates the Dialer tab; OPERATE is the operator surface (join/leave
+   * a campaign queue and take routed live calls); SUPERVISE + MANAGE_QUEUES
+   * gate the supervisor admin (queue CRUD, number upload, statistics, restart).
+   * NOTE: backend RBAC code strings must be confirmed with the auth service.
+   */
+  DIALER: {
+    VIEW: 'view_dialer',
+    OPERATE: 'operate_dialer',
+    SUPERVISE: 'supervise_dialer',
+    MANAGE_QUEUES: 'manage_dialer_queues',
   },
 
   /**
@@ -96,6 +125,7 @@ export const PERMISSIONS = {
   DATA: {
     IMPORT: 'import_clients',
     IMPORT_PAYMENTS: 'import_payments',
+    IMPORT_DOCUMENTS: 'import_documents',
     EXPORT: 'export_clients',
     MANAGE_PRIORITY: 'manage_client_priority',
   },
@@ -113,7 +143,7 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (4 permissions)
+   * System Category (5 permissions)
    * Controls access to system administration
    */
   SYSTEM: {
@@ -122,6 +152,8 @@ export const PERMISSIONS = {
     MANAGE_ROLES: 'manage_roles',
     // Call QA — global «AI call analysis» switch + its settings surface
     MANAGE_CALL_QA: 'manage_call_qa',
+    // AI settings — global assistant kill-switch + its settings surface
+    MANAGE_AI_SETTINGS: 'manage_ai_settings',
   },
 
   /**
@@ -350,6 +382,8 @@ export const PERMISSIONS = {
     TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
+    ACTIVATE: 'rr_activate',
+    DELETE_DRAFT: 'rr_delete_draft',
   },
 
   /**
@@ -360,6 +394,16 @@ export const PERMISSIONS = {
    */
   UBKI: {
     SUBMIT: 'submit_to_ubki',
+  },
+
+  /**
+   * AI Assistant Category (1 permission)
+   * Gates access to the operator AI assistant (chat, history, feedback,
+   * voice/TTS). Enforced server-side by the ai-assistant proxy; this UI gate
+   * hides the entry for users who lack it. Orthogonal to per-user data-scope.
+   */
+  AI_ASSISTANT: {
+    USE: 'use_ai_assistant',
   },
 } as const
 
@@ -401,6 +445,7 @@ export function getAllPermissions(): Permission[] {
 export const PERMISSION_CATEGORIES = {
   CLIENTS: 'Clients',
   COMMUNICATION: 'Communication',
+  DIALER: 'Dialer',
   MESSAGING: 'Messaging',
   REPORTS: 'Reports',
   DATA: 'Data',
@@ -419,6 +464,8 @@ export const PERMISSION_CATEGORIES = {
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
+  REVERSALS: 'Reversals',
+  AI_ASSISTANT: 'AI Assistant',
 } as const
 
 /**
@@ -443,8 +490,15 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Communication
   make_calls: 'Make outbound phone calls to clients',
+  receive_calls: 'Receive inbound calls: incoming-call popup and its reject control',
   send_sms: 'Send SMS messages to clients',
   view_call_history: 'View call recordings and SMS history',
+
+  // Dialer (KAN-379)
+  view_dialer: 'View the Dialer tab (operator or supervisor surface)',
+  operate_dialer: 'Join/leave a dialer campaign queue and take routed live calls',
+  supervise_dialer: 'Access the dialer supervisor admin (queues, uploads, statistics, restart)',
+  manage_dialer_queues: 'Create, edit, delete, and activate dialer campaign queues',
 
   // Messaging
   manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
@@ -467,6 +521,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Data
   import_clients: 'Import client data from files',
   import_payments: 'Import payments from bank CSV files in bulk',
+  import_documents: 'Bulk-import client and credit documents from a ZIP archive',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
   manage_primary_creditor_comments: 'Upload bulk sale notes and delete individual sale notes',
@@ -603,6 +658,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
   rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
   rr_complete: 'Manually mark a restructuring agreement as Completed',
+  rr_activate: 'Manually activate a draft restructuring agreement (Draft → Connected)',
+  rr_delete_draft: 'Delete a draft restructuring agreement before it is activated',
 
   // Write-offs (KAN-245)
   view_writeoffs: 'List and read individual debt write-off entries',
@@ -614,4 +671,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // UBKI — outbound credit-bureau submission
   submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
+
+  // Reversals (KAN-334)
+  view_reversals: 'View the payment reversals (storno) table',
+  create_reversal: 'Create a payment reversal (storno) — single and bulk',
+
+  // AI Assistant
+  use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
+  manage_ai_settings: 'Manage global AI settings (assistant kill-switch)',
 }

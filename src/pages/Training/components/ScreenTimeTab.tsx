@@ -129,7 +129,7 @@ export function ScreenTimeTab() {
                   {t('pages.training.screenTime.columns.afterCall', 'After-call')}
                 </th>
                 <th className="px-4 py-2">
-                  {t('pages.training.screenTime.columns.deviation', 'Î” vs team')}
+                  {t('pages.training.screenTime.columns.deviation', 'Δ vs team')}
                 </th>
               </tr>
             </thead>

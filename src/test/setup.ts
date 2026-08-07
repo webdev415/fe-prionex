@@ -1,6 +1,9 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterAll } from 'vitest'
+import './mocks/callQaSettings'
+import './mocks/aiAssistantSettings'
+import './mocks/assistantOverview'
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
@@ -70,7 +73,17 @@ if (typeof globalThis.HTMLAudioElement === 'undefined') {
 // Mock i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
+    // Third arg carries the interpolation values for the `t(key, fallback, vars)`
+    // call form; `options` holds them for the two-arg `t(key, vars)` form.
+    t: (
+      key: string,
+      options?: Record<string, unknown>,
+      interpolation?: Record<string, unknown>
+    ) => {
+      const vars = interpolation ?? options
+      if (key === 'common.selectItem') {
+        return `Select item ${String(vars?.id)}`
+      }
       if (key === 'pages.imports.operatorAssignment.preview.fileInfo' && options) {
         return `File: ${String(options.filename)} · ${String(options.totalRecords)} records · Batch: ${String(options.batchId)}`
       }
@@ -104,6 +117,8 @@ vi.mock('react-i18next', () => ({
         'alreadyLoggedIn.message': 'You are already logged in on another device.',
         'alreadyLoggedIn.forceLogout': 'Force Logout Other Session',
         'alreadyLoggedIn.cancel': 'Back to Login',
+        'common.selectAll': 'Select all',
+        'common.selectionOptions': 'Selection options',
         'pages.clients.listOfClients': 'List of Clients',
         'pages.clients.clearAll': 'Clear All',
         'pages.clients.filtersLabel': 'Filters',
@@ -117,6 +132,13 @@ vi.mock('react-i18next', () => ({
         'pages.clients.priorityCards.criticalPriority': 'Critical Priority',
         'pages.clients.priorityCards.totalDebt': 'Total Debt',
         // Call-related translations
+        'pages.clients.modals.callDialog.multipleClientsTitle': 'Several clients found',
+        'pages.clients.modals.callDialog.multipleClientsHint':
+          'Choose who is calling — the interaction will be filed against this client.',
+        'pages.clients.modals.callDialog.clientNotFound': 'Client not found',
+        'pages.clients.modals.callDialog.clientNotFoundHint':
+          'This number is not linked to any client in your projects.',
+        'pages.clients.modals.callDialog.searchByNumber': 'Search by this number',
         'pages.clients.modals.callDialog.callClient': 'Call Client',
         'pages.clients.modals.callDialog.clientName': 'Client Name',
         'pages.clients.modals.callDialog.phoneNumber': 'Phone Number',
@@ -339,6 +361,10 @@ vi.mock('i18next', () => ({
   default: {
     use: vi.fn().mockReturnThis(),
     init: vi.fn(),
+    // `src/lib/i18n.ts` subscribes to languageChanged at module scope to keep
+    // `<html lang>` in step with the active language.
+    on: vi.fn(),
+    language: 'en',
   },
 }))
 

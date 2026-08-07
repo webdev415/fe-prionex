@@ -52,6 +52,8 @@ export const clientKeys = {
     [...clientKeys.details(), id, 'restructuringAgreements'] as const,
   restructuringDetail: (id: number, raId: number) =>
     [...clientKeys.details(), id, 'restructuringDetail', raId] as const,
+  loanCalculation: (id: number, debtId: number) =>
+    [...clientKeys.details(), id, 'loanCalculation', debtId] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -749,6 +751,22 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
 }
 
 /**
+ * Detailed calculation (after sale) for a single loan — KAN-335 modal.
+ */
+export function useLoanCalculation(clientId: number, debtId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.loanCalculation(clientId, debtId),
+    queryFn: () => clientApi.getLoanCalculation(clientId, debtId),
+    enabled: enabled && clientId > 0 && debtId > 0,
+    // The modal is opened on demand and must reflect the current ledger, so
+    // always refetch when it (re)mounts — a payment/write-off/reversal recorded
+    // between opens would otherwise be masked by a cached copy.
+    staleTime: 0,
+    refetchOnMount: 'always',
+  })
+}
+
+/**
  * Create a restructuring agreement for a client (Connect RR).
  */
 export function useCreateRestructuringAgreement() {
@@ -952,6 +970,47 @@ export function useDisconnectRR() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to disconnect restructuring'
+      toast.error(message)
+    },
+  })
+}
+
+export function useActivateRR() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId }: { clientId: number; raId: number }) =>
+      clientApi.activateRestructuringAgreement(clientId, raId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring activated')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to activate restructuring'
+      toast.error(message)
+    },
+  })
+}
+
+export function useDeleteRRDraft() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId }: { clientId: number; raId: number }) =>
+      clientApi.deleteRestructuringAgreement(clientId, raId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      toast.success('Draft restructuring deleted')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to delete draft restructuring'
       toast.error(message)
     },
   })

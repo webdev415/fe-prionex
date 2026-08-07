@@ -102,15 +102,19 @@ export function WriteoffEditDialog({ open, onClose, entry }: WriteoffEditDialogP
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.PencilEdit02 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.PencilEdit02
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
         }
         title={t('pages.clients.detail.writeOffEditDialog.title')}
       />
       <ModalContent>
         <div className="flex flex-col gap-4">
-          <p className="text-xs text-gray-600">
+          <p className="text-muted-foreground text-xs">
             {t('pages.clients.detail.writeOffEditDialog.immutabilityNote')}
           </p>
           <DateSelect
@@ -120,7 +124,7 @@ export function WriteoffEditDialog({ open, onClose, entry }: WriteoffEditDialogP
             min={getTomorrowAtMidnight()}
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-foreground text-sm font-medium">
               {t('pages.clients.detail.writeOffModal.notes')}
             </label>
             <Textarea

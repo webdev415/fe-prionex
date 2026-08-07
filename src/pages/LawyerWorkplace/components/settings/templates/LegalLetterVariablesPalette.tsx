@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { LEGAL_LETTER_TEMPLATE_VARIABLES } from '@/features/lawyerWorkplace/utils/letterTemplateVariables'
+import {
+  LEGAL_LETTER_TEMPLATE_VARIABLES,
+  LEGAL_LETTER_VARIABLE_GROUP_ORDER,
+} from '@/features/lawyerWorkplace/utils/letterTemplateVariables'
 import { cn } from '@/lib/utils'
 
 interface LegalLetterVariablesPaletteProps {
@@ -18,12 +21,12 @@ export function LegalLetterVariablesPalette({
   return (
     <div
       className={cn(
-        'rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600',
+        'border-border bg-card text-muted-foreground rounded-xl border p-4 text-sm',
         className
       )}
     >
       <div className="flex items-center justify-between">
-        <div className="text-dark-500 font-medium">
+        <div className="text-foreground font-medium">
           {t('pages.lawyerWorkplace.settings.templates.availableVariables', 'Available variables')}
         </div>
         <div className="flex items-center gap-2">
@@ -33,32 +36,53 @@ export function LegalLetterVariablesPalette({
           </span>
         </div>
       </div>
-      <p className="text-light-600 mt-2 text-[11px]">
+      <p className="text-muted-foreground mt-2 text-[11px]">
         {t(
           'pages.lawyerWorkplace.settings.templates.variablesHint',
           'Click a variable to insert it at the cursor in the template body.'
         )}
       </p>
-      <div className="mt-3 flex flex-col gap-2">
-        {LEGAL_LETTER_TEMPLATE_VARIABLES.map((variable) => (
-          <button
-            key={variable.name}
-            type="button"
-            disabled={disabled}
-            onClick={() => onInsert(variable.name)}
-            className="text-dark-500 hover:bg-primary-50 flex items-start gap-4 rounded-lg px-2 py-1.5 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <code className="w-44 shrink-0 rounded bg-gray-100 px-2 py-1 font-mono">
-              {`{{${variable.name}}}`}
-            </code>
-            <span className="flex-1 self-center font-medium">
-              {t(
-                `pages.lawyerWorkplace.settings.templates.variables.${variable.labelKey}`,
-                variable.name
-              )}
-            </span>
-          </button>
-        ))}
+
+      <div className="mt-3 flex flex-col gap-4">
+        {LEGAL_LETTER_VARIABLE_GROUP_ORDER.map((group) => {
+          const variables = LEGAL_LETTER_TEMPLATE_VARIABLES.filter(
+            (variable) => variable.group === group
+          )
+          if (variables.length === 0) return null
+
+          return (
+            <div key={group} className="flex flex-col gap-2">
+              <div className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                {t(`pages.lawyerWorkplace.settings.templates.variableGroups.${group}`, group)}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {variables.map((variable) => (
+                  <button
+                    key={variable.name}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onInsert(variable.name)}
+                    title={t(
+                      `pages.lawyerWorkplace.settings.templates.variableDescriptions.${variable.name}`,
+                      ''
+                    )}
+                    className="text-foreground hover:bg-primary/10 border-border flex items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-[11px]">
+                      {`{{${variable.name}}}`}
+                    </code>
+                    <span className="font-medium">
+                      {t(
+                        `pages.lawyerWorkplace.settings.templates.variables.${variable.name}`,
+                        variable.name
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

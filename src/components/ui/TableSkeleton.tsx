@@ -30,63 +30,56 @@ export function TableSkeleton({
 }: TableSkeletonProps) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
+      className={`border-border bg-card overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
     >
-      {/* Bulk Header Row Skeleton */}
       {showBulkHeader && (
-        <div className="flex h-[49px] items-center justify-between border-b border-[#EBECE8] bg-white px-6">
-          <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-          <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+        <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">
+          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+          <div className="bg-muted h-8 w-32 animate-pulse rounded" />
         </div>
       )}
 
-      {/* Table Header Actions Row Skeleton */}
       {showTableHeaderActions && (
-        <div className="flex h-[49px] items-center justify-between border-b border-[#EBECE8] bg-white px-6">
-          <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
-          <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
+        <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">
+          <div className="bg-muted h-4 w-32 animate-pulse rounded" />
+          <div className="bg-muted h-8 w-40 animate-pulse rounded" />
         </div>
       )}
 
       <table className="min-w-full border-collapse">
         <thead>
-          <tr className="bg-white">
-            {/* Checkbox column for bulk selection */}
+          <tr className="bg-muted/60">
             {enableBulkSelection && (
-              <th
-                scope="col"
-                className="h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium text-[#05040D]"
-              >
-                <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
+              <th scope="col" className="border-border h-[49px] border-r px-6 text-left">
+                <div className="bg-muted h-4 w-4 animate-pulse rounded" />
               </th>
             )}
             {Array.from({ length: columns }).map((_, index) => (
               <th
                 key={index}
                 scope="col"
-                className={`h-[49px] px-6 text-xs font-medium text-[#05040D] ${index < columns - 1 ? 'border-r border-[#EBECE8]' : ''}`}
+                className={`h-[49px] px-6 ${index < columns - 1 ? 'border-border border-r' : ''}`}
               >
-                <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                <div className="bg-muted h-4 w-20 animate-pulse rounded" />
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}>
-              {/* Checkbox column for bulk selection */}
+            <tr key={rowIndex} className="bg-card">
               {enableBulkSelection && (
-                <td className="h-[49px] border-r border-[#EBECE8] px-6">
-                  <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
+                <td className="border-border h-[49px] border-r px-6">
+                  <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                 </td>
               )}
               {Array.from({ length: columns }).map((_, colIndex) => (
                 <td
                   key={colIndex}
-                  className={`h-[49px] px-6 ${colIndex < columns - 1 ? 'border-r border-[#EBECE8]' : ''}`}
+                  className={`h-[49px] px-6 ${colIndex < columns - 1 ? 'border-border border-r' : ''}`}
                 >
                   <div
-                    className={`h-4 animate-pulse rounded bg-gray-200 ${
+                    className={`bg-muted h-4 animate-pulse rounded ${
                       colIndex === 0 ? 'w-[60%]' : colIndex === columns - 1 ? 'w-[40%]' : 'w-[80%]'
                     }`}
                   />

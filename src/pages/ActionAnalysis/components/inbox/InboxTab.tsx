@@ -112,7 +112,7 @@ export function InboxTab({
       >
         <div>
           {effectiveUserIds.length === 0 ? (
-            <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+            <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
               {t(
                 'pages.actionAnalysis.inbox.list.emptyScope',
                 'No operators in the current scope.'

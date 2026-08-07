@@ -4,6 +4,7 @@ import { useTeamEvents } from '@/features/quality/coaching/hooks'
 import type { TeamEvent, TeamEventSeverity, TeamEventType } from '@/features/quality/coaching/types'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * Team event feed inside the operator detail panel (KAN-413 Figma
@@ -52,10 +53,10 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function formatClock(iso: string): string {
+function formatClock(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return formatTimeShort(d, language)
 }
 
 interface FeedRow {
@@ -65,7 +66,7 @@ interface FeedRow {
 }
 
 export function InboxEventFeed({ userIds, hours = 24, limit = 20 }: InboxEventFeedProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
@@ -114,7 +115,7 @@ export function InboxEventFeed({ userIds, hours = 24, limit = 20 }: InboxEventFe
             className={`relative flex gap-3 px-4 py-3 ${isLast ? '' : 'border-b border-[#F2F3F0]'}`}
           >
             <span className="w-12 flex-shrink-0 pt-0.5 text-[11px] font-medium text-[#676767]">
-              {formatClock(event.occurred_at)}
+              {formatClock(event.occurred_at, i18n.language)}
             </span>
 
             <div className="relative flex-shrink-0">

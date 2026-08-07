@@ -21,6 +21,7 @@ export interface Tag {
   category?: TagCategory
   is_protected?: boolean
   expiry_type?: ExpiryType
+  sort_order?: number
   created_at: string
 }
 
@@ -47,6 +48,7 @@ export interface TagDefinition extends Tag {
   expiry_type: ExpiryType
   /** When true, tag surfaces on linked clients' Related Tags tab */
   is_related_tag?: boolean
+  sort_order?: number
   /** Restrict to departments; omit / empty = all departments */
   department_ids?: number[] | null
   updated_at?: string
@@ -78,6 +80,7 @@ export interface TagDefinitionCreate extends TagCreate {
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
   is_related_tag?: boolean
+  sort_order?: number
   department_ids?: number[] | null
 }
 
@@ -104,6 +107,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
   is_related_tag?: boolean
+  sort_order?: number
   department_ids?: number[] | null
 }
 
@@ -165,6 +169,7 @@ export type RuleTriggerType =
   | 'event'
   | 'schedule'
   | 'tag_expired'
+  | 'expires_today'
   | 'scoring_change'
   | 'import_complete'
 export type RuleActionType = 'add_tag' | 'remove_tag' | 'replace_tag'

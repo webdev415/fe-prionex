@@ -51,6 +51,9 @@ function makeScorecard(overrides: Partial<Scorecard> = {}): Scorecard {
     created_at: '2026-05-15T09:30:00',
     completed_at: '2026-05-15T09:40:00',
     sent_at: null,
+    call_started_at: null,
+    call_talk_duration: null,
+    call_telephony_type: null,
     ...overrides,
   }
 }
@@ -88,7 +91,8 @@ describe('buildDialogueRow', () => {
     const row = buildDialogueRow(makeScorecard(), lookup)
 
     expect(row.id).toBe(1)
-    expect(row.dateLabel).toBe('15.05')
+    // Locale-aware month/day; test i18n.language is undefined → en-US (MM/DD).
+    expect(row.dateLabel).toBe('05/15')
     expect(row.operatorName).toBe('Kateryna Antonova')
     expect(row.operatorInitials).toBe('KA')
     expect(row.hasScore).toBe(true)

@@ -28,7 +28,7 @@ export function CreateTargetActionModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full">
-            <Icons.Add size={18} className="text-dark-500" strokeWidth={2} />
+            <Icons.Add size={18} className="text-primary-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.targetActions.modals.create.title')}

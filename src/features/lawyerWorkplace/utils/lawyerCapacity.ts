@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { LegalLawyer } from '../api/types'
 
 export function isLawyerAtCapacity(
@@ -20,11 +21,10 @@ export function canAssignLawyer(
 
 export function formatLawyerCapacityLabel(
   lawyer: Pick<LegalLawyer, 'current_active' | 'max_in_flight'>,
-  t?: (key: string, fallback: string) => string
+  t: TFunction
 ): string {
-  const translate = t ?? ((_key, fallback) => fallback)
-  return translate(
-    'pages.lawyerWorkplace.lawyers.atCapacity',
-    `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`
-  )
+  return t('pages.lawyerWorkplace.lawyers.atCapacity', 'At capacity ({{current}}/{{max}})', {
+    current: lawyer.current_active,
+    max: lawyer.max_in_flight,
+  })
 }

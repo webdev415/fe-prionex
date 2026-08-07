@@ -13,9 +13,14 @@ import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignm
 import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
+import { BulkDocumentImportPageSkeleton } from '@/pages/Operations/BulkDocumentImportPageSkeleton'
+import { RepaymentConfigurationPageSkeleton } from '@/pages/RepaymentConfiguration/RepaymentConfigurationPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const PublicPaymentsPage = lazy(() =>
+  import('@/pages/PublicPayments').then((m) => ({ default: m.PublicPaymentsPage }))
+)
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
@@ -23,10 +28,14 @@ const UserManagementPage = lazy(() =>
 const IpWhitelistPage = lazy(() =>
   import('@/pages/IpWhitelist').then((m) => ({ default: m.IpWhitelistPage }))
 )
+const AiSettingsPage = lazy(() =>
+  import('@/pages/AiSettings').then((m) => ({ default: m.AiSettingsPage }))
+)
 const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
 const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
 const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
 const ProjectManagementPage = lazy(() => import('@/pages/ProjectManagement/ProjectManagementPage'))
+const DialerPage = lazy(() => import('@/pages/Dialer').then((m) => ({ default: m.DialerPage })))
 const RoleManagementPage = lazy(() =>
   import('@/pages/RoleManagement/RoleManagementPage').then((m) => ({
     default: m.RoleManagementPage,
@@ -80,6 +89,11 @@ const MessagingDraftsPage = lazy(() =>
 const MessagingIntegrationsPage = lazy(() =>
   import('@/pages/MessagingIntegrations').then((m) => ({
     default: m.MessagingIntegrationsPage,
+  }))
+)
+const UbkiIntegrationPage = lazy(() =>
+  import('@/pages/UbkiIntegration').then((m) => ({
+    default: m.UbkiIntegrationPage,
   }))
 )
 const RRNotificationsPage = lazy(() =>
@@ -194,6 +208,11 @@ const BulkWriteoffImportPage = lazy(() =>
     default: m.BulkWriteoffImportPage,
   }))
 )
+const BulkReversalImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkReversalImportPage,
+  }))
+)
 const RepaymentConfigurationPage = lazy(() =>
   import('@/pages/RepaymentConfiguration/RepaymentConfigurationPage').then((m) => ({
     default: m.RepaymentConfigurationPage,
@@ -202,6 +221,11 @@ const RepaymentConfigurationPage = lazy(() =>
 const BulkSaleNotesImportPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkSaleNotesImportPage,
+  }))
+)
+const BulkDocumentImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkDocumentImportPage,
   }))
 )
 
@@ -230,6 +254,13 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorElement />,
   },
   {
+    // Public EasyPay payment portal (techno-finance.com "Factoring" tab).
+    // No auth, no dashboard layout — reachable by unauthenticated visitors.
+    path: '/pay',
+    element: withSuspense(<PublicPaymentsPage />),
+    errorElement: <RouteErrorElement />,
+  },
+  {
     path: '/change-password',
     element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
     errorElement: <RouteErrorElement />,
@@ -253,7 +284,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'ai-assistant',
-        element: withSuspense(<AiAssistantPage />),
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.AI_ASSISTANT.USE}>
+            {withSuspense(<AiAssistantPage />)}
+          </PermissionRoute>
+        ),
       },
       {
         path: 'team-management/users',
@@ -312,6 +347,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'dialer',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DIALER.VIEW}>
+            {withSuspense(<DialerPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'team-management/roles',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
@@ -332,6 +375,21 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.EDIT}>
             {withSuspense(<IpWhitelistPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/ai',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+              PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
+              PERMISSIONS.SYSTEM.MANAGE_ROLES,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<AiSettingsPage />)}
           </PermissionRoute>
         ),
       },
@@ -435,6 +493,17 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // UBKI integration admin page. TODO(ubki): gate behind a dedicated
+        // `manage_integrations` permission once it exists; reusing the
+        // messaging-integrations permission (admins hold it) for now.
+        path: 'system-settings/integrations/ubki',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
+            {withSuspense(<UbkiIntegrationPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'system-settings/contact-types',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TYPES.VIEW}>
@@ -454,7 +523,9 @@ export const router = createBrowserRouter([
         path: 'system-settings/repayment-configuration',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
-            {withSuspense(<RepaymentConfigurationPage />)}
+            <Suspense fallback={<RepaymentConfigurationPageSkeleton />}>
+              <RepaymentConfigurationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
@@ -581,11 +652,31 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'import/bulk-reversal-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REVERSALS.BULK}>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <BulkReversalImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'import/bulk-sale-notes-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SALE_NOTES.MANAGE}>
             <Suspense fallback={<BulkSaleNotesImportPageSkeleton />}>
               <BulkSaleNotesImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-document-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_DOCUMENTS}>
+            <Suspense fallback={<BulkDocumentImportPageSkeleton />}>
+              <BulkDocumentImportPage />
             </Suspense>
           </PermissionRoute>
         ),

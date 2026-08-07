@@ -6,7 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Icons } from '@/lib/icons'
@@ -84,8 +84,8 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
   return (
     <div className={`flex flex-1 flex-col items-center gap-2 rounded-xl p-4 ${bgColors[color]}`}>
       <div className={`flex items-center justify-center ${iconColors[color]}`}>{icon}</div>
-      <div className="text-dark-500 text-xl font-bold tracking-[-0.4px]">{value}</div>
-      <div className="text-dark-500 text-center text-xs font-medium tracking-[-0.24px]">
+      <div className="text-foreground text-xl font-bold tracking-[-0.4px]">{value}</div>
+      <div className="text-foreground text-center text-xs font-medium tracking-[-0.24px]">
         {label}
       </div>
     </div>
@@ -145,7 +145,9 @@ export function SMSSentDetailModal({
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-      <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
+      <span className="text-foreground text-sm font-medium">
+        {t('common.loading', 'Loading...')}
+      </span>
     </div>
   )
 
@@ -153,10 +155,10 @@ export function SMSSentDetailModal({
   const renderError = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <Icons.Warning size={48} className="text-error-500" />
-      <h3 className="text-dark-500 text-lg font-medium">
+      <h3 className="text-foreground text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">
+      <p className="text-muted-foreground">
         {error?.message || t('pages.reports.error.generic', 'An error occurred')}
       </p>
     </div>
@@ -165,8 +167,10 @@ export function SMSSentDetailModal({
   // Empty state
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <Icons.Folder size={48} className="text-gray-400" />
-      <p className="text-gray-500">{t('pages.reports.smsModal.noData', 'No data available')}</p>
+      <Icons.Folder size={48} className="text-muted-foreground" />
+      <p className="text-muted-foreground">
+        {t('pages.reports.smsModal.noData', 'No data available')}
+      </p>
     </div>
   )
 
@@ -176,17 +180,17 @@ export function SMSSentDetailModal({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="bg-primary-400 flex flex-col items-start gap-2.5 rounded-full p-[10px]">
-            <Icons.MailSend01 size={20} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.MailSend01 size={20} className="text-foreground" strokeWidth={1.5} />
           </div>
-          <span className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]">
+          <ModalTitle className="text-foreground text-2xl leading-tight font-light tracking-[-0.48px]">
             {t('pages.reports.smsModal.title')} – {getPeriodLabel()}
-          </span>
+          </ModalTitle>
         </div>
-        <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+        <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
           {formatDate()}
         </span>
       </div>
-      <div className="mt-4 h-px w-full bg-gray-200" />
+      <div className="bg-border mt-4 h-px w-full" />
 
       <ModalContent className="max-h-[calc(90vh-140px)]">
         {isLoading ? (
@@ -199,7 +203,7 @@ export function SMSSentDetailModal({
           <>
             {/* Summary */}
             <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
-              <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
+              <div className="text-foreground text-2xl leading-tight font-medium tracking-[-0.48px]">
                 {t('pages.reports.smsModal.totalSent')}: {data.totalSent}
               </div>
               <div className="flex items-center justify-center gap-4">
@@ -209,11 +213,11 @@ export function SMSSentDetailModal({
                   ) : (
                     <Icons.ArrowDown02 size={20} className="text-error-500" />
                   )}
-                  <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {data.change}%
                   </span>
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
                   <span className="font-light">{t('pages.reports.kpi.vs')} </span>
                   <span className="font-medium">{getComparisonText()}</span>
                   <span className="font-light"> ({data.previousTotal})</span>
@@ -223,7 +227,7 @@ export function SMSSentDetailModal({
 
             {/* Delivery Statistics */}
             <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-              <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.reports.smsModal.deliveryStats', 'Delivery Statistics')}:
               </span>
               <div className="flex w-full gap-4 self-stretch">
@@ -251,10 +255,10 @@ export function SMSSentDetailModal({
             {/* Delivery Rate */}
             <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
               <div className="flex w-full items-center justify-between">
-                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.reports.smsModal.deliveryRate', 'Delivery Rate')}:
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] font-bold tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] font-bold tracking-[-0.28px]">
                   {data.deliveryRate.toFixed(1)}%
                 </span>
               </div>
@@ -269,14 +273,14 @@ export function SMSSentDetailModal({
             {/* By Operator */}
             {data.byOperator.length > 0 && (
               <div className="flex flex-col items-start gap-2 self-stretch">
-                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.reports.smsModal.byOperator', 'By Operator')}:
                 </span>
-                <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+                <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-5 px-6">
                   {data.byOperator.map((row) => (
                     <div key={row.name} className="flex w-full flex-col items-start gap-1">
                       <div className="flex items-center gap-5 self-stretch">
-                        <span className="text-dark-500 w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        <span className="text-foreground w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                           {row.name}
                         </span>
                         <ProgressBar
@@ -285,7 +289,7 @@ export function SMSSentDetailModal({
                           barClassName="bg-primary-400"
                           className="flex-1"
                         />
-                        <span className="text-dark-500 w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-foreground w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {row.smsSent} {t('pages.reports.smsModal.sms', 'SMS')}
                         </span>
                       </div>
