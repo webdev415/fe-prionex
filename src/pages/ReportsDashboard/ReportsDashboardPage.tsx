@@ -38,7 +38,7 @@ import {
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ClientProcessingTab } from '@/features/clientProcessing'
-import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
+import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
 // Error State Component
@@ -475,12 +475,22 @@ export function ReportsDashboardPage() {
     }
   }, [isAuthenticated, user])
 
+  // Page-tab switches push a history entry (Back returns to the previous
+  // tab); only filter updates inside the tabs use `replace`.
+  //
+  // The processing tab's `?from/?to/?dept` params are deliberately KEPT when
+  // switching tabs: the filters must survive a round-trip through the
+  // dashboard (documented contract of ClientProcessingTab), and with
+  // selection-follows-focus a single ArrowLeft would otherwise wipe them.
+  // A slightly "dirty" dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
-    const next = new URLSearchParams(searchParams)
-    // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
-    if (tab === 'dashboard') next.delete('tab')
-    else next.set('tab', tab)
-    setSearchParams(next, { replace: true })
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
+      if (tab === 'dashboard') next.delete('tab')
+      else next.set('tab', tab)
+      return next
+    })
   }
 
   return (
@@ -498,9 +508,17 @@ export function ReportsDashboardPage() {
         value={activeTab}
         onChange={handleTabChange}
         ariaLabel={t('pages.reports.title')}
+        idPrefix="reports"
       />
 
-      {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
+      <div
+        role="tabpanel"
+        id={segmentedTabPanelId('reports', activeTab)}
+        aria-labelledby={segmentedTabId('reports', activeTab)}
+        className="flex flex-1 flex-col self-stretch"
+      >
+        {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
+      </div>
     </div>
   )
 }

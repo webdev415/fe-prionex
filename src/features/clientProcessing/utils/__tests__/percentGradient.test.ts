@@ -21,15 +21,21 @@ describe('gradientRedToGreen', () => {
 
 describe('formatPercent', () => {
   it('formats 0..100 values as XX.XX% (already percents, no ×100)', () => {
-    expect(formatPercent(0)).toBe('0.00%')
-    expect(formatPercent(76.6)).toBe('76.60%')
-    expect(formatPercent(12.3456)).toBe('12.35%')
-    expect(formatPercent(100)).toBe('100.00%')
+    expect(formatPercent(0, 'en')).toBe('0.00%')
+    expect(formatPercent(76.6, 'en')).toBe('76.60%')
+    expect(formatPercent(12.3456, 'en')).toBe('12.35%')
+    expect(formatPercent(100, 'en')).toBe('100.00%')
   })
 
-  it('renders a dash for missing values', () => {
-    expect(formatPercent(null)).toBe('—')
-    expect(formatPercent(Number.NaN)).toBe('—')
+  it('uses the UI language locale for the decimal separator', () => {
+    expect(formatPercent(76.6, 'uk')).toBe('76,60%')
+  })
+
+  it('renders a dash for missing or non-finite values', () => {
+    expect(formatPercent(null, 'en')).toBe('—')
+    expect(formatPercent(undefined, 'en')).toBe('—')
+    expect(formatPercent(Number.NaN, 'en')).toBe('—')
+    expect(formatPercent(Number.POSITIVE_INFINITY, 'en')).toBe('—')
   })
 })
 
@@ -38,8 +44,10 @@ describe('percentCellBackground', () => {
     expect(percentCellBackground(100)).toBe('hsl(120, 70%, 85%)')
   })
 
-  it('returns no fill for missing values', () => {
+  it('returns no fill for missing or non-finite values', () => {
     expect(percentCellBackground(null)).toBeUndefined()
+    expect(percentCellBackground(undefined)).toBeUndefined()
     expect(percentCellBackground(Number.NaN)).toBeUndefined()
+    expect(percentCellBackground(Number.POSITIVE_INFINITY)).toBeUndefined()
   })
 })

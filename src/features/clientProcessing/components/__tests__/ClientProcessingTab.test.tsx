@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ClientProcessingTab } from '../ClientProcessingTab'
 import { getClientProcessingReport } from '../../api/clientProcessingApi'
 import type { ProcessingReportResponse, ProcessingReportRow } from '../../types'
@@ -13,11 +13,17 @@ vi.mock('../../api/clientProcessingApi', () => ({
   getClientProcessingReport: vi.fn(),
 }))
 
+// Mutable so individual tests can set the profile timezone.
+const authState = {
+  user: {
+    active_project_id: 1,
+    projects: [{ id: 1 }],
+    timezone: null as string | null,
+  },
+}
+
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: unknown) => unknown) =>
-    selector({
-      user: { active_project_id: 1, projects: [{ id: 1 }], timezone: null },
-    }),
+  useAuthStore: (selector: (s: unknown) => unknown) => selector(authState),
 }))
 
 // The real DateSelect drags react-datepicker into jsdom; a functional stub
@@ -27,12 +33,15 @@ vi.mock('@/components/ui/DateSelect', () => ({
   DateSelect: ({
     value,
     onChange,
+    label,
   }: {
     value?: string | Date | null
     onChange?: (args: { value: Date | null }) => void
+    label?: string
   }) => (
     <input
       data-testid="date-select"
+      aria-label={label}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) =>
         // Noon avoids the parsed UTC date rolling into the previous local day
@@ -92,14 +101,21 @@ function isoPlusDays(iso: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-function renderTab() {
+/** Exposes the current ?search so tests can assert URL-state side effects. */
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-testid="location-search">{location.search}</div>
+}
+
+function renderTab(initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <ClientProcessingTab />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>
   )
@@ -107,10 +123,11 @@ function renderTab() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  authState.user.timezone = null
 })
 
 describe('ClientProcessingTab', () => {
-  it('renders the ТП department rows by default and filters out other departments', async () => {
+  it('renders the ТП department rows by default and requests today–today', async () => {
     mockGetReport.mockResolvedValue(
       makeResponse([
         makeRow(),
@@ -134,9 +151,49 @@ describe('ClientProcessingTab', () => {
     expect(await screen.findByText('Іваненко Іван')).toBeInTheDocument()
     expect(screen.queryByText('Петренко Петро')).not.toBeInTheDocument()
     expect(screen.queryByText('Сидоренко Сидір')).not.toBeInTheDocument()
-    // One request serves all department sub-tabs
+
+    // One request serves all department sub-tabs; contract: project + the
+    // today–today default window shown in the pickers, no timezone for a
+    // profile without one (backend then defaults to UTC).
+    const [startInput, endInput] = screen.getAllByTestId('date-select')
     expect(mockGetReport).toHaveBeenCalledTimes(1)
-    expect(mockGetReport).toHaveBeenCalledWith(expect.objectContaining({ project_id: 1 }))
+    expect(mockGetReport).toHaveBeenCalledWith({
+      project_id: 1,
+      date_start: (startInput as HTMLInputElement).value,
+      date_end: (endInput as HTMLInputElement).value,
+    })
+  })
+
+  it('sends the profile IANA timezone to the API when the user has one', async () => {
+    authState.user.timezone = 'Europe/Kyiv'
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+
+    expect(mockGetReport).toHaveBeenCalledWith(expect.objectContaining({ timezone: 'Europe/Kyiv' }))
+  })
+
+  it('reads dates and department from the URL (?from=&to=&dept=)', async () => {
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow(),
+        makeRow({
+          employee_id: 3,
+          full_name: 'Сидоренко Сидір',
+          department_id: 12,
+          department_name: 'Стягнення',
+        }),
+      ])
+    )
+
+    renderTab(['/?from=2026-01-01&to=2026-01-31&dept=collection'])
+
+    expect(await screen.findByText('Сидоренко Сидір')).toBeInTheDocument()
+    expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
+    expect(mockGetReport).toHaveBeenCalledWith(
+      expect.objectContaining({ date_start: '2026-01-01', date_end: '2026-01-31' })
+    )
   })
 
   it('switches rows when another department sub-tab is selected', async () => {
@@ -163,6 +220,33 @@ describe('ClientProcessingTab', () => {
     expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
     // Client-side filter — no extra request
     expect(mockGetReport).toHaveBeenCalledTimes(1)
+  })
+
+  it('defaults to the first non-empty sub-tab when ?dept= is not set', async () => {
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow({
+          employee_id: 2,
+          full_name: 'Петренко Петро',
+          department_id: 11,
+          department_name: 'Дайлер',
+        }),
+      ])
+    )
+
+    renderTab()
+
+    // No ТП rows — the Дайлер tab (first with data) opens instead of an empty ТП
+    expect(await screen.findByText('Петренко Петро')).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: 'pages.reports.processing.departments.dialer' })
+    ).toHaveAttribute('aria-selected', 'true')
+
+    // The auto-selected tab is pinned into ?dept= so a later refetch with a
+    // different department set can't jump the tab under the user
+    await waitFor(() =>
+      expect(screen.getByTestId('location-search').textContent).toContain('dept=dialer')
+    )
   })
 
   it('builds id-keyed extra sub-tabs and a «—» tab for rows without a department', async () => {
@@ -267,23 +351,30 @@ describe('ClientProcessingTab', () => {
     expect(mockGetReport).toHaveBeenCalledTimes(1)
   })
 
-  it('blocks the request and shows a hint when the range exceeds 366 days', async () => {
+  it('pins the 366-day boundary: a 366-day span passes, 367 is blocked', async () => {
+    // Matches the backend's `_MAX_RANGE_DAYS` (services/client/app/routers/
+    // reports.py): (end - start) diff of 366 days is the widest allowed window.
     mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab()
     await screen.findByText('Іваненко Іван')
     expect(mockGetReport).toHaveBeenCalledTimes(1)
 
-    const [startInput] = screen.getAllByTestId('date-select')
-    const initialStart = (startInput as HTMLInputElement).value
-    fireEvent.change(startInput, { target: { value: isoPlusDays(initialStart, -400) } })
+    const [startInput, endInput] = screen.getAllByTestId('date-select')
+    const end = (endInput as HTMLInputElement).value
 
+    // Exactly 366 days back — still valid, a new request goes out
+    fireEvent.change(startInput, { target: { value: isoPlusDays(end, -366) } })
+    await waitFor(() => expect(mockGetReport).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('pages.reports.processing.rangeTooLong')).not.toBeInTheDocument()
+
+    // 367 days back — blocked with a hint, no third request
+    fireEvent.change(startInput, { target: { value: isoPlusDays(end, -367) } })
     expect(await screen.findByText('pages.reports.processing.rangeTooLong')).toBeInTheDocument()
-    expect(screen.queryByText('Іваненко Іван')).not.toBeInTheDocument()
-    expect(mockGetReport).toHaveBeenCalledTimes(1)
+    expect(mockGetReport).toHaveBeenCalledTimes(2)
   })
 
-  it('restores the previous date when a manual input is cleared', async () => {
+  it('ignores a cleared manual date input (URL keeps the previous value)', async () => {
     mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab()
@@ -295,10 +386,11 @@ describe('ClientProcessingTab', () => {
 
     fireEvent.change(startInput, { target: { value: '' } })
 
-    // The field resyncs to the kept filter value instead of staying empty
-    const [resyncedInput] = screen.getAllByTestId('date-select')
-    expect((resyncedInput as HTMLInputElement).value).toBe(initialValue)
-    // Filter state unchanged — no new request
+    // onChange(null) is a no-op: state/URL keep the old date and no request
+    // is issued; a valid date commits once the user finishes retyping.
+    const [inputAfterClear] = screen.getAllByTestId('date-select')
+    expect((inputAfterClear as HTMLInputElement).value).toBe(initialValue)
+    expect(screen.getByText('Іваненко Іван')).toBeInTheDocument()
     expect(mockGetReport).toHaveBeenCalledTimes(1)
   })
 

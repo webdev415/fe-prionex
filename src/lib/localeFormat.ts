@@ -22,13 +22,51 @@ function toValidDate(value: DateInput): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-/** Number with locale grouping/decimals; pass `opts` for currency/precision. */
+// Intl.NumberFormat construction is comparatively expensive and report
+// tables format hundreds of values per render — cache instances per
+// locale+options.
+const numberFormatCache = new Map<string, Intl.NumberFormat>()
+
+// Cache policy: distinct locale+options combos are few in practice. If some
+// caller ever generates unbounded option variants, dropping the whole cache
+// once is cheaper and simpler than LRU bookkeeping.
+const NUMBER_FORMAT_CACHE_MAX = 64
+
+/**
+ * Cached Intl.NumberFormat per locale+options (exported for callers needing
+ * a raw formatter instance and for cache-behaviour tests).
+ */
+export function getNumberFormat(
+  locale: string,
+  opts?: Intl.NumberFormatOptions
+): Intl.NumberFormat {
+  // Key from sorted entries so option order doesn't split the cache
+  // ({min,max} and {max,min} hit the same instance).
+  const optsKey = opts
+    ? JSON.stringify(Object.entries(opts).sort(([a], [b]) => a.localeCompare(b)))
+    : ''
+  const key = `${locale}|${optsKey}`
+  let format = numberFormatCache.get(key)
+  if (!format) {
+    if (numberFormatCache.size >= NUMBER_FORMAT_CACHE_MAX) numberFormatCache.clear()
+    format = new Intl.NumberFormat(locale, opts)
+    numberFormatCache.set(key, format)
+  }
+  return format
+}
+
+/**
+ * Number with locale grouping/decimals; pass `opts` for currency/precision.
+ * Missing (null/undefined) or non-finite values render as "—", never "NaN".
+ */
 export function formatNumber(
-  value: number | string,
+  value: number | string | null | undefined,
   language: string,
   opts?: Intl.NumberFormatOptions
 ): string {
-  return Number(value).toLocaleString(intlLocaleForUiLanguage(language), opts)
+  const num = typeof value === 'string' ? Number(value) : value
+  if (typeof num !== 'number' || !Number.isFinite(num)) return INVALID_PLACEHOLDER
+  return getNumberFormat(intlLocaleForUiLanguage(language), opts).format(num)
 }
 
 /** Amount with fixed two decimals (no currency symbol — call-sites add ₴). */

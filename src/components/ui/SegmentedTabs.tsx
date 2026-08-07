@@ -1,14 +1,36 @@
+/* eslint-disable react-refresh/only-export-components -- id helpers belong
+   with the component (same precedent as Button.tsx's buttonVariants) */
 /**
  * SegmentedTabs Component
  *
- * Small tab strip with proper tablist/tab semantics, in two visual variants:
+ * Tab strip with full tablist semantics — roving tabIndex (0 on the active
+ * tab, -1 elsewhere) and ArrowLeft / ArrowRight / Home / End keyboard
+ * navigation (moving focus also selects the tab) — in two visual variants:
  *
  * - `segmented` (default) — pill buttons inside a card container; visual
  *   style follows the existing PeriodTabs on the Reports page.
  * - `underline` — bottom-border tabs on a divider line, as used for
  *   page-level tab strips (e.g. the Reports page tabs).
+ *
+ * Pass `idPrefix` to link tabs with their panels: each tab gets
+ * `id={segmentedTabId(idPrefix, item.id)}` and
+ * `aria-controls={segmentedTabPanelId(idPrefix, item.id)}`; give the panel
+ * container the matching id plus `role="tabpanel"` and
+ * `aria-labelledby={segmentedTabId(idPrefix, activeId)}`:
+ *
+ * ```tsx
+ * <SegmentedTabs idPrefix="reports" items={items} value={active} onChange={setActive} />
+ * <div
+ *   role="tabpanel"
+ *   id={segmentedTabPanelId('reports', active)}
+ *   aria-labelledby={segmentedTabId('reports', active)}
+ * >
+ *   …
+ * </div>
+ * ```
  */
 
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface SegmentedTabItem<T extends string> {
@@ -23,8 +45,26 @@ export interface SegmentedTabsProps<T extends string> {
   variant?: 'segmented' | 'underline'
   /** Accessible name for the tablist. */
   ariaLabel?: string
+  /** When set, tabs get stable ids and aria-controls (see the docblock example). */
+  idPrefix?: string
   className?: string
 }
+
+/** DOM id of a tab button when `idPrefix` is set. */
+export function segmentedTabId(idPrefix: string, tabId: string): string {
+  return `${idPrefix}-tab-${tabId}`
+}
+
+/** DOM id the matching `role="tabpanel"` container should carry. */
+export function segmentedTabPanelId(idPrefix: string, tabId: string): string {
+  return `${idPrefix}-panel-${tabId}`
+}
+
+const SEGMENTED_BUTTON_CLASS =
+  'flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:min-w-[120px] sm:flex-none sm:px-4 sm:text-sm'
+
+const UNDERLINE_BUTTON_CLASS =
+  'cursor-pointer border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm'
 
 export function SegmentedTabs<T extends string>({
   items,
@@ -32,8 +72,60 @@ export function SegmentedTabs<T extends string>({
   onChange,
   variant = 'segmented',
   ariaLabel,
+  idPrefix,
   className,
 }: SegmentedTabsProps<T>) {
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    // Leave modified keystrokes to the browser (Alt+Arrow = history
+    // navigation, etc.) — precedent: Radix RovingFocusGroup.
+    if (event.ctrlKey || event.altKey || event.metaKey) return
+    let next: number | null = null
+    if (event.key === 'ArrowRight') next = (index + 1) % items.length
+    else if (event.key === 'ArrowLeft') next = (index - 1 + items.length) % items.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = items.length - 1
+    if (next === null || items.length === 0) return
+    event.preventDefault()
+    onChange(items[next].id)
+    buttonRefs.current[next]?.focus()
+  }
+
+  const buttons = items.map((item, index) => {
+    const isActive = item.id === value
+    return (
+      <button
+        key={item.id}
+        ref={(el) => {
+          buttonRefs.current[index] = el
+        }}
+        type="button"
+        role="tab"
+        id={idPrefix ? segmentedTabId(idPrefix, item.id) : undefined}
+        // Only the active tab's panel exists in the DOM (consumers render a
+        // single tabpanel), so inactive tabs must not reference a missing id.
+        aria-controls={idPrefix && isActive ? segmentedTabPanelId(idPrefix, item.id) : undefined}
+        aria-selected={isActive}
+        tabIndex={isActive ? 0 : -1}
+        onClick={() => onChange(item.id)}
+        onKeyDown={(event) => handleKeyDown(event, index)}
+        className={cn(
+          variant === 'underline' ? UNDERLINE_BUTTON_CLASS : SEGMENTED_BUTTON_CLASS,
+          variant === 'underline'
+            ? isActive
+              ? 'border-secondary text-foreground'
+              : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
+            : isActive
+              ? 'bg-secondary text-secondary-foreground'
+              : 'bg-card text-muted-foreground hover:bg-muted'
+        )}
+      >
+        {item.label}
+      </button>
+    )
+  })
+
   if (variant === 'underline') {
     return (
       <div className={cn('border-border border-b', className)}>
@@ -42,26 +134,7 @@ export function SegmentedTabs<T extends string>({
           aria-label={ariaLabel}
           className="-mb-px flex flex-wrap items-center gap-1"
         >
-          {items.map((item) => {
-            const isActive = item.id === value
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => onChange(item.id)}
-                className={cn(
-                  'cursor-pointer border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm',
-                  isActive
-                    ? 'border-secondary text-foreground'
-                    : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
-                )}
-              >
-                {item.label}
-              </button>
-            )
-          })}
+          {buttons}
         </div>
       </div>
     )
@@ -76,28 +149,7 @@ export function SegmentedTabs<T extends string>({
         className
       )}
     >
-      {items.map((item) => {
-        const isActive = item.id === value
-        return (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(item.id)}
-            className={cn(
-              'flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:min-w-[120px] sm:flex-none sm:px-4 sm:text-sm',
-              isActive
-                ? 'bg-secondary text-secondary-foreground'
-                : 'bg-card text-muted-foreground hover:bg-muted'
-            )}
-          >
-            {item.label}
-          </button>
-        )
-      })}
+      {buttons}
     </div>
   )
 }
-
-export default SegmentedTabs

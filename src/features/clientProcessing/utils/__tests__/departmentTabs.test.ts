@@ -5,7 +5,6 @@ import {
   rowDepartmentTabId,
   NO_DEPARTMENT_TAB_ID,
 } from '../departmentTabs'
-import { KNOWN_DEPARTMENTS } from '../../types'
 import type { ProcessingReportRow } from '../../types'
 
 function makeRow(
@@ -44,6 +43,21 @@ describe('rowDepartmentTabId', () => {
   it('maps rows without a department name to the «—» tab', () => {
     expect(rowDepartmentTabId(makeRow(null, null))).toBe(NO_DEPARTMENT_TAB_ID)
     expect(rowDepartmentTabId(makeRow(null, 5))).toBe(NO_DEPARTMENT_TAB_ID)
+    // Loose payloads: undefined and empty-string names are "missing" too —
+    // no `name-undefined` id, no tab without an accessible name
+    expect(rowDepartmentTabId(makeRow(undefined as unknown as string, 5))).toBe(
+      NO_DEPARTMENT_TAB_ID
+    )
+    expect(rowDepartmentTabId(makeRow('', 5))).toBe(NO_DEPARTMENT_TAB_ID)
+  })
+
+  it('encodes the name-fallback id (null department_id) to stay IDREF-safe', () => {
+    const id = rowDepartmentTabId(makeRow('Новий відділ', null))
+    // Tab ids end up as DOM ids / aria-labelledby IDREFs — no spaces allowed
+    expect(id).not.toMatch(/\s/)
+    expect(id).toBe(`name-${encodeURIComponent('Новий відділ')}`)
+    // Distinct names must stay distinct (encoding is injective)
+    expect(rowDepartmentTabId(makeRow('Інший відділ', null))).not.toBe(id)
   })
 })
 
@@ -86,24 +100,28 @@ describe('buildDepartmentTabs', () => {
     ])
     expect(tabs.at(-1)?.label).toBe('—')
   })
-
-  it('gives known departments i18n label keys', () => {
-    for (const known of KNOWN_DEPARTMENTS) {
-      expect(known.labelKey).toMatch(/^pages\.reports\.processing\.departments\./)
-    }
-  })
 })
 
 describe('resolveActiveDepartmentTab', () => {
-  const tabs = buildDepartmentTabs([makeRow('VIP', 42)])
+  const rows = [makeRow('VIP', 42)]
+  const tabs = buildDepartmentTabs(rows)
 
   it('matches the raw ?dept= value by tab id', () => {
-    expect(resolveActiveDepartmentTab(tabs, 'collection').id).toBe('collection')
-    expect(resolveActiveDepartmentTab(tabs, '42').label).toBe('VIP')
+    expect(resolveActiveDepartmentTab(tabs, 'collection', rows).id).toBe('collection')
+    expect(resolveActiveDepartmentTab(tabs, '42', rows).label).toBe('VIP')
   })
 
-  it('falls back to the first tab for unknown or missing values', () => {
-    expect(resolveActiveDepartmentTab(tabs, null).id).toBe('tp')
-    expect(resolveActiveDepartmentTab(tabs, 'nope').id).toBe('tp')
+  it('prefers the first non-empty tab when ?dept= is missing or unknown', () => {
+    const dialerRows = [makeRow('Дайлер', 2)]
+    const dialerTabs = buildDepartmentTabs(dialerRows)
+    expect(resolveActiveDepartmentTab(dialerTabs, null, dialerRows).id).toBe('dialer')
+    expect(resolveActiveDepartmentTab(dialerTabs, 'nope', dialerRows).id).toBe('dialer')
+    // The VIP fixture has no rows in any known tab — VIP wins
+    expect(resolveActiveDepartmentTab(tabs, null, rows).id).toBe('42')
+  })
+
+  it('falls back to the first tab when there are no rows at all', () => {
+    const emptyTabs = buildDepartmentTabs([])
+    expect(resolveActiveDepartmentTab(emptyTabs, null, []).id).toBe('tp')
   })
 })

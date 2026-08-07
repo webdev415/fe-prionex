@@ -9,15 +9,21 @@
  *
  * All tab state lives in the URL (`?dept=`, `?from=`, `?to=`) so it survives
  * refresh, bookmarking and switching between the page tabs (panels unmount
- * on switch).
+ * on switch). Filter updates use `replace` — only page-tab changes create
+ * history entries.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { SegmentedTabs, type SegmentedTabItem } from '@/components/ui/SegmentedTabs'
+import {
+  SegmentedTabs,
+  segmentedTabId,
+  segmentedTabPanelId,
+  type SegmentedTabItem,
+} from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { isTransientFailure } from '@/lib/api'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
@@ -34,10 +40,15 @@ import { ProcessingTable } from './ProcessingTable'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-// Mirrors the backend's window cap (client-service reports router).
+// Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
+// api-prionex/services/client/app/routers/reports.py: the (end - start) day
+// difference may be at most 366, i.e. an inclusive window of 367 days is the
+// widest allowed — larger answers 400.
 const MAX_RANGE_DAYS = 366
 
 const MS_PER_DAY = 86_400_000
+
+const TABS_ID_PREFIX = 'client-processing'
 
 export function ClientProcessingTab() {
   const { t } = useTranslation('common')
@@ -51,36 +62,44 @@ export function ClientProcessingTab() {
 
   // Dates live in the URL so they survive switching page tabs. Default
   // window is today–today in the user's profile timezone (the backend
-  // defaults to the same window, but we always send both dates explicitly).
+  // defaults to the same window, but we always send both dates explicitly,
+  // together with the profile timezone for the day-boundary cut).
   const today = getDateStringInTimezone(new Date(), userTimezone)
   const rawFrom = searchParams.get('from')
   const rawTo = searchParams.get('to')
   const dateStart = rawFrom && DATE_RE.test(rawFrom) ? rawFrom : today
   const dateEnd = rawTo && DATE_RE.test(rawTo) ? rawTo : today
 
-  // Per-field remount nonces: bumping one re-mounts only that DateSelect so
-  // a cleared manual input resyncs back to the kept URL value instead of
-  // looking empty (clearing one field must not disturb the other). A proper
-  // clear-and-retype flow inside DateSelect itself is out of scope here.
-  const [startNonce, setStartNonce] = useState(0)
-  const [endNonce, setEndNonce] = useState(0)
-
+  // Filter updates never create history entries (page-tab switches do).
   const setUrlParam = (key: string, value: string) => {
-    const next = new URLSearchParams(searchParams)
-    next.set(key, value)
-    setSearchParams(next, { replace: true })
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set(key, value)
+        return next
+      },
+      { replace: true }
+    )
   }
 
+  // Timezone policy: the profile TZ applies only to the "today" DEFAULT above
+  // (resolving the moment "now" into a calendar day). A PICKED date is
+  // already a calendar day — the picker hands us a local-midnight Date whose
+  // local Y/M/D are exactly the cell the user clicked, so we read them back
+  // verbatim with formatPickerDateAsYMD. Re-rendering that instant in the
+  // profile TZ would shift the day whenever the browser-vs-profile offset
+  // spans midnight (IANA offsets span 26h, so a noon anchor doesn't save it).
   const handleDateChange =
-    (key: 'from' | 'to', bumpNonce: () => void) =>
+    (key: 'from' | 'to') =>
     ({ value }: { value: Date | null }) => {
+      // A cleared manual input is not a filter change: the URL keeps the old
+      // value and a valid date commits once the user finishes retyping
+      // (DateSelect itself resyncs the abandoned text on blur).
       if (value) setUrlParam(key, formatPickerDateAsYMD(value))
-      else bumpNonce()
     }
 
   // Manual input can bypass the pickers' min/max, so invalid ranges must not
-  // reach the API. ISO YYYY-MM-DD strings compare correctly as strings; the
-  // 366-day cap mirrors the backend validation (which answers 400).
+  // reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
   const isRangeInverted = dateStart > dateEnd
   const isRangeTooLong =
     !isRangeInverted && (Date.parse(dateEnd) - Date.parse(dateStart)) / MS_PER_DAY > MAX_RANGE_DAYS
@@ -94,12 +113,29 @@ export function ClientProcessingTab() {
     projectId,
     dateStart,
     dateEnd,
+    timezone: userTimezone,
     enabled: !rangeErrorKey,
   })
 
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
   const departmentTabs = useMemo(() => buildDepartmentTabs(rows), [rows])
-  const activeTab = resolveActiveDepartmentTab(departmentTabs, searchParams.get('dept'))
+  const rawDept = searchParams.get('dept')
+  const activeTab = resolveActiveDepartmentTab(departmentTabs, rawDept, rows)
+
+  // Pin the auto-selected (first non-empty) tab into the URL once data is
+  // there, so a later refetch with a different department set can't jump the
+  // active tab under the user.
+  useEffect(() => {
+    if (rows.length === 0 || rawDept === activeTab.id) return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('dept', activeTab.id)
+        return next
+      },
+      { replace: true }
+    )
+  }, [rows.length, rawDept, activeTab.id, setSearchParams])
 
   const tabItems: SegmentedTabItem<string>[] = departmentTabs.map((tab) => ({
     id: tab.id,
@@ -112,8 +148,13 @@ export function ClientProcessingTab() {
   )
 
   // keepPreviousData shows the previous period's rows while a new period
-  // loads — they must not look final, hence the busy overlay.
-  const isRefreshing = query.isFetching || query.isPlaceholderData
+  // loads — they must not look final, hence the busy overlay. Placeholder
+  // only: a background refetch of the SAME period (e.g. window focus) shows
+  // current data and needs no overlay. Accepted stale-while-revalidate
+  // trade-off: returning to a period older than staleTime (60s) renders the
+  // cached rows without an overlay while a background revalidation runs, so
+  // the numbers may update in place a moment later.
+  const isRefreshing = query.isPlaceholderData
 
   const errorStatus = getErrorStatus(query.error)
   const isForbidden = errorStatus === 403
@@ -130,34 +171,24 @@ export function ClientProcessingTab() {
     <div className="flex w-full flex-col gap-4">
       {/* Date range filter */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
-            {t('pages.reports.processing.dateFrom')}
-          </span>
-          <DateSelect
-            key={`processing-date-start-${startNonce}`}
-            value={dateStart}
-            max={dateEnd}
-            onChange={handleDateChange('from', () => setStartNonce((nonce) => nonce + 1))}
-            allowManualInput
-            format="dd.MM.yyyy"
-            className="w-full min-w-0 sm:w-44"
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
-            {t('pages.reports.processing.dateTo')}
-          </span>
-          <DateSelect
-            key={`processing-date-end-${endNonce}`}
-            value={dateEnd}
-            min={dateStart}
-            onChange={handleDateChange('to', () => setEndNonce((nonce) => nonce + 1))}
-            allowManualInput
-            format="dd.MM.yyyy"
-            className="w-full min-w-0 sm:w-44"
-          />
-        </div>
+        <DateSelect
+          label={t('pages.reports.processing.dateFrom')}
+          value={dateStart}
+          max={dateEnd}
+          onChange={handleDateChange('from')}
+          allowManualInput
+          format="dd.MM.yyyy"
+          className="w-full min-w-0 sm:w-44"
+        />
+        <DateSelect
+          label={t('pages.reports.processing.dateTo')}
+          value={dateEnd}
+          min={dateStart}
+          onChange={handleDateChange('to')}
+          allowManualInput
+          format="dd.MM.yyyy"
+          className="w-full min-w-0 sm:w-44"
+        />
         {rangeErrorKey && (
           <p className="text-error-500 w-full text-xs font-medium" role="alert">
             {t(rangeErrorKey)}
@@ -171,35 +202,43 @@ export function ClientProcessingTab() {
         value={activeTab.id}
         onChange={(deptId) => setUrlParam('dept', deptId)}
         ariaLabel={t('pages.reports.tabs.processing')}
+        idPrefix={TABS_ID_PREFIX}
       />
 
       {/* Content: an invalid range shows only the hint above */}
-      {rangeErrorKey ? null : query.isLoading ? (
-        <TableSkeleton columns={9} rows={6} />
-      ) : query.isError ? (
-        <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
-          <Icons.Warning size={40} className="text-error-500" />
-          <p className="text-foreground text-center text-sm font-medium">{errorMessage}</p>
-          {/* Retrying cannot fix missing permissions — no button on 403 */}
-          {!isForbidden && (
-            <Button variant="secondary" size="sm" onClick={() => query.refetch()}>
-              {t('pages.reports.processing.error.retry')}
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="relative w-full" aria-busy={isRefreshing || undefined}>
-          <ProcessingTable rows={filteredRows} />
-          {isRefreshing && (
-            <div
-              data-testid="processing-refreshing"
-              className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-            >
-              <Icons.Spinner className="h-8 w-8" />
-            </div>
-          )}
-        </div>
-      )}
+      <div
+        role="tabpanel"
+        id={segmentedTabPanelId(TABS_ID_PREFIX, activeTab.id)}
+        aria-labelledby={segmentedTabId(TABS_ID_PREFIX, activeTab.id)}
+        className="w-full"
+      >
+        {rangeErrorKey ? null : query.isLoading ? (
+          <TableSkeleton columns={9} rows={6} />
+        ) : query.isError ? (
+          <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
+            <Icons.Warning size={40} className="text-error-500" />
+            <p className="text-foreground text-center text-sm font-medium">{errorMessage}</p>
+            {/* Retrying cannot fix missing permissions — no button on 403 */}
+            {!isForbidden && (
+              <Button variant="secondary" size="sm" onClick={() => query.refetch()}>
+                {t('pages.reports.processing.error.retry')}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="relative w-full" aria-busy={isRefreshing || undefined}>
+            <ProcessingTable rows={filteredRows} />
+            {isRefreshing && (
+              <div
+                data-testid="processing-refreshing"
+                className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
+              >
+                <Icons.Spinner className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

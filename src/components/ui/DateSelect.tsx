@@ -36,14 +36,24 @@ const MaskedDateTimeInput = forwardRef<
   React.InputHTMLAttributes<HTMLInputElement> & {
     text: string
     onTextChange: (raw: string) => void
+    onTextBlur?: () => void
   }
->(function MaskedDateTimeInput({ value: _v, onChange: _oc, text, onTextChange, ...rest }, ref) {
+>(function MaskedDateTimeInput(
+  { value: _v, onChange: _oc, text, onTextChange, onTextBlur, onBlur, ...rest },
+  ref
+) {
   return (
     <input
       {...rest}
       ref={ref}
       value={text}
       onChange={(e) => onTextChange(e.target.value)}
+      onBlur={(e) => {
+        // Keep react-datepicker's injected blur handling (popup close etc.),
+        // then let DateSelect resync abandoned text from the committed value.
+        onBlur?.(e)
+        onTextBlur?.()
+      }}
       inputMode="numeric"
     />
   )
@@ -274,6 +284,29 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       }
     }
 
+    // Focus left the field with text that no longer matches the committed
+    // value — e.g. the user cleared it (some parents keep the old value on
+    // ``onChange(null)``) or abandoned a partial entry. Restore the text from
+    // the ``value`` prop so the field never sits empty/stale while a filter
+    // is still active. The value-keyed sync effect above can't cover this
+    // case: ``value`` hasn't changed, so it bails on
+    // ``formatted === lastSyncedValue.current``.
+    const handleManualBlur = () => {
+      if (!allowManualInput) return
+      // Only the documented cases resync: cleared text or an invalid partial
+      // entry. A complete VALID text is never overwritten — even if it
+      // differs from the `value` prop (e.g. a future consumer debounces the
+      // committed value), the user's entry must not snap back on blur.
+      if (!manualInvalid && text !== '') return
+      const d = parseDate(value)
+      const formatted = d ? formatFns(d, manualDisplayFormat) : ''
+      if (text === formatted) return
+      lastSyncedValue.current = formatted
+      setText(formatted)
+      setManualInvalid(false)
+      onValidityChange?.(false)
+    }
+
     // Red styling for both an explicit error and an in-progress invalid entry.
     const hasError = !!error || manualInvalid
 
@@ -321,7 +354,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               {...(allowManualInput
                 ? {
                     customInput: (
-                      <MaskedDateTimeInput text={text} onTextChange={handleManualType} />
+                      <MaskedDateTimeInput
+                        text={text}
+                        onTextChange={handleManualType}
+                        onTextBlur={handleManualBlur}
+                      />
                     ),
                   }
                 : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}

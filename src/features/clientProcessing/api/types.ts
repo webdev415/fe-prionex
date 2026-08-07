@@ -13,6 +13,8 @@ export interface ProcessingReportParams {
   project_id: number
   date_start: string // YYYY-MM-DD
   date_end: string // YYYY-MM-DD
+  /** IANA timezone of the user's profile; the backend defaults to UTC when omitted. */
+  timezone?: string
 }
 
 /**

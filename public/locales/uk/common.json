@@ -7611,7 +7611,10 @@
           "processed": "З ЦД за період",
           "processedClient": "З ЦД по клієнту",
           "processedContact": "З ЦД по 3-й особі",
-          "percent": "%"
+          "percent": "%",
+          "percentProcessedAria": "% з ЦД за період",
+          "percentClientAria": "% з ЦД по клієнту",
+          "percentContactAria": "% з ЦД по 3-й особі"
         },
         "empty": "Немає даних за вибраний період",
         "invalidRange": "Початкова дата пізніша за кінцеву",

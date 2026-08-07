@@ -19,6 +19,8 @@ export interface UseClientProcessingReportParams {
   projectId: number
   dateStart: string // YYYY-MM-DD
   dateEnd: string // YYYY-MM-DD
+  /** IANA timezone of the user's profile (backend defaults to UTC when omitted). */
+  timezone?: string | null
   enabled?: boolean
 }
 
@@ -26,12 +28,15 @@ export function useClientProcessingReport({
   projectId,
   dateStart,
   dateEnd,
+  timezone,
   enabled = true,
 }: UseClientProcessingReportParams) {
   const params: ProcessingReportParams = {
     project_id: projectId,
     date_start: dateStart,
     date_end: dateEnd,
+    // Part of the query key via `params`, so a timezone change refetches.
+    ...(timezone ? { timezone } : {}),
   }
 
   return useQuery<ProcessingReportResponse>({

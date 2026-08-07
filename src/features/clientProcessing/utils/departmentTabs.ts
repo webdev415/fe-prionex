@@ -29,12 +29,17 @@ export const NO_DEPARTMENT_LABEL = '—'
  */
 export function rowDepartmentTabId(row: ProcessingReportRow): string {
   const name = row.department_name
-  if (name === null) return NO_DEPARTMENT_TAB_ID
+  // == null also catches undefined from a loose payload; an empty-string
+  // name would make a tab without an accessible name — treat it as missing.
+  if (name == null || name === '') return NO_DEPARTMENT_TAB_ID
   const known = KNOWN_BY_NAME.get(name)
   if (known) return known.slug
   // Unknown departments are keyed by numeric id; the name fallback covers
-  // the contract edge where enrichment supplied a name without an id.
-  return row.department_id !== null ? String(row.department_id) : `name-${name}`
+  // the contract edge where enrichment supplied a name without an id. The
+  // name is percent-encoded because tab ids become DOM ids / IDREFs
+  // (aria-labelledby) where spaces are illegal — encoding is injective, so
+  // distinct names can't collide the way slugification could.
+  return row.department_id !== null ? String(row.department_id) : `name-${encodeURIComponent(name)}`
 }
 
 export function buildDepartmentTabs(rows: ProcessingReportRow[]): DepartmentTabDef[] {
@@ -61,10 +66,21 @@ export function buildDepartmentTabs(rows: ProcessingReportRow[]): DepartmentTabD
   return tabs
 }
 
-/** Resolve the active tab from the raw `?dept=` URL value (fallback: first tab). */
+/**
+ * Resolve the active tab from the raw `?dept=` URL value. Without an explicit
+ * (and valid) selection, prefer the first tab that actually has rows — the
+ * known tabs are always rendered, so blindly defaulting to ТП could open an
+ * empty tab while the data lives elsewhere. Falls back to the first tab.
+ */
 export function resolveActiveDepartmentTab(
   tabs: DepartmentTabDef[],
-  rawDept: string | null
+  rawDept: string | null,
+  rows: ProcessingReportRow[]
 ): DepartmentTabDef {
-  return tabs.find((tab) => tab.id === rawDept) ?? tabs[0]
+  if (rawDept) {
+    const explicit = tabs.find((tab) => tab.id === rawDept)
+    if (explicit) return explicit
+  }
+  const nonEmptyIds = new Set(rows.map(rowDepartmentTabId))
+  return tabs.find((tab) => nonEmptyIds.has(tab.id)) ?? tabs[0]
 }
