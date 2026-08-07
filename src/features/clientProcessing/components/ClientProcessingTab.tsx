@@ -210,8 +210,12 @@ export function ClientProcessingTab() {
         role="tabpanel"
         id={segmentedTabPanelId(TABS_ID_PREFIX, activeTab.id)}
         aria-labelledby={segmentedTabId(TABS_ID_PREFIX, activeTab.id)}
-        // No focusable wrapper inside; per ARIA APG the panel itself must be
-        // keyboard-reachable so a wide table can be scrolled.
+        // This panel holds only the table — no focusable content — so per
+        // ARIA APG the panel itself must be keyboard-reachable. (Making the
+        // wide table horizontally scrollable from the keyboard is a separate
+        // concern: the scroll container lives inside DataTable, and focusing
+        // this parent does not scroll it. Tracked as a follow-up on the
+        // shared component.)
         tabIndex={0}
         className="w-full"
       >

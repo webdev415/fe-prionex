@@ -517,9 +517,11 @@ export function ReportsDashboardPage() {
         role="tabpanel"
         id={segmentedTabPanelId('reports', activeTab)}
         aria-labelledby={segmentedTabId('reports', activeTab)}
-        // The panel holds no focusable wrapper of its own; per ARIA APG it
-        // must stay keyboard-reachable so it can be scrolled.
-        tabIndex={0}
+        // Deliberately NOT focusable: the ARIA APG rule that a tabpanel needs
+        // `tabIndex={0}` applies only to panels with no focusable content.
+        // Both panels here are full of it (export button, period tabs, date
+        // pickers, department sub-tabs), so a tabIndex would only add a
+        // useless extra stop on the way through the page.
         className="flex flex-1 flex-col self-stretch"
       >
         {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
