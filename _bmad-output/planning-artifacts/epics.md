@@ -30,6 +30,24 @@ and Architecture for this infrastructure effort) into implementable stories.
 **Hard constraint:** existing DEV and PROD stands must not be touched during migration;
 the new pipeline is built in parallel and switched over only at the final step.
 
+**External dependency: the GitHub transition (recorded 2026-08-07).** No action of any kind is
+taken on GitHub by this plan — not on its workflows, settings, secrets, or credentials. GitHub
+is left running exactly as it is today. Moving delivery and content across to Forgejo is owned
+by Oleg and tracked outside this plan.
+
+Two consequences the plan depends on and cannot itself guarantee:
+
+- **Forgejo must hold current code.** Epics 2-6 build CI, image builds and deploys on Forgejo,
+  so they test and ship whatever Forgejo holds. Forgejo currently lags GitHub — `development`
+  is at `372ee2c4` there versus `405db726` on GitHub as of 2026-08-07. Until the transition
+  happens, a Forgejo pipeline may be exercising code that is not what the team is actually
+  writing.
+- **Two pipelines can reach production.** The legacy GitHub CD deploys to s2 on a merge to
+  `main` and is not disabled (Story 6.1, cancelled). From the moment Forgejo can also deploy
+  to s2, concurrent deploys from two independent pipelines are possible.
+
+Both are accepted risk for the duration, not solved problems.
+
 **Locked decision (Blocker 1.1 = Option C):** the application is migrated as-is. Vite
 environment variables stay baked in at build time, so a distinct image is built per
 environment. Artifact promotion PRE-PROD → PROD is **not** achieved in this migration and
@@ -152,17 +170,24 @@ directory that does not depend on the Forgejo version.
 
 **Cutover and decommissioning (Phases 7, 8)**
 
-FR31: The currently running PROD image is pulled from ghcr and pushed into the Forgejo
-registry under `sha-<commit>` and `prod-current` to enable a no-op cutover deploy.
+FR31: `[C]` The commit currently running in PROD is identified from the running container on
+s2 and **rebuilt** into the Forgejo registry under `sha-<commit>` and `prod-current` to enable
+a cutover deploy. The image is not pulled from ghcr — no action is taken on GitHub, and that
+includes its registry — so the cutover deploy is commit-identical but not byte-identical to
+what production currently serves.
 
 FR32: The cutover is validated by running `deploy-prod.yml` with `rollback: true` against
 that imported tag — exercising the full mechanism without changing what is served.
 
-FR33: The GitHub `deploy` job is disabled at the start of the PROD phase; GitHub Actions
-remains CI-only for 1–2 release cycles, then `.github/workflows/` is deleted.
+FR33: **CANCELLED (2026-08-07).** ~~The GitHub `deploy` job is disabled at the start of the
+PROD phase; GitHub Actions remains CI-only for 1-2 release cycles, then `.github/workflows/`
+is deleted.~~ No action is taken on GitHub. Deleting the workflow files from the repository is
+covered by Story 7.2; nothing else here survives.
 
-FR34: Deployment SSH keys and ghcr tokens are removed from GitHub Secrets and revoked;
-SSH keys that were stored in GitHub Secrets are rotated.
+FR34: **CANCELLED (2026-08-07).** ~~Deployment SSH keys and ghcr tokens are removed from
+GitHub Secrets and revoked; SSH keys that were stored in GitHub Secrets are rotated.~~ No
+action is taken on GitHub. Key rotation on the servers is covered by Story 7.5; the secrets
+and ghcr tokens stay where they are.
 
 ### NonFunctional Requirements
 
@@ -221,17 +246,23 @@ Technical and infrastructure requirements extracted from the plan that shape sto
   migrated into CI variables — they already live in per-stand server `.env` files.
 - `github.server_url` / `github.repository` / `github.run_id` work unchanged in Forgejo and
   produce a valid run URL.
-- How GitHub and Forgejo are currently synchronized (push-mirror?) must be established —
-  pull requests are platform objects and are not mirrored, so a `pull_request` trigger on
-  GitHub will never fire for a Forgejo PR.
+- **Answered 2026-08-07 (Story 1.4, cancelled):** GitHub and Forgejo are **not** synchronized
+  in either direction. `main` matched at `e6ecfced`, `development` had diverged (Forgejo
+  `372ee2c4`, GitHub `405db726`), the GitHub repository is not a fork and carries
+  `mirror_url: null`. Pull requests are platform objects and are not mirrored either way.
+  The team pushes to GitHub; the Forgejo copy lags and the gap widens daily.
 - Known live bug in the current GitHub CD: pushing a `v*` tag evaluates `environment: dev`
   at `CD.yml:124` while `set-env` resolves `DEPLOY_ENV=production` at `CD.yml:150`, so the
   production gate is bypassed by pushing a tag. Note the gate is nominal today — the
   `production` environment carries no protection rules — and the tag path also fails at the
   `docker pull` in `CD.yml:191`, but only *after* the scp step has already written to the
-  production server. Closed in Story 1.1 by removing the `v*` trigger.
-- Interim regulation is needed for who updates the legacy DEV stand (branch `development`,
-  GitHub CD) before cutover, given that the new process retires the `development` branch.
+  production server. Story 1.1 removed the `v*` trigger in the repository (commit `09591984`)
+  but is **cancelled**: the file only takes effect on GitHub, where no action is taken, so the
+  bypass stays open there. Accepted risk.
+- ~~Interim regulation is needed for who updates the legacy DEV stand.~~ **Dropped 2026-08-07
+  (Story 1.5, cancelled):** the legacy stand keeps running on `development` via the GitHub CD
+  with no planned end date, since the GitHub transition is owned outside this plan. Two DEV
+  stands will coexist indefinitely and this plan does not say which is authoritative.
 - `[C]` `Dockerfile.prod` keeps its `ARG VITE_API_BASE_URL` / `ARG VITE_WS_URL` build-time
   contract unchanged; no `entrypoint.sh` runtime-config layer is introduced.
 - `[C]` `VITE_API_BASE_URL_PREPROD` / `VITE_WS_URL_PREPROD` must be added as repo variables
@@ -276,10 +307,10 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
 | FR30 | Epic 4 | `concurrency` plus version-independent server-side `flock` |
-| FR31 | Epic 6 | Import the running PROD image from ghcr into the Forgejo registry |
+| FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry (ghcr unreachable) |
 | FR32 | Epic 6 | Cutover validated by a no-op `rollback: true` deploy |
-| FR33 | Epic 6 + Epic 7 | Deploy job disabled before Forgejo touches s2 (Story 6.1); `.github/workflows/` removed after the overlap (Epic 7) |
-| FR34 | Epic 7 | Deploy secrets revoked and SSH keys rotated |
+| FR33 | — | **Cancelled** — no action on GitHub. File deletion only, via Story 7.2 |
+| FR34 | — | **Cancelled** — no action on GitHub. Server-side key rotation only, via Story 7.5 |
 
 ## Epic List
 
@@ -294,12 +325,11 @@ migration, and a retention policy that cannot delete a rollback target.
 
 **FRs covered:** FR10, FR11, FR28, FR29
 
-**Implementation notes:** Also closes the live GitHub CD defect where pushing a `v*` tag
-bypasses the production required-reviewers gate (`CD.yml:124` vs `CD.yml:150`). That bug is
-exploitable for the entire duration of the migration, not only after it, so it is fixed
-here rather than deferred to decommissioning. It is closed by removing the `v*` trigger
-outright — see Story 1.1 for the evidence behind that choice — which also means no approval
-gate is added to the legacy `main` release path.
+**Implementation notes:** Story 1.1 originally closed the live GitHub CD defect where pushing
+a `v*` tag bypasses the production gate (`CD.yml:124` vs `CD.yml:150`). It is **cancelled** —
+the 2026-08-07 decision that no action is taken on GitHub makes any repository-side fix inert
+there. The defect is instead closed by Story 6.1, by ending delivery to GitHub entirely. The
+exposure during the intervening window is recorded as accepted risk under Story 1.1.
 
 ### Epic 2: Forgejo CI as the Quality Gate
 
@@ -357,7 +387,7 @@ deliberately excluded from acceptance criteria.
 A release reaches production through Forgejo, rollback is proven in practice rather than in
 theory, and the cutover happens without changing what production serves.
 
-**FRs covered:** FR15, FR16, FR17, FR18, FR21, FR24, FR31, FR32, and the disable half of FR33
+**FRs covered:** FR15, FR16, FR17, FR18, FR21, FR24, FR31, FR32
 **NFRs addressed:** NFR3 (rollback without rebuild), NFR7 (old s2 key retained), NFR9 (no
 technical approval gate — organizational control), NFR11 (`[C]` promotion principle violated)
 
@@ -365,15 +395,17 @@ technical approval gate — organizational control), NFR11 (`[C]` promotion prin
 PROD image is rebuilt rather than promoted, the guard degrades from image identity to commit
 identity, and the deviation is recorded as tracked technical debt.
 
-### Epic 7: GitHub Decommissioning
+### Epic 7: Forgejo as the Single Source of Delivery
 
-Forgejo is the single source of truth for delivery, and no stale deployment credentials
-remain on the GitHub side.
+Forgejo is the only pipeline anyone works with, the documentation describes the process that
+actually runs, and the keys that were held in GitHub Secrets no longer open anything.
 
-**FRs covered:** FR33, FR34
+**FRs covered:** none. FR33 and FR34 are cancelled; Stories 7.2 and 7.5 remain as work the epic still does
 
-**Implementation notes:** Runs one to two release cycles behind Epic 6, with GitHub in
-CI-only mode during the overlap. The old s2 SSH key is not revoked until this epic
+**Implementation notes:** Reduced by the 2026-08-07 decision that no action is taken on
+GitHub. Stories 7.1 and 7.4 are cancelled; 7.2 is reduced to deleting the legacy workflow
+files from the repository. GitHub itself is left running as it is — see *External dependency:
+the GitHub transition* in the Overview. The old s2 SSH key is not revoked until this epic
 completes.
 
 ---
@@ -393,15 +425,27 @@ reviewers,
 So that the production approval gate cannot be circumvented during the weeks the legacy
 pipeline is still live.
 
-**Resolution: remove the tag trigger (decided 2026-08-07).** The bypass is closed by deleting
-the `v*` trigger rather than by repairing the `environment` expression and configuring
-required reviewers. Evidence: **no `v*` tag has ever existed in this repository** (`git tag`
-empty, GitHub `/tags` returns `[]`), so the tag release path is unused; the `production`
-environment has **no protection rules at all** (`protection_rules: []`), so repairing the
-expression alone would have changed nothing observable and would additionally have imposed an
-approval step on every `main` merge — the daily release path — to guard a path nobody uses.
-The GitHub pipeline is retired by Story 6.1 and Epic 7 regardless. Verification also becomes
-side-effect-free: a test tag builds no image and touches no server.
+> **CANCELLED — not applicable (decided 2026-08-07).** Superseded by the decision that no
+> action is ever taken on GitHub. `.github/workflows/CD.yml` takes effect only on GitHub, so
+> no repository-side change can close this defect there. The bypass is instead closed by
+> Story 6.1, which stops delivering commits to GitHub at all — an unreachable workflow cannot
+> be triggered by a tag or anything else.
+>
+> **The fix itself is kept**, in commit `09591984`: the `v*` trigger is removed from
+> `on.push`, the tag clause is removed from the deploy job `if:`, and the `environment`
+> expression, its Slack-payload copy and `set-env` are collapsed onto one discriminator. It is
+> correct, it costs nothing to carry, and it travels to Forgejo with the rest of the tree. It
+> is simply inert with respect to GitHub.
+>
+> **Accepted risk.** Until Story 6.1 completes, GitHub still receives commits and its CD is
+> live (it deployed `development` on 2026-08-07 and production on 2026-08-05). For that
+> window the tag bypass remains open on GitHub and cannot be closed. Practically bounded by
+> the fact that no `v*` tag has ever existed in this repository (`git tag` empty, GitHub
+> `/tags` returns `[]`) and that the tag path aborts at `docker pull` — though only after scp
+> has already written to the production server.
+>
+> Original investigation, evidence and the superseded acceptance criteria are preserved in
+> `{implementation_artifacts}/1-1-close-the-tag-based-production-gate-bypass-in-the-current-github-cd.md`.
 
 **Acceptance Criteria:**
 
@@ -484,25 +528,17 @@ As a developer,
 I want to know exactly what is mirrored between GitHub and Forgejo and in which direction,
 So that I can tell which triggers will fire on which platform during the parallel period.
 
-**Acceptance Criteria:**
-
-**Given** the repository exists on both platforms
-**When** the synchronization is investigated
-**Then** the mechanism is identified (push-mirror, pull-mirror, or none) with its direction
-and refresh behaviour
-**And** the finding is written into the migration documentation.
-
-**Given** pull requests are platform objects and are not mirrored
-**When** the documentation is written
-**Then** it states explicitly that a `pull_request` trigger on GitHub will never fire for a
-Forgejo pull request, and vice versa
-**And** it states which comparisons between the two pipelines are therefore technically
-possible.
-
-**Given** branch pushes may or may not be mirrored
-**When** a test branch is pushed to one platform
-**Then** its appearance or absence on the other platform is observed and recorded
-**And** the implication for duplicate CI runs during the overlap is noted.
+> **CANCELLED — out of scope (decided 2026-08-07).** The plan takes no action on GitHub and
+> does not run a parallel period across both platforms, so the synchronization model is no
+> longer something it needs to reason about. Moving delivery across is owned outside the plan
+> — see *External dependency: the GitHub transition* in the Overview.
+>
+> The investigation was in fact already carried out on 2026-08-07 while working Story 1.1, and
+> its answer is recorded there and in the Overview rather than lost: **there is no mirror in
+> either direction.** `main` matched at `e6ecfced`, `development` had diverged (Forgejo
+> `372ee2c4`, GitHub `405db726`), the GitHub repository is not a fork and carries
+> `mirror_url: null`, and the local `origin` points at Forgejo with no GitHub remote
+> configured. The team pushes to GitHub; the Forgejo copy lags and the gap widens daily.
 
 ### Story 1.5: Publish the Interim Regulation for the Legacy DEV Stand
 
@@ -510,19 +546,16 @@ As a developer,
 I want written instructions on how the legacy DEV stand is updated during the migration,
 So that the `development` branch does not go stale or get updated by two conflicting routes.
 
-**Acceptance Criteria:**
-
-**Given** the new process retires the `development` branch while the legacy stand still
-depends on it
-**When** the regulation is published
-**Then** it names who updates the legacy DEV stand, by which branch, and through which
-pipeline until cutover
-**And** it states that Forgejo deploys only to newly created stands until Epic 6.
-
-**Given** the regulation has been written
-**When** it is distributed
-**Then** distribution to the development team is confirmed
-**And** the document is stored in the repository, not only in a chat message.
+> **CANCELLED — out of scope (decided 2026-08-07).** The regulation governed how the legacy
+> DEV stand is kept updated through the GitHub pipeline until cutover. The plan takes no action
+> on GitHub and does not schedule a cutover, so it has nothing to regulate there: the legacy
+> stand simply keeps working exactly as it does today, driven by the `development` branch and
+> the GitHub CD, for as long as that continues.
+>
+> **What this leaves open**, deliberately and outside the plan: two DEV stands will coexist
+> with no planned end date — the legacy one and the Forgejo one built in Epic 4 — and nothing
+> here says which is authoritative or who retires the old one. That belongs to the GitHub
+> transition owned outside this plan.
 
 ### Story 1.6: Secure the PRE-PROD Infrastructure Commitment
 
@@ -1591,34 +1624,32 @@ A release reaches production through Forgejo, rollback is proven in practice rat
 theory, and the cutover happens without changing what production serves. This is where the
 Option C compromise becomes visible and is recorded as tracked technical debt.
 
+> **Accepted risk: the rollback horizon resets at cutover (recorded 2026-08-07).** Every image
+> built before the migration lives in `ghcr.io/crm-prionex/fe-prionex`, and no action is taken
+> on GitHub — which includes pulling from its registry. Those images are therefore
+> unreachable. Rollback via Story 6.8 can only target versions built by Forgejo.
+>
+> The practical consequence: **the first Forgejo release is a one-way door.** Before it, the
+> legacy pipeline can still put an older version back. After it, rollback depth starts at zero
+> and grows one release at a time. Story 6.8 must be proven on a Forgejo-built version before
+> the cutover, not after, because there is no older version to fall back to.
+>
+> This compounds the loss of the GitHub fallback recorded in Story 7.1 (cancelled). Together
+> they mean Epic 6 carries no external safety net at all.
+
 ### Story 6.1: Disable the GitHub CD Deploy Job
 
-As a release engineer,
-I want only one pipeline able to deploy to s2,
-So that a merge on GitHub cannot deploy to production while a Forgejo release is in flight.
-
-**Acceptance Criteria:**
-
-**Given** `.github/workflows/CD.yml` still contains the `deploy` job at lines 118-265
-**When** this story is completed, before any Forgejo workflow touches s2
-**Then** the `deploy` job no longer runs on any trigger
-**And** the `build-and-push` job and the GitHub CI workflow continue to run.
-
-**Given** the deploy job has been disabled
-**When** a commit is pushed to `main` on GitHub
-**Then** no deployment to s2 occurs
-**And** the run completes without attempting an SSH connection.
-
-**Given** the disable is intended to be reversible during the overlap
-**When** the change is made
-**Then** the job is disabled rather than deleted, so it can be restored if the Forgejo path
-must be abandoned
-**And** the removal of the file is deferred to Epic 7.
-
-**Given** the team relies on the GitHub pipeline today
-**When** the change lands
-**Then** the team is notified that GitHub no longer deploys
-**And** the notice points at the Forgejo deploy workflows instead.
+> **CANCELLED — not applicable (decided 2026-08-07).** Disabling the job is an action on
+> GitHub, and no action is taken on GitHub. GitHub is left running exactly as it is.
+>
+> The concern this story addressed is real and does not disappear: while GitHub still receives
+> commits, a merge to `main` there deploys to s2 through the legacy pipeline. Once Forgejo
+> also deploys to s2, **two pipelines can deploy to production independently.** Nothing in
+> this plan prevents that.
+>
+> It is instead resolved outside the plan — see *External dependency: the GitHub transition*
+> in the Overview. Until that transition happens, the overlap is accepted risk, and Epic 6
+> must treat a concurrent legacy deploy as possible rather than excluded.
 
 ### Story 6.2: Publish the Production Approval Regulation
 
@@ -1651,36 +1682,45 @@ record from Story 1.2 is the only technical barrier
 **Then** it lives in the repository documentation
 **And** the development and release teams have acknowledged it.
 
-### Story 6.3: Import the Running Production Image into the Forgejo Registry
+### Story 6.3: Rebuild the Running Production Commit into the Forgejo Registry
 
 As a release engineer,
-I want the image production is currently serving present in the Forgejo registry,
-So that the cutover can be rehearsed against the exact artifact already in production.
+I want the commit production is currently serving present in the Forgejo registry,
+So that the cutover can be rehearsed against the code already in production.
+
+> **Changed (2026-08-07).** Originally this story *imported* the running image from ghcr. No
+> action is taken on GitHub, and that includes pulling from its registry, so the image is
+> rebuilt from the same commit instead. Under Option C production already receives a rebuilt
+> image rather than the artifact validated on PRE-PROD, so this introduces no new compromise —
+> it makes the story consistent with one the plan had already accepted (NFR11).
 
 **Acceptance Criteria:**
 
 **Given** production currently runs an image from ghcr.io
-**When** the running image is identified
-**Then** its digest and originating commit are determined from the running container on s2,
-not assumed from a branch name.
+**When** the running commit is identified
+**Then** it is determined from the running container on s2 — via its image labels or the
+recorded deployment — not assumed from a branch name
+**And** the identification is evidenced rather than asserted.
 
-**Given** the identified image
-**When** it is imported
-**Then** it is pulled from ghcr and pushed to `git.crm-prionex.com/crm/fe-prionex`
-**And** it is tagged `sha-<commit>` matching the commit it was built from.
+**Given** the identified commit
+**When** it is built
+**Then** it is built from that exact commit with the production build arguments
+**And** pushed to `git.crm-prionex.com/crm/fe-prionex` tagged `sha-<commit>`.
 
-**Given** the imported image
+**Given** the rebuilt image
 **When** the current production state is recorded
 **Then** it also carries the tag `prod-current`.
 
-**Given** the import is complete
-**When** the digests are compared
-**Then** the image in the Forgejo registry is byte-identical to the one running on s2
-**And** the comparison is performed rather than assumed.
+**Given** the rebuilt image
+**When** it is compared with what production serves
+**Then** it is confirmed to originate from the same commit
+**And** it is recorded that it is **not** byte-identical, because it was rebuilt — so Story
+6.9's "no-op deploy" is a no-op in code, not in bytes, and must be validated by behaviour
+rather than by digest comparison.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** the imported tags are protected as the current production and rollback targets.
+**Then** these tags are protected as the current production and rollback targets.
 
 ### Story 6.4: Deploy to Production by Dispatch
 
@@ -1869,10 +1909,15 @@ documentation so it is not forgotten.
 
 ---
 
-## Epic 7: GitHub Decommissioning
+## Epic 7: Forgejo as the Single Source of Delivery
 
-Forgejo is the single source of truth for delivery, the documentation describes the process
-that actually runs, and no stale deployment credentials remain on the GitHub side.
+Forgejo is the only pipeline anyone works with, the documentation describes the process that
+actually runs, and the keys that were held in GitHub Secrets no longer open anything.
+
+> **Reduced by the no-GitHub-action decision (2026-08-07).** This epic originally decommissioned
+> GitHub. Three of its five stories required acting on GitHub and are cancelled (7.1, 7.4) or
+> reduced (7.2). What survives is everything achievable from our own side: the documentation
+> (7.3) and the key rotation on the servers (7.5).
 
 ### Story 7.1: Observe Two Release Cycles with GitHub in CI-Only Mode
 
@@ -1880,55 +1925,48 @@ As a tech lead,
 I want the Forgejo pipeline to carry real releases before GitHub is dismantled,
 So that decommissioning is irreversible only after the replacement has proven itself.
 
-**Acceptance Criteria:**
+> **CANCELLED — premise removed (decided 2026-08-07).** This story depended on Story 6.1
+> putting GitHub into CI-only mode. 6.1 is cancelled and GitHub keeps running in full, so
+> there is no "CI-only overlap" to observe and no decommissioning decision to gate.
+>
+> **The fallback it described is gone in a way worth stating plainly.** The story treated the
+> still-enabled GitHub deploy job as a safety net — "could be re-enabled if the Forgejo
+> pipeline failed badly". Re-enabling it would be an action on GitHub, so that net does not
+> exist for us. Rollback lives entirely inside Forgejo (Story 6.8, redeploy of a previous
+> `image_tag`), and Epic 6 must be proven on its own merits before production depends on it.
+>
+> Recording each Forgejo release cycle is still worth doing, but as ordinary release practice
+> under the regulation in Story 6.2 — not as a gate on a decommissioning that will not happen.
 
-**Given** the GitHub deploy job was disabled in Story 6.1
-**When** the overlap period begins
-**Then** GitHub Actions runs CI only
-**And** Forgejo carries every build and deployment.
-
-**Given** the overlap period
-**When** one to two full release cycles have completed through Forgejo
-**Then** each cycle is recorded with its candidate tag, PRE-PROD validation outcome and
-production release
-**And** any incident during those cycles is recorded with its resolution.
-
-**Given** the observation period is complete
-**When** the decision to decommission is taken
-**Then** it is based on the recorded cycles
-**And** any unresolved defect in the Forgejo pipeline blocks the decision.
-
-**Given** the Forgejo pipeline had failed badly during the overlap
-**When** the fallback is considered
-**Then** the still-present GitHub deploy job could be re-enabled
-**And** this fallback remains available for as long as the GitHub workflow files exist.
-
-### Story 7.2: Retire the GitHub Workflows
+### Story 7.2: Delete the Legacy Workflow Files
 
 As a developer,
 I want a single place where CI and CD are defined,
 So that nobody has to guess which pipeline governs a change.
 
+> **Reduced (2026-08-07).** Disabling anything in GitHub's repository settings is out of
+> scope. This story now covers only the files in our tree. Deleting them changes nothing on
+> GitHub: that copy keeps whatever it has.
+
 **Acceptance Criteria:**
 
-**Given** two successful release cycles from Story 7.1
-**When** the GitHub workflows are retired
-**Then** the workflows are disabled in the GitHub repository settings
-**And** no scheduled or triggered run remains active.
+**Given** `.github/workflows/CI.yml` and `CD.yml` are the reference for what the Forgejo
+workflows must reproduce
+**When** Epics 2-6 are still in progress
+**Then** the files are deliberately kept in place, so the port can be checked against them
+**And** they are not deleted early.
 
-**Given** the workflows are disabled
+**Given** every Forgejo workflow is in place and proven
 **When** the files are removed
 **Then** `.github/workflows/CI.yml` and `.github/workflows/CD.yml` are deleted
 **And** the deletion goes through a pull request reviewed the normal way.
 
 **Given** the files are removed
-**When** a commit is pushed to GitHub
-**Then** no GitHub Actions run is triggered.
-
-**Given** GitHub no longer runs anything
 **When** the repository is reviewed
 **Then** any remaining GitHub-specific configuration that is now dead is identified and
-removed or documented as intentionally retained.
+removed or documented as intentionally retained
+**And** the retained `docs/forgejo-migration.md` record still describes what the legacy
+pipeline did, so the deletion loses no history.
 
 ### Story 7.3: Publish the Updated Deployment Process Documentation
 
@@ -1969,27 +2007,26 @@ As a security-conscious engineer,
 I want credentials removed from the platform that no longer needs them,
 So that a compromised GitHub account cannot reach our servers or registry.
 
-**Acceptance Criteria:**
-
-**Given** the GitHub workflows are retired in Story 7.2
-**When** GitHub Secrets are reviewed
-**Then** every deployment secret is enumerated before deletion, so nothing is missed.
-
-**Given** the enumerated secrets
-**When** they are deleted
-**Then** `DEV_SSH_HOST`, `DEV_SSH_USER`, `DEV_SSH_KEY`, `PROD_SSH_HOST`, `PROD_SSH_USER` and
-`PROD_SSH_KEY` no longer exist in GitHub
-**And** the Vite URL secrets used only by the old build are removed.
-
-**Given** images were published to ghcr.io
-**When** the registry access is revoked
-**Then** the ghcr tokens are revoked
-**And** the ghcr package remains readable for as long as any rollback path could need it, or
-its removal date is recorded.
-
-**Given** the secrets have been deleted
-**When** a deployment is attempted from GitHub
-**Then** it is impossible because no workflow and no credentials remain.
+> **CANCELLED — not applicable (decided 2026-08-07).** Deleting GitHub Secrets and revoking
+> ghcr tokens are actions on GitHub, and no action is taken on GitHub.
+>
+> **What compensates, and what does not:**
+>
+> - **SSH keys — compensated.** `DEV_SSH_KEY` and `PROD_SSH_KEY` stay in GitHub Secrets, but
+>   Story 7.5 rotates the keys on the servers and removes the old ones from `authorized_keys`
+>   on s1 and s2. After that the stored secrets open nothing. The secret is not deleted; it is
+>   made worthless. 7.5 is now the only barrier here, so it is not optional.
+> - **Host and user secrets — not compensated, low value.** `DEV_SSH_HOST`, `PROD_SSH_HOST`,
+>   `DEV_SSH_USER`, `PROD_SSH_USER` remain readable. They disclose where the servers are and
+>   under which account, which is reconnaissance, not access.
+> - **ghcr tokens — not compensated.** Revoking them is only possible on GitHub. The package
+>   `ghcr.io/crm-prionex/fe-prionex` and its publish credentials stay reachable by anyone with
+>   the account or the token. **Accepted residual risk**, recorded here rather than left
+>   unstated. It is also what keeps the legacy images pullable, which Story 6.3 relies on.
+>
+> Note the story's closing claim — "a deployment from GitHub is impossible because no workflow
+> and no credentials remain" — does not hold under this decision. The workflow remains, and so
+> do the credentials. What ends is only the usefulness of the SSH keys.
 
 ### Story 7.5: Rotate the SSH Keys That Were Held in GitHub Secrets
 

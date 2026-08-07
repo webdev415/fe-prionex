@@ -4,7 +4,14 @@ baseline_commit: e6ecfced2b3c3ec237e50e7f3d690ba38b73c2c1
 
 # Story 1.1: Close the Tag-Based Production Gate Bypass in the Current GitHub CD
 
-Status: in-progress
+Status: cancelled
+
+> **Cancelled 2026-08-07** — superseded by the decision that no action is ever taken on
+> GitHub. `.github/workflows/CD.yml` takes effect only there, so no repository-side change can
+> close this defect. Closed instead by Story 6.1 (ending delivery to GitHub). The fix is kept
+> in commit `09591984` — correct, inert, and carried to Forgejo with the rest of the tree.
+> AC2 was satisfied and verified; AC1 and AC3 were not and cannot be. Everything below is
+> preserved as the investigation record.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
