@@ -498,6 +498,14 @@ As a platform engineer,
 I want the Forgejo instance's Actions capabilities established by observation,
 So that workflow design does not rest on assumptions that fail silently.
 
+> **Prerequisite note (added 2026-08-08, story 1.3).** Unlike Story 1.9, which gates explicitly
+> on Story 1.7 being operational (line 670), this story carries no prerequisite clause even
+> though AC2 and AC4 require a runner with **capacity ≥ 2** to distinguish concurrency-group
+> queueing from ordinary capacity contention — a single-slot runner (the `forgejo-runner`
+> default, and what Story 1.7 provisions) returns a guaranteed false positive on the AC2 probe.
+> Story 1.3 resolved this by provisioning its own disposable probe runner instead of depending
+> on Story 1.7 — see [migration-decisions.md#d8](../../docs/migration-decisions.md#d8).
+
 **Acceptance Criteria:**
 
 **Given** the Forgejo instance configuration
@@ -1330,7 +1338,7 @@ So that one deploy's `down` cannot tear down another deploy's freshly started co
 **Given** the behaviour of `concurrency` observed in Story 1.3
 **When** `deploy-dev.yml` is configured
 **Then** it declares `concurrency: cd-${{ github.ref }}` with `cancel-in-progress: false`,
-matching `CD.yml:21-23`.
+matching `CD.yml:19-21`.
 
 **Given** `concurrency` may be silently ignored by this Forgejo version
 **When** the deploy script runs on the server
