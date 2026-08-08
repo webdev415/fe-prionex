@@ -1,21 +1,39 @@
 <svg width="1440" height="1024" viewBox="0 0 1440 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
 <rect width="1440" height="1024" fill="#0D2526"/>
-<g opacity="0.1" filter="url(#filter0_f_16142_3252)">
-<circle cx="499" cy="820" r="308" fill="#BBFB5B"/>
-</g>
-<g opacity="0.1" filter="url(#filter1_f_16142_3252)">
-<circle cx="1059" cy="820" r="308" fill="#204E4D"/>
-</g>
+<circle opacity="0.1" cx="499" cy="820" r="1000" fill="url(#glow0_neutral_dim_teal)"/>
+<circle opacity="0.1" cx="1059" cy="820" r="1000" fill="url(#glow1_neutral_dim_teal)"/>
 <defs>
-<filter id="filter0_f_16142_3252" x="-193" y="128" width="1384" height="1384" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feGaussianBlur stdDeviation="192" result="effect1_foregroundBlur_16142_3252"/>
-</filter>
-<filter id="filter1_f_16142_3252" x="367" y="128" width="1384" height="1384" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feGaussianBlur stdDeviation="192" result="effect1_foregroundBlur_16142_3252"/>
-</filter>
+<radialGradient id="glow0_neutral_dim_teal" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(499 820) rotate(90) scale(1000)">
+<stop stop-color="#BBFB5B" stop-opacity="0.7238"/>
+<stop offset="0.034" stop-color="#BBFB5B" stop-opacity="0.7183"/>
+<stop offset="0.068" stop-color="#BBFB5B" stop-opacity="0.7018"/>
+<stop offset="0.102" stop-color="#BBFB5B" stop-opacity="0.6749"/>
+<stop offset="0.138" stop-color="#BBFB5B" stop-opacity="0.6362"/>
+<stop offset="0.206" stop-color="#BBFB5B" stop-opacity="0.5401"/>
+<stop offset="0.34" stop-color="#BBFB5B" stop-opacity="0.3133"/>
+<stop offset="0.4" stop-color="#BBFB5B" stop-opacity="0.2208"/>
+<stop offset="0.466" stop-color="#BBFB5B" stop-opacity="0.1383"/>
+<stop offset="0.532" stop-color="#BBFB5B" stop-opacity="0.079"/>
+<stop offset="0.608" stop-color="#BBFB5B" stop-opacity="0.0368"/>
+<stop offset="0.696" stop-color="#BBFB5B" stop-opacity="0.0129"/>
+<stop offset="0.806" stop-color="#BBFB5B" stop-opacity="0.0027"/>
+<stop offset="1" stop-color="#BBFB5B" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="glow1_neutral_dim_teal" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1059 820) rotate(90) scale(1000)">
+<stop stop-color="#204E4D" stop-opacity="0.7238"/>
+<stop offset="0.034" stop-color="#204E4D" stop-opacity="0.7183"/>
+<stop offset="0.068" stop-color="#204E4D" stop-opacity="0.7018"/>
+<stop offset="0.102" stop-color="#204E4D" stop-opacity="0.6749"/>
+<stop offset="0.138" stop-color="#204E4D" stop-opacity="0.6362"/>
+<stop offset="0.206" stop-color="#204E4D" stop-opacity="0.5401"/>
+<stop offset="0.34" stop-color="#204E4D" stop-opacity="0.3133"/>
+<stop offset="0.4" stop-color="#204E4D" stop-opacity="0.2208"/>
+<stop offset="0.466" stop-color="#204E4D" stop-opacity="0.1383"/>
+<stop offset="0.532" stop-color="#204E4D" stop-opacity="0.079"/>
+<stop offset="0.608" stop-color="#204E4D" stop-opacity="0.0368"/>
+<stop offset="0.696" stop-color="#204E4D" stop-opacity="0.0129"/>
+<stop offset="0.806" stop-color="#204E4D" stop-opacity="0.0027"/>
+<stop offset="1" stop-color="#204E4D" stop-opacity="0"/>
+</radialGradient>
 </defs>
 </svg>

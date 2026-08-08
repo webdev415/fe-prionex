@@ -692,13 +692,17 @@
       "voiceMessageSend": "Send voice message",
       "voiceMessageTooLarge": "Voice message is too large (limit 10MB).",
       "voiceMessageBubbleLabel": "Voice message",
-      "attachImageUnsupported": "Only PNG, JPEG or WebP images can be attached.",
-      "attachImageTooLarge": "Image exceeds the 5MB limit.",
-      "attachImageTooMany": "Up to 3 images per message.",
+      "attachUnsupported": "You can attach images (PNG, JPEG, WebP) and documents (PDF, Word, Excel, CSV).",
+      "attachTooLarge": "The file exceeds the {{limit}} limit.",
+      "attachTooMany": "Up to {{count}} attachments per message.",
+      "attachReadFailed": "Could not read the file — try attaching it again.",
+      "attachPreparing": "Preparing…",
+      "attachStillPreparing": "Wait until the attachments are ready.",
+      "attachTotalTooLarge": "Too many attachments at once — send the files in smaller batches.",
+      "attachmentRemove": "Remove “{{name}}”",
       "attachImageRemove": "Remove image",
-      "attachImageButton": "Attach image",
       "attachedImageAlt": "Attached image",
-      "attachmentNeedsText": "Add a text message to send the image.",
+      "attachmentNeedsText": "Add a text message to send the attachment.",
       "ttsListen": "Listen to the reply",
       "ttsStop": "Stop playback",
       "ttsError": "Could not play the reply.",
@@ -717,9 +721,28 @@
       "modeFastHint": "Answers instantly",
       "modeThinkingHint": "Analyzes more thoroughly, but slower",
       "modeChangeHint": "Set next to the input",
+      "showReasoning": "Show reasoning",
+      "showReasoningHint": "The train of thought is shown in the «Activity» panel",
+      "showReasoningFastHint": "Fast mode produces no reasoning",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
-      "voiceSeconds": "{{count}}s"
+      "voiceSeconds": "{{count}}s",
+      "filePreview": {
+        "loading": "Loading…",
+        "loadFailed": "Could not load the file",
+        "imageFailed": "Could not load the image “{{name}}”",
+        "openFull": "Open “{{name}}” full size",
+        "close": "Close",
+        "download": "Download",
+        "downloadFailed": "Download failed — try again",
+        "openPreview": "Open preview",
+        "externalLink": "external link",
+        "blocked": "Attachment not shown",
+        "linkLost": "The link to this file was lost — ask the assistant to send it again",
+        "errorNotFound": "The file is no longer available",
+        "errorTooLarge": "The file is too large to open here — ask for a smaller export",
+        "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
+      }
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -3769,6 +3792,52 @@
       "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
       "accessToggleAria": "Toggle assistant access for role {{role}}",
       "disabledBanner": "The AI assistant is temporarily disabled by an administrator.",
+      "management": {
+        "title": "Assistant management",
+        "helper": "Persona, the system prompt add-on and skills. Changes apply to the assistant for every operator.",
+        "persona": {
+          "title": "Persona",
+          "description": "Name, role, tone and language the assistant introduces itself with.",
+          "save": "Save persona",
+          "toastSaved": "Persona saved",
+          "fields": {
+            "name": "Name",
+            "role": "Role",
+            "tone": "Tone",
+            "language": "Language"
+          }
+        },
+        "prompt": {
+          "title": "System prompt add-on",
+          "description": "Text appended to the assistant's base prompt on every request. Supports {name}, {role} and {tone} placeholders; the limit applies to the text after substitution.",
+          "warning": "Edits affect answers for every operator. The previous version is backed up automatically on the server.",
+          "inputAria": "System prompt add-on",
+          "save": "Save",
+          "toastSaved": "System prompt add-on saved",
+          "counterStale": "recalculated on save",
+          "renderErrorTitle": "The stored template does not render — the assistant is serving the last working version.",
+          "counterLabel": "rendered characters"
+        },
+        "skills": {
+          "title": "Skills",
+          "description": "Turn individual assistant skills on or off. A disabled skill stays in the list.",
+          "empty": "The brain reported no skills.",
+          "disabledBadge": "off",
+          "toggleAria": "Toggle skill {{skill}}",
+          "showText": "Show prompt",
+          "hideText": "Hide prompt",
+          "toastEnabled": "Skill {{skill}} enabled",
+          "toastDisabled": "Skill {{skill}} disabled"
+        },
+        "errors": {
+          "validation": "The server rejected the value. Check it and try again.",
+          "forbidden": "You do not have permission to change assistant settings.",
+          "notFound": "This skill no longer exists. Refresh the page.",
+          "unavailable": "The assistant service is unavailable.",
+          "unknown": "Could not save. Try again."
+        },
+        "overridden": "overridden"
+      },
       "internals": {
         "title": "Assistant internals",
         "configTitle": "Configuration",
@@ -3892,12 +3961,38 @@
             "projectCode": "Enter Project Code",
             "clientCompany": "Client Company",
             "contractNumber": "Contract Number",
-            "description": "Placeholder text"
+            "description": "Placeholder text",
+            "fullCompanyName": "Enter full company name",
+            "address": "Enter address",
+            "edrpouCode": "Enter EDRPOU",
+            "website": "Enter website",
+            "email": "Enter email",
+            "hotlinePhone": "Enter support hotline phone",
+            "directorName": "Enter director's name",
+            "iban": "Enter IBAN",
+            "bankName": "Enter bank name",
+            "bankCode": "Enter bank code"
           },
           "errors": {
             "nameMinLength": "Name must be at least 3 characters",
             "codeMinLength": "Code must be at least 2 characters",
             "endDateAfterStart": "End date must be after start date"
+          },
+          "companyDetails": {
+            "title": "Company details",
+            "fullCompanyName": "Full company name",
+            "address": "Address",
+            "edrpouCode": "EDRPOU",
+            "website": "Website",
+            "email": "Email",
+            "hotlinePhone": "Support hotline phone",
+            "directorName": "Director"
+          },
+          "bankingDetails": {
+            "title": "Banking details",
+            "iban": "IBAN",
+            "bankName": "Bank",
+            "bankCode": "Bank code"
           }
         },
         "edit": {
@@ -3926,11 +4021,37 @@
             "projectName": "Enter Project Name",
             "clientCompany": "Client Company",
             "contractNumber": "Contract Number",
-            "description": "Placeholder text"
+            "description": "Placeholder text",
+            "fullCompanyName": "Enter full company name",
+            "address": "Enter address",
+            "edrpouCode": "Enter EDRPOU",
+            "website": "Enter website",
+            "email": "Enter email",
+            "hotlinePhone": "Enter support hotline phone",
+            "directorName": "Enter director's name",
+            "iban": "Enter IBAN",
+            "bankName": "Enter bank name",
+            "bankCode": "Enter bank code"
           },
           "errors": {
             "nameMinLength": "Name must be at least 3 characters",
             "endDateAfterStart": "End date must be after start date"
+          },
+          "companyDetails": {
+            "title": "Company details",
+            "fullCompanyName": "Full company name",
+            "address": "Address",
+            "edrpouCode": "EDRPOU",
+            "website": "Website",
+            "email": "Email",
+            "hotlinePhone": "Support hotline phone",
+            "directorName": "Director"
+          },
+          "bankingDetails": {
+            "title": "Banking details",
+            "iban": "IBAN",
+            "bankName": "Bank",
+            "bankCode": "Bank code"
           }
         },
         "delete": {
@@ -3938,6 +4059,12 @@
           "confirmMessage": "Are you sure you want to delete this project? This action cannot be undone.",
           "deleting": "Deleting...",
           "deleteProject": "Delete Project"
+        },
+        "errors": {
+          "edrpouCodeFormat": "EDRPOU must be exactly 8 digits",
+          "ibanFormat": "IBAN must start with 2 uppercase letters followed by up to 32 digits (max 34 characters)",
+          "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
+          "emailFormat": "Enter a valid email address"
         }
       }
     },
@@ -4817,7 +4944,8 @@
         "stepValuePlaceholder": "Search…",
         "lastInteractionResultSearchPlaceholder": "Search...",
         "stepValueUnsupported": "No value filter available for this step.",
-        "selectedCount": "{{count}} selected"
+        "selectedCount": "{{count}} selected",
+        "onlyLastChain": "Only the last interaction"
       },
       "statuses": {
         "active": "Active",
@@ -4835,7 +4963,10 @@
         "failed": "Failed",
         "pending": "Pending",
         "skipped": "Skipped",
-        "bounced": "Bounced"
+        "bounced": "Bounced",
+        "missed": "Missed",
+        "rejected": "Rejected",
+        "droppedByClient": "Dropped by client"
       },
       "messageHistory": {
         "destinationOwner": {
@@ -6767,6 +6898,7 @@
         "variableGroups": {
           "client": "Client",
           "credit": "Credit",
+          "project": "Project",
           "system": "System",
           "promise": "Promise",
           "restructuring": "Restructuring"
@@ -6785,6 +6917,16 @@
           "debtCurrency": "Debt currency",
           "contractDate": "Contract sign date",
           "dueDate": "Next payment due date",
+          "projectFullCompanyName": "Full company name",
+          "projectAddress": "Company address",
+          "projectEdrpouCode": "EDRPOU code",
+          "projectWebsite": "Website",
+          "projectEmail": "Contact email",
+          "projectHotlinePhone": "Support hotline phone",
+          "projectDirectorName": "Director's name",
+          "projectIban": "IBAN",
+          "projectBankName": "Bank name",
+          "projectBankCode": "Bank code",
           "today": "Today's date",
           "operatorName": "Operator full name"
         },
@@ -7605,7 +7747,14 @@
           "new_status": "New status",
           "inbound": "Inbound",
           "outbound": "Outbound",
-          "system": "System"
+          "system": "System",
+          "chain_name": "Chain name",
+          "chain_id": "Chain ID",
+          "credit_id": "Credit ID",
+          "result_code": "Result code",
+          "promise_date": "Promise date",
+          "promise_amount": "Promise amount",
+          "next_action_date": "Next action date"
         },
         "validation": {
           "nameRequired": "Name is required",
@@ -7684,6 +7833,10 @@
               "inbound": "Inbound",
               "outbound": "Outbound",
               "system": "System"
+            },
+            "source": {
+              "legacy": "Interaction Log",
+              "target_action": "Target Action"
             }
           }
         },
@@ -8092,6 +8245,40 @@
     "reports": {
       "title": "Reports Dashboard",
       "exporting": "Exporting...",
+      "tabs": {
+        "dashboard": "Dashboard",
+        "processing": "Client Processing"
+      },
+      "processing": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "departments": {
+          "tp": "TP",
+          "dialer": "Dialer",
+          "collection": "Collection"
+        },
+        "columns": {
+          "employee": "Employee",
+          "group": "Group",
+          "assignedClients": "Assigned clients",
+          "processed": "With TA in period",
+          "processedClient": "With TA by client",
+          "processedContact": "With TA via 3rd party",
+          "percent": "%",
+          "percentProcessedAria": "% with TA in period",
+          "percentClientAria": "% with TA by client",
+          "percentContactAria": "% with TA via 3rd party"
+        },
+        "empty": "No data for the selected period",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
       "periods": {
         "today": "Today",
         "thisWeek": "This Week",

@@ -36,7 +36,10 @@ export interface AssistantChatRequest {
    * ships support, so it is safe to send today (forward-compatible).
    */
   deep_research?: boolean
-  /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */
+  /**
+   * Images (screenshot paste), documents (pdf/xlsx/xls/csv) and/or one voice
+   * note; at most {@link MAX_ATTACHMENTS} in total.
+   */
   attachments?: ChatAttachmentPayload[]
 }
 
@@ -156,12 +159,63 @@ export interface SendChatMessageCallbacks {
 export class AssistantChatStreamError extends Error {
   readonly status?: number
   readonly code?: string
+  /**
+   * The server's own wording, when it sent any. Kept apart from `message`
+   * (which falls back to a generic English string) so the UI can tell "the
+   * server explained the rejection" from "the request just failed" — a
+   * rejected attachment must surface the backend's text, not «щось пішло не
+   * так».
+   */
+  readonly serverDetail?: string
 
   constructor(payload: SseErrorPayload) {
     super(payload.message ?? 'Assistant stream error')
     this.name = 'AssistantChatStreamError'
     this.status = payload.status
     this.code = payload.code
+    this.serverDetail = payload.message?.trim() || undefined
+  }
+}
+
+/** The chat refuses a turn whose attachments are too large *in total* with this code. */
+export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
+
+/**
+ * The readable text and the machine code inside an error body. Three shapes
+ * arrive here, and only the first is the obvious one:
+ *
+ * - `detail` as a plain string — the service's own `HTTPException`;
+ * - `detail` as a **list** of `{msg, loc}` — FastAPI's answer to a schema
+ *   violation, which rendered naively shows the operator "[object Object]";
+ * - `detail` as an object `{code, message, …}` — a refusal the service wants
+ *   the client to be able to tell apart, e.g. the total-attachments cap
+ *   ({@link ATTACHMENTS_TOTAL_TOO_LARGE}). Its `message` is already written for
+ *   the operator, so it is shown as it stands.
+ */
+export function extractErrorDetail(body: unknown): { message?: string; code?: string } {
+  if (!body || typeof body !== 'object') return {}
+  const raw = (body as { detail?: unknown }).detail
+  const detail = raw ?? (body as { message?: unknown }).message
+  const clean = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim() : undefined
+
+  if (typeof detail === 'string') return { message: clean(detail) }
+
+  // `message` is the structured-refusal wording, `msg` is FastAPI's per-field one.
+  const readItem = (item: unknown): string | undefined => {
+    if (typeof item === 'string') return clean(item)
+    const entry = item as { message?: unknown; msg?: unknown } | null
+    return clean(entry?.message) ?? clean(entry?.msg)
+  }
+
+  if (Array.isArray(detail)) {
+    const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
+    return { message: parts.length > 0 ? parts.join('; ') : undefined }
+  }
+
+  return {
+    message: readItem(detail),
+    code: clean((detail as { code?: unknown } | null)?.code),
   }
 }
 
@@ -195,16 +249,18 @@ export async function sendChatMessage(
     body: JSON.stringify(payload),
   })
 
-  // HTTP-level failure (e.g. 503 before the stream starts, 422 image-only).
+  // HTTP-level failure (e.g. 503 before the stream starts, 422 image-only,
+  // 413 from the proxy when an attachment exceeds the body limit — the latter
+  // answers with HTML, hence the tolerant parsing).
   if (!response.ok) {
     let message: string | undefined
+    let code: string | undefined
     try {
-      const body = await response.json()
-      message = body?.detail ?? body?.message
+      ;({ message, code } = extractErrorDetail(await response.json()))
     } catch {
-      /* non-JSON error body — fall back to status text */
+      /* non-JSON error body — the caller falls back to a status-based text */
     }
-    throw new AssistantChatStreamError({ status: response.status, message })
+    throw new AssistantChatStreamError({ status: response.status, message, code })
   }
 
   if (!response.body) {

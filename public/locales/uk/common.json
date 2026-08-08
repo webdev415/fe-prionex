@@ -699,13 +699,17 @@
       "voiceMessageSend": "Надіслати голосове повідомлення",
       "voiceMessageTooLarge": "Голосове повідомлення завелике (ліміт 10MB).",
       "voiceMessageBubbleLabel": "Голосове повідомлення",
-      "attachImageUnsupported": "Можна прикріпити лише зображення PNG, JPEG або WebP.",
-      "attachImageTooLarge": "Зображення перевищує ліміт 5MB.",
-      "attachImageTooMany": "До 3 зображень в одному повідомленні.",
+      "attachUnsupported": "Можна прикріпити зображення (PNG, JPEG, WebP) та документи (PDF, Word, Excel, CSV).",
+      "attachTooLarge": "Файл перевищує ліміт {{limit}}.",
+      "attachTooMany": "До {{count}} вкладень в одному повідомленні.",
+      "attachReadFailed": "Не вдалося прочитати файл — спробуйте прикріпити ще раз.",
+      "attachPreparing": "Готуємо…",
+      "attachStillPreparing": "Зачекайте, доки вкладення будуть готові.",
+      "attachTotalTooLarge": "Забагато вкладень за один раз — надішліть файли меншими партіями.",
+      "attachmentRemove": "Видалити «{{name}}»",
       "attachImageRemove": "Видалити зображення",
-      "attachImageButton": "Прикріпити зображення",
       "attachedImageAlt": "Прикріплене зображення",
-      "attachmentNeedsText": "Додайте текст, щоб надіслати зображення.",
+      "attachmentNeedsText": "Додайте текст, щоб надіслати вкладення.",
       "ttsListen": "Прослухати відповідь",
       "ttsStop": "Зупинити відтворення",
       "ttsError": "Не вдалося відтворити відповідь.",
@@ -724,9 +728,28 @@
       "modeFastHint": "Відповідає миттєво",
       "modeThinkingHint": "Аналізує ретельніше, але довше",
       "modeChangeHint": "Змінюється праворуч від поля",
+      "showReasoning": "Показувати міркування",
+      "showReasoningHint": "Хід міркування показується в панелі «Активність»",
+      "showReasoningFastHint": "У швидкому режимі міркувань немає",
       "voiceSilenceTimeout": "Тайм-аут тиші (авто-стоп)",
       "voiceMaxDuration": "Макс. довжина запису",
-      "voiceSeconds": "{{count}} с"
+      "voiceSeconds": "{{count}} с",
+      "filePreview": {
+        "loading": "Завантаження…",
+        "loadFailed": "Не вдалося завантажити файл",
+        "imageFailed": "Не вдалося завантажити зображення «{{name}}»",
+        "openFull": "Відкрити «{{name}}» на весь екран",
+        "close": "Закрити",
+        "download": "Завантажити",
+        "downloadFailed": "Не вдалося завантажити — спробуйте ще раз",
+        "openPreview": "Відкрити перегляд",
+        "externalLink": "зовнішнє посилання",
+        "blocked": "Вкладення не показано",
+        "linkLost": "Посилання на цей файл втрачено — попросіть асистента надіслати його ще раз",
+        "errorNotFound": "Файл уже недоступний",
+        "errorTooLarge": "Файл завеликий, щоб відкрити його тут — попросіть меншу вигрузку",
+        "errorBrainUnavailable": "Асистент недоступний — спробуйте за хвилину"
+      }
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -3780,6 +3803,52 @@
       "accessDescription": "Які ролі можуть користуватися асистентом оператора (пермішен use_ai_assistant).",
       "accessToggleAria": "Перемкнути доступ до асистента для ролі {{role}}",
       "disabledBanner": "AI-асистент тимчасово вимкнений адміністратором.",
+      "management": {
+        "title": "Керування асистентом",
+        "helper": "Персона, системна надбудова та навички. Зміни діють на асистента для всіх операторів.",
+        "persona": {
+          "title": "Персона",
+          "description": "Ім'я, роль, тон і мова, якими асистент представляється.",
+          "save": "Зберегти персону",
+          "toastSaved": "Персону збережено",
+          "fields": {
+            "name": "Ім'я",
+            "role": "Роль",
+            "tone": "Тон",
+            "language": "Мова"
+          }
+        },
+        "prompt": {
+          "title": "Системна надбудова",
+          "description": "Текст, який додається до базового промпту асистента в кожному запиті. Підтримує підстановки {name}, {role}, {tone}; ліміт рахується вже після підстановки.",
+          "warning": "Правки впливають на відповіді всіх операторів. Попередню версію сервер зберігає автоматично.",
+          "inputAria": "Системна надбудова",
+          "save": "Зберегти",
+          "toastSaved": "Системну надбудову збережено",
+          "counterStale": "перерахується при збереженні",
+          "renderErrorTitle": "Збережений шаблон не рендериться — асистент віддає останню робочу версію.",
+          "counterLabel": "символів після підстановки"
+        },
+        "skills": {
+          "title": "Навички",
+          "description": "Вмикайте та вимикайте окремі навички асистента. Вимкнена навичка лишається у списку.",
+          "empty": "Мозок не повернув жодної навички.",
+          "disabledBadge": "вимкнено",
+          "toggleAria": "Перемкнути навичку {{skill}}",
+          "showText": "Показати промпт",
+          "hideText": "Сховати промпт",
+          "toastEnabled": "Навичку {{skill}} увімкнено",
+          "toastDisabled": "Навичку {{skill}} вимкнено"
+        },
+        "errors": {
+          "validation": "Сервер відхилив значення. Перевірте його та спробуйте ще раз.",
+          "forbidden": "У вас немає права змінювати налаштування асистента.",
+          "notFound": "Цієї навички більше немає. Оновіть сторінку.",
+          "unavailable": "Сервіс асистента недоступний.",
+          "unknown": "Не вдалося зберегти. Спробуйте ще раз."
+        },
+        "overridden": "змінено"
+      },
       "internals": {
         "title": "Устрій асистента",
         "configTitle": "Конфігурація",
@@ -3903,12 +3972,38 @@
             "projectCode": "Введіть код проєкту",
             "clientCompany": "Компанія клієнта",
             "contractNumber": "Номер контракту",
-            "description": "Текст-заповнювач"
+            "description": "Текст-заповнювач",
+            "fullCompanyName": "Введіть повну назву компанії",
+            "address": "Введіть адресу",
+            "edrpouCode": "Введіть ЄДРПОУ",
+            "website": "Введіть сайт",
+            "email": "Введіть електронну пошту",
+            "hotlinePhone": "Введіть номер телефону підтримки",
+            "directorName": "Введіть ПІБ директора",
+            "iban": "Введіть IBAN",
+            "bankName": "Введіть назву банку",
+            "bankCode": "Введіть код банку"
           },
           "errors": {
             "nameMinLength": "Назва має містити щонайменше 3 символи",
             "codeMinLength": "Код має містити щонайменше 2 символи",
             "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          },
+          "companyDetails": {
+            "title": "Дані компанії",
+            "fullCompanyName": "Повна назва компанії",
+            "address": "Адреса",
+            "edrpouCode": "ЄДРПОУ",
+            "website": "Сайт",
+            "email": "Електронна пошта",
+            "hotlinePhone": "Номер телефону підтримки",
+            "directorName": "Директор"
+          },
+          "bankingDetails": {
+            "title": "Банківські реквізити",
+            "iban": "IBAN",
+            "bankName": "Банк",
+            "bankCode": "Код банку"
           }
         },
         "edit": {
@@ -3937,11 +4032,37 @@
             "projectName": "Введіть назву проєкту",
             "clientCompany": "Компанія клієнта",
             "contractNumber": "Номер контракту",
-            "description": "Текст-заповнювач"
+            "description": "Текст-заповнювач",
+            "fullCompanyName": "Введіть повну назву компанії",
+            "address": "Введіть адресу",
+            "edrpouCode": "Введіть ЄДРПОУ",
+            "website": "Введіть сайт",
+            "email": "Введіть електронну пошту",
+            "hotlinePhone": "Введіть номер телефону підтримки",
+            "directorName": "Введіть ПІБ директора",
+            "iban": "Введіть IBAN",
+            "bankName": "Введіть назву банку",
+            "bankCode": "Введіть код банку"
           },
           "errors": {
             "nameMinLength": "Назва має містити щонайменше 3 символи",
             "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          },
+          "companyDetails": {
+            "title": "Дані компанії",
+            "fullCompanyName": "Повна назва компанії",
+            "address": "Адреса",
+            "edrpouCode": "ЄДРПОУ",
+            "website": "Сайт",
+            "email": "Електронна пошта",
+            "hotlinePhone": "Номер телефону підтримки",
+            "directorName": "Директор"
+          },
+          "bankingDetails": {
+            "title": "Банківські реквізити",
+            "iban": "IBAN",
+            "bankName": "Банк",
+            "bankCode": "Код банку"
           }
         },
         "delete": {
@@ -3949,6 +4070,12 @@
           "confirmMessage": "Ви впевнені, що хочете видалити цей проєкт? Цю дію неможливо скасувати.",
           "deleting": "Видалення...",
           "deleteProject": "Видалити проєкт"
+        },
+        "errors": {
+          "edrpouCodeFormat": "ЄДРПОУ має містити рівно 8 цифр",
+          "ibanFormat": "IBAN має починатися з 2 великих латинських літер, далі до 32 цифр (макс. 34 символи)",
+          "hotlinePhoneFormat": "Номер телефону може містити лише цифри та пробіли",
+          "emailFormat": "Введіть коректну електронну адресу"
         }
       }
     },
@@ -4828,7 +4955,8 @@
         "stepValuePlaceholder": "Пошук…",
         "lastInteractionResultSearchPlaceholder": "Пошук...",
         "stepValueUnsupported": "Для цього кроку фільтр за значенням недоступний.",
-        "selectedCount": "Вибрано: {{count}}"
+        "selectedCount": "Вибрано: {{count}}",
+        "onlyLastChain": "Тільки остання взаємодія"
       },
       "statuses": {
         "active": "Активний",
@@ -4846,7 +4974,10 @@
         "failed": "Не вдалося",
         "pending": "Очікується",
         "skipped": "Пропущено",
-        "bounced": "Відхилено"
+        "bounced": "Відхилено",
+        "missed": "Пропущений",
+        "rejected": "Відхилений",
+        "droppedByClient": "Клієнт поклав слухавку"
       },
       "messageHistory": {
         "destinationOwner": {
@@ -7027,6 +7158,7 @@
         "variableGroups": {
           "client": "Клієнт",
           "credit": "Кредит",
+          "project": "Проєкт",
           "system": "Система",
           "promise": "Обіцянка",
           "restructuring": "Реструктуризація"
@@ -7045,6 +7177,16 @@
           "debtCurrency": "Валюта боргу",
           "contractDate": "Дата підписання договору",
           "dueDate": "Наступна дата платежу",
+          "projectFullCompanyName": "Повна назва компанії",
+          "projectAddress": "Адреса",
+          "projectEdrpouCode": "ЄДРПОУ",
+          "projectWebsite": "Сайт",
+          "projectEmail": "Електронна пошта",
+          "projectHotlinePhone": "Номер телефону підтримки",
+          "projectDirectorName": "Директор",
+          "projectIban": "IBAN",
+          "projectBankName": "Банк",
+          "projectBankCode": "Код банку",
           "today": "Сьогоднішня дата",
           "operatorName": "Повне імʼя оператора"
         },
@@ -7451,6 +7593,40 @@
     "reports": {
       "title": "Панель звітів",
       "exporting": "Експортується...",
+      "tabs": {
+        "dashboard": "Дашборд",
+        "processing": "Відпрацювання за ЦД"
+      },
+      "processing": {
+        "dateFrom": "Дата з",
+        "dateTo": "Дата по",
+        "departments": {
+          "tp": "ТП",
+          "dialer": "Дайлер",
+          "collection": "Стягнення"
+        },
+        "columns": {
+          "employee": "Співробітник",
+          "group": "Група",
+          "assignedClients": "Закріплено клієнтів",
+          "processed": "З ЦД за період",
+          "processedClient": "З ЦД по клієнту",
+          "processedContact": "З ЦД по 3-й особі",
+          "percent": "%",
+          "percentProcessedAria": "% з ЦД за період",
+          "percentClientAria": "% з ЦД по клієнту",
+          "percentContactAria": "% з ЦД по 3-й особі"
+        },
+        "empty": "Немає даних за вибраний період",
+        "invalidRange": "Початкова дата пізніша за кінцеву",
+        "rangeTooLong": "Діапазон дат не може перевищувати 366 днів",
+        "forbidden": "Недостатньо прав для перегляду звіту",
+        "unavailable": "Дані про співробітників тимчасово недоступні. Спробуйте пізніше.",
+        "error": {
+          "title": "Не вдалося завантажити звіт",
+          "retry": "Повторити"
+        }
+      },
       "periods": {
         "today": "Сьогодні",
         "thisWeek": "Цей тиждень",
@@ -8280,7 +8456,14 @@
           "new_status": "Новий статус",
           "inbound": "Вхідний",
           "outbound": "Вихідний",
-          "system": "Системний"
+          "system": "Системний",
+          "chain_name": "Назва ланцюжка",
+          "chain_id": "ID ланцюжка",
+          "credit_id": "ID кредиту",
+          "result_code": "Код результату",
+          "promise_date": "Дата обіцянки",
+          "promise_amount": "Сума обіцянки",
+          "next_action_date": "Дата наступної дії"
         },
         "validation": {
           "nameRequired": "Назва обов'язкова",
@@ -8359,6 +8542,10 @@
               "inbound": "Вхідний",
               "outbound": "Вихідний",
               "system": "Системний"
+            },
+            "source": {
+              "legacy": "Журнал взаємодій",
+              "target_action": "Цільова дія"
             }
           }
         },

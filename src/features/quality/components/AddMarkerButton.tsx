@@ -64,14 +64,14 @@ export function AddMarkerButton({
       </Button>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
-          <label className="text-xs font-medium text-gray-700">
+        <div className="border-border bg-card absolute right-0 z-20 mt-1 w-72 rounded-lg border p-3 shadow-lg">
+          <label className="text-foreground text-xs font-medium">
             {t('pages.training.markers.type', 'Type')}
           </label>
           <select
             value={markerType}
             onChange={(e) => setMarkerType(e.target.value as MarkerType)}
-            className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm"
+            className="border-border mt-1 mb-2 w-full rounded-md border px-2 py-1.5 text-sm"
           >
             {MARKER_TYPES.map((mt) => (
               <option key={mt} value={mt}>
@@ -80,7 +80,7 @@ export function AddMarkerButton({
             ))}
           </select>
 
-          <label className="text-xs font-medium text-gray-700">
+          <label className="text-foreground text-xs font-medium">
             {t('pages.training.markers.comment', 'Comment')}
           </label>
           <textarea
@@ -88,7 +88,7 @@ export function AddMarkerButton({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={t('pages.training.markers.commentPlaceholder', 'Optional comment')}
-            className="mt-1 mb-3 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
+            className="border-border mt-1 mb-3 w-full rounded-md border px-2 py-1 text-sm"
           />
 
           <div className="flex justify-end gap-2">

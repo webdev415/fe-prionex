@@ -111,10 +111,10 @@ function ScorePill({ score }: { score: number }) {
   // Thresholds mirror scorecard categories: green ≥80 / yellow ≥60 / red <60.
   const tone =
     score >= 80
-      ? 'bg-green-100 text-green-800'
+      ? 'bg-success-50 text-success-700'
       : score >= 60
-        ? 'bg-yellow-100 text-yellow-800'
-        : 'bg-red-100 text-red-700'
+        ? 'bg-warning-50 text-warning-700'
+        : 'bg-error-50 text-error-700'
   return (
     <span
       data-testid="transcript-score-pill"
@@ -142,7 +142,7 @@ function ReviewPills({ review }: { review: CallAiReview }) {
       {redFlags.length > 0 ? (
         <span
           data-testid="transcript-flags-pill"
-          className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700"
+          className="bg-error-50 text-error-700 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
           title={redFlags.map((f) => f.type ?? 'flag').join(', ')}
         >
           {t('pages.training.transcript.redFlags')}: {redFlags.length}
@@ -151,7 +151,7 @@ function ReviewPills({ review }: { review: CallAiReview }) {
       {fraud.length > 0 ? (
         <span
           data-testid="transcript-fraud-pill"
-          className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800"
+          className="bg-warning-100 text-warning-800 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
           title={fraud.map((f) => f.type ?? 'fraud').join(', ')}
         >
           {t('pages.training.transcript.fraudSuspicion')}
@@ -160,7 +160,7 @@ function ReviewPills({ review }: { review: CallAiReview }) {
       {moodEntries.length > 0 ? (
         <span
           data-testid="transcript-mood-pill"
-          className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700"
+          className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
           title={moodEntries.map(([k, v]) => `${k}: ${String(v)}/5`).join(', ')}
         >
           {t('pages.training.transcript.moodOperator')}
@@ -184,10 +184,10 @@ function UtteranceRow({
 
   const bubbleTone =
     role === 'operator'
-      ? 'bg-[#204E4D] text-white'
+      ? 'bg-secondary text-secondary-foreground'
       : role === 'client'
-        ? 'bg-gray-100 text-dark-500'
-        : 'bg-transparent text-gray-500 italic text-center'
+        ? 'bg-muted text-dark-500'
+        : 'bg-transparent text-muted-foreground italic text-center'
 
   const alignment =
     role === 'operator' ? 'justify-end' : role === 'client' ? 'justify-start' : 'justify-center'
@@ -196,7 +196,7 @@ function UtteranceRow({
     <div data-testid={`transcript-utt-${utt.i}`} className={`flex ${alignment}`}>
       <div
         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-snug ${bubbleTone} ${
-          hasFlags ? 'ring-2 ring-red-400' : ''
+          hasFlags ? 'ring-error-400 ring-2' : ''
         }`}
       >
         <div className="mb-0.5 flex items-center gap-2 text-[11px] opacity-70">
@@ -224,7 +224,7 @@ function UtteranceRow({
             {flags.map((flag, i) => (
               <span
                 key={i}
-                className="rounded bg-red-500/90 px-1.5 py-0.5 text-[10px] font-medium text-white"
+                className="bg-error-500/90 rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
               >
                 {flagLabel(flag)}
               </span>
@@ -273,7 +273,7 @@ export function CallTranscriptPanel({
     return (
       <div
         data-testid="transcript-no-access"
-        className={`rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500 ${className ?? ''}`}
+        className={`border-border bg-muted text-muted-foreground rounded-lg border p-4 text-center text-sm ${className ?? ''}`}
       >
         {t('pages.training.transcript.noAccess')}
       </div>
@@ -286,9 +286,9 @@ export function CallTranscriptPanel({
         data-testid="transcript-skeleton"
         className={`animate-pulse space-y-2 ${className ?? ''}`}
       >
-        <div className="h-4 w-2/3 rounded bg-gray-200" />
-        <div className="h-16 rounded bg-gray-100" />
-        <div className="h-16 rounded bg-gray-100" />
+        <div className="bg-muted h-4 w-2/3 rounded" />
+        <div className="bg-muted h-16 rounded" />
+        <div className="bg-muted h-16 rounded" />
       </div>
     )
   }
@@ -297,7 +297,7 @@ export function CallTranscriptPanel({
     return (
       <div
         data-testid="transcript-not-ready"
-        className={`rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500 ${className ?? ''}`}
+        className={`border-border bg-muted text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm ${className ?? ''}`}
       >
         {t('pages.training.transcript.notReady')}
       </div>
@@ -308,7 +308,7 @@ export function CallTranscriptPanel({
     return (
       <div
         data-testid="transcript-error"
-        className={`rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600 ${className ?? ''}`}
+        className={`border-error-200 bg-error-50 text-error-600 rounded-lg border p-4 text-center text-sm ${className ?? ''}`}
       >
         {t('pages.training.transcript.error')}
       </div>
@@ -339,7 +339,7 @@ export function CallTranscriptPanel({
           </h3>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {transcript.language ? (
-              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 uppercase">
+              <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium uppercase">
                 {transcript.language}
               </span>
             ) : null}
@@ -347,7 +347,7 @@ export function CallTranscriptPanel({
           </div>
         </div>
         {transcript.summary ? (
-          <p data-testid="transcript-summary" className="text-sm leading-snug text-gray-700">
+          <p data-testid="transcript-summary" className="text-foreground text-sm leading-snug">
             {transcript.summary}
           </p>
         ) : null}
@@ -393,7 +393,7 @@ export function CallTranscriptPanel({
                 key={index}
                 data-testid={`transcript-scene-${index}`}
                 className={`rounded-lg border ${
-                  isPromise ? 'border-[#BBFB5B] bg-[#BBFB5B]/10' : 'border-gray-200 bg-white'
+                  isPromise ? 'border-primary-300 bg-primary-300/10' : 'border-border bg-card'
                 }`}
               >
                 <button
@@ -407,7 +407,7 @@ export function CallTranscriptPanel({
                   </span>
                   <Icons.ArrowDown
                     size={14}
-                    className={`text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+                    className={`text-muted-foreground transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
                   />
                 </button>
                 {isCollapsed ? null : body}
@@ -432,18 +432,18 @@ export function CallTranscriptPanel({
       {promise && (promiseAmount != null || promise.date) ? (
         <div
           data-testid="transcript-promise"
-          className="rounded-lg border border-[#BBFB5B] bg-[#BBFB5B]/15 p-3 text-sm"
+          className="border-primary-300 bg-primary-300/15 rounded-lg border p-3 text-sm"
         >
           <div className="text-dark-500 font-medium">
             {t('pages.training.transcript.promiseTitle')}
           </div>
-          <div className="text-gray-700">
+          <div className="text-foreground">
             {promiseAmount != null ? `${promiseAmount} ${promise.currency ?? ''}`.trim() : null}
             {promiseAmount != null && promise.date ? ' — ' : null}
             {promise.date ?? null}
           </div>
           {promise.quote ? (
-            <div className="mt-1 text-xs text-gray-500">«{promise.quote}»</div>
+            <div className="text-muted-foreground mt-1 text-xs">«{promise.quote}»</div>
           ) : null}
         </div>
       ) : null}
@@ -453,7 +453,7 @@ export function CallTranscriptPanel({
           <div className="text-dark-500 text-xs font-semibold tracking-wide uppercase">
             {t('pages.training.transcript.recommendations')}
           </div>
-          <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">
+          <ul className="text-foreground list-disc space-y-0.5 pl-5 text-sm">
             {review.recommendations.map((rec, i) => (
               <li key={i}>{rec}</li>
             ))}

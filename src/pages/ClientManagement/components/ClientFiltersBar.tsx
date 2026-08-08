@@ -8,6 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { CheckboxMultiSelect } from '@/components/ui/CheckboxMultiSelect'
 import { DateSelect } from '@/components/ui/DateSelect'
 import {
   Select,
@@ -33,6 +34,7 @@ import { useTAChains } from '@/features/taChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { ClientStepFilterDropdown } from './ClientStepFilterDropdown'
+import { buildChainStepOptions } from './chainStepOptions'
 import { ClientStepValueRow, type StepValueEntry } from './ClientStepValueRow'
 import { useOperatorFilterOptions } from '../hooks/useOperatorFilterOptions'
 import { useAuthStore } from '@/stores/authStore'
@@ -153,12 +155,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     () => [...(chainsData?.items ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     [chainsData]
   )
-  const selectedChainId = filters.chainId
-  const selectedChain = useMemo(
-    () => (selectedChainId ? allChains.find((c) => c.id === selectedChainId) : undefined),
-    [allChains, selectedChainId]
+  const selectedChainIds = useMemo(() => filters.chainIds ?? [], [filters.chainIds])
+  const selectedChains = useMemo(
+    () => allChains.filter((c) => selectedChainIds.includes(c.id)),
+    [allChains, selectedChainIds]
   )
-  const chainSteps = useMemo(() => selectedChain?.steps ?? [], [selectedChain])
+  // KAN-821: with several chains picked the Step list is their union, labelled
+  // per chain. See ``chainStepOptions`` for why.
+  const chainSteps = useMemo(() => buildChainStepOptions(selectedChains), [selectedChains])
   const selectedChainStepIds = useMemo(() => filters.chainStepIds ?? [], [filters.chainStepIds])
   const stepValues = filters.stepValues ?? {}
 
@@ -792,38 +796,35 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {t('pages.clients.filters.chain', 'Chain')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
-                <Select
-                  value={selectedChainId != null ? String(selectedChainId) : 'all'}
-                  onValueChange={(v) => {
-                    if (v === 'all') {
-                      onFilterChange({
-                        ...filters,
-                        chainId: undefined,
-                        chainStepIds: [],
-                      })
-                    } else {
-                      onFilterChange({
-                        ...filters,
-                        chainId: Number(v),
-                        chainStepIds: [],
-                      })
+                <CheckboxMultiSelect
+                  options={allChains.map((c) => ({ value: c.id, label: c.name }))}
+                  selected={selectedChainIds}
+                  onChange={(ids) =>
+                    onFilterChange({ ...filters, chainIds: ids, chainStepIds: [] })
+                  }
+                  allLabel={t('pages.clients.filters.allChains', 'All chains')}
+                  ariaLabel={t('pages.clients.filters.chain', 'Chain')}
+                  testId="client-chain-filter"
+                />
+                {/* KAN-821. Default on: the filter answers "where is the client
+                    now", not "where have they ever been".
+
+                    Always clickable, including with no chain picked. It was
+                    disabled until a chain was chosen — the flag does nothing
+                    without one — but a ticked box that ignores clicks and says
+                    nothing about why just reads as broken. The setting is
+                    harmless to hold in advance: the server ignores it until
+                    there is a chain to narrow. */}
+                <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-xs">
+                  <Checkbox
+                    checked={filters.onlyLastChain ?? true}
+                    onCheckedChange={(checked) =>
+                      onFilterChange({ ...filters, onlyLastChain: checked === true })
                     }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('pages.clients.filters.allChains', 'All chains')} />
-                  </SelectTrigger>
-                  <SelectContent searchable>
-                    <SelectItem value="all">
-                      {t('pages.clients.filters.allChains', 'All chains')}
-                    </SelectItem>
-                    {allChains.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    aria-label={t('pages.clients.filters.onlyLastChain', 'Only last TA chain')}
+                  />
+                  {t('pages.clients.filters.onlyLastChain', 'Only last TA chain')}
+                </label>
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
@@ -840,7 +841,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       chainStepIds: ids,
                     })
                   }
-                  disabled={selectedChainId == null}
+                  disabled={selectedChainIds.length === 0}
                 />
               </div>
             </div>

@@ -32,6 +32,14 @@ export type AssistantVoiceMaxDuration = 30 | 60 | 120
 export interface AssistantSettings {
   /** Reasoning depth sent with every chat request: fast (default) | thinking. */
   mode: AssistantMode
+  /**
+   * Показывать ли оператору ход рассуждения модели — плашку «Ход рассуждения» в
+   * бабле и одноимённую секцию панели «Активность». Чисто клиентская настройка:
+   * `reasoning` приходит отдельным SSE-кадром, запрос к мозгу не меняется.
+   * Шаги оркестратора и «Источники» под ней не прячутся — по ним оператор
+   * проверяет факты ответа.
+   */
+  showReasoning: boolean
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
@@ -53,6 +61,7 @@ export interface AssistantSettings {
 
 export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   mode: 'fast',
+  showReasoning: true,
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,

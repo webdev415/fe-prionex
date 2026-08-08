@@ -56,12 +56,12 @@ function fmtTime(iso?: string | null): string {
 /** Soft avatar tints for in-conversation operators (picked deterministically by
  * operator id so each person keeps a stable colour). Awaiting operators are grey. */
 const AVATAR_COLORS = [
-  'bg-success-100 text-success-700', // green
-  'bg-[#FEF3C7] text-[#B45309]', // amber
-  'bg-[#DBEAFE] text-[#1D4ED8]', // blue
-  'bg-[#EDE9FE] text-[#6D28D9]', // violet
-  'bg-[#FCE7F3] text-[#BE185D]', // pink
-  'bg-[#CCFBF1] text-[#0F766E]', // teal
+  'bg-success-100 text-success-700',
+  'bg-warning-100 text-warning-700',
+  'bg-information-100 text-information-700',
+  'bg-violet-100 text-violet-700',
+  'bg-pink-100 text-pink-700',
+  'bg-teal-100 text-teal-700',
 ]
 
 function avatarClass(operatorId: number, inConversation: boolean): string {

@@ -72,6 +72,7 @@ const ACCEPT_DOCX = '.docx'
 const GROUP_FALLBACK: Record<string, string> = {
   client: 'Client',
   credit: 'Credit',
+  project: 'Project',
   promise: 'Promise',
   restructuring: 'Restructuring',
   system: 'System',

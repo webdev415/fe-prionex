@@ -88,8 +88,18 @@ class CallService {
    * records the call as rejected by the operator rather than missed, and gates
    * on `receive_calls` so an inbound-only operator can decline.
    */
-  async rejectCall(callId: string): Promise<{ status: string; message: string }> {
-    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/reject`)
+  /**
+   * @param agentExtension which leg to drop. A queue rings every member at once,
+   *   so without it the backend can only fall back to the extension recorded on
+   *   the call — which is the first operator rung, not necessarily this one.
+   */
+  async rejectCall(
+    callId: string,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/reject`, {
+      agent_extension: agentExtension ?? null,
+    })
     return response.data
   }
 }

@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AssistantChatStreamError, sendChatMessage, type AssistantChatRequest } from '../api'
+import {
+  AssistantChatStreamError,
+  ATTACHMENTS_TOTAL_TOO_LARGE,
+  sendChatMessage,
+  type AssistantChatRequest,
+} from '../api'
 
 /** Build a Response whose body streams the given SSE text chunks. */
 function sseResponse(chunks: string[], init: ResponseInit = {}): Response {
@@ -229,6 +234,98 @@ describe('sendChatMessage SSE transport', () => {
     expect(error).toBeInstanceOf(AssistantChatStreamError)
     expect(error.status).toBe(422)
     expect(error.message).toBe('image needs text')
+    expect(error.serverDetail).toBe('image needs text')
+  })
+
+  it('flattens the FastAPI validation detail list into readable text', async () => {
+    // Pydantic answers a rejected attachment with detail: [{loc, msg, type}] —
+    // rendering that object as-is would show the operator "[object Object]".
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: [
+              {
+                loc: ['body', 'attachments', 0, 'data_b64'],
+                msg: 'документ 62914560 байт перевищує ліміт 52428800 байт (50MB)',
+                type: 'value_error',
+              },
+            ],
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.serverDetail).toBe('документ 62914560 байт перевищує ліміт 52428800 байт (50MB)')
+  })
+
+  it('reads the structured 413 refusal (total attachment cap) with its code', async () => {
+    // The service answers the total cap with detail as an OBJECT — a shape that
+    // shares nothing with FastAPI's {msg} items, so reading only `msg` would
+    // drop the wording and leave the operator with a wrong hint about a single
+    // oversized file.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: {
+              code: ATTACHMENTS_TOTAL_TOO_LARGE,
+              message:
+                'Сумарний розмір вкладень перевищує ліміт — надішліть файли меншими партіями.',
+              total_bytes: 157286400,
+              max_bytes: 157286400,
+            },
+          }),
+          { status: 413, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.status).toBe(413)
+    expect(error.code).toBe(ATTACHMENTS_TOTAL_TOO_LARGE)
+    expect(error.serverDetail).toBe(
+      'Сумарний розмір вкладень перевищує ліміт — надішліть файли меншими партіями.'
+    )
+  })
+
+  it('reports no code for the gateway 413, marking the text as not ours', async () => {
+    // Kong: kong.response.error(413, "Request size limit exceeded") → a plain
+    // {message} body. The absent code is what lets the UI tell this apart from
+    // our own refusal and use its localised wording instead.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Request size limit exceeded' }), {
+          status: 413,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.status).toBe(413)
+    expect(error.code).toBeUndefined()
+  })
+
+  it('leaves serverDetail unset when the error body is not JSON (proxy 413)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('<html><body><h1>413 Request Entity Too Large</h1></body></html>', {
+          status: 413,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      )
+    )
+
+    const error = await sendChatMessage(baseRequest).catch((e) => e)
+    expect(error.status).toBe(413)
+    expect(error.serverDetail).toBeUndefined()
   })
 
   it('ignores unknown event frames in the stream (forward-compat)', async () => {

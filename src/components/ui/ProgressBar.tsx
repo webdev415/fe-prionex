@@ -38,7 +38,7 @@ export function ProgressBar({
           'overflow-hidden rounded-full transition-all duration-300',
           'shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)]',
           heightClasses[height],
-          barClassName || 'bg-[#A0F229]',
+          barClassName || 'bg-primary-400',
           className
         )}
         style={{ width: `${clampedPercentage}%` }}
@@ -50,7 +50,7 @@ export function ProgressBar({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-full bg-white shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)]',
+        'bg-muted w-full overflow-hidden rounded-full shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)]',
         heightClasses[height],
         className
       )}
@@ -59,7 +59,7 @@ export function ProgressBar({
         className={cn(
           'h-full rounded-full transition-all duration-300',
           'shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)]',
-          barClassName || 'bg-[#A0F229]'
+          barClassName || 'bg-primary-400'
         )}
         style={{ width: `${clampedPercentage}%` }}
       />

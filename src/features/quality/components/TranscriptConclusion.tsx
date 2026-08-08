@@ -40,9 +40,9 @@ export interface TranscriptConclusionProps {
 
 // Same semantic tones as ScorePill; unknown grades stay neutral grey.
 const GRADE_TONES: Record<string, string> = {
-  green: 'bg-green-100 text-green-800',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  red: 'bg-red-100 text-red-700',
+  green: 'bg-success-50 text-success-700',
+  yellow: 'bg-warning-50 text-warning-700',
+  red: 'bg-error-50 text-error-700',
 }
 
 function gradeTone(grade: string | null, score: number | null): string {
@@ -51,7 +51,7 @@ function gradeTone(grade: string | null, score: number | null): string {
     // ScorePill thresholds: green ≥80 / yellow ≥60 / red <60.
     return score >= 80 ? GRADE_TONES.green : score >= 60 ? GRADE_TONES.yellow : GRADE_TONES.red
   }
-  return 'bg-gray-100 text-gray-700'
+  return 'bg-muted text-muted-foreground'
 }
 
 /** Free text with `utt N` anchors turned into player-seek buttons. */
@@ -81,7 +81,7 @@ function UttText({
             key={i}
             type="button"
             data-testid={`transcript-conclusion-utt-${segment.utt}`}
-            className="font-mono text-gray-500 tabular-nums underline decoration-dotted underline-offset-2 hover:text-gray-700"
+            className="text-muted-foreground hover:text-foreground font-mono tabular-nums underline decoration-dotted underline-offset-2"
             onClick={() => onSeek?.(Math.round(t0 * 1000))}
             title={t('pages.training.transcript.seekTo')}
           >
@@ -95,7 +95,7 @@ function UttText({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[11px] font-semibold tracking-wide text-gray-400 uppercase">
+    <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
       {children}
     </div>
   )
@@ -129,7 +129,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
   return (
     <section
       data-testid="transcript-conclusion"
-      className="rounded-lg border border-gray-200 bg-white text-left"
+      className="border-border bg-card rounded-lg border text-left"
     >
       <button
         type="button"
@@ -155,7 +155,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
           ) : null}
           <Icons.ArrowDown
             size={14}
-            className={`text-gray-400 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+            className={`text-muted-foreground transition-transform ${collapsed ? '' : 'rotate-180'}`}
           />
         </span>
       </button>
@@ -177,7 +177,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
               {showCalc ? (
                 <div
                   data-testid="transcript-conclusion-calc"
-                  className="text-xs font-medium text-gray-600 tabular-nums"
+                  className="text-muted-foreground text-xs font-medium tabular-nums"
                 >
                   {t('pages.training.transcript.v7.conclusion.calc', {
                     rubric: formatScore(conclusion.rubricScoreInput as number),
@@ -185,7 +185,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                     score: formatScore(conclusion.assessmentScore as number),
                   })}
                   {conclusion.adjustment !== 0 && conclusion.adjustmentReason ? (
-                    <span className="font-normal text-gray-500">
+                    <span className="text-muted-foreground font-normal">
                       {' '}
                       — {conclusion.adjustmentReason}
                     </span>
@@ -195,7 +195,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
               {conclusion.justification ? (
                 <p
                   data-testid="transcript-conclusion-justification"
-                  className="text-sm leading-snug text-gray-700"
+                  className="text-foreground text-sm leading-snug"
                 >
                   {conclusion.justification}
                 </p>
@@ -210,7 +210,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                   <SectionTitle>
                     {t('pages.training.transcript.v7.conclusion.strengths')}
                   </SectionTitle>
-                  <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">
+                  <ul className="text-foreground list-disc space-y-0.5 pl-5 text-sm">
                     {conclusion.strengths.map((item, i) => (
                       <li key={i}>{item}</li>
                     ))}
@@ -222,7 +222,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                   <SectionTitle>
                     {t('pages.training.transcript.v7.conclusion.weaknesses')}
                   </SectionTitle>
-                  <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">
+                  <ul className="text-foreground list-disc space-y-0.5 pl-5 text-sm">
                     {conclusion.weaknesses.map((item, i) => (
                       <li key={i}>{item}</li>
                     ))}
@@ -237,7 +237,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
               <SectionTitle>
                 {t('pages.training.transcript.v7.conclusion.keyFindings')}
               </SectionTitle>
-              <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">
+              <ul className="text-foreground list-disc space-y-0.5 pl-5 text-sm">
                 {conclusion.keyFindings.map((finding, i) => (
                   <li key={i}>
                     <UttText text={finding} utterances={utterances} onSeek={onSeek} />
@@ -250,7 +250,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
           {conclusion.divergences.length > 0 ? (
             <div data-testid="transcript-conclusion-tone" className="flex flex-col gap-1">
               <SectionTitle>{t('pages.training.transcript.v7.audio.toneVsWords')}</SectionTitle>
-              <ul className="flex flex-col gap-0.5 text-sm text-gray-700">
+              <ul className="text-foreground flex flex-col gap-0.5 text-sm">
                 {conclusion.divergences.map((divergence, i) => (
                   <li key={i} data-testid={`transcript-conclusion-divergence-${i}`}>
                     {divergence.utt != null ? (
@@ -266,7 +266,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                     {t('pages.training.transcript.v7.conclusion.said')} «{divergence.said}» —{' '}
                     {t('pages.training.transcript.v7.conclusion.sounded')} «{divergence.sounded}»
                     {divergence.interpretation ? (
-                      <span className="text-gray-500"> · {divergence.interpretation}</span>
+                      <span className="text-muted-foreground"> · {divergence.interpretation}</span>
                     ) : null}
                   </li>
                 ))}
@@ -280,13 +280,13 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
               className="flex flex-col gap-1"
             >
               <SectionTitle>{t('pages.training.transcript.recommendations')}</SectionTitle>
-              <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">
+              <ul className="text-foreground list-disc space-y-0.5 pl-5 text-sm">
                 {conclusion.recommendations.map((rec, i) => (
                   <li key={i} data-testid={`transcript-conclusion-rec-${i}`}>
                     {rec.priority ? (
                       <span
                         className={`mr-1.5 text-[10px] font-semibold uppercase ${
-                          rec.priority === 'high' ? 'text-[#c8492f]' : 'text-gray-400'
+                          rec.priority === 'high' ? 'text-error-600' : 'text-muted-foreground'
                         }`}
                       >
                         {priorityLabel(rec.priority)}
@@ -294,7 +294,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                     ) : null}
                     {rec.text}
                     {rec.evidence ? (
-                      <span className="text-gray-500">
+                      <span className="text-muted-foreground">
                         {' '}
                         (<UttText text={rec.evidence} utterances={utterances} onSeek={onSeek} />)
                       </span>
@@ -308,7 +308,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
           {metaParts.length > 0 || conclusion.limitedBy.length > 0 ? (
             <div
               data-testid="transcript-conclusion-meta"
-              className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-400"
+              className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]"
             >
               {metaParts.length > 0 ? <span>{metaParts.join(' · ')}</span> : null}
               {conclusion.limitedBy.length > 0 ? (

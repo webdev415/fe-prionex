@@ -74,14 +74,14 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+      <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
         {t('pages.training.dynamics.empty', 'No completed scorecards in this range.')}
       </div>
     )
   }
 
   return (
-    <div className="h-72 w-full rounded-xl bg-white p-3 shadow-sm">
+    <div className="bg-card h-72 w-full rounded-xl p-3 shadow-sm">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={rows}
@@ -98,9 +98,9 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
             }
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="bucket_label" stroke="#6b7280" fontSize={12} />
-          <YAxis domain={[0, 5]} stroke="#6b7280" fontSize={12} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="bucket_label" stroke="var(--muted-foreground)" fontSize={12} />
+          <YAxis domain={[0, 5]} stroke="var(--muted-foreground)" fontSize={12} />
           <Tooltip
             formatter={(v: number | string | (number | string)[] | undefined) => {
               if (v == null) return '—'
@@ -113,13 +113,13 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
           {data.period_avg != null ? (
             <ReferenceLine
               y={Number(data.period_avg)}
-              stroke="#94a3b8"
+              stroke="var(--muted-foreground)"
               strokeDasharray="2 4"
               label={{
                 value: t('pages.training.dynamics.periodAvg', 'Period avg'),
                 position: 'insideTopLeft',
                 fontSize: 10,
-                fill: '#64748b',
+                fill: 'var(--muted-foreground)',
               }}
             />
           ) : null}
@@ -127,7 +127,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
             type="monotone"
             dataKey="operator"
             name={t('pages.training.dynamics.operator', 'Operator')}
-            stroke="#0ea5e9"
+            stroke="var(--chart-3)"
             strokeWidth={2}
             connectNulls
             dot={{ r: 3 }}
@@ -137,7 +137,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
             type="monotone"
             dataKey="team"
             name={t('pages.training.dynamics.teamAvg', 'Team average')}
-            stroke="#64748b"
+            stroke="var(--muted-foreground)"
             strokeWidth={1.5}
             strokeDasharray="4 4"
             connectNulls
