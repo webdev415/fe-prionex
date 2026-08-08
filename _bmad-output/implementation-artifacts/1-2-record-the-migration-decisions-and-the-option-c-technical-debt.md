@@ -4,7 +4,7 @@ baseline_commit: 54c6faae
 
 # Story 1.2: Record the Migration Decisions and the Option C Technical Debt
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
