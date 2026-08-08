@@ -514,8 +514,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
     if (suppressionDecidedFor.current === incomingCall.call_id) return
     suppressionDecidedFor.current = incomingCall.call_id
-    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
-    setPopupSuppressed(openCallModal !== null || existing !== null)
+    // Only a call genuinely in progress may take the window. Suppressing on
+    // "the store holds something" let a leftover bubble swallow every inbound
+    // popup, with nothing on screen to explain the silence.
+    setPopupSuppressed(useCallStore.getState().isCallWindowLive())
   }, [incomingCall])
 
   // Which client the operator picked when the number is shared. Reset per call
