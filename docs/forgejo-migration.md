@@ -35,7 +35,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 - **Тегов `v*` в репозитории не было ни разу** — `git tag` пуст локально, `GET /repos/CRM-Prionex/fe-prionex/tags` возвращает `[]`. Тег-путь релиза не используется.
 - **Гейт на `production` номинальный.** У окружения `production` нет ни одного правила защиты (`protection_rules: []`, `can_admins_bypass: true`). Required reviewers, которые «обходятся», в реальности не настроены — обходить нечего. То же у `dev` и `staging`.
-- **Тег-путь падал, но прод всё равно затрагивался.** `BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's/refs\/heads\///')` (`CD.yml:191`) на `refs/tags/v1.2.3` не срабатывает, `docker pull` получает невалидный тег и `exit 1` (`CD.yml:197`) отрабатывает **до** `docker compose down`. Но шаг scp (`CD.yml:155-163`) выполняется раньше и перезаписывает `docker-compose.server.yml` на прод-сервере. То есть запись на прод без апрува происходила, полного деплоя — нет. Защита здесь случайная: любая правка обработки имени тега превратила бы это в полноценный неапрувленный прод-деплой.
+- **Тег-путь падал, но прод всё равно затрагивался.** `BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's/refs\/heads\///')` (`CD.yml:190`) на `refs/tags/v1.2.3` не срабатывает, `docker pull` получает невалидный тег и `exit 1` (`CD.yml:196`) отрабатывает **до** `docker compose down`. Но шаг scp (`CD.yml:154-162`) выполняется раньше и перезаписывает `docker-compose.server.yml` на прод-сервере. То есть запись на прод без апрува происходила, полного деплоя — нет. Защита здесь случайная: любая правка обработки имени тега превратила бы это в полноценный неапрувленный прод-деплой.
 - **Зеркала Forgejo ↔ GitHub нет.** `main` совпадает (`e6ecfced`), но `development` разошёлся: Forgejo `372ee2c4`, GitHub `405db726` (коммит от 07.08.2026 12:52, он же запустил CD). Пуши идут в GitHub, Forgejo — отставшая копия. Локальный `origin` смотрит на Forgejo, remote на GitHub не настроен.
 
 #### Решение и его статус
@@ -88,11 +88,11 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 Нужно: параметризовать имена (`COMPOSE_PROJECT_NAME`, `CONTAINER_NAME`), развести каталоги (`~/crm-prionex/fe-prionex-dev` / `-preprod`), и **согласовать с бэкендом отдельную сеть `crm-network-preprod` с собственным Kong**. Без второго Kong-стенда на s1 preprod получается фиктивным.
 
-Сюда же — хардкоды в healthcheck-шаге, который портируется из CD: `docker inspect ... fe-prionex` (`CD.yml:225`) и `curl localhost:8080` (`CD.yml:234`). При трёх стендах с разными именами и портами копирование «как есть» даст зелёный healthcheck на мёртвом стенде. Оба места параметризовать вместе с compose.
+Сюда же — хардкоды в healthcheck-шаге, который портируется из CD: `docker inspect ... fe-prionex` (`CD.yml:224`) и `curl localhost:8080` (`CD.yml:233`). При трёх стендах с разными именами и портами копирование «как есть» даст зелёный healthcheck на мёртвом стенде. Оба места параметризовать вместе с compose.
 
 ### 1.3. В Forgejo нет GitHub Environments с обязательным апрувом
 
-`environment: name: production` (`CD.yml:123-124`) с required reviewers в Forgejo не воспроизводится.
+`environment: name: production` (`CD.yml:121-122`) с required reviewers в Forgejo не воспроизводится.
 
 **Прямо: технического гейта на PROD не будет.** В Forgejo нет прав на уровне отдельного workflow — любой с write-доступом к репозиторию может запустить `deploy-prod.yml` через `workflow_dispatch`. Барьеры остаются организационные (апрув фиксируется в трекере) плюс один технический — guard промоушена из фазы 7. Это надо принять осознанно и записать в регламент.
 
@@ -101,14 +101,14 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 | Что | Статус / решение |
 |---|---|
 | `docker/setup-buildx-action`, `docker/build-push-action`, `docker/login-action`, `docker/metadata-action` | **Требуют docker-сокета на runner'е** — см. фазу 1, отдельная метка. Проверить резолв и работу первыми |
-| `appleboy/scp-action`, `appleboy/ssh-action` (`CD.yml:156,169,214`) | Docker-container actions, риск резолва высокий. **Рекомендация: сразу переписать на нативные `ssh`/`scp` в `run:`** — меньше зависимостей, полный контроль |
+| `appleboy/scp-action`, `appleboy/ssh-action` (`CD.yml:155,168,213`) | Docker-container actions, риск резолва высокий. **Рекомендация: сразу переписать на нативные `ssh`/`scp` в `run:`** — меньше зависимостей, полный контроль |
 | `actions/upload-artifact@v4` (`CI.yml:102`) | У Gitea/Forgejo была известная несовместимость с artifact API v4 (v3 работал). В свежих версиях чинилось — **проверить на своём инстансе**, при проблеме откатить на v3 |
 | `actions/checkout@v6`, `actions/setup-node@v4` | Работают через полный URL: `uses: https://github.com/actions/checkout@v6` (правка `DEFAULT_ACTIONS_URL` не обязательна, нужен egress до github.com с runner'а). Альтернатива — зеркала `code.forgejo.org` |
-| `cache-from/to: type=gha` (`CD.yml:115-116`) | Вне GitHub не работает → `type=registry,ref=<registry>/fe-prionex:buildcache` |
+| `cache-from/to: type=gha` (`CD.yml:113-114`) | Вне GitHub не работает → `type=registry,ref=<registry>/fe-prionex:buildcache` |
 | `codecov/codecov-action@v4` (`CI.yml:75`) | Убрать, coverage — в артефакт |
 | `slackapi/slack-github-action@v3.0.3` | Заменить на `curl` к incoming webhook |
 | `secrets.GITHUB_TOKEN` для ghcr | Отдельный Forgejo-токен с правом `write:package` |
-| `github.server_url` / `repository` / `run_id` (`CD.yml:264`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть |
+| `github.server_url` / `repository` / `run_id` (`CD.yml:263`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть |
 
 ---
 
@@ -118,7 +118,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 1. ✅ Зафиксировать решение по п.1.1 (A / B / C). От него зависят фазы 4–7. — **сделано: вариант C**, [migration-decisions.md#d1](./migration-decisions.md#d1).
 2. Согласовать с бэкендом/инфрой: сеть и Kong для preprod на s1, DNS-имя `preprod.crm-prionex.online`, TLS.
-3. Проверить версию Forgejo: включён ли Actions (`[actions] ENABLED=true`), поддерживается ли `concurrency` (в Gitea появился только в 1.24; по Forgejo — проверить на инстансе, поддержка может отсутствовать **молча**, без ошибки).
+3. Проверить версию Forgejo: включён ли Actions (`[actions] ENABLED=true`), поддерживается ли `concurrency` (в Gitea появился только в 1.24; по Forgejo — проверить на инстансе, поддержка может отсутствовать **молча**, без ошибки). ✅ сделано, [migration-decisions.md#d8](./migration-decisions.md#d8).
 4. ~~**Зафиксировать, как сейчас синхронизируются GitHub и Forgejo** (push-mirror?). Это определяет, что вообще можно гонять параллельно: PR — объект платформы и не зеркалируется, GitHub-триггер `pull_request` для Forgejo-PR не сработает.~~ — **отменено** (story 1.4). Ответ всё же получен и записан: зеркала нет ни в одну сторону, см. [§0.1](#01-побочная-находка-баг-в-текущем-github-cd) и [migration-decisions.md#d7](./migration-decisions.md#d7).
 5. ~~Написать переходный регламент для разработчиков: кто и чем обновляет старый DEV-стенд (ветка `development`, GitHub CD) до cutover, при том что новый процесс ветку `development` упраздняет.~~ — **отменено** (story 1.5): регламентировать нечего, легаси-стенд просто продолжает работать как работает. Следствие — два DEV-стенда сосуществуют без назначенной даты окончания.
 6. Инвентаризация секретов GitHub → список для переноса (раздел 3). — карта решений: [migration-decisions.md#d6](./migration-decisions.md#d6).
@@ -170,7 +170,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 3. Схема тегов: `sha-<short>` (всегда), `<branch>`, `v*` из git-тега, `latest` только с `main`.
 4. Кэш — `type=registry`.
 5. Build-args — по решению из п.1.1.
-6. `concurrency: cd-${{ github.ref }}`, `cancel-in-progress: false` — сохранить поведение `CD.yml:21-23`. **Плюс обязательный fallback:** `flock` на файл в каталоге стенда внутри деплой-скрипта. Если инстанс Forgejo игнорирует `concurrency` (см. фазу 0.3), ошибки не будет — просто два деплоя параллельно погонят `down`/`up` на одном стенде. Серверный lock от версии Forgejo не зависит.
+6. `concurrency: cd-${{ github.ref }}`, `cancel-in-progress: false` — сохранить поведение `CD.yml:19-21`. **Плюс обязательный fallback:** `flock` на файл в каталоге стенда внутри деплой-скрипта. Если инстанс Forgejo игнорирует `concurrency` (см. фазу 0.3), ошибки не будет — просто два деплоя параллельно погонят `down`/`up` на одном стенде. Серверный lock от версии Forgejo не зависит.
 
 **DoD:** push в любую ветку даёт неизменяемый образ `sha-<short>`, привязанный к коммиту (принцип 6); два одновременных деплоя на один стенд сериализуются (проверить намеренно).
 
@@ -262,7 +262,7 @@ docs/deployment.md          # обновлённый процесс
 | Риск | Митигация |
 |---|---|
 | `docker/*` и `appleboy/*` actions не работают на runner'е | Фаза 1.4 — смоук до портирования; appleboy заменить на нативный ssh/scp сразу |
-| `concurrency` молча игнорируется версией Forgejo | `flock` на сервере (фаза 4.6) — не зависит от версии |
+| `concurrency` молча игнорируется версией Forgejo | риск не реализовался — probe-тест на `v15.0.5` подтвердил очередь и отмену ([migration-decisions.md#d8](./migration-decisions.md#d8)); митигация сохраняется: `flock` на сервере (фаза 4.6), поскольку concurrency остаётся best-effort — не зависит от версии |
 | PRE-PROD без своего Kong = фиктивная валидация | Блокер 1.2, согласовать с инфрой в фазе 0 |
 | Промоушен образа невозможен без п.1.1 | Выбран вариант C; компромисс задокументирован — [migration-decisions.md#d1](./migration-decisions.md#d1), [#d3](./migration-decisions.md#d3) |
 | Один runner блокирует мержи после включения required checks | Второй runner **до** фазы 3.5 |

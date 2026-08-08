@@ -18,6 +18,7 @@
 | [D5](#d5) | Блокер 1.3 — технического гейта апрува PROD не будет | принято | Stories 6.2, 7.3 |
 | [D6](#d6) | Перенос секретов и переменных | принято | Story 1.12 |
 | [D7](#d7) | 07.08.2026 — на стороне GitHub не выполняется никаких действий | принято | вне плана (владелец — Oleg) |
+| [D8](#d8) | Возможности Forgejo Actions установлены по факту | установлено по факту | Stories 3.1, 4.4, 4.8 |
 
 ---
 
@@ -283,6 +284,109 @@ healthcheck на мёртвом стенде. Параметризуются в�
 
 ---
 
+<a id="d8"></a>
+
+## D8. Возможности Forgejo Actions установлены по факту: версия, concurrency, workflow_call, composite actions
+
+**Решение.** Story 1.3 подняла одноразовый probe-раннер (capacity 2, на рабочей станции, не на
+s1/s2) и прогнала пять проб на throwaway-ветке `probe/forgejo-capabilities` против
+`git.crm-prionex.com`. Каждый пункт [Фазы 0, п.3](./forgejo-migration.md#фаза-0--подготовка-без-изменений-в-ci)
+установлен тестом, а не по документации релиза.
+
+**Самая существенная находка — не про Actions, а про риск для PROD.** В организации `CRM`
+уже зарегистрированы два раннера: `ci-hub` (метка `ubuntu-latest`, статус `idle`) и
+`s1-build-crm` (метки `s1`, `ci`, `build-crm`). Пока `.forgejo/workflows/` в `main` не
+существует, Forgejo резолвит директорию воркфлоу как `.forgejo/workflows` → `.gitea/workflows`
+→ `.github/workflows` и падает на последний. Любой push `main` или `development` в Forgejo
+**немедленно**, не в очередь, запускает `.github/workflows/CD.yml` на `ci-hub` — а его job
+`deploy` делает `docker compose down/up` на **s2 PROD**. Митигация: `main`/`development` не
+пушить в Forgejo, пока Story 2.1 не положит `.forgejo/workflows/`, либо пока
+`.github/workflows/` не будет нейтрализован на стороне Forgejo. Именно поэтому сама story 1.3
+работала через `probe/forgejo-capabilities`, а не через `main`.
+
+**Версия и `[actions] ENABLED`.** `GET /api/forgejo/v1/version` → `15.0.5+gitea-1.22.0` (ветка
+v15 LTS). `has_actions: true` на `CRM/fe-prionex` — косвенное подтверждение; прямое
+доказательство — первый успешно выполнившийся пробный ран:
+https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/3 (`probe-smoke`,
+`actions/checkout@v6`, статус success).
+
+**Concurrency — очередь подтверждена тестом, определённое «да».** Probe A (без `concurrency`,
+два параллельных `workflow_dispatch`) доказала capacity ≥ 2: оба рана стартовали и завершились
+в одну и ту же секунду (started/stopped `20:26:18` / `20:27:20`, runs
+[4](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/4) и
+[5](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/5)). Probe B
+(`concurrency: {group: probe-cc, cancel-in-progress: false}`) показала: run #2 (run
+[7](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/7)) стартовал ровно в момент, когда
+run #1 (run [6](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/6)) остановился —
+`20:28:48` у обоих событий одновременно. Раз Probe A уже доказала два свободных слота,
+единственное объяснение — очередь по группе `concurrency`, а не ожидание слота.
+**AC2 = да.**
+
+**Отмена (`cancel-in-progress: true`) — тоже да.** Probe B′ (группа `probe-cc2`): run #1 (run
+[8](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/8)) создан/стартован/остановлен в
+одну секунду `20:30:12` — отменён сразу при старте run #2 (run
+[9](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/9)). Это независимое подтверждение
+B="да": ограничение по capacity никогда не *отменяет* выполняющийся джоб, только ставит в
+очередь — отмена является сигнатурой именно `concurrency`-группы. Поскольку B уже дала «да»,
+сценарий «B=нет, но B′ отменяет» (флаг `CONCURRENCY_GROUP_QUEUE_ENABLED` выключен админом при
+работающей версии) здесь не применим.
+
+**`workflow_call` — оба ответа «да», раздельно.** Probe C (run
+[10](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/10), `probe-caller.yml` без
+`runs-on` на джобе `call`): вызов **резолвится** и **разворачивается** в отдельные джобы
+вызываемого воркфлоу — в списке задач появились три отдельные записи (`call`, `first`,
+`second`), а не одна плоская. Проба выполнена на образе раннера `v13.0.0` — той же версии, что у
+продовых `ci-hub`/`s1-build-crm` (риск «работает на пробном раннере, но не на v13» из Dev Notes
+снят).
+
+**Composite actions — да, подтверждено выполнением, а не только резолвом.** Первая попытка (run
+[11](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/11)) упала — но не из-за отсутствия
+поддержки: verbatim-шаблон `.forgejo/actions/probe-composite/action.yml` из Dev Notes этой же
+истории содержит невалидный YAML (`run: echo "composite ok: ${{ inputs.text }}"` —
+неэкранированное `: ` внутри plain-скаляра ломает парсер: `mapping values are not allowed in
+this context`, строка 10). `actions/checkout@v6` при этом отработал успешно (`Success - Main
+actions/checkout@v6`) — по правилу Task 4.8 это не вердикт про composite actions. После правки
+на блочный скаляр (`run: |`) повторный прогон (run
+[12](https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/12)) прошёл успешно, лог содержит
+фактический вывод шага: `composite ok: hello`. **Локальные composite actions поддерживаются,
+подтверждено выполнением.** Story 4.8 может опираться на этот механизм; исходный шаблон в Dev
+Notes стоит поправить тем же способом при следующей правке файла.
+
+**Job-level `concurrency` не реализован.** Forgejo применяет `concurrency` только на уровне
+workflow; `jobs.<id>.concurrency` игнорируется молча. `CD.yml:19-21` — workflow-level блок,
+переносится как есть; сериализация отдельных job'ов внутри одного workflow должна идти через
+`needs:`.
+
+**Легаси auto-cancel по умолчанию.** На событиях `push` и `pull_request` (synchronize) Forgejo
+отменяет более ранние раны того же workflow на той же ветке **даже без блока `concurrency`**.
+Это меняет смысл «CI-прогон для коммита X», когда коммиты приходят быстро один за другим —
+учесть в story 2.2.
+
+**AC3 — вывод про `flock` в Epic 4.** Concurrency честно отработал во всех пробах (B и B′), но
+это не повод убирать серверный `flock` из Story 4.4: `forgejo-migration.md:173` называет его
+**обязательным** fallback безусловно, а собственная документация Forgejo описывает concurrency
+как best-effort, без гарантии порядка «в исключительных обстоятельствах». Положительный
+результат пробы — не лицензия отказаться от блокировки.
+
+**Story 1.7 — вопрос уже закрыт correct-course, здесь только факт.** Раннеры `ci-hub` и
+`s1-build-crm` принадлежат другой команде и не усыновляются; согласно
+`_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-07-runners.md` (одобрено
+2026-08-07), Stories 1.7 и 1.9 регистрируют раннеры на уровне **репозитория**, Story 2.1
+запрещает `ubuntu-latest`, а новая Story 1.13 нейтрализует fallback на `.github/workflows/` и
+блокирует Story 1.12.
+
+**Capacity пробного раннера: 2** (`runner-config.yaml`, поле `capacity`). Раннер поднят на
+образе `code.forgejo.org/forgejo/runner:13` (v13.0.0) — тег `latest` в этом registry не
+публикуется, только версионные теги; образ `:6` (v6.4.0) не годится сам по себе — его
+`act`-библиотека не поддерживает рантайм `node24`, который требует `actions/checkout@v6`
+(`The runs.using key in action.yml must be one of: [...], got node24`). Для повторяемости стоит
+зафиксировать версию образа раннера явно в будущих stories (1.7, 1.8), а не полагаться на
+`latest`.
+
+**Требования:** FR30, NFR10; Stories 3.1, 4.4, 4.8.
+
+---
+
 <a id="changelog"></a>
 
 ## Журнал изменений
@@ -290,3 +394,4 @@ healthcheck на мёртвом стенде. Параметризуются в�
 | Дата | Story | Изменение |
 |---|---|---|
 | 07.08.2026 | 1.2 | Файл создан: зафиксированы D1-D7 по итогам фазы 0 |
+| 08.08.2026 | 1.3 | Проверены возможности Forgejo Actions: версия, concurrency, workflow_call, composite actions (D8); исправлены устаревшие ссылки на `CD.yml`, сдвинутые коммитом `09591984` |
