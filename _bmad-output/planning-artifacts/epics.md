@@ -590,10 +590,25 @@ So that CI jobs and image builds have somewhere to run.
 
 **Acceptance Criteria:**
 
+> **Context (established in Story 1.3, 2026-08-07).** The `CRM` organization already has two
+> registered runners — `ci-hub` (label `ubuntu-latest`) and `s1-build-crm` (labels `s1`, `ci`,
+> `build-crm`), both on forgejo-runner v13.0.0. **They belong to another team and are not under
+> this plan's control.** This story still provisions our own runner; it does not adopt,
+> reconfigure or depend on theirs. Registration scope changed from organization to repository —
+> see `{planning_artifacts}/sprint-change-proposal-2026-08-07-runners.md`.
+
 **Given** a host that is not s2
-**When** the `forgejo-runner` is installed and registered at the `CRM` organization level
+**When** the `forgejo-runner` is installed and registered at the **repository** level for
+`CRM/fe-prionex`
 **Then** it exposes the label `node-20:docker://node:20-bookworm`
-**And** it exposes the label `docker-build`.
+**And** it exposes the label `docker-build`
+**And** neither label collides with a label already registered at the `CRM` organization
+(`ubuntu-latest`, `s1`, `ci`, `build-crm`).
+
+**Given** the runner is registered at repository scope
+**When** the organization runner list is inspected
+**Then** our runner does not appear as available to other `CRM` repositories
+**And** the two pre-existing organization runners are unmodified.
 
 **Given** a job running under the `docker-build` label
 **When** it executes `docker version`
@@ -653,7 +668,7 @@ So that one runner failing does not freeze every merge into `main`.
 **Acceptance Criteria:**
 
 **Given** the primary runner from Story 1.7 is operational
-**When** a second runner is registered at the same organization level
+**When** a second runner is registered at the same **repository** level
 **Then** it carries the identical `node-20` and `docker-build` labels
 **And** both runners appear as online in the organization runner list.
 
@@ -725,6 +740,12 @@ As a developer,
 I want the secrets the new workflows need present in Forgejo at the right scope,
 So that later epics do not stall on missing credentials.
 
+> **Prerequisite: Story 1.13 must be complete.** Until `.forgejo/workflows/` suppresses the
+> `.github/workflows/` fallback, putting `S1_SSH_*`, `S2_SSH_*` and `SLACK_CD_WEBHOOK_URL` into
+> Forgejo arms the legacy `CD.yml` deploy job on a platform where an idle `ubuntu-latest` runner
+> will execute it. Today that job fails harmlessly at `docker/login-action` only because these
+> credentials are absent — this story removes exactly that accidental protection.
+
 **Acceptance Criteria:**
 
 **Given** the secret migration map in the plan
@@ -750,6 +771,53 @@ So that later epics do not stall on missing credentials.
 **When** the variable set is reviewed
 **Then** `FRONTEND_PORT` is absent from Forgejo variables
 **And** the rationale (no duplicated state) is recorded.
+
+### Story 1.13: Stop Forgejo from Executing the Legacy GitHub Workflows
+
+As a release engineer,
+I want Forgejo to ignore `.github/workflows/` before any secret or branch reaches it,
+So that the legacy production-deploying pipeline cannot be triggered on a platform it was never
+intended to run on.
+
+> **Added 2026-08-07** by
+> `{planning_artifacts}/sprint-change-proposal-2026-08-07-runners.md`.
+> **Sequencing: must complete before Story 1.12.** May run any time after Story 1.3, and is
+> listed ahead of 1.6 in the sprint plan despite its number.
+>
+> **Why.** Forgejo resolves the workflow directory as `.forgejo/workflows` → `.gitea/workflows`
+> → `.github/workflows`, first match wins. `main` has no `.forgejo/`, so Forgejo executes
+> `.github/workflows/` — where all six jobs request `runs-on: ubuntu-latest`
+> (`CI.yml:12,34,53,82`, `CD.yml:31,119`), and the `CRM` organization has an idle runner
+> carrying exactly that label. Any push of `main` or `development` to Forgejo is executed
+> immediately. Today `CD.yml` fails at `docker/login-action` because its credentials are absent;
+> Story 1.12 supplies them.
+
+**Acceptance Criteria:**
+
+**Given** Forgejo resolves the workflow directory as `.forgejo/workflows` → `.gitea/workflows`
+→ `.github/workflows`, first match wins
+**When** a minimal, inert `.forgejo/workflows/` is committed to `main`
+**Then** the directory exists on `main` and contains no workflow that any trigger can fire
+**And** `.github/workflows/` is left byte-for-byte unchanged, so GitHub's behaviour is untouched
+per decision D7.
+
+**Given** the placeholder is in place on `main`
+**When** a commit is pushed to a branch matching `CI.yml`'s trigger list
+**Then** no `CI` run is created on Forgejo
+**And** the absence of a run is recorded with the branch name and timestamp as evidence.
+
+**Given** the placeholder is in place
+**When** the observation above is made
+**Then** it is recorded as a definite yes/no whether the presence of `.forgejo/workflows/`
+suppresses the `.github/workflows/` fallback on Forgejo 15.0.5
+**And** if the answer is no, the repository Actions unit is disabled until Story 2.1, Stories 1.7
+and 1.8 are resequenced after it, and this is escalated as a change to the epic order.
+
+**Given** the neutralisation is proven
+**When** the decision record is updated
+**Then** a `D9` entry in `docs/migration-decisions.md` records the mechanism, the evidence, and
+the constraint that `.forgejo/workflows/` must never again be absent from `main` while
+`.github/workflows/` still exists in the tree.
 
 ---
 
@@ -799,6 +867,12 @@ parallel with no dependencies between them
 **When** it is first committed
 **Then** its only trigger is `workflow_dispatch`, so porting does not spam runs on every push
 **And** all four jobs are confirmed green via a manual dispatch.
+
+**Given** the `CRM` organization has a runner labelled `ubuntu-latest` that belongs to another
+team
+**When** the ported workflows declare `runs-on`
+**Then** no workflow in `.forgejo/workflows/` uses `ubuntu-latest`
+**And** every job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
 
 ### Story 2.2: Trigger CI on Pull Requests and Feature Branches
 
