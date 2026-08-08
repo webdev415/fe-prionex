@@ -496,8 +496,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user: authUser } = useAuth()
   const agentExtension = authUser?.asterisk_extension || null
 
+  // The call-service is the only authority on a call being over. Without this,
+  // a window whose call ended is cleared solely by the bubble's own polling —
+  // which needs the bubble mounted and the lookup to succeed, and leaves the
+  // window suppressing the incoming popup whenever either fails.
+  const handleCallSettled = useCallback((callId: string) => {
+    useCallStore.getState().closeWindowForCall(callId)
+  }, [])
+
   // Handle incoming calls
-  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension, {
+    onCallSettled: handleCallSettled,
+  })
 
   // One call window at a time: if a call modal is already open or minimized when
   // the call arrives, the operator keeps only the bell. The decision is latched

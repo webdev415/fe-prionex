@@ -83,6 +83,49 @@ describe('callStore', () => {
     })
   })
 
+  describe('closeWindowForCall', () => {
+    const CALL = '72462e71-4419-48d9-8f65-5a534500e856'
+
+    it('closes the window belonging to the call that ended', async () => {
+      const store = await loadStore(null)
+      store.getState().setOpenCallModal('call-dialog')
+      store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'connected' }))
+
+      store.getState().closeWindowForCall(CALL)
+
+      expect(store.getState().minimizedCall).toBeNull()
+      expect(store.getState().openCallModal).toBeNull()
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    })
+
+    it('leaves a window for a different call alone', async () => {
+      const store = await loadStore(null)
+      store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'connected' }))
+
+      // Two calls can be in flight for one operator. Closing on any terminal
+      // event would take away the window of a call still in progress.
+      store.getState().closeWindowForCall('ab2b3fce-bd6a-40a5-85a8-6d22b03b630b')
+
+      expect(store.getState().minimizedCall).not.toBeNull()
+    })
+
+    it('leaves a window whose call was never identified alone', async () => {
+      const store = await loadStore(null)
+      store.getState().setMinimizedCall(stored({ callId: null, callState: 'dialing' }))
+
+      store.getState().closeWindowForCall(CALL)
+
+      expect(store.getState().minimizedCall).not.toBeNull()
+    })
+
+    it('does nothing when no window is open', async () => {
+      const store = await loadStore(null)
+
+      expect(() => store.getState().closeWindowForCall(CALL)).not.toThrow()
+      expect(store.getState().minimizedCall).toBeNull()
+    })
+  })
+
   describe('isCallWindowLive', () => {
     it('is false with nothing open', async () => {
       const store = await loadStore(null)

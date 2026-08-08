@@ -66,6 +66,7 @@ interface CallStore {
   clearMinimizedCall: () => void
   isCallActive: () => boolean
   isCallWindowLive: () => boolean
+  closeWindowForCall: (callId: string) => void
 }
 
 const STORAGE_KEY = 'minimized-call-storage'
@@ -183,5 +184,14 @@ export const useCallStore = create<CallStore>((set, get) => ({
     // A bubble showing an ended call is not a call in progress. It clears
     // itself three seconds later, and until then it must not stand in for one.
     return !TERMINAL_CALL_STATES.has(minimized.callState)
+  },
+  closeWindowForCall: (callId) => {
+    const minimized = get().minimizedCall
+    // Only the window this call owns. A terminal event names one call, and the
+    // operator may well be holding a different one — closing on any terminal
+    // event would take away a window that is still live.
+    if (!minimized || !minimized.callId || minimized.callId !== callId) return
+    setStoredCallState(null)
+    set({ minimizedCall: null, openCallModal: null })
   },
 }))
