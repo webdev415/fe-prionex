@@ -4394,8 +4394,8 @@
           "pending": "Pending",
           "cancelled": "Cancelled"
         },
-        "rowsApplied": "Rows Applied",
-        "contactsTagged": "Contacts Tagged",
+        "rowsApplied": "Rows Applied:",
+        "contactsTagged": "Contacts Tagged:",
         "vendor": {
           "accepted": "Accepted",
           "filesProgress": "Files & downstream progress",
@@ -4623,7 +4623,8 @@
             "system": "System-managed",
             "multipleValuesSingleSelect": "Too many values",
             "duplicate": "Duplicate",
-            "invalid": "Invalid"
+            "invalid": "Invalid",
+            "warning": "Partly skipped"
           },
           "columns": {
             "rowNumber": "Row",
@@ -4643,10 +4644,24 @@
           },
           "duplicatesOverridden": "Duplicate rows overridden",
           "overriddenNotice": "{{count}} rows were discarded. A later row in the file names the same contact and category, and only the last row applies. To set several values at once, list them in one cell: \"Telegram,WhatsApp\".",
-          "noChange": "Already up to date"
+          "noChange": "Already up to date",
+          "warning": "Partly skipped"
         },
         "progress": {
-          "jobStarted": "Contact tag operation started"
+          "jobStarted": "Contact tag operation started",
+          "headingComplete": "Contact tag operation complete",
+          "headingFailed": "Contact tag operation failed",
+          "headingCancelled": "Contact tag operation cancelled",
+          "processing": "Processing contact tags…",
+          "progress": "Progress",
+          "totalRecords": "Total rows",
+          "successful": "Rows applied",
+          "failed": "Failed",
+          "processingTime": "Processing time",
+          "errorDetails": "Error details",
+          "cancel": "Cancel",
+          "downloadErrors": "Download errors",
+          "startNew": "Start a new import"
         }
       },
       "bulkPaymentVerification": {

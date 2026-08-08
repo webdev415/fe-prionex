@@ -342,7 +342,7 @@ export function ImportDetailsPage() {
                   <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                     <span className="text-foreground w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                       {isContactTagAssignment
-                        ? t('pages.imports.details.rowsApplied', 'Rows Applied')
+                        ? t('pages.imports.details.rowsApplied', 'Rows Applied:')
                         : t('pages.imports.details.newClients')}
                     </span>
                     <span className="text-foreground flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
@@ -356,7 +356,7 @@ export function ImportDetailsPage() {
                     {isTagAssignment
                       ? t('pages.imports.details.tagsApplied', 'Tags Applied')
                       : isContactTagAssignment
-                        ? t('pages.imports.details.contactsTagged', 'Contacts Tagged')
+                        ? t('pages.imports.details.contactsTagged', 'Contacts Tagged:')
                         : t('pages.imports.details.updatedClients')}
                   </span>
                   <span className="text-foreground flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">

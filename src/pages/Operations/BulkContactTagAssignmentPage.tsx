@@ -92,7 +92,7 @@ export function BulkContactTagAssignmentPage() {
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-primary-foreground" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
           {t('pages.imports.contactTagAssignment.viewHistory', 'Import History')}

@@ -4405,8 +4405,8 @@
           "pending": "Очікування",
           "cancelled": "Скасовано"
         },
-        "rowsApplied": "Рядків застосовано",
-        "contactsTagged": "Контактів позначено",
+        "rowsApplied": "Рядків застосовано:",
+        "contactsTagged": "Контактів позначено:",
         "vendor": {
           "accepted": "Прийнято",
           "filesProgress": "Файли та подальший прогрес",
@@ -4634,7 +4634,8 @@
             "system": "Системна категорія",
             "multipleValuesSingleSelect": "Забагато значень",
             "duplicate": "Дублікат",
-            "invalid": "Некоректний"
+            "invalid": "Некоректний",
+            "warning": "Частково пропущено"
           },
           "columns": {
             "rowNumber": "Рядок",
@@ -4654,10 +4655,24 @@
           },
           "duplicatesOverridden": "Дублікатів рядків перезаписано",
           "overriddenNotice": "{{count}} рядків відхилено. Пізніший рядок файлу вказує той самий контакт і категорію, і застосовується лише останній. Щоб задати кілька значень одразу, перелічіть їх в одній комірці: \"Telegram,WhatsApp\".",
-          "noChange": "Вже актуальні"
+          "noChange": "Вже актуальні",
+          "warning": "Частково пропущено"
         },
         "progress": {
-          "jobStarted": "Операцію з тегами розпочато"
+          "jobStarted": "Операцію з тегами розпочато",
+          "headingComplete": "Операцію з тегами контактів завершено",
+          "headingFailed": "Операція з тегами контактів не вдалася",
+          "headingCancelled": "Операцію з тегами контактів скасовано",
+          "processing": "Обробка тегів контактів…",
+          "progress": "Прогрес",
+          "totalRecords": "Усього рядків",
+          "successful": "Рядків застосовано",
+          "failed": "Помилки",
+          "processingTime": "Час обробки",
+          "errorDetails": "Деталі помилок",
+          "cancel": "Скасувати",
+          "downloadErrors": "Завантажити помилки",
+          "startNew": "Почати новий імпорт"
         }
       },
       "bulkPaymentVerification": {

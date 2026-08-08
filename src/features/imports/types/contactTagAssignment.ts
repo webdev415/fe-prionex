@@ -15,6 +15,8 @@
  */
 export type ContactTagRowStatus =
   | 'ready'
+  /** Actionable, but part of the row will be skipped (a value did not resolve). */
+  | 'warning'
   | 'no_change'
   | 'contact_not_found'
   | 'tag_not_found'
@@ -66,12 +68,24 @@ export interface ContactTagPreviewRow {
 export interface ContactTagPreviewSummary {
   total_rows: number
   ready: number
+  /**
+   * Actionable, but part of the row will be skipped. Counted apart from
+   * `ready` so ready + warning + no_change + invalid + duplicates_overridden
+   * still equals total_rows.
+   */
+  warning: number
   no_change: number
   invalid: number
   /** Rows discarded because a later row named the same (contact, category). */
   duplicates_overridden: number
   unique_contacts: number
   unique_categories: number
+  /**
+   * Rows whose write destroys a value that is currently set. Counted by the
+   * backend over ALL rows: preview_rows is a truncated sample, so filtering it
+   * understates an irreversible overwrite.
+   */
+  replacing_rows: number
   /** Rows and writes differ because of fan-out; both are reported. */
   contacts_affected: number
 }

@@ -80,11 +80,13 @@ function preview(
     summary: {
       total_rows: 1,
       ready: 1,
+      warning: 0,
       no_change: 0,
       invalid: 0,
       duplicates_overridden: 0,
       unique_contacts: 1,
       unique_categories: 1,
+      replacing_rows: 0,
       contacts_affected: 1,
     },
     preview_rows: [row()],
@@ -136,7 +138,23 @@ describe('ContactTagAssignmentPreview', () => {
   it('warns when the backend says a value will be destroyed', () => {
     // Driven by replaces_existing, not by the category being single-select: a
     // row that merely repeats the value already stored destroys nothing.
+    //
+    // The banner count comes from summary.replacing_rows, not from the rows:
+    // preview_rows is capped at 50 server-side, so counting it would report a
+    // fraction of the real number of overwrites.
     const p = preview({
+      summary: {
+        total_rows: 1,
+        ready: 1,
+        warning: 0,
+        no_change: 0,
+        invalid: 0,
+        duplicates_overridden: 0,
+        unique_contacts: 1,
+        unique_categories: 1,
+        replacing_rows: 1,
+        contacts_affected: 1,
+      },
       preview_rows: [
         row({
           selection_type: 'single',

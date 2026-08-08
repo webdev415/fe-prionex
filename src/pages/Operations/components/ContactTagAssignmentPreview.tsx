@@ -27,6 +27,12 @@ function StatusBadge({ status }: { status: ContactTagRowStatus }) {
     { icon: typeof Icons.Success; color: string; key: string; label: string }
   > = {
     ready: { icon: Icons.Success, color: 'text-success-600', key: 'ready', label: 'Ready' },
+    warning: {
+      icon: Icons.Warning,
+      color: 'text-warning-500',
+      key: 'warning',
+      label: 'Partly skipped',
+    },
     no_change: {
       icon: Icons.Cancel01,
       color: 'text-gray-400',
@@ -74,12 +80,18 @@ function StatusBadge({ status }: { status: ContactTagRowStatus }) {
     invalid: { icon: Icons.Error, color: 'text-error-500', key: 'invalid', label: 'Invalid' },
   }
 
-  const c = cfg[status]
+  // This union is a hand-maintained mirror of a Python enum in another repo, so
+  // it goes stale the moment the backend gains a status. Without the fallback
+  // an unknown value made `c.icon` throw during render, taking the whole route
+  // down right after a successful upload and orphaning the validated job.
+  // Falling back to `invalid` degrades one badge instead.
+  const c = cfg[status] ?? cfg.invalid
   const StatusIcon = c.icon
+  const known = status in cfg
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${c.color}`}>
       <StatusIcon size={14} />
-      {t(`${p}.${c.key}`, c.label)}
+      {known ? t(`${p}.${c.key}`, c.label) : status}
     </span>
   )
 }
@@ -194,7 +206,8 @@ function usePreviewColumns(): Column<RowWithId>[] {
           // this fires only when a value would genuinely be destroyed — not
           // merely because the category is single-select and the row happens to
           // repeat the value already there.
-          const replaces = row.replaces_existing && row.status === 'ready'
+          const replaces =
+            row.replaces_existing && (row.status === 'ready' || row.status === 'warning')
           if (!replaces) {
             return <span className="text-xs text-gray-600">{row.error || ''}</span>
           }
@@ -232,10 +245,11 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
     [preview.errors]
   )
 
-  const replacingRows = useMemo(
-    () => preview.preview_rows.filter((r) => r.replaces_existing && r.status === 'ready').length,
-    [preview.preview_rows]
-  )
+  // From the summary, never from preview_rows: that list is capped at 50 by the
+  // backend, so counting it reported "3 rows will be overwritten" for a file
+  // that overwrites 900. Of every figure on this screen, this is the one that
+  // must not read low.
+  const replacingRows = preview.summary.replacing_rows
 
   const fansOut = summary.contacts_affected > summary.ready
 
@@ -311,11 +325,12 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
         </div>
       )}
 
-      {/* The four row counts (ready + no change + invalid + overridden) add up
-          to total_rows, so an operator can check nothing was silently dropped.
-          Contacts affected is deliberately last: it counts CONTACTS, not rows,
-          and would break that arithmetic if read as part of the same set. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {/* The five row counts (ready + warning + no change + invalid +
+          overridden) add up to total_rows, so an operator can check nothing
+          was silently dropped. Contacts affected is deliberately last: it
+          counts CONTACTS, not rows, and would break that arithmetic if read
+          as part of the same set. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard
           label={t(
             isAssign ? `${b}.readyToAssign` : `${b}.readyToRemove`,
@@ -323,6 +338,11 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
           )}
           value={summary.ready}
           color="bg-success-50 border-success-200 text-success-700"
+        />
+        <SummaryCard
+          label={t(`${b}.warning`, 'Partly skipped')}
+          value={summary.warning}
+          color="bg-warning-50 border-warning-200 text-warning-700"
         />
         <SummaryCard
           label={t(`${b}.noChange`, 'Already up to date')}
@@ -402,7 +422,7 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
           variant={isAssign ? 'secondary' : 'danger'}
           size="md"
           onClick={() => onConfirm()}
-          disabled={isExecuting || summary.ready === 0}
+          disabled={isExecuting || summary.ready + summary.warning === 0}
           isLoading={isExecuting}
         >
           {isExecuting

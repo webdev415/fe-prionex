@@ -64,7 +64,13 @@ export function TagAssignmentProgress({ jobId, onComplete }: Props) {
       ? job.errors_count
       : Math.max(0, (job.unique_clients ?? 0) - (job.successful_clients ?? 0))
 
-  const p = 'pages.imports.tagAssignment.progress'
+  // Headings name the entity being tagged, so they follow the job's own type
+  // rather than the component's origin. Derived from job.import_type rather
+  // than passed in: the caller cannot then hand it a scope that disagrees
+  // with the job it is rendering.
+  const p = isContactTags
+    ? 'pages.imports.contactTagAssignment.progress'
+    : 'pages.imports.tagAssignment.progress'
 
   return (
     <div className="space-y-6">
