@@ -499,7 +499,7 @@ I want the Forgejo instance's Actions capabilities established by observation,
 So that workflow design does not rest on assumptions that fail silently.
 
 > **Prerequisite note (added 2026-08-08, story 1.3).** Unlike Story 1.9, which gates explicitly
-> on Story 1.7 being operational (line 670), this story carries no prerequisite clause even
+> on Story 1.7 being operational (line 678), this story carries no prerequisite clause even
 > though AC2 and AC4 require a runner with **capacity ≥ 2** to distinguish concurrency-group
 > queueing from ordinary capacity contention — a single-slot runner (the `forgejo-runner`
 > default, and what Story 1.7 provisions) returns a guaranteed false positive on the AC2 probe.

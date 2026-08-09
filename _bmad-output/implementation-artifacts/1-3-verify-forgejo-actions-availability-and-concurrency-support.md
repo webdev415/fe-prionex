@@ -359,6 +359,62 @@ shared deploy mechanics are factored out.
       > preceded by a decision on how `.github/workflows/` is neutralised on the Forgejo side.
       > (`CD.yml` is inert **on GitHub** per D7 — it is live-by-path on Forgejo.)
 
+### Review Findings
+
+Code review 2026-08-08 (adversarial, model claude-fable-5 — independent of the implementing
+model per project convention). Diff reviewed: `2bc363a0..4bdce371`. Layers: Blind Hunter,
+Edge Case Hunter, Acceptance Auditor — all three completed.
+
+- [x] **[Review][Decision]** D8 probe evidence falls short of the story's own standard of proof —
+      Tasks 4.4/4.9/5.4 require, per probe: run URL, run IDs, start/finish timestamps, and the
+      job-status sequence. D8 lacked the full start/finish pair for Probe B run 6 and Probe B′
+      run 9, recorded no timestamps at all for Probes C and D, no job-status sequences anywhere,
+      no date/timezone on any time given, and the Probe A dispatch wall-clock gap (Task 4.4) was
+      unrecorded. The yes/no verdicts themselves were never in question (Probe A is a valid
+      capacity control). **Resolved 2026-08-09 — option (2) chosen:** pulled full run/job data
+      from `GET /api/v1/repos/CRM/fe-prionex/actions/runs/{id}` and `.../actions/tasks` while
+      token `fe_tmp` was still live, and appended a full evidence table to D8 (job id/name/status,
+      `created`/`started`/`stopped` with date+timezone for every probe run, plus the Probe A
+      dispatch gap) — see `docs/migration-decisions.md#d8` and its 09.08.2026 changelog row.
+      Token `fe_tmp` is now cleared to be revoked (Task 7.1 still pending on Oleg).
+- [x] **[Review][Patch]** Fresh stale self-citation: the new prerequisite note cited "line 670"
+      for the Story 1.9 gate, which the note's own 8-line insertion moved to line 678
+      [`_bmad-output/planning-artifacts/epics.md:502`] — fixed to 678.
+- [x] **[Review][Patch]** Four stale `CD.yml` citation lines in `docs/forgejo-migration.md`
+      outside the Task 6.3 sweep list — fixed and verified against `CD.yml` at HEAD: `:32`
+      (124→122, 150→149), `:60` (112-114→110-112), `:181` (155-239→154-238), `:239` (49,59→47,57).
+      Logged in the `migration-decisions.md` changelog.
+- [x] **[Review][Patch]** Token last-eight characters were committed in the Completion Notes
+      against Task 1.1's "never write it into any file" — redacted; token name + id suffice to
+      locate it for revocation.
+- [x] **[Review][Patch]** The known-broken verbatim `probe-composite/action.yml` template in Dev
+      Notes (unquoted `: ` in a plain scalar — the exact bug the probe hit) was left uncorrected —
+      applied the block-scalar (`run: |`) fix that D8 itself prescribes.
+- [x] **[Review][Patch]** Anchor-range note in `docs/migration-decisions.md:8` still read
+      "`#d1` … `#d7`" after D8 was added — extended to `#d8`.
+- [x] **[Review][Patch]** Completion Notes precision: the two "verified correct" self-citations
+      pointed at pre-shift lines 153/233 (now 154/234 — shifted by this story's own D8 index
+      row), and "8 stale citations" counted lines, not references (8 lines, 11 backticked
+      references) — both corrected. Repeat-class of Story 1.2 review lesson #4 ("count before
+      asserting").
+- [x] **[Review][Defer]** `epics.md` carries six pre-existing stale `CD.yml` citations outside
+      this story's scope, verified against `CD.yml` at HEAD: `:213` (49,59→47,57), `:255` and
+      `:329` (124→122, 150→149), `:457` (140-153→138-152), `:458` (123-124→121-122), `:1168`
+      (115-116→113-114); `:258` and `:1107` are already correct — deferred, pre-existing.
+- [x] **[Review][Defer]** API token `fe_tmp` was created with scopes `all` instead of the
+      prescribed `write:repository` + `read:organization` (Task 1.1) and is still live — remedy
+      is identical to the already-tracked Task 7.1 manual revocation, but this raises its
+      urgency — deferred, resolution already tracked in Task 7.1.
+- [x] **[Review][Defer]** `docs/forgejo-migration.md:19` current-state table still lists
+      «`v*` → production» although the tags trigger was removed by `09591984` (the `CD.yml:5`
+      citation itself is correct) — deferred, pre-existing content staleness beyond the
+      citation sweep.
+
+Dismissed as noise/known: 4 (status `in-progress` while record reads complete — known token
+deferral; `path:line` citation style as "rot vector" — established project convention;
+probe-runner root + docker.sock without a risk note — scaffolding already removed; Phase-0
+item-3 marking style vs item-1 precedent — cosmetic, operational clause satisfied).
+
 ## Dev Notes
 
 ### What this story produces
@@ -527,8 +583,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: echo "composite ok: ${{ inputs.text }}"
-      shell: bash
+    - shell: bash
+      run: |
+        echo "composite ok: ${{ inputs.text }}"
 ```
 
 | Probe | Gate | Expected if supported | Answers |
@@ -791,19 +848,20 @@ claude-sonnet-5
   revoked**. The `DELETE /api/v1/users/{username}/tokens/{id}` call was blocked by the harness's
   auto-mode safety classifier (destructive external HTTP call), and retries under different
   invocation forms were also blocked. **Oleg needs to revoke this token manually** — Forgejo web
-  UI → Settings → Applications → delete token id 83 (`fe_tmp`, last eight `74649ab3`) — before
+  UI → Settings → Applications → delete token id 83 (`fe_tmp`) — before
   this story can be considered fully closed per Task 7.1. Runner registration token itself
   carries no separate ongoing risk: the runner it registered is already deregistered, and Forgejo
   registration tokens are single-use-to-register, not reusable credentials.
 - `git status` on `main` is clean of probe scaffolding (no `.forgejo/`, no token, no runner
   config); `npm run lint` and `npm run typecheck` pass (both required `npm install` first — empty
   `node_modules` was pre-existing environment state, unrelated to this story's changes).
-- Citation sweep (Task 6.3): 8 stale `CD.yml` line-number citations fixed across
+- Citation sweep (Task 6.3): stale `CD.yml` line-number citations fixed on 8 lines (11 backticked references) across
   `docs/forgejo-migration.md` (lines 38, 91, 95, 104, 107, 111, 173) and `epics.md:1341`
   (was 1333 before this story's own edits shifted it) — all caused by commit `09591984` removing
   the tag trigger. Two citations already checked out correct and were left untouched
-  (`migration-decisions.md:153` and `:233`) — verified against `CD.yml`, not assumed from the
-  documented offset rule.
+  (`migration-decisions.md:154` and `:234`; they sat at 153/233 until this story's own D8 index
+  row shifted them by one) — verified against `CD.yml`, not assumed from the documented offset
+  rule.
 
 ### File List
 

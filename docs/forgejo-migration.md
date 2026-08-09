@@ -29,7 +29,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 ### 0.1. Побочная находка: баг в текущем GitHub CD
 
-При пуше тега `v*` выражение в `CD.yml:124` вычисляет `environment: dev` (условие проверяет только `refs/heads/main`), а шаг `set-env` (`CD.yml:150`) в ветке `else` ставит `DEPLOY_ENV=production` и деплоит на прод. То есть required reviewers прод-окружения обходятся пушем тега. К миграции отношения не имеет — но это живой баг сегодня, чинить в текущем CD или закрыть переходом на dispatch-only (см. фазу 7).
+При пуше тега `v*` выражение в `CD.yml:122` вычисляет `environment: dev` (условие проверяет только `refs/heads/main`), а шаг `set-env` (`CD.yml:149`) в ветке `else` ставит `DEPLOY_ENV=production` и деплоит на прод. То есть required reviewers прод-окружения обходятся пушем тега. К миграции отношения не имеет — но это живой баг сегодня, чинить в текущем CD или закрыть переходом на dispatch-only (см. фазу 7).
 
 #### Что установлено при разборе (07.08.2026, story 1.1)
 
@@ -57,7 +57,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 ### 1.1. Артефакт нельзя промотировать PRE-PROD → PROD (критично)
 
-Процесс требует: *«PROD receives the exact version validated in PRE-PROD»*, *«Rebuilding the application specifically for the production deployment is discouraged»*. Но сейчас `VITE_API_BASE_URL` / `VITE_WS_URL` запекаются в бандл на build (`CD.yml:112-114`), значит образ preprod физически не равен образу prod.
+Процесс требует: *«PROD receives the exact version validated in PRE-PROD»*, *«Rebuilding the application specifically for the production deployment is discouraged»*. Но сейчас `VITE_API_BASE_URL` / `VITE_WS_URL` запекаются в бандл на build (`CD.yml:110-112`), значит образ preprod физически не равен образу prod.
 
 Варианты:
 
@@ -178,7 +178,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 1. Поднять **параллельный** стенд на s1: каталог `~/crm-prionex/fe-prionex-dev/`, порт `8082`, отдельный `container_name`.
 2. `deploy-dev.yml`: `workflow_dispatch` с input `ref` — любой разработчик деплоит свою feature-ветку без апрува (требование документа к DEV). Зависит от фазы 4.2.
-3. Шаги деплоя портируются из `CD.yml:155-239`: scp compose → `docker compose down` → `pull` (fail-fast без fallback на `latest` — важное свойство, сохранить) → `up -d` → healthcheck по `docker inspect .State.Health.Status` с **параметризованными** именем контейнера и портом (п.1.2). SSH/SCP — нативные, не appleboy (п.1.4).
+3. Шаги деплоя портируются из `CD.yml:154-238`: scp compose → `docker compose down` → `pull` (fail-fast без fallback на `latest` — важное свойство, сохранить) → `up -d` → healthcheck по `docker inspect .State.Health.Status` с **параметризованными** именем контейнера и портом (п.1.2). SSH/SCP — нативные, не appleboy (п.1.4).
 4. Отдельная задача (может идти параллельно): еженедельный сброс DEV к `main` — `schedule`-workflow по воскресеньям, деплой `main` + `docker image prune`.
 5. Прогон: 5+ деплоев разных feature-веток.
 
@@ -236,7 +236,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 Порты (`FRONTEND_PORT`) в CI-переменные **не выносим** — они уже живут в серверных `.env` каждого стенда, дублировать состояние незачем.
 
-Fallback-значения URL-ов из `CD.yml:49,59` при переносе **убрать** — молчаливый дефолт на прод-API это мина.
+Fallback-значения URL-ов из `CD.yml:47,57` при переносе **убрать** — молчаливый дефолт на прод-API это мина.
 
 ---
 
