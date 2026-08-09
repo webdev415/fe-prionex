@@ -24,6 +24,19 @@ import {
 } from '@/lib/dateUtils'
 
 /**
+ * Password-manager opt-outs for the field we render ourselves. Chrome's own
+ * autofill is handled by ``autoComplete``/``name`` on <DatePicker> (which
+ * covers both the masked input and react-datepicker's built-in one); these
+ * cover LastPass / 1Password / Dashlane, whose overlays block the calendar in
+ * exactly the same way (KAN-995).
+ */
+const PASSWORD_MANAGER_OPT_OUT = {
+  'data-lpignore': 'true',
+  'data-1p-ignore': '',
+  'data-form-type': 'other',
+} as const
+
+/**
  * Custom input used when ``allowManualInput`` is on. react-datepicker clones
  * this and injects ``value``/``onChange`` (its own typed-input handler) — we
  * ignore both and drive the field from our own masked ``text`` state so the
@@ -55,6 +68,7 @@ const MaskedDateTimeInput = forwardRef<
         onTextBlur?.()
       }}
       inputMode="numeric"
+      {...PASSWORD_MANAGER_OPT_OUT}
     />
   )
 })
@@ -195,6 +209,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
+    // Deliberately opaque and derived from the generated id, never from a
+    // caller-supplied one: Chrome ignores autocomplete="off" on fields whose
+    // name/id it can classify as profile data (a date field reads as a
+    // birthday), so it must have nothing to match on (KAN-995).
+    const autofillName = `ds-${generatedId.replace(/:/g, '')}`
     const { t } = useTranslation('common')
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
@@ -362,6 +381,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             <DatePicker
               ref={ref}
               id={inputId}
+              name={autofillName}
+              autoComplete="off"
               className={inputClassName}
               selected={parseDate(value)}
               onChange={handleChange}

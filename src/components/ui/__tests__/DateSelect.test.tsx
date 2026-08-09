@@ -105,3 +105,35 @@ describe('DateSelect (manual input)', () => {
     expect(lastCall.value?.getDate()).toBe(6)
   })
 })
+
+// Chrome's native autofill suggestion (name + saved date) renders on top of
+// the calendar popup and blocks click-selection. It is suppressed on the
+// input itself, so it must hold for BOTH render paths: the masked input we
+// own (allowManualInput) and react-datepicker's built-in one (KAN-995).
+
+describe('DateSelect (browser autofill suppression)', () => {
+  it('suppresses autofill on the masked manual input', () => {
+    render(<DateSelect allowManualInput format="dd.MM.yyyy" value="2026-08-05" />)
+
+    const input = screen.getByRole('textbox')
+    expect(input).toHaveAttribute('autocomplete', 'off')
+    expect(input).toHaveAttribute('data-lpignore', 'true')
+    expect(input).toHaveAttribute('data-form-type', 'other')
+  })
+
+  it('suppresses autofill on the calendar-only input', () => {
+    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" />)
+
+    expect(screen.getByRole('textbox')).toHaveAttribute('autocomplete', 'off')
+  })
+
+  it('gives the field a name Chrome cannot classify as profile data', () => {
+    render(<DateSelect allowManualInput id="assignment-date" value="2026-08-05" />)
+
+    const input = screen.getByRole('textbox')
+    const name = input.getAttribute('name')
+    expect(name).toBeTruthy()
+    expect(name).not.toContain('assignment')
+    expect(name).not.toContain('date')
+  })
+})
