@@ -197,6 +197,24 @@ describe('DateSelect (label association survives the id decoupling)', () => {
   })
 })
 
+describe('DateSelect (message wiring survives the id rename)', () => {
+  it('points aria-describedby at the rendered error node', () => {
+    render(<DateSelect id="promise-date" error="Bad date" value="2026-08-05" />)
+
+    const describedBy = screen.getByRole('textbox').getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)?.textContent).toBe('Bad date')
+  })
+
+  it('points aria-describedby at the rendered helper node', () => {
+    render(<DateSelect helperText="Pick a day" value="2026-08-05" />)
+
+    const describedBy = screen.getByRole('textbox').getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)?.textContent).toBe('Pick a day')
+  })
+})
+
 describe('DateSelect (autoComplete escape hatch)', () => {
   it('defaults to off', () => {
     render(<DateSelect value="2026-08-05" />)

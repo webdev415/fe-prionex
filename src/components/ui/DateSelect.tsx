@@ -100,6 +100,13 @@ export interface DateSelectProps {
   value?: string | Date | null
   onChange?: (args: { value: Date | null }) => void
   disabled?: boolean
+  /**
+   * Applied to the WRAPPER element, not the field. The input itself always
+   * carries a generated opaque id so a semantic value cannot reach Chrome's
+   * autofill classifier (KAN-995). Use ``label`` for association, or query
+   * within the wrapper — an external ``htmlFor``/``#id`` aimed at this value
+   * would target a div.
+   */
   id?: string
   min?: Date | string
   max?: Date | string
@@ -234,9 +241,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     ref
   ) => {
     const generatedId = useId()
-    const inputId = id || generatedId
-    const errorId = `${inputId}-error`
-    const helperId = `${inputId}-helper`
+    const describedByBase = id || generatedId
+    const errorId = `${describedByBase}-error`
+    const helperId = `${describedByBase}-helper`
     // Opaque and always derived from the generated id, never a caller-supplied
     // one, because Chrome ignores autocomplete="off" on fields it classifies as
     // profile data and a date field reads as a birthday. This removes the name
