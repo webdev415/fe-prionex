@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import type { MinimizedCallInfo } from './callStore'
 
@@ -32,10 +32,6 @@ async function loadStore(entry: MinimizedCallInfo | null) {
 describe('callStore', () => {
   beforeEach(() => {
     localStorage.clear()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   describe('what may be restored from a previous session', () => {

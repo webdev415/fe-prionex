@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useEffect } from 'react'
 import { render, act } from '@testing-library/react'
 
-import { useIncomingPopupSuppression } from '../useIncomingPopupSuppression'
+import { useCanShowIncomingPopup } from '../useCanShowIncomingPopup'
 import { useCallStore } from '@/stores/callStore'
 
 /**
@@ -19,11 +19,11 @@ function Popup() {
 }
 
 function Layout({ callId }: { callId: string | null }) {
-  const suppressed = useIncomingPopupSuppression(callId)
-  return <>{callId && suppressed === false && <Popup />}</>
+  const canShow = useCanShowIncomingPopup(callId)
+  return <>{callId && canShow && <Popup />}</>
 }
 
-describe('useIncomingPopupSuppression', () => {
+describe('useCanShowIncomingPopup', () => {
   beforeEach(() => {
     localStorage.clear()
     useCallStore.setState({ minimizedCall: null, openCallModal: null })

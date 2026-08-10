@@ -78,7 +78,7 @@ describe('MinimizedCallBubble', () => {
 
       // A server fault says nothing about whether the call exists; throwing the
       // operator's live call window away over one would be far worse.
-      await new Promise((r) => setTimeout(r, 50))
+      await waitFor(() => expect(useCallDetails).toHaveBeenCalled())
       expect(useCallStore.getState().minimizedCall).not.toBeNull()
     })
 
@@ -91,7 +91,7 @@ describe('MinimizedCallBubble', () => {
 
       renderBubble()
 
-      await new Promise((r) => setTimeout(r, 50))
+      await waitFor(() => expect(useCallDetails).toHaveBeenCalled())
       expect(useCallStore.getState().minimizedCall).not.toBeNull()
     })
   })

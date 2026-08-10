@@ -28,7 +28,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
-import { useIncomingPopupSuppression } from '@/features/calls/hooks/useIncomingPopupSuppression'
+import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
 import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
@@ -510,10 +510,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     onCallSettled: handleCallSettled,
   })
 
-  // One call window at a time. The answer is `null` until it is known, and the
-  // popup renders only on an explicit `false` — see the hook for why it may not
-  // render before then.
-  const popupSuppressed = useIncomingPopupSuppression(incomingCall?.call_id)
+  // One call window at a time. False until the answer is known — see the hook
+  // for why the popup may not render before then.
+  const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
   // Which client the operator picked when the number is shared. Reset per call
   // so a previous choice never leaks onto the next caller.
@@ -1253,7 +1252,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
 
         {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && popupSuppressed === false && (
+        {incomingCall && canShowIncomingPopup && (
           <CallDialogModal
             open={true}
             onClose={dismissIncomingCall}
