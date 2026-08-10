@@ -171,6 +171,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         timezone: formData.timezone || 'Europe/Kyiv',
         must_change_password: formData.must_change_password || false,
         asterisk_extension: formData.asterisk_extension || undefined,
+        dialer_extension: formData.dialer_extension || undefined,
         is_agent: formData.is_agent || false,
         project_assignments,
       },
@@ -433,7 +434,25 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-7">
+          <div>
+            <Label htmlFor="dialer_extension">{t('pages.users.forms.dialerExtension')}</Label>
+            <Input
+              id="dialer_extension"
+              placeholder="9001"
+              {...register('dialer_extension')}
+              aria-invalid={!!errors.dialer_extension}
+              variant={errors.dialer_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.dialer_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.dialer_extension.message}</p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('pages.users.forms.helpers.dialerExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:pt-1">
             <Controller
               name="is_agent"
               control={control}

@@ -237,6 +237,11 @@ export function ProfileSettingsPage() {
                   Extension: {user.asterisk_extension}
                 </div>
               )}
+              {user?.dialer_extension && (
+                <div className="text-muted-foreground text-xs">
+                  {t('pages.users.forms.dialerExtension')}: {user.dialer_extension}
+                </div>
+              )}
               {user?.is_agent && user?.agent_status && (
                 <div className="flex items-center gap-2">
                   <span
@@ -387,6 +392,14 @@ export function ProfileSettingsPage() {
                   <Input
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                     value={user?.asterisk_extension || ''}
+                    disabled
+                    onChange={() => {}}
+                    placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
+                    className="w-full"
+                  />
+                  <Input
+                    label={t('pages.users.forms.dialerExtension') || 'Predictive Dialer Extension'}
+                    value={user?.dialer_extension || ''}
                     disabled
                     onChange={() => {}}
                     placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}

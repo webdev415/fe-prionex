@@ -78,6 +78,7 @@ export interface CurrentUserResponse {
   last_login_at?: string | null
   created_at: string
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
   agent_status?: string
   must_change_password?: boolean
@@ -110,6 +111,7 @@ export interface User {
   createdAt?: string
   updatedAt?: string
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
   agent_status?: string
   timezone?: string

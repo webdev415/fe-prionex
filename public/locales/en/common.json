@@ -3694,6 +3694,7 @@
         "language": "Language",
         "timezone": "Timezone",
         "asteriskExtension": "Asterisk Extension",
+        "dialerExtension": "Predictive Dialer Extension",
         "agentStatus": "Agent Status",
         "isAgent": "Is Agent",
         "assignProjects": "Assign Projects",
@@ -3721,7 +3722,8 @@
           "assignRoleForEachProject": "Please assign a role for each selected project"
         },
         "helpers": {
-          "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)"
+          "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)",
+          "dialerExtension": "3-10 digit extension for the predictive dialer, allocated by the dialer admin (e.g., 9001, 9002)"
         }
       },
       "editForm": {
