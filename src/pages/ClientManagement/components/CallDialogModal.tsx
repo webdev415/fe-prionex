@@ -17,6 +17,7 @@ import { Button } from '../../../components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import type { IncomingModalLoan } from '@/stores/callStore'
@@ -1430,16 +1431,12 @@ function IncomingCallContext({
 // The shape is `IncomingModalLoan`, not a copy of it: the local duplicate this
 // replaces had silently fallen behind the real one, which is why the card had
 // no client to link to.
-/** Both loan dates arrive as raw backend strings; an unparseable one must not
- *  render as the literal "Invalid Date". */
-function asDate(value?: string | null): string {
-  if (!value) return '—'
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString()
-}
-
 function LoanCard({ loan }: { loan: IncomingModalLoan }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  // Both loan dates arrive as raw backend strings. `formatDate` follows the UI
+  // language and already renders a placeholder for an unparseable value, which
+  // a bare toLocaleDateString() would print as the literal "Invalid Date".
+  const asDate = (value?: string | null) => (value ? formatDate(value, i18n.language) : '—')
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
