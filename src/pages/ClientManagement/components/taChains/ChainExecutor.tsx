@@ -287,6 +287,13 @@ export function ChainExecutor({
 
   const [selectedChainId, setSelectedChainId] = useState<string>('')
 
+  // Identifies "which selection do the all-at-once values belong to". Derived
+  // once: the selection-reset effect writes it to lastInstantSelectionRef, and
+  // the cards compare against it to know whether that reset has run yet. Both
+  // sites must format it identically, and the JSX branch below has
+  // ``activeInstance`` narrowed to never, so it cannot rebuild the string there.
+  const instantSelectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
+
   // Chain selector dropdown — search-enabled to handle many chains.
   const [chainOpen, setChainOpen] = useState(false)
   const [chainSearch, setChainSearch] = useState('')
@@ -769,7 +776,7 @@ export function ChainExecutor({
     // render is treated as already-settled. Resetting here would wipe them.
     if (restoredRef.current) return
 
-    const selectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
+    const selectionKey = instantSelectionKey
     if (lastInstantSelectionRef.current === selectionKey) return
     lastInstantSelectionRef.current = selectionKey
 
@@ -789,7 +796,19 @@ export function ChainExecutor({
     setInstantNotes('')
     setInstantSubmitting(false)
     setNotifyResponsible(true)
-  }, [selectedChainId, activeInstance?.id, prefilledPhone, contactSource, effectiveChain, taById])
+    // ``instantSelectionKey`` is derived from selectedChainId + activeInstance.id,
+    // both already listed, so naming it changes nothing at runtime — it is here
+    // to satisfy exhaustive-deps now that the body reads it instead of rebuilding
+    // the string.
+  }, [
+    instantSelectionKey,
+    selectedChainId,
+    activeInstance?.id,
+    prefilledPhone,
+    contactSource,
+    effectiveChain,
+    taById,
+  ])
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
@@ -846,7 +865,15 @@ export function ChainExecutor({
     if (pick === null) return
 
     autoSelectedContactStepRef.current = currentStep?.id ?? null
-    setStepValue(pick)
+    // Functional, not ``setStepValue(pick)``. This effect and the reset above
+    // run in the SAME commit, and both read the render-time ``stepValue`` —
+    // so on a render where it was still '' (the executor mounting onto an
+    // already-active instance, or a quick-pick start served from a warm
+    // contact cache) the helper sees an empty step and this setter lands
+    // AFTER the reset's ``setStepValue(preset)``, silently discarding an
+    // admin-configured preset. Reading ``prev`` consults the value the reset
+    // just queued, which is what the documented precedence actually requires.
+    setStepValue((prev) => (prev ? prev : pick))
   }, [contactOptions, currentTA?.field_type, isEmailContactStep, currentStep?.id, stepValue])
 
   // ── Step editing ──────────────────────────────────────────────────────────
@@ -2496,6 +2523,8 @@ export function ChainExecutor({
                     onChange={(patch) => updateInstantStep(step.id, patch)}
                     debts={debts}
                     clientId={clientId}
+                    hasPriorEntry={Object.prototype.hasOwnProperty.call(instantValues, step.id)}
+                    selectionSettled={lastInstantSelectionRef.current === instantSelectionKey}
                   />
                 )
               })}
@@ -2621,6 +2650,20 @@ interface InstantStepCardProps {
   ta: TargetAction
   value: InstantStepValue
   onChange: (patch: Partial<InstantStepValue>) => void
+  /**
+   * Whether the parent's ``instantValues`` already holds an entry for this
+   * step. ``value`` alone cannot say: a step the operator cleared and one they
+   * never opened both arrive as ``value: ''``. Only used to seed the KAN-977
+   * auto-select latch — see the effect for why that distinction matters.
+   */
+  hasPriorEntry: boolean
+  /**
+   * Whether the parent's selection-reset effect has already run for the current
+   * ``selectedChainId``/instance — i.e. whether ``instantValues`` describes THIS
+   * selection rather than the previous one. Auto-select waits for it; see the
+   * effect for the race it prevents.
+   */
+  selectionSettled: boolean
   debts: Array<{
     id: number
     contract_number?: string
@@ -2632,7 +2675,7 @@ interface InstantStepCardProps {
   clientId: number
 }
 
-function InstantStepCard({
+export function InstantStepCard({
   index,
   step,
   ta,
@@ -2640,6 +2683,8 @@ function InstantStepCard({
   onChange,
   debts,
   clientId,
+  hasPriorEntry,
+  selectionSettled,
 }: InstantStepCardProps) {
   const { t } = useTranslation('common')
   const cardUser = useAuthStore((s) => s.user)
@@ -2660,10 +2705,46 @@ function InstantStepCard({
   // because this card owns its own contact query: the parent cannot call the
   // hook per step without calling hooks in a loop (see the note above).
   //
-  // Once per mount is enough here — a card remounts when the chain selection
-  // changes, and there is no step-to-step navigation to re-arm.
-  const autoSelectedRef = useRef(false)
+  // Two guards beyond the shared rule, each for a race found in review:
+  //
+  // * ``selectionSettled``. This card mounts in the SAME commit where
+  //   ``selectedChainId`` changes, and React flushes child effects before
+  //   parent ones. With a warm contact cache the list is populated on the very
+  //   first render, so without this the card would pick and queue a FUNCTIONAL
+  //   ``setInstantValues`` — and the parent's selection reset would then queue
+  //   a PLAIN ``setInstantValues({})`` that lands last and discards it. Nothing
+  //   would retry: on the next render neither ``value.value`` ('' both times)
+  //   nor ``contactOptions`` (same cached array) changes, so the effect would
+  //   not re-run and the feature would silently no-op after every chain switch.
+  //   Waiting for the reset makes this prop the dependency that DOES flip, so
+  //   the effect runs exactly once, after ``instantValues`` describes this
+  //   selection.
+  //
+  // * ``hasPriorEntry`` seeding the latch. Restoring a minimized session
+  //   remounts these cards with the persisted ``instantValues``. A step the
+  //   operator deliberately unticked comes back as ``value: ''`` —
+  //   indistinguishable from never-touched — so a fresh latch would re-tick it
+  //   and undo an explicit choice. Presence of the step's key in the snapshot
+  //   is what separates "cleared on purpose" from "never visited".
+  const autoSelectedRef = useRef(hasPriorEntry)
+
+  // ``onChange`` is an inline arrow rebuilt on every parent render, so keeping
+  // it in the dep array below would re-run this effect on every parent render.
+  // A ref keeps the dependency list honest about what actually triggers it.
+  const onChangeRef = useRef(onChange)
   useEffect(() => {
+    onChangeRef.current = onChange
+  })
+
+  useEffect(() => {
+    // Any value present — the pick that landed, a prefill, or operator input —
+    // means there is nothing left to choose for this card.
+    if (value.value) {
+      autoSelectedRef.current = true
+      return
+    }
+    if (!selectionSettled) return
+
     const pick = pickSingleContactCandidate({
       fieldType: ta.field_type,
       isEmailStep: isEmailContact,
@@ -2674,8 +2755,8 @@ function InstantStepCard({
     if (pick === null) return
 
     autoSelectedRef.current = true
-    onChange({ value: pick })
-  }, [contactOptions, ta.field_type, isEmailContact, value.value, onChange])
+    onChangeRef.current({ value: pick })
+  }, [contactOptions, ta.field_type, isEmailContact, value.value, selectionSettled])
 
   // Mirror the wizard-mode debt filter: hide closed debts unless the
   // step's show_closed_credits admin flag is set.
