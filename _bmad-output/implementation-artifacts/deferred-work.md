@@ -14,3 +14,13 @@
 - `docs/forgejo-migration.md:19` current-state table still lists «`v*` → production» although
   the `tags: ['v*']` trigger was removed from `CD.yml` by commit `09591984`; the `CD.yml:5`
   citation on that row is correct — only the `v*` clause is stale content.
+
+## Deferred from: story 1-13-stop-forgejo-from-executing-the-legacy-github-workflows (2026-08-10)
+
+- `docs/forgejo-migration.md` §5 «Риски» — the row «Оба пайплайна одновременно деплоят на один
+  стенд» closes with «job `deploy` в GitHub CD отключается в начале фазы 7», but decision
+  [D7](../../docs/migration-decisions.md#d7) already established that **no action is taken on
+  GitHub** — that job is never disabled by this plan. Story 1.13's Task 9.5 flagged this as
+  out-of-scope for a citation-only pass; a neighbouring row was touched (a new risk row added
+  directly below it), which is why it's noted here rather than silently left. Needs a content
+  fix, not a line-number repair — someone should reconcile that row's wording with D7.
