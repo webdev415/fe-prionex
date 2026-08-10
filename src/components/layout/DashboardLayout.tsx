@@ -28,6 +28,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import { useIncomingPopupSuppression } from '@/features/calls/hooks/useIncomingPopupSuppression'
 import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
@@ -509,26 +510,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     onCallSettled: handleCallSettled,
   })
 
-  // One call window at a time: if a call modal is already open or minimized when
-  // the call arrives, the operator keeps only the bell. The decision is latched
-  // per call rather than subscribed, because the popup itself sets openCallModal
-  // on mount and a live read would make it suppress itself on the next render.
-  const [popupSuppressed, setPopupSuppressed] = useState(false)
-  const suppressionDecidedFor = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!incomingCall) {
-      suppressionDecidedFor.current = null
-      setPopupSuppressed(false)
-      return
-    }
-    if (suppressionDecidedFor.current === incomingCall.call_id) return
-    suppressionDecidedFor.current = incomingCall.call_id
-    // Only a call genuinely in progress may take the window. Suppressing on
-    // "the store holds something" let a leftover bubble swallow every inbound
-    // popup, with nothing on screen to explain the silence.
-    setPopupSuppressed(useCallStore.getState().isCallWindowLive())
-  }, [incomingCall])
+  // One call window at a time. The answer is `null` until it is known, and the
+  // popup renders only on an explicit `false` — see the hook for why it may not
+  // render before then.
+  const popupSuppressed = useIncomingPopupSuppression(incomingCall?.call_id)
 
   // Which client the operator picked when the number is shared. Reset per call
   // so a previous choice never leaks onto the next caller.
@@ -1268,7 +1253,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
 
         {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && !popupSuppressed && (
+        {incomingCall && popupSuppressed === false && (
           <CallDialogModal
             open={true}
             onClose={dismissIncomingCall}
