@@ -13,6 +13,8 @@ export type CallModalType = 'call-dialog' | 'call-recording'
 /** Loan card shape the call modal renders; mirrored here so it survives minimize. */
 export interface IncomingModalLoan {
   id: string
+  /** The loan's own owner, which is not always the client the popup is anchored to. */
+  clientId?: number | null
   clientName: string
   loanNumber: string
   counterparty: string

@@ -755,10 +755,17 @@ export function CallDialogModal({
                   </div>
                 )}
 
-                <button className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
-                  <Icons.ArrowDown size={14} className="sm:size-4" />
-                </button>
+                {(incomingContext?.client_id ?? clientId) != null ? (
+                  <a
+                    href={`/dashboard/clients/${incomingContext?.client_id ?? clientId}/debt-summary`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm"
+                  >
+                    {t('pages.clients.modals.callDialog.viewAllLoans', 'View all loans')}{' '}
+                    <Icons.ArrowDown size={14} className="sm:size-4" />
+                  </a>
+                ) : null}
               </div>
             )}
           </div>
@@ -1420,23 +1427,10 @@ function IncomingCallContext({
   )
 }
 
-function LoanCard({
-  loan,
-}: {
-  loan: {
-    id: string
-    clientName: string
-    loanNumber: string
-    counterparty: string
-    loanPrincipal: number
-    debt: number
-    status: string
-    saleDate: string
-    lastContact: string
-    priority: 'Critical' | 'High' | 'Medium' | 'Low'
-    score: number
-  }
-}) {
+// The shape is `IncomingModalLoan`, not a copy of it: the local duplicate this
+// replaces had silently fallen behind the real one, which is why the card had
+// no client to link to.
+function LoanCard({ loan }: { loan: IncomingModalLoan }) {
   const { t } = useTranslation('common')
 
   const getPriorityColor = (priority: string) => {
@@ -1473,9 +1467,16 @@ function LoanCard({
             </div>
           </div>
         </div>
-        <button className="text-primary-700 text-xs font-medium sm:text-sm">
-          {t('pages.clients.modals.callDialog.viewClient')} &gt;
-        </button>
+        {loan.clientId != null ? (
+          <a
+            href={`/dashboard/clients/${loan.clientId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-700 shrink-0 text-xs font-medium sm:text-sm"
+          >
+            {t('pages.clients.modals.callDialog.viewClient', 'View Client')} &gt;
+          </a>
+        ) : null}
       </div>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:mt-3 sm:grid-cols-2 sm:gap-3">
         <div className="flex flex-col gap-1">

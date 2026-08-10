@@ -48,6 +48,7 @@ export function buildIncomingCallLoans(
 
     return {
       id: loan.loan_id.toString(),
+      clientId: owner?.client_id ?? incomingCall.client_id ?? null,
       clientName: owner?.client_name || incomingCall.client_name || 'Unknown',
       loanNumber: loan.contract_number,
       counterparty: loan.seller_name ?? '',
