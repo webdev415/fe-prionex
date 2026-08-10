@@ -181,9 +181,22 @@ export interface DateSelectProps {
    * saved-value list everywhere, but Chrome ignores it on fields its classifier
    * reads as profile data. The rendered ``id`` and ``name`` are both opaque, so
    * what it can still read is the visible label and the placeholder (manual
-   * mode sets ``DD.MM.YYYY``). A field labelled "Promise date" may therefore
-   * still get a suggestion; pass ``new-password`` there, which Chrome always
-   * honours, at the cost of it occasionally offering to save a password.
+   * mode sets ``DD.MM.YYYY``).
+   *
+   * ``new-password`` is the token Chrome always honours, and it is what the
+   * client date-of-birth and passport fields use. Two costs come with it, and
+   * both need re-checking in Chrome if that set ever grows:
+   *
+   * - it declares a credential purpose, so Chrome may attach password-manager
+   *   UI to the field — a save prompt on submit, or a suggestion dropdown that
+   *   would cover the calendar exactly the way the autofill list does. Chrome
+   *   reserves password generation for ``type="password"`` inputs and these are
+   *   ``type="text"``, so this is unlikely rather than impossible;
+   * - it is not the field's real purpose. WCAG 1.3.5 would want ``bday`` on a
+   *   date of birth, but 1.3.5 covers fields collecting data about *the user*.
+   *   These collect a client's data, so ``bday`` is not merely unhelpful there,
+   *   it is wrong: it invites Chrome to write the operator's own birthday into
+   *   a debtor record.
    */
   autoComplete?: string
 }
