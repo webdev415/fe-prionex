@@ -269,10 +269,7 @@ describe('DateSelect (aria-describedby never dangles)', () => {
     await userEvent.type(input, '15.08')
     await userEvent.tab()
 
-    const describedBy = input.getAttribute('aria-describedby')
-    if (describedBy) {
-      expect(document.getElementById(describedBy)).not.toBeNull()
-    }
+    expect(input.getAttribute('aria-describedby')).toBeNull()
   })
 })
 

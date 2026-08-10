@@ -10,7 +10,6 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -265,13 +264,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // caller's `id` moves to the wrapper instead, where it stays available to
     // CSS and automation but is not a form field. The visible label and the
     // placeholder are still readable by the classifier, which is what the
-    // `autoComplete` prop exists to override (KAN-995). The character whitelist keeps the value well formed
-    // across React versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
+    // `autoComplete` prop exists to override (KAN-995).
+    //
+    // The character whitelist keeps the value well formed across React
+    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
     const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
-    const { t } = useTranslation('common')
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
-    const isDatetimeManual = allowManualInput && !!showTimeSelect
     const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
 
     // ── Manual-input state (only used when allowManualInput) ──────────────
@@ -399,17 +398,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // Red styling for both an explicit error and an in-progress invalid entry.
     const hasError = !!error || manualInvalid
 
-    // TA datetime fields: inline error under the input while typing invalid text.
-    // Date filter fields: border only — no inline message.
-    const manualInlineError =
-      manualInvalid && isDatetimeManual ? t('pages.clientChains.errors.dateInvalid') : undefined
-    const displayedError = error || manualInlineError
-    // Must track exactly when the <p id={errorId}> below renders, not when a
-    // message merely exists: `manualInlineError` is datetime-manual only, while
-    // the paragraph also renders for `manualInvalid && invalidText`. Keying
-    // aria-describedby off `displayedError` instead left the reference dangling
-    // in both directions — pointing at a helper that this state suppresses, and
-    // pointing at an error paragraph that never rendered.
+    // Mirrors exactly when the <p id={errorId}> below renders, so
+    // aria-describedby can never reference an element that is not there. The
+    // complement is the helper paragraph's own condition. TA datetime fields
+    // surface their inline message through `invalidText`, which is the second
+    // branch — the component has no separate built-in message of its own.
     const errorMessageShown = !!error || (manualInvalid && !!invalidText)
 
     const inputClassName = cn(
@@ -507,7 +500,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         </div>
         {error ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
-            {displayedError}
+            {error}
           </p>
         ) : manualInvalid && invalidText ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
