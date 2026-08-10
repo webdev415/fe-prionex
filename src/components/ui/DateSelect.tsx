@@ -73,6 +73,7 @@ const MaskedDateTimeInput = forwardRef<
 ) {
   return (
     <input
+      type="text"
       {...rest}
       ref={ref}
       value={text}
@@ -171,11 +172,11 @@ export interface DateSelectProps {
   /**
    * Escape hatch for Chrome's autofill (KAN-995). ``off`` suppresses the
    * saved-value list everywhere, but Chrome ignores it on fields its classifier
-   * reads as profile data, and it reads the caller's ``id`` and the visible
-   * label as well as the (deliberately opaque) ``name``. A semantic call site
-   * such as ``id="promise-date"`` labelled "Promise date" can therefore still
-   * get a suggestion; pass ``new-password`` there, which Chrome always honours,
-   * at the cost of it occasionally offering to save a password.
+   * reads as profile data. The rendered ``id`` and ``name`` are both opaque, so
+   * what it can still read is the visible label and the placeholder (manual
+   * mode sets ``DD.MM.YYYY``). A field labelled "Promise date" may therefore
+   * still get a suggestion; pass ``new-password`` there, which Chrome always
+   * honours, at the cost of it occasionally offering to save a password.
    */
   autoComplete?: string
 }
@@ -245,6 +246,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // The character whitelist keeps the value well formed across React
     // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
     const autofillName = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    // The rendered input carries the opaque id too, so a semantic call-site id
+    // (promise-date, task-due-date, start_date) never reaches the element the
+    // classifier inspects. The caller's `id` moves to the wrapper, where it
+    // stays available to CSS and automation but is not a form field.
+    const inputElementId = autofillName
     const { t } = useTranslation('common')
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
@@ -397,9 +403,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         : placeholder
 
     return (
-      <div className={`w-full ${className || ''}`}>
+      <div id={id} className={`w-full ${className || ''}`}>
         {label && (
-          <label htmlFor={inputId} className="text-foreground mb-1.5 block text-sm font-light">
+          <label
+            htmlFor={inputElementId}
+            className="text-foreground mb-1.5 block text-sm font-light"
+          >
             {label}
             {required && <span className="text-error-500 ml-1">*</span>}
           </label>
@@ -411,7 +420,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           <div className="date-select-wrapper" data-has-error={hasError ? 'true' : 'false'}>
             <DatePicker
               ref={ref}
-              id={inputId}
+              id={inputElementId}
               name={autofillName}
               autoComplete={autoComplete}
               className={inputClassName}

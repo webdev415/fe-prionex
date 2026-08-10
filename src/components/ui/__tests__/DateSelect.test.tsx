@@ -108,8 +108,8 @@ describe('DateSelect (manual input)', () => {
 
 // Chrome's native autofill suggestion (name + saved date) renders on top of
 // the calendar popup and blocks click-selection. It is suppressed on the
-// input itself, so it must hold for BOTH render paths: the masked input we
-// own (allowManualInput) and react-datepicker's built-in one (KAN-995).
+// input itself, so it must hold for BOTH render paths: the masked input
+// (allowManualInput) and the plain one (calendar-only) (KAN-995).
 
 describe('DateSelect (browser autofill suppression)', () => {
   // Both modes must carry the same attributes. react-datepicker never forwards
@@ -129,12 +129,18 @@ describe('DateSelect (browser autofill suppression)', () => {
     expect(input).toHaveAttribute('data-lpignore', 'true')
     expect(input).toHaveAttribute('data-1p-ignore')
     expect(input).toHaveAttribute('data-form-type', 'other')
+    expect(input).toHaveAttribute('type', 'text')
   })
 
   it('gives the field a name Chrome cannot classify as profile data', () => {
     render(<DateSelect allowManualInput id="assignment-date" value="2026-08-05" />)
 
     const input = screen.getByRole('textbox')
+    // The caller's semantic id must not reach the element Chrome inspects; it
+    // moves to the wrapper, and the label still points at the real input.
+    expect(input.getAttribute('id')).not.toContain('assignment')
+    expect(document.querySelector('#assignment-date')?.tagName).toBe('DIV')
+
     const name = input.getAttribute('name')
     expect(name).toBeTruthy()
     expect(name).not.toContain('assignment')
@@ -178,6 +184,16 @@ describe('DateSelect (calendar-only behaviour after the custom-input swap)', () 
     const input = screen.getByRole('textbox')
     expect(input.closest('.react-datepicker__input-container')).not.toBeNull()
     expect(input).toHaveAttribute('type', 'text')
+  })
+})
+
+describe('DateSelect (label association survives the id decoupling)', () => {
+  it('still associates the visible label with the input', () => {
+    render(<DateSelect id="promise-date" label="Promise date" value="2026-08-05" />)
+
+    // getByLabelText resolves through htmlFor -> input id, so this fails if the
+    // label still points at the caller's id after the input moved off it.
+    expect(screen.getByLabelText('Promise date')).toBe(screen.getByRole('textbox'))
   })
 })
 
