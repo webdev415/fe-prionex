@@ -652,13 +652,16 @@ export interface AddressResponse {
 export interface CreateContactRequest {
   contact_value: string
   contact_type_id?: number | null
-  comment?: string
+  // null, not just undefined: clearing the field has to be sent explicitly.
+  // Omitting it means "leave the stored value alone" on the update endpoint,
+  // which is why a cleared comment never used to persist.
+  comment?: string | null
 }
 
 export interface UpdateContactRequest {
   contact_value?: string
   contact_type_id?: number | null
-  comment?: string
+  comment?: string | null
 }
 
 export interface ContactResponse {
