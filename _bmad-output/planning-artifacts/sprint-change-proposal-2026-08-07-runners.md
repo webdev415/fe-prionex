@@ -7,6 +7,14 @@
 constraint. No epic is added, removed or redefined.
 **Status:** **Approved by Oleg, 2026-08-07.** Applied to `epics.md` and `sprint-status.yaml`.
 
+> **Correction (2026-08-10, `bmad-correct-course` after Story 1.13's code review).** §2's
+> "Technical impact" bullet about the Story 1.3 probe branch cited `CD.yml:4` as filtering
+> `[main, development]` without noting this varies by ref — see the marked passage below and
+> [migration-decisions.md#d9](./../../docs/migration-decisions.md#d9). The probe-branch safety
+> conclusion itself was never wrong (a probe branch matches no filter list on any ref); only the
+> generality of the citation was. Nothing else in this proposal is affected — no epic, story or
+> scope change follows from this correction.
+
 > This is the second change proposal dated 2026-08-07. The first
 > ([sprint-change-proposal-2026-08-07.md](./sprint-change-proposal-2026-08-07.md)) covered the
 > Story 1.1 / GitHub-inaction decision and is approved and applied. This one is independent of it
@@ -129,6 +137,15 @@ has no user-facing surface.
 - Story 1.3's probe branch (`probe/forgejo-capabilities`) is safe: `CI.yml:5,7` filters
   `[main, staging, development]` and `CD.yml:4` filters `[main, development]`, so a probe branch
   triggers neither.
+  ⚠️ **Corrected 2026-08-10 (`bmad-correct-course`, triggered by Story 1.13).** `CD.yml:4`'s
+  `[main, development]` filter is **local `main`'s copy only**. Forgejo's three refs each carry a
+  *different* `CD.yml` (Story 1.13's per-ref trigger matrix,
+  [migration-decisions.md#d9](./../../docs/migration-decisions.md#d9)): `origin/staging`'s
+  `CD.yml` filters `[main, staging, development]` — `staging` is a CD-deploying ref **on its own
+  copy**, not CI-only. The conclusion above still holds — `probe/forgejo-capabilities` matches
+  neither branch-filter list on any ref — but do not generalise "`CD.yml` filters
+  `[main, development]`" beyond this specific probe-branch check. Nothing done under this proposal
+  was ever unsafe; the citation was incomplete, not the outcome.
 
 ---
 
