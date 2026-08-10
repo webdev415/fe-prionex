@@ -465,6 +465,10 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
               aria-describedby={errorMessageShown ? errorId : helperText ? helperId : undefined}
+              // Same condition as the red border, so the visual invalid state
+              // always has a programmatic counterpart — including the case
+              // where the field is invalid but the caller passed no message.
+              aria-invalid={hasError ? 'true' : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
               popperClassName="date-select-popper"

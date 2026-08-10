@@ -273,6 +273,30 @@ describe('DateSelect (aria-describedby never dangles)', () => {
   })
 })
 
+describe('DateSelect (invalid state is exposed, not just styled)', () => {
+  it('marks the field invalid when the caller passes an error', () => {
+    render(<DateSelect error="Bad date" value="2026-08-05" />)
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('marks the field invalid when typing is invalid and no message is supplied', async () => {
+    render(<DateSelect allowManualInput format="dd.MM.yyyy" value={null} />)
+
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '15.08')
+    await userEvent.tab()
+
+    // Red border only, no paragraph — previously nothing reached assistive tech.
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input.getAttribute('aria-describedby')).toBeNull()
+  })
+
+  it('leaves the attribute off while the field is valid', () => {
+    render(<DateSelect helperText="Pick a day" value="2026-08-05" />)
+    expect(screen.getByRole('textbox').getAttribute('aria-invalid')).toBeNull()
+  })
+})
+
 describe('DateSelect (autoComplete escape hatch)', () => {
   it('defaults to off', () => {
     render(<DateSelect value="2026-08-05" />)
