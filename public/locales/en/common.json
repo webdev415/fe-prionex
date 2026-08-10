@@ -4657,7 +4657,7 @@
           "totalRecords": "Total rows",
           "successful": "Rows applied",
           "failed": "Failed",
-          "processingTime": "Processing time",
+          "processingTime": "Processing time: {{time}}",
           "errorDetails": "Error details",
           "cancel": "Cancel",
           "downloadErrors": "Download errors",

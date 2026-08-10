@@ -85,7 +85,7 @@ export function BulkContactTagAssignmentPage() {
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.imports.contactTagAssignment.title', 'Bulk Contact Tag Assignment')}
         </h1>
 
@@ -99,7 +99,7 @@ export function BulkContactTagAssignmentPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="border-border bg-card/50 rounded-xl border p-4 shadow-sm sm:p-6">
         {state === 'upload' && (
           <ContactTagAssignmentUpload
             mode={mode}

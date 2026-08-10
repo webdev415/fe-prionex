@@ -4668,7 +4668,7 @@
           "totalRecords": "Усього рядків",
           "successful": "Рядків застосовано",
           "failed": "Помилки",
-          "processingTime": "Час обробки",
+          "processingTime": "Час обробки: {{time}}",
           "errorDetails": "Деталі помилок",
           "cancel": "Скасувати",
           "downloadErrors": "Завантажити помилки",

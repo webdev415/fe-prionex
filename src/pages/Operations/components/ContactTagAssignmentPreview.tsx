@@ -85,9 +85,13 @@ function StatusBadge({ status }: { status: ContactTagRowStatus }) {
   // an unknown value made `c.icon` throw during render, taking the whole route
   // down right after a successful upload and orphaning the validated job.
   // Falling back to `invalid` degrades one badge instead.
-  const c = cfg[status] ?? cfg.invalid
+  // Object.hasOwn, not `status in cfg` or `?? cfg.invalid`: for a status of
+  // 'toString' or 'constructor' both resolve to an inherited function instead
+  // of undefined, so the fallback is skipped, c.icon is undefined and the
+  // render throws — the exact crash this guard exists to stop.
+  const known = Object.hasOwn(cfg, status)
+  const c = known ? cfg[status] : cfg.invalid
   const StatusIcon = c.icon
-  const known = status in cfg
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${c.color}`}>
       <StatusIcon size={14} />
@@ -249,9 +253,25 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
   // backend, so counting it reported "3 rows will be overwritten" for a file
   // that overwrites 900. Of every figure on this screen, this is the one that
   // must not read low.
-  const replacingRows = preview.summary.replacing_rows
+  // ?? 0 on both: they are typed required, but a backend that predates them
+  // sends undefined, and the failure is silent in the worst direction —
+  // `ready + undefined === 0` is NaN === 0, which leaves execute enabled and
+  // renders NaN, while `undefined > 0` hides the overwrite banner entirely.
+  const replacingRows = preview.summary.replacing_rows ?? 0
 
-  const fansOut = summary.contacts_affected > summary.ready
+  // Every row that will be written, not just the plainly-ready ones. Warning
+  // rows are applicable too — execute is gated on `ready + warning` — so
+  // counting `ready` alone made the fan-out notice read "0 rows will update 5
+  // contact records" for a file of nothing but warning rows, and understate
+  // the write for any mix of the two.
+  // Normalised once rather than at each use site: guarding the gate and the
+  // fan-out but not the card left `undefined` rendering in the card, which is
+  // the same defect one line over.
+  const warningRows = summary.warning ?? 0
+
+  const applicableRows = summary.ready + warningRows
+
+  const fansOut = summary.contacts_affected > applicableRows
 
   return (
     <div className="space-y-6">
@@ -305,7 +325,7 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
             {t(`${b}.fanOutNotice`, {
               defaultValue:
                 '{{rows}} rows will update {{contacts}} contact records. The same number can be stored more than once under a client, and every copy is updated.',
-              rows: summary.ready,
+              rows: applicableRows,
               contacts: summary.contacts_affected,
             })}
           </p>
@@ -341,7 +361,7 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
         />
         <SummaryCard
           label={t(`${b}.warning`, 'Partly skipped')}
-          value={summary.warning}
+          value={warningRows}
           color="bg-warning-50 border-warning-200 text-warning-700"
         />
         <SummaryCard
@@ -422,7 +442,7 @@ export function ContactTagAssignmentPreview({ preview, onConfirm, onCancel, isEx
           variant={isAssign ? 'secondary' : 'danger'}
           size="md"
           onClick={() => onConfirm()}
-          disabled={isExecuting || summary.ready + summary.warning === 0}
+          disabled={isExecuting || applicableRows === 0}
           isLoading={isExecuting}
         >
           {isExecuting

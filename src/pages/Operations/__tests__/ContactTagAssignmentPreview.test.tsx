@@ -351,7 +351,8 @@ describe('ContactTagAssignmentPreview', () => {
       summary: {
         ...preview().summary,
         total_rows: 15,
-        ready: 4,
+        ready: 3,
+        warning: 1,
         no_change: 6,
         invalid: 2,
         duplicates_overridden: 3,
@@ -369,7 +370,11 @@ describe('ContactTagAssignmentPreview', () => {
     expect(screen.getByText('Already up to date')).toBeInTheDocument()
     expect(screen.getByText('6')).toBeInTheDocument()
     const s = p.summary
-    expect(s.ready + s.no_change + s.invalid + s.duplicates_overridden).toBe(s.total_rows)
+    // warning belongs here too: it is its own applicable status, and
+    // omitting it made this pass only because the fixture set warning: 0.
+    expect(s.ready + s.warning + s.no_change + s.invalid + s.duplicates_overridden).toBe(
+      s.total_rows
+    )
   })
 
   it('renders parser warnings', () => {
@@ -386,5 +391,150 @@ describe('ContactTagAssignmentPreview', () => {
       }
     )
     expect(screen.getByText('Only the first worksheet was read.')).toBeInTheDocument()
+  })
+
+  describe('warning rows', () => {
+    // A warning row is APPLICABLE: part of its tag cell did not resolve, but
+    // what did resolve is still written. Treating it as non-applicable is how
+    // the fan-out notice came to report "0 rows will update 5 contact records".
+    const warningPreview = (extra = {}) =>
+      preview({
+        summary: {
+          ...preview().summary,
+          total_rows: 5,
+          ready: 0,
+          warning: 5,
+          contacts_affected: 5,
+          ...extra,
+        },
+        preview_rows: [
+          row({
+            status: 'warning',
+            severity: 'warning',
+            error: "Some values will be skipped: ['Whatsap'] not in category 'Messengers'.",
+            unknown_tag_names: ['Whatsap'],
+            tag_names: ['Telegram', 'Whatsap'],
+          }),
+        ],
+      })
+
+    it('counts warning rows in the Partly skipped card', () => {
+      render(
+        <ContactTagAssignmentPreview
+          preview={warningPreview()}
+          onConfirm={noop}
+          onCancel={noop}
+          isExecuting={false}
+        />,
+        { wrapper: createWrapper() }
+      )
+      // 'Partly skipped' appears on the summary card and again on the row
+      // badge, and '5' is also contacts_affected — so scope to the card and
+      // assert the count inside it rather than globally.
+      const card = screen.getAllByText('Partly skipped')[0].closest('div')
+      expect(card).toHaveTextContent('5')
+    })
+
+    it('enables execute when every applicable row is a warning', () => {
+      render(
+        <ContactTagAssignmentPreview
+          preview={warningPreview()}
+          onConfirm={noop}
+          onCancel={noop}
+          isExecuting={false}
+        />,
+        { wrapper: createWrapper() }
+      )
+      expect(screen.getByRole('button', { name: /Assign to/i })).not.toBeDisabled()
+    })
+
+    it('does not understate the row count in the fan-out notice', () => {
+      // ready=0, warning=5, contacts_affected=5. Counting `ready` alone made
+      // this read "0 rows will update 5 contact records" on the confirmation
+      // screen for a bulk, partly irreversible write.
+      render(
+        <ContactTagAssignmentPreview
+          preview={warningPreview({ contacts_affected: 9 })}
+          onConfirm={noop}
+          onCancel={noop}
+          isExecuting={false}
+        />,
+        { wrapper: createWrapper() }
+      )
+      expect(screen.queryByText(/\b0 rows\b/)).not.toBeInTheDocument()
+    })
+
+    it('still shows the replaces-existing note on a warning row', () => {
+      const p = warningPreview({ replacing_rows: 1 })
+      p.preview_rows = [
+        row({
+          status: 'warning',
+          severity: 'warning',
+          unknown_tag_names: ['Whatsap'],
+          replaces_existing: true,
+          currently_assigned: ['Viber'],
+        }),
+      ]
+      render(
+        <ContactTagAssignmentPreview
+          preview={p}
+          onConfirm={noop}
+          onCancel={noop}
+          isExecuting={false}
+        />,
+        { wrapper: createWrapper() }
+      )
+      // Matches both the summary banner and the per-row note; the row note is
+      // the one gated on status, so assert at least one rendered.
+      expect(screen.getAllByText(/replace/i).length).toBeGreaterThan(0)
+    })
+
+    it('degrades to a visible zero when the backend omits warning', () => {
+      // warning and replacing_rows are typed required, but a backend that
+      // predates them sends neither. The failure is silent in the worst
+      // direction: undefined renders in the card, `ready + undefined === 0` is
+      // NaN so execute stays enabled, and `undefined > 0` hides the overwrite
+      // banner — the one figure that must never read low.
+      const base = preview()
+      const summary = { ...base.summary } as Partial<typeof base.summary>
+      delete summary.warning
+      delete summary.replacing_rows
+      const p = { ...base, summary: summary as typeof base.summary }
+
+      render(
+        <ContactTagAssignmentPreview
+          preview={p}
+          onConfirm={noop}
+          onCancel={noop}
+          isExecuting={false}
+        />,
+        { wrapper: createWrapper() }
+      )
+
+      const card = screen.getAllByText('Partly skipped')[0].closest('div')
+      expect(card).toHaveTextContent('0')
+      expect(card).not.toHaveTextContent('NaN')
+      expect(screen.queryByText('undefined')).not.toBeInTheDocument()
+    })
+
+    it('does not crash on a status the backend added later', () => {
+      // The status union is a hand-maintained mirror of a Python enum in
+      // another repo. `toString` specifically: an `in` check matched it via the
+      // prototype, skipped the fallback, and threw on c.icon.
+      const p = preview({
+        preview_rows: [row({ status: 'toString' as never })],
+      })
+      expect(() =>
+        render(
+          <ContactTagAssignmentPreview
+            preview={p}
+            onConfirm={noop}
+            onCancel={noop}
+            isExecuting={false}
+          />,
+          { wrapper: createWrapper() }
+        )
+      ).not.toThrow()
+    })
   })
 })
