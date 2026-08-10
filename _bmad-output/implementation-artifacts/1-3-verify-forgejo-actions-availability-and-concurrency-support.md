@@ -852,6 +852,10 @@ claude-sonnet-5
   this story can be considered fully closed per Task 7.1. Runner registration token itself
   carries no separate ongoing risk: the runner it registered is already deregistered, and Forgejo
   registration tokens are single-use-to-register, not reusable credentials.
+  **Deliberately deferred (2026-08-10):** Oleg has decided to keep `fe_tmp` live and revoke it
+  only once all epics (1–7) of the Forgejo migration are complete, rather than revoke/reissue
+  per story. Task 7.1 and this story's Status therefore stay open long-term by design — this is
+  not a stalled or forgotten item.
 - `git status` on `main` is clean of probe scaffolding (no `.forgejo/`, no token, no runner
   config); `npm run lint` and `npm run typecheck` pass (both required `npm install` first — empty
   `node_modules` was pre-existing environment state, unrelated to this story's changes).
