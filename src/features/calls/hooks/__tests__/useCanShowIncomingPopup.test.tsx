@@ -82,6 +82,49 @@ describe('useCanShowIncomingPopup', () => {
     expect(queryByTestId('popup')).not.toBeNull()
   })
 
+  it('shows a second call that arrives while the first is still ringing', () => {
+    const { queryByTestId, rerender } = render(<Layout callId="c1" />)
+    expect(queryByTestId('popup')).not.toBeNull()
+
+    // A queue can replace one ringing call with another without ever passing
+    // through "no call" — and React batches "c1 ended, c2 arrived" into a
+    // single render. The registration c1's popup made must not decide against
+    // its own successor.
+    act(() => rerender(<Layout callId="c2" />))
+
+    expect(queryByTestId('popup')).not.toBeNull()
+  })
+
+  it('still hides a second call when a real call window is open', () => {
+    const { queryByTestId, rerender } = render(<Layout callId="c1" />)
+    useCallStore.getState().setMinimizedCall({
+      id: 'm1',
+      type: 'call-dialog',
+      clientName: 'X',
+      phoneNumber: '380000000000',
+      callId: 'c1',
+      callState: 'connected',
+      timestamp: Date.now(),
+    })
+
+    act(() => rerender(<Layout callId="c2" />))
+
+    // The operator minimized the first call and is on it; the discount above
+    // must not wave a second popup through.
+    expect(queryByTestId('popup')).toBeNull()
+  })
+
+  it('gives the registration back when it unmounts', () => {
+    const { unmount } = render(<Layout callId="c1" />)
+    expect(useCallStore.getState().openCallModal).toBe('call-dialog')
+
+    unmount()
+
+    // Otherwise logging out or navigating away leaves a registration that
+    // blocks every outbound call button with nothing on screen.
+    expect(useCallStore.getState().openCallModal).toBeNull()
+  })
+
   it('leaves a real call window alone when the popup goes away', () => {
     const { rerender } = render(<Layout callId="c1" />)
     useCallStore.getState().setMinimizedCall({

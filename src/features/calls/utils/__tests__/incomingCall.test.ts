@@ -119,6 +119,19 @@ describe('buildIncomingCallLoans — the owner each loan links to', () => {
     expect(buildIncomingCallLoans(orphan)?.[0]?.clientId).toBe(7)
   })
 
+  it('leaves an unmatched loan unlinked when the caller did match someone', () => {
+    const stray = payload({
+      client_id: 1,
+      clients: [anchored, other],
+      loans: [{ loan_id: 99, contract_number: 'L-99', remaining_debt: '900', status: 'active' }],
+    })
+
+    // The payload named candidates and this loan belongs to none of them, so
+    // its owner is unknown. Pointing the card at the anchored client would send
+    // the operator confidently to the wrong person.
+    expect(buildIncomingCallLoans(stray)?.[0]?.clientId).toBeNull()
+  })
+
   it('leaves the id absent when nothing identifies the caller', () => {
     const unknown = payload({
       clients: [],

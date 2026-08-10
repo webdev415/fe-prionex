@@ -13,7 +13,7 @@
  * timer, the same backend state polling, and the same auto-dismiss timer.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
@@ -25,6 +25,13 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+
+/**
+ * Consecutive not-found polls before a call window is discarded. The poll runs
+ * every 2 s, so this trades a few seconds of a stale bar against never dropping
+ * a live one on a single blip.
+ */
+const NOT_FOUND_POLLS_BEFORE_DISCARD = 3
 
 export function MinimizedCallBubble() {
   const { t } = useTranslation('common')
@@ -43,20 +50,48 @@ export function MinimizedCallBubble() {
 
   // Poll backend call state while minimized and call is active
   const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
-  const { data: callDetails, error: callDetailsError } = useCallDetails(activeCallId)
+  const {
+    data: callDetails,
+    error: callDetailsError,
+    errorUpdatedAt,
+  } = useCallDetails(activeCallId)
 
-  // The call-service not recognising this call is final: nothing will ever move
-  // it to a terminal state, so the auto-dismiss below can never fire. The bar
-  // then sits there indefinitely — and while it does, it counts as a call in
-  // progress and suppresses every incoming-call popup.
+  // A call the backend does not recognise will never reach a terminal state, so
+  // the auto-dismiss below can never fire and the bar sits there indefinitely —
+  // counting as a call in progress and suppressing every incoming-call popup.
+  //
+  // But one not-found is not proof. This also polls a *ringing* inbound call,
+  // whose id arrives on the socket, and discarding that window mid-ring costs
+  // the operator the caller card and the hang-up control with no way back.
+  // Losing a stale bar slowly is far cheaper than losing a live one quickly, so
+  // require the answer to repeat before acting on it.
+  const notFoundStreak = useRef(0)
   useEffect(() => {
+    if (activeCallId === null) {
+      notFoundStreak.current = 0
+      return
+    }
+    if (callDetails) {
+      notFoundStreak.current = 0
+      return
+    }
     if (!minimizedCall || !callDetailsError) return
-    const status = getErrorStatus(callDetailsError)
     // 404: no such call. 422: the id is not even one the backend can parse.
+    const status = getErrorStatus(callDetailsError)
     if (status !== 404 && status !== 422) return
+    notFoundStreak.current += 1
+    if (notFoundStreak.current < NOT_FOUND_POLLS_BEFORE_DISCARD) return
     setOpenCallModal(null)
     clearMinimizedCall()
-  }, [callDetailsError, minimizedCall, setOpenCallModal, clearMinimizedCall])
+  }, [
+    activeCallId,
+    callDetails,
+    callDetailsError,
+    errorUpdatedAt,
+    minimizedCall,
+    setOpenCallModal,
+    clearMinimizedCall,
+  ])
 
   // Live elapsed time: compute from the snapshot + time passed since minimized.
   // Only advance the timer for dialing/connected — otherwise 'initial' or 'ended'

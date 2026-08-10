@@ -3,6 +3,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useCallStore } from '@/stores/callStore'
 
 /**
+ * Give back the store registration the popup made on mount.
+ *
+ * Only when no other window has taken over: minimizing the popup turns it into
+ * a real call window, and that one is not ours to close.
+ */
+function releasePopupRegistration(): void {
+  const store = useCallStore.getState()
+  if (!store.minimizedCall) store.setOpenCallModal(null)
+}
+
+/**
  * Whether the incoming-call popup for `callId` may be rendered.
  *
  * False until the answer is known, so an undecided state can only ever hide the
@@ -23,7 +34,17 @@ export function useCanShowIncomingPopup(callId: string | null | undefined): bool
   const [decided, setDecided] = useState<{ callId: string; canShow: boolean } | null>(null)
 
   if (callId && decided?.callId !== callId) {
-    setDecided({ callId, canShow: !useCallStore.getState().isCallWindowLive() })
+    const store = useCallStore.getState()
+    // A popup already on screen has registered itself in the store. A queue can
+    // replace one ringing call with another without ever passing through "no
+    // call", so judging the successor against our own registration would
+    // suppress it — the same self-suppression this hook exists to prevent, one
+    // call later. Discount it and judge against real windows only.
+    const registrationIsOurs = decided !== null && decided.canShow
+    setDecided({
+      callId,
+      canShow: registrationIsOurs ? !store.minimizedCall : !store.isCallWindowLive(),
+    })
   } else if (!callId && decided) {
     setDecided(null)
   }
@@ -37,16 +58,24 @@ export function useCanShowIncomingPopup(callId: string | null | undefined): bool
       shownFor.current = callId
       return
     }
-    if (callId || !shownFor.current) return
-    shownFor.current = null
     // The popup is unmounted rather than closed — its consumer drops it from
     // the tree — so the modal's own "clear on close" effect never runs, and the
-    // registration it made would stay behind and suppress every later call for
-    // the rest of the session. Undo only what showing it caused, and only while
-    // no other window has taken over.
-    const store = useCallStore.getState()
-    if (!store.minimizedCall) store.setOpenCallModal(null)
+    // registration it made would stay behind. Left there it suppresses every
+    // later call AND keeps `isCallActive()` true, which blocks the operator
+    // from starting a call with nothing on screen to explain why.
+    if (!shownFor.current) return
+    shownFor.current = null
+    releasePopupRegistration()
   }, [callId, canShow])
+
+  useEffect(
+    () => () => {
+      if (!shownFor.current) return
+      shownFor.current = null
+      releasePopupRegistration()
+    },
+    []
+  )
 
   return canShow
 }

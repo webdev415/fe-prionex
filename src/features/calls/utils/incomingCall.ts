@@ -41,6 +41,7 @@ export function buildIncomingCallLoans(
   if (!incomingCall) return undefined
 
   const primaryClientId = resolvePrimaryClient(incomingCall, selectedClientId)?.client_id
+  const hasCandidates = (incomingCall.clients?.length ?? 0) > 0
 
   return incomingCall.loans?.map((loan) => {
     const owner = incomingCall.clients?.find((c) => c.loans.some((l) => l.loan_id === loan.loan_id))
@@ -48,7 +49,11 @@ export function buildIncomingCallLoans(
 
     return {
       id: loan.loan_id.toString(),
-      clientId: owner?.client_id ?? incomingCall.client_id ?? null,
+      // Only when there was nothing to match against. With candidates present,
+      // an unmatched loan belongs to somebody the payload did not name, and
+      // linking it to the anchored client would send the operator confidently
+      // to the wrong person's card.
+      clientId: owner?.client_id ?? (hasCandidates ? null : (incomingCall.client_id ?? null)),
       clientName: owner?.client_name || incomingCall.client_name || 'Unknown',
       loanNumber: loan.contract_number,
       counterparty: loan.seller_name ?? '',

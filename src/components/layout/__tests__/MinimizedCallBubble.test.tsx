@@ -38,11 +38,16 @@ function minimized(over: Partial<MinimizedCallInfo> = {}): MinimizedCallInfo {
 
 function renderBubble() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  // A fresh element each time: re-rendering the identical element lets React
+  // bail out, and the next poll's result would never be read.
+  const ui = () => (
     <QueryClientProvider client={client}>
       <MinimizedCallBubble />
     </QueryClientProvider>
   )
+  const result = render(ui())
+  // Stands in for the next turn of the 2 s details poll.
+  return { ...result, poll: () => result.rerender(ui()) }
 }
 
 describe('MinimizedCallBubble', () => {
@@ -50,16 +55,28 @@ describe('MinimizedCallBubble', () => {
     localStorage.clear()
     useCallStore.setState({ minimizedCall: null, openCallModal: null })
     useCallDetails.mockReset()
-    useCallDetails.mockReturnValue({ data: undefined, error: null })
+    useCallDetails.mockReturnValue({ data: undefined, error: null, errorUpdatedAt: 0 })
   })
 
   describe('a call the backend does not recognise', () => {
-    it.each([404, 422])('clears the window on %i', async (status) => {
+    it.each([404, 422])('clears the window after %i repeats', async (status) => {
       useCallStore.getState().setMinimizedCall(minimized())
       useCallStore.getState().setOpenCallModal('call-dialog')
-      useCallDetails.mockReturnValue({ data: undefined, error: notFound(status) })
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: notFound(status),
+        errorUpdatedAt: 1,
+      })
 
-      renderBubble()
+      const { poll } = renderBubble()
+      for (const at of [2, 3]) {
+        useCallDetails.mockReturnValue({
+          data: undefined,
+          error: notFound(status),
+          errorUpdatedAt: at,
+        })
+        poll()
+      }
 
       // Nothing will ever move this call to a terminal state, so the
       // auto-dismiss timer can never fire. Left alone, the bar suppresses every
@@ -70,9 +87,60 @@ describe('MinimizedCallBubble', () => {
       })
     })
 
+    it('keeps a ringing call through a single not-found blip', async () => {
+      useCallStore.getState().setMinimizedCall(minimized({ callState: 'incoming' }))
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: notFound(404),
+        errorUpdatedAt: 1,
+      })
+
+      renderBubble()
+
+      // This polls a ringing inbound call too. Dropping that window on one
+      // stray 404 costs the operator the caller card and the hang-up control
+      // while the phone is still ringing, with no way to get them back.
+      await waitFor(() => expect(useCallDetails).toHaveBeenCalled())
+      expect(useCallStore.getState().minimizedCall).not.toBeNull()
+    })
+
+    it('forgets the streak once the call is found again', async () => {
+      useCallStore.getState().setMinimizedCall(minimized())
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: notFound(404),
+        errorUpdatedAt: 1,
+      })
+      const { poll } = renderBubble()
+
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: notFound(404),
+        errorUpdatedAt: 2,
+      })
+      poll()
+
+      useCallDetails.mockReturnValue({
+        data: { call_id: minimized().callId, state: 'RINGING' },
+        error: null,
+        errorUpdatedAt: 2,
+      })
+      poll()
+
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: notFound(404),
+        errorUpdatedAt: 3,
+      })
+      poll()
+
+      await waitFor(() => expect(useCallDetails).toHaveBeenCalled())
+      expect(useCallStore.getState().minimizedCall).not.toBeNull()
+    })
+
     it('keeps the window when the lookup fails for another reason', async () => {
       useCallStore.getState().setMinimizedCall(minimized())
-      useCallDetails.mockReturnValue({ data: undefined, error: notFound(500) })
+      useCallDetails.mockReturnValue({ data: undefined, error: notFound(500), errorUpdatedAt: 1 })
 
       renderBubble()
 
@@ -87,6 +155,7 @@ describe('MinimizedCallBubble', () => {
       useCallDetails.mockReturnValue({
         data: { call_id: minimized().callId, state: 'ACTIVE' },
         error: null,
+        errorUpdatedAt: 0,
       })
 
       renderBubble()

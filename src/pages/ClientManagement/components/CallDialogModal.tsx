@@ -648,7 +648,7 @@ export function CallDialogModal({
         open={open}
         onClose={isCallActive ? handleMinimize : handleClose}
         maxWidth="xl"
-        className="p-4 sm:p-6"
+        className="flex max-h-[90vh] flex-col overflow-hidden p-4 sm:p-6"
         showCloseButton={false}
         preventOutsideClose={isCallActive}
       >
@@ -660,7 +660,7 @@ export function CallDialogModal({
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
-        <div className="flex max-h-[calc(90vh-2rem)] flex-col gap-4 sm:max-h-[calc(90vh-3rem)] sm:gap-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
           {/* Pinned: the number and its status. The operator reads these for
               the whole time the phone is ringing. */}
           <div className="flex shrink-0 flex-col gap-4 sm:gap-6">
@@ -1430,6 +1430,14 @@ function IncomingCallContext({
 // The shape is `IncomingModalLoan`, not a copy of it: the local duplicate this
 // replaces had silently fallen behind the real one, which is why the card had
 // no client to link to.
+/** Both loan dates arrive as raw backend strings; an unparseable one must not
+ *  render as the literal "Invalid Date". */
+function asDate(value?: string | null): string {
+  if (!value) return '—'
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString()
+}
+
 function LoanCard({ loan }: { loan: IncomingModalLoan }) {
   const { t } = useTranslation('common')
 
@@ -1489,7 +1497,7 @@ function LoanCard({ loan }: { loan: IncomingModalLoan }) {
           <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.saleDate')}:
           </span>
-          <span className="text-foreground text-sm font-medium">{loan.saleDate}</span>
+          <span className="text-foreground text-sm font-medium">{asDate(loan.saleDate)}</span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs">
@@ -1503,9 +1511,7 @@ function LoanCard({ loan }: { loan: IncomingModalLoan }) {
           <span className="text-muted-foreground text-xs">
             {t('pages.clients.modals.callDialog.lastContact')}:
           </span>
-          <span className="text-foreground text-sm font-medium">
-            {loan.lastContact ? new Date(loan.lastContact).toLocaleDateString() : '—'}
-          </span>
+          <span className="text-foreground text-sm font-medium">{asDate(loan.lastContact)}</span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs">
