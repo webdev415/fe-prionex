@@ -257,20 +257,17 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const describedByBase = id || generatedId
     const errorId = `${describedByBase}-error`
     const helperId = `${describedByBase}-helper`
-    // Opaque and always derived from the generated id, never a caller-supplied
-    // one, because Chrome ignores autocomplete="off" on fields it classifies as
-    // profile data and a date field reads as a birthday. This removes the name
-    // from what the classifier can see; the caller's `id` and the visible label
-    // are still readable by it, so a semantic call site (promise-date,
-    // task-due-date) may need the stronger autocomplete token (KAN-995).
-    // The character whitelist keeps the value well formed across React
-    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
-    const autofillName = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
-    // The rendered input carries the opaque id too, so a semantic call-site id
-    // (promise-date, task-due-date, start_date) never reaches the element the
-    // classifier inspects. The caller's `id` moves to the wrapper, where it
-    // stays available to CSS and automation but is not a form field.
-    const inputElementId = autofillName
+    // The rendered input's id AND name, always derived from the generated id and
+    // never from a caller-supplied one. Chrome ignores autocomplete="off" on
+    // fields it classifies as profile data, and it classifies from id, name,
+    // placeholder and label — so a semantic call site (promise-date,
+    // task-due-date, start_date) must not reach the element it inspects. The
+    // caller's `id` moves to the wrapper instead, where it stays available to
+    // CSS and automation but is not a form field. The visible label is still
+    // readable by the classifier, which is what the `autoComplete` prop exists
+    // to override (KAN-995). The character whitelist keeps the value well formed
+    // across React versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
+    const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
     const { t } = useTranslation('common')
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
@@ -426,7 +423,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       <div id={id} className={`w-full ${className || ''}`}>
         {label && (
           <label
-            htmlFor={inputElementId}
+            htmlFor={opaqueFieldId}
             className="text-foreground mb-1.5 block text-sm font-light"
           >
             {label}
@@ -440,8 +437,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           <div className="date-select-wrapper" data-has-error={hasError ? 'true' : 'false'}>
             <DatePicker
               ref={ref}
-              id={inputElementId}
-              name={autofillName}
+              id={opaqueFieldId}
+              name={opaqueFieldId}
               autoComplete={autoComplete}
               className={inputClassName}
               selected={parseDate(value)}
