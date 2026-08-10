@@ -24,3 +24,71 @@
   out-of-scope for a citation-only pass; a neighbouring row was touched (a new risk row added
   directly below it), which is why it's noted here rather than silently left. Needs a content
   fix, not a line-number repair — someone should reconcile that row's wording with D7.
+
+## Deferred from: code review of story 1-13-stop-forgejo-from-executing-the-legacy-github-workflows (2026-08-10)
+
+**Actionable follow-ups this story created and did not track anywhere:**
+
+- 🔴 **Re-provision the org Actions secret `SLACK_CD_WEBHOOK_URL` before Story 1.12.** Story 1.13
+  overwrote its value with a non-resolving `example.invalid` stub. Forgejo secret values are
+  write-only, so the original webhook URL is **unrecoverable** — whoever created it on
+  2026-08-10 must supply it again. `docs/migration-decisions.md#d6` still records this secret as
+  «org, без изменений» owned by Story 1.12, so Story 1.12 will see the name already populated and
+  skip it, leaving deploy notifications silently dead. The overwrite was justified by a misreading
+  of `CD.yml` (`deploy` has `needs: build-and-push`; the `if: always()` Slack step is step-scoped
+  and cannot run when the job is skipped) — see `#d9` «Находки инстанса». Also still unanswered:
+  why five secrets matching D6's naming scheme appeared minutes before the story's pre-flight.
+- **Re-verify the fallback mechanism on any Forgejo upgrade.** `#d9` says «перепроверить при
+  апгрейде инстанса», citing [forgejo#9203](https://codeberg.org/forgejo/forgejo/issues/9203) — a
+  live upstream proposal to make foreign workflow directories configurable, i.e. exactly the change
+  that would break this mechanism. No sprint item, no owner and no epic gate holds this recheck;
+  this bullet is the only tracking it has.
+- **Stories 1.7, 1.8 and 4.4 must not design around an Actions-run cancel capability.** No cancel
+  endpoint exists in this Forgejo version — `POST .../actions/runs/{id}/cancel` → 404, confirmed
+  against the full swagger spec. Story 1.3 and Story 1.13 both assumed one existed; Story 1.13's
+  control run consequently ran to completion on another team's runner. Whether the **web UI**
+  offers a cancel control was not checked.
+- **Partially resolved 2026-08-10 (Oleg: "branch protection, preprod, prod, main"):** branch
+  protection (block force-push and deletion for non-admins) added on `main` and `staging`. Still
+  open: `development` has no rule; no protection stops a plain `git revert`/`git rm` of the
+  placeholder (git cannot track an empty directory, and that's an ordinary fast-forward); no tag
+  protection; `apply_to_admins: false` means the admin-scoped `fe_tmp` token itself bypasses the
+  rule entirely. Decide whether any of these gaps are worth closing, and whether the tag rule
+  ("cut `v*` only from commits carrying `.forgejo/workflows/") belongs in the Story 6.2
+  production-approval regulation (Story 1.13's Open Question 5). See `#d9`.
+
+**Findings deferred as not actionable now:**
+
+- **The "accidental protection" premise was never observed, only assumed.**
+  `.github/workflows/CD.yml:83-87` logs into `ghcr.io` with `username: ${{ github.actor }}` /
+  `password: ${{ secrets.GITHUB_TOKEN }}`. Forgejo auto-injects `GITHUB_TOKEN` per run, so it never
+  appears in the org/repo secret inventory Story 1.13's Task 2.1 enumerated — the pre-flight
+  inventoried secrets the blocking step does not consume. The real failure mode (ghcr.io rejecting
+  a Forgejo-issued token) is inferred. Verifying it means deliberately creating a CD run.
+- **Actions runs 1–2 remain unattributed.** Story 1.13's Dev Notes flagged them as "unexplained —
+  they may themselves be prior fallback executions"; Task 1.6 closed the point with "Story 1.3's
+  early `probe-smoke` failures, as already documented", but neither Story 1.3's story file nor D8
+  documents them — D8 only calls run 3 «первый успешно выполнившийся пробный ран». No run id, event
+  type or timestamp was offered. This is the one place a prior, unattributed legacy fallback
+  execution would surface. Needs API access to settle.
+- **The `push` verdict has no control of its own.** Story 1.13's only control (run #13) was a
+  `pull_request`; the three decisive "no run" results are `push` events. That a push *does* create
+  a run without the placeholder comes from D8 by inference, never observed on the same counter.
+  Obtaining such a control means deliberately re-arming the hazard on a CD ref.
+- **Absence was measured only by run `total_count`.** Story 1.13's own Task 1.6 argued "Index alone
+  is not enough" and required the newest run id alongside it; only the count was recorded from
+  Task 3.8 onward. A count is invariant to a created-then-deleted run, and forgejo#10259 makes run
+  states ambiguous on this version. The observations cannot be reconstructed after the fact.
+- **Story 1.13 exceeded its own write budget on the over-broad `fe_tmp` token.** Task 1.4 allowed
+  "the two writes this story needs (cancel a run; if escalating, disable the Actions unit)".
+  Neither happened; three unplanned writes did — the org-secret `PUT`, the `has_pull_requests`
+  `PATCH`, and direct pushes to three shared branches. Revocation is already tracked above as
+  Story 1.3 Task 7.1; this raises its urgency further.
+- **497 of 501 remote branches still carry an executable legacy `.github/workflows/CD.yml`** with a
+  live `v*` tag trigger and `workflow_dispatch` (`environment` defaulting to `production`). The
+  `#d9` invariant is proven on three branch heads; the mechanism is per-commit. Bulk remediation is
+  outside Story 1.13's scope, but it bounds what Story 1.12 may safely arm. The PR-triggered
+  variant of this risk (any PR from one of those branches running legacy CI on `ci-hub`) is closed
+  for now — `has_pull_requests` was reverted to `false` on 2026-08-10 (Oleg: "ci-hub не надо
+  запускать") — but re-opens automatically if Story 2.1 or anyone else re-enables the unit without
+  re-checking this.

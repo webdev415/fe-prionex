@@ -4,7 +4,7 @@ baseline_commit: e4dcb734
 
 # Story 1.3: Verify Forgejo Actions Availability and Concurrency Support
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -854,8 +854,12 @@ claude-sonnet-5
   registration tokens are single-use-to-register, not reusable credentials.
   **Deliberately deferred (2026-08-10):** Oleg has decided to keep `fe_tmp` live and revoke it
   only once all epics (1–7) of the Forgejo migration are complete, rather than revoke/reissue
-  per story. Task 7.1 and this story's Status therefore stay open long-term by design — this is
-  not a stalled or forgotten item.
+  per story.
+  **Story closed anyway (2026-08-10, Oleg: "закрыть если сделано" — during Story 1.13's code
+  review):** Task 7.1 is left unchecked and the token stays live, by the same deliberate choice
+  above, but this story's own Status is set to `done` regardless — the token revocation is
+  tracked as a standalone cross-epic item (this note, plus `deferred-work.md`), not as a gate on
+  Story 1.3's completion.
 - `git status` on `main` is clean of probe scaffolding (no `.forgejo/`, no token, no runner
   config); `npm run lint` and `npm run typecheck` pass (both required `npm install` first — empty
   `node_modules` was pre-existing environment state, unrelated to this story's changes).
