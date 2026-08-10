@@ -69,6 +69,7 @@ import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import { pickSingleContactCandidate } from './taChainAutoSelect'
 import { applyStepEdits, collectFromSnapshot, type StepEdit } from './taChainSaveData'
 
 interface Props {
@@ -462,6 +463,10 @@ export function ChainExecutor({
   // Template preset values (from quick pick)
   const presetValuesRef = useRef<Record<string, string>>({})
 
+  // Step id whose lone contact candidate was already auto-selected (KAN-977),
+  // so unticking that radio is not immediately undone. Cleared on step change.
+  const autoSelectedContactStepRef = useRef<number | null>(null)
+
   // Accumulated data across steps — refs for synchronous access (no React batching issues)
   const collectedStepDataRef = useRef<Record<string, string>>({})
   const collectedDropdownValueIdsRef = useRef<Record<string, number>>({})
@@ -806,6 +811,11 @@ export function ChainExecutor({
     const phonePrefill =
       isContactStep && prefilledPhone && contactSource === stepSource ? prefilledPhone : ''
     setStepValue(preset ?? phonePrefill)
+    // New step, so the single-candidate auto-select (KAN-977, below) is allowed
+    // to run again. Cleared here rather than keyed on step id so returning to a
+    // step via rewind re-arms it, matching what the operator sees: the field
+    // was cleared, so it should refill.
+    autoSelectedContactStepRef.current = null
     setPromiseDate('')
     setPromiseAmount('')
   }, [
@@ -817,6 +827,27 @@ export function ChainExecutor({
     contactSource,
     prefilledPhone,
   ])
+
+  // KAN-977 — see ``pickSingleContactCandidate`` for the rules.
+  //
+  // Its own effect, after the reset above, because the candidate list is
+  // fetched: on the render where the step becomes current it is still
+  // ``undefined`` and the phones land a moment later. Folding this into the
+  // reset and adding ``contactOptions`` to those deps would re-run the whole
+  // reset when they arrive, wiping anything already entered.
+  useEffect(() => {
+    const pick = pickSingleContactCandidate({
+      fieldType: currentTA?.field_type,
+      isEmailStep: isEmailContactStep,
+      candidates: contactOptions,
+      currentValue: stepValue,
+      alreadyAutoSelected: autoSelectedContactStepRef.current === currentStep?.id,
+    })
+    if (pick === null) return
+
+    autoSelectedContactStepRef.current = currentStep?.id ?? null
+    setStepValue(pick)
+  }, [contactOptions, currentTA?.field_type, isEmailContactStep, currentStep?.id, stepValue])
 
   // ── Step editing ──────────────────────────────────────────────────────────
 
@@ -2623,6 +2654,28 @@ function InstantStepCard({
     contactSource && isEmailContact ? contactSource : null
   )
   const contactOptions = isEmailContact ? emails : phones
+
+  // KAN-977, all-at-once mode — same rule as the wizard, shared via
+  // ``pickSingleContactCandidate``. The effect is repeated rather than lifted
+  // because this card owns its own contact query: the parent cannot call the
+  // hook per step without calling hooks in a loop (see the note above).
+  //
+  // Once per mount is enough here — a card remounts when the chain selection
+  // changes, and there is no step-to-step navigation to re-arm.
+  const autoSelectedRef = useRef(false)
+  useEffect(() => {
+    const pick = pickSingleContactCandidate({
+      fieldType: ta.field_type,
+      isEmailStep: isEmailContact,
+      candidates: contactOptions,
+      currentValue: value.value,
+      alreadyAutoSelected: autoSelectedRef.current,
+    })
+    if (pick === null) return
+
+    autoSelectedRef.current = true
+    onChange({ value: pick })
+  }, [contactOptions, ta.field_type, isEmailContact, value.value, onChange])
 
   // Mirror the wizard-mode debt filter: hide closed debts unless the
   // step's show_closed_credits admin flag is set.
