@@ -24,17 +24,33 @@ import {
 } from '@/lib/dateUtils'
 
 /**
- * Password-manager opt-outs for the field we render ourselves. Chrome's own
- * autofill is handled by ``autoComplete``/``name`` on <DatePicker> (which
- * covers both the masked input and react-datepicker's built-in one); these
- * cover LastPass / 1Password / Dashlane, whose overlays block the calendar in
- * exactly the same way (KAN-995).
+ * LastPass / 1Password / Dashlane opt-outs. Their overlays cover the calendar
+ * exactly the way Chrome's own suggestion list does (KAN-995).
+ *
+ * react-datepicker builds its built-in input from a fixed prop list and never
+ * forwards ``data-*``, so these can only land on an input we render ourselves.
+ * That is why both modes go through a custom input below, not just the masked
+ * one — otherwise the ~35 calendar-only call sites (client date of birth,
+ * passport issued/expires, …) would stay exposed.
  */
 const PASSWORD_MANAGER_OPT_OUT = {
   'data-lpignore': 'true',
   'data-1p-ignore': '',
   'data-form-type': 'other',
 } as const
+
+/**
+ * Calendar-only counterpart of ``MaskedDateTimeInput``: a faithful pass-through
+ * of everything react-datepicker injects, existing only so the opt-out
+ * attributes above reach the DOM node. Typing is still blocked by the
+ * ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
+ * through a custom input.
+ */
+const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function PlainDateInput(props, ref) {
+    return <input {...props} ref={ref} {...PASSWORD_MANAGER_OPT_OUT} />
+  }
+)
 
 /**
  * Custom input used when ``allowManualInput`` is on. react-datepicker clones
@@ -209,11 +225,15 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
-    // Deliberately opaque and derived from the generated id, never from a
-    // caller-supplied one: Chrome ignores autocomplete="off" on fields whose
-    // name/id it can classify as profile data (a date field reads as a
-    // birthday), so it must have nothing to match on (KAN-995).
-    const autofillName = `ds-${generatedId.replace(/:/g, '')}`
+    // Opaque and always derived from the generated id, never a caller-supplied
+    // one, because Chrome ignores autocomplete="off" on fields it classifies as
+    // profile data and a date field reads as a birthday. This removes the name
+    // from what the classifier can see; the caller's `id` and the visible label
+    // are still readable by it, so a semantic call site (promise-date,
+    // task-due-date) may need the stronger autocomplete token (KAN-995).
+    // The character whitelist keeps the value well formed across React
+    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
+    const autofillName = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
     const { t } = useTranslation('common')
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
@@ -398,7 +418,10 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
                       />
                     ),
                   }
-                : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}
+                : {
+                    customInput: <PlainDateInput />,
+                    onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault(),
+                  })}
               dateFormat={format}
               placeholderText={effectivePlaceholder}
               disabled={disabled}

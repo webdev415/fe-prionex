@@ -112,19 +112,23 @@ describe('DateSelect (manual input)', () => {
 // own (allowManualInput) and react-datepicker's built-in one (KAN-995).
 
 describe('DateSelect (browser autofill suppression)', () => {
-  it('suppresses autofill on the masked manual input', () => {
-    render(<DateSelect allowManualInput format="dd.MM.yyyy" value="2026-08-05" />)
+  // Both modes must carry the same attributes. react-datepicker never forwards
+  // data-* to its built-in input, so calendar-only mode renders through
+  // PlainDateInput purely to get them onto the DOM node; if that ever reverts
+  // to the built-in input these assertions are what catches it.
+  it.each([
+    ['manual', true],
+    ['calendar-only', false],
+  ])('suppresses autofill on the %s input', (_mode, allowManualInput) => {
+    render(
+      <DateSelect allowManualInput={allowManualInput} format="dd.MM.yyyy" value="2026-08-05" />
+    )
 
     const input = screen.getByRole('textbox')
     expect(input).toHaveAttribute('autocomplete', 'off')
     expect(input).toHaveAttribute('data-lpignore', 'true')
+    expect(input).toHaveAttribute('data-1p-ignore')
     expect(input).toHaveAttribute('data-form-type', 'other')
-  })
-
-  it('suppresses autofill on the calendar-only input', () => {
-    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" />)
-
-    expect(screen.getByRole('textbox')).toHaveAttribute('autocomplete', 'off')
   })
 
   it('gives the field a name Chrome cannot classify as profile data', () => {
@@ -135,5 +139,8 @@ describe('DateSelect (browser autofill suppression)', () => {
     expect(name).toBeTruthy()
     expect(name).not.toContain('assignment')
     expect(name).not.toContain('date')
+    // useId's delimiters differ between React 18 (':r0:') and 19 ('_r_0_');
+    // the name must stay attribute-safe on either.
+    expect(name).toMatch(/^ds-[a-zA-Z0-9_-]+$/)
   })
 })
