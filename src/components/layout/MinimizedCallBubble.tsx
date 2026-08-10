@@ -19,6 +19,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
 import { invalidateCallRelatedQueries } from '@/features/calls/utils/queryInvalidation'
+import { getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
@@ -42,7 +43,20 @@ export function MinimizedCallBubble() {
 
   // Poll backend call state while minimized and call is active
   const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
-  const { data: callDetails } = useCallDetails(activeCallId)
+  const { data: callDetails, error: callDetailsError } = useCallDetails(activeCallId)
+
+  // The call-service not recognising this call is final: nothing will ever move
+  // it to a terminal state, so the auto-dismiss below can never fire. The bar
+  // then sits there indefinitely — and while it does, it counts as a call in
+  // progress and suppresses every incoming-call popup.
+  useEffect(() => {
+    if (!minimizedCall || !callDetailsError) return
+    const status = getErrorStatus(callDetailsError)
+    // 404: no such call. 422: the id is not even one the backend can parse.
+    if (status !== 404 && status !== 422) return
+    setOpenCallModal(null)
+    clearMinimizedCall()
+  }, [callDetailsError, minimizedCall, setOpenCallModal, clearMinimizedCall])
 
   // Live elapsed time: compute from the snapshot + time passed since minimized.
   // Only advance the timer for dialing/connected — otherwise 'initial' or 'ended'
