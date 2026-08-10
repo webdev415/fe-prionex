@@ -660,101 +660,111 @@ export function CallDialogModal({
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
-        <div className="flex flex-col gap-4 sm:gap-6">
-          {telephonyUnavailable && (
-            <div
-              role="alert"
-              className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
-            >
-              Telephony is temporarily unavailable
-            </div>
-          )}
+        <div className="flex max-h-[calc(90vh-2rem)] flex-col gap-4 sm:max-h-[calc(90vh-3rem)] sm:gap-6">
+          {/* Pinned: the number and its status. The operator reads these for
+              the whole time the phone is ringing. */}
+          <div className="flex shrink-0 flex-col gap-4 sm:gap-6">
+            {telephonyUnavailable && (
+              <div
+                role="alert"
+                className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
+              >
+                Telephony is temporarily unavailable
+              </div>
+            )}
 
-          {/* Call Info */}
-          <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
-              <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
-            </div>
-            <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
-              {phoneNumber}
-            </div>
-            <div className="bg-primary flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
-              <div className="bg-primary-foreground h-2 w-2 rounded-full" />
-              <span className="text-primary-foreground text-xs font-medium sm:text-sm">
-                {t('pages.clients.modals.callDialog.incomingCall')}
-              </span>
+            {/* Call Info */}
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
+                <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
+              </div>
+              <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
+                {phoneNumber}
+              </div>
+              <div className="bg-primary flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
+                <div className="bg-primary-foreground h-2 w-2 rounded-full" />
+                <span className="text-primary-foreground text-xs font-medium sm:text-sm">
+                  {t('pages.clients.modals.callDialog.incomingCall')}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Guard on the context too: a call restored from minimized carries the
+          {/* Everything below the number scrolls together. Pinning the client
+              card too left the loan list a sliver on a normal window — and what
+              has to stay on screen is the caller's number and the Reject
+              button, not the whole card. */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:gap-6">
+            {/* Guard on the context too: a call restored from minimized carries the
               resolved client but not the full candidate list, and must not be
               mistaken for an unresolved caller. */}
-          {incomingClients.length === 0 && !incomingContext ? (
-            <IncomingCallerNotFound onSearchByPhone={onSearchByPhone} t={t} />
-          ) : (
-            <>
-              {incomingClients.length > 1 && (
-                <IncomingClientPicker
-                  clients={incomingClients}
-                  selectedClientId={incomingContext?.client_id ?? selectedIncomingClientId}
-                  onSelect={onSelectIncomingClient}
-                  t={t}
-                />
-              )}
-              <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
-            </>
-          )}
+            {incomingClients.length === 0 && !incomingContext ? (
+              <IncomingCallerNotFound onSearchByPhone={onSearchByPhone} t={t} />
+            ) : (
+              <>
+                {incomingClients.length > 1 && (
+                  <IncomingClientPicker
+                    clients={incomingClients}
+                    selectedClientId={incomingContext?.client_id ?? selectedIncomingClientId}
+                    onSelect={onSelectIncomingClient}
+                    t={t}
+                  />
+                )}
+                <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
+              </>
+            )}
 
-          {/* Loans Information */}
-          {loans.length > 0 && (
-            <div className="flex flex-col gap-3 sm:gap-4">
-              {/* Primary loans */}
-              {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-error-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
-                      {t('pages.clients.modals.callDialog.primary')}
-                    </span>
-                    <span className="text-foreground text-xs font-medium sm:text-sm">
-                      {t('pages.clients.modals.callDialog.primaryLoans')}
-                    </span>
+            {/* Loans Information */}
+            {loans.length > 0 && (
+              <div className="flex flex-col gap-3 sm:gap-4">
+                {/* Primary loans */}
+                {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="bg-error-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
+                        {t('pages.clients.modals.callDialog.primary')}
+                      </span>
+                      <span className="text-foreground text-xs font-medium sm:text-sm">
+                        {t('pages.clients.modals.callDialog.primaryLoans')}
+                      </span>
+                    </div>
+                    {loans
+                      .filter((loan) => loan.priority === 'Critical')
+                      .map((loan) => (
+                        <LoanCard key={loan.id} loan={loan} />
+                      ))}
                   </div>
-                  {loans
-                    .filter((loan) => loan.priority === 'Critical')
-                    .map((loan) => (
-                      <LoanCard key={loan.id} loan={loan} />
-                    ))}
-                </div>
-              )}
+                )}
 
-              {/* Third-party loans */}
-              {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-warning-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
-                      {t('pages.clients.priorities.high')}
-                    </span>
-                    <span className="text-foreground text-xs font-medium sm:text-sm">
-                      {t('pages.clients.modals.callDialog.thirdPartyLoans')}
-                    </span>
+                {/* Third-party loans */}
+                {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="bg-warning-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
+                        {t('pages.clients.priorities.high')}
+                      </span>
+                      <span className="text-foreground text-xs font-medium sm:text-sm">
+                        {t('pages.clients.modals.callDialog.thirdPartyLoans')}
+                      </span>
+                    </div>
+                    {loans
+                      .filter((loan) => loan.priority !== 'Critical')
+                      .map((loan) => (
+                        <LoanCard key={loan.id} loan={loan} />
+                      ))}
                   </div>
-                  {loans
-                    .filter((loan) => loan.priority !== 'Critical')
-                    .map((loan) => (
-                      <LoanCard key={loan.id} loan={loan} />
-                    ))}
-                </div>
-              )}
+                )}
 
-              <button className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
-                {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
-                <Icons.ArrowDown size={14} className="sm:size-4" />
-              </button>
-            </div>
-          )}
+                <button className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
+                  {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
+                  <Icons.ArrowDown size={14} className="sm:size-4" />
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Call Actions */}
-          <div className="flex flex-col gap-2 sm:gap-3">
+          <div className="flex shrink-0 flex-col gap-2 sm:gap-3">
             <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 sm:px-4">
               <Icons.StopWatch size={14} className="text-muted-foreground sm:size-4" />
               <span className="text-muted-foreground text-xs sm:text-sm">
@@ -1492,11 +1502,13 @@ function LoanCard({
           <span className="text-muted-foreground text-xs">
             {t('pages.clients.modals.callDialog.lastContact')}:
           </span>
-          <span className="text-foreground text-sm font-medium">{loan.lastContact}</span>
+          <span className="text-foreground text-sm font-medium">
+            {loan.lastContact ? new Date(loan.lastContact).toLocaleDateString() : '—'}
+          </span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs">
-            {t('pages.clients.detail.tableHeaders.debt')}:
+            {t('pages.clients.detail.tableHeaders.debt', 'Debt')}:
           </span>
           <span className="text-foreground text-sm font-medium">
             {formatMoneyUAHTwoDecimals(loan.debt)}
