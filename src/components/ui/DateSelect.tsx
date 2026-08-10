@@ -48,7 +48,7 @@ const PASSWORD_MANAGER_OPT_OUT = {
  */
 const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function PlainDateInput(props, ref) {
-    return <input {...props} ref={ref} {...PASSWORD_MANAGER_OPT_OUT} />
+    return <input type="text" {...props} ref={ref} {...PASSWORD_MANAGER_OPT_OUT} />
   }
 )
 
@@ -168,6 +168,16 @@ export interface DateSelectProps {
    * snap back to the active filter value.
    */
   resyncInvalidOnBlur?: boolean
+  /**
+   * Escape hatch for Chrome's autofill (KAN-995). ``off`` suppresses the
+   * saved-value list everywhere, but Chrome ignores it on fields its classifier
+   * reads as profile data, and it reads the caller's ``id`` and the visible
+   * label as well as the (deliberately opaque) ``name``. A semantic call site
+   * such as ``id="promise-date"`` labelled "Promise date" can therefore still
+   * get a suggestion; pass ``new-password`` there, which Chrome always honours,
+   * at the cost of it occasionally offering to save a password.
+   */
+  autoComplete?: string
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -218,6 +228,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       onValidityChange,
       invalidText,
       resyncInvalidOnBlur = false,
+      autoComplete = 'off',
     },
     ref
   ) => {
@@ -402,7 +413,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               ref={ref}
               id={inputId}
               name={autofillName}
-              autoComplete="off"
+              autoComplete={autoComplete}
               className={inputClassName}
               selected={parseDate(value)}
               onChange={handleChange}

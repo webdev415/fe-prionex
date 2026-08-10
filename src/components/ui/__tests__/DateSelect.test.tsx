@@ -144,3 +144,51 @@ describe('DateSelect (browser autofill suppression)', () => {
     expect(name).toMatch(/^ds-[a-zA-Z0-9_-]+$/)
   })
 })
+
+// Calendar-only mode no longer uses react-datepicker's own input (KAN-995
+// routes it through PlainDateInput so the opt-out attributes reach the DOM).
+// These pin the two properties that swap could break: typing stays rejected by
+// onChangeRaw, and the popup still opens on click.
+
+describe('DateSelect (calendar-only behaviour after the custom-input swap)', () => {
+  it('still rejects typing', async () => {
+    const onChange = vi.fn()
+    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" onChange={onChange} />)
+
+    const input = screen.getByRole('textbox') as HTMLInputElement
+    const before = input.value
+    await userEvent.type(input, '99')
+
+    expect(input.value).toBe(before)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('still opens the calendar on click', async () => {
+    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" />)
+
+    await userEvent.click(screen.getByRole('textbox'))
+
+    expect(document.querySelector('.react-datepicker')).not.toBeNull()
+    expect(document.querySelector('.react-datepicker__day')).not.toBeNull()
+  })
+
+  it('keeps the input inside the library wrapper the theme CSS targets', () => {
+    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" />)
+
+    const input = screen.getByRole('textbox')
+    expect(input.closest('.react-datepicker__input-container')).not.toBeNull()
+    expect(input).toHaveAttribute('type', 'text')
+  })
+})
+
+describe('DateSelect (autoComplete escape hatch)', () => {
+  it('defaults to off', () => {
+    render(<DateSelect value="2026-08-05" />)
+    expect(screen.getByRole('textbox')).toHaveAttribute('autocomplete', 'off')
+  })
+
+  it('lets a semantic call site pass a stronger token', () => {
+    render(<DateSelect id="promise-date" autoComplete="new-password" value="2026-08-05" />)
+    expect(screen.getByRole('textbox')).toHaveAttribute('autocomplete', 'new-password')
+  })
+})
