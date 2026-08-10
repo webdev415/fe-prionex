@@ -127,7 +127,13 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 ### Фаза 1 — Runner-инфраструктура
 
-1. Поднять `forgejo-runner` (отдельная VM или контейнер; **не** на s2).
+1. Поднять `forgejo-runner` (отдельная VM или контейнер; **не** на s2). ⚠️ На момент Story 1.3
+   на инстансе уже зарегистрированы два **чужих** org-раннера — `ci-hub` (`ubuntu-latest`) и
+   `s1-build-crm` (`s1`, `ci`, `build-crm`); Story 1.3 (2026-08-08) и Story 1.13 (2026-08-10)
+   застали также третий, `s1-deploy-dev-preprod` (`deploy-dev-preprod`). Ни один из них не
+   усыновляется — свой раннер этой историей регистрируется на уровне **репозитория**, не
+   организации, и не берёт занятые метки. См.
+   [migration-decisions.md#d8](./migration-decisions.md#d8).
 2. Зарегистрировать на уровне организации `CRM` с **двумя метками**:
    - `node-20:docker://node:20-bookworm` — для CI-job (lint / typecheck / test / build);
    - `docker-build` — для сборки образа: **обязательно** dind-образ либо проброс `/var/run/docker.sock` в конфиге runner'а. Без этого `docker/*` actions не работают: внутри `node:20-bookworm` нет ни docker CLI, ни сокета.
@@ -242,6 +248,13 @@ Fallback-значения URL-ов из `CD.yml:47,57` при переносе *
 
 ## 4. Итоговый набор файлов
 
+> ⚠️ **`.forgejo/workflows/` уже существует** на `main`, `staging` и `development` — Story 1.13
+> (2026-08-10) положила туда инертный `README.md`, который не даёт Forgejo провалиться в
+> `.github/workflows/` (см. [migration-decisions.md#d9](./migration-decisions.md#d9)). Story 2.1
+> **заполняет** эту директорию реальными воркфлоу ниже — она не создаёт её с нуля.
+> **Директория не должна опустеть без трекнутого файла, пока `.github/workflows/` существует в
+> дереве** — иначе легаси-fallback молча возвращается на всех трёх ветках.
+
 ```
 .forgejo/workflows/
   ci.yml              # PR + feature push: lint, typecheck, test, build (метка node-20)
@@ -270,6 +283,7 @@ docs/deployment.md          # обновлённый процесс
 | Потеря SSH-доступа к s2 из-за нового ключа | Старый ключ не отзывать до конца фазы 8 |
 | Оба пайплайна одновременно деплоят на один стенд | В фазах 3-6 Forgejo деплоит **только** на новые стенды; job `deploy` в GitHub CD отключается в начале фазы 7 |
 | Неопределённость с зеркалированием GitHub↔Forgejo | Фаза 0.4-0.5 |
+| Push на `main`/`staging`/`development` попадает в legacy `.github/workflows/CD.yml` на чужом раннере и деплоит на PROD | риск не реализовался — Story 1.13 положила `.forgejo/workflows/` на все три ветки и доказала тестом отсутствие рана на каждой ([migration-decisions.md#d9](./migration-decisions.md#d9)); митигация: не опустошать директорию, пока `.github/workflows/` существует |
 
 ---
 
