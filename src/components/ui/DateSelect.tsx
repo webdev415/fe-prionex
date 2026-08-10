@@ -263,9 +263,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // placeholder and label — so a semantic call site (promise-date,
     // task-due-date, start_date) must not reach the element it inspects. The
     // caller's `id` moves to the wrapper instead, where it stays available to
-    // CSS and automation but is not a form field. The visible label is still
-    // readable by the classifier, which is what the `autoComplete` prop exists
-    // to override (KAN-995). The character whitelist keeps the value well formed
+    // CSS and automation but is not a form field. The visible label and the
+    // placeholder are still readable by the classifier, which is what the
+    // `autoComplete` prop exists to override (KAN-995). The character whitelist keeps the value well formed
     // across React versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
     const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
     const { t } = useTranslation('common')
@@ -404,6 +404,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const manualInlineError =
       manualInvalid && isDatetimeManual ? t('pages.clientChains.errors.dateInvalid') : undefined
     const displayedError = error || manualInlineError
+    // Must track exactly when the <p id={errorId}> below renders, not when a
+    // message merely exists: `manualInlineError` is datetime-manual only, while
+    // the paragraph also renders for `manualInvalid && invalidText`. Keying
+    // aria-describedby off `displayedError` instead left the reference dangling
+    // in both directions — pointing at a helper that this state suppresses, and
+    // pointing at an error paragraph that never rendered.
+    const errorMessageShown = !!error || (manualInvalid && !!invalidText)
 
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border border-input-border bg-input pr-4 pl-10 text-sm font-light text-foreground transition-all outline-none placeholder:text-muted-foreground',
@@ -464,7 +471,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               disabled={disabled}
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
-              aria-describedby={displayedError ? errorId : helperText ? helperId : undefined}
+              aria-describedby={errorMessageShown ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
               popperClassName="date-select-popper"

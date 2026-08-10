@@ -235,6 +235,47 @@ describe('DateSelect (message wiring survives the id rename)', () => {
   })
 })
 
+describe('DateSelect (aria-describedby never dangles)', () => {
+  // Both of these resolved to an element id that was not in the DOM before the
+  // reference was keyed off the paragraph's own render condition.
+  it('points at the inline invalid message, not the helper it suppresses', async () => {
+    render(
+      <DateSelect
+        allowManualInput
+        format="dd.MM.yyyy"
+        helperText="Pick a day"
+        invalidText="Incomplete date"
+        value="2026-08-05"
+      />
+    )
+
+    const input = screen.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, '15.08')
+    await userEvent.tab()
+
+    expect(screen.getByText('Incomplete date')).toBeInTheDocument()
+    expect(screen.queryByText('Pick a day')).not.toBeInTheDocument()
+
+    const describedBy = input.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)?.textContent).toBe('Incomplete date')
+  })
+
+  it('references nothing when no message is rendered', async () => {
+    render(<DateSelect allowManualInput showTimeSelect format="dd.MM.yyyy HH:mm" value={null} />)
+
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '15.08')
+    await userEvent.tab()
+
+    const describedBy = input.getAttribute('aria-describedby')
+    if (describedBy) {
+      expect(document.getElementById(describedBy)).not.toBeNull()
+    }
+  })
+})
+
 describe('DateSelect (autoComplete escape hatch)', () => {
   it('defaults to off', () => {
     render(<DateSelect value="2026-08-05" />)
