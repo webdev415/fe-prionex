@@ -8249,7 +8249,8 @@
       "exporting": "Exporting...",
       "tabs": {
         "dashboard": "Dashboard",
-        "processing": "Client Processing"
+        "processing": "Client Processing",
+        "verification": "Third-party verification"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8274,6 +8275,32 @@
         "empty": "No data for the selected period",
         "invalidRange": "Start date is later than end date",
         "rangeTooLong": "Date range must not exceed 366 days",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "verification": {
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "countFrom": "Count date from",
+        "countTo": "Count date to",
+        "planHint": "The plan is calculated for the whole sale month; the actual figure covers the selected count window.",
+        "columns": {
+          "employee": "Employee",
+          "group": "Group",
+          "numbersAdded": "Verified",
+          "uniqueClients": "Unique clients",
+          "monthPlan": "Monthly plan",
+          "monthPlanDiff": "Shortfall to plan"
+        },
+        "empty": "No data for the selected period",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "sellRangeTooLong": "Sale date range must not exceed 366 days",
+        "invalidCountRange": "Count date from is later than count date to",
+        "countRangeTooLong": "Count date range must not exceed 366 days",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
