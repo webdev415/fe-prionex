@@ -54,6 +54,7 @@ export function MinimizedCallBubble() {
     data: callDetails,
     error: callDetailsError,
     errorUpdatedAt,
+    dataUpdatedAt,
   } = useCallDetails(activeCallId)
 
   // A call the backend does not recognise will never reach a terminal state, so
@@ -71,7 +72,12 @@ export function MinimizedCallBubble() {
       notFoundStreak.current = 0
       return
     }
-    if (callDetails) {
+    // Deliberately not `if (callDetails)`: the query keeps the last successful
+    // data when a later poll fails, so a call the backend has since forgotten
+    // would reset its own streak on every poll and never be discarded — the
+    // stuck bar this exists to clear. Only a success *newer* than the error
+    // counts.
+    if (dataUpdatedAt >= errorUpdatedAt) {
       notFoundStreak.current = 0
       return
     }
@@ -85,9 +91,9 @@ export function MinimizedCallBubble() {
     clearMinimizedCall()
   }, [
     activeCallId,
-    callDetails,
     callDetailsError,
     errorUpdatedAt,
+    dataUpdatedAt,
     minimizedCall,
     setOpenCallModal,
     clearMinimizedCall,

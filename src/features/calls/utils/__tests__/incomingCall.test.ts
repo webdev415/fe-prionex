@@ -119,6 +119,21 @@ describe('buildIncomingCallLoans — the owner each loan links to', () => {
     expect(buildIncomingCallLoans(orphan)?.[0]?.clientId).toBe(7)
   })
 
+  it('does not file an unmatched loan under the caller', () => {
+    const stray = payload({
+      client_id: 1,
+      clients: [anchored, other],
+      loans: [{ loan_id: 99, contract_number: 'L-99', remaining_debt: '900', status: 'active' }],
+    })
+
+    const [loan] = buildIncomingCallLoans(stray) ?? []
+    // Naming the caller and grouping it as their own debt asserts an ownership
+    // nothing in the payload supports — the same wrong attribution the missing
+    // link avoids, expressed in words instead of a destination.
+    expect(loan?.clientName).toBe('Unknown')
+    expect(loan?.priority).not.toBe('Critical')
+  })
+
   it('leaves an unmatched loan unlinked when the caller did match someone', () => {
     const stray = payload({
       client_id: 1,

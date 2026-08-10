@@ -1254,6 +1254,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Incoming Call Modal — suppressed while another call window is up */}
         {incomingCall && canShowIncomingPopup && (
           <CallDialogModal
+            // A queue can replace one ringing call with another without the
+            // popup ever unmounting, and the modal resets its timer and state
+            // on `open`, not on the call. Without a per-call identity the
+            // second call inherits the first's "Ringing MM:SS" and, if the
+            // first had already ended, its auto-close countdown.
+            key={incomingCall.call_id}
             open={true}
             onClose={dismissIncomingCall}
             initialState="incoming"

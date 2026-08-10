@@ -45,7 +45,11 @@ export function buildIncomingCallLoans(
 
   return incomingCall.loans?.map((loan) => {
     const owner = incomingCall.clients?.find((c) => c.loans.some((l) => l.loan_id === loan.loan_id))
-    const isPrimary = owner ? owner.client_id === primaryClientId : true
+    // With candidates listed, a loan matching none of them belongs to somebody
+    // the payload did not name. Grouping it as the caller's own debt asserts an
+    // ownership nothing supports — the same wrong attribution the missing link
+    // below avoids, just in words instead of a destination.
+    const isPrimary = owner ? owner.client_id === primaryClientId : !hasCandidates
 
     return {
       id: loan.loan_id.toString(),
@@ -54,7 +58,8 @@ export function buildIncomingCallLoans(
       // linking it to the anchored client would send the operator confidently
       // to the wrong person's card.
       clientId: owner?.client_id ?? (hasCandidates ? null : (incomingCall.client_id ?? null)),
-      clientName: owner?.client_name || incomingCall.client_name || 'Unknown',
+      clientName:
+        owner?.client_name || (hasCandidates ? 'Unknown' : incomingCall.client_name) || 'Unknown',
       loanNumber: loan.contract_number,
       counterparty: loan.seller_name ?? '',
       loanPrincipal: Number(loan.principal_amount ?? loan.remaining_debt) || 0,

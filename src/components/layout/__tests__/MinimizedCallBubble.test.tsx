@@ -36,6 +36,8 @@ function minimized(over: Partial<MinimizedCallInfo> = {}): MinimizedCallInfo {
   }
 }
 
+const pollRef: { current: (() => void) | null } = { current: null }
+
 function renderBubble() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   // A fresh element each time: re-rendering the identical element lets React
@@ -47,7 +49,9 @@ function renderBubble() {
   )
   const result = render(ui())
   // Stands in for the next turn of the 2 s details poll.
-  return { ...result, poll: () => result.rerender(ui()) }
+  const poll = () => result.rerender(ui())
+  pollRef.current = poll
+  return { ...result, poll }
 }
 
 describe('MinimizedCallBubble', () => {
@@ -55,7 +59,12 @@ describe('MinimizedCallBubble', () => {
     localStorage.clear()
     useCallStore.setState({ minimizedCall: null, openCallModal: null })
     useCallDetails.mockReset()
-    useCallDetails.mockReturnValue({ data: undefined, error: null, errorUpdatedAt: 0 })
+    useCallDetails.mockReturnValue({
+      data: undefined,
+      error: null,
+      errorUpdatedAt: 0,
+      dataUpdatedAt: 0,
+    })
   })
 
   describe('a call the backend does not recognise', () => {
@@ -66,6 +75,7 @@ describe('MinimizedCallBubble', () => {
         data: undefined,
         error: notFound(status),
         errorUpdatedAt: 1,
+        dataUpdatedAt: 0,
       })
 
       const { poll } = renderBubble()
@@ -74,6 +84,7 @@ describe('MinimizedCallBubble', () => {
           data: undefined,
           error: notFound(status),
           errorUpdatedAt: at,
+          dataUpdatedAt: 0,
         })
         poll()
       }
@@ -93,6 +104,7 @@ describe('MinimizedCallBubble', () => {
         data: undefined,
         error: notFound(404),
         errorUpdatedAt: 1,
+        dataUpdatedAt: 0,
       })
 
       renderBubble()
@@ -110,6 +122,7 @@ describe('MinimizedCallBubble', () => {
         data: undefined,
         error: notFound(404),
         errorUpdatedAt: 1,
+        dataUpdatedAt: 0,
       })
       const { poll } = renderBubble()
 
@@ -117,6 +130,7 @@ describe('MinimizedCallBubble', () => {
         data: undefined,
         error: notFound(404),
         errorUpdatedAt: 2,
+        dataUpdatedAt: 0,
       })
       poll()
 
@@ -124,18 +138,41 @@ describe('MinimizedCallBubble', () => {
         data: { call_id: minimized().callId, state: 'RINGING' },
         error: null,
         errorUpdatedAt: 2,
+        dataUpdatedAt: 3,
       })
       poll()
 
       useCallDetails.mockReturnValue({
         data: undefined,
         error: notFound(404),
-        errorUpdatedAt: 3,
+        errorUpdatedAt: 4,
+        dataUpdatedAt: 3,
       })
       poll()
 
       await waitFor(() => expect(useCallDetails).toHaveBeenCalled())
       expect(useCallStore.getState().minimizedCall).not.toBeNull()
+    })
+
+    it('discards a call the backend forgot even though it once answered', async () => {
+      useCallStore.getState().setMinimizedCall(minimized())
+
+      // TanStack keeps the last successful data when a later poll fails, so a
+      // call that resolved once then started 404ing arrives here with BOTH set.
+      // Treating retained data as a success would reset the streak on every
+      // poll and leave the bar stuck forever.
+      for (const at of [1, 2, 3]) {
+        useCallDetails.mockReturnValue({
+          data: { call_id: minimized().callId, state: 'RINGING' },
+          error: notFound(404),
+          errorUpdatedAt: at,
+          dataUpdatedAt: 0,
+        })
+        if (at === 1) renderBubble()
+        else pollRef.current?.()
+      }
+
+      await waitFor(() => expect(useCallStore.getState().minimizedCall).toBeNull())
     })
 
     it('keeps the window when the lookup fails for another reason', async () => {
@@ -156,6 +193,7 @@ describe('MinimizedCallBubble', () => {
         data: { call_id: minimized().callId, state: 'ACTIVE' },
         error: null,
         errorUpdatedAt: 0,
+        dataUpdatedAt: 1,
       })
 
       renderBubble()
