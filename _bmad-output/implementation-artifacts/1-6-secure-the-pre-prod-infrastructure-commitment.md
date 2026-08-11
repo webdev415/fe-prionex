@@ -279,7 +279,7 @@ point of this task is that **you** checked them.
       [D2](docs/migration-decisions.md#d2)).
 - [ ] 2.10 **State the sequencing constraint instead of inventing a deadline.** The document
       must convey *when it is needed* without naming a date this side does not own: PRE-PROD
-      infra sits on the critical path (`forgejo-migration.md:303`), Epics 1–4 run before Epic 5,
+      infra sits on the critical path (`forgejo-migration.md:313`), Epics 1–4 run before Epic 5,
       and CI/DEV work proceeds in parallel — so their lead time, not ours, sets the schedule.
       End on the single question Task 3.1 also carries: **«когда реалистично?»**
 - [ ] 2.11 **Link forms inside `docs/`** are relative to `docs/`: use
@@ -336,9 +336,16 @@ point of this task is that **you** checked them.
 
 ### Task 5 — Record the decision as D11 in `docs/migration-decisions.md` (AC: 3)
 
-- [ ] 5.1 Append a new entry **`<a id="d11"></a>` / `## D11. Внешняя зависимость: инфраструктура
-      PRE-PROD на s1`** after D9, before the `---` that precedes the changelog anchor
-      (`migration-decisions.md:622-624`). **Do not rewrite D4.** The file's own contract
+- [ ] 5.1 🚨 **Coordinates in this task were corrected by Story 1.7's code review (2026-08-11) and
+      are now expressed structurally — do not re-introduce raw line numbers, they rot.** Story 1.7
+      landed D10 before this story ran, so D11 is now the *second* entry to append, not the first.
+      Append a new entry **`<a id="d11"></a>` / `## D11. Внешняя зависимость: инфраструктура
+      PRE-PROD на s1`** **after the D10 entry** — i.e. after the `**Требования:**` line that closes
+      D10, before the last `---` in the file, which is the one immediately preceding
+      `<a id="changelog"></a>`. (At the time of writing that `---` is line **816** and the changelog
+      anchor **818** — but D10 grew three times on 2026-08-11 alone, so **verify by locating
+      `<a id="changelog"></a>`, not by trusting these numbers.**)
+      **Do not rewrite D4, and do not rewrite D10.** The file's own contract
       (line 9) states records are never edited retroactively — *«Записи не переписываются
       задним числом»*. D4 already says the network is an external dependency; D11 records
       **what was asked, of whom, when, and what was promised**.
@@ -360,16 +367,22 @@ point of this task is that **you** checked them.
       that Epic 5 (Stories 5.1, 5.2) cannot start before it lands. Do **not** duplicate the
       requirement's contents into D11 — link it. Duplicated lists drift apart (Story 1.2's own
       anti-pattern, applied to D7).
-- [ ] 5.4 Update the **index table** — it spans `migration-decisions.md:12-22` (header at 12-13,
-      D1–D9 rows at 14-22); the D11 row goes after line 22. And update the anchor range in the
-      "Как этим пользоваться" paragraph at **line 8** — it currently reads `#d1` … `#d9` and
-      must become `#d1` … `#d11`. Story 1.3's code review had to fix exactly this omission;
-      do not repeat it.
-- [ ] 5.5 Append changelog rows. The table header is at `migration-decisions.md:628`, rows run
-      `630-636`. Format is fixed — `| Дата | Story | Изменение |`, date as `DD.MM.YYYY`, story
-      as the bare dotted number (`1.6`, never a `KAN-` key), one long prose sentence per row,
-      append-only, chronological. **Use the commit date**, not a guessed "today"; the existing
-      last rows are `10.08.2026`.
+- [ ] 5.4 Update the **index table** — header at `migration-decisions.md:12-13`, rows now run
+      **14-23** with **D10 at line 23**. 🚨 **The D11 row goes after the D10 row — after line 23,
+      not after line 22.** The original instruction said "after line 22", which was written before
+      D10 existed and would now insert D11 *above* D10, out of order. Locate the last `| [DN](#dN)`
+      row rather than counting. And update the anchor range in the "Как этим пользоваться"
+      paragraph at **line 8** — it now reads `#d1` … `#d10` (not `#d9`, as the original text of
+      this task claimed) and must become `#d1` … `#d11`. Story 1.3's code review had to fix
+      exactly this omission; do not repeat it.
+      Match D10's column style: `| [D11](#d11) | <краткое решение> | <статус> | <потребители> |`.
+- [ ] 5.5 Append changelog rows. Locate the table by its `## Журнал изменений` heading — at the
+      time of writing the heading is line 820, the header row 822 and the existing rows run
+      824-834, but verify rather than trusting these. Format is fixed — `| Дата | Story |
+      Изменение |`, date as `DD.MM.YYYY`, story as the bare dotted number (`1.6`, never a `KAN-`
+      key), one long prose sentence per row, append-only, chronological. **Use the commit date**,
+      not a guessed "today"; the existing last rows are `11.08.2026` (Story 1.7 and its code
+      review).
 
 ### Task 6 — Amend the migration plan (AC: 3)
 
@@ -383,11 +396,12 @@ point of this task is that **you** checked them.
 - [ ] 6.1a **If the status is `не направлено`, leave line 120 unchanged** and record why in
       Completion Notes. A phase-0 item that has not moved must not acquire a marker implying
       it has.
-- [ ] 6.2 `§5 Риски` (line 288) — the row
+- [ ] 6.2 `§5 Риски` (line 298 — refreshed 2026-08-11; Story 1.7 added 10 lines in Фаза 1, so
+      every reference below Фаза 1 in this file shifted by 10) — the row
       *«PRE-PROD без своего Kong = фиктивная валидация | Блокер 1.2, согласовать с инфрой в
       фазе 0»*. Update the mitigation cell with the current state and the two links. Preserve
       the two-column `| Риск | Митигация |` shape; do not reorder or renumber rows.
-- [ ] 6.3 `§6 Критический путь` (lines 299-306) already reads
+- [ ] 6.3 `§6 Критический путь` (lines 309-316, refreshed 2026-08-11) already reads
       *«→ preprod-инфра (зависит от бэкенда) → prod»*. If a date now exists, it belongs here as
       the constraint on when Epic 5 can start — this is the section a reader consults to
       schedule.
@@ -477,7 +491,7 @@ out of scope.
 
 The real deliverable is **a date**. Everything else is the apparatus for getting one and for
 making sure it is not quietly forgotten. Epic 5 is on the critical path
-(`forgejo-migration.md:299-306`: *«→ preprod-инфра (зависит от бэкенда) → prod»*), Epic 6's
+(`forgejo-migration.md:309-316`: *«→ preprod-инфра (зависит от бэкенда) → prod»*), Epic 6's
 promotion guard ([D2](docs/migration-decisions.md#d2)) checks for `preprod-<sha>` tags that only
 exist if PRE-PROD exists, and this story sits in Epic 1 — five epics early — for exactly one
 reason: another team's queue is the longest-latency item in the plan, so the request is made
@@ -510,23 +524,30 @@ only document in this repository addressed *outward*. There is no precedent for 
 idiom from `docs/superpowers/specs/2026-07-07-reasoning-activity-panel-design.md`
 (`**Дата:** / **Статус:** / **Репозитории:**`) is the closest thing and is worth following.
 
-**`docs/migration-decisions.md`** — UPDATE, 636 lines, Russian. Current state:
-- Header: purpose, the never-rewrite contract (line 9), and the D1–D9 index table at lines
-  **12-22** (header 12-13, rows 14-22) with columns `| # | Решение | Статус | Реализуется в |`.
-  The "Как этим пользоваться" paragraph at **line 8** names the anchor range `#d1 … #d9` —
+**`docs/migration-decisions.md`** — UPDATE, **834 lines** (was 636 when this story was written;
+Story 1.7 added D10 and three rounds of code-review corrections), Russian. 🚨 **Coordinates below
+were refreshed on 2026-08-11 and this file moved three times that day — re-verify by anchor
+before relying on any line number here.** Current state:
+- Header: purpose, the never-rewrite contract (line 9), and the **D1–D10** index table at lines
+  **12-23** (header 12-13, rows 14-23) with columns `| # | Решение | Статус | Реализуется в |`.
+  The "Как этим пользоваться" paragraph at **line 8** names the anchor range **`#d1 … #d10`** —
   **must be extended to `#d11`**.
-- D1–D9, each `<a id="dN"></a>` + `## DN. Title`, ending `**Требования:** FRxx, NFRxx`.
-- **D4** (anchor at 164, heading 166, ending `**Требования:**` at 189) is this story's basis.
+- D1–D10, each `<a id="dN"></a>` + `## DN. Title`, ending `**Требования:** FRxx, NFRxx`.
+  Anchors: D1 27, D2 78, D3 113, D4 165, D5 194, D6 214, D7 249, D8 289, D9 414, **D10 625**.
+- **D4** (anchor at 165, heading 167) is this story's basis.
   Its closing line — *«Внешняя зависимость. Сеть и
   второй Kong на s1 предоставляет команда бэкенда/инфры — это блокер на Epic 5, зафиксированный
   в story 1.6»* — is currently the **only** place the entire dependency is recorded. **Preserve
   it verbatim.**
-- `<a id="changelog"></a>` at 624, `## Журнал изменений` at 626, table header 628, rows
-  630-636. Append-only.
+- `<a id="changelog"></a>` at **818**, `## Журнал изменений` at **820**, table header **822**, rows
+  **824-834**. Append-only. The last `---` before the changelog anchor is line **816** — that is
+  the insertion point for D11, *after* D10 (which starts at 625 and now runs to ~816).
 
 **`docs/forgejo-migration.md`** — UPDATE, Russian. Serves as **both PRD and Architecture** for
-this migration. Touch only: Фаза 0 item 2 (line 120), §5 Риски row (line 288), §6 (299-306).
-Preserve §1.2 (81-91) in full.
+this migration. Touch only: Фаза 0 item 2 (line 120), §5 Риски row (line 298), §6 (309-316).
+Preserve §1.2 (81-91) in full. (Coordinates refreshed 2026-08-11 by Story 1.7's code review —
+1.7 inserted 10 lines into Фаза 1, shifting everything below it; lines 120 and 81-91 sit above
+Фаза 1 and were unaffected.)
 
 **`_bmad-output/planning-artifacts/epics.md`** — UPDATE, English. Annotate Epic 5's dependency
 line only.
@@ -736,7 +757,7 @@ the claim gets tested, not here.
 - [Source: docs/migration-decisions.md#changelog] — the `| Дата | Story | Изменение |` format and its rules
 - [Source: docs/forgejo-migration.md#1.2] — блокер 1.2 in full; "Без второго Kong-стенда на s1 preprod получается фиктивным"
 - [Source: docs/forgejo-migration.md#2] — Фаза 0 item 2 (line 120), the item this story closes
-- [Source: docs/forgejo-migration.md#5] — the risk row "PRE-PROD без своего Kong = фиктивная валидация" (line 288)
+- [Source: docs/forgejo-migration.md#5] — the risk row "PRE-PROD без своего Kong = фиктивная валидация" (line 298)
 - [Source: docs/forgejo-migration.md#6] — critical path: "→ preprod-инфра (зависит от бэкенда) → prod"
 - [Source: docs/forgejo-migration.md#1.1] — lines 70-72: 3 of 5 socket.io hooks call `io(WS_URL)` with no `path`, so WS cannot be proxied through the frontend nginx (the AC4 evidence, and why Option B was rejected)
 - [Source: src/lib/api.ts:12-18] — `withCredentials: true`, hence the CORS ask in Task 2.6a

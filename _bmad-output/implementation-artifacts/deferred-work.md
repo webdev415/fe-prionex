@@ -7,10 +7,39 @@
   at HEAD: `:213` (`49,59`→`47,57`), `:255` and `:329` (`124`→`122`, `150`→`149`), `:457`
   (`140-153`→`138-152`), `:458` (`123-124`→`121-122`), `:1168` (`115-116`→`113-114`). Lines
   `:258` (`CD.yml:191`) and `:1107` (`CD.yml:47-74`) are already correct — sweep only the six.
-- Forgejo API token `fe_tmp` (id 83) was created with scopes `all` instead of the
-  `write:repository` + `read:organization` prescribed by story 1.3 Task 1.1, and is still live.
-  Remedy is the already-tracked Task 7.1 manual revocation (Oleg, Forgejo UI → Settings →
-  Applications), but the over-broad scope raises its urgency.
+- ✅ **Closed 2026-08-11 by story 1.7.** Forgejo API token `fe_tmp` (id 83) was created with scopes
+  `all` instead of the `write:repository` + `read:organization` prescribed by story 1.3 Task 1.1.
+  It is **no longer live**: its value had been lost, and rather than retrieve it Oleg chose to
+  invalidate it during story 1.7 (Task 1.1). The over-broad-scope concern is therefore resolved,
+  and the Task 7.1 manual revocation this entry pointed at is moot. Superseded by the `fe_tmp_1_7`
+  entry below. *(This entry still read "and is still live" until story 1.7's code review corrected
+  it — the invalidation happened in the same session that edited this file and was not swept.)*
+- 🔑 **`fe_tmp_1_7` is live and needs an owner — opened 2026-08-11 by story 1.7's code review.**
+  Story 1.7 minted a replacement API token on s1 via `docker exec -u git forgejo gitea admin user
+  generate-access-token -u platform-admin -t fe_tmp_1_7 --scopes write:repository,read:organization`.
+  It is strictly narrower than `fe_tmp` was, and it is mintable on the host without a password,
+  which removes the out-of-band friction that motivated Open Question 7 — but it is still a live,
+  write-capable credential on a `platform-admin` account, and story 1.7 recorded no owner, no
+  expiry and no revocation trigger for it.
+  **Owner: Oleg.** **Revocation trigger:** revoke when the last story that needs Forgejo API write
+  access has closed, or immediately if the standing-token model is replaced. By standing rule its
+  value is written into no file, so revocation is a manual UI/CLI action.
+  **Open policy question, carried from story 1.7's Open Question 3:** one long-lived token per
+  epic, or a scoped short-lived token minted per story? The second is what story 1.3 intended
+  before its scope came back as `all`, and it is now cheap to do — the mint command above needs
+  only host access.
+  🔑 **A second live token now exists: `fe_review_1_7`.** Minted 2026-08-11 during story 1.7's code
+  review, with Oleg's explicit authorisation, same scopes (`write:repository,read:organization`) on
+  the same `platform-admin` account. It was needed to close the API-side evidence gaps (AC7's
+  `idle` re-observation, AC8's server-side cross-check, run 337's job ids, the org runner list).
+  **Stored host-local at `/root/.fj_token` on s1, mode `600`, owner `root:root`** — deliberately
+  *not* in this repository, so the standing "never write the token into any file" rule (which is
+  about repository files, the same rule that keeps `.runner` and `runner-config.yml` on the host)
+  is respected. Its value never entered any transcript.
+  **Owner: Oleg. Revocation:** both `fe_tmp_1_7` and `fe_review_1_7` should be revoked together
+  when Forgejo API write access is no longer needed — and note that **two live tokens now exist
+  where the model calls for one**, which is itself an argument for settling the policy question
+  above. Whether `fe_tmp_1_7` is still live was not checked during the review: «не проверено».
 - `docs/forgejo-migration.md:19` current-state table still lists «`v*` → production» although
   the `tags: ['v*']` trigger was removed from `CD.yml` by commit `09591984`; the `CD.yml:5`
   citation on that row is correct — only the `v*` clause is stale content.
@@ -96,12 +125,13 @@
 ## Deferred from: story 1-7-provision-the-primary-forgejo-runner-with-both-labels (2026-08-11)
 
 - **Node 20 is EOL (2026-04-30), `node:20-bookworm` is delisted but still pulls (frozen at
-  v20.20.2).** The `node-20` label is fixed by FR28 (`epics.md:161-163`), `docs/forgejo-migration.md:142`
+  v20.20.2).** The `node-20` label is fixed by FR28 (`epics.md:161-163`), `docs/forgejo-migration.md:144`
   and AC4 — this story registered it as specified and does not change it unilaterally. Someone needs
   to own the decision: stay pinned (accepting no further base-image security patches) or bump to a
   maintained line (Node 22 "Jod" or Node 24 "Krypton"), which is a scoped change touching
   `.github/workflows/CI.yml:20`, `Dockerfile.prod`, FR28 and this runner's registered labels, not an
-  infrastructure-story drive-by.
+  infrastructure-story drive-by. **Reviewed 2026-08-11 — Oleg: leave as is for now**, this entry is
+  the tracking; no owner or date assigned deliberately.
 - **s1 host contention is now directly observed, not just asked about.** Task 2.2 raised the
   question as an input to Story 4.2, not something this story resolves. Direct host inspection
   (not the API — `docker ps`/`docker inspect` on s1 itself) confirms all of `ci-hub`,
@@ -133,3 +163,85 @@
   have. **Always dispatch a real probe workflow before declaring a runner done** — a clean
   `register`/`daemon` startup log proves nothing about which images the labels actually resolve
   to.
+
+## Deferred from: code review of story-1.7 (2026-08-11)
+
+- 🔒 **nginx ACL on s1 was widened and has no rollback owner.** Story 1.7 added
+  `allow 192.168.226.0/24;` to `/etc/nginx/sites-available/forgejo-platform` on s1 — a shared
+  production host — because runner registration was failing `403 Forbidden` from the ACL boundary
+  before ever reaching Forgejo, and none of the five already-allowed subnets was free. A config
+  backup was taken and `nginx -t` was run before `systemctl reload nginx`.
+  **What is not tracked anywhere else:** the file is outside version control, the backup is
+  host-local, and the neighbouring `CRM/api-prionex` project hit the same wall and deliberately
+  declined to edit the ACL itself (`docs/migration-decisions.md#d10`). Approval is recorded
+  second-hand — story 1.7 says Oleg confirmed coordination with the hub administrator (aleksey);
+  no direct confirmation from the administrator is captured.
+  **Owner: Oleg.** **Removal trigger:** when subnet `192.168.226.0/24` is retired — i.e. if the
+  `forgejo-runner-fe-prionex` compose project is decommissioned or renumbered. Nothing else in
+  this repository points at that ACL line, so without this entry it would be invisible.
+- 🧪 **AC2's cross-repository routing was never tested.** Story 1.7's AC2 requires that our runner
+  "does not appear as available to other `CRM` repositories". What was actually checked is its
+  total absence from `GET /orgs/CRM/actions/runners` across every read of the session — a property
+  of *registration scope*, not of *job routing*. Whether a job defined in a different `CRM`
+  repository could somehow target `id: 19` was not tested and is not claimed (story 1.7 Task 8.2
+  says so plainly).
+  **Reviewed 2026-08-11 — Oleg: accept repository-scope registration as the isolation guarantee.**
+  It is Forgejo's own mechanism for this, and the direct test would mean starting an uncancellable
+  run in another team's repository, which story 1.7's own rules forbid. Recorded here so the gap
+  is visible rather than implied by a ticked AC.
+- 📦 **The runner's host configuration is unversioned, and two hardcoded addresses are
+  load-bearing — for Story 1.9.** `/opt/forgejo-runner-fe-prionex/{config.yml,docker-compose.yml}`
+  on s1 is the only record of how the runner is set up. Two values in it are fragile:
+  `cache.host: "192.168.226.3"` (the `runner` container's statically pinned bridge IP) and
+  `container.options: -e DOCKER_HOST=tcp://172.17.0.1:2375` (the nested engine's default-bridge
+  gateway). Per Trap 3, losing the cache server **does not fail a job** — `actions/setup-node`
+  logs `Cache action is only supported on GHES version >= 3.5…` and goes green, caching nothing —
+  so a subnet renumber or a lost IP pin degrades every future CI run silently, and nothing in this
+  repository can detect it. The only reachability assertion was the probe workflow, deleted in
+  Task 10.1.
+  **Reviewed 2026-08-11 — Oleg: carry to Story 1.9**, which provisions the second runner with the
+  same pattern and is the right place to decide whether a sanitised config (never `.runner`, which
+  holds the instance secret) belongs in the repository. Story 2.1 should additionally consider a
+  CI step that *fails* when the cache server is unreachable, so the degradation stops being silent.
+  This closes story 1.7's Open Question 8, which was raised and then filed against nothing.
+- 🔁 **AC7's crash test was never re-run against the surviving runner registration.** Story 1.7's
+  durability proof (`RestartCount` 0→1 after a host-side `SIGKILL` to the real PID) was taken
+  before Task 3.5's label fix, i.e. against runner `id: 18`, which was then deregistered and
+  `DELETE`d. `restart: unless-stopped` is a property of the container rather than the registration,
+  so the restart conclusion stands — but the re-declare that was observed carried the bare, wrong
+  labels, and no crash test has been run against `id: 19`. Two adjacent gaps: the API re-read of
+  the runner round-tripping `offline` → `idle` was never performed, and the premise that
+  `docker.service` is enabled at boot on s1 was stated as fact but never checked
+  (`systemctl is-enabled docker`, one read-only command).
+  **Reviewed 2026-08-11 — Oleg: re-run the crash test against `id: 19`. ✅ Done, and it passed.**
+  `RestartCount` 0→1, new PID, recovery within 1 second, clean re-declare with labels, `dind`
+  untouched. `systemctl is-enabled docker` → `enabled`, so the reboot-assertion chain now rests on
+  a checked premise. **What remains open, and only this:** the API-side observation of the runner
+  round-tripping `offline` → `idle` in the repository runner list, which needs `FJ_TOKEN` — token
+  minting was blocked in the review session. Low value now that the container-level evidence is
+  direct; fold into Story 1.9 rather than chasing separately.
+- ⚠️ **AD-6 is not the absolute rule story 1.7 recorded — for Story 1.9 and anyone reasoning about
+  runner security on s1.** Direct host inspection on 2026-08-11 found **six** runner compose
+  projects on s1 (not three or four), and one of them — `/opt/forgejo-runner-deploy` — mounts the
+  host `/var/run/docker.sock` deliberately, with the risk explicitly accepted in a banner in its
+  own compose file. The observability agent `vm-alloy` mounts it too. The rule as actually
+  practised: **build runners use DinD and never touch the host socket; the deploy runner is a
+  documented exception**, because deploying means driving the host's own daemon. Story 1.7's choice
+  of DinD stands — it is a build runner and matches four of five neighbours — but any future story
+  that cites AD-6 as "never, in any service" will be citing something untrue. Full correction in
+  `docs/migration-decisions.md#d10`.
+
+- **Story files are not committed at `create-story` time, so self-reported deviations cannot be
+  audited.** Story 1.7's file has exactly two commits (`c1170987`, `9f75b89e`), both authored
+  after execution — it was born already at `Status: review`. Every `⚠️ Deviated from the
+  recommended path` and `🔴 This entry was wrong` annotation was therefore written in the same
+  commit as the instruction it claims to deviate from, and for ~40 subtasks the original
+  requirement text was overwritten in place rather than annotated, so there is no recoverable
+  statement of what the tick was claiming to satisfy. Story 1.6 by contrast has a `create-story`
+  commit (`4032f867`) preceding any dev work — that is the pattern that makes the
+  "retro-annotate rather than silently tick" convention auditable. Deferred: process issue,
+  not retroactively fixable for 1.7; worth enforcing from the next story onward.
+- **A story reached `review` with open subtasks.** At `c1170987` — the commit that set
+  `Status: review` and flipped `sprint-status.yaml` — Tasks 5.3, 10.6 and 10.7 were still `[ ]`;
+  they were ticked afterwards in `9f75b89e`. Deferred: already past for 1.7, but the
+  status-transition gate is worth making explicit in the dev-story cycle.
