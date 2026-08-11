@@ -154,7 +154,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 4. **Смоук-проверка совместимости из таблицы 1.4** — до портирования реальных workflow: тестовый workflow, который резолвит и запускает `checkout`, `setup-node`, `upload-artifact`, `docker/build-push-action` (сборка любого мусорного образа с пушем в registry).
 5. Поднять **второй runner** (см. фазу 3 — до включения required checks).
 
-**DoD:** ~~обе метки работают~~ ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
+**DoD:** обе метки работают — ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
 все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — **открыто**, Story 1.8.
 **Rollback:** удалить runner, GitHub Actions продолжает работать.
 
