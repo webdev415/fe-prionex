@@ -7,6 +7,7 @@ import {
   registerOnAuthCleared,
   runOnceOnNextAuthSuccess,
   setAccessToken,
+  triggerAuthExpired,
 } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
@@ -918,7 +919,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: unknown) {
       let errorMessage = 'Failed to exit impersonation'
 
-      const err = error as { response?: { data?: { detail?: string | { message?: string } } } }
+      const err = error as {
+        response?: { status?: number; data?: { detail?: string | { message?: string } } }
+      }
 
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail
@@ -929,6 +932,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: errorMessage,
         isLoading: false,
       })
+
+      // KAN-941: every refusal past the "not impersonating" check terminates
+      // the admin's session server-side, so the token in hand is already
+      // blacklisted. The 401 interceptor cannot help here — it skips /auth/*
+      // URLs — so without this the SPA sits on a dead token still rendering as
+      // the impersonated user until some other request happens to 401.
+      if (err.response?.status !== undefined && err.response.status !== 400) {
+        localStorage.removeItem('impersonation_original_admin')
+        localStorage.removeItem('impersonated_user_profile')
+        triggerAuthExpired()
+      }
 
       throw new Error(errorMessage)
     }
