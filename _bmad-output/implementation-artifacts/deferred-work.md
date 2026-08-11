@@ -193,6 +193,32 @@
   `s2-prod-deploy` stop being forbidden from Epic 4 onward and become the intended deploy targets.
   They remain forbidden for Story 1.8, which is a smoke test bound to `node-20`/`docker-build`.
 
+## Blocker for Story 3.1 — established by story 1.8's code review (2026-08-11)
+
+- 🔴 **`--add-host` on `container.options` is necessary but NOT sufficient for `docker/build-push-action`.**
+  Story 1.8's `#d12` records the `--add-host git.crm-prionex.com:10.67.0.1` line as a permanent
+  Story 3.1 prerequisite. Re-dispatching the credentialed probe during code review proved that
+  **the push still fails with it in place**:
+  `failed to solve: failed to push … failed to do request: Head "https://…/v2/…/blobs/sha256:…": EOF`.
+  **Cause:** `docker/setup-buildx-action` creates a builder with `driver=docker-container`, so buildx
+  pushes from its **own BuildKit container**. `container.options` applies only to the *job* container,
+  so the builder never gets the host mapping, resolves `git.crm-prionex.com` to the public address
+  through split-horizon DNS, and the connection dies. Control pair from a job-equivalent container:
+  with `--add-host` → `401`, without → `000`.
+  **Story 3.1's `build.yml` will fail identically unless one of these is done — all «не проверено»:**
+  (a) pass the mapping through `setup-buildx-action`'s `driver-opts`; (b) use the `docker` driver so
+  the push goes via the nested daemon; (c) give the nested `dockerd` the mapping so every container
+  it spawns inherits it; (d) replace the action with native `docker build` + `docker push` from the
+  job container, which already holds the mapping — this is also the AC5 replacement Story 1.8 owes.
+- ✅ **Answered while proving the above: `REGISTRY_USER` / `REGISTRY_TOKEN_RW` work.**
+  `docker/login-action@v3` authenticated against `git.crm-prionex.com` and the build proceeded to
+  the push stage, so the credentials exist, are valid and carry push rights. Story 1.10's question
+  «adopt `robot-registry` as-is or mint `ci-bot`?» can now be decided on preference rather than on
+  an unknown. Oleg confirmed with `aleksey` on 2026-08-11 that they are ours to use.
+- ✅ **The `run_registry_push` gate works in the enabling direction** — a review layer flagged that a
+  boolean/string mistake would be indistinguishable from a withheld run. It is
+  `== 'true'` with a string default, and the gated job did execute when dispatched with `"true"`.
+
 ## Deferred from: code review of story-1.7 (2026-08-11)
 
 - 🔒 **nginx ACL on s1 was widened and has no rollback owner.** Story 1.7 added

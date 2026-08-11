@@ -4,7 +4,7 @@ baseline_commit: 598de32c
 
 # Story 1.8: Prove Action Compatibility with a Smoke Workflow
 
-Status: review
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -623,6 +623,66 @@ explicitly recorded as accepted.
 - [x] 9.9 Update `sprint-status.yaml`: `1-8-…` → `review`, and this file's `Status:` line. Verify
       the prior value before writing — Story 1.7 claimed a verified prior value that git disproved.
 
+### Review Findings
+
+Code review 2026-08-11 (Blind Hunter, Edge Case Hunter, Acceptance Auditor — all Opus). Every
+finding was re-verified against the live host and the recovered workflow before being recorded.
+**Five layer findings were dismissed as disproven by direct verification** and are listed at the
+end, so nobody re-raises them.
+
+> 🔑 **Context that changes the disposition: Oleg confirmed with `aleksey` on 2026-08-11 that the
+> `REGISTRY_*` credentials are ours to use.** The blocker that caused AC3's push clause to be
+> withheld is gone. This story is therefore not "ready for sign-off with a known gap" — it is
+> ready to be finished.
+
+- [x] [Review][Decision] **AC3 was dropped instead of unblocked — resolved: re-dispatched during review, 2026-08-11.** Task 2.1 said the confirmation «costs one message» and named **Oleg**, the session user; the record instead reasoned it away as "no channel to `aleksey`". Oleg confirmed, so the review re-created the probe branch from the recovered workflow and dispatched with `run_registry_push: "true"` (run index 20, tasks 2529/2530, and a second debug-level dispatch to capture step output). **Result below — it is a bigger finding than a missing tick.**
+
+  ✅ **All four `docker/*` actions resolve.** `docker/setup-buildx-action@v3`, `docker/login-action@v3` and `docker/metadata-action@v5` all reported `✅ Success`; `docker/build-push-action@v5` resolved and executed. **`login-action` succeeding is itself a result: `REGISTRY_USER` / `REGISTRY_TOKEN_RW` authenticate against `git.crm-prionex.com` and carry push rights** — Story 1.10's credential question is answered in the affirmative.
+
+  ❌ **The push itself fails, and the cause is not the actions:**
+  ```
+  ERROR: failed to build: failed to solve: failed to push
+  git.crm-prionex.com/crm/fe-prionex:smoke-1-8-probe:
+  failed to do request: Head "https://.../v2/crm/fe-prionex/blobs/sha256:…": EOF
+  ```
+  🔴 **Mechanism, established during review: the `--add-host` fix does not reach the process that pushes.** `setup-buildx-action` creates a builder with `driver=docker-container`, i.e. buildx runs in its **own BuildKit container** spawned inside the nested engine. `container.options` applies to the *job* container only, so the BuildKit container never receives `--add-host git.crm-prionex.com:10.67.0.1`, resolves the name to the public address via split-horizon DNS, and the connection dies — the same class of "one level deeper than the notes assume" that Story 1.7 hit with the cache. Control pair, from a job-equivalent container: **with `--add-host` → `401`; without → `000`.**
+
+  **Consequence for Story 3.1, and this is the load-bearing part:** the `--add-host` line recorded in `#d12` as a permanent Story 3.1 prerequisite is **necessary but not sufficient**. Story 3.1's `build.yml` will fail identically at push unless one of these is done — none of them verified, all «не проверено»:
+  1. pass the host mapping to the builder via `setup-buildx-action`'s `driver-opts`;
+  2. use the `docker` driver instead of `docker-container`, so the push goes through the nested daemon rather than a fresh BuildKit container;
+  3. give the nested `dockerd` the mapping itself (its own `/etc/hosts` or `--dns`), so every container it spawns inherits it;
+  4. **the AC5 native `run:` replacement** — `docker build` + `docker push` from the job container, which *does* hold the mapping. This is the option AC5 asks for and the only one whose network path is already proven.
+
+  **AC3's status after this:** the resolve clause is **closed by observation**; the push clause remains open with a diagnosed cause and four candidate remedies, which is a strictly better hand-off than the «не проверено» it replaced. No image was pushed, so there is nothing to clean from the registry.
+- [ ] [Review][Patch] **No native `run:` replacement is recorded for any non-resolving action, and two Table 1.4 rows have no verdict at all** — AC5 requires a verdict for every action plus a `run:` replacement for each that does not resolve. `upload-artifact@v4` is recorded «не резолвится» with a *version* fallback beside it, not a `run:` replacement; `codecov/codecov-action@v4` and `slackapi/slack-github-action@v3.0.3` carry «Вне периметра Story 1.8», which is not one of AC5's four permitted verdicts. The DoD's «6 из 8 позиций» matches no count in a table listing 11 actions. Completion Notes nonetheless claim AC5 satisfied [docs/migration-decisions.md D12 verdict table; docs/forgejo-migration.md:109-110, :167]
+- [ ] [Review][Patch] **Run 385 is recorded as «каждый шаг зелёный» when the `upload-artifact@v4` step demonstrably failed inside it** — the step carries `continue-on-error: true`, so it ran, failed with `GHESNotSupportedError`, and did not stop the job. The per-action table's header sources itself to "рана 385 … чистого прохода", so the error propagates to every row [docs/migration-decisions.md, evidence table dispatch 3]
+- [ ] [Review][Patch] **Фаза 4 still instructs Story 3.1 to run the `docker/*` actions on the `docker-build` label** — the exact thing this story proved impossible, left unamended in the very file this story edited. Table 1.4 and Фаза 1 were marked; `docs/forgejo-migration.md:201` and the file map at `:293` were not. Story 3.1 will read them and author a workflow that cannot work
+- [ ] [Review][Patch] **The only technical artifact of the story exists in no git ref** — `.forgejo/workflows/probe-actions.yml` survives solely as dangling objects `2ed3965d`/`2ea19bdf` in one local clone, which `git gc` prunes by default. Open Question 7 tells the next person to restore it "from this story's git history"; `git log --all` finds nothing. Every AC1/AC2/AC7 verdict becomes unverifiable, and the AC3 follow-up would have to be re-authored from prose. **Recovered to the session scratchpad during review — commit it before it is lost**
+- [ ] [Review][Patch] **Two freshly-written citations are already wrong, which is the defect Task 8.6 exists to prevent** — D12 cites `epics.md:233-234` twice for the "smoke test before porting" gate; that is the blank line after `### Additional Requirements`, and the text is at `:239-240`. It was shifted by commit `72e86faa`, which this same story recorded as drift in Task 1.6. Separately `deferred-work.md` cites `epics.md:704-707` for `ci-bot` — those are Story 1.9's ACs; `ci-bot` is at `:94`, `:209`, `:299`, `:722`, and Story 1.10 is routed to that entry
+- [ ] [Review][Patch] **Story 1.6's citations into `docs/forgejo-migration.md` are stale again** — the file grew 327→340 lines, so `:313`→`:326` and `:309-316`→`:322-329`. Story 1.6 is `ready-for-dev`, so these are forward instructions, not history. **This file has now moved three times in one day; convert 1.6's references to anchors rather than repairing the numbers a third time** [1-6-secure-the-pre-prod-infrastructure-commitment.md:282, :494]
+- [ ] [Review][Patch] **The `setup-node` assertion has no discriminating power** — `node --version | grep -q '^v20\.'` runs on the `node:20-bookworm` image, where Node 20 is present before the action executes. The assert passes identically whether `setup-node` resolved or silently no-opped. This is Trap 3, reproduced inside the story's own probe. `checkout`'s `test -f package.json` is weak for the same reason: it proves a file exists, not that the right ref was fetched
+- [ ] [Review][Patch] **AC7's attribution claim over-reaches** — Completion Notes say «every dispatched job attributed to runner `id: 19` by direct evidence», but the runner-side log prefix was captured only during dispatches 2–3, and jobs `2488`/`2490`/`2492` were `skipped` and never reached any runner. Independently verified during review: `docker logs` contains **zero** occurrences of `RUN_ID:383` or `TASK-2487`, while 384/385/2489/2491 are present — so run 383's recorded cause («upload-artifact failure») is not corroborated by the runner at all, and needs an explanation or «не проверено»
+- [ ] [Review][Patch] **Three subtasks ticked `[x]` while their own text describes a check that did not run**, with no retro-annotation, inconsistently with 1.6/5.1/5.5/6.3/9.4/2.1 which *are* annotated: 5.3 (the `docker manifest inspect` assert lives in the never-executed job), 6.2 («attempt retrieval by the chosen channel» — no retrieval was attempted by any channel, and the captured `artifact-id`/`artifact-url` outputs are recorded nowhere), 7.2 (see above)
+- [ ] [Review][Patch] **A `✅` was awarded to an `echo` with no assertion** — `docs/forgejo-migration.md:112` marks `github.server_url`/`repository`/`run_id` «Дёшево подтверждено … эхом выведен в успешном шаге», citing `#d12`. The echoed value appears nowhere, D12 has no row for it, and an empty `server_url` would pass identically. Trap 3, committed into the plan as a checkmark
+- [ ] [Review][Patch] **Verdicts are published by tag but were proven by SHA pin** — the run used `checkout@d23441a4… # v6`, `setup-node@49933ea5… # v4`, `upload-artifact@ff15f030… # v3`. D12 publishes `@v6`/`@v4`/`@v3`, which is what Story 2.1 will write, and the tag→SHA mapping exists only as a YAML comment in the deleted branch. (Pinning by SHA was *stricter* than the story asked — the defect is only that the record does not say so.)
+- [ ] [Review][Patch] **A tracked question was ✅-closed with evidence that answers a different question** — the open item was why five secrets appeared *minutes before Story 1.13's pre-flight*, a timing question. The answer supplies org membership and creation timestamps and concludes they are platform credentials. No timing comparison is made, and `SLACK_CD_WEBHOOK_URL` is one of the five and belongs to neither robot account [deferred-work.md:69-75]
+- [ ] [Review][Patch] **Two of the story's own six «не проверено» items never reached `deferred-work.md`** — org-secret visibility to workflows (which the spec says Story 1.12 depends on) and whether `retention-days` is honoured (which Story 2.1 sets at `CI.yml:106`). Both live only inside a story file marked `review`. Task 8.5 required filing everything surfaced but unowned
+- [ ] [Review][Patch] **The `--add-host` address choice is correct but unexplained, and both reviewers read it as a production error** — the record says s1 resolves the name to `10.70.0.1` while the applied fix pins `10.67.0.1`. **Verified during review: both are s1's own WireGuard interfaces** (`wg-clients` and `wg-private`), nginx listens on `0.0.0.0:443`, and both return `401` from a job-equivalent container. The change is sound; the record needs one sentence saying so, or Story 3.1 inherits the same confusion
+- [ ] [Review][Patch] **The write budget's "overage" is measured against a number never declared** — D12 says «план был 2 — превышение из-за честного провала первого», but Task 1.8's declaration records only «(b) M workflow dispatches» with `M` unbound. The overage is unfalsifiable and the declared budget Task 1.8 asked for does not exist
+- [ ] [Review][Patch] **The Фаза 1 DoD reads `✅` for a partial result on the clause gating Epics 2–7**, and nothing states whether porting may now proceed. A reader scanning the plan for checkmarks sees the gate as satisfied; «выполнено частично» is three words into a six-line block [docs/forgejo-migration.md:165-170]
+- [ ] [Review][Patch] **`robot-registry` ownership hardened from "almost certainly" into flat fact in the canonical, non-rewritable file** before the confirming step had been taken — «Они **принадлежат** аккаунту `robot-registry`» in D12 versus «almost certainly» in `deferred-work.md` and «still genuinely unanswered» in Open Question 6. Oleg's confirmation has since made it true, so record *that* as the basis rather than leaving an unsourced assertion
+- [ ] [Review][Patch] **Task 9.6's `[DEBUG]`-free claim is inconsistent with the evidence drawn from the same stream** — `docker compose restart` does not truncate `docker logs`, so a whole-stream `grep -c "\[DEBUG\]"` of 0 would contradict the AC7 attribution evidence taken from those same dispatches. If `--since` was used, that is not stated
+- [ ] [Review][Patch] Stray combining accent in the append-only changelog: «провере́н» [docs/migration-decisions.md, 11.08.2026 story-1.8 row]
+
+- [x] [Review][Defer] **The `docker-build` label now has no proven working use case** — every job in the probe ran on `node-20` with `apt-get install -y -qq docker.io` supplying the CLI. That was Task 4.1's sanctioned decision (a), but the consequence is unfiled: Stories 2.1 and 3.1 will need a runtime docker-CLI install in every real docker workflow, and Story 1.7's deliverable label is unexercised — deferred, belongs to Story 1.9/3.1
+
+**Dismissed — raised by a layer, disproven by direct verification. Do not re-raise:**
+1. *"`--add-host` points at the wrong host"* — both IPs are s1's own WG interfaces; both serve the registry identically (401).
+2. *"the `run_registry_push` gate may be a boolean/string mistake"* — it is `== 'true'` with a string default `"false"`, exactly as Task 5.2 requires.
+3. *"`docker manifest inspect` needs experimental mode"* — the CLI in the job image is 29.7.1; the subcommand is available.
+4. *"`FROM alpine:3.20` needs untested docker.io egress"* — verified reachable (`registry-1.docker.io` → 401) and `pull alpine:3.20` succeeds from the nested engine.
+5. *"`continue-on-error` defeats exit-status discipline"* — a combined assert fails the job when neither v4 nor v3 succeeds, so job status still carries the verdict. Only the "каждый шаг зелёный" wording is wrong, tracked separately above.
+
 ## Dev Notes
 
 ### What this story produces
@@ -977,6 +1037,200 @@ workflow. The project's evidence standard applies:
   process expectations this story is the first to inherit.
 - [Source: `.github/workflows/CI.yml`, `.github/workflows/CD.yml`] — every action under test, with
   the versions and call sites the inventory table cites.
+
+## Appendix — `.forgejo/workflows/probe-actions.yml` as dispatched
+
+Recovered during code review 2026-08-11 from dangling commit `2ea19bdf` and preserved here,
+because it existed in **no git ref**: branch `probe/action-compat` was deleted on `origin` and
+locally per Task 9.1, and the commits survived only as unreachable objects in one local clone,
+which `git gc` prunes by default. The File List already claimed this file was "recorded here for
+the audit trail"; it now is.
+
+This is the exact text that produced runs 384 and 385. Every AC1/AC2/AC7 verdict in `#d12` is
+checkable against it, and the AC3 follow-up can be re-dispatched from it rather than re-authored
+from prose. Note the `uses:` lines are **SHA pins with tag comments** — stricter than the story
+required, and the only surviving record of the tag→SHA mapping the verdicts are published under.
+
+```yaml
+name: probe-actions
+
+# THROWAWAY — Story 1.8. Lives only on branch probe/action-compat, cut from
+# main. Never dispatched from main/staging/development, never given push/PR
+# triggers (see docs/migration-decisions.md#d9 and the Story 1.8 write-up).
+on:
+  workflow_dispatch:
+    inputs:
+      run_registry_push:
+        description: >-
+          Set to the literal string 'true' to also run the credentialed
+          docker/login-action + docker/build-push-action job (AC3's push
+          clause). Requires Oleg's Task 2.1 confirmation with aleksey that
+          REGISTRY_USER/REGISTRY_TOKEN_RW are ours to use. Defaults to not
+          running that job.
+        required: false
+        default: "false"
+
+jobs:
+  # AC1, AC2, AC7, and the two docker/* actions that need no registry
+  # credential (setup-buildx-action, metadata-action). Runs on node-20 per
+  # Task 4 decision (a): docker-build's image has no Node runtime (Trap 1),
+  # so every uses: step in this file targets node-20, and the docker CLI is
+  # supplied via a run: step reaching the nested daemon that container.options
+  # already hands to every job container regardless of label.
+  probe-node20:
+    runs-on: node-20
+    steps:
+      - name: actions/checkout@v6
+        uses: https://github.com/actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: assert checkout effect (AC1)
+        run: |
+          test -f package.json || (echo "CHECKOUT DID NOT RESOLVE: package.json absent from workspace" && exit 1)
+          echo "checkout OK: package.json present in workspace"
+
+      - name: actions/setup-node@v4
+        uses: https://github.com/actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+
+      - name: assert setup-node effect (AC1)
+        run: |
+          node --version
+          node --version | grep -q '^v20\.' || (echo "SETUP-NODE DID NOT RESOLVE: node major version is not 20" && exit 1)
+          echo "setup-node OK: node 20 active"
+
+      - name: create artifact payload
+        run: |
+          mkdir -p smoke-artifact
+          printf 'story-1.8 smoke artifact\nrun_id=%s\ntimestamp_utc=%s\n' "${{ github.run_id }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > smoke-artifact/smoke.txt
+          cat smoke-artifact/smoke.txt
+
+      - name: actions/upload-artifact@v4
+        id: upload_v4
+        continue-on-error: true
+        uses: https://github.com/actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-1-8-artifact-v4
+          path: smoke-artifact/smoke.txt
+          retention-days: 1
+
+      - name: record upload-artifact@v4 verdict (AC2, AC5)
+        run: |
+          echo "v4 outcome: ${{ steps.upload_v4.outcome }}"
+          echo "v4 conclusion: ${{ steps.upload_v4.conclusion }}"
+          echo "v4 artifact-id output: [${{ steps.upload_v4.outputs.artifact-id }}]"
+          echo "v4 artifact-url output: [${{ steps.upload_v4.outputs.artifact-url }}]"
+
+      - name: actions/upload-artifact@v3 (fallback, always attempted so both verdicts are recorded)
+        id: upload_v3
+        continue-on-error: true
+        uses: https://github.com/actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: smoke-1-8-artifact-v3
+          path: smoke-artifact/smoke.txt
+          retention-days: 1
+
+      - name: assert at least one of v4/v3 resolved (AC2)
+        run: |
+          echo "v3 outcome: ${{ steps.upload_v3.outcome }}"
+          echo "v3 conclusion: ${{ steps.upload_v3.conclusion }}"
+          if [ "${{ steps.upload_v4.outcome }}" != "success" ] && [ "${{ steps.upload_v3.outcome }}" != "success" ]; then
+            echo "UPLOAD-ARTIFACT DID NOT RESOLVE: neither v4 nor v3 succeeded" && exit 1
+          fi
+          echo "upload-artifact resolved: v4=${{ steps.upload_v4.outcome }} v3=${{ steps.upload_v3.outcome }} (retrieval verified separately, see Task 6)"
+
+      - name: "install docker CLI (run: only; node-20 needs a daemon, not a runtime)"
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq docker.io
+          docker --version
+          docker version
+
+      - name: docker/setup-buildx-action@v3
+        id: buildx
+        uses: https://github.com/docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: assert setup-buildx-action effect (AC3, non-credentialed)
+        run: |
+          docker buildx version
+          docker buildx inspect --bootstrap
+          docker buildx ls
+          docker buildx ls | grep -q "${{ steps.buildx.outputs.name }}" || (echo "SETUP-BUILDX-ACTION DID NOT RESOLVE: builder ${{ steps.buildx.outputs.name }} not listed" && exit 1)
+          echo "setup-buildx-action OK: builder ${{ steps.buildx.outputs.name }} present"
+
+      - name: docker/metadata-action@v5
+        id: meta
+        uses: https://github.com/docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: git.crm-prionex.com/crm/fe-prionex
+          tags: |
+            type=raw,value=smoke-1-8-probe
+
+      - name: assert metadata-action effect (AC3, non-credentialed)
+        run: |
+          echo "tags output: [${{ steps.meta.outputs.tags }}]"
+          echo "${{ steps.meta.outputs.tags }}" | grep -q "git.crm-prionex.com/crm/fe-prionex:smoke-1-8-probe" || (echo "METADATA-ACTION DID NOT RESOLVE: expected tag missing from output" && exit 1)
+          echo "metadata-action OK: expected tag computed"
+
+      - name: AC7 cheap optional assertion — constructed run URL
+        run: |
+          echo "constructed run url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: confirm this job used node-20, not a forbidden label
+        run: echo "runs-on was node-20 for this job (see workflow file header) — no ubuntu-latest/s1/ci/build-crm/deploy-dev-preprod/s2-prod-deploy used anywhere in this file"
+
+  # AC3's credentialed clause: docker/login-action + docker/build-push-action
+  # against the real throwaway image push. GATED behind an explicit
+  # workflow_dispatch input (inputs arrive as strings — compare == 'true').
+  # Not dispatched with run_registry_push=true until Task 2.1's human
+  # confirmation (Oleg -> aleksey) is obtained.
+  probe-docker-push:
+    if: ${{ github.event.inputs.run_registry_push == 'true' }}
+    runs-on: node-20
+    steps:
+      - name: "install docker CLI (run: only)"
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq docker.io
+
+      - name: docker/setup-buildx-action@v3
+        id: buildx
+        uses: https://github.com/docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: docker/login-action@v3
+        id: login
+        uses: https://github.com/docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: docker/metadata-action@v5
+        id: meta
+        uses: https://github.com/docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: git.crm-prionex.com/crm/fe-prionex
+          tags: |
+            type=raw,value=smoke-1-8-probe
+
+      - name: write throwaway Dockerfile
+        run: |
+          printf 'FROM alpine:3.20\nCMD ["true"]\n' > Dockerfile.smoke
+
+      - name: docker/build-push-action@v5
+        id: push
+        uses: https://github.com/docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          file: Dockerfile.smoke
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: assert the image actually exists in the registry (AC3, not a green step)
+        run: |
+          docker manifest inspect ${{ steps.meta.outputs.tags }} || (echo "BUILD-PUSH-ACTION DID NOT RESOLVE: manifest not inspectable at ${{ steps.meta.outputs.tags }}" && exit 1)
+          echo "build-push-action OK: manifest inspectable at ${{ steps.meta.outputs.tags }}"
+```
 
 ## Dev Agent Record
 
