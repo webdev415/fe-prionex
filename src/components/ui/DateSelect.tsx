@@ -10,7 +10,6 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -22,6 +21,35 @@ import {
   parseManualDate,
   parseManualDateTime,
 } from '@/lib/dateUtils'
+
+/**
+ * LastPass / 1Password / Dashlane opt-outs. Their overlays cover the calendar
+ * exactly the way Chrome's own suggestion list does (KAN-995).
+ *
+ * react-datepicker builds its built-in input from a fixed prop list and never
+ * forwards ``data-*``, so these can only land on an input we render ourselves.
+ * That is why both modes go through a custom input below, not just the masked
+ * one — otherwise the ~35 calendar-only call sites (client date of birth,
+ * passport issued/expires, …) would stay exposed.
+ */
+const PASSWORD_MANAGER_OPT_OUT = {
+  'data-lpignore': 'true',
+  'data-1p-ignore': '',
+  'data-form-type': 'other',
+} as const
+
+/**
+ * Calendar-only counterpart of ``MaskedDateTimeInput``: a faithful pass-through
+ * of everything react-datepicker injects, existing only so the opt-out
+ * attributes above reach the DOM node. Typing is still blocked by the
+ * ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
+ * through a custom input.
+ */
+const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function PlainDateInput(props, ref) {
+    return <input type="text" {...props} ref={ref} {...PASSWORD_MANAGER_OPT_OUT} />
+  }
+)
 
 /**
  * Custom input used when ``allowManualInput`` is on. react-datepicker clones
@@ -44,6 +72,7 @@ const MaskedDateTimeInput = forwardRef<
 ) {
   return (
     <input
+      type="text"
       {...rest}
       ref={ref}
       value={text}
@@ -55,6 +84,7 @@ const MaskedDateTimeInput = forwardRef<
         onTextBlur?.()
       }}
       inputMode="numeric"
+      {...PASSWORD_MANAGER_OPT_OUT}
     />
   )
 })
@@ -69,6 +99,13 @@ export interface DateSelectProps {
   value?: string | Date | null
   onChange?: (args: { value: Date | null }) => void
   disabled?: boolean
+  /**
+   * Applied to the WRAPPER element, not the field. The input itself always
+   * carries a generated opaque id so a semantic value cannot reach Chrome's
+   * autofill classifier (KAN-995). Use ``label`` for association, or query
+   * within the wrapper — an external ``htmlFor``/``#id`` aimed at this value
+   * would target a div.
+   */
   id?: string
   min?: Date | string
   max?: Date | string
@@ -145,6 +182,29 @@ export interface DateSelectProps {
    * snap back to the active filter value.
    */
   resyncInvalidOnBlur?: boolean
+  /**
+   * Escape hatch for Chrome's autofill (KAN-995). ``off`` suppresses the
+   * saved-value list everywhere, but Chrome ignores it on fields its classifier
+   * reads as profile data. The rendered ``id`` and ``name`` are both opaque, so
+   * what it can still read is the visible label and the placeholder (manual
+   * mode sets ``DD.MM.YYYY``).
+   *
+   * ``new-password`` is the token Chrome always honours, and it is what the
+   * client date-of-birth and passport fields use. Two costs come with it, and
+   * both need re-checking in Chrome if that set ever grows:
+   *
+   * - it declares a credential purpose, so Chrome may attach password-manager
+   *   UI to the field — a save prompt on submit, or a suggestion dropdown that
+   *   would cover the calendar exactly the way the autofill list does. Chrome
+   *   reserves password generation for ``type="password"`` inputs and these are
+   *   ``type="text"``, so this is unlikely rather than impossible;
+   * - it is not the field's real purpose. WCAG 1.3.5 would want ``bday`` on a
+   *   date of birth, but 1.3.5 covers fields collecting data about *the user*.
+   *   These collect a client's data, so ``bday`` is not merely unhelpful there,
+   *   it is wrong: it invites Chrome to write the operator's own birthday into
+   *   a debtor record.
+   */
+  autoComplete?: string
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -196,17 +256,29 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       onValidityChange,
       invalidText,
       resyncInvalidOnBlur = false,
+      autoComplete = 'off',
     },
     ref
   ) => {
     const generatedId = useId()
-    const inputId = id || generatedId
-    const errorId = `${inputId}-error`
-    const helperId = `${inputId}-helper`
-    const { t } = useTranslation('common')
+    const describedByBase = id || generatedId
+    const errorId = `${describedByBase}-error`
+    const helperId = `${describedByBase}-helper`
+    // The rendered input's id AND name, always derived from the generated id and
+    // never from a caller-supplied one. Chrome ignores autocomplete="off" on
+    // fields it classifies as profile data, and it classifies from id, name,
+    // placeholder and label — so a semantic call site (promise-date,
+    // task-due-date, start_date) must not reach the element it inspects. The
+    // caller's `id` moves to the wrapper instead, where it stays available to
+    // CSS and automation but is not a form field. The visible label and the
+    // placeholder are still readable by the classifier, which is what the
+    // `autoComplete` prop exists to override (KAN-995).
+    //
+    // The character whitelist keeps the value well formed across React
+    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
+    const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
-    const isDatetimeManual = allowManualInput && !!showTimeSelect
     const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
 
     // ── Manual-input state (only used when allowManualInput) ──────────────
@@ -334,11 +406,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // Red styling for both an explicit error and an in-progress invalid entry.
     const hasError = !!error || manualInvalid
 
-    // TA datetime fields: inline error under the input while typing invalid text.
-    // Date filter fields: border only — no inline message.
-    const manualInlineError =
-      manualInvalid && isDatetimeManual ? t('pages.clientChains.errors.dateInvalid') : undefined
-    const displayedError = error || manualInlineError
+    // Mirrors exactly when the <p id={errorId}> below renders, so
+    // aria-describedby can never reference an element that is not there. The
+    // complement is the helper paragraph's own condition. TA datetime fields
+    // surface their inline message through `invalidText`, which is the second
+    // branch — the component has no separate built-in message of its own.
+    const errorMessageShown = !!error || (manualInvalid && !!invalidText)
 
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border border-input-border bg-input pr-4 pl-10 text-sm font-light text-foreground transition-all outline-none placeholder:text-muted-foreground',
@@ -355,9 +428,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         : placeholder
 
     return (
-      <div className={`w-full ${className || ''}`}>
+      <div id={id} className={`w-full ${className || ''}`}>
         {label && (
-          <label htmlFor={inputId} className="text-foreground mb-1.5 block text-sm font-light">
+          <label
+            htmlFor={opaqueFieldId}
+            className="text-foreground mb-1.5 block text-sm font-light"
+          >
             {label}
             {required && <span className="text-error-500 ml-1">*</span>}
           </label>
@@ -369,7 +445,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           <div className="date-select-wrapper" data-has-error={hasError ? 'true' : 'false'}>
             <DatePicker
               ref={ref}
-              id={inputId}
+              id={opaqueFieldId}
+              name={opaqueFieldId}
+              autoComplete={autoComplete}
               className={inputClassName}
               selected={parseDate(value)}
               onChange={handleChange}
@@ -385,13 +463,20 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
                       />
                     ),
                   }
-                : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}
+                : {
+                    customInput: <PlainDateInput />,
+                    onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault(),
+                  })}
               dateFormat={format}
               placeholderText={effectivePlaceholder}
               disabled={disabled}
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
-              aria-describedby={displayedError ? errorId : helperText ? helperId : undefined}
+              aria-describedby={errorMessageShown ? errorId : helperText ? helperId : undefined}
+              // Same condition as the red border, so the visual invalid state
+              // always has a programmatic counterpart — including the case
+              // where the field is invalid but the caller passed no message.
+              aria-invalid={hasError ? 'true' : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
               popperClassName="date-select-popper"
@@ -427,7 +512,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         </div>
         {error ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
-            {displayedError}
+            {error}
           </p>
         ) : manualInvalid && invalidText ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
