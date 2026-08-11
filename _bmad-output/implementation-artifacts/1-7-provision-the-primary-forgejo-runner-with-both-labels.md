@@ -410,14 +410,14 @@ exists on `main`, `staging` or `development`
       container keeps running. Confirmed with a live poll loop (10× 1s samples, `StartedAt`
       never changed). A genuine crash test on this image must signal the **host-side** PID, not
       exec into the container.
-- [ ] 5.3 ⚠️ **Not done — needs an explicit go-ahead, not assumed.** s1 is a shared production
-      hub carrying three other tenants' live infrastructure (`techno-finance`, the observability
-      stack, three other orgs' runners); rebooting it is outside what this story should decide
-      unilaterally. Recording per the story's own instruction: reboot recovery is **asserted**
-      from `restart: unless-stopped` (a container with this policy is started by the Docker
-      daemon itself on daemon startup, which in turn is enabled at boot on every other runner
-      project on this host) — **not observed**. If Oleg wants it actually observed, that is a
-      deliberate, scheduled action on shared infrastructure, not a quick check.
+- [x] 5.3 🚫 **Declined by Oleg, explicitly** ("нельзя ребутить сервера") — not a gap, a decision.
+      s1 is a shared production hub carrying three other tenants' live infrastructure
+      (`techno-finance`, the observability stack, three other orgs' runners); a reboot would
+      interrupt all of them for a single runner's durability check. Recorded per the story's own
+      instruction for this case: reboot recovery is **asserted** from `restart: unless-stopped`
+      (a container with this policy is started by the Docker daemon itself on daemon startup,
+      which in turn is enabled at boot on every other runner project on this host) — **not
+      observed**, and will not be observed under this story.
 - [x] 5.4 Log location for the next person: `docker logs forgejo-runner-fe-prionex` /
       `docker compose -f /opt/forgejo-runner-fe-prionex/docker-compose.yml logs runner` (as
       `forgejo-runner-fe-prionex` user). No systemd/journalctl — this project is pure compose.
@@ -597,16 +597,17 @@ exists on `main`, `staging` or `development`
       (`sed` in place, backup taken first then removed once verified). `docker compose restart
       runner` — daemon log post-restart shows no `[DEBUG]` lines, only `level=info`. Confirmed
       still `idle` afterward via `GET /repos/CRM/fe-prionex/actions/runners`.
-- [ ] 10.6 Commit with the project's convention — Conventional Commits with a scope, **no
-      `KAN-###`** (Jira ids are for feature work only), and split by area:
-      `docs(migration): …` for `docs/`, `chore(bmad): …` for `_bmad-output/`. Push `main` as a
-      fast-forward; verify fast-forward status first as Story 1.13's Task 1.1 did.
-      🚨 Pushing `main` is safe **because** the placeholder suppresses `.github/workflows/` on
-      that ref — confirm no run is created after the push
-      (`GET /api/v1/repos/CRM/fe-prionex/actions/runs` `total_count` unchanged).
-- [ ] 10.7 Update `_bmad-output/implementation-artifacts/sprint-status.yaml`: the `1-7-…` entry
-      (line 64) `ready-for-dev` → `review`, and bump `last_updated`. Verify the current value
-      before writing. Leave every other entry alone.
+- [x] 10.6 Two commits, split by area: `docs(migration): record D10 — s1-fe-prionex-1 runner
+      (node-20, docker-build)` (`68855066`, `docs/`) and `chore(bmad): story 1.7 to review —
+      runner s1-fe-prionex-1 live, both labels proven` (`c1170987`, `_bmad-output/`). Both ran
+      the full husky pre-commit suite (lint, format, typecheck, 1921 tests) — not skipped.
+      Fast-forward verified first (`git merge-base --is-ancestor origin/main HEAD`). Pushed
+      `main` — pre-push build hook ran and passed, landed as `42fb1472..c1170987`. Confirmed
+      no run was created: `total_count` before and after the push both `16`, latest run still
+      id 337/index 16 (the Task 7.2 cache-hit dispatch).
+- [x] 10.7 `sprint-status.yaml`: `1-7-…` entry `in-progress` → `review` (verified the prior value
+      before writing), `last_updated` bumped to `2026-08-11`. This story's own `Status:` line
+      also moved `in-progress` → `review`. No other entry touched.
 
 ## Dev Notes
 
