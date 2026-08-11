@@ -55,9 +55,27 @@ function extensionOf(value: unknown): string | null {
     : null
 }
 
-export function useIncomingCall(agentExtension: string | null) {
+interface UseIncomingCallOptions {
+  /**
+   * A call this operator can see has reached a terminal state.
+   *
+   * The socket carries state for every call in the agent's room, which makes
+   * this the one place that learns a call is over without waiting for a poll to
+   * notice. Consumers holding their own call window use it to take that window
+   * down; the callee is responsible for checking the id names *their* call.
+   */
+  onCallSettled?: (callId: string) => void
+}
+
+export function useIncomingCall(
+  agentExtension: string | null,
+  { onCallSettled }: UseIncomingCallOptions = {}
+) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
+  // Held in a ref so a caller passing an inline function does not tear down and
+  // rebuild the socket on every render.
+  const onCallSettledRef = useRef(onCallSettled)
   const settledCallsRef = useRef<Map<string, number>>(new Map())
   const shownCallRef = useRef<string | null>(null)
   const loggedMissingAnswererRef = useRef<string | null>(null)
@@ -67,6 +85,10 @@ export function useIncomingCall(agentExtension: string | null) {
   useEffect(() => {
     shownCallRef.current = incomingCall?.call_id ?? null
   }, [incomingCall])
+
+  useEffect(() => {
+    onCallSettledRef.current = onCallSettled
+  })
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
@@ -170,6 +192,9 @@ export function useIncomingCall(agentExtension: string | null) {
         // already over with nothing left to close it.
         rememberSettled(callId)
         dismissIfSameCall(callId)
+        // Deliberately not fired for a colleague answering: that settles the
+        // call for the queue, not for whoever is now holding it.
+        if (callId) onCallSettledRef.current?.(callId)
         return
       }
 
