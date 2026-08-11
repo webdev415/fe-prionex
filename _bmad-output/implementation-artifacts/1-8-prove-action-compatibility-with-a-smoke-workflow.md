@@ -23,28 +23,32 @@ ported". Story 1.7 finished the runner and deliberately left the other half of �
 for you (`docs/forgejo-migration.md:158`, and Story 1.7 Task 9.4 says so in as many words). Four
 things make this story harder than it looks.
 
-### 1. Two of your four ACs are blocked on infrastructure that does not exist yet
+### 1. Two of your four ACs rested on infrastructure that does not exist — Oleg has now settled both
 
 `epics.md` declares **no prerequisites** for this story. That is a hole in the epic, not a licence
-to improvise — the create-story pre-flight found it by probing the live instance:
+to improvise. The create-story pre-flight found it by probing the live instance, and **Oleg decided
+all three open points on 2026-08-11 before this story was released for dev.** They are recorded
+here so you do not re-open them:
 
-| AC | What it needs | Who owns it | State today |
-|---|---|---|---|
-| AC3 | a `write:package` registry credential | Story **1.10** (mint) + **1.12** (place in Forgejo) | both `backlog`; 1.12 is itself gated behind 1.13 |
-| AC4 | `S1_SSH_*` and a network path to s1:22 | Story **1.12** | `backlog`; **and the firewall blocks it outright** — see §3 |
+| Point | Decision (Oleg, 2026-08-11) |
+|---|---|
+| **AC3 — registry credential** | **Use the existing org secrets `REGISTRY_USER` + `REGISTRY_TOKEN_RW`.** They already exist on the `CRM` org and almost certainly belong to the `robot-registry` account (see §5). Story 1.10 therefore becomes "adopt and document", not "create". |
+| **AC3 — network fix** | **Approved.** Add `--add-host git.crm-prionex.com:10.67.0.1` to `container.options` on s1. Back the config up first and log the edit against the write budget. |
+| **AC4 — SSH to s1** | **Rescoped: deployment will run on a runner located on the target host, not over `ssh`/`scp` from a build job.** See §6. |
 
-**Tasks 2 and 3 are 🛑 HARD STOPS.** Do not invent a credential, do not widen a firewall, do not
-land `S1_SSH_*` into Forgejo to unblock yourself. Landing SSH secrets early is a partial Story 1.12
-executed out of order on a repository where **497 of 501 remote branches still carry an executable
-legacy `CD.yml`** (D9) — that is the exact protection Story 1.12 is scheduled to remove
-deliberately, and removing it by accident here would be the worst outcome this plan can produce.
+What remains genuinely human-only:
 
 | Part | Who | Can the dev agent do it? |
 |---|---|---|
-| Decide how AC3 gets a registry credential | **Oleg** | ❌ no — Task 2 is a hard stop |
-| Decide whether AC4 is run, rescoped or deferred | **Oleg** | ❌ no — Task 3 is a hard stop |
-| Approve any change to s1's runner config or firewall | **Oleg** (+ hub admin `aleksey`) | ❌ no |
+| Any *further* change to s1's firewall or nginx ACL | **Oleg** (+ hub admin `aleksey`) | ❌ no — and none is needed now |
+| Confirming with `aleksey` that `REGISTRY_TOKEN_RW` is ours to use | **Oleg** | ❌ no — Task 2.1 |
 | Everything else in this story | dev agent | ✅ yes |
+
+**Still forbidden regardless:** do not land `S1_SSH_*` into Forgejo to unblock anything. That is a
+partial Story 1.12 executed out of order on a repository where **497 of 501 remote branches still
+carry an executable legacy `CD.yml`** (D9) — the exact protection 1.12 is scheduled to remove
+deliberately. Removing it by accident would be the worst outcome this plan can produce, and after
+the AC4 rescope there is no longer any reason to go near it.
 
 ### 2. You cannot stop a run once it starts — and this story starts the longest ones yet
 
@@ -90,12 +94,14 @@ auth. This is a change to `container.options` in the runner's **unversioned** co
 is a Task 2 decision, not a drive-by edit. **This finding is bigger than 1.8:** Story 3.1 pushes to
 the same registry from the same runner and will hit exactly this wall.
 
-**(c) AC4 is blocked by firewall policy, not by a missing secret.** `ufw` on s1 is **active** with
-`-P INPUT DROP`, and port 22 is allowed from exactly two admin addresses (`81.4.156.7` "Ober home
-SSH", `194.156.248.138` "Aleksey SSH"). Docker subnets are not among them, and a job-equivalent
-container times out on `10.67.0.1:22`, `10.67.0.1:2222` and `git.crm-prionex.com:2222`. So AC4
-cannot pass as written **even with a valid key**. Opening it means editing a shared production
-host's firewall — the same escalation class as Story 1.7's nginx ACL, which required `aleksey`.
+**(c) SSH from a job container to s1 is impossible by firewall policy, not by a missing secret.**
+`ufw` on s1 is **active** with `-P INPUT DROP`, and port 22 is allowed from exactly two admin
+addresses (`81.4.156.7` "Ober home SSH", `194.156.248.138` "Aleksey SSH"). Docker subnets are not
+among them, and a job-equivalent container times out on `10.67.0.1:22`, `10.67.0.1:2222` and
+`git.crm-prionex.com:2222`. AC4 as originally written could not pass **even with a valid key**.
+**This is now moot for this story** — see §6 — but keep the finding: it is why nobody should
+attempt an SSH-based deploy from a build runner later, and it is evidence for the Epic 4
+correct-course.
 
 ### 4. `.forgejo/workflows/` is armed, and you are the second story to put a `.yml` in it
 
@@ -114,6 +120,57 @@ D9 is **per-commit, not per-branch**: any ref Forgejo resolves on a commit witho
    **`c9aeac2f0f0adf492d66781e3fbd330217844ee2`**, identical on all three refs.
 4. **Do not use a Story 2.1 filename** — `ci.yml`, `build.yml`, `deploy-dev.yml`,
    `deploy-preprod.yml`, `deploy-prod.yml`, `dev-reset.yml` are reserved.
+
+### 5. The platform already has service accounts the plan does not know about
+
+`GET /orgs/CRM/members` returns three accounts: **`platform-admin`**, **`robot-deploy`**,
+**`robot-registry`**. The five org secrets created `2026-08-10T10:14:26–27+02:00` —
+`REGISTRY_USER`, `REGISTRY_USER_RO`, `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`,
+`SLACK_CD_WEBHOOK_URL` — line up with them. `deferred-work.md` had recorded their provenance as
+"still unanswered"; this is the answer: they are the hub's own platform credentials, not something
+a previous story left behind.
+
+**The plan's `ci-bot` does not exist** (`GET /users/ci-bot` → 403, and it is absent from the member
+list). `epics.md:704-707` and FR10 both name `ci-bot`; the platform's equivalent is
+`robot-registry`. Record the substitution — do **not** create `ci-bot`, and do not "fix" the plan
+here; that is Story 1.10's business.
+
+⚠️ **Forgejo secret values are write-only, so you cannot verify `REGISTRY_TOKEN_RW` before using
+it.** The first `docker/login-action` step *is* the test. If it fails, that is a credential
+finding, not an action-compatibility finding — say which in the verdict. Also note repo-level
+secrets are currently `[]`; whether org secrets are exposed to workflows in this repository is
+itself something your probe run establishes. Record it either way — Story 1.12 depends on the
+answer.
+
+⚠️ `SLACK_CD_WEBHOOK_URL` is a non-resolving `example.invalid` stub: Story 1.13 overwrote it on a
+false reading of `CD.yml`, and since values are write-only the original is **unrecoverable**.
+Restoration is deferred. Do not touch it and do not treat its presence as evidence of anything.
+
+### 6. Deployment will not use SSH — AC4 is rescoped
+
+**Oleg's decision, 2026-08-11: «деплой по runner».** Deployment runs on a runner located on the
+**target host**, driving that host's own Docker daemon locally — not `ssh`/`scp` from a build job.
+
+This is not a new invention; it is what this hub already does, which is why §3(c)'s firewall wall
+exists and nobody had hit it before:
+
+- `/opt/forgejo-runner-deploy` on s1 mounts the host `docker.sock` deliberately, with a banner in
+  its own compose file — «🚨🚨🚨 Хостовой docker.sock … Это НЕ dind» / «Деплойный раннер получает
+  хостовой docker.sock — риск принят». It is the documented exception to the build-runner rule.
+- Org runner `s1-deploy-dev-preprod` (id 14) and the org account `robot-deploy` exist for exactly
+  this.
+
+**Consequence for AC4, and it is a simplification:** `appleboy/scp-action` and `appleboy/ssh-action`
+are "confirmed as not needed" **because the architecture no longer performs SSH at all** — a
+stronger result than proving native `ssh`/`scp` would have been. Task 3 records this; there is no
+SSH probe to run.
+
+🚨 **Consequence beyond this story — do not absorb it silently.** `FR19` (`epics.md:128-130`,
+"scp compose file → `docker compose down` → `docker pull` … → health check") and **Story 4.3 AC2**
+(`epics.md:1301-1304`, "it uses native `ssh` and `scp` in `run:` steps") now describe the wrong
+mechanism, and Stories 5.3 and 6.4 inherit it. **Oleg's decision: record it here, run
+`correct-course` for Epic 4 separately.** Task 8.5 files the entry; this story does not amend
+`epics.md`.
 
 ### Six prohibitions
 
@@ -184,8 +241,14 @@ replacement.
 **Then** native `ssh` and `scp` in a `run:` step reach s1 successfully
 **And** the `appleboy/*` actions are confirmed as not needed.
 
-> 🛑 **Blocked at the network layer — see §3(c).** `ufw` denies port 22 to everything except two
-> admin IPs. This AC cannot pass without a firewall change on a shared production host. Task 3.
+> ✅ **Rescoped by Oleg's decision, 2026-08-11 — read §6 before acting on the text above.**
+> Deployment will run on a runner located on the target host, not over SSH from a build job, so
+> there is **no SSH probe to run**. The AC's second clause — "the `appleboy/*` actions are confirmed
+> as not needed" — is closed by the architecture rather than by a connectivity test, which is a
+> stronger result. The first clause is recorded as superseded, not as failed. §3(c) explains why an
+> SSH probe could not have passed anyway: `ufw` denies port 22 to everything but two admin IPs.
+> Task 3 records all of this; `epics.md` is **not** amended here — Epic 4 gets its own
+> `correct-course`.
 
 **AC5 — [DERIVED] every action under test gets a per-action recorded verdict, not a green run**
 
@@ -287,45 +350,54 @@ explicitly recorded as accepted.
       this list is recorded openly, not silently. Close the ledger out at the end, not mid-session
       — both 1.13's and 1.7's budgets were found stale in review.
 
-### Task 2 — 🛑 HARD STOP: settle the registry path for AC3 with Oleg (AC: 3)
+### Task 2 — Wire the registry path decided by Oleg (AC: 3)
 
-- [ ] 2.1 🛑 Present the finding, do not resolve it alone: **the registry is enabled**
-      (`has_packages: true`, `/v2/` answers `401` — alive, needs auth), so Story 1.10 is about
-      *scoped credentials*, not enablement. But no credential is provisioned for this story, and
-      **four `REGISTRY_*` org secrets already exist with unexplained provenance** — `REGISTRY_USER`,
-      `REGISTRY_USER_RO`, `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`, all created
-      `2026-08-10T10:14:26–27+02:00`, minutes before Story 1.13's pre-flight, matching D6's naming
-      scheme for Story 1.12. `deferred-work.md` records this as still unanswered.
-      **Ask Oleg to choose:** (a) use the existing org secrets; (b) mint a throwaway `write:package`
-      token for this story and revoke it at the end; (c) defer AC3 until Story 1.10; (d) prove the
-      `docker/*` actions against a local registry target and record the push clause as
-      «не проверено».
-- [ ] 2.2 🛑 Present the network finding and its fix (§3(b)). Reaching the registry from a job
-      container requires pinning the hostname — `--add-host git.crm-prionex.com:10.67.0.1` — which
-      means editing `container.options` in `/opt/forgejo-runner-fe-prionex/config.yml`, an
-      **unversioned production config** that Story 1.9 will inherit. Ask Oleg to approve or decline.
-      If approved: take a backup first, log it against the write budget, and hand the state to
-      Story 1.9 documented. **Do not widen the nginx ACL** — that is a separate escalation needing
-      `aleksey`, and it is not what this problem requires.
-- [ ] 2.3 Record whichever path is chosen, including the rejected ones and why. If AC3 is deferred,
-      say so as a definite "not done and why", not as silence.
+> **Decided 2026-08-11, both points. Do not re-open; execute and record.**
 
-### Task 3 — 🛑 HARD STOP: settle AC4 with Oleg (AC: 4)
+- [ ] 2.1 Use the existing org secrets **`REGISTRY_USER` + `REGISTRY_TOKEN_RW`** for
+      `docker/login-action` against `git.crm-prionex.com`. They are platform credentials belonging
+      to the hub (see §5), not artefacts of a previous story. ⚠️ **Ask Oleg to confirm with
+      `aleksey` that they are ours to use before the first push** — this is the one remaining
+      human-only item, and it costs one message. Values are write-only and unverifiable in advance:
+      the first login step is the test. A failure there is a **credential** finding, not an
+      action-compatibility one — label it correctly in the verdict.
+- [ ] 2.2 Apply the approved network fix: add `--add-host git.crm-prionex.com:10.67.0.1` to
+      `container.options` in `/opt/forgejo-runner-fe-prionex/config.yml`, keeping the existing
+      `-e DOCKER_HOST=tcp://172.17.0.1:2375` intact. **Back the file up first**, log the edit
+      against the Task 1.8 write budget, restart the runner, and confirm it returns to `idle`.
+      Without this the registry is simply unreachable from job containers — §3(b).
+      **Do not widen the nginx ACL or the firewall.** Neither is needed: the runner's subnet
+      `192.168.226.0/24` is already allowed, and the problem is name resolution, not access.
+- [ ] 2.3 Hand the changed state to Story 1.9 documented — that story inherits this config and
+      `deferred-work.md` already tracks the directory as unversioned. Record the exact line added,
+      where the backup lives, and whether it should persist (it should: Story 3.1 needs it too).
+- [ ] 2.4 Record the target path as **`git.crm-prionex.com/crm/fe-prionex`** — lowercase `crm` is
+      correct per the OCI spec even though the git remote is `/CRM/`. Do not "fix" it. Your
+      throwaway tag must sit **outside** Epic 3's namespaces (`sha-*`, `<branch>`, `v*`, `latest`,
+      `buildcache`, `preprod-*`, `prod-*`).
 
-- [ ] 3.1 🛑 Present §3(c): `ufw` is active with default DROP and port 22 is open to two admin IPs
-      only, so a job container cannot reach s1:22 **regardless of credentials**. Independently,
-      `S1_SSH_*` belongs to Story 1.12 and landing it early is a partial 1.12 out of order on a
-      repo where 497 branches carry an executable legacy `CD.yml`.
-      **Ask Oleg to choose:** (a) open the firewall for the runner subnet (needs `aleksey`, same
-      class as 1.7's ACL); (b) rescope AC4 to prove the *mechanism* — that native `ssh`/`scp` exist
-      and work in a `run:` step against a reachable target — and record the s1 leg as «не
-      проверено»; (c) defer AC4 to Story 4.3, which is where deploy-over-SSH actually lands.
-- [ ] 3.2 Whatever is chosen, close the second clause of AC4 on its own merits: `appleboy/scp-action`
-      and `appleboy/ssh-action` are **pre-decided replacements**, not candidates —
-      `docs/forgejo-migration.md:104` («Рекомендация: сразу переписать на нативные `ssh`/`scp`»),
-      `:201`, `:296`, and `epics.md:240-241`. "Confirmed as not needed" can be closed by showing the
-      native equivalents are available in the job image, without proving the s1 hop.
-- [ ] 3.3 Record the decision and the reasoning, including which clause was closed by what evidence.
+### Task 3 — Record the AC4 rescope; run no SSH probe (AC: 4)
+
+> **Decided 2026-08-11: «деплой по runner». There is no SSH test in this story.** Read §6.
+
+- [ ] 3.1 Record the decision and its basis: deployment runs on a runner on the **target host**,
+      driving that host's Docker daemon locally. The hub already works this way —
+      `/opt/forgejo-runner-deploy` mounts the host `docker.sock` with the risk accepted in its own
+      compose banner, org runner `s1-deploy-dev-preprod` (id 14) and account `robot-deploy` exist
+      for it.
+- [ ] 3.2 Close AC4's second clause on the architecture, not on a probe: `appleboy/scp-action` and
+      `appleboy/ssh-action` are **not needed because nothing performs SSH**. This is stronger than
+      the epic's intended evidence. Note that the plan had already pre-decided them as replacements
+      rather than candidates — `docs/forgejo-migration.md:104`, `:201`, `:296`, `epics.md:240-241`
+      — so no verdict is lost.
+- [ ] 3.3 Record AC4's first clause as **superseded, not failed**, and keep §3(c)'s firewall
+      evidence: `ufw` would have denied the probe anyway. That evidence is what makes the Epic 4
+      correct-course well-founded rather than a preference.
+- [ ] 3.4 🚨 **Do not amend `epics.md` here.** FR19 and Story 4.3 AC2 now describe the wrong
+      mechanism, and Stories 5.3 and 6.4 inherit it — but Oleg's decision is to fix that through a
+      separate `correct-course`. File the entry in Task 8.5 and stop there. Absorbing an epic-wide
+      change into an Epic 1 smoke-test story is exactly the scope creep the plan's own
+      change-control process exists to prevent.
 
 ### Task 4 — Decide how the `docker/*` actions get a Node runtime (AC: 3, 5)
 
@@ -455,9 +527,19 @@ explicitly recorded as accepted.
       closes or updates (`:158`). ⚠️ Use the `✅` annotation alone — **do not add strikethrough**;
       that file already uses `~~…~~` with two conflicting meanings and Story 1.7's review flagged it.
       Also mark Table 1.4 rows with their verdicts.
-- [ ] 8.5 Add to `deferred-work.md` anything this story surfaced but does not own — at minimum the
-      registry-DNS finding as a **Story 3.1 blocker**, the firewall finding if AC4 is deferred, and
-      any token opened in Task 1.1.
+- [ ] 8.5 Add to `deferred-work.md` everything this story surfaced but does not own:
+      - 🚨 **The Epic 4 correct-course** — FR19 (`epics.md:128-130`) and Story 4.3 AC2
+        (`epics.md:1301-1304`) specify `ssh`/`scp` deployment, which Oleg's «деплой по runner»
+        decision supersedes; Stories 5.3 and 6.4 inherit the same mechanism. Owner: Oleg. Include
+        §3(c)'s firewall evidence so the proposal is grounded in a fact, not a preference.
+      - The **registry DNS finding and its fix** as a **Story 3.1 prerequisite** — 3.1 pushes to
+        the same registry from the same runner and fails identically without `--add-host`.
+      - The **`ci-bot` vs `robot-registry` substitution** for Story 1.10, and the resolved
+        provenance of the five org secrets (close the existing "still unanswered" entry rather than
+        adding a second one).
+      - Whether org secrets proved visible to workflows in this repository — Story 1.12 depends on
+        the answer.
+      - Any token opened in Task 1.1, with owner and revocation trigger.
 - [ ] 8.6 🚨 **Citation discipline.** Prefer anchors (`#dNN`) to line numbers. If you insert lines
       into a cited file, re-verify **every** citation into that file across the repository, not
       only the ones you wrote — Story 1.7 shifted `docs/forgejo-migration.md` by 10 lines and broke
@@ -477,8 +559,10 @@ explicitly recorded as accepted.
 - [ ] 9.4 Delete the throwaway image from the registry if one was pushed, or record its retention as
       explicitly accepted with an owner. It matches no Story 1.11 retention pattern and would
       otherwise persist forever in the namespace Epic 3 is about to define.
-- [ ] 9.5 Revert any runner-config change made under Task 2.2 **unless** Oleg chose to keep it. If
-      kept, hand it to Story 1.9 documented, since that story inherits this config.
+- [ ] 9.5 🚨 **Do not revert Task 2.2's `--add-host` line — it is meant to persist.** Story 3.1
+      pushes to the same registry from the same runner and needs it. Confirm it survived any runner
+      restart, and that the config on s1 matches what Task 2.3 recorded. Revert only changes this
+      story made *for its own convenience* (e.g. the log level, Task 9.6).
 - [ ] 9.6 Restore `log.level`/`log.job_level` to `info` if Task 7.2 raised them. Confirm the daemon
       log shows no `[DEBUG]` lines afterwards and the runner is still `idle`.
 - [ ] 9.7 Commit in **two** commits split by area, per the house convention:
@@ -504,9 +588,12 @@ explicitly recorded as accepted.
 3. **Native `run:` replacements** for every action that does not resolve, which Story 3.1 uses.
 4. **Amendments to `docs/forgejo-migration.md`** Table 1.4 and the Фаза 1 DoD, turning "проверить"
    into recorded fact.
-5. **Nothing durable in the repository** — the probe workflow and its branch are gone by the end,
-   and the runner is left exactly as Story 1.7 configured it unless Task 2.2 changed it with
-   approval.
+5. **One durable change on s1** — the `--add-host` line in `container.options` (Task 2.2, approved).
+   It stays: Story 3.1 needs it too. Everything else in the repository is transient — the probe
+   workflow and its branch are gone by the end.
+6. **A `deferred-work.md` entry that triggers a `correct-course` for Epic 4** — deployment is no
+   longer SSH-based, so FR19 and Story 4.3 AC2 need rewriting. This story files the finding and
+   does not act on it.
 
 ### The argument in one paragraph — memorize this
 
@@ -626,10 +713,18 @@ verdict for the `appleboy/*`, codecov and Slack rows — but it must be *written
   `#d10`). s2 = `175.110.122.17` (PROD, forbidden).
 - Endpoints known **absent**: `POST .../actions/runs/{id}/cancel`, `GET /api/v1/settings/actions`,
   anything Actions-artifact-shaped.
-- **Four `REGISTRY_*` org secrets exist with unexplained provenance** — see Task 2.1.
-  `SLACK_CD_WEBHOOK_URL` at org scope is a non-resolving `example.invalid` stub whose original
-  value is unrecoverable (Forgejo secrets are write-only). Do not touch it, and do not treat its
-  presence as evidence of anything.
+- **Org accounts:** `platform-admin`, `robot-deploy`, `robot-registry`. **`ci-bot` does not exist**
+  (`GET /users/ci-bot` → 403, absent from the member list) despite FR10 and `epics.md:704-707`
+  naming it — `robot-registry` is the platform's equivalent. Record the substitution; creating
+  `ci-bot` is Story 1.10's call, not yours.
+- **Org secrets (names only — values are write-only):** `REGISTRY_USER`, `REGISTRY_USER_RO`,
+  `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO` (all `2026-08-10T10:14:27+02:00`) and
+  `SLACK_CD_WEBHOOK_URL` (`…:26`). **Repo-level secrets: `[]` — none.** Whether org secrets reach
+  workflows in this repository is something your probe run establishes; record it, Story 1.12
+  depends on it.
+- `SLACK_CD_WEBHOOK_URL` is a non-resolving `example.invalid` stub whose original value is
+  **unrecoverable** — Story 1.13 overwrote it on a false reading of `CD.yml` and Forgejo secrets
+  are write-only. Do not touch it, and do not treat its presence as evidence of anything.
 
 ### The runner as Story 1.7 left it — do not change it
 
@@ -849,28 +944,31 @@ workflow. The project's evidence standard applies:
 
 ## Open Questions for Review
 
-### Blocking — must be answered before or during Task 2/3
+### Resolved before release — recorded so they are not re-opened
 
-1. **How does AC3 get a registry credential?** Four `REGISTRY_*` org secrets exist with
-   unexplained provenance, created minutes before Story 1.13's pre-flight and matching Story 1.12's
-   naming scheme. Using them means using credentials nobody in the plan provisioned; not using them
-   means either minting a throwaway or deferring AC3 to Story 1.10.
-2. **Is the `--add-host` runner-config change approved?** It is the proven fix for the registry
-   being unreachable from job containers, but it edits an unversioned production config that
-   Story 1.9 inherits. Declining it means AC3's push clause is «не проверено».
-3. **Is AC4 run, rescoped or deferred?** `ufw` blocks port 22 to everything but two admin IPs, so
-   the s1 leg cannot pass without a firewall change coordinated with `aleksey`.
+1. ✅ **AC3's registry credential — use the existing `REGISTRY_USER` + `REGISTRY_TOKEN_RW`.**
+   Oleg, 2026-08-11. The five org secrets turned out to be the hub's own platform credentials
+   (accounts `robot-registry`, `robot-deploy`), not leftovers from a previous story — which also
+   closes `deferred-work.md`'s "still unanswered" entry. One human-only step remains: Oleg confirms
+   with `aleksey` that they are ours to use (Task 2.1).
+2. ✅ **The `--add-host` runner-config change — approved.** Oleg, 2026-08-11. Task 2.2 applies it
+   with a backup and logs it against the write budget.
+3. ✅ **AC4 — rescoped to «деплой по runner».** Oleg, 2026-08-11. No SSH probe; the `appleboy/*`
+   clause closes on the architecture. Epic 4 gets a separate `correct-course` (Task 8.5), and this
+   story does not amend `epics.md`.
 
-### Non-blocking
+### Still open
 
 4. **`D11` or `D12`?** Story 1.6 has reserved `D11` and has not run. Recommended: take `D12` and
    leave the reservation intact — a numbering gap costs nothing, and the last renumber cost a
    code-review repair.
-5. **Does the registry-DNS finding need its own change proposal?** It is not a Story 1.8 problem
-   alone — Story 3.1 pushes to the same registry from the same runner and will hit the identical
-   wall. Recording it in `deferred-work.md` may be too quiet for something that blocks an entire
-   epic.
-6. **Should the token policy be settled now?** Two live tokens exist where the model calls for one
+5. **Should the token policy be settled now?** Two live tokens exist where the model calls for one
    (`fe_tmp_1_7`, `fe_review_1_7`), and this story needs a third unless it reuses one. The open
    question from Story 1.7 — one long-lived token per epic vs. a scoped short-lived token per story
-   — is now costing something.
+   — is now costing something. Note the platform's own answer is different again: it uses named
+   robot accounts (`robot-registry`, `robot-deploy`) rather than tokens on a human admin, which may
+   be the model worth adopting.
+6. **Does `robot-registry` have `write:package`, or only the RO pair?** Both `REGISTRY_TOKEN_RW`
+   and `REGISTRY_TOKEN_RO` exist, so presumably yes — but values are write-only and the first
+   `docker/login-action` step is the only way to find out. If RW turns out to be scoped narrower
+   than its name suggests, that is a Story 1.10 finding, not a blocker for the other three ACs.
