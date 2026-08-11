@@ -136,16 +136,26 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
    организации, и не берёт занятые метки. См.
    [migration-decisions.md#d8](./migration-decisions.md#d8) (два исходных раннера) и
    [#d9](./migration-decisions.md#d9) (третий, дрейф инстанса).
+   ✅ **выполнено** (Story 1.7, 2026-08-11): раннер поднят на **s1** — не отдельная VM, хост уже
+   нёс три раннера этого профиля. См. [#d10](./migration-decisions.md#d10).
 2. ⚠️ **Уровень регистрации пересмотрен** — см. примечание к п.1: раннер регистрируется на уровне
    **репозитория**, не организации. Метки остаются как ниже.
    Зарегистрировать ~~на уровне организации `CRM`~~ с **двумя метками**:
    - `node-20:docker://node:20-bookworm` — для CI-job (lint / typecheck / test / build);
    - `docker-build` — для сборки образа: **обязательно** dind-образ либо проброс `/var/run/docker.sock` в конфиге runner'а. Без этого `docker/*` actions не работают: внутри `node:20-bookworm` нет ни docker CLI, ни сокета.
+   ✅ **выполнено** (Story 1.7): зарегистрированы обе метки, `node-20:docker://node:20-bookworm` и
+   `docker-build:docker://code.forgejo.org/oci/docker:cli` (не голая `docker-build` — резолвится
+   в образ без CLI); механизм — DinD-сайдкар, без хостового `docker.sock` (правило AD-6 хаба).
+   См. [#d10](./migration-decisions.md#d10).
 3. Настроить кэш-сервер runner'а (нужен для `actions/setup-node` с `cache: npm`).
+   ✅ **выполнено** (Story 1.7): `cache.host` — собственный IP `runner`-контейнера в общем бридже
+   (`192.168.226.3`), не хостовый LAN-IP — hairpin NAT туда из job-контейнера не работает,
+   проверено намеренным тестом. `cache.proxy_port: 34568`. См. [#d10](./migration-decisions.md#d10).
 4. **Смоук-проверка совместимости из таблицы 1.4** — до портирования реальных workflow: тестовый workflow, который резолвит и запускает `checkout`, `setup-node`, `upload-artifact`, `docker/build-push-action` (сборка любого мусорного образа с пушем в registry).
 5. Поднять **второй runner** (см. фазу 3 — до включения required checks).
 
-**DoD:** обе метки работают, все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:`.
+**DoD:** ~~обе метки работают~~ ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
+все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — **открыто**, Story 1.8.
 **Rollback:** удалить runner, GitHub Actions продолжает работать.
 
 ### Фаза 2 — Реестр образов
