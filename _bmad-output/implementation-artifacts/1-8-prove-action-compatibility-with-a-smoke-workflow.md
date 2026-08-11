@@ -4,7 +4,7 @@ baseline_commit: 598de32c
 
 # Story 1.8: Prove Action Compatibility with a Smoke Workflow
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -668,6 +668,19 @@ end, so nobody re-raises them.
   4. **the AC5 native `run:` replacement** — `docker build` + `docker push` from the job container, which *does* hold the mapping. This is the option AC5 asks for and the only one whose network path is already proven.
 
   **AC3's status after this:** the resolve clause is **closed by observation**; the push clause remains open with a diagnosed cause and four candidate remedies, which is a strictly better hand-off than the «не проверено» it replaced. No image was pushed, so there is nothing to clean from the registry.
+
+  ✅ **AC3 CLOSED, 2026-08-11 — push clause proven, both candidate remedies work.** Run index 22,
+  task 2639, job `ac3`, **all ten steps green**. The diagnosis above was right and the fix follows
+  from it: `dind` itself resolves `git.crm-prionex.com` to `10.70.0.1` and reaches it (`401`) — only
+  the containers it *spawns* resolve publicly. So keeping the push inside the daemon fixes it.
+  - **Remedy (b) — `docker/setup-buildx-action@v3` with `driver: docker` → `docker/build-push-action@v5`: success.** The image landed in the registry, confirmed in-job by `docker manifest inspect`. **Story 3.1 keeps the action** — it does not need a `run:` rewrite, only `driver: docker` so buildx uses the daemon's builder instead of spawning a BuildKit container.
+  - **Remedy (d) — native `docker build` + `docker push` from the job container: success.** This is the AC5-required native `run:` replacement, now proven rather than asserted.
+  - **AC1's assertion repaired and re-proven.** The old assert had no discriminating power. The new one requests `node-version: "22"` on a `node:20-bookworm` base and asserts `^v22\.` — a result that can only come from `setup-node` actually running. It passed, so `setup-node@v4` genuinely resolves; the earlier verdict was right for the wrong reason.
+  - **Registry left clean:** both throwaway tags (`smoke-1-8-remedy-b`, `smoke-1-8-remedy-d`) deleted, `204` each. AC6's cleanup clause holds.
+  - ⚠️ **Recorded against myself:** the first dispatch of this probe returned `HTTP 500` —
+    `yaml: line 15: mapping values are not allowed in this context`. That is precisely the trap
+    Task 5.2 documents and Story 1.3 hit: a `run:` one-liner containing a colon-space, parsed as a
+    mapping. Fixed with a block scalar. Two empty run records exist from the rejected dispatches.
 - [x] [Review][Patch] **No native `run:` replacement is recorded for any non-resolving action, and two Table 1.4 rows have no verdict at all** — AC5 requires a verdict for every action plus a `run:` replacement for each that does not resolve. `upload-artifact@v4` is recorded «не резолвится» with a *version* fallback beside it, not a `run:` replacement; `codecov/codecov-action@v4` and `slackapi/slack-github-action@v3.0.3` carry «Вне периметра Story 1.8», which is not one of AC5's four permitted verdicts. The DoD's «6 из 8 позиций» matches no count in a table listing 11 actions. Completion Notes nonetheless claim AC5 satisfied [docs/migration-decisions.md D12 verdict table; docs/forgejo-migration.md:109-110, :167]
 - [x] [Review][Patch] **Run 385 is recorded as «каждый шаг зелёный» when the `upload-artifact@v4` step demonstrably failed inside it** — the step carries `continue-on-error: true`, so it ran, failed with `GHESNotSupportedError`, and did not stop the job. The per-action table's header sources itself to "рана 385 … чистого прохода", so the error propagates to every row [docs/migration-decisions.md, evidence table dispatch 3]
 - [x] [Review][Patch] **Фаза 4 still instructs Story 3.1 to run the `docker/*` actions on the `docker-build` label** — the exact thing this story proved impossible, left unamended in the very file this story edited. Table 1.4 and Фаза 1 were marked; `docs/forgejo-migration.md:201` and the file map at `:293` were not. Story 3.1 will read them and author a workflow that cannot work

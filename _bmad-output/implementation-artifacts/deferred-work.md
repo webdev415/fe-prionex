@@ -195,6 +195,16 @@
 
 ## Blocker for Story 3.1 — established by story 1.8's code review (2026-08-11)
 
+- ✅ **RESOLVED 2026-08-11 — `driver: docker` is the fix; Story 3.1 keeps `docker/build-push-action`.**
+  Proven by a follow-up probe (run index 22, task 2639, all steps green): `setup-buildx-action` with
+  `driver: docker` pushes through the `dind` daemon, which resolves `git.crm-prionex.com` correctly
+  (`10.70.0.1`, reachable) — only containers *spawned by* the daemon resolve publicly, which is why
+  the default `driver=docker-container` failed. Native `docker build` + `docker push` from the job
+  container also works and stands as the AC5 replacement if the action is ever dropped. Both
+  throwaway tags were deleted afterwards (`204`).
+  **What Story 3.1 must carry:** `--add-host` in `container.options` (already permanent) **and**
+  `driver: docker` on `setup-buildx-action`. Either alone is insufficient.
+  *Original finding, kept for the reasoning:*
 - 🔴 **`--add-host` on `container.options` is necessary but NOT sufficient for `docker/build-push-action`.**
   Story 1.8's `#d12` records the `--add-host git.crm-prionex.com:10.67.0.1` line as a permanent
   Story 3.1 prerequisite. Re-dispatching the credentialed probe during code review proved that
@@ -215,6 +225,18 @@
   the push stage, so the credentials exist, are valid and carry push rights. Story 1.10's question
   «adopt `robot-registry` as-is or mint `ci-bot`?» can now be decided on preference rather than on
   an unknown. Oleg confirmed with `aleksey` on 2026-08-11 that they are ours to use.
+- ✅ **Answered as a by-product: org secrets ARE visible to workflows in `CRM/fe-prionex`.**
+  Story 1.8 listed this as «не проверено» and the spec said Story 1.12 depends on the answer. The
+  credentialed job referenced `${{ secrets.REGISTRY_USER }}` / `${{ secrets.REGISTRY_TOKEN_RW }}`
+  and `docker/login-action` authenticated successfully — org-scoped secrets therefore reach
+  workflows in this repository without a repo-level copy. Story 1.12 can plan on that.
+- 🔑 **Two more live tokens: `fe_ac3_close` (`write:repository,read:organization`) and
+  `fe_pkg_cleanup` (`write:package`).** Both minted 2026-08-11 during code review with Oleg's
+  authorisation — the first to close AC3, the second because deleting the throwaway images needed a
+  package scope the first did not have. Host-local on s1, never written into the repository.
+  **Owner: Oleg.** Revoke together with `fe_tmp_1_7`. **Four tokens now exist where the model calls
+  for one** — the policy question is no longer theoretical, and the platform's own answer (named
+  robot accounts rather than tokens on a human admin) is worth adopting.
 - ✅ **The `run_registry_push` gate works in the enabling direction** — a review layer flagged that a
   boolean/string mistake would be indistinguishable from a withheld run. It is
   `== 'true'` with a string default, and the gated job did execute when dispatched with `"true"`.
