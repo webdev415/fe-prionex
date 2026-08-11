@@ -100,15 +100,16 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 | Что | Статус / решение |
 |---|---|
-| `docker/setup-buildx-action`, `docker/build-push-action`, `docker/login-action`, `docker/metadata-action` | **Требуют docker-сокета на runner'е** — см. фазу 1, отдельная метка. Проверить резолв и работу первыми |
-| `appleboy/scp-action`, `appleboy/ssh-action` (`CD.yml:155,168,213`) | Docker-container actions, риск резолва высокий. **Рекомендация: сразу переписать на нативные `ssh`/`scp` в `run:`** — меньше зависимостей, полный контроль |
-| `actions/upload-artifact@v4` (`CI.yml:102`) | У Gitea/Forgejo была известная несовместимость с artifact API v4 (v3 работал). В свежих версиях чинилось — **проверить на своём инстансе**, при проблеме откатить на v3 |
-| `actions/checkout@v6`, `actions/setup-node@v4` | Работают через полный URL: `uses: https://github.com/actions/checkout@v6` (правка `DEFAULT_ACTIONS_URL` не обязательна, нужен egress до github.com с runner'а). Альтернатива — зеркала `code.forgejo.org` |
-| `cache-from/to: type=gha` (`CD.yml:113-114`) | Вне GitHub не работает → `type=registry,ref=<registry>/fe-prionex:buildcache` |
-| `codecov/codecov-action@v4` (`CI.yml:75`) | Убрать, coverage — в артефакт |
-| `slackapi/slack-github-action@v3.0.3` | Заменить на `curl` к incoming webhook |
-| `secrets.GITHUB_TOKEN` для ghcr | Отдельный Forgejo-токен с правом `write:package` |
-| `github.server_url` / `repository` / `run_id` (`CD.yml:263`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть |
+| `docker/setup-buildx-action`, `docker/metadata-action` | **Требуют docker-сокета на runner'е** — см. фазу 1, отдельная метка. ✅ **Проверено и резолвится** (Story 1.8, [#d12](./migration-decisions.md#d12)) — как действия, на метке `node-20` (не `docker-build`, у которой нет Node-рантайма), с docker CLI, поставленным `run:`-шагом |
+| `docker/login-action`, `docker/build-push-action` | **Требуют docker-сокета на runner'е** — см. фазу 1, отдельная метка. ⚠️ **«Не проверено»** (Story 1.8, [#d12](./migration-decisions.md#d12)) — авторизован дизайн (org-секреты `REGISTRY_USER`/`REGISTRY_TOKEN_RW`), но реальный дефолт с ними не диспатчился: подтверждение Oleg у `aleksey`, что секреты можно использовать, не было получено в рамках этой story |
+| `appleboy/scp-action`, `appleboy/ssh-action` (`CD.yml:155,168,213`) | Docker-container actions, риск резолва высокий. **Рекомендация: сразу переписать на нативные `ssh`/`scp` в `run:`** — меньше зависимостей, полный контроль. ✅ **Заменены дизайном, не пробой** (Story 1.8, [#d12](./migration-decisions.md#d12)) — деплой переехал на раннер целевого хоста, SSH из джобы вообще не выполняется (см. также [#d12](./migration-decisions.md#d12) и `sprint-change-proposal-2026-08-11-deploy-runner.md`) |
+| `actions/upload-artifact@v4` (`CI.yml:102`) | У Gitea/Forgejo была известная несовместимость с artifact API v4 (v3 работал). В свежих версиях чинилось — **проверить на своём инстансе**, при проблеме откатить на v3. ❌ **Не резолвится на этом инстансе** (Story 1.8, [#d12](./migration-decisions.md#d12)): `GHESNotSupportedError`. ✅ **v3 резолвится — это пин** для Story 2.1 |
+| `actions/checkout@v6`, `actions/setup-node@v4` | Работают через полный URL: `uses: https://github.com/actions/checkout@v6` (правка `DEFAULT_ACTIONS_URL` не обязательна, нужен egress до github.com с runner'а). Альтернатива — зеркала `code.forgejo.org`. ✅ **Проверено и резолвится** (Story 1.8, [#d12](./migration-decisions.md#d12)) |
+| `cache-from/to: type=gha` (`CD.yml:113-114`) | Вне GitHub не работает → `type=registry,ref=<registry>/fe-prionex:buildcache`. Не задействован в смоук-сборке Story 1.8 намеренно (не действие, риск подтверждать нечем) |
+| `codecov/codecov-action@v4` (`CI.yml:75`) | Убрать, coverage — в артефакт. Вне периметра Story 1.8 — исключено дизайном плана, не пробой |
+| `slackapi/slack-github-action@v3.0.3` | Заменить на `curl` к incoming webhook. Вне периметра Story 1.8 — Story 4.5 |
+| `secrets.GITHUB_TOKEN` для ghcr | Отдельный Forgejo-токен с правом `write:package`. Уточнено Story 1.8 ([#d12](./migration-decisions.md#d12)): реальные учётные данные — org-секреты `REGISTRY_USER`/`REGISTRY_TOKEN_RW`, владелец `robot-registry`, не отдельный `ci-bot` (которого на инстансе нет) |
+| `github.server_url` / `repository` / `run_id` (`CD.yml:263`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть. ✅ **Дёшево подтверждено** (Story 1.8, [#d12](./migration-decisions.md#d12)) — сконструированный URL эхом выведен в успешном шаге |
 
 ---
 
@@ -152,10 +153,22 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
    (`192.168.226.3`), не хостовый LAN-IP — hairpin NAT туда из job-контейнера не работает,
    проверено намеренным тестом. `cache.proxy_port: 34568`. См. [#d10](./migration-decisions.md#d10).
 4. **Смоук-проверка совместимости из таблицы 1.4** — до портирования реальных workflow: тестовый workflow, который резолвит и запускает `checkout`, `setup-node`, `upload-artifact`, `docker/build-push-action` (сборка любого мусорного образа с пушем в registry).
+   ✅ **выполнено частично** (Story 1.8, 2026-08-11): throwaway workflow на ветке
+   `probe/action-compat` резолвит и запускает `checkout`, `setup-node`, `upload-artifact` (пин
+   `v3` после пробы `v4`), `docker/setup-buildx-action`, `docker/metadata-action`. Сборка с пушем
+   в registry (`docker/login-action` + `docker/build-push-action`) — не выполнена, «не проверено»:
+   требует подтверждения Oleg у администратора хаба, что org-секреты `REGISTRY_USER`/
+   `REGISTRY_TOKEN_RW` можно использовать (Task 2.1 story 1.8), которое не было получено в рамках
+   этой story. См. [#d12](./migration-decisions.md#d12).
 5. Поднять **второй runner** (см. фазу 3 — до включения required checks).
 
 **DoD:** обе метки работают — ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
-все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — **открыто**, Story 1.8.
+все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — ✅ **выполнено частично**
+(Story 1.8, [#d12](./migration-decisions.md#d12)): 6 из 8 позиций закрыты пробой или дизайном
+(`checkout`, `setup-node`, `upload-artifact` с пином на `v3`, `setup-buildx-action`,
+`metadata-action`, `appleboy/*`); `docker/login-action` и `docker/build-push-action` — «не
+проверено», блокировано человеческим подтверждением (Task 2.1 story 1.8), не техническим
+дефектом.
 **Rollback:** удалить runner, GitHub Actions продолжает работать.
 
 ### Фаза 2 — Реестр образов
