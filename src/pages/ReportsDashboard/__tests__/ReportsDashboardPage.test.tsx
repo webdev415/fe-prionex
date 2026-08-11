@@ -38,6 +38,11 @@ vi.mock('@/features/clientProcessing', () => ({
   ClientProcessingTab: () => <div data-testid="client-processing-tab" />,
 }))
 
+// Likewise for the verification tab (features/thirdPartyVerification).
+vi.mock('@/features/thirdPartyVerification', () => ({
+  ThirdPartyVerificationTab: () => <div data-testid="third-party-verification-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -102,6 +107,7 @@ const search = () => screen.getByTestId('location-search').textContent ?? ''
 
 const dashboardTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.dashboard' })
 const processingTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.processing' })
+const verificationTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.verification' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -116,13 +122,14 @@ describe('ReportsDashboardPage (tab host)', () => {
 
   it.each([
     ['no tab param', '/reports'],
-    ['an unknown tab value', '/reports?tab=totally-unknown'],
+    ['an unknown tab value', '/reports?tab=bogus'],
     ['an empty tab value', '/reports?tab='],
   ])('falls back to the dashboard for %s', (_case, entry) => {
     renderPage([entry])
 
     expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
     expect(screen.queryByTestId('client-processing-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -158,6 +165,31 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('from=2026-01-01')
     expect(search()).toContain('to=2026-01-31')
     expect(search()).toContain('dept=collection')
+  })
+
+  it('renders the verification report panel for ?tab=verification', () => {
+    renderPage(['/reports?tab=verification'])
+
+    expect(screen.getByTestId('third-party-verification-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('client-processing-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(verificationTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-verification')
+  })
+
+  it('keeps the verification filters when switching tabs', async () => {
+    renderPage(['/reports?tab=verification&sf=2026-01-01&st=2026-01-31&cf=2026-01-10'])
+    expect(screen.getByTestId('third-party-verification-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the processing tab: the filters survive a
+    // round-trip through the dashboard, and the two key sets don't collide.
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('sf=2026-01-01')
+    expect(search()).toContain('st=2026-01-31')
+    expect(search()).toContain('cf=2026-01-10')
   })
 
   it('pushes a history entry so Back returns to the previous tab', async () => {

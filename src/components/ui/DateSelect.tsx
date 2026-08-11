@@ -121,6 +121,13 @@ export interface DateSelectProps {
    * DateSelect are unaffected because the × only renders when onClear is set.
    */
   onClear?: () => void
+  /**
+   * Accessible name of that "×" button. Opt-in: the default stays the plain
+   * "Clear" every existing usage renders. Pass a field-specific (localized)
+   * name when a form places SEVERAL clearable date fields side by side — a row
+   * of identical "Clear" buttons is indistinguishable to a screen reader.
+   */
+  clearLabel?: string
   // Restrict the selectable time-of-day inside the time column.
   // ``minTime``/``maxTime`` are react-datepicker's static bounds and
   // apply to **every** selected calendar day, so they're only correct
@@ -239,6 +246,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       timeFormat = 'HH:mm',
       timeIntervals = 15,
       onClear,
+      clearLabel = 'Clear',
       minTime,
       maxTime,
       filterTime,
@@ -495,7 +503,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             <button
               type="button"
               onClick={onClear}
-              aria-label="Clear"
+              aria-label={clearLabel}
               className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex items-center pr-3"
             >
               <Icons.Cancel01 size={14} />

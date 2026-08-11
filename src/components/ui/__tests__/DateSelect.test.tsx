@@ -106,6 +106,34 @@ describe('DateSelect (manual input)', () => {
   })
 })
 
+describe('DateSelect (clear button)', () => {
+  it('names the × "Clear" by default', async () => {
+    // Unchanged default: every existing onClear usage relies on this name.
+    const onClear = vi.fn()
+    render(<DateSelect format="dd.MM.yyyy" value="2026-08-05" onClear={onClear} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the opt-in clearLabel as the accessible name', async () => {
+    // Opt-in per-field name for forms with several clearable date fields.
+    const onClear = vi.fn()
+    render(
+      <DateSelect
+        format="dd.MM.yyyy"
+        value="2026-08-05"
+        onClear={onClear}
+        clearLabel="Clear count date from"
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Clear count date from' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+  })
+})
+
 // Chrome's native autofill suggestion (name + saved date) renders on top of
 // the calendar popup and blocks click-selection. It is suppressed on the
 // input itself, so it must hold for BOTH render paths: the masked input
