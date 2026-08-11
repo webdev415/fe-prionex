@@ -4,7 +4,7 @@ baseline_commit: 598de32c
 
 # Story 1.8: Prove Action Compatibility with a Smoke Workflow
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -318,36 +318,44 @@ explicitly recorded as accepted.
 
 ### Task 1 — Pre-flight: re-verify live state before changing anything (AC: 1, 7)
 
-- [ ] 1.1 Obtain an API token. **Do not mint a new one blindly** — a token already exists on s1 at
+- [x] 1.1 Obtain an API token. **Do not mint a new one blindly** — a token already exists on s1 at
       `/root/.fj_token` (mode `600`, minted during Story 1.7's code review with Oleg's
       authorisation, scopes `write:repository,read:organization`). Source it in the shell
       (`. /root/.fj_token`). If it has been revoked, mint one with
       `docker exec -u git forgejo gitea admin user generate-access-token -u platform-admin -t <name> --scopes write:repository,read:organization`
       **and open a tracked revocation entry in `deferred-work.md` in the same commit** — two live
       tokens already exist where the model calls for one.
-- [ ] 1.2 Re-verify the instance: `GET /api/forgejo/v1/version` → expect `15.0.5+gitea-1.22.0`;
+- [x] 1.2 Re-verify the instance: `GET /api/forgejo/v1/version` → expect `15.0.5+gitea-1.22.0`;
       `GET /repos/CRM/fe-prionex` → expect `has_actions: true`, `has_pull_requests: false`,
       `has_packages: true`, `default_branch: main`. Record any drift; do not adapt silently.
-- [ ] 1.3 Re-read the runner lists. Expect repo: exactly `id: 19`, `status: idle`. Expect org:
+- [x] 1.3 Re-read the runner lists. Expect repo: exactly `id: 19`, `status: idle`. Expect org:
       ids 10, 12, 14, 17 and **not** ours. Any new runner is drift — record it, add its labels to
       the forbidden set, do not adapt silently.
-- [ ] 1.4 Confirm the runner still carries the full label spec. The API returns labels **bare** and
+- [x] 1.4 Confirm the runner still carries the full label spec. The API returns labels **bare** and
       cannot discriminate; the authoritative record is
       `/opt/forgejo-runner-fe-prionex/data/runner/.runner` on s1, which must read
       `["node-20:docker://node:20-bookworm", "docker-build:docker://code.forgejo.org/oci/docker:cli"]`.
       **Never commit that file** — it holds the runner's permanent instance secret.
-- [ ] 1.5 Re-confirm egress **from inside the nested engine**, not from the host:
+- [x] 1.5 Re-confirm egress **from inside the nested engine**, not from the host:
       `docker exec forgejo-runner-fe-prionex-dind docker -H tcp://localhost:2375 run --rm curlimages/curl:latest …`
       🚨 `docker exec … docker …` without `-H tcp://localhost:2375` **fails** — the `dind` sidecar
       runs with no unix socket at all. Expect github.com 200, code.forgejo.org 303,
       registry.npmjs.org 200.
-- [ ] 1.6 Re-verify the git baseline: `git log --oneline -1` = `598de32c`, working tree clean,
+- [x] 1.6 Re-verify the git baseline: `git log --oneline -1` = `598de32c`, working tree clean,
       `git ls-files .forgejo` = exactly `.forgejo/workflows/README.md`, and its blob is
       `c9aeac2f0f0adf492d66781e3fbd330217844ee2` on `main`, `staging` and `development`.
-- [ ] 1.7 Record the run counters **before** you start: `GET .../actions/runs` → `total_count`
+      ⚠️ **Drift found and recorded, not adapted silently:** `main` had moved to `72e86faa`
+      (fast-forward from `598de32c`, verified via `git merge-base --is-ancestor`) by the time of
+      this session — the Epic 4 correct-course commits (`f258970d`, `36069f6d`, `72e86faa`) landed
+      after story creation, as the story text itself anticipated ("has since run and been
+      approved"). The `.forgejo/workflows` invariant (exactly `README.md`, blob `c9aeac2f…`) held
+      on all three refs regardless. Decision: cut the probe branch from the current `main` tip
+      (`72e86faa`), not the stale `598de32c`, since "cut from main" means the current approved
+      state.
+- [x] 1.7 Record the run counters **before** you start: `GET .../actions/runs` → `total_count`
       (16 at story creation, latest run id 337 / index 16) and `GET .../actions/tasks` →
       `total_count` (24). 🚨 Tasks are jobs, not runs — never compare the two numbers.
-- [ ] 1.8 **Declare the write budget** and hold to it, enumerating every mutating call: (a) probe
+- [x] 1.8 **Declare the write budget** and hold to it, enumerating every mutating call: (a) probe
       branch push + N `--no-verify` commits on it; (b) M workflow dispatches — each irreversible;
       (c) any image push to the registry — a **durable, external** write, the largest blast radius
       in this story; (d) probe branch deletion; (e) the closing commits to `main`. Anything outside
@@ -358,24 +366,35 @@ explicitly recorded as accepted.
 
 > **Decided 2026-08-11, both points. Do not re-open; execute and record.**
 
-- [ ] 2.1 Use the existing org secrets **`REGISTRY_USER` + `REGISTRY_TOKEN_RW`** for
+- [x] 2.1 Use the existing org secrets **`REGISTRY_USER` + `REGISTRY_TOKEN_RW`** for
       `docker/login-action` against `git.crm-prionex.com`. They are platform credentials belonging
       to the hub (see §5), not artefacts of a previous story. ⚠️ **Ask Oleg to confirm with
       `aleksey` that they are ours to use before the first push** — this is the one remaining
       human-only item, and it costs one message. Values are write-only and unverifiable in advance:
       the first login step is the test. A failure there is a **credential** finding, not an
       action-compatibility one — label it correctly in the verdict.
-- [ ] 2.2 Apply the approved network fix: add `--add-host git.crm-prionex.com:10.67.0.1` to
+      ⚠️ **[x] = design applied, first push withheld — attempted, not completed as specified.**
+      The `probe-docker-push` job in `.forgejo/workflows/probe-actions.yml` was authored exactly as
+      decided, referencing `secrets.REGISTRY_USER`/`secrets.REGISTRY_TOKEN_RW`, gated behind an
+      explicit `workflow_dispatch` input (`run_registry_push`, default `"false"`). The
+      confirmation-with-`aleksey` half of this subtask is explicitly marked "❌ no" for the dev
+      agent in this story's own capability table (§1) — it was not obtained during this session,
+      and the dev agent has no channel to `aleksey`. The gated job was therefore **never dispatched
+      with `run_registry_push: "true"`**. `docker/login-action` and `docker/build-push-action`
+      carry the verdict «не проверено» (withheld attempt, not an observed failure) — see
+      `docs/migration-decisions.md#d12`. AC3's "image pushed to the registry successfully" clause
+      is **not closed** by this story.
+- [x] 2.2 Apply the approved network fix: add `--add-host git.crm-prionex.com:10.67.0.1` to
       `container.options` in `/opt/forgejo-runner-fe-prionex/config.yml`, keeping the existing
       `-e DOCKER_HOST=tcp://172.17.0.1:2375` intact. **Back the file up first**, log the edit
       against the Task 1.8 write budget, restart the runner, and confirm it returns to `idle`.
       Without this the registry is simply unreachable from job containers — §3(b).
       **Do not widen the nginx ACL or the firewall.** Neither is needed: the runner's subnet
       `192.168.226.0/24` is already allowed, and the problem is name resolution, not access.
-- [ ] 2.3 Hand the changed state to Story 1.9 documented — that story inherits this config and
+- [x] 2.3 Hand the changed state to Story 1.9 documented — that story inherits this config and
       `deferred-work.md` already tracks the directory as unversioned. Record the exact line added,
       where the backup lives, and whether it should persist (it should: Story 3.1 needs it too).
-- [ ] 2.4 Record the target path as **`git.crm-prionex.com/crm/fe-prionex`** — lowercase `crm` is
+- [x] 2.4 Record the target path as **`git.crm-prionex.com/crm/fe-prionex`** — lowercase `crm` is
       correct per the OCI spec even though the git remote is `/CRM/`. Do not "fix" it. Your
       throwaway tag must sit **outside** Epic 3's namespaces (`sha-*`, `<branch>`, `v*`, `latest`,
       `buildcache`, `preprod-*`, `prod-*`).
@@ -384,20 +403,20 @@ explicitly recorded as accepted.
 
 > **Decided 2026-08-11: «деплой по runner». There is no SSH test in this story.** Read §6.
 
-- [ ] 3.1 Record the decision and its basis: deployment runs on a runner on the **target host**,
+- [x] 3.1 Record the decision and its basis: deployment runs on a runner on the **target host**,
       driving that host's Docker daemon locally. The hub already works this way —
       `/opt/forgejo-runner-deploy` mounts the host `docker.sock` with the risk accepted in its own
       compose banner, org runner `s1-deploy-dev-preprod` (id 14) and account `robot-deploy` exist
       for it.
-- [ ] 3.2 Close AC4's second clause on the architecture, not on a probe: `appleboy/scp-action` and
+- [x] 3.2 Close AC4's second clause on the architecture, not on a probe: `appleboy/scp-action` and
       `appleboy/ssh-action` are **not needed because nothing performs SSH**. This is stronger than
       the epic's intended evidence. Note that the plan had already pre-decided them as replacements
       rather than candidates — `docs/forgejo-migration.md:104`, `:201`, `:296`, `epics.md:240-241`
       — so no verdict is lost.
-- [ ] 3.3 Record AC4's first clause as **superseded, not failed**, and keep §3(c)'s firewall
+- [x] 3.3 Record AC4's first clause as **superseded, not failed**, and keep §3(c)'s firewall
       evidence: `ufw` would have denied the probe anyway. That evidence is what makes the Epic 4
       correct-course well-founded rather than a preference.
-- [ ] 3.4 🚨 **Do not amend `epics.md` here.** FR19 and Story 4.3 AC2 now describe the wrong
+- [x] 3.4 🚨 **Do not amend `epics.md` here.** FR19 and Story 4.3 AC2 now describe the wrong
       mechanism, and Stories 5.3 and 6.4 inherit it — but Oleg's decision is to fix that through a
       separate `correct-course`. File the entry in Task 8.5 and stop there. Absorbing an epic-wide
       change into an Epic 1 smoke-test story is exactly the scope creep the plan's own
@@ -405,7 +424,7 @@ explicitly recorded as accepted.
 
 ### Task 4 — Decide how the `docker/*` actions get a Node runtime (AC: 3, 5)
 
-- [ ] 4.1 🚨 **This is the story's central design decision. Make it deliberately, before writing
+- [x] 4.1 🚨 **This is the story's central design decision. Make it deliberately, before writing
       YAML.** AC3 says "on the `docker-build` label", but that label's image
       (`code.forgejo.org/oci/docker:cli`) has no Node runtime, so all four `docker/*` JS actions
       fail there with an error that mimics action-incompatibility. Three options, all legitimate:
@@ -422,10 +441,10 @@ explicitly recorded as accepted.
         ⚠️ This modifies Story 1.7's deliverable and the runner's registration — highest blast
         radius, needs Task 2-level approval, and is almost certainly the wrong call for a smoke test.
       **Recommended: (a), with (b) as the recorded fallback for any action that still fails.**
-- [ ] 4.2 Whichever is chosen, state plainly in the record which of AC3's four actions were proven
+- [x] 4.2 Whichever is chosen, state plainly in the record which of AC3's four actions were proven
       **as actions** and which were proven only as `run:` equivalents. Do not let a `run:`
       replacement read as an action that resolved.
-- [ ] 4.3 🚨 Do not misdiagnose. A missing Node runtime produces
+- [x] 4.3 🚨 Do not misdiagnose. A missing Node runtime produces
       `The runs.using key in action.yml must be one of: [...], got nodeNN` or an equally
       action-shaped failure. That is an **environment** fact, not an action-compatibility verdict.
       Story 1.3 hit the mirror of this with runner image `:6` and `checkout@v6` (`got node24`) and
@@ -433,10 +452,14 @@ explicitly recorded as accepted.
 
 ### Task 5 — Author the smoke workflow (AC: 1, 2, 3, 7)
 
-- [ ] 5.1 Cut the probe branch from `main` at `598de32c`: `git switch -c probe/action-compat main`.
+- [x] 5.1 Cut the probe branch from `main` at `598de32c`: `git switch -c probe/action-compat main`.
       Verify the name matches no `push` filter and no tag pattern on any ref before pushing.
       Convention from 1.3/1.13/1.7 is `probe/<subject>`.
-- [ ] 5.2 Add `.forgejo/workflows/probe-actions.yml`. 🚨 **Do not delete or modify `README.md`.**
+      ⚠️ **Cut from `main` at `72e86faa`, not literally `598de32c`** — see Task 1.6's drift note;
+      `598de32c` is an ancestor of `72e86faa` (fast-forward), and the newer tip carries the already
+      -approved Epic 4 correct-course. `on: workflow_dispatch` only, filename outside Story 2.1's
+      reserved set (`probe-actions.yml`) — both verified before pushing.
+- [x] 5.2 Add `.forgejo/workflows/probe-actions.yml`. 🚨 **Do not delete or modify `README.md`.**
       🚨 **Do not use a Story 2.1 filename.** Requirements:
       - `on: workflow_dispatch` **only**. If you take inputs, remember `workflow_dispatch` inputs
         arrive as **strings** — compare `== 'true'`, never as a boolean.
@@ -449,7 +472,7 @@ explicitly recorded as accepted.
         failed first on a YAML parse error in the story's own verbatim template
         (`mapping values are not allowed in this context`) and nearly recorded it as an action
         finding.
-- [ ] 5.3 🚨 **Encode every assertion into exit status.** Job logs are not readable via the API
+- [x] 5.3 🚨 **Encode every assertion into exit status.** Job logs are not readable via the API
       (web-UI routes need session-cookie auth); job *status* is, via
       `GET /repos/CRM/fe-prionex/actions/tasks`. A green step proves nothing on this forge — see
       Trap 3. Each action under test needs a following `run:` step that fails the job unless the
@@ -460,78 +483,90 @@ explicitly recorded as accepted.
         step's exit code alone cannot close AC2.
       - `docker/*` → `docker manifest inspect <pushed tag>` or an equivalent that proves the image
         exists in the registry, not that the step was green.
-- [ ] 5.4 Commit on the probe branch. ✅ `--no-verify` **is** expressly permitted here (branch cut
+- [x] 5.4 Commit on the probe branch. ✅ `--no-verify` **is** expressly permitted here (branch cut
       from `main`, throwaway, never merged, adds no code the hooks can check) — but log each such
       commit against the Task 1.8 write budget. It is **forbidden** on `main`.
-- [ ] 5.5 Push the branch and dispatch by API:
+- [x] 5.5 Push the branch and dispatch by API:
       `POST /repos/CRM/fe-prionex/actions/workflows/probe-actions.yml/dispatches` with
       `{"ref":"probe/action-compat"}` → expect **204**.
       🚨 The Actions UI enumerates dispatchable workflows from the **default branch only**, so the
       "Run workflow" button will never list this file. That is expected. Story 1.3's old advice to
       "temporarily land the probe on the default branch" is **forbidden** now — API dispatch is
       proven (1.3 once, 1.7 twice) and landing a `.yml` on `main` is exactly what AC6 prohibits.
+      ⚠️ **3 dispatches, not 1** (all `204`, all attributed to runner `id: 19`) — see
+      `docs/migration-decisions.md#d12`'s evidence table for run ids 383/384/385 (index 17/18/19).
+      Dispatch 1 failed honestly (`upload-artifact@v4`'s real error); dispatch 2 re-ran with
+      `log.level: debug` to capture the diagnosis; dispatch 3, after adding the `v3` fallback,
+      succeeded cleanly end to end. Logged against the Task 1.8 write budget as an overage, not
+      absorbed silently.
 
 ### Task 6 — Close AC2 against the instance, not against a green step (AC: 2, 5)
 
-- [ ] 6.1 🚨 **Establish how you will verify retrieval before you upload anything.** There is no
+- [x] 6.1 🚨 **Establish how you will verify retrieval before you upload anything.** There is no
       Actions-artifacts API on this instance — 314 swagger paths, and the only artifact-shaped ones
       are storage quotas. Decide and record which channel you will use:
       - the web UI with session-cookie auth (the only route that literally matches "the run page"),
       - a download URL captured from the upload action's own outputs, if it emits one,
       - or an explicit «не проверено» for the retrieval clause, with the upload proven and the
         reason stated.
-- [ ] 6.2 Upload a small file with `actions/upload-artifact@v4` and attempt retrieval by the chosen
+- [x] 6.2 Upload a small file with `actions/upload-artifact@v4` and attempt retrieval by the chosen
       channel. Record the artifact name, size and the exact retrieval method.
-- [ ] 6.3 🚨 **A silent no-op is the expected failure mode, not a red step.** The known v4 breakage
+- [x] 6.3 🚨 **A silent no-op is the expected failure mode, not a red step.** The known v4 breakage
       is in the artifact **API**, and Trap 3 shows how this forge fails: `actions/setup-node`'s
       cache gate is literally `return !!process.env['ACTIONS_CACHE_URL']` and short-circuits to a
       green step with a misleading GHES message. Assume `upload-artifact` can do the same. If the
       step is green but nothing is retrievable, that is the incompatibility manifesting — apply the
       `v3` fallback and record both results.
-- [ ] 6.4 Record the verdict as a **version pin** Story 2.1 can cite verbatim: `v4` works, or `v4`
+      ⚠️ **Manifested differently than predicted — worth recording, not a deviation from
+      instructions.** `upload-artifact@v4` failed **loudly**, not silently: a real `❌ Failure` step
+      with `GHESNotSupportedError: @actions/artifact v2.0.0+, upload-artifact@v4+ … are not
+      currently supported on GHES.`, `exitcode '1'`. Easier to detect than the silent-no-op pattern
+      Trap 3 warned about, but still the same underlying incompatibility — `v3` fallback applied and
+      both results recorded per `docs/migration-decisions.md#d12`.
+- [x] 6.4 Record the verdict as a **version pin** Story 2.1 can cite verbatim: `v4` works, or `v4`
       is broken in this specific way and `v3` is the pin. Also note whether `retention-days` is
       honoured — `CI.yml:106` sets it and nothing in the plan has verified it.
 
 ### Task 7 — Capture evidence to the house standard (AC: 1, 2, 3, 5, 7)
 
-- [ ] 7.1 For **every** dispatch record: run **index and id**, event, `created` / `started` /
+- [x] 7.1 For **every** dispatch record: run **index and id**, event, `created` / `started` /
       `stopped` **with timezone**, and duration. Per job: **id**, name, status. Story 1.7 was caught
       in review leaving a job id as a placeholder — write the full table the first time.
-- [ ] 7.2 Attribute every job to runner `id: 19` by direct evidence. Story 1.7's method: the
+- [x] 7.2 Attribute every job to runner `id: 19` by direct evidence. Story 1.7's method: the
       runner-side debug log carries `[<workflow name>/<job name>]` prefixes, and the repo runner
       list contains exactly one runner. ⚠️ Story 1.7 reverted `log.level`/`log.job_level` to `info`
       in its Task 10.5 — if you need runner-side log evidence you must raise it to `debug` and
       **revert it again** at teardown. Log the edit against the write budget.
-- [ ] 7.3 Timezone convention: the API returns `+02:00`, `date -u` logs are UTC. Record both and
+- [x] 7.3 Timezone convention: the API returns `+02:00`, `date -u` logs are UTC. Record both and
       label which is which, as D9 does.
-- [ ] 7.4 🚨 Do not infer anything from job status transitions. Forgejo bug
+- [x] 7.4 🚨 Do not infer anything from job status transitions. Forgejo bug
       [#10259](https://codeberg.org/forgejo/forgejo/issues/10259) makes a job blocked by a
       concurrency group report `waiting`, identical to one waiting for a free slot. Use timestamps.
 
 ### Task 8 — Record the outcome (AC: 5)
 
-- [ ] 8.1 🚨 **The `D11` anchor is contested.** Story 1.6 reserved `D11` after Story 1.7 took `D10`;
+- [x] 8.1 🚨 **The `D11` anchor is contested.** Story 1.6 reserved `D11` after Story 1.7 took `D10`;
       Story 1.6 is `ready-for-dev` and not yet written. Decide explicitly: take `D11` and renumber
       1.6 to `D12`, or take `D12` and leave 1.6's reservation intact. **If you renumber, fix
       positional instructions too, not just tokens** — Story 1.7's renumber was token-only and left
       1.6's line references pointing at the wrong slots, which its code review had to repair.
       Recommended: **take `D12`**, leaving 1.6's reservation untouched; the cost of a gap is zero
       and the cost of another renumber is demonstrated.
-- [ ] 8.2 Write the entry: the per-action verdict table (AC5), the artifact version pin, the
+- [x] 8.2 Write the entry: the per-action verdict table (AC5), the artifact version pin, the
       `docker/*` outcome including which were proven as actions vs as `run:` equivalents, the
       registry reachability finding and its fix, the SSH/firewall finding, and every «не проверено»
       with its reason.
-- [ ] 8.3 Follow the file's conventions: Russian prose, English identifiers; explicit
+- [x] 8.3 Follow the file's conventions: Russian prose, English identifiers; explicit
       `<a id="dNN"></a>` anchor; D1–D10 untouched; index-table row added after the D10 row;
       **extend the anchor range in the header paragraph at `docs/migration-decisions.md:8`** —
       omitting this has been a review finding twice; changelog row appended
       (`| Дата | Story | Изменение |`, `DD.MM.YYYY`, bare dotted story number).
-- [ ] 8.4 Amend `docs/forgejo-migration.md` Фаза 1 by **marking, not rewriting**: the DoD clause
+- [x] 8.4 Amend `docs/forgejo-migration.md` Фаза 1 by **marking, not rewriting**: the DoD clause
       «все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:`» is the one this story
       closes or updates (`:158`). ⚠️ Use the `✅` annotation alone — **do not add strikethrough**;
       that file already uses `~~…~~` with two conflicting meanings and Story 1.7's review flagged it.
       Also mark Table 1.4 rows with their verdicts.
-- [ ] 8.5 Add to `deferred-work.md` everything this story surfaced but does not own:
+- [x] 8.5 Add to `deferred-work.md` everything this story surfaced but does not own:
       - ✅ **The Epic 4 correct-course is already done — do not file it again.** It ran on
         2026-08-11 as `sprint-change-proposal-2026-08-11-deploy-runner.md`, was approved, and
         `epics.md` is amended: FR19 rewritten, NFR7 narrowed, `S1_SSH_*`/`S2_SSH_*` removed from
@@ -545,7 +580,7 @@ explicitly recorded as accepted.
       - Whether org secrets proved visible to workflows in this repository — Story 1.12 depends on
         the answer.
       - Any token opened in Task 1.1, with owner and revocation trigger.
-- [ ] 8.6 🚨 **Citation discipline.** Prefer anchors (`#dNN`) to line numbers. If you insert lines
+- [x] 8.6 🚨 **Citation discipline.** Prefer anchors (`#dNN`) to line numbers. If you insert lines
       into a cited file, re-verify **every** citation into that file across the repository, not
       only the ones you wrote — Story 1.7 shifted `docs/forgejo-migration.md` by 10 lines and broke
       six of its own citations plus one in `deferred-work.md`. Count before asserting: if you claim
@@ -553,33 +588,39 @@ explicitly recorded as accepted.
 
 ### Task 9 — Tear down and verify the invariant (AC: 6)
 
-- [ ] 9.1 Delete the probe branch **after** the last dispatch completes, not before:
+- [x] 9.1 Delete the probe branch **after** the last dispatch completes, not before:
       `git push origin --delete probe/action-compat` and `git branch -D probe/action-compat`.
       Confirm with `git branch -a` **and** `GET /repos/CRM/fe-prionex/branches`.
-- [ ] 9.2 Verify the D9 invariant **both ways**, as Story 1.7's review required: git-side
+- [x] 9.2 Verify the D9 invariant **both ways**, as Story 1.7's review required: git-side
       (`git ls-tree` on all three refs → blob `c9aeac2f…`, no `.yml`) **and** server-side
       (`GET .../contents/.forgejo/workflows?ref=<r>` for `main`, `staging`, `development`).
-- [ ] 9.3 `git diff 598de32c -- .github/workflows/` → must be empty. This story makes zero changes
+- [x] 9.3 `git diff 598de32c -- .github/workflows/` → must be empty. This story makes zero changes
       under `.github/`.
-- [ ] 9.4 Delete the throwaway image from the registry if one was pushed, or record its retention as
+- [x] 9.4 Delete the throwaway image from the registry if one was pushed, or record its retention as
       explicitly accepted with an owner. It matches no Story 1.11 retention pattern and would
       otherwise persist forever in the namespace Epic 3 is about to define.
-- [ ] 9.5 🚨 **Do not revert Task 2.2's `--add-host` line — it is meant to persist.** Story 3.1
+      **No image was ever pushed** — `probe-docker-push` (the only job that could push) was never
+      dispatched with `run_registry_push: "true"` (Task 2.1). Nothing to delete. Verified there is
+      no orphan by attempting `GET /packages/CRM?type=container` — `403: token does not have
+      … [read:package]`, the same scope gap D10 already documents; no new token minted to check
+      further since the risk was zero (no push occurred, confirmed by all three
+      `probe-docker-push` tasks reading `skipped`).
+- [x] 9.5 🚨 **Do not revert Task 2.2's `--add-host` line — it is meant to persist.** Story 3.1
       pushes to the same registry from the same runner and needs it. Confirm it survived any runner
       restart, and that the config on s1 matches what Task 2.3 recorded. Revert only changes this
       story made *for its own convenience* (e.g. the log level, Task 9.6).
-- [ ] 9.6 Restore `log.level`/`log.job_level` to `info` if Task 7.2 raised them. Confirm the daemon
+- [x] 9.6 Restore `log.level`/`log.job_level` to `info` if Task 7.2 raised them. Confirm the daemon
       log shows no `[DEBUG]` lines afterwards and the runner is still `idle`.
-- [ ] 9.7 Commit in **two** commits split by area, per the house convention:
+- [x] 9.7 Commit in **two** commits split by area, per the house convention:
       `docs(migration): …` for `docs/` and `chore(bmad): …` for `_bmad-output/`. Run the full husky
       suite on `main` — `--no-verify` is forbidden there. Known flake: a Radix `focus-scope` timer
       test is intermittently flaky in a different file each time; **retry once** before treating it
       as a regression. Verify fast-forward first
       (`git merge-base --is-ancestor origin/main HEAD`).
-- [ ] 9.8 After **every** push, re-check `GET .../actions/runs` → `total_count` against the Task 1.7
+- [x] 9.8 After **every** push, re-check `GET .../actions/runs` → `total_count` against the Task 1.7
       baseline and confirm no run was created. Story 1.7's review found this check had covered only
       the first of three pushes.
-- [ ] 9.9 Update `sprint-status.yaml`: `1-8-…` → `review`, and this file's `Status:` line. Verify
+- [x] 9.9 Update `sprint-status.yaml`: `1-8-…` → `review`, and this file's `Status:` line. Verify
       the prior value before writing — Story 1.7 claimed a verified prior value that git disproved.
 
 ## Dev Notes
@@ -941,11 +982,136 @@ workflow. The project's evidence standard applies:
 
 ### Agent Model Used
 
+Claude Sonnet 5 (claude-sonnet-5), via Claude Code, running the `bmad-dev-story` skill.
+
 ### Debug Log References
+
+- SSH to runner host: `root@10.67.0.1` (key-based). API token sourced from `/root/.fj_token`
+  (mode `600`, pre-existing on s1, minted during Story 1.7's code review — no new token minted
+  this session).
+- Pre-flight re-verification (Task 1): instance version, repo flags, runner list/labels,
+  `.forgejo/workflows` invariant, egress from inside `forgejo-runner-fe-prionex-dind`, run/task
+  counters — all matched the story's recorded baseline except the expected `main` drift (Task 1.6).
+- Registry network fix (Task 2.2): `container.options` edited on s1
+  (`/opt/forgejo-runner-fe-prionex/config.yml`), backup
+  `config.yml.bak-story1.8-20260811T174645Z`, runner restarted, fix verified directly (`/v2/` and
+  `/v2/token` → `401` from a job-equivalent container with `--add-host`, vs. unreachable before).
+- Probe workflow `.forgejo/workflows/probe-actions.yml` authored on branch `probe/action-compat`
+  (cut from `main` at `72e86faa`), two `--no-verify` commits (`2ed3965d` initial, `2ea19bdf` v3
+  fallback fix), pushed, dispatched 3 times via
+  `POST /repos/CRM/fe-prionex/actions/workflows/probe-actions.yml/dispatches` (all `204`). Run
+  ids/index: 383/17 (failure), 384/18 (failure, `log.level: debug` captured), 385/19 (success).
+  Full evidence table, per-action verdicts and quoted log lines recorded in
+  `docs/migration-decisions.md#d12`.
+- `log.level`/`log.job_level` raised to `debug` for dispatches 2–3 (runner-side attribution
+  evidence, Task 7.2), reverted to `info` at teardown (Task 9.6) — confirmed by diff against the
+  Task 2.2 backup: final `config.yml` differs from the pre-story backup by exactly the intended
+  `--add-host` line, nothing else.
+- Teardown (Task 9): probe branch deleted (`origin` + local), D9 invariant re-verified git-side and
+  server-side on `main`/`staging`/`development`, `.github/workflows/` diff against `598de32c` empty,
+  no image pushed (credentialed job never dispatched), run counters progressed `16→17→18→19`
+  exactly matching the three dispatches with no extra runs from branch push/delete.
+- Docs updated: `docs/migration-decisions.md` (new `D12`, index row, header anchor range,
+  changelog row), `docs/forgejo-migration.md` (Table 1.4 verdicts, Фаза 1 item 4 and DoD marked),
+  `_bmad-output/implementation-artifacts/deferred-work.md` (registry DNS fix as Story 3.1
+  prerequisite, `ci-bot`/`robot-registry` substitution, closed the "still unanswered" secrets
+  -provenance entry, recorded the withheld AC3 credential attempt, noted no new token minted).
+  Citation discipline (Task 8.6): 2 stale line-number citations found and fixed after this story's
+  edits shifted `docs/forgejo-migration.md` — `docs/migration-decisions.md:370`
+  (`forgejo-migration.md:173` → `:206`) and `deferred-work.md:134`
+  (`forgejo-migration.md:144` → `:145`). Historical citations inside other stories' own files
+  (`1-7-…md`, `1-3-…md`, etc.) were left as point-in-time records, consistent with how those
+  stories treated each other's citations.
 
 ### Completion Notes List
 
+- **AC1 — satisfied.** `actions/checkout@v6` and `actions/setup-node@v4` both resolve on `node-20`
+  via full-URL SHA-pinned `uses:`, proven by a following assertion step each (not just a green
+  step). Egress re-confirmed from inside the nested engine: github.com 200, api.github.com 200,
+  code.forgejo.org 303, registry.npmjs.org 200 — no mirror substitution needed.
+- **AC2 — partially satisfied, honestly.** `actions/upload-artifact@v4` does **not** resolve on
+  this instance (`GHESNotSupportedError`, a real red step, not the silent no-op Trap 3 predicted).
+  `v3` resolves and is the recorded pin for Story 2.1, with server-side upload confirmed via the
+  action's own log lines. The retrieval clause ("retrievable from the run page") is **«не
+  проверено»**: no Actions-artifacts API exists on this instance, and its would-be quota-based
+  proxy (`/orgs/{org}/quota/artifacts` etc.) also 404s — a finding beyond what the story recorded.
+  No session-cookie/password credential was available to the dev agent to try the web UI.
+  Whether `retention-days` is honoured is also «не проверено» — needs more elapsed time than one
+  session.
+- **AC3 — partially satisfied, honestly.** `docker/setup-buildx-action@v3` and
+  `docker/metadata-action@v5` resolve, proven **as actions** on `node-20` (Task 4 decision (a),
+  a recorded deviation from AC3's literal `docker-build` label wording) — a real BuildKit builder
+  was created against the nested daemon and the expected image tag was computed correctly.
+  `docker/login-action@v3` and `docker/build-push-action@v5` are **«не проверено»**: authored,
+  gated behind an explicit dispatch input, never dispatched with the enabling input, because
+  Task 2.1's human confirmation (Oleg → `aleksey`, that `REGISTRY_USER`/`REGISTRY_TOKEN_RW` are
+  ours to use) was not obtained during this session and is explicitly marked as not the dev
+  agent's to do. **No image was pushed to the registry — this clause of AC3 is not closed.**
+- **AC4 — satisfied as rescoped.** Recorded per Oleg's 2026-08-11 decision («деплой по runner»):
+  no SSH probe run, `appleboy/*` confirmed not needed by architecture, first clause recorded as
+  superseded (not failed), resting on the already-established `ufw` firewall finding. `epics.md`
+  not amended by this story (already amended by the approved correct-course).
+  s1's `ufw` port-22 allowlist itself was not re-checked this session (not in Task 1's re-verify
+  list) — «не проверено», relying on the prior finding instead.
+- **AC5 — satisfied.** Every Table 1.4 action carries a definite verdict (*resolves* /
+  *does not resolve* / *replaced by design* / *«не проверено»*) in `docs/migration-decisions.md#d12`,
+  each не-проверено entry states its reason, and the artifact verdict names a specific version
+  (`v3`).
+- **AC6 — satisfied.** Probe branch deleted locally and on `origin`; no `.forgejo/workflows/*.yml`
+  on `main`/`staging`/`development`; `README.md` byte-identical (`c9aeac2f…`) verified both git-side
+  and server-side on all three refs; `.github/workflows/` byte-for-byte unchanged
+  (`git diff 598de32c` empty). No image was pushed, so there is nothing to delete or whose
+  retention needs recording — verified via a `read:package`-scope-denied probe against the
+  registry's packages API (consistent with "nothing was pushed", not evidence on its own).
+- **AC7 — satisfied.** Every job in the probe workflow pinned `runs-on` to `node-20` only; no
+  forbidden label used anywhere in the file; every dispatched job attributed to runner `id: 19` by
+  direct evidence (runner-side `docker logs` prefix `[probe-actions/<job>]`, cross-checked against
+  the repo runner list containing exactly that one runner).
+- **Registry DNS/egress fix (beyond the four ACs, Task 2.2) — applied and durable.**
+  `--add-host git.crm-prionex.com:10.67.0.1` added to `container.options` on s1, verified to fix
+  `/v2/` and token-endpoint reachability from job containers, confirmed to survive the session
+  unchanged. Filed in `deferred-work.md` as a Story 3.1 prerequisite (same registry, same runner).
+- **Everything marked «не проверено» in this story, with its reason, in one place:**
+  (1) AC2 artifact retrieval — no Actions-artifacts API, no quota-based proxy either (404), no
+  web-UI credential available. (2) AC2 `retention-days` honoured — needs more elapsed time than one
+  session. (3) AC3 `docker/login-action`/`docker/build-push-action` — withheld pending Oleg's
+  confirmation with `aleksey` (Task 2.1, explicitly not the dev agent's to do). (4) Whether org
+  secrets are exposed to workflows in this repository — the only job that would have exercised a
+  secret was never dispatched. (5) s1's `ufw` port-22 allowlist — not re-checked this session, AC4
+  no longer needs it. (6) Whether `fe_tmp_1_7` (the other live token named in `deferred-work.md`)
+  is still live — not checked, out of scope for this story's token usage.
+- **Write budget, closed out:** 1 branch push + 2 `--no-verify` commits on it; 3 workflow dispatches
+  (plan was 2 — overage from an honest first-dispatch failure, logged not absorbed); 0 image pushes;
+  1 branch deletion; 2 closing commits on `main`; 1 durable line in `container.options` on s1 (with
+  backup); `log.level`/`log.job_level` raised then reverted (round-trip confirmed by diff). No new
+  API token minted.
+- **`D12` taken, `D11` left reserved for Story 1.6**, per Task 8.1's recommendation — no renumber,
+  so no positional-instruction repair was needed either.
+- **Citation discipline:** 2 stale line-number citations found (after this story's own edits shifted
+  `docs/forgejo-migration.md`) and fixed — see Debug Log References.
+
 ### File List
+
+- `.forgejo/workflows/probe-actions.yml` — created on throwaway branch `probe/action-compat`,
+  committed twice, pushed, dispatched 3 times, **deleted with the branch before this commit** (not
+  present in the final tree; recorded here for the audit trail per the story's evidence standard).
+- `docs/migration-decisions.md` — modified: header anchor range extended, `D12` index row and full
+  section added, one stale internal citation (`forgejo-migration.md:173→206`) fixed, changelog row
+  appended. `D1`–`D10` untouched.
+- `docs/forgejo-migration.md` — modified: Table 1.4 rows annotated with per-action verdicts
+  (`✅`/`❌`, no strikethrough), Фаза 1 item 4 and its DoD clause marked with the outcome.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified: closed the "still
+  unanswered" secrets-provenance question, one stale line-number citation
+  (`forgejo-migration.md:144→145`) fixed, new "Deferred from: story 1-8" section added.
+- `_bmad-output/implementation-artifacts/1-8-prove-action-compatibility-with-a-smoke-workflow.md`
+  — this file: Tasks/Subtasks checked off with retro-annotations where attempted-not-as-specified,
+  Dev Agent Record filled in, Status updated.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `1-8-…` status updated to `review`.
+- On s1 (not part of this git repository, per `docs/forgejo-migration.md` conventions):
+  `/opt/forgejo-runner-fe-prionex/config.yml` — one durable line added
+  (`--add-host git.crm-prionex.com:10.67.0.1`), backed up first at
+  `config.yml.bak-story1.8-20260811T174645Z`; `log.level`/`log.job_level` round-tripped
+  `info → debug → info`.
 
 ## Open Questions for Review
 
@@ -964,16 +1130,22 @@ workflow. The project's evidence standard applies:
 
 ### Still open
 
-4. **`D11` or `D12`?** Story 1.6 has reserved `D11` and has not run. Recommended: take `D12` and
-   leave the reservation intact — a numbering gap costs nothing, and the last renumber cost a
-   code-review repair.
-5. **Should the token policy be settled now?** Two live tokens exist where the model calls for one
-   (`fe_tmp_1_7`, `fe_review_1_7`), and this story needs a third unless it reuses one. The open
-   question from Story 1.7 — one long-lived token per epic vs. a scoped short-lived token per story
-   — is now costing something. Note the platform's own answer is different again: it uses named
-   robot accounts (`robot-registry`, `robot-deploy`) rather than tokens on a human admin, which may
-   be the model worth adopting.
-6. **Does `robot-registry` have `write:package`, or only the RO pair?** Both `REGISTRY_TOKEN_RW`
-   and `REGISTRY_TOKEN_RO` exist, so presumably yes — but values are write-only and the first
-   `docker/login-action` step is the only way to find out. If RW turns out to be scoped narrower
-   than its name suggests, that is a Story 1.10 finding, not a blocker for the other three ACs.
+4. ✅ **`D11` or `D12`? — Resolved during dev.** Took `D12`, left Story 1.6's `D11` reservation
+   intact, per the recommendation.
+5. **Token policy — not settled, but not worsened.** This story reused the existing
+   `/root/.fj_token` (`fe_review_1_7`) and did **not** mint a third live token, so the "two tokens
+   where the model calls for one" problem did not become three. The underlying policy question
+   (one long-lived token per epic vs. scoped short-lived per story, vs. adopting named robot
+   accounts like `robot-registry`/`robot-deploy`) is unchanged and still needs an owner.
+6. **Does `robot-registry` have `write:package`? — still genuinely unanswered.** The first
+   `docker/login-action` step, which would have been the only way to find out, was never
+   dispatched this session (blocked on the confirmation in item 7 below). Still open for whoever
+   next dispatches `probe-docker-push` with `run_registry_push: "true"`.
+7. **New — raised by this story's execution: Oleg needs to confirm with `aleksey` that
+   `REGISTRY_USER`/`REGISTRY_TOKEN_RW` are `fe-prionex`'s to use (Task 2.1), then someone needs to
+   actually run the credentialed probe.** Until that happens, AC3's push clause and the
+   `docker/login-action`/`docker/build-push-action` verdicts stay «не проверено», Story 1.10 can't
+   close its own credential question, and question 6 above stays open too. The probe branch and
+   workflow were deleted per AC6 (teardown is not conditional on this), so re-running it means
+   recreating a throwaway branch from `main` and re-authoring (or restoring from this story's git
+   history) `.forgejo/workflows/probe-actions.yml`.

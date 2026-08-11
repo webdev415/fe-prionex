@@ -65,8 +65,14 @@
   «org, без изменений» owned by Story 1.12, so Story 1.12 will see the name already populated and
   skip it, leaving deploy notifications silently dead. The overwrite was justified by a misreading
   of `CD.yml` (`deploy` has `needs: build-and-push`; the `if: always()` Slack step is step-scoped
-  and cannot run when the job is skipped) — see `#d9` «Находки инстанса». Also still unanswered:
-  why five secrets matching D6's naming scheme appeared minutes before the story's pre-flight.
+  and cannot run when the job is skipped) — see `#d9` «Находки инстанса».
+  ✅ **"Why five secrets matching D6's naming scheme appeared" — answered, story 1.8
+  (2026-08-11).** `GET /orgs/CRM/members` returns exactly three accounts: `platform-admin`,
+  `robot-deploy`, `robot-registry`. The five org secrets (`REGISTRY_USER`, `REGISTRY_USER_RO`,
+  `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`, `SLACK_CD_WEBHOOK_URL`, all created
+  `2026-08-10T10:14:26–27+02:00`) are the hub's own platform credentials for those accounts, not
+  something a previous story left behind. `SLACK_CD_WEBHOOK_URL`'s stub-value problem (previous
+  bullet) is unaffected and remains open. See `docs/migration-decisions.md#d12`.
 - **Re-verify the fallback mechanism on any Forgejo upgrade.** `#d9` says «перепроверить при
   апгрейде инстанса», citing [forgejo#9203](https://codeberg.org/forgejo/forgejo/issues/9203) — a
   live upstream proposal to make foreign workflow directories configurable, i.e. exactly the change
@@ -125,7 +131,7 @@
 ## Deferred from: story 1-7-provision-the-primary-forgejo-runner-with-both-labels (2026-08-11)
 
 - **Node 20 is EOL (2026-04-30), `node:20-bookworm` is delisted but still pulls (frozen at
-  v20.20.2).** The `node-20` label is fixed by FR28 (`epics.md:161-163`), `docs/forgejo-migration.md:144`
+  v20.20.2).** The `node-20` label is fixed by FR28 (`epics.md:161-163`), `docs/forgejo-migration.md:145`
   and AC4 — this story registered it as specified and does not change it unilaterally. Someone needs
   to own the decision: stay pinned (accepting no further base-image security patches) or bump to a
   maintained line (Node 22 "Jod" or Node 24 "Krypton"), which is a scoped change touching
@@ -268,3 +274,57 @@
   `Status: review` and flipped `sprint-status.yaml` — Tasks 5.3, 10.6 and 10.7 were still `[ ]`;
   they were ticked afterwards in `9f75b89e`. Deferred: already past for 1.7, but the
   status-transition gate is worth making explicit in the dev-story cycle.
+
+## Deferred from: story 1-8-prove-action-compatibility-with-a-smoke-workflow (2026-08-11)
+
+- 🔴 **Registry DNS/egress finding and its fix — Story 3.1 prerequisite.** From inside a job
+  container, `git.crm-prionex.com` resolves to the **public** IP `185.185.49.127` (split-horizon —
+  the s1 host itself resolves it to `10.70.0.1`), and connecting there fails
+  (`OpenSSL SSL_read: unexpected eof`). Pointing at the internal IP alone does not fix it either —
+  the registry's auth realm is pinned to the public hostname. **Fix applied and verified by story
+  1.8:** `--add-host git.crm-prionex.com:10.67.0.1` added to `container.options` in
+  `/opt/forgejo-runner-fe-prionex/config.yml` on s1 (backup taken first, runner restarted, returned
+  to `idle`). After the fix, `/v2/` and `/v2/token?service=container_registry` both return `401`
+  from a job-equivalent container (reachable, correctly demanding auth). **Story 3.1 pushes to the
+  same registry from the same runner and will fail identically without this line — it is meant to
+  persist, do not revert it.** See `docs/migration-decisions.md#d12`.
+- **`ci-bot` vs `robot-registry` substitution — for Story 1.10.** `epics.md:704-707` and FR10 name
+  a technical user `ci-bot`; it does not exist on this instance (`GET /users/ci-bot` → 403, absent
+  from `GET /orgs/CRM/members`). The platform's own equivalent is `robot-registry`, one of exactly
+  three accounts on the org (`platform-admin`, `robot-deploy`, `robot-registry`), and the org
+  secrets `REGISTRY_USER`/`REGISTRY_TOKEN_RW` almost certainly belong to it. Story 1.10 decides
+  whether to adopt `robot-registry` as-is or still create `ci-bot` — story 1.8 does not decide this,
+  only records the substitution. Oleg still needs to confirm with the hub administrator (`aleksey`)
+  that `REGISTRY_USER`/`REGISTRY_TOKEN_RW` are `fe-prionex`'s to use — **not done during story
+  1.8's session**, and it blocked AC3's credentialed clause (below).
+- ⚠️ **Whether org secrets are exposed to workflows in `CRM/fe-prionex` — «не проверено», Story
+  1.12 depends on the answer.** Story 1.8 authored a job (`probe-docker-push` in
+  `.forgejo/workflows/probe-actions.yml`, on the now-deleted `probe/action-compat` branch) that
+  referenced `secrets.REGISTRY_USER` and `secrets.REGISTRY_TOKEN_RW`, gated behind an explicit
+  `workflow_dispatch` input defaulting to `false`. That job was **never dispatched with the
+  enabling input** — see next entry — so this session produced no direct evidence either way.
+  Repo-level secrets are confirmed empty (`[]`); whether the **org**-level secrets resolve inside a
+  repo workflow at all was not established.
+- 🔴 **AC3's credentialed clause (`docker/login-action` + `docker/build-push-action` against a real
+  push) was not exercised — blocked on human confirmation, carried forward for whoever revisits
+  it.** Task 2.1 of story 1.8 requires Oleg to confirm with `aleksey` that `REGISTRY_USER`/
+  `REGISTRY_TOKEN_RW` are `fe-prionex`'s to use before the first push; the story's own capability
+  table marks this "❌ no" for the dev agent, and the dev agent that ran story 1.8 has no channel to
+  `aleksey`. That confirmation was not obtained during the session, so the credentialed job was
+  authored (readable in `docs/migration-decisions.md#d12`'s evidence, reconstructable from this
+  entry) but never dispatched. `docker/login-action` and `docker/build-push-action` therefore carry
+  the verdict «не проверено», not "does not resolve" — this is a withheld attempt, not an observed
+  failure. Whoever obtains the confirmation can recreate a throwaway probe branch and dispatch with
+  `run_registry_push: "true"` to close this.
+- **Token reuse, not a new mint.** Story 1.8 used the existing `/root/.fj_token` on s1 (per
+  `deferred-work.md`'s own entry above, this is `fe_review_1_7`, minted 2026-08-11 during story
+  1.7's code review with Oleg's authorisation) and did **not** mint a third live token. The
+  standing two-token question (`fe_tmp_1_7` vs `fe_review_1_7`, one-per-epic vs scoped-per-story)
+  is unchanged by this story — still open, still tracked above. Whether `fe_tmp_1_7` is still live
+  was not re-checked: «не проверено», same as before.
+- **s1 firewall re-verification was not repeated.** Story 1.8's Task 1 pre-flight list does not
+  include re-checking `ufw`'s port-22 allowlist; the story rests on the finding already recorded
+  when the Epic 4 correct-course was approved (`ufw` active, `-P INPUT DROP`, port 22 allowed only
+  from two named admin IPs). Re-verifying this specific fact in this session: «не проверено» —
+  not re-run, deliberately, since AC4 no longer needs an SSH probe at all (rescoped to «деплой по
+  runner»).
