@@ -62,7 +62,7 @@ development_status:
   1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: cancelled
   1-6-secure-the-pre-prod-infrastructure-commitment: ready-for-dev
   1-7-provision-the-primary-forgejo-runner-with-both-labels: done
-  1-8-prove-action-compatibility-with-a-smoke-workflow: backlog
+  1-8-prove-action-compatibility-with-a-smoke-workflow: ready-for-dev
   1-9-provision-the-second-runner: backlog
   1-10-enable-the-forgejo-container-registry-with-scoped-credentials: backlog
   1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: backlog
