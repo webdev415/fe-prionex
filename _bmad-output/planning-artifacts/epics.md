@@ -125,9 +125,11 @@ previously deployed prod tag without rebuilding.
 FR18: After a successful PROD deploy the workflow retags the deployed image as
 `prod-current` in the registry.
 
-FR19: All deploy workflows follow the sequence: scp compose file → `docker compose down`
-→ `docker pull` (fail-fast, **no** fallback to `:latest`) → `docker compose up -d` →
-health check.
+FR19: **AMENDED (2026-08-11, `sprint-change-proposal-2026-08-11-deploy-runner.md`).** All deploy
+workflows run on a deploy runner located on the target host and follow the sequence: place the
+compose file in the stand directory → `docker compose down` → `docker pull` (fail-fast, **no**
+fallback to `:latest`) → `docker compose up -d` → health check. **No step connects to the host
+over SSH.** ~~All deploy workflows follow the sequence: scp compose file → …~~
 
 FR20: The health check polls `docker inspect -f '{{.State.Health.Status}}'` against a
 **parameterized** container name, with a fallback `curl` against the **parameterized**
@@ -207,7 +209,11 @@ phases 0–6; Forgejo deploys only to newly created stands.
 NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only `ci-bot` holds
 `write:package`.
 
-NFR7: s2 receives a **new** SSH key; the old key is not revoked until Phase 8 completes, to
+NFR7: **NARROWED (2026-08-11, `sprint-change-proposal-2026-08-11-deploy-runner.md`).** Deployment
+no longer authenticates to s2 over SSH (FR19), so **no new deployment key is required**. The
+existing key stays authorized on s2 as an **administrative access path only**; it is not a delivery
+credential, and its rotation is Story 7.5's concern rather than a prerequisite for any deploy.
+~~s2 receives a **new** SSH key~~; the old key is not revoked until Phase 8 completes, to
 avoid losing access.
 
 NFR8: No silent URL fallbacks — the `CD.yml:49,59` style defaults to the production API are
@@ -237,13 +243,17 @@ Technical and infrastructure requirements extracted from the plan that shape sto
 - Third-party actions are referenced by full URL (`uses: https://github.com/actions/checkout@v6`),
   which requires egress to github.com from the runner; mirrors on `code.forgejo.org` are the
   alternative.
-- `appleboy/scp-action` and `appleboy/ssh-action` are replaced with native `ssh`/`scp` in
-  `run:` steps rather than ported.
+- **AMENDED (2026-08-11).** `appleboy/scp-action` and `appleboy/ssh-action` are not ported and
+  not replaced by an SSH equivalent: deployment runs on a deploy runner located on the target
+  host, so **no workflow performs SSH at all**.
+  ~~replaced with native `ssh`/`scp` in `run:` steps rather than ported.~~
 - A runner cache server is required for `actions/setup-node` with `cache: npm`.
 - The runner must not be hosted on s2.
-- Secret migration map: `REGISTRY_TOKEN` (org), `S1_SSH_HOST/USER/KEY` (repo),
-  `S2_SSH_HOST/USER/KEY` (repo, new key), `SLACK_CD_WEBHOOK_URL` (org). Ports are **not**
-  migrated into CI variables — they already live in per-stand server `.env` files.
+- Secret migration map **(AMENDED 2026-08-11)**: `REGISTRY_TOKEN` (org),
+  `SLACK_CD_WEBHOOK_URL` (org). **No SSH secrets are migrated** — deployment runs on the target
+  host and needs none; ~~`S1_SSH_HOST/USER/KEY` (repo), `S2_SSH_HOST/USER/KEY` (repo, new key)~~.
+  Ports are **not** migrated into CI variables — they already live in per-stand server `.env`
+  files.
 - `github.server_url` / `github.repository` / `github.run_id` work unchanged in Forgejo and
   produce a valid run URL.
 - **Answered 2026-08-07 (Story 1.4, cancelled):** GitHub and Forgejo are **not** synchronized
@@ -365,7 +375,8 @@ while the legacy DEV stand keeps running untouched.
 (serialization independent of `concurrency` support)
 
 **Implementation notes:** This epic establishes the reusable deployment mechanics consumed
-by Epics 5 and 6: parameterized compose, native `ssh`/`scp` instead of `appleboy/*`,
+by Epics 5 and 6: parameterized compose, **execution on a deploy runner located on the target
+host** (amended 2026-08-11; was ~~native `ssh`/`scp` instead of `appleboy/*`~~),
 fail-fast `docker pull` with no `:latest` fallback, health check parameterized by container
 name and port, Slack via `curl`, and the server-side `flock`.
 
@@ -662,10 +673,17 @@ and `docker/build-push-action` against a throwaway image
 **And** any action that fails to resolve is recorded together with its native `run:`
 replacement.
 
-**Given** the plan calls for replacing `appleboy/scp-action` and `appleboy/ssh-action`
-**When** the smoke test covers SSH connectivity
-**Then** native `ssh` and `scp` in a `run:` step reach s1 successfully
-**And** the `appleboy/*` actions are confirmed as not needed.
+**Given** deployment runs on a deploy runner located on the target host (amended FR19)
+**When** the action inventory is reconciled
+**Then** the `appleboy/*` actions are confirmed as not needed, because no workflow performs SSH
+**And** no SSH connectivity probe is run.
+
+> Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"When the smoke
+> test covers SSH connectivity / Then native `ssh` and `scp` in a `run:` step reach s1
+> successfully."* Story 1.8's pre-flight established that `ufw` on s1 denies port 22 to everything
+> but two administrative addresses, so that probe could not have passed at any credential — which
+> is the evidence that grounded the mechanism change. The remaining clause is closed by the
+> architecture, which is stronger than a connectivity test would have been.
 
 ### Story 1.9: Provision the Second Runner
 
@@ -749,10 +767,18 @@ I want the secrets the new workflows need present in Forgejo at the right scope,
 So that later epics do not stall on missing credentials.
 
 > **Prerequisite: Story 1.13 must be complete.** Until `.forgejo/workflows/` suppresses the
-> `.github/workflows/` fallback, putting `S1_SSH_*`, `S2_SSH_*` and `SLACK_CD_WEBHOOK_URL` into
-> Forgejo arms the legacy `CD.yml` deploy job on a platform where an idle `ubuntu-latest` runner
-> will execute it. Today that job fails harmlessly at `docker/login-action` only because these
-> credentials are absent — this story removes exactly that accidental protection.
+> `.github/workflows/` fallback, putting credentials into Forgejo arms the legacy `CD.yml` deploy
+> job on a platform where an idle `ubuntu-latest` runner will execute it. Today that job fails
+> harmlessly at `docker/login-action` only because these credentials are absent.
+>
+> ✅ **Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`) — this story no
+> longer removes that protection.** The original text ended *"this story removes exactly that
+> accidental protection"*, because it was the story that would place ~~`S1_SSH_*`, `S2_SSH_*`~~
+> into Forgejo. Under the amended FR19 no SSH secret is ever created there, so the legacy deploy
+> job can never reach a server regardless of the placeholder. What remains is `REGISTRY_TOKEN` and
+> `SLACK_CD_WEBHOOK_URL`, neither of which lets `CD.yml` deploy — it would still fail, now at the
+> `appleboy/*` steps for want of a host and key. The prerequisite on 1.13 stands on its own merits;
+> the hazard it guarded against is retired.
 
 **Acceptance Criteria:**
 
@@ -760,14 +786,18 @@ So that later epics do not stall on missing credentials.
 **When** organization-level secrets are created
 **Then** `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` exist at the `CRM` organization scope.
 
-**Given** s1 hosts both DEV and PRE-PROD
-**When** repository-level secrets are created
-**Then** `S1_SSH_HOST`, `S1_SSH_USER` and `S1_SSH_KEY` exist and authenticate against s1.
+**Given** deployment runs on a deploy runner located on the target host under the amended FR19
+**When** the secret set is reviewed
+**Then** **no SSH secret of any kind is created in Forgejo**
+**And** the rationale is recorded: a legacy `.github/workflows/CD.yml` execution can then never
+reach a server, which makes D9's suppression permanent rather than procedural.
 
-**Given** s2 must receive a new key
-**When** `S2_SSH_HOST`, `S2_SSH_USER` and `S2_SSH_KEY` are created
-**Then** the key is newly generated rather than copied from GitHub Secrets
-**And** the previous key remains authorized on s2 so access cannot be lost.
+> Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Two AC blocks were
+> deleted here — ~~`S1_SSH_HOST/USER/KEY` authenticating against s1~~ and ~~`S2_SSH_HOST/USER/KEY`
+> newly generated for s2~~. This is the change that retires the plan's largest standing hazard:
+> Story 1.13 named this story as the one that removes the accidental protection keeping legacy
+> `CD.yml` from deploying, because it was the story that would place SSH credentials in Forgejo.
+> It no longer does.
 
 **Given** Option C requires per-environment build variables
 **When** repository variables are created
@@ -1218,7 +1248,8 @@ its tag string.
 
 Any developer can deploy any feature branch to a new DEV stand on s1 without approval, while
 the legacy DEV stand keeps serving untouched. This epic also establishes the deployment
-mechanics that Epics 5 and 6 reuse: parameterized compose, native `ssh`/`scp`, fail-fast
+mechanics that Epics 5 and 6 reuse: parameterized compose, **execution on a deploy runner
+located on the target host** (amended 2026-08-11; was ~~native `ssh`/`scp`~~), fail-fast
 pull, parameterized health check, Slack via `curl`, and the server-side lock.
 
 ### Story 4.1: Parameterize the Compose File for Coexisting Stands
@@ -1299,9 +1330,14 @@ So that I can validate my work on a real stand as often as I need to.
 **And** no approval or review step gates it.
 
 **Given** the deploy runs
-**When** it connects to s1
-**Then** it uses native `ssh` and `scp` in `run:` steps
-**And** no `appleboy/scp-action` or `appleboy/ssh-action` is used.
+**When** the workflow declares `runs-on`
+**Then** it targets the deploy runner located on s1 by its label
+**And** the compose file reaches the stand directory without leaving the host
+**And** no SSH client, `appleboy/scp-action` or `appleboy/ssh-action` appears in the workflow.
+
+> Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"When it
+> connects to s1 / Then it uses native `ssh` and `scp` in `run:` steps."* "Connects to s1" no
+> longer describes anything — the job already runs on s1.
 
 **Given** the deploy sequence
 **When** it executes
@@ -1462,8 +1498,10 @@ workflows invoke
 
 **Given** the shared definition
 **When** it is parameterized
-**Then** target host, stand directory, container name, port, environment label and image tag
-are all inputs
+**Then** deploy-runner label, stand directory, container name, port, environment label and
+image tag are all inputs
+**And** no target host is passed, because the runner label determines the host (amended
+2026-08-11; was ~~target host~~)
 **And** no environment-specific value is embedded in it.
 
 **Given** `deploy-dev.yml` from Story 4.3
@@ -1592,8 +1630,9 @@ So that validation is performed against a known, reproducible candidate.
 **Given** a dispatch with a valid `image_tag`
 **When** the deploy runs
 **Then** it consumes the shared deploy definition from Story 4.8 rather than copying its
-steps — native `ssh`/`scp`, compose copy, `down`, fail-fast pull, `up -d`, parameterized
-health check
+steps — compose placement, `down`, fail-fast pull, `up -d`, parameterized health check —
+running on the deploy runner located on s1 (amended 2026-08-11; was ~~native `ssh`/`scp`,
+compose copy~~)
 **And** it acquires the Story 4.4 lock on the PRE-PROD stand directory.
 
 **Given** an `image_tag` that does not exist in the registry
@@ -1830,9 +1869,16 @@ PRE-PROD artifact.
 **And** no build step runs on this path.
 
 **Given** the deploy targets s2
-**When** it connects
-**Then** it authenticates with the new `S2_SSH_KEY` from Story 1.12
-**And** the previous key remains authorized on s2 throughout, so access cannot be lost.
+**When** the workflow declares `runs-on`
+**Then** it targets the deploy runner located on s2 by its label
+**And** no SSH credential is used, so production access cannot be lost by a key change.
+
+> Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"Then it
+> authenticates with the new `S2_SSH_KEY` from Story 1.12."* That key is no longer created —
+> see the amended FR19 and Story 1.12. **Accepted trade-off, recorded by Oleg's explicit
+> decision:** the s2 deploy runner holds that host's `docker.sock`, so a production deploy job
+> has root-equivalent control of the s2 daemon. This is the hub's documented pattern and the
+> only way this model reaches production.
 
 **Given** the deploy sequence
 **When** it executes
@@ -2120,8 +2166,15 @@ So that deleting the secret is not mistaken for the key becoming safe.
 
 **Given** the s1 key was stored in GitHub Secrets
 **When** rotation is performed
-**Then** a new key pair is generated, authorized on s1, and stored as `S1_SSH_KEY` in Forgejo
-**And** a deploy to DEV succeeds with the new key before the old one is removed.
+**Then** a new key pair is generated and authorized on s1 for **administrative access**
+**And** it is **not** stored in Forgejo, because no workflow uses SSH (amended FR19)
+**And** administrative access with the new key is proven before the old one is removed.
+
+> Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"stored as
+> `S1_SSH_KEY` in Forgejo / And a deploy to DEV succeeds with the new key before the old one is
+> removed."* Deployment no longer uses SSH, so there is no deploy to prove the key with and
+> nothing to store. This story becomes pure security hygiene — rotating a key that was exposed in
+> GitHub Secrets — rather than a delivery prerequisite.
 
 **Given** the old s1 key
 **When** the new key is proven working

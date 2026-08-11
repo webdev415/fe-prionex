@@ -165,12 +165,16 @@ are "confirmed as not needed" **because the architecture no longer performs SSH 
 stronger result than proving native `ssh`/`scp` would have been. Task 3 records this; there is no
 SSH probe to run.
 
-🚨 **Consequence beyond this story — do not absorb it silently.** `FR19` (`epics.md:128-130`,
-"scp compose file → `docker compose down` → `docker pull` … → health check") and **Story 4.3 AC2**
-(`epics.md:1301-1304`, "it uses native `ssh` and `scp` in `run:` steps") now describe the wrong
-mechanism, and Stories 5.3 and 6.4 inherit it. **Oleg's decision: record it here, run
-`correct-course` for Epic 4 separately.** Task 8.5 files the entry; this story does not amend
-`epics.md`.
+✅ **The Epic 4 correct-course has since run and been approved (2026-08-11).**
+`sprint-change-proposal-2026-08-11-deploy-runner.md` amended FR19, narrowed NFR7, removed
+`S1_SSH_*`/`S2_SSH_*` from the secret map, and updated Epic 4's goal plus Stories 4.3, 4.8, 5.3,
+6.4 and 1.12. It also established that the platform's deploy runners — `s1-deploy-dev-preprod`
+(id 14) and `s2-prod-deploy` (id 17) — are org-scoped and confirmed available to this repository.
+Nothing is left for this story to file; §3(c)'s firewall evidence was what grounded the proposal.
+
+⚠️ **The deploy labels are still forbidden *to you*.** `dev`, `preprod`, `deploy`,
+`deploy-dev-preprod` and `s2-prod-deploy` become intended targets from Epic 4 onward — but this
+story is a smoke test and must run only on `node-20` and `docker-build`. AC7 is unchanged.
 
 ### Six prohibitions
 
@@ -528,10 +532,11 @@ explicitly recorded as accepted.
       that file already uses `~~…~~` with two conflicting meanings and Story 1.7's review flagged it.
       Also mark Table 1.4 rows with their verdicts.
 - [ ] 8.5 Add to `deferred-work.md` everything this story surfaced but does not own:
-      - 🚨 **The Epic 4 correct-course** — FR19 (`epics.md:128-130`) and Story 4.3 AC2
-        (`epics.md:1301-1304`) specify `ssh`/`scp` deployment, which Oleg's «деплой по runner»
-        decision supersedes; Stories 5.3 and 6.4 inherit the same mechanism. Owner: Oleg. Include
-        §3(c)'s firewall evidence so the proposal is grounded in a fact, not a preference.
+      - ✅ **The Epic 4 correct-course is already done — do not file it again.** It ran on
+        2026-08-11 as `sprint-change-proposal-2026-08-11-deploy-runner.md`, was approved, and
+        `epics.md` is amended: FR19 rewritten, NFR7 narrowed, `S1_SSH_*`/`S2_SSH_*` removed from
+        the secret map, Epic 4's goal and Stories 4.3, 4.8, 5.3, 6.4 and 1.12 updated. Your §3(c)
+        firewall evidence is what grounded it.
       - The **registry DNS finding and its fix** as a **Story 3.1 prerequisite** — 3.1 pushes to
         the same registry from the same runner and fails identically without `--add-host`.
       - The **`ci-bot` vs `robot-registry` substitution** for Story 1.10, and the resolved

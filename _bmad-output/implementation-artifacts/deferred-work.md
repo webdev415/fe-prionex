@@ -164,6 +164,29 @@
   `register`/`daemon` startup log proves nothing about which images the labels actually resolve
   to.
 
+## Resolved: deployment mechanism (2026-08-11, correct-course)
+
+- ✅ **Deployment moves from `ssh`/`scp` to a deploy runner on the target host.**
+  `sprint-change-proposal-2026-08-11-deploy-runner.md`, approved by Oleg and coordinated with the
+  hub administrator. Triggered by Story 1.8's pre-flight finding that `ufw` on s1 denies port 22 to
+  everything but two admin addresses, so SSH from a job container is impossible **at any
+  credential**. `epics.md` amended: FR19 rewritten, NFR7 narrowed to administrative access,
+  `S1_SSH_*`/`S2_SSH_*` removed from the secret migration map, Epic 4's goal and implementation
+  notes reworded, Stories 4.3, 4.8, 5.3, 6.4 and 1.12 updated.
+  🔒 **This retires the plan's largest standing hazard.** Story 1.13 named Story 1.12 as the story
+  that removes the accidental protection keeping legacy `.github/workflows/CD.yml` from deploying,
+  because 1.12 was what would place SSH credentials into Forgejo. It no longer does, so D9's
+  suppression is permanent rather than procedural.
+  ⚠️ **Accepted risk, recorded by Oleg's explicit decision:** the s2 deploy runner holds that
+  host's `docker.sock`, so a production deploy job has root-equivalent control of the s2 daemon.
+  Hub-standard pattern; the only way this model reaches production.
+  ⚠️ **Still open for Story 4.4:** the `flock` server-side lock was designed against concurrent SSH
+  sessions. A runner with `capacity > 1` still permits two simultaneous deploys, so **re-examine
+  the lock rather than deleting it**.
+  ⚠️ **Label status changed:** `dev`, `preprod`, `deploy`, `deploy-dev-preprod` and
+  `s2-prod-deploy` stop being forbidden from Epic 4 onward and become the intended deploy targets.
+  They remain forbidden for Story 1.8, which is a smoke test bound to `node-20`/`docker-build`.
+
 ## Deferred from: code review of story-1.7 (2026-08-11)
 
 - 🔒 **nginx ACL on s1 was widened and has no rollback owner.** Story 1.7 added
