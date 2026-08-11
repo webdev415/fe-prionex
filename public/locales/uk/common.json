@@ -5200,6 +5200,7 @@
           "saleDate": "Дата продажу",
           "principalAmount": "Сума основного боргу",
           "principalDebt": "Основна заборгованість",
+          "debt": "Заборгованість",
           "eligibleForReturn": "Дозволена до повернення",
           "remainingDebtAmount": "Залишок боргу",
           "totalToReturn": "Всього до повернення",
