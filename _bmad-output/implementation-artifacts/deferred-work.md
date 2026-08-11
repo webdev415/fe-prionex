@@ -314,7 +314,7 @@
   from a job-equivalent container (reachable, correctly demanding auth). **Story 3.1 pushes to the
   same registry from the same runner and will fail identically without this line — it is meant to
   persist, do not revert it.** See `docs/migration-decisions.md#d12`.
-- **`ci-bot` vs `robot-registry` substitution — for Story 1.10.** `epics.md:704-707` and FR10 name
+- **`ci-bot` vs `robot-registry` substitution — for Story 1.10.** `epics.md:94` (FR10), `:209` (NFR6), `:299` and `:722` name
   a technical user `ci-bot`; it does not exist on this instance (`GET /users/ci-bot` → 403, absent
   from `GET /orgs/CRM/members`). The platform's own equivalent is `robot-registry`, one of exactly
   three accounts on the org (`platform-admin`, `robot-deploy`, `robot-registry`), and the org

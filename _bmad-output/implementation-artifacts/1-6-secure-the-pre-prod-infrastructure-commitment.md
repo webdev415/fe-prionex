@@ -279,7 +279,7 @@ point of this task is that **you** checked them.
       [D2](docs/migration-decisions.md#d2)).
 - [ ] 2.10 **State the sequencing constraint instead of inventing a deadline.** The document
       must convey *when it is needed* without naming a date this side does not own: PRE-PROD
-      infra sits on the critical path (`forgejo-migration.md:313`), Epics 1–4 run before Epic 5,
+      infra sits on the critical path ([`forgejo-migration.md` §6 «Критический путь»](../../docs/forgejo-migration.md#6-критический-путь)), Epics 1–4 run before Epic 5,
       and CI/DEV work proceeds in parallel — so their lead time, not ours, sets the schedule.
       End on the single question Task 3.1 also carries: **«когда реалистично?»**
 - [ ] 2.11 **Link forms inside `docs/`** are relative to `docs/`: use
@@ -491,7 +491,7 @@ out of scope.
 
 The real deliverable is **a date**. Everything else is the apparatus for getting one and for
 making sure it is not quietly forgotten. Epic 5 is on the critical path
-(`forgejo-migration.md:309-316`: *«→ preprod-инфра (зависит от бэкенда) → prod»*), Epic 6's
+([`forgejo-migration.md` §6 «Критический путь»](../../docs/forgejo-migration.md#6-критический-путь): *«→ preprod-инфра (зависит от бэкенда) → prod»*), Epic 6's
 promotion guard ([D2](docs/migration-decisions.md#d2)) checks for `preprod-<sha>` tags that only
 exist if PRE-PROD exists, and this story sits in Epic 1 — five epics early — for exactly one
 reason: another team's queue is the longest-latency item in the plan, so the request is made

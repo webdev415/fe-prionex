@@ -106,10 +106,10 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 | `actions/upload-artifact@v4` (`CI.yml:102`) | У Gitea/Forgejo была известная несовместимость с artifact API v4 (v3 работал). В свежих версиях чинилось — **проверить на своём инстансе**, при проблеме откатить на v3. ❌ **Не резолвится на этом инстансе** (Story 1.8, [#d12](./migration-decisions.md#d12)): `GHESNotSupportedError`. ✅ **v3 резолвится — это пин** для Story 2.1 |
 | `actions/checkout@v6`, `actions/setup-node@v4` | Работают через полный URL: `uses: https://github.com/actions/checkout@v6` (правка `DEFAULT_ACTIONS_URL` не обязательна, нужен egress до github.com с runner'а). Альтернатива — зеркала `code.forgejo.org`. ✅ **Проверено и резолвится** (Story 1.8, [#d12](./migration-decisions.md#d12)) |
 | `cache-from/to: type=gha` (`CD.yml:113-114`) | Вне GitHub не работает → `type=registry,ref=<registry>/fe-prionex:buildcache`. Не задействован в смоук-сборке Story 1.8 намеренно (не действие, риск подтверждать нечем) |
-| `codecov/codecov-action@v4` (`CI.yml:75`) | Убрать, coverage — в артефакт. Вне периметра Story 1.8 — исключено дизайном плана, не пробой |
-| `slackapi/slack-github-action@v3.0.3` | Заменить на `curl` к incoming webhook. Вне периметра Story 1.8 — Story 4.5 |
+| `codecov/codecov-action@v4` (`CI.yml:75`) | Убрать, coverage — в артефакт. **Вердикт: заменено дизайном** (не проверялось пробой и не будет — экшен удаляется). Уточнено code review 11.08.2026: «вне периметра» не входит в четыре допустимых вердикта AC5 |
+| `slackapi/slack-github-action@v3.0.3` | Заменить на `curl` к incoming webhook. **Вердикт: заменено дизайном** (FR22; реализует Story 4.5). Уточнено code review 11.08.2026 — см. строку выше |
 | `secrets.GITHUB_TOKEN` для ghcr | Отдельный Forgejo-токен с правом `write:package`. Уточнено Story 1.8 ([#d12](./migration-decisions.md#d12)): реальные учётные данные — org-секреты `REGISTRY_USER`/`REGISTRY_TOKEN_RW`, владелец `robot-registry`, не отдельный `ci-bot` (которого на инстансе нет) |
-| `github.server_url` / `repository` / `run_id` (`CD.yml:263`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть. ✅ **Дёшево подтверждено** (Story 1.8, [#d12](./migration-decisions.md#d12)) — сконструированный URL эхом выведен в успешном шаге |
+| `github.server_url` / `repository` / `run_id` (`CD.yml:263`) | В Forgejo доступны, формат URL `/{owner}/{repo}/actions/runs/{id}` совпадает — работает как есть. ⚠️ **Не подтверждено** — code review 11.08.2026 снял отметку ✅. Шаг лишь `echo`-ит URL без единого ассерта, пустой `server_url` прошёл бы так же, само значение нигде не записано, и строки в таблице вердиктов `#d12` для него нет. Это Trap 3 («зелёный шаг ничего не доказывает»), внесённый в план галочкой |
 
 ---
 
@@ -163,8 +163,8 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 5. Поднять **второй runner** (см. фазу 3 — до включения required checks).
 
 **DoD:** обе метки работают — ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
-все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — ✅ **выполнено частично**
-(Story 1.8, [#d12](./migration-decisions.md#d12)): 6 из 8 позиций закрыты пробой или дизайном
+все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — 🟡 **НЕ закрыто полностью**
+(Story 1.8, [#d12](./migration-decisions.md#d12)): ⚠️ code review: знаменатель «8» ничему в таблице 1.4 не соответствует — в ней 11 экшенов. Закрыты пробой или дизайном: `checkout`, `setup-node`, `upload-artifact` (пин `v3`), `setup-buildx`, `metadata`, `login`, `build-push` (все четыре `docker/*` резолвятся, проверено code review), `appleboy/*` ×2. Без вердикта: `codecov` и `slackapi` — им нужен явный «заменено дизайном»
 (`checkout`, `setup-node`, `upload-artifact` с пином на `v3`, `setup-buildx-action`,
 `metadata-action`, `appleboy/*`); `docker/login-action` и `docker/build-push-action` — «не
 проверено», блокировано человеческим подтверждением (Task 2.1 story 1.8), не техническим
@@ -198,7 +198,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 ### Фаза 4 — Сборка и публикация образа
 
-1. `.forgejo/workflows/build.yml` на метке `docker-build`: checkout → buildx → login в Forgejo registry → metadata → build & push.
+1. `.forgejo/workflows/build.yml` — ⚠️ **исправлено 11.08.2026 (code review story 1.8): не на метке `docker-build`.** У её образа нет Node-рантайма, поэтому `uses:` там не работает вовсе; экшены идут на `node-20` с установкой docker CLI шагом `run:` — см. [#d12](./migration-decisions.md#d12). Состав шагов прежний: checkout → buildx → login в Forgejo registry → metadata → build & push. 🔴 Одного этого недостаточно: push падает и на `node-20`, потому что buildx пушит из собственного BuildKit-контейнера, не наследующего `--add-host`; варианты решения — в `deferred-work.md` (блокер Story 3.1).
 2. **Триггеры — включая feature-ветки:** `push` в `main`, tag `v*`, `push` в feature-ветки (или `workflow_dispatch` с `ref`). Иначе деплой feature-ветки на DEV невозможен: `deploy-dev.yml` делает fail-fast `docker pull` и падает, потому что образа просто нет.
 3. Схема тегов: `sha-<short>` (всегда), `<branch>`, `v*` из git-тега, `latest` только с `main`.
 4. Кэш — `type=registry`.
@@ -290,7 +290,7 @@ Fallback-значения URL-ов из `CD.yml:47,57` при переносе *
 ```
 .forgejo/workflows/
   ci.yml              # PR + feature push: lint, typecheck, test, build (метка node-20)
-  build.yml           # push в любую ветку / tag v*: сборка и пуш образа (метка docker-build)
+  build.yml           # push в любую ветку / tag v*: сборка и пуш образа (метка node-20 + docker CLI шагом run:, НЕ docker-build — см. #d12)
   deploy-dev.yml      # dispatch: любая ветка → s1:8082
   deploy-preprod.yml  # dispatch: image_tag → s1:8081 + ретег preprod-current
   deploy-prod.yml     # dispatch: image_tag [+ rollback] → s2:8080, guard по preprod-* в registry
