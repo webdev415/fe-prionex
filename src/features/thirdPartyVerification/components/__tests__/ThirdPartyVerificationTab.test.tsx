@@ -29,16 +29,21 @@ vi.mock('@/stores/authStore', () => ({
 // The real DateSelect drags react-datepicker into jsdom; a functional stub
 // keeps the tests focused while still driving value/onChange/onClear like the
 // real component (onChange receives a Date or null; onClear is the opt-in "×").
+// The "×" name follows the real contract — `clearLabel` when given, otherwise
+// the component's hardcoded "Clear" — so these tests can't over-promise a
+// name the shipped component never renders.
 vi.mock('@/components/ui/DateSelect', () => ({
   DateSelect: ({
     value,
     onChange,
     onClear,
+    clearLabel,
     label,
   }: {
     value?: string | Date | null
     onChange?: (args: { value: Date | null }) => void
     onClear?: () => void
+    clearLabel?: string
     label?: string
   }) => (
     <>
@@ -52,7 +57,7 @@ vi.mock('@/components/ui/DateSelect', () => ({
         }
       />
       {onClear && (
-        <button type="button" aria-label={`clear ${label ?? ''}`} onClick={onClear}>
+        <button type="button" aria-label={clearLabel ?? 'Clear'} onClick={onClear}>
           ×
         </button>
       )}
@@ -219,7 +224,11 @@ describe('ThirdPartyVerificationTab', () => {
   )
 
   it('writes a picked count date into the URL and clears it again', async () => {
-    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+    // Distinct payloads per window, so "the filter is gone" is observable in
+    // the rendered rows and not just in the request params.
+    mockGetReport
+      .mockResolvedValueOnce(makeResponse([makeRow()]))
+      .mockResolvedValueOnce(makeResponse([makeRow({ user_id: 2, full_name: 'Фільтренко Федір' })]))
 
     renderTab()
     await screen.findByText('Іваненко Іван')
@@ -233,20 +242,24 @@ describe('ThirdPartyVerificationTab', () => {
         expect.objectContaining({ count_from: '2026-01-10' })
       )
     )
+    expect(await screen.findByText('Фільтренко Федір')).toBeInTheDocument()
 
     // The opt-in "×" removes the bound entirely (onChange(null) would only be
     // an abandoned manual entry and must not drop the filter).
     await userEvent.click(
-      screen.getByRole('button', { name: 'clear pages.reports.verification.countFrom' })
+      screen.getByRole('button', { name: 'pages.reports.verification.clearCountFrom' })
     )
 
     await waitFor(() =>
       expect(screen.getByTestId('location-search').textContent).not.toContain('cf=')
     )
-    // Back on the unfiltered query key — served from cache, and the rows the
-    // user sees are the unbounded ones again.
+    // Back on the unfiltered query key: its rows are on screen again and the
+    // bounded ones are gone. No third request — that key is still fresh in the
+    // React Query cache (staleTime), so the only calls are the initial
+    // unfiltered one and the bounded one.
     expect(await screen.findByText('Іваненко Іван')).toBeInTheDocument()
-    expect('count_from' in mockGetReport.mock.calls[0][0]).toBe(false)
+    expect(screen.queryByText('Фільтренко Федір')).not.toBeInTheDocument()
+    expect(mockGetReport).toHaveBeenCalledTimes(2)
   })
 
   it('blocks the request and shows an inline hint for an inverted sell range', async () => {
@@ -280,7 +293,7 @@ describe('ThirdPartyVerificationTab', () => {
     // Dropping the upper bound leaves a valid open-ended filter — the pair
     // rule applies only when BOTH bounds are set.
     await userEvent.click(
-      screen.getByRole('button', { name: 'clear pages.reports.verification.countTo' })
+      screen.getByRole('button', { name: 'pages.reports.verification.clearCountTo' })
     )
 
     expect(await screen.findByText('Іваненко Іван')).toBeInTheDocument()
@@ -312,6 +325,37 @@ describe('ThirdPartyVerificationTab', () => {
       await screen.findByText('pages.reports.verification.sellRangeTooLong')
     ).toBeInTheDocument()
     expect(mockGetReport).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    ['a day the month does not have', '/?sf=2026-02-31&st=2026-02-28'],
+    ['a month that does not exist', '/?sf=2026-13-01&st=2026-12-31'],
+  ])('blocks a hand-edited sell bound with %s', async (_case, entry) => {
+    // Shape-only validation would let these through: the range checks compare
+    // against NaN (always false) and the request would go out with a date the
+    // picker itself renders as a different day.
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab([entry])
+
+    expect(
+      await screen.findByText('pages.reports.verification.invalidSellDate')
+    ).toBeInTheDocument()
+    expect(mockGetReport).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a day the month does not have', '/?cf=2026-02-31'],
+    ['a month that does not exist', '/?ct=2026-13-01'],
+  ])('blocks a hand-edited count bound with %s', async (_case, entry) => {
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab([entry])
+
+    expect(
+      await screen.findByText('pages.reports.verification.invalidCountDate')
+    ).toBeInTheDocument()
+    expect(mockGetReport).not.toHaveBeenCalled()
   })
 
   it('blocks a count window wider than 366 days', async () => {

@@ -10,6 +10,10 @@
  * «Верифіковано» is filled over [0 .. max(month_plan)], «Унікальних клієнтів»
  * over the column's own [min .. max], and «Недостача до плану» gets a text
  * colour only (red below plan, green on/above it) — no fill.
+ * The single team-wide scale for «Верифіковано» (everyone measured against the
+ * LARGEST plan in the data set, not against their own) is intentional Card-128
+ * parity, not a bug: the colour ranks operators against each other, and
+ * per-operator scaling would repaint every row green and destroy that ranking.
  *
  * Two deliberate differences from that reference:
  *   * the plan and the shortfall are NOT truncated to integers (TF pushed both

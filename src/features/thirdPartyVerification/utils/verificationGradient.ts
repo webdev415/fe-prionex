@@ -10,10 +10,10 @@
  *     `[min .. max]`;
  *   * «Недостача до плану» — NO fill, text colour only.
  *
- * The gradient function itself is reused from the processing report (via its
- * public index; it lives in `clientProcessing/utils/percentGradient`) — same
- * red→yellow→green pastel ramp, already covered by its own tests; a second
- * copy would be the kind of hand-rolled duplicate review rejects.
+ * The gradient function itself is the shared `@/lib/gradient` ramp (the same
+ * red→yellow→green pastel one the processing report uses, already covered by
+ * its own tests); a second copy would be the kind of hand-rolled duplicate
+ * review rejects.
  *
  * Every input is guarded: `month_plan` arrives as a Decimal that may be
  * serialised as a JSON string, and any counter may be missing in a malformed
@@ -21,7 +21,7 @@
  * never a crash.
  */
 
-import { gradientRedToGreen } from '@/features/clientProcessing'
+import { gradientRedToGreen } from '@/lib/gradient'
 
 /**
  * Coerce a backend numeric (number, Decimal-as-string, null, undefined) to a

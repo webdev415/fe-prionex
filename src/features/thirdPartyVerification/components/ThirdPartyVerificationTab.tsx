@@ -59,6 +59,24 @@ function spanInDays(from: string, to: string): number {
   return (Date.parse(to) - Date.parse(from)) / MS_PER_DAY
 }
 
+/**
+ * True only for a REAL calendar day in ISO YYYY-MM-DD form.
+ *
+ * The shape alone is not enough: a hand-edited URL can carry an impossible day
+ * (`?sf=2026-02-31`, `?cf=2026-13-01`). Such a bound would poison every check
+ * below, because comparisons against NaN are all false — the 366-day guard
+ * would pass silently and the request would reach the API — while the picker
+ * would display yet another day (`new Date(2026, 1, 31)` → 03.03.2026).
+ * Hence the round trip: re-formatting the parsed instant must reproduce the
+ * original string, which also rejects any day the parser silently rolls over.
+ */
+function isRealCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false
+  const parsed = Date.parse(`${value}T00:00:00Z`)
+  if (Number.isNaN(parsed)) return false
+  return new Date(parsed).toISOString().slice(0, 10) === value
+}
+
 export function ThirdPartyVerificationTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -75,11 +93,22 @@ export function ThirdPartyVerificationTab() {
   const rawCountFrom = searchParams.get(COUNT_FROM_KEY)
   const rawCountTo = searchParams.get(COUNT_TO_KEY)
 
-  const sellFrom = rawSellFrom && DATE_RE.test(rawSellFrom) ? rawSellFrom : sellDefaults.from
-  const sellTo = rawSellTo && DATE_RE.test(rawSellTo) ? rawSellTo : sellDefaults.to
+  // A present-but-unusable bound is NOT silently replaced by the default: the
+  // URL would then disagree with both the field and the request. It goes down
+  // the same path as an inverted range — inline hint, no request (below). An
+  // absent (or empty) parameter stays a plain "no value".
+  const hasInvalidSellDate =
+    (!!rawSellFrom && !isRealCalendarDate(rawSellFrom)) ||
+    (!!rawSellTo && !isRealCalendarDate(rawSellTo))
+  const hasInvalidCountDate =
+    (!!rawCountFrom && !isRealCalendarDate(rawCountFrom)) ||
+    (!!rawCountTo && !isRealCalendarDate(rawCountTo))
+
+  const sellFrom = rawSellFrom && isRealCalendarDate(rawSellFrom) ? rawSellFrom : sellDefaults.from
+  const sellTo = rawSellTo && isRealCalendarDate(rawSellTo) ? rawSellTo : sellDefaults.to
   // No default: an unset count bound means "no bound", not "today".
-  const countFrom = rawCountFrom && DATE_RE.test(rawCountFrom) ? rawCountFrom : undefined
-  const countTo = rawCountTo && DATE_RE.test(rawCountTo) ? rawCountTo : undefined
+  const countFrom = rawCountFrom && isRealCalendarDate(rawCountFrom) ? rawCountFrom : undefined
+  const countTo = rawCountTo && isRealCalendarDate(rawCountTo) ? rawCountTo : undefined
 
   // Functional form only: a clone taken from a render-scoped `searchParams`
   // would drop a concurrent update from another field.
@@ -113,13 +142,16 @@ export function ThirdPartyVerificationTab() {
 
   // Manual input can bypass the pickers' min/max, so invalid ranges must not
   // reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
-  const isSellInverted = sellFrom > sellTo
-  const isSellTooLong = !isSellInverted && spanInDays(sellFrom, sellTo) > MAX_RANGE_DAYS
-  const sellErrorKey = isSellInverted
-    ? 'pages.reports.verification.invalidSellRange'
-    : isSellTooLong
-      ? 'pages.reports.verification.sellRangeTooLong'
-      : null
+  const isSellInverted = !hasInvalidSellDate && sellFrom > sellTo
+  const isSellTooLong =
+    !hasInvalidSellDate && !isSellInverted && spanInDays(sellFrom, sellTo) > MAX_RANGE_DAYS
+  const sellErrorKey = hasInvalidSellDate
+    ? 'pages.reports.verification.invalidSellDate'
+    : isSellInverted
+      ? 'pages.reports.verification.invalidSellRange'
+      : isSellTooLong
+        ? 'pages.reports.verification.sellRangeTooLong'
+        : null
 
   // Only a FULLY specified count window can be inverted or too wide — a single
   // bound is a legitimate open-ended filter (backend rule, same branch).
@@ -127,11 +159,13 @@ export function ThirdPartyVerificationTab() {
   const isCountInverted = hasBothCountBounds && countFrom > countTo
   const isCountTooLong =
     hasBothCountBounds && !isCountInverted && spanInDays(countFrom, countTo) > MAX_RANGE_DAYS
-  const countErrorKey = isCountInverted
-    ? 'pages.reports.verification.invalidCountRange'
-    : isCountTooLong
-      ? 'pages.reports.verification.countRangeTooLong'
-      : null
+  const countErrorKey = hasInvalidCountDate
+    ? 'pages.reports.verification.invalidCountDate'
+    : isCountInverted
+      ? 'pages.reports.verification.invalidCountRange'
+      : isCountTooLong
+        ? 'pages.reports.verification.countRangeTooLong'
+        : null
 
   const hasFilterError = !!sellErrorKey || !!countErrorKey
 
@@ -198,6 +232,9 @@ export function ThirdPartyVerificationTab() {
           max={countTo}
           onChange={handleDateChange(COUNT_FROM_KEY)}
           onClear={() => setUrlParam(COUNT_FROM_KEY, null)}
+          // Two "×" buttons stand side by side here — DateSelect's default
+          // "Clear" name would be identical for both.
+          clearLabel={t('pages.reports.verification.clearCountFrom')}
           allowManualInput
           resyncInvalidOnBlur
           format="dd.MM.yyyy"
@@ -209,6 +246,7 @@ export function ThirdPartyVerificationTab() {
           min={countFrom}
           onChange={handleDateChange(COUNT_TO_KEY)}
           onClear={() => setUrlParam(COUNT_TO_KEY, null)}
+          clearLabel={t('pages.reports.verification.clearCountTo')}
           allowManualInput
           resyncInvalidOnBlur
           format="dd.MM.yyyy"
@@ -216,10 +254,11 @@ export function ThirdPartyVerificationTab() {
         />
 
         {/* Deliberate addition over the Techno-Finance reference, which shows
-            the four pickers with no explanation: the plan is always a MONTHLY
-            figure derived from the sell window, while the fact is counted over
-            the count window. Without this note a one-day count window shows a
-            deeply negative "shortfall" by construction and reads as a bug. */}
+            the four pickers with no explanation: the plan comes from the client
+            cohort of the WHOLE sell window (a month is only the default window),
+            while the fact is counted over the count window. Without this note a
+            one-day count window shows a deeply negative "shortfall" by
+            construction and reads as a bug. */}
         <p className="text-muted-foreground w-full text-xs">
           {t('pages.reports.verification.planHint')}
         </p>
