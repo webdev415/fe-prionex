@@ -92,3 +92,44 @@
   for now — `has_pull_requests` was reverted to `false` on 2026-08-10 (Oleg: "ci-hub не надо
   запускать") — but re-opens automatically if Story 2.1 or anyone else re-enables the unit without
   re-checking this.
+
+## Deferred from: story 1-7-provision-the-primary-forgejo-runner-with-both-labels (2026-08-11)
+
+- **Node 20 is EOL (2026-04-30), `node:20-bookworm` is delisted but still pulls (frozen at
+  v20.20.2).** The `node-20` label is fixed by FR28 (`epics.md:161-163`), `docs/forgejo-migration.md:142`
+  and AC4 — this story registered it as specified and does not change it unilaterally. Someone needs
+  to own the decision: stay pinned (accepting no further base-image security patches) or bump to a
+  maintained line (Node 22 "Jod" or Node 24 "Krypton"), which is a scoped change touching
+  `.github/workflows/CI.yml:20`, `Dockerfile.prod`, FR28 and this runner's registered labels, not an
+  infrastructure-story drive-by.
+- **s1 host contention is now directly observed, not just asked about.** Task 2.2 raised the
+  question as an input to Story 4.2, not something this story resolves. Direct host inspection
+  (not the API — `docker ps`/`docker inspect` on s1 itself) confirms all of `ci-hub`,
+  `s1-build-crm`, `s1-deploy-dev-preprod` **and now `s1-fe-prionex-1`** run containers on the same
+  box, alongside `techno-finance` and the observability stack. Story 4.2 still owns the formal
+  resource-budget confirmation before the DEV (`:8082`) and PRE-PROD (`:8081`) stands land there too.
+- **Resolved 2026-08-11, once `FJ_TOKEN` arrived:** `s1-deploy-dev-preprod`'s `GITEA_RUNNER_LABELS`
+  env carries four values (`deploy-dev-preprod,dev,preprod,deploy`), but `GET
+  /orgs/CRM/actions/runners` confirms only **one** is actually registered server-side —
+  `[deploy-dev-preprod]`, matching this story's original baseline exactly. Env and registered
+  labels diverge here (expected — the env var only applies at first-run auto-registration, which
+  this runner apparently didn't use either). No baseline correction needed; noted for anyone
+  reading that container's compose file and assuming the env var is authoritative.
+- **New drift, found via the same API re-verification, not in any prior story's baseline:**
+  org runner `s2-prod-deploy`, id 17, label `[s2-prod-deploy]`, running on **s2** (PROD). Appeared
+  after Story 1.13's last inventory; no story has acknowledged it. No collision with `node-20`/
+  `docker-build`. Whoever owns Story 6-series (production deploy) should confirm this is expected
+  and not something to reconcile against.
+- **`docker exec ... kill -9 1` silently no-ops inside the `forgejo/runner:13.0.0` image** — reports
+  `exit=0` but does not deliver the signal; the container does not crash. A genuine crash test needs
+  the signal sent from the **host**, targeting `docker inspect --format '{{.State.Pid}}'`. Worth
+  carrying into Story 1.9 so the second runner's durability proof does not repeat the same false
+  negative.
+- 🔴 **This story itself hit Trap 1 on the first registration attempt — worth repeating loudly for
+  Story 1.9.** Registering with `--labels 'node-20,docker-build'` (bare names, no `:docker://<image>`
+  suffix) silently resolves both to the runner's default image (`node:22-bookworm` on this
+  version) — no error, no warning, `register` reports success. The first probe dispatch caught it
+  (wrong Node major version, no docker CLI); nothing about the registration step itself would
+  have. **Always dispatch a real probe workflow before declaring a runner done** — a clean
+  `register`/`daemon` startup log proves nothing about which images the labels actually resolve
+  to.

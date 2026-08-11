@@ -283,10 +283,10 @@ point of this task is that **you** checked them.
       and CI/DEV work proceeds in parallel — so their lead time, not ours, sets the schedule.
       End on the single question Task 3.1 also carries: **«когда реалистично?»**
 - [ ] 2.11 **Link forms inside `docs/`** are relative to `docs/`: use
-      `./migration-decisions.md#d10`, not a repo-root path. (The `[D4](docs/...)` form used
+      `./migration-decisions.md#d11`, not a repo-root path. (The `[D4](docs/...)` form used
       throughout *this* story file is the `_bmad-output/` convention inherited from Story 1.2;
       do not copy it into `docs/`. From `epics.md` or `deferred-work.md` the correct form is
-      `../../docs/migration-decisions.md#d10`, as already used at `deferred-work.md:22`.)
+      `../../docs/migration-decisions.md#d11`, as already used at `deferred-work.md:22`.)
 
 ### Task 3 — 🛑 HARD STOP: hand the submission to Oleg (AC: 1, 2, 4)
 
@@ -334,36 +334,36 @@ point of this task is that **you** checked them.
       of thing this story exists to surface early. Record it, then stop: re-planning Epic 5
       around it is `correct-course` work, not yours.
 
-### Task 5 — Record the decision as D10 in `docs/migration-decisions.md` (AC: 3)
+### Task 5 — Record the decision as D11 in `docs/migration-decisions.md` (AC: 3)
 
-- [ ] 5.1 Append a new entry **`<a id="d10"></a>` / `## D10. Внешняя зависимость: инфраструктура
+- [ ] 5.1 Append a new entry **`<a id="d11"></a>` / `## D11. Внешняя зависимость: инфраструктура
       PRE-PROD на s1`** after D9, before the `---` that precedes the changelog anchor
       (`migration-decisions.md:622-624`). **Do not rewrite D4.** The file's own contract
       (line 9) states records are never edited retroactively — *«Записи не переписываются
-      задним числом»*. D4 already says the network is an external dependency; D10 records
+      задним числом»*. D4 already says the network is an external dependency; D11 records
       **what was asked, of whom, when, and what was promised**.
-- [ ] 5.1a 🚨 **Resolve the update path before writing D10, or you will trap yourself.** D10
+- [ ] 5.1a 🚨 **Resolve the update path before writing D11, or you will trap yourself.** D11
       will very likely be written while the answer is still absent. When the answer later
-      arrives, D10 is **not** edited — that would violate the contract just cited. The rule:
+      arrives, D11 is **not** edited — that would violate the contract just cited. The rule:
       **the response block in `docs/preprod-infrastructure-requirement.md` (Task 2.8) is the
-      mutable surface; D10 is not.** When the commitment lands, append a changelog row; add a
+      mutable surface; D11 is not.** When the commitment lands, append a changelog row; add a
       *new* D-record only if the commitment differs materially from the ask (different Kong
-      name, shared network, reduced scope). Say this explicitly inside D10 itself, so the next
+      name, shared network, reduced scope). Say this explicitly inside D11 itself, so the next
       person does not have to rediscover it.
 - [ ] 5.2 Follow the established entry shape: `**Решение.**` / consequences / `**Внешняя
       зависимость.**` / `**Требования:**`. For requirements, cite **FR27** (dedicated
       `crm-network-preprod` with its own Kong), **FR25**, **FR26**, **FR20** — the same set D4
       carries — and note that Story 1.6 covers no FR of its own: it is a de-risking story whose
       output is consumed by FR27 in Epic 5.
-- [ ] 5.3 D10 must carry: a link to `docs/preprod-infrastructure-requirement.md` as the
+- [ ] 5.3 D11 must carry: a link to `docs/preprod-infrastructure-requirement.md` as the
       authoritative artifact, the committed date **or** its explicit absence, and the sentence
       that Epic 5 (Stories 5.1, 5.2) cannot start before it lands. Do **not** duplicate the
-      requirement's contents into D10 — link it. Duplicated lists drift apart (Story 1.2's own
+      requirement's contents into D11 — link it. Duplicated lists drift apart (Story 1.2's own
       anti-pattern, applied to D7).
 - [ ] 5.4 Update the **index table** — it spans `migration-decisions.md:12-22` (header at 12-13,
-      D1–D9 rows at 14-22); the D10 row goes after line 22. And update the anchor range in the
+      D1–D9 rows at 14-22); the D11 row goes after line 22. And update the anchor range in the
       "Как этим пользоваться" paragraph at **line 8** — it currently reads `#d1` … `#d9` and
-      must become `#d1` … `#d10`. Story 1.3's code review had to fix exactly this omission;
+      must become `#d1` … `#d11`. Story 1.3's code review had to fix exactly this omission;
       do not repeat it.
 - [ ] 5.5 Append changelog rows. The table header is at `migration-decisions.md:628`, rows run
       `630-636`. Format is fixed — `| Дата | Story | Изменение |`, date as `DD.MM.YYYY`, story
@@ -377,7 +377,7 @@ point of this task is that **you** checked them.
       *«Согласовать с бэкендом/инфрой: сеть и Kong для preprod на s1, DNS-имя
       `preprod.crm-prionex.online`, TLS.»* Items 1, 3, 4 and 5 carry an explicit status marker
       (`✅` or strikethrough); items 2 and 6 do not. Give item 2 the status it **actually**
-      reached, plus links to the requirement document and `#d10`. Match the existing idiom
+      reached, plus links to the requirement document and `#d11`. Match the existing idiom
       (`✅ сделано, [migration-decisions.md#dN](...)`); if it is submitted but unanswered, say
       that instead of `✅`.
 - [ ] 6.1a **If the status is `не направлено`, leave line 120 unchanged** and record why in
@@ -409,7 +409,7 @@ YAML key; the file is machine-read by the sprint workflows.
       immediately above the tracked key. Precedent: `sprint-status.yaml:58-59`, where the
       1.13-before-1.12 ordering constraint from a change proposal is recorded as a comment.
       Add a comment above `epic-5:` naming the dependency, the committed date (or its absence),
-      and pointing at `#d10`. Keep `epic-5: backlog` and all story statuses unchanged.
+      and pointing at `#d11`. Keep `epic-5: backlog` and all story statuses unchanged.
 - [ ] 7.2 `_bmad-output/planning-artifacts/epics.md` — the Epic 5 body already opens with
       *"This epic depends on the infrastructure commitment secured in Story 1.6."* (line ~1513)
       and the Epic List entry (lines 372-383) calls it *"The only epic with an external
@@ -441,7 +441,7 @@ YAML key; the file is machine-read by the sprint workflows.
 - [ ] 9.1 Trace **each AC clause** to a specific line of a specific file — the same
       verification standard Story 1.2 Task 7 used. There is nothing to run and nothing to
       observe on a server; the AC trace *is* the test.
-- [ ] 9.2 Resolve every link and anchor added: `#d10` in `migration-decisions.md`, the
+- [ ] 9.2 Resolve every link and anchor added: `#d11` in `migration-decisions.md`, the
       cross-file links from `forgejo-migration.md` and `epics.md`, and the links out of the
       requirement document. A broken anchor in a document sent to another team is a
       credibility cost, not a typo.
@@ -514,7 +514,7 @@ idiom from `docs/superpowers/specs/2026-07-07-reasoning-activity-panel-design.md
 - Header: purpose, the never-rewrite contract (line 9), and the D1–D9 index table at lines
   **12-22** (header 12-13, rows 14-22) with columns `| # | Решение | Статус | Реализуется в |`.
   The "Как этим пользоваться" paragraph at **line 8** names the anchor range `#d1 … #d9` —
-  **must be extended to `#d10`**.
+  **must be extended to `#d11`**.
 - D1–D9, each `<a id="dN"></a>` + `## DN. Title`, ending `**Требования:** FRxx, NFRxx`.
 - **D4** (anchor at 164, heading 166, ending `**Требования:**` at 189) is this story's basis.
   Its closing line — *«Внешняя зависимость. Сеть и
@@ -590,7 +590,7 @@ The TLS ask is on `.online`.
   (`project_key: NOKEY`, `tracking_system: file-system`); the `KAN` project is for feature work
   only, a convention already written down in Stories 1.3 and 1.13. If Oleg wants a ticket, that
   is his call to make, not a default to assume.
-- **Do not rewrite D4** or any existing D-record. Append D10 and log it.
+- **Do not rewrite D4** or any existing D-record. Append D11 and log it.
 - **Do not invent a `blocked_by:` key in `sprint-status.yaml`.** The file is machine-read;
   use a comment (Task 7.1).
 - **Do not propose that PRE-PROD share `crm-network` with a routing trick.** It is the one
@@ -598,7 +598,7 @@ The TLS ask is on `.online`.
   (Task 4.4) — do not accept it on their behalf.
 - **Do not create `docs/adr/`, `docs/requirements/` or `docs/infra/`.** Flat `docs/`.
 - **Do not fix `README.md:136`.** Record it (Task 8.2).
-- **Do not restate D4's contents inside D10.** Link.
+- **Do not restate D4's contents inside D11.** Link.
 
 ### Previous story intelligence
 
