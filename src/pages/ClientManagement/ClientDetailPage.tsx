@@ -146,6 +146,7 @@ import {
   PERIODICITY_MONTHLY_NTH_DAY,
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
+import { buildContactPayload } from '@/features/clients/utils/contactPayload'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -1703,11 +1704,7 @@ export function ClientDetailPage() {
   }
 
   const handleSaveContact = () => {
-    const payload = {
-      contact_value: contactFormData.contact_value.trim(),
-      contact_type_id: contactFormData.contact_type_id,
-      comment: contactFormData.comment.trim() || undefined,
-    }
+    const payload = buildContactPayload(contactFormData)
     if (!payload.contact_value) return
 
     // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
