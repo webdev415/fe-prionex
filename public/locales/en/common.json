@@ -6422,6 +6422,10 @@
       }
     },
     "clientChains": {
+      "hotkeys": {
+        "blockedOpen": "Finish or close the open target action first",
+        "blockedMinimized": "Restore or finish the minimized target action first"
+      },
       "logInteraction": "Log interaction",
       "taChainLabel": "TA Chain",
       "startChain": "Start a chain",

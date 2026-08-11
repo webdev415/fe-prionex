@@ -16,7 +16,7 @@
  * preserving per-step effects.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -64,6 +64,8 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
+import type { QuickPick } from '@/features/quickPicks/api/types'
+import { decideHotkeyAutoStart } from '@/features/taHotkeys/decideHotkeyAutoStart'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
@@ -97,6 +99,17 @@ interface Props {
    * the phone manually. Empty value = no auto-fill (general entry).
    */
   prefilledPhone?: string | null
+  /**
+   * Quick-pick template to start immediately on open, instead of making the
+   * operator find it in the picker (KAN-973 hotkey quick-launch).
+   *
+   * Ignored when the client already has an active instance — that instance is
+   * what the modal shows, and starting a second one would 409 on the server.
+   * Ignored too when the id is not among the operator's accessible templates:
+   * the ticket says a mapping to a template that became inaccessible behaves as
+   * unassigned, so this quietly does nothing rather than reporting an error.
+   */
+  initialTemplateId?: number | null
   onSave?: () => void
   onMinimize?: () => void
   onMinimizeRef?: React.MutableRefObject<(() => void) | null>
@@ -207,6 +220,7 @@ export function ChainExecutor({
   debts = [],
   contactSource = null,
   prefilledPhone = null,
+  initialTemplateId = null,
   onSave,
   onMinimize,
   onMinimizeRef,
@@ -345,23 +359,6 @@ export function ChainExecutor({
     () => quickPicks.find((qp) => qp.id === selectedTemplateId) ?? null,
     [quickPicks, selectedTemplateId]
   )
-
-  const handleStartTemplate = async () => {
-    if (!selectedTemplate) return
-    try {
-      presetValuesRef.current = selectedTemplate.preset_values ?? {}
-      await startMut.mutateAsync({
-        chain_id: selectedTemplate.chain_id,
-        client_id: clientId,
-      })
-      toast.success(t('pages.clientChains.toasts.started'))
-      setSelectedTemplateId(null)
-      setTemplateSearch('')
-    } catch (err) {
-      presetValuesRef.current = {}
-      toast.error(getErrorMessage(err))
-    }
-  }
 
   // The active instance's chain may be missing from `chainsData` — that list
   // is filtered by department and only used to populate the manual-chain
@@ -644,6 +641,52 @@ export function ChainExecutor({
   const advanceMut = useAdvanceChainInstance()
   const cancelMut = useCancelChainInstance()
   const rewindMut = useRewindChainInstance()
+
+  // Shared by the picker and by hotkey quick-launch (KAN-973). The template is
+  // passed in rather than read from `selectedTemplateId`, so the hotkey path
+  // does not have to set picker state and wait a render to start.
+  const startTemplate = useCallback(
+    async (template: QuickPick) => {
+      try {
+        presetValuesRef.current = template.preset_values ?? {}
+        await startMut.mutateAsync({
+          chain_id: template.chain_id,
+          client_id: clientId,
+        })
+        toast.success(t('pages.clientChains.toasts.started'))
+        setSelectedTemplateId(null)
+        setTemplateSearch('')
+      } catch (err) {
+        presetValuesRef.current = {}
+        toast.error(getErrorMessage(err))
+      }
+    },
+    [startMut, clientId, t]
+  )
+
+  const handleStartTemplate = async () => {
+    if (!selectedTemplate) return
+    await startTemplate(selectedTemplate)
+  }
+
+  // KAN-973 — hotkey quick-launch. The gating rule (and the loading-vs-empty
+  // trap behind it) lives in decideHotkeyAutoStart, where it is unit-tested;
+  // the ref latches so a started chain is never started twice.
+  const autoStartedRef = useRef(false)
+  useEffect(() => {
+    if (autoStartedRef.current) return
+
+    const { start } = decideHotkeyAutoStart({
+      initialTemplateId,
+      instancesLoaded: instances !== undefined,
+      hasActiveInstance: activeInstance !== null,
+      templates: quickPicks,
+    })
+    if (!start) return
+
+    autoStartedRef.current = true
+    void startTemplate(start)
+  }, [initialTemplateId, instances, activeInstance, quickPicks, startTemplate])
 
   // Reset on chain change
   useEffect(() => {

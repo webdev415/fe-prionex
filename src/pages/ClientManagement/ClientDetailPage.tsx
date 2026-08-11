@@ -166,6 +166,7 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { useTAHotkeyLaunch } from '@/features/taHotkeys/useTAHotkeyLaunch'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
@@ -420,6 +421,12 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhone, setChainExecutorPrefilledPhone] = useState<string | null>(
     null
   )
+  // KAN-973 — template the executor should start immediately, set only by a
+  // hotkey launch. Cleared with the other executor context on close so a later
+  // click-open does not re-run the hotkey's template.
+  const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
+    number | null
+  >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
@@ -445,6 +452,19 @@ export function ClientDetailPage() {
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
   const isValidClientId = clientId > 0 && !isNaN(clientId)
+
+  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
+  // in the hook and its pure modules; this only says what "launch" means here.
+  useTAHotkeyLaunch({
+    enabled: isValidClientId,
+    isExecutorOpen: isChainExecutorOpen,
+    onLaunch: (templateId) => {
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(null)
+      setChainExecutorInitialTemplateId(templateId)
+      setIsChainExecutorOpen(true)
+    },
+  })
 
   // Auto-open the chain modal ONLY for the operator who just changed a debt's
   // status on this client — closing a loan (→ closed) or reopening it
@@ -478,6 +498,7 @@ export function ClientDetailPage() {
     if (open) {
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(null)
+      setChainExecutorInitialTemplateId(null)
       setIsChainExecutorOpen(true)
     } else if (disarm) {
       setChainAutoOpenArmed(false)
@@ -2970,6 +2991,7 @@ export function ClientDetailPage() {
                 onClick={() => {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorInitialTemplateId(null)
                   setIsChainExecutorOpen(true)
                 }}
               >
@@ -3384,6 +3406,7 @@ export function ClientDetailPage() {
                               onClick={() => {
                                 setChainExecutorContactSource('client')
                                 setChainExecutorPrefilledPhone(phone.number)
+                                setChainExecutorInitialTemplateId(null)
                                 setIsChainExecutorOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -3560,6 +3583,7 @@ export function ClientDetailPage() {
                     onInteraction={(phone) => {
                       setChainExecutorContactSource('client')
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -3837,6 +3861,7 @@ export function ClientDetailPage() {
                                 onClick={() => {
                                   setChainExecutorContactSource('client')
                                   setChainExecutorPrefilledPhone(client.work?.workPhone || '')
+                                  setChainExecutorInitialTemplateId(null)
                                   setIsChainExecutorOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -4560,6 +4585,7 @@ export function ClientDetailPage() {
                     onStartInteraction={(phone, contactTypeId) => {
                       setChainExecutorContactSource(classifyContactSource(contactTypeId))
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -5579,6 +5605,7 @@ export function ClientDetailPage() {
               setIsChainExecutorOpen(false)
               setChainExecutorContactSource(null)
               setChainExecutorPrefilledPhone(null)
+              setChainExecutorInitialTemplateId(null)
             }}
             maxWidth="xl"
             showCloseButton={false}
@@ -5597,6 +5624,7 @@ export function ClientDetailPage() {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
@@ -5612,15 +5640,18 @@ export function ClientDetailPage() {
                 debts={loans}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
+                initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimize={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
@@ -5645,6 +5676,7 @@ export function ClientDetailPage() {
                   onClick={() => {
                     setChainExecutorContactSource(null)
                     setChainExecutorPrefilledPhone(null)
+                    setChainExecutorInitialTemplateId(null)
                     setIsChainExecutorOpen(true)
                   }}
                   className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
