@@ -38,7 +38,7 @@
 Обе точки задокументированы прямо в файлах, где заданы, но собраны здесь
 для быстрого поиска:
 
-1. **`cache.host`** (`config.yml:31` / `config-2.yml`, после добавления
+1. **`cache.host`** (`config.yml` (найдите `host:` в секции `cache:` — номер строки намеренно не указан) / `config-2.yml`, после добавления
    баннера — см. комментарий рядом со значением) — это **закреплённый IP
    контейнера** в сети `192.168.226.0/24` (`.3` у runner 1, `.4` у runner 2),
    а не адрес хоста. Если проект когда-нибудь перенумеруют, кэш **тихо**
@@ -66,3 +66,22 @@
   доказательства failover и distribution.
 - `_bmad-output/implementation-artifacts/1-7-provision-the-primary-forgejo-runner-with-both-labels.md`
   и `1-9-provision-the-second-runner.md` — истории, породившие эти файлы.
+
+## Как проверить дрейф (добавлено code review 1.9, 2026-08-12)
+
+До этой правки механическая сверка ничего не давала: копия намеренно отличалась от хоста и
+баннером, и `LOAD-BEARING`-комментариями, так что непустой `diff` не отличал «наши пометки» от
+настоящего расхождения. Теперь комментарии одинаковы на обеих сторонах, и **единственное
+ожидаемое различие — восьмистрочный баннер в начале каждого `config*.yml`**.
+
+```sh
+ssh root@10.67.0.1 'cat /opt/forgejo-runner-fe-prionex/config.yml' \
+  | diff - docs/runners/config.yml | grep -c '^[<>]'   # ожидается 8
+ssh root@10.67.0.1 'cat /opt/forgejo-runner-fe-prionex/config-2.yml' \
+  | diff - docs/runners/config-2.yml | grep -c '^[<>]' # ожидается 8
+ssh root@10.67.0.1 'cat /opt/forgejo-runner-fe-prionex/docker-compose.yml' \
+  | diff - docs/runners/docker-compose.yml | grep -c '^[<>]' # баннер + строка `name:`
+```
+
+Больше восьми — конфигурация на хосте изменилась и копию надо обновить вручную. Автоматики нет:
+это по-прежнему запись, а не механизм.

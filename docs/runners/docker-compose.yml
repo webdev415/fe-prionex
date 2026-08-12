@@ -6,7 +6,11 @@
 # by hand after a future change. No secret lives in this file — all
 # credentials are supplied via .env (see .env.example in this directory),
 # which is itself never committed.
-name: forgejo-runner-fe-prionex
+name: forgejo-runner-fe-prionex-RECORD
+# 🚨 The project name above is deliberately NOT the live one (`forgejo-runner-fe-prionex`).
+# Renamed by code review 2026-08-12: with the live name, `docker compose -f <this file> down`
+# executed anywhere on s1 would adopt and stop both production runners and both dind sidecars.
+# The banner below disclaims *automation*; it did not disclaim a human with a terminal.
 
 networks:
   runner:

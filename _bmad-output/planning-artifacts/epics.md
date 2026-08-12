@@ -696,7 +696,13 @@ So that one runner failing does not freeze every merge into `main`.
 **Given** the primary runner from Story 1.7 is operational
 **When** a second runner is registered at the same **repository** level
 **Then** it carries the identical `node-20` and `docker-build` labels
-**And** both runners appear as online in the organization runner list.
+**And** ~~both runners appear as online in the organization runner list~~ — ⚠️ **устарело
+(2026-08-12, code review story 1.9).** Регистрация переведена на уровень **репозитория**
+(`sprint-change-proposal-2026-08-07-runners.md` §4.2), а AC2 story 1.7 прямо требует отсутствия
+наших раннеров в org-списке. Repo-scoped раннер там не появится никогда. Действующая проверка —
+`GET /repos/CRM/fe-prionex/actions/runners`, см. AC4 story 1.9 и
+[#d13](../../docs/migration-decisions.md#d13). Story 2.6 гейтит мержи на этих раннерах и читает
+именно этот текст.
 
 **Given** both runners are online
 **When** the primary runner is deliberately stopped and a CI job is queued

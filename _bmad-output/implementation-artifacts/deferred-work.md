@@ -157,7 +157,7 @@
   `docker-build`. Whoever owns Story 6-series (production deploy) should confirm this is expected
   and not something to reconcile against.
 - ✅ **CLOSED 2026-08-12, Story 1.9.** `docker exec ... kill -9 1` silently no-ops inside the
-  `forgejo/runner:13.0.0` image** — reports `exit=0` but does not deliver the signal; the container
+  `forgejo/runner:13.0.0` image — reports `exit=0` but does not deliver the signal; the container
   does not crash. A genuine crash test needs the signal sent from the **host**, targeting
   `docker inspect --format '{{.State.Pid}}'`. **Not repeated**: Story 1.9's AC5 evidence used
   host-side `kill -9` against the real PID both times (attempt 1: `2595943`; attempt 2, held down
@@ -285,6 +285,17 @@
   recorded as a **record, not a deployment mechanism** — it will drift unless updated by hand. A
   CI step that fails on an unreachable cache server, so the degradation stops being silent, remains
   open for Story 2.1 to consider — not attempted here. See `docs/migration-decisions.md#d13`.
+  ⚠️ **Restored by code review 2026-08-12 — the closure rewrote this entry and dropped three things
+  a ledger of this kind must keep.** (a) The human decision that routed it here: **«Reviewed
+  2026-08-11 — Oleg: carry to Story 1.9»**. (b) The backlink: this entry closes **Story 1.7's Open
+  Question 8**, which was raised and originally filed against nothing. (c) The literal value the
+  warning was about — `cache.host: "192.168.226.3"` for runner 1, and now `"192.168.226.4"` for
+  runner 2 — generalised away to «the statically pinned bridge IP», which is the part a reader
+  cannot act on.
+  🔴 **Still open, and now owned by nobody: drift detection.** `docs/runners/` records the config but
+  cannot detect divergence from the host — the copy deliberately differs (banner + `LOAD-BEARING`
+  comments) with no recorded checksum or marker, so a mechanical `diff` is non-empty on day one and
+  proves nothing. **Re-filed here rather than left implied.**
 - 🔁 **AC7's crash test was never re-run against the surviving runner registration.** Story 1.7's
   durability proof (`RestartCount` 0→1 after a host-side `SIGKILL` to the real PID) was taken
   before Task 3.5's label fix, i.e. against runner `id: 18`, which was then deregistered and
@@ -303,9 +314,12 @@
   direct; fold into Story 1.9 rather than chasing separately.
   **Attempted in Story 1.9 (2026-08-12), still not observed — leaving this open rather than
   claiming it.** Two crash-test attempts against runner 1 (`id: 19`), one recovering in 327ms and
-  one deliberately held down for ~51s (`docker update --restart=no`), both queried
-  `GET .../actions/runners` mid-outage: both times the API still reported `idle`. Forgejo's
-  heartbeat/offline threshold exceeds 51s; observing the transition would need a longer hold than
+  one deliberately held down for ~51s (`docker update --restart=no`). ⚠️ **Corrected by code review
+  2026-08-12 — the original text overstated both the sampling and the conclusion.** Only the second
+  attempt queried `GET .../actions/runners` mid-outage, and only once, ~2s after the kill; attempt
+  1's outage was **327 ms**, so no HTTP round-trip fits inside it. The API reported `idle` at that
+  single sample, which bounds the threshold at **>2s, not >51s** — it was never measured. Observing
+  the transition would need a longer hold than
   either AC2 or AC5 required, so it wasn't chased further. See
   `docs/migration-decisions.md#d13` and Story 1.9 Task 4.4.
 - ⚠️ **AD-6 is not the absolute rule story 1.7 recorded — for Story 1.9 and anyone reasoning about
