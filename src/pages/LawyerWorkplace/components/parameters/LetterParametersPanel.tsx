@@ -38,7 +38,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
-import { formatDueDate } from '../../utils/formatters'
+import { formatLegalDeadline } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
 import { SenderHistorySection } from './SenderHistorySection'
 
@@ -786,7 +786,9 @@ function LetterParametersPanelContent({
 
           {p.dueDate && (
             <ReadonlyField label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}>
-              <span className="text-foreground">{formatDueDate(p.dueDate, i18n.language)}</span>
+              <span className="text-foreground">
+                {formatLegalDeadline(p.dueDate, i18n.language, timezone)}
+              </span>
               {p.dueDateHint && (
                 <span className="text-error-500 ml-2 text-[11px]">{p.dueDateHint}</span>
               )}
