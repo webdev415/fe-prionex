@@ -267,11 +267,17 @@
   deleting an *image* — that is the lesson, and it is what AC6 got wrong.
 - 🔑 **`fe_reg_1_10_ro` (id 99, `robot-registry`, `read:package`) is s1's live pull credential** —
   a deliverable, not scaffolding. Do not revoke it without replacing s1's `docker login`.
-  ⚠️ **`fe_reg_1_10_rw` (id 100, `robot-registry`, `write:package`) is still live and should be
-  revoked** — its only purposes (the push, the `204` delete) are finished. **Owner: Oleg.**
-  Revocation cannot be done from a token: `gitea admin user` has no delete subcommand in this
-  version, and `DELETE /users/{username}/tokens/{token}` requires **basic auth** (any token gets
-  `401`). The web UI is the working route — Oleg used it on 2026-08-12 to revoke `fe_revoke_tmp`.
+  ✅ **`fe_reg_1_10_rw` (id 100, `robot-registry`, `write:package`) revoked 2026-08-12** by
+  deleting its `access_token` row, on Oleg's decision — the instance went 94 → 93 live tokens.
+  ⚠️ **Every scripted revocation route is closed on this version, and this is the fact that will
+  cost the next story time:** `gitea admin user` has no delete subcommand;
+  `DELETE /users/{username}/tokens/{token}` requires **basic auth as that same account** (a token,
+  even an admin's, gets `401`); and the web UI Applications page lists **only the logged-in user's
+  own tokens** — a service account's tokens are invisible to an admin there, and the admin panel
+  has no token view at all. So a token minted *as* `robot-registry` cannot be revoked by an admin
+  through any UI or API path without that account's password. Oleg looked for id 100 in his own
+  Applications list and correctly did not find it. Plan token cleanup **before** minting: either
+  keep the account's password to hand, or accept the DB row as the revocation route.
 - ⚠️ **Recurring trap, evidenced: cleaning up a token needs `write:user`, and prior stories left
   their attempt tokens behind.** `platform-admin` carries four abandoned `write:user` tokens —
   `story21-cleanup-1785925612`, `story21-cleanup2-1785925641`, `story21-cleanup3-1785925657`,
