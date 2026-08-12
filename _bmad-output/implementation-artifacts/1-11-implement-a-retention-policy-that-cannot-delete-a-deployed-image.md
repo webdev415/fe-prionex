@@ -252,15 +252,15 @@ and deleting an image.
       contains no `^`, `$`, `\A`, `\z`. Remember patterns are case-insensitive and auto-anchored.
 - [x] 2.6 Decide explicitly what happens to `ci-probe` and `ci-probe-cache`, and record it.
 
-### Task 3 — Preview before enabling (AC: 4) — 3.1 done; 3.2–3.4 need the UI
+### Task 3 — Preview before enabling (AC: 4) ✅
 
 - [x] 3.1 Create the rule **disabled**, with the Task 2 field values. ✅ Rule `id = 1` exists, `enabled = f`.
-- [ ] 3.2 Run the rule's preview. Capture its complete output into the story — not a summary of
+- [x] 3.2 Run the rule's preview. Capture its complete output into the story — not a summary of
       it, the list.
-- [ ] 3.3 Assert against the capture: zero versions outside `crm/fe-prionex`. If even one
+- [x] 3.3 Assert against the capture: zero versions outside `crm/fe-prionex`. If even one
       `api-prionex/*` or `hub-*` version appears, **stop, do not enable, fix the pattern, preview
       again**, and record both attempts.
-- [ ] 3.4 Assert the protected set from Task 2.4 does not appear in the preview.
+- [x] 3.4 Assert the protected set from Task 2.4 does not appear in the preview.
 
 ### Task 4 — Seed the test set (AC: 3)
 
@@ -620,6 +620,44 @@ is evidence; a changed count is noise. An increase must never be read as "nothin
 
 This also sharpens the blast radius from Task 1: it is not a static 1185 versions belonging to other
 teams — it is a registry receiving roughly 120 new versions per build round while we work in it.
+
+**Task 3.2–3.4 — the preview, run twice, and why once was not enough (2026-08-12, Oleg at the UI).**
+
+**Run 1, the rule as designed (`remove_days = 14`):** `0 packages are scheduled to be removed.
+Cleanup rule does not match any packages.`
+
+That looked like the result we wanted and it was worth almost nothing. Checking the age
+distribution afterwards showed why:
+
+```
+foreign container versions in CRM older than 14 days: 0
+```
+
+**Not one version outside our three packages is older than fourteen days.** The backend team
+rebuilds continuously, so their entire registry — 1300+ versions — is younger than the threshold.
+Step 3 of the evaluation order discarded every foreign version *on age alone*; `remove_pattern` was
+never consulted. Run 1 proved the rule currently matches nothing. It proved nothing whatsoever
+about scoping, which is the property AC4 is actually about.
+
+**Run 2, the stress configuration (`remove_days = 0`, rule still `enabled = false`):** every version
+in the organisation becomes age-eligible, so `remove_pattern` is the *only* thing standing between
+the rule and 1300+ packages belonging to two other teams. Result:
+
+```
+0 packages are scheduled to be removed.
+Cleanup rule does not match any packages.
+```
+
+**That is the evidence.** Under the most dangerous configuration this rule can hold, anchoring plus
+`match_full_name` excluded every foreign version. AC4's claim — the blast radius stops at
+`crm/fe-prionex` — is now measured rather than argued from documentation.
+
+`remove_days` was restored to `14` immediately afterwards. The rule was never enabled at `0`.
+
+**Method note for anyone reading this later:** a preview that returns nothing is not evidence of
+safety. It is evidence of *no match*, and a rule can fail to match for reasons that have nothing to
+do with the protection you think you are testing. Make the property under test load-bearing before
+you believe the result.
 
 ### Completion Notes List
 
