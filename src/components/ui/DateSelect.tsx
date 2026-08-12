@@ -21,29 +21,20 @@ import {
   parseManualDate,
   parseManualDateTime,
 } from '@/lib/dateUtils'
-
-/**
- * LastPass / 1Password / Dashlane opt-outs. Their overlays cover the calendar
- * exactly the way Chrome's own suggestion list does (KAN-995).
- *
- * react-datepicker builds its built-in input from a fixed prop list and never
- * forwards ``data-*``, so these can only land on an input we render ourselves.
- * That is why both modes go through a custom input below, not just the masked
- * one — otherwise the ~35 calendar-only call sites (client date of birth,
- * passport issued/expires, …) would stay exposed.
- */
-const PASSWORD_MANAGER_OPT_OUT = {
-  'data-lpignore': 'true',
-  'data-1p-ignore': '',
-  'data-form-type': 'other',
-} as const
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
 
 /**
  * Calendar-only counterpart of ``MaskedDateTimeInput``: a faithful pass-through
  * of everything react-datepicker injects, existing only so the opt-out
- * attributes above reach the DOM node. Typing is still blocked by the
- * ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
+ * attributes from ``./autofill`` reach the DOM node. Typing is still blocked by
+ * the ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
  * through a custom input.
+ *
+ * That indirection is what forces both modes below through a custom input
+ * rather than only the masked one: react-datepicker builds its built-in input
+ * from a fixed prop list and never forwards ``data-*``, so the ~35
+ * calendar-only call sites (client date of birth, passport issued/expires, …)
+ * would otherwise stay exposed.
  */
 const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function PlainDateInput(props, ref) {
@@ -274,9 +265,17 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // placeholder are still readable by the classifier, which is what the
     // `autoComplete` prop exists to override (KAN-995).
     //
-    // The character whitelist keeps the value well formed across React
-    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
-    const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    // This is why the default here is still `off` while the shared `Input`
+    // defaults to `new-password` (KAN-1009), even though both now read their
+    // opt-outs from the same module. `Input` leaves the caller's id in place
+    // and has no equivalent of the wrapper trick, so there the id and name are
+    // signals too; here only the label and placeholder are left, and neither
+    // reads as profile data on a standalone date field. The three that do -
+    // date of birth, passport issued and expires - pass `new-password` at the
+    // call site. Aligning the two defaults would let those three props go, but
+    // it changes behaviour for ~35 shipped call sites for no reported bug, so
+    // it is left alone deliberately.
+    const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
     const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
