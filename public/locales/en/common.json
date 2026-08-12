@@ -5175,7 +5175,8 @@
             "thirdParty": "Third party by contracts",
             "view": "View"
           },
-          "minimize": "Minimize"
+          "minimize": "Minimize",
+          "cancel": "Cancel"
         },
         "callLogCard": {
           "message": "Message",

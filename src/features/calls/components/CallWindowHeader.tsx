@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
 import { formatCallDuration } from '../utils/duration'
 
 interface CallWindowHeaderProps {
@@ -32,13 +31,9 @@ export function CallWindowHeader({
     <div className="flex shrink-0 items-start gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              'h-2 w-2 shrink-0 rounded-full',
-              connected ? 'bg-success-500' : 'bg-primary'
-            )}
-            aria-hidden
-          />
+          {/* Green from the moment the line is up, not from acceptance — the
+              dot reports the line, and the timer reports the conversation. */}
+          <span className="bg-success-500 h-2 w-2 shrink-0 rounded-full" aria-hidden />
           <span className="text-foreground truncate text-sm font-medium sm:text-base">
             {phoneNumber}
           </span>

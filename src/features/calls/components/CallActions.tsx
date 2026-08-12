@@ -62,7 +62,7 @@ export function CallActions({
           className="w-full rounded-md"
         >
           <Icons.Cancel01 size={18} className="mr-2 sm:size-5" aria-hidden />
-          {t('pages.clients.modals.callDialog.reject', 'Cancel')}
+          {t('pages.clients.modals.callDialog.cancel', 'Cancel')}
         </Button>
 
         {phase === 'ringing' && onAccept && (
