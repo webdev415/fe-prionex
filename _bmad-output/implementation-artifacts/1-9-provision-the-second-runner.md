@@ -4,7 +4,7 @@ baseline_commit: 9eb433f6
 
 # Story 1.9: Provision the Second Runner
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -552,7 +552,21 @@ AC1's stale clause was handled as the spec required — superseded **and recorde
 at org scope. AC7 holds both git-side and server-side. No secret is committed. The committed configs
 match the host on every load-bearing value, including runner 2's `cache.host` pointing at its own IP.
 
-- [ ] [Review][Decision] **`docker-build` on runner 2 was never exercised — and the `deferred-work` item saying exactly that is insufficient was closed by this commit.** All five probe jobs are `runs-on: node-20`. Runner 2's log has 26 lines and no job at all; its `dind2` contains **only `node:20-bookworm`** — `code.forgejo.org/oci/docker:cli` is not even pulled, and `force_pull: true` means the first real docker job pulls it untested. The closed item read: *«Always dispatch a real probe workflow before declaring a runner done — a clean `register`/`daemon` startup log proves nothing about which images the labels actually resolve to.»* It was closed on a register log and a config file. AC1 requires *identical* labels; half of that is asserted. **Decide: dispatch one `docker-build` job on runner 2 now, or record it as «не проверено» and re-open the item.**
+- [x] [Review][Decision] **`docker-build` on runner 2 — RESOLVED by dispatch, 2026-08-12. It works.**
+  The finding stood: all five original probe jobs were `runs-on: node-20`, `dind2` held only
+  `node:20-bookworm`, and the `deferred-work` item saying a register log proves nothing about label
+  resolution had been closed on exactly a register log. Oleg's call was to check rather than record
+  it as «не проверено».
+  **Method:** four jobs, all `runs-on: docker-build`, dispatched once — four rather than one so that
+  runner 2 was guaranteed to take some without stopping runner 1. Each job asserts the CLI exists
+  (`command -v docker` or fail) and that **both** client and server versions are non-empty, so a
+  green job cannot mean a missing CLI or an unreachable daemon.
+  **Result:** tasks **2822–2825 all `success`**; runner 2's own log shows it accepted **2822 and
+  2823**, runner 1 took 2824/2825. `dind2` now contains `code.forgejo.org/oci/docker:cli` — the
+  label's backing image was pulled and executed on runner 2, which it had never done before.
+  **AC1's «identical labels» is therefore proven on both runners by dispatch, not by config alone**,
+  and the Trap 1 rule is now satisfied in substance as well as in form. Probe branch deleted;
+  `.forgejo/workflows/` on all three refs holds only `README.md`.
 - [x] [Review][Patch] **The closure deleted ledger entries instead of annotating them, in a file whose contract is «Записи не переписываются задним числом».** Removed outright: the Trap 1 warning quoted above, `**Reviewed 2026-08-11 — Oleg: carry to Story 1.9**` (a recorded human decision), the backlink to Story 1.7's Open Question 8, the literal `cache.host: "192.168.226.3"`, and the clause «nothing in this repository can detect it». Deleting the rule this same commit broke is worse than either alone. Restore the text and mark it closed above it
 - [x] [Review][Patch] **`docs/runners/docker-compose.yml` carries `name: forgejo-runner-fe-prionex` — the live project's own name.** `docker compose -f docs/runners/docker-compose.yml down` run anywhere on s1 adopts and stops both runners and both sidecars. The banner disclaims *automation*; it says nothing about a human with a terminal. Rename the project in the copy (e.g. `-record` suffix) or neutralise it, and say in the banner what happens if it is run
 - [x] [Review][Patch] **Task 7.3's «no `[DEBUG]` after the revert» check cannot fail.** The daemon was never in debug today: runner 2's stream has 0 debug lines across its entire lifetime, runner 1's last debug line is `2026-08-11T22:13:27+02:00`, and neither shows the `log level changed to debug` line that its earlier debug sessions opened with. A count of 0 reads identically whether the revert happened or not. Relatedly, Task 4.2's stated reason for raising the level — the `[<workflow>/<job>]` prefixes — never materialised; every attribution line quoted is a plain `level=info` line available without debug

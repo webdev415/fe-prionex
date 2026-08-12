@@ -63,7 +63,7 @@ development_status:
   1-6-secure-the-pre-prod-infrastructure-commitment: ready-for-dev
   1-7-provision-the-primary-forgejo-runner-with-both-labels: done
   1-8-prove-action-compatibility-with-a-smoke-workflow: done
-  1-9-provision-the-second-runner: in-progress
+  1-9-provision-the-second-runner: done
   1-10-enable-the-forgejo-container-registry-with-scoped-credentials: backlog
   1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: backlog
   1-12-migrate-secrets-and-variables-into-forgejo: backlog
