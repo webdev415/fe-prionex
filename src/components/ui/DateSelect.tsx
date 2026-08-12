@@ -21,29 +21,20 @@ import {
   parseManualDate,
   parseManualDateTime,
 } from '@/lib/dateUtils'
-
-/**
- * LastPass / 1Password / Dashlane opt-outs. Their overlays cover the calendar
- * exactly the way Chrome's own suggestion list does (KAN-995).
- *
- * react-datepicker builds its built-in input from a fixed prop list and never
- * forwards ``data-*``, so these can only land on an input we render ourselves.
- * That is why both modes go through a custom input below, not just the masked
- * one — otherwise the ~35 calendar-only call sites (client date of birth,
- * passport issued/expires, …) would stay exposed.
- */
-const PASSWORD_MANAGER_OPT_OUT = {
-  'data-lpignore': 'true',
-  'data-1p-ignore': '',
-  'data-form-type': 'other',
-} as const
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
 
 /**
  * Calendar-only counterpart of ``MaskedDateTimeInput``: a faithful pass-through
  * of everything react-datepicker injects, existing only so the opt-out
- * attributes above reach the DOM node. Typing is still blocked by the
- * ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
+ * attributes from ``./autofill`` reach the DOM node. Typing is still blocked by
+ * the ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
  * through a custom input.
+ *
+ * That indirection is what forces both modes below through a custom input
+ * rather than only the masked one: react-datepicker builds its built-in input
+ * from a fixed prop list and never forwards ``data-*``, so the ~35
+ * calendar-only call sites (client date of birth, passport issued/expires, …)
+ * would otherwise stay exposed.
  */
 const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function PlainDateInput(props, ref) {
@@ -273,10 +264,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // CSS and automation but is not a form field. The visible label and the
     // placeholder are still readable by the classifier, which is what the
     // `autoComplete` prop exists to override (KAN-995).
-    //
-    // The character whitelist keeps the value well formed across React
-    // versions: useId emits ':r0:' on 18 and '_r_0_' on 19.
-    const opaqueFieldId = `ds-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
     const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT

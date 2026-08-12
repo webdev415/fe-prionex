@@ -28,6 +28,7 @@ import {
 } from '../../../components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { PASSWORD_MANAGER_OPT_OUT } from '@/components/ui/autofill'
 import { toast } from 'sonner'
 import {
   useInteractionTypes,
@@ -555,6 +556,9 @@ export function AddNoteModal({
               <input
                 type="number"
                 id="promise-amount"
+                name="promise-amount"
+                autoComplete="off"
+                {...PASSWORD_MANAGER_OPT_OUT}
                 value={promiseAmount}
                 onChange={(e) => setPromiseAmount(e.target.value)}
                 min="0"

@@ -3,6 +3,7 @@ import { forwardRef, useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
 
 const inputVariants = cva(
   'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground placeholder:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
@@ -39,6 +40,24 @@ export interface InputProps
   onClear?: () => void
 }
 
+/**
+ * Autofill defence (KAN-1009): the rendered field defaults to
+ * ``autocomplete="off"``, carries the password-manager opt-outs, and falls back
+ * to an opaque generated ``name`` so the classifier has one less signal to read.
+ *
+ * All of it backs off the moment a caller asks for real autofill: the login
+ * form passes ``username``/``current-password`` and must keep working, and
+ * ``data-lpignore`` would stop LastPass saving those credentials, so the
+ * opt-outs and the generated name only apply under ``off``/``new-password``.
+ *
+ * Two deliberate limits. The caller's ``id`` is left on the input rather than
+ * moved to the wrapper the way ``DateSelect`` does it — ~100 call sites pass a
+ * semantic id and the app has ~190 ``htmlFor`` references, so relocating it
+ * would cost label association for a signal that is weaker than the visible
+ * label anyway. And ``off`` is not enough on fields Chrome reads as profile
+ * data (person name, phone, email, street address); those call sites pass
+ * ``autoComplete="new-password"``, the one token Chrome always honours.
+ */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
@@ -54,6 +73,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       onClear,
       value,
       id,
+      name,
+      autoComplete = 'off',
       ...props
     },
     ref
@@ -62,6 +83,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
+    const suppressAutofill = autoComplete === 'off' || autoComplete === 'new-password'
+    const fieldName = name ?? (suppressAutofill ? opaqueFieldName('fld', generatedId) : undefined)
 
     const effectiveVariant = error ? 'error' : variant
 
@@ -96,6 +119,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             id={inputId}
+            name={fieldName}
+            autoComplete={autoComplete}
             value={value}
             className={cn(
               inputVariants({ variant: effectiveVariant, inputSize }),
@@ -107,6 +132,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
             {...props}
+            {...(suppressAutofill ? PASSWORD_MANAGER_OPT_OUT : {})}
           />
           {showClear ? (
             <button
