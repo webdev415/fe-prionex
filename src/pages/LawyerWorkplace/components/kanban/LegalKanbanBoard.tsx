@@ -26,6 +26,7 @@ import {
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
+import { formatLegalDueDateTime } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
@@ -68,7 +69,7 @@ function parseTaskIdFromSearch(params: URLSearchParams): number | null {
 }
 
 export function LegalKanbanBoard() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const timezone = useLegalProfileTimezone()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -269,6 +270,7 @@ export function LegalKanbanBoard() {
 
       if (metadataKeys.length === 0 && taskKeys.length === 0) return
 
+      const isDeadlineChange = patch.deadline !== undefined
       const finalize = () => setLocalOverrides(null)
 
       void (async () => {
@@ -279,6 +281,7 @@ export function LegalKanbanBoard() {
               patchMetadataMutation.mutateAsync({
                 taskId: task.taskId,
                 payload: metadataPayload,
+                suppressErrorToast: isDeadlineChange,
               })
             )
           }
@@ -287,17 +290,41 @@ export function LegalKanbanBoard() {
               updateTaskMutation.mutateAsync({
                 taskId: task.taskId,
                 payload: taskPayload,
+                suppressErrorToast: isDeadlineChange,
               })
             )
           }
           await Promise.all(ops)
           finalize()
+          if (isDeadlineChange) {
+            toast.success(
+              patch.deadline
+                ? t('pages.lawyerWorkplace.kanban.deadlineSaved', 'Deadline set to {{deadline}}', {
+                    deadline: formatLegalDueDateTime(patch.deadline, timezone, i18n.language),
+                  })
+                : t('pages.lawyerWorkplace.kanban.deadlineCleared', 'Deadline cleared')
+            )
+          }
         } catch {
           finalize()
+          if (isDeadlineChange) {
+            toast.error(
+              t('pages.lawyerWorkplace.kanban.deadlineSaveFailed', 'Deadline was not saved')
+            )
+          }
         }
       })()
     },
-    [apiTasks, lawyers, localOverrides, patchMetadataMutation, timezone, updateTaskMutation]
+    [
+      apiTasks,
+      i18n.language,
+      lawyers,
+      localOverrides,
+      patchMetadataMutation,
+      t,
+      timezone,
+      updateTaskMutation,
+    ]
   )
 
   const handleMoveTask = useCallback(

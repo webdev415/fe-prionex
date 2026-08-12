@@ -55,3 +55,58 @@ describe('legalDueDate', () => {
     vi.useRealTimers()
   })
 })
+
+// Every fixture above carries a Z. The task service does not send one: due_date
+// is a naive DateTime column serialised with .isoformat(), so the wire value is
+// UTC with no designator. That is the whole of KAN-1000 — the tests passed
+// because they were fed a shape the API never produces.
+describe('legalDueDate (offset-less wire values)', () => {
+  it('reads a naive wire value as UTC, not browser local', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00')?.toISOString()).toBe('2026-08-14T03:00:00.000Z')
+  })
+
+  it('round-trips the deadline from the ticket', () => {
+    const picked = new Date(2026, 7, 14, 6, 0, 0, 0)
+    const sent = legalDueDateToIso(picked, KYIV)
+    expect(sent).toBe('2026-08-14T03:00:00.000Z')
+
+    const stored = '2026-08-14T03:00:00'
+    expect(formatLegalDueDateTime(stored, KYIV, 'uk')).toBe('14.08 06:00')
+  })
+
+  it('keeps microseconds and the space separator readable', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00.123456')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.123Z'
+    )
+    expect(parseLegalDueDate('2026-08-14 03:00:00')?.toISOString()).toBe('2026-08-14T03:00:00.000Z')
+  })
+
+  it('leaves a value that already carries an offset alone', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00Z')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.000Z'
+    )
+    expect(parseLegalDueDate('2026-08-14T06:00:00+03:00')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.000Z'
+    )
+  })
+
+  it('leaves a date-only value alone', () => {
+    expect(parseLegalDueDate('2026-08-14')?.toISOString()).toBe('2026-08-14T00:00:00.000Z')
+  })
+
+  it('returns null for a blank or unparseable value', () => {
+    expect(parseLegalDueDate('   ')).toBeNull()
+    expect(parseLegalDueDate('not a date')).toBeNull()
+  })
+
+  // The three hours only move the calendar day for late-evening deadlines, so
+  // this is where the old behaviour put a card in the wrong column.
+  it('routes a late-evening deadline by the right calendar day', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-14T09:00:00Z'))
+    const stored = '2026-08-13T22:00:00'
+    expect(formatLegalDueDateTime(stored, KYIV, 'uk')).toBe('14.08 01:00')
+    expect(isLegalDueDateOverdue(stored, KYIV)).toBe(false)
+    vi.useRealTimers()
+  })
+})

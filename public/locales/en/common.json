@@ -1041,7 +1041,10 @@
         },
         "exportEmpty": "No tasks match the current filters",
         "taskNotFound": "Kanban task could not be found",
-        "transitionSuccess": "Moved to {{state}}"
+        "transitionSuccess": "Moved to {{state}}",
+        "deadlineSaved": "Deadline set to {{deadline}}",
+        "deadlineCleared": "Deadline cleared",
+        "deadlineSaveFailed": "Deadline was not saved"
       },
       "documents": {
         "title": "Documents",

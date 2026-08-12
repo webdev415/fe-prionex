@@ -92,9 +92,30 @@ export function legalDueDateToIso(date: Date, timezone?: string | null): string 
   )
 }
 
+const HAS_TIME_PART = /\d{2}:\d{2}/
+const HAS_TIMEZONE_PART = /(?:Z|[+-]\d{2}:?\d{2})$/i
+
+/**
+ * The task service stores `due_date` in a naive `DateTime` column and serialises
+ * it with `.isoformat()`, so the wire value is UTC with no designator on it —
+ * `2026-08-14T03:00:00`. `new Date` reads a date-time form without an offset as
+ * *local* time (ECMA-262), which turned a Kyiv 06:00 deadline into a 03:00 one
+ * on the card: the stored instant was right all along, the read lost the marker
+ * (KAN-1000).
+ *
+ * Only offset-less date-times are stamped. Anything already carrying `Z` or
+ * `+00:00` is left alone, which matters because the email service's
+ * `suggested_due_date` sits in a `DateTime(timezone=True)` column and does send
+ * one — stamping that a second time would shift it the other way. Date-only
+ * values are left alone too; `new Date` already reads those as UTC.
+ */
 export function parseLegalDueDate(iso: string | null | undefined): Date | null {
   if (!iso) return null
-  const parsed = new Date(iso)
+  const trimmed = iso.trim()
+  if (!trimmed) return null
+  const normalized =
+    HAS_TIME_PART.test(trimmed) && !HAS_TIMEZONE_PART.test(trimmed) ? `${trimmed}Z` : trimmed
+  const parsed = new Date(normalized)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
