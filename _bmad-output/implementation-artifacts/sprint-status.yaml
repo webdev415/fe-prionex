@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-11
+last_updated: 2026-08-12
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -63,7 +63,7 @@ development_status:
   1-6-secure-the-pre-prod-infrastructure-commitment: ready-for-dev
   1-7-provision-the-primary-forgejo-runner-with-both-labels: done
   1-8-prove-action-compatibility-with-a-smoke-workflow: done
-  1-9-provision-the-second-runner: backlog
+  1-9-provision-the-second-runner: ready-for-dev
   1-10-enable-the-forgejo-container-registry-with-scoped-credentials: backlog
   1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: backlog
   1-12-migrate-secrets-and-variables-into-forgejo: backlog
