@@ -556,7 +556,6 @@ export function AddNoteModal({
               <input
                 type="number"
                 id="promise-amount"
-                name="promise-amount"
                 autoComplete="off"
                 {...PASSWORD_MANAGER_OPT_OUT}
                 value={promiseAmount}

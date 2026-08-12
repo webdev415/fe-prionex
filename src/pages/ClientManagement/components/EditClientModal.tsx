@@ -505,7 +505,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.editModal.firstName')} <span className="text-error-500">*</span>
               </label>
               <Input
-                autoComplete="new-password"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 disabled={!canEditAll}
@@ -518,7 +517,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.editModal.lastName')} <span className="text-error-500">*</span>
               </label>
               <Input
-                autoComplete="new-password"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 disabled={!canEditAll}
@@ -534,7 +532,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.editModal.middleName')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
                 disabled={!canEditAll}
@@ -547,7 +544,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.editModal.email')}
               </label>
               <Input
-                autoComplete="new-password"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -596,7 +592,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.editModal.taxId')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={taxId}
                 onChange={(e) => setTaxId(e.target.value)}
                 disabled={!canEditAll}
@@ -612,7 +607,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.numberOfFamilyMembers')}
               </label>
               <Input
-                autoComplete="new-password"
                 type="number"
                 value={familyMembers}
                 onChange={(e) => setFamilyMembers(e.target.value)}
@@ -626,7 +620,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.incomeLevel')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={incomeLevel}
                 onChange={(e) => setIncomeLevel(e.target.value)}
                 disabled={!canEditAll}
@@ -669,7 +662,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.documentType')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
                 disabled={!canEditAll}
@@ -682,7 +674,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.passportSeries')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={passportSeries}
                 onChange={(e) => setPassportSeries(e.target.value)}
                 disabled={!canEditAll}
@@ -697,7 +688,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.passportNumber')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={passportNumber}
                 onChange={(e) => setPassportNumber(e.target.value)}
                 disabled={!canEditAll}
@@ -713,7 +703,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.issuedBy')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={issuedBy}
                 onChange={(e) => setIssuedBy(e.target.value)}
                 disabled={!canEditAll}
@@ -756,7 +745,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.gender')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
                 disabled={!canEditAll}
@@ -794,7 +782,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.organizationName')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 disabled={!canEditAll}
@@ -807,7 +794,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.position')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
                 disabled={!canEditAll}
@@ -822,7 +808,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.experience')}
               </label>
               <Input
-                autoComplete="new-password"
                 type="number"
                 value={workExperience}
                 onChange={(e) => setWorkExperience(e.target.value)}
@@ -836,7 +821,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.managerFullName')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={managerFullName}
                 onChange={(e) => setManagerFullName(e.target.value)}
                 disabled={!canEditAll}
@@ -872,7 +856,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.workPhone')}
               </label>
               <Input
-                autoComplete="new-password"
                 value={workPhone}
                 onChange={(e) => setWorkPhone(e.target.value)}
                 disabled={!canEditAll}
@@ -951,7 +934,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.region')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.region || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, region: e.target.value })
@@ -965,7 +947,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.city')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.city || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, city: e.target.value })
@@ -981,7 +962,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.district')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.district || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, district: e.target.value })
@@ -995,7 +975,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.postalCode')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.postal_code || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, postal_code: e.target.value })
@@ -1011,7 +990,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.street')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.street || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, street: e.target.value })
@@ -1025,7 +1003,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.building')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.building || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, building: e.target.value })
@@ -1039,7 +1016,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.houseNumber')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.house_number || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, house_number: e.target.value })
@@ -1053,7 +1029,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.apartment')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.apartment || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, apartment: e.target.value })
@@ -1069,7 +1044,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {t('pages.clients.editModal.housingType')}
                       </label>
                       <Input
-                        autoComplete="new-password"
                         value={editAddressData.housing_type || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, housing_type: e.target.value })
@@ -1180,7 +1154,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.region')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.region || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, region: e.target.value })}
                     inputSize="md"
@@ -1192,7 +1165,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.city')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.city || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                     inputSize="md"
@@ -1206,7 +1178,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.district')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.district || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, district: e.target.value })}
                     inputSize="md"
@@ -1218,7 +1189,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.postalCode')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.postal_code || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, postal_code: e.target.value })}
                     inputSize="md"
@@ -1232,7 +1202,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.street')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.street || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
                     inputSize="md"
@@ -1244,7 +1213,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.building')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.building || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, building: e.target.value })}
                     inputSize="md"
@@ -1256,7 +1224,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.houseNumber')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.house_number || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, house_number: e.target.value })}
                     inputSize="md"
@@ -1268,7 +1235,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.apartment')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.apartment || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
                     inputSize="md"
@@ -1282,7 +1248,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     {t('pages.clients.editModal.housingType')}
                   </label>
                   <Input
-                    autoComplete="new-password"
                     value={newAddress.housing_type || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, housing_type: e.target.value })}
                     inputSize="md"

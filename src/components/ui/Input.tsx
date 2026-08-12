@@ -3,7 +3,7 @@ import { forwardRef, useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
-import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT, suppressesAutofill } from './autofill'
 
 const inputVariants = cva(
   'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground placeholder:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
@@ -42,21 +42,29 @@ export interface InputProps
 
 /**
  * Autofill defence (KAN-1009): the rendered field defaults to
- * ``autocomplete="off"``, carries the password-manager opt-outs, and falls back
- * to an opaque generated ``name`` so the classifier has one less signal to read.
+ * ``autocomplete="new-password"``, carries the password-manager opt-outs, and
+ * falls back to an opaque generated ``name`` so the classifier has one less
+ * signal to read.
  *
- * All of it backs off the moment a caller asks for real autofill: the login
- * form passes ``username``/``current-password`` and must keep working, and
- * ``data-lpignore`` would stop LastPass saving those credentials, so the
- * opt-outs and the generated name only apply under ``off``/``new-password``.
+ * ``new-password`` rather than ``off`` because Chrome honours ``off`` only
+ * outside its profile groups, and ignores it for person name, phone, email and
+ * street address — the fields this app is mostly made of. Setting the strong
+ * token here rather than at the call sites is what keeps it consistent: the
+ * client, user, seller and project forms are all the same class of field, and
+ * a per-call-site rule goes stale the first time someone adds a form. Nothing
+ * built on this component is ever a real password field (``PasswordInput``
+ * renders its own input), so the token only ever means "do not autofill".
  *
- * Two deliberate limits. The caller's ``id`` is left on the input rather than
- * moved to the wrapper the way ``DateSelect`` does it — ~100 call sites pass a
+ * All of it backs off when a call site asks for real autofill, which today is
+ * only the login form's username — ``data-lpignore`` there would stop LastPass
+ * saving the credential. The password half of that form goes through
+ * ``PasswordInput``, which has none of this and is meant not to.
+ *
+ * One deliberate limit: the caller's ``id`` stays on the input rather than
+ * moving to the wrapper the way ``DateSelect`` does it. ~100 call sites pass a
  * semantic id and the app has ~190 ``htmlFor`` references, so relocating it
- * would cost label association for a signal that is weaker than the visible
- * label anyway. And ``off`` is not enough on fields Chrome reads as profile
- * data (person name, phone, email, street address); those call sites pass
- * ``autoComplete="new-password"``, the one token Chrome always honours.
+ * would cost label association to hide a signal weaker than the visible label
+ * standing next to it.
  */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (
@@ -74,7 +82,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       value,
       id,
       name,
-      autoComplete = 'off',
+      autoComplete = 'new-password',
       ...props
     },
     ref
@@ -83,7 +91,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
-    const suppressAutofill = autoComplete === 'off' || autoComplete === 'new-password'
+    const suppressAutofill = suppressesAutofill(autoComplete)
     const fieldName = name ?? (suppressAutofill ? opaqueFieldName('fld', generatedId) : undefined)
 
     const effectiveVariant = error ? 'error' : variant
@@ -131,8 +139,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            {...props}
             {...(suppressAutofill ? PASSWORD_MANAGER_OPT_OUT : {})}
+            {...props}
           />
           {showClear ? (
             <button

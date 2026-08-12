@@ -715,7 +715,6 @@ export function EditInteractionModal({
               <input
                 type="number"
                 id="edit-promise-amount"
-                name="edit-promise-amount"
                 autoComplete="off"
                 {...PASSWORD_MANAGER_OPT_OUT}
                 value={promiseAmount}
