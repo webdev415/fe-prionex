@@ -1,6 +1,10 @@
+---
+baseline_commit: 2cea6569
+---
+
 # Story 1.11: Implement a Retention Policy That Cannot Delete a Deployed Image
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -208,47 +212,47 @@ and deleting an image.
 
 ## Tasks / Subtasks
 
-### Task 1 — Pre-flight: bind every number before touching anything (AC: 4, 6)
+### Task 1 — Pre-flight: bind every number before touching anything (AC: 4, 6) ✅
 
-- [ ] 1.1 Record the baseline, in the story, as literal numbers:
+- [x] 1.1 Record the baseline, in the story, as literal numbers:
       total container packages owned by `CRM`; count of `api-prionex/*`; version count per
       `fe-prionex`, `ci-probe`, `ci-probe-cache`; total rows in `package_cleanup_rule` (expect 0).
-- [ ] 1.2 Confirm `UNIQUE (owner_id, type)` still holds on `package_cleanup_rule` — the whole
+- [x] 1.2 Confirm `UNIQUE (owner_id, type)` still holds on `package_cleanup_rule` — the whole
       design rests on there being no second rule available.
-- [ ] 1.3 Read the running instance's package-cleanup cron schedule and `OLDER_THAN` from the
+- [x] 1.3 Read the running instance's package-cleanup cron schedule and `OLDER_THAN` from the
       effective configuration. Record what it actually is. If it comes from a default rather than
       `app.ini`, say so.
-- [ ] 1.4 Confirm the Forgejo version is still `15.0.5+gitea-1.22.0`, because the multi-platform
+- [x] 1.4 Confirm the Forgejo version is still `15.0.5+gitea-1.22.0`, because the multi-platform
       `keep_count` fix landing in 15.0.0 is load-bearing for this design.
-- [ ] 1.5 **Declare the write budget and bind every number**: one cleanup rule created, R rule
+- [x] 1.5 **Declare the write budget and bind every number**: one cleanup rule created, R rule
       edits, S seeded tags pushed, T tags deleted, K commits — with R, S, T, K as integers, not
       letters. Close the ledger in Task 8 against these numbers.
       *(Task 1.5 of Story 1.10 was written to stop unbound letters and was itself never done. It
       is repeated here deliberately.)*
 
-### Task 2 — Decide the policy on paper before configuring it (AC: 1, 2, 5)
+### Task 2 — Decide the policy on paper before configuring it (AC: 1, 2, 5) ✅
 
-- [ ] 2.1 Write out the complete tag vocabulary this registry will hold, from FR7, Story 3.2 and
+- [x] 2.1 Write out the complete tag vocabulary this registry will hold, from FR7, Story 3.2 and
       Story 3.3: `sha-<short>`, `<branch>`, semver from `v*`, `latest`, the environment
       discriminators `sha-<short>-dev|-preprod|-prod`, `preprod-current`, `preprod-<sha>`,
       `prod-current`, `buildcache`, and the digest-named rows every push adds.
-- [ ] 2.2 Classify each into **protect forever**, **protect N most recent**, or **expire at 14
+- [x] 2.2 Classify each into **protect forever**, **protect N most recent**, or **expire at 14
       days**. Branch names are arbitrary strings — they cannot be enumerated, so the design must
       protect by naming the survivors, not by naming the victims.
-- [ ] 2.3 Choose N for AC2 and justify it. State what it costs in storage at the observed image
+- [x] 2.3 Choose N for AC2 and justify it. State what it costs in storage at the observed image
       size and what it buys in rollback depth.
-- [ ] 2.4 Write the three field values — `keep_count`, `keep_pattern`, `remove_pattern` — plus
+- [x] 2.4 Write the three field values — `keep_count`, `keep_pattern`, `remove_pattern` — plus
       `remove_days = 14` and `match_full_name = true`, and hand-check each against the four
       evaluation steps in §3 above, in order, for at least these versions:
       `fe-prionex/prod-current`, `fe-prionex/preprod-current`, `fe-prionex/preprod-<sha>`,
       `fe-prionex/sha-abc1234`, `fe-prionex/feature-x`, `fe-prionex/buildcache`,
       `fe-prionex/latest`, `fe-prionex/sha256:…`, `api-prionex/auth-service/sha-abc1234`,
       `hub-web/sha-6b3a348`.
-- [ ] 2.5 Verify every pattern compiles under RE2 — **no lookahead, no backreference** — and
+- [x] 2.5 Verify every pattern compiles under RE2 — **no lookahead, no backreference** — and
       contains no `^`, `$`, `\A`, `\z`. Remember patterns are case-insensitive and auto-anchored.
-- [ ] 2.6 Decide explicitly what happens to `ci-probe` and `ci-probe-cache`, and record it.
+- [x] 2.6 Decide explicitly what happens to `ci-probe` and `ci-probe-cache`, and record it.
 
-### Task 3 — Preview before enabling (AC: 4)
+### Task 3 — Preview before enabling (AC: 4) 🛑 **BLOCKED — web UI only, needs Oleg**
 
 - [ ] 3.1 Create the rule **disabled**, with the Task 2 field values.
 - [ ] 3.2 Run the rule's preview. Capture its complete output into the story — not a summary of
@@ -263,12 +267,14 @@ and deleting an image.
 - [ ] 4.1 Push seeded tags into `crm/fe-prionex` that cover, at minimum: one aged branch tag that
       must die, one aged tag standing in for a deployed image that must live, and one recent
       branch tag that must live because of its age alone.
-- [ ] 4.2 Ageing a tag is the hard part — the registry cannot backdate a push. Choose one and say
-      which: **(a)** temporarily lower `remove_days` so "aged" is reachable in real time, restore
-      it afterwards, and note that this tests the mechanism at a different threshold than the one
-      shipped; or **(b)** backdate `created_unix` for the seeded version rows in the database,
-      which is faithful but is a write to a shared production database and therefore **needs
-      Oleg's explicit approval before it happens**. Do not pick (b) silently.
+- [ ] 4.2 **Ageing route is decided: (a), and (b) is prohibited.** The registry cannot backdate a
+      push, so temporarily lower `remove_days` until "aged" is reachable in real time, then restore
+      it to 14. Oleg ruled out writing to the database on 2026-08-12: no `UPDATE` of `created_unix`,
+      no row edits of any kind on `package_version`. 🚨 **The consequence must be written down, not
+      glossed:** what gets exercised is the mechanism at a *lower* threshold, not the 14-day
+      threshold that ships. `remove_days = 14` itself is therefore **«не проверено»** and belongs on
+      the Task 7.3 list. Record the exact value used, and prove `remove_days` was restored to 14
+      afterwards by re-reading the row.
 - [ ] 4.3 Record what "marked as deployed" means concretely in the test — a `prod-current` or
       `preprod-current` tag pointing at the aged image — since no stand is actually running this
       image yet.
@@ -461,11 +467,163 @@ No file under `src/`, `.forgejo/`, or `.github/` is touched.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`), 2026-08-12.
+
 ### Debug Log References
+
+**Task 1 — baseline, all figures read from the instance on 2026-08-12, none from memory:**
+
+| measure | value |
+|---|---|
+| `CRM` container packages | **86** |
+| of which `api-prionex/*` | **80** |
+| `CRM` container versions, all packages | **1197** |
+| versions we own (`fe-prionex` 5, `ci-probe` 6, `ci-probe-cache` 1) | **12** |
+| **our share of the blast radius** | **12 / 1197 = 1.0 %** |
+| rows in `package_cleanup_rule` | **0** |
+| constraint | `CREATE UNIQUE INDEX "UQE_package_cleanup_rule_s" ON public.package_cleanup_rule USING btree (owner_id, type)` |
+| Forgejo | `15.0.5+gitea-1.22.0` — contains the v15.0.0 multi-platform `keep_count` fix |
+| `app.ini` | 64 non-empty lines, **no `[packages]`, no `[cron.*]`** — cleanup schedule is a compiled-in default nobody chose |
+| `action_run` rows for `repo_id = 16` (Task 8.2 baseline) | **30** |
+
+Every query ran through `forgejo-postgres`; nothing was written.
+
+**Task 1.5 — write budget, bound to integers:**
+
+| | declared |
+|---|---|
+| cleanup rules created | 1 |
+| rule edits after creation | ≤ 3 (preview iterations) |
+| seeded tags pushed | 3 |
+| tags deleted | 3 (the seeded ones) |
+| commits | 2 |
+| tokens minted | 0 so far — see the blocker |
+| rows written to the database | **0** |
+
+**Task 1.3 finding, not in the story when it was written:** there is no `[cron.cleanup_packages]`
+section at all, so the schedule and `OLDER_THAN` are Forgejo defaults. The rule's timing is
+therefore not under our control and not recorded anywhere on this host.
+
+**Task 2 — the policy, hand-checked against the four evaluation steps.**
+
+Field values, ready to enter:
+
+| field | value |
+|---|---|
+| owner / type | `CRM` / `container` |
+| `enabled` | `false` at creation, `true` only after the preview is read |
+| `match_full_name` | **`true`** — non-negotiable |
+| `keep_count` | **`0`** |
+| `remove_days` | `14` |
+| `remove_pattern` | `fe-prionex/.+` |
+| `keep_pattern` | `fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64})` |
+
+**Why `remove_pattern` is the safety mechanism, not `keep_pattern`.** Patterns are auto-anchored
+`\A…\z`. `fe-prionex/.+` cannot match `api-prionex/auth-service/sha-abc1234` — that string starts
+`api-`, and there is no leading `.*` to absorb it. Step 4 excludes everything that does not match
+`remove_pattern`, so all 1185 versions outside our three packages leave the candidate list before
+anything else is considered. The anchoring is what makes this true, and it is the first thing the
+preview must confirm.
+
+**Why `keep_count = 0` and not a safety net.** `keep_count` keeps the N most recent *version rows*
+of a package, ordered by recency across every kind of row. A day of branch builds pushes older
+`prod-` tags out of that window, so `keep_count` would silently stop protecting exactly the tags
+AC2 is about. It cannot express "the deployment lineage"; only a pattern can. A non-zero value
+would also protect the newest branch tags from AC1's 14-day expiry, which contradicts AC1. Zero.
+
+**N for AC2, bound as the story demanded:** **N = all.** The deployment lineage —
+`prod-current`, `preprod-current`, `(pre)?prod-<sha>`, `sha-<sha>-prod|-preprod` — is protected by
+pattern and never expires. This satisfies "the N previous rollback targets" for every N, which is
+what Stories 5.4 and 6.6 need. Cost: at ~15 MB of manifest per release and infrequent production
+deploys, on the order of a few hundred MB a year, with layers shared across releases. Branch
+builds — the actual growth driver — are the ones that expire.
+
+**Hand-check, all ten versions from Task 2.4, in evaluation order** (`keep_count = 0` so step 1
+excludes nothing):
+
+| version | step 2 `keep_pattern` | step 3 `< 14d` | step 4 `remove_pattern` | verdict |
+|---|---|---|---|---|
+| `fe-prionex/prod-current` | **kept** | — | — | survives ✅ |
+| `fe-prionex/preprod-current` | **kept** | — | — | survives ✅ |
+| `fe-prionex/preprod-a1b2c3d` | **kept** | — | — | survives ✅ |
+| `fe-prionex/sha-a1b2c3d-prod` | **kept** | — | — | survives ✅ |
+| `fe-prionex/latest` | **kept** (and the registry keeps `latest` regardless) | — | — | survives ✅ |
+| `fe-prionex/buildcache` | **kept** | — | — | survives ✅ |
+| `fe-prionex/sha256:…` | **kept** (phase 1 — see below) | — | — | survives ✅ |
+| `fe-prionex/feature-x` | not kept | if older | matches | **deleted** ✅ AC1 |
+| `fe-prionex/sha-a1b2c3d` (bare, or `-dev`) | not kept | if older | matches | **deleted** ✅ |
+| `api-prionex/auth-service/sha-a1b2c3d` | not kept | — | **no match → excluded** | survives ✅ AC4 |
+| `hub-web/sha-6b3a348` | not kept | — | **no match → excluded** | survives ✅ AC4 |
+
+**Task 2.5 — RE2 compliance:** no lookahead, no backreference, no `^ $ \A \z` written by hand.
+The patterns are alternation, character classes and bounded repetition only. Case-insensitivity
+means `[0-9a-f]` also admits `A–F`; harmless.
+
+**Task 2.6 — `ci-probe` and `ci-probe-cache`:** deliberately **outside** the rule.
+`remove_pattern` is anchored to `fe-prionex/`, so the rule will never collect them. They are Epic 1
+smoke-test residue serving nothing; the right disposal is a one-off deletion at Epic 1 close, not a
+standing policy clause that widens the rule's reach for seven versions. Filed to `deferred-work`.
+
+**The phase-1 / phase-2 split, and the awkward thing it exposes.**
+
+`keep_pattern` protects `sha256:…` digest rows in phase 1, because a tag's manifests are separate
+version rows and losing them leaves a tag that lists but does not pull. That is safe — and it means
+**phase 1 reclaims almost no storage**: deleting a branch tag removes the tag row while its
+manifests and blobs stay. FR11 exists to bound registry growth, so phase 1 satisfies AC2 and fails
+FR11's purpose.
+
+Phase 2 removes the `sha256:` clause, and it is only reachable if the AC3/5.5 test shows Forgejo
+refuses to delete a digest still referenced by a protected tag. **That test is now the deciding
+experiment for whether this retention policy does anything at all**, not merely a confirmation
+step. Recorded here so the result cannot be quietly skipped.
+
 
 ### Completion Notes List
 
+**🛑 HALT after Task 2. Tasks 3–8 cannot be executed by this agent — the mechanism has no
+non-interactive interface at all.**
+
+Established on the instance, not assumed:
+
+- **No API.** `swagger.v1.json` exposes seven package routes (`/packages/{owner}`,
+  `…/{type}/{name}/{version}`, `/files`, `/-/link`, `/-/unlink`, two quota routes). **Zero** contain
+  `cleanup`. There is no endpoint to create, read, preview or enable a cleanup rule.
+- **No CLI.** `forgejo admin` offers `user`, `repo-sync-releases`, `regenerate`, `auth`, `sendmail`.
+  Nothing for packages.
+- **Web UI only** — the route is `org/settings/packages_cleanup_rules_edit`, reachable with an
+  org-owner or site-admin session. A token does not open it; web routes need a session cookie and a
+  CSRF token from a password login.
+- **The preview is a UI feature too.** Prohibition 1 forbids enabling an unpreviewed rule and AC4
+  requires the preview output as evidence, so this is not a step that can be worked around by
+  writing the row directly — and writing the row directly is also a database write, which the
+  Task 4.2 decision ruled out.
+
+So the story stops here on purpose rather than inventing a route. **This is the second mechanism in
+this migration that turns out to be UI-only** — the first was token revocation, in Story 1.10. The
+pattern is now worth naming: on this Forgejo, anything under *owner settings* has no automation
+surface, and any story that depends on one needs a human step designed in from the start rather
+than discovered at implementation time.
+
+**What is finished and needs nothing further:** Task 1 (baseline, every number bound) and Task 2
+(the complete policy, hand-checked against all four evaluation steps for eleven representative
+versions, including the two that prove other teams' packages are untouchable).
+
+**What Oleg needs to do, precisely.** In the web UI, org `CRM` → Settings → Packages → add a
+cleanup rule with the seven field values in the table above. Save it **disabled**. Run the preview.
+Capture the complete list it produces. The single thing that matters in that output: **no version
+outside `crm/fe-prionex` may appear.** If any `api-prionex/*` or `hub-*` version does, the anchoring
+assumption is wrong and the rule must not be enabled — that result is more valuable than a
+successful one, and it is exactly the check that cannot be done from here.
+
+**One thing worth doing before that:** the backend and hub teams own 1185 of the 1197 container
+versions this rule is evaluated against. By construction it cannot touch them, and the preview is
+there to prove it — but they have no way to know a cleanup rule is about to exist over their
+registry.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 
 ---
 
@@ -473,10 +631,8 @@ No file under `src/`, `.forgejo/`, or `.github/` is touched.
 
 ### Blocking
 
-1. **Task 4.2 route (b) needs Oleg's approval before it is used.** Backdating `created_unix` on
-   seeded version rows is the only way to test the real 14-day threshold, and it is a write to a
-   shared production database. Route (a) — temporarily lowering `remove_days` — needs no approval
-   but tests the mechanism at a different threshold, which must then be stated as a limitation.
+*None. The one blocking question — how to age a tag — was answered by Oleg on 2026-08-12: route
+(a), no database writes. See Task 4.2, and carry its limitation into Task 7.3.*
 
 ### Non-blocking
 
