@@ -5153,7 +5153,19 @@
           "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
           "clientNotFound": "Client not found",
           "clientNotFoundHint": "This number is not linked to any client in your projects.",
-          "searchByNumber": "Search by this number"
+          "searchByNumber": "Search by this number",
+          "interaction": {
+            "title": "Interaction Form",
+            "result": "Result",
+            "selectResult": "Select a result",
+            "reason": "Reason for contact",
+            "selectReason": "Select a reason",
+            "channel": "Communication channel",
+            "comment": "Comment",
+            "commentPlaceholder": "Add a comment to the interaction...",
+            "save": "Save Interaction",
+            "saved": "Interaction saved"
+          }
         },
         "callLogCard": {
           "message": "Message",
