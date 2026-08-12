@@ -22,11 +22,19 @@ export const PASSWORD_MANAGER_OPT_OUT = {
  * The tokens this app hands to the browser on purpose. Everything else means
  * the field wants no help, so the opt-outs apply.
  *
- * Only the login form is on this list today. It is written as an allow-list
- * rather than a list of suppressing tokens so the failure mode points the safe
- * way: a typo, one of the ``autocomplete="none"`` workarounds doing the rounds,
- * or a prefixed token like ``section-billing new-password`` all end up
- * suppressed rather than silently losing the defence.
+ * Two exemptions are live: the login form's username, and the 2FA code fields
+ * in ``TwoFactorSetupModal``, ``TwoFactorDisableModal``,
+ * ``TwoFactorRegenerateModal`` and ``TwoFactorCodeCard``, which need
+ * ``one-time-code`` for the SMS handoff to work at all. ``current-password``
+ * is listed defensively — today it only ever reaches ``PasswordInput``, which
+ * has none of this logic.
+ *
+ * Written as an allow-list rather than a list of suppressing tokens so the
+ * failure mode points the safe way: a typo, one of the ``autocomplete="none"``
+ * workarounds doing the rounds, or a prefixed token like
+ * ``section-billing new-password`` all end up suppressed rather than silently
+ * losing the defence. The cost is that this set, not the call site, is where a
+ * field is opted back into real autofill.
  */
 const REQUESTS_REAL_AUTOFILL = new Set(['username', 'current-password', 'one-time-code'])
 

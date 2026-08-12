@@ -55,16 +55,30 @@ export interface InputProps
  * built on this component is ever a real password field (``PasswordInput``
  * renders its own input), so the token only ever means "do not autofill".
  *
- * All of it backs off when a call site asks for real autofill, which today is
- * only the login form's username — ``data-lpignore`` there would stop LastPass
- * saving the credential. The password half of that form goes through
+ * All of it backs off for the tokens in ``REQUESTS_REAL_AUTOFILL``: the login
+ * form's username, where ``data-lpignore`` would stop LastPass saving the
+ * credential, and the 2FA ``one-time-code`` fields, where it would break the
+ * SMS handoff. The password half of the login form goes through
  * ``PasswordInput``, which has none of this and is meant not to.
  *
- * One deliberate limit: the caller's ``id`` stays on the input rather than
- * moving to the wrapper the way ``DateSelect`` does it. ~100 call sites pass a
+ * Passing ``autoComplete`` at a call site is not on its own a way back into
+ * profile autofill. A token outside that set still gets the opt-outs and the
+ * generated name, so the field would be asking Chrome to fill it while telling
+ * every password manager to keep away. Opting a field back in means adding its
+ * token to ``REQUESTS_REAL_AUTOFILL`` in ``./autofill``, deliberately, rather
+ * than one call site quietly disagreeing with the rest of the app.
+ *
+ * Two deliberate limits. The caller's ``id`` stays on the input rather than
+ * moving to the wrapper the way ``DateSelect`` does it: ~100 call sites pass a
  * semantic id and the app has ~190 ``htmlFor`` references, so relocating it
  * would cost label association to hide a signal weaker than the visible label
- * standing next to it.
+ * standing next to it. And a blanket ``new-password`` is the wrong token under
+ * WCAG 1.3.5, which wants the real one on fields collecting the user's own
+ * details — ``ProfileSettingsPage`` is the only form in the app that qualifies,
+ * and it is a known exception rather than an oversight. Exempting it means
+ * putting ``email``/``given-name``/``family-name``/``tel`` on the allow-list
+ * and passing them there, which also brings the suggestion dropdown back to
+ * that page.
  */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (

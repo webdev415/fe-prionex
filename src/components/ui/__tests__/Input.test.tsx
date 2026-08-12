@@ -55,6 +55,17 @@ describe('Input (autofill defence)', () => {
     expect(input).toHaveAttribute('name', 'email')
   })
 
+  // ProfileSettingsPage's shape: no id, no name, only a visible label. It is
+  // not in this PR's diff, so this is the standing proof that the default
+  // covers it rather than the file having been missed.
+  it('defends a profile field carrying nothing but its label', () => {
+    render(<Input label="Phone" />)
+    const input = screen.getByLabelText('Phone')
+    expect(input).toHaveAttribute('autocomplete', 'new-password')
+    expect(input).toHaveAttribute('data-lpignore', 'true')
+    expect(input.getAttribute('name')).toMatch(/^fld-[A-Za-z0-9_-]+$/)
+  })
+
   it('lets a call site override an opt-out attribute', () => {
     render(<Input data-form-type="amount" />)
     const input = screen.getByRole('textbox')
@@ -73,9 +84,14 @@ describe('Input (which tokens count as asking for real autofill)', () => {
     expect(input).not.toHaveAttribute('data-form-type')
   })
 
-  it('does not invent a name for a field that wants real autofill', () => {
+  // The four 2FA components pass one-time-code. Opt-outs there would break the
+  // SMS handoff, which is the whole point of the token.
+  it('stands down for the 2FA one-time-code fields', () => {
     render(<Input autoComplete="one-time-code" />)
-    expect(screen.getByRole('textbox').getAttribute('name')).toBeNull()
+    const input = screen.getByRole('textbox')
+    expect(input).toHaveAttribute('autocomplete', 'one-time-code')
+    expect(input).not.toHaveAttribute('data-lpignore')
+    expect(input.getAttribute('name')).toBeNull()
   })
 
   // The allow-list is written the safe way round: anything unrecognised keeps
