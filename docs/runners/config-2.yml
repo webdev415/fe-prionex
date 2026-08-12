@@ -1,0 +1,48 @@
+# Sanitised, version-controlled copy of runner 2's live config, taken from
+# /opt/forgejo-runner-fe-prionex/config-2.yml on s1 (2026-08-12, Story 1.9).
+# See docs/runners/README.md — this is a RECORD, not a deployment mechanism:
+# nothing applies this file automatically, and it will drift from the host
+# unless someone updates it by hand after a future change.
+# No secret lives in this file — the runner's permanent instance secret is
+# in .runner (host-only, data/runner-2/.runner, never committed).
+
+log:
+  level: info
+  job_level: info
+
+runner:
+  file: /data/.runner
+  capacity: 2
+  timeout: 2h
+  fetch_interval: 2s
+  fetch_timeout: 5s
+  # Empty and stays empty: labels were fixed at registration time (Story 1.9,
+  # Task 3, interactive `register` prompts), not this file's `labels` key and
+  # not GITEA_RUNNER_LABELS in docker-compose.yml either — see runner 1's
+  # config.yml for the full explanation (Trap 5, story 1.7).
+  labels: []
+
+cache:
+  enabled: true
+  dir: ""
+  # Runner 2's OWN address on the shared bridge (192.168.226.0/24), NOT
+  # runner 1's .3. Each runner in this compose project runs its own cache
+  # server; pointing runner 2 here at .3 would make its cache die with
+  # runner 1 and the failure would be silent (a missing cache server does not
+  # fail a job — see D10 / Story 1.9 §3 trap table).
+  host: "192.168.226.4"
+  proxy_port: 34568
+
+container:
+  network: ""
+  privileged: false
+  # Copied verbatim from runner 1's config.yml (D10). 172.17.0.1 is the
+  # NESTED dind-2 engine's own default-bridge gateway (each dind sidecar has
+  # its own independent internal address space, so this value is correct for
+  # dind-2 too, not a collision with dind-1's job containers).
+  # 🚨 LOAD-BEARING: `--add-host git.crm-prionex.com:10.67.0.1` — without it, a
+  # job container on this runner cannot resolve the registry by name at all.
+  options: "-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host git.crm-prionex.com:10.67.0.1"
+  docker_host: "tcp://dind2:2375"
+  valid_volumes: []
+  force_pull: true

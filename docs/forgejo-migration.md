@@ -161,6 +161,9 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
    `REGISTRY_TOKEN_RW` можно использовать (Task 2.1 story 1.8), которое не было получено в рамках
    этой story. См. [#d12](./migration-decisions.md#d12).
 5. Поднять **второй runner** (см. фазу 3 — до включения required checks).
+   ✅ **выполнено** (Story 1.9, 2026-08-12): `s1-fe-prionex-2` поднят в том же compose-проекте на
+   s1, тот же `192.168.226.0/24`, свой `dind`. Failover и распределение между двумя раннерами
+   доказаны throwaway-пробой. См. [#d13](./migration-decisions.md#d13).
 
 **DoD:** обе метки работают — ✅ **выполнено** (Story 1.7, [#d10](./migration-decisions.md#d10)),
 все actions из таблицы 1.4 либо резолвятся, либо заменены на `run:` — 🟡 **НЕ закрыто полностью**

@@ -1,0 +1,181 @@
+# Sanitised, version-controlled copy of the compose project's
+# docker-compose.yml, taken from /opt/forgejo-runner-fe-prionex/ on s1
+# (2026-08-12, Story 1.9, after runner 2 was added). See docs/runners/README.md
+# — this is a RECORD, not a deployment mechanism: nothing applies this file
+# automatically, and it will drift from the host unless someone updates it
+# by hand after a future change. No secret lives in this file — all
+# credentials are supplied via .env (see .env.example in this directory),
+# which is itself never committed.
+name: forgejo-runner-fe-prionex
+
+networks:
+  runner:
+    driver: bridge
+    ipam:
+      config:
+        # Occupied on this host (checked via `docker network inspect`, 2026-08-10):
+        #   172.17.0.0/16     default bridge
+        #   172.18.0.0/16     techno-finance
+        #   172.19.0.0/16     victoria-metrics
+        #   172.20.0.0/24     forgejo (platform)
+        #   192.168.221.0/24  forgejo-runner (build-hub, org infra)
+        #   192.168.222.0/24  forgejo-runner-ci (ci-hub, org crm)
+        #   192.168.223.0/24  forgejo-runner-telecom (build-telecom, org telecom)
+        #   192.168.224.0/24  forgejo-runner-crm (s1-build-crm, org crm / api-prionex)
+        #   192.168.225.0/24  forgejo-runner-crm-deploy (s1-deploy-dev-preprod)
+        # 192.168.226.0/24 — first free. Added to the nginx ACL allow-list
+        # (/etc/nginx/sites-available/forgejo-platform) on 2026-08-10, coordinated
+        # with aleksey (Story 1.7).
+        # Within this /24: .2 = dind, .3 = runner (Story 1.7). .4 = runner2,
+        # .5 = dind2 (Story 1.9). .6-.254 still free. No ACL change needed —
+        # the /24 is already ours.
+        - subnet: 192.168.226.0/24
+
+volumes:
+  dind-storage:
+  dind2-storage:
+
+services:
+  # Docker-in-Docker: the only place `docker build` executes. No host docker.sock
+  # is ever mounted into this project (matches this hub's AD-6 convention) — job
+  # containers reach this nested daemon over TCP only.
+  dind:
+    image: docker:27.5.1-dind
+    container_name: forgejo-runner-fe-prionex-dind
+    privileged: true
+    command: ["dockerd", "-H", "tcp://0.0.0.0:2375", "--tls=false"]
+    volumes:
+      - dind-storage:/var/lib/docker
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      runner:
+        ipv4_address: 192.168.226.2
+    healthcheck:
+      test: ["CMD", "docker", "-H", "tcp://127.0.0.1:2375", "info"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  runner:
+    image: ${RUNNER_IMAGE:?RUNNER_IMAGE must be set, e.g. code.forgejo.org/forgejo/runner:13.0.0}
+    container_name: forgejo-runner-fe-prionex
+    restart: unless-stopped
+    # Dedicated system user (created outside compose), not root, no docker group
+    # needed — this service talks to dind over TCP, never through a socket.
+    user: "${RUNNER_UID:?RUNNER_UID must be set}:${RUNNER_GID:?RUNNER_GID must be set}"
+    depends_on:
+      dind:
+        condition: service_healthy
+    environment:
+      - DOCKER_HOST=tcp://dind:2375
+      - CONFIG_FILE=/etc/forgejo-runner/config.yml
+      - GITEA_INSTANCE_URL=${FORGEJO_INSTANCE_URL:-https://git.crm-prionex.com}
+      - GITEA_RUNNER_NAME=${RUNNER_NAME:-s1-fe-prionex-1}
+      - GITEA_RUNNER_LABELS=${RUNNER_LABELS:-node-20:docker://node:20-bookworm,docker-build:docker://code.forgejo.org/oci/docker:cli}
+      # Soft form (no ${VAR:?}) deliberately — after first successful registration
+      # .runner (./data/runner) holds the credential and the token is never read
+      # again; a hard requirement would break every later `docker compose`
+      # maintenance command in this directory unless the token stayed exported.
+      # 🚨 These GITEA_RUNNER_* vars are NOT consumed for auto-registration —
+      # verified empirically (Story 1.7, 2026-08-10): `command: daemon` does not
+      # read them; the runner crashes with "0 server connections configured"
+      # if .runner is missing. Registration is always the explicit two-step
+      # `forgejo-runner register` (see scripts / Task 3.5), never this env block.
+      # Left here only because they are harmless once .runner exists.
+      - GITEA_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN:-}
+    command: ["forgejo-runner", "daemon", "--config", "/etc/forgejo-runner/config.yml"]
+    volumes:
+      - ./config.yml:/etc/forgejo-runner/config.yml:ro
+      - ${RUNNER_DATA_DIR:-./data/runner}:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "10.67.0.1:34568:34568"
+    networks:
+      runner:
+        ipv4_address: 192.168.226.3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpus: ${RUNNER_CPU_LIMIT:-2}
+    mem_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    memswap_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    pids_limit: 256
+
+  # Story 1.9 — second runner. OWN dind sidecar deliberately (not shared with
+  # `dind` above): sharing would make the single dind a point of failure for
+  # BOTH runners, which would partly defeat AC2 (prove the pair survives a
+  # runner dying). See docs/migration-decisions.md#d13 for the full
+  # shared-vs-own trade-off and what this choice does NOT protect against
+  # (a host-level Docker daemon or network fault still takes both down).
+  dind2:
+    image: docker:27.5.1-dind
+    container_name: forgejo-runner-fe-prionex-dind-2
+    privileged: true
+    command: ["dockerd", "-H", "tcp://0.0.0.0:2375", "--tls=false"]
+    volumes:
+      - dind2-storage:/var/lib/docker
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      runner:
+        ipv4_address: 192.168.226.5
+    healthcheck:
+      test: ["CMD", "docker", "-H", "tcp://127.0.0.1:2375", "info"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  runner2:
+    image: ${RUNNER_IMAGE:?RUNNER_IMAGE must be set, e.g. code.forgejo.org/forgejo/runner:13.0.0}
+    container_name: forgejo-runner-fe-prionex-2
+    restart: unless-stopped
+    # Same dedicated system user as runner 1 (uid/gid 1502) — safe to reuse:
+    # each service has its own bind-mounted data directory, so there is no
+    # file collision, and the container talks to its OWN dind (dind2) over
+    # TCP, never through a socket.
+    user: "${RUNNER_UID:?RUNNER_UID must be set}:${RUNNER_GID:?RUNNER_GID must be set}"
+    depends_on:
+      dind2:
+        condition: service_healthy
+    environment:
+      - DOCKER_HOST=tcp://dind2:2375
+      - CONFIG_FILE=/etc/forgejo-runner/config-2.yml
+      - GITEA_INSTANCE_URL=${FORGEJO_INSTANCE_URL:-https://git.crm-prionex.com}
+      - GITEA_RUNNER_NAME=s1-fe-prionex-2
+      - GITEA_RUNNER_LABELS=node-20:docker://node:20-bookworm,docker-build:docker://code.forgejo.org/oci/docker:cli
+      # Same caveat as runner 1: NOT consumed for auto-registration on this
+      # image (Story 1.7, verified). Registration is the explicit
+      # `forgejo-runner register` step (Story 1.9 Task 3), never this block.
+      - GITEA_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN_2:-}
+    command: ["forgejo-runner", "daemon", "--config", "/etc/forgejo-runner/config-2.yml"]
+    volumes:
+      - ./config-2.yml:/etc/forgejo-runner/config-2.yml:ro
+      - ${RUNNER_DATA_DIR_2:-./data/runner-2}:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "10.67.0.1:34569:34568"
+    networks:
+      runner:
+        ipv4_address: 192.168.226.4
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpus: ${RUNNER_CPU_LIMIT:-2}
+    mem_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    memswap_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    pids_limit: 256
