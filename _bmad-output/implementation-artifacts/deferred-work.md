@@ -464,3 +464,41 @@
   from two named admin IPs). Re-verifying this specific fact in this session: «не проверено» —
   not re-run, deliberately, since AC4 no longer needs an SSH probe at all (rescoped to «деплой по
   runner»).
+
+## Opened by story 1.11 implementation (2026-08-12)
+
+- 🔴 **Story 1.12 is written against a premise that is already false, and mostly already done.**
+  Its AC1 requires `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` to exist at `CRM` organisation
+  scope. Verified on the instance: `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`, `REGISTRY_USER`,
+  `REGISTRY_USER_RO` and `SLACK_CD_WEBHOOK_URL` **all already exist** at org scope, created by the
+  platform before this migration began. Its AC4 requires `FRONTEND_PORT` to be absent from
+  variables — it is absent. Under the amended FR19 no SSH secret is created at all. **What actually
+  remains of Story 1.12 is six repository variables** — `VITE_API_BASE_URL_{DEV,PREPROD,PROD}` and
+  `VITE_WS_URL_{DEV,PREPROD,PROD}` — none of which exist yet, plus the decision below. Re-scope the
+  story before running it, or it will "create" things that are there and record a migration that
+  did not happen.
+- 🔑 **The platform runs OpenBao (`forgejo-openbao`, OpenBao 2.6.1) on s1, and the plan never
+  mentions it.** Two incompatible secret patterns are live on the same instance:
+  **(a)** `CRM/PRIONEX_HUB` holds only bootstrap AppRole credentials in Forgejo —
+  `OPENBAO_ADDR`, `OPENBAO_{DEV,PREPROD,PROD}_ROLE_ID` and `…_SECRET_ID` — and fetches real secrets
+  from OpenBao at run time. `Telecom/aggressive_dialer` and org `Infra` use the same shape under the
+  older `VAULT_*` names.
+  **(b)** `CRM/api-prionex` uses no OpenBao at all: fifteen real production secrets sit directly in
+  Forgejo repo secrets — `PREPROD_JWT_SECRET`, `PREPROD_POSTGRES_PASSWORD`,
+  `PREPROD_ENCRYPTION_KEY_VERSIONS`, `PREPROD_DOCUMENT_ENCRYPTION_KEY`, `PREPROD_KONG_PG_PASSWORD`
+  and others.
+  **Decision needed before Story 1.12:** which pattern `fe-prionex` follows. The honest engineering
+  answer is that the frontend needs neither — the only credential it consumes is the registry token,
+  which already lives in org secrets and is shared by all of `CRM`; an AppRole chain would add a
+  dependency for nothing. But if platform policy is that production credentials belong in OpenBao,
+  then the backend's fifteen are the larger problem and that is a platform conversation, not a
+  frontend one. Whichever way it goes, **record it** — a third pattern appearing by accident is the
+  bad outcome.
+- ⚠️ **Runner inventory is wrong again, in a new way.** s1 runs six runner projects, not four:
+  `forgejo-runner-crm-deploy`, `forgejo-runner-crm`, `forgejo-ci-runner` (+dind),
+  `forgejo-runner-telecom` (+dind), `forgejo-runner` (+dind). Versions are split — `runner:13.0.0`
+  on three, `runner:12.13.2` on two. Story 1.9 documented a drift-check procedure in
+  `docs/runners/README.md`; it does not cover version skew across projects on the same host.
+- ⚠️ **`fe_seed_1_11` was never minted.** `forgejo admin user generate-access-token` exited `1` with
+  no message on stderr. Story 1.11's Task 4 is blocked on it, and the cause is undiagnosed —
+  the command needs to be run interactively to see the real error.
