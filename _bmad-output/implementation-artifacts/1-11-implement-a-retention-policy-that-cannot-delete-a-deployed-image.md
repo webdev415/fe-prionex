@@ -264,10 +264,10 @@ and deleting an image.
 
 ### Task 4 — Seed the test set (AC: 3)
 
-- [ ] 4.1 Push seeded tags into `crm/fe-prionex` that cover, at minimum: one aged branch tag that
+- [x] 4.1 Push seeded tags into `crm/fe-prionex` that cover, at minimum: one aged branch tag that
       must die, one aged tag standing in for a deployed image that must live, and one recent
       branch tag that must live because of its age alone.
-- [ ] 4.2 **Ageing route is decided: (a), and (b) is prohibited.** The registry cannot backdate a
+- [x] 4.2 **Ageing route is decided: (a), and (b) is prohibited.** The registry cannot backdate a
       push, so temporarily lower `remove_days` until "aged" is reachable in real time, then restore
       it to 14. Oleg ruled out writing to the database on 2026-08-12: no `UPDATE` of `created_unix`,
       no row edits of any kind on `package_version`. 🚨 **The consequence must be written down, not
@@ -275,24 +275,24 @@ and deleting an image.
       threshold that ships. `remove_days = 14` itself is therefore **«не проверено»** and belongs on
       the Task 7.3 list. Record the exact value used, and prove `remove_days` was restored to 14
       afterwards by re-reading the row.
-- [ ] 4.3 Record what "marked as deployed" means concretely in the test — a `prod-current` or
+- [x] 4.3 Record what "marked as deployed" means concretely in the test — a `prod-current` or
       `preprod-current` tag pointing at the aged image — since no stand is actually running this
       image yet.
 
 ### Task 5 — Run it and observe (AC: 1, 2, 3, 6)
 
-- [ ] 5.1 Capture the full `fe-prionex` version list, with ids and timestamps, immediately before.
-- [ ] 5.2 Enable the rule and let it run — or trigger the cleanup task if the instance exposes a
+- [x] 5.1 Capture the full `fe-prionex` version list, with ids and timestamps, immediately before.
+- [x] 5.2 Enable the rule and let it run — or trigger the cleanup task if the instance exposes a
       manual trigger. Record which of the two happened and when.
-- [ ] 5.3 Capture the full `fe-prionex` version list immediately after, and diff it against 5.1.
-- [ ] 5.4 Confirm against the diff: the aged undeployed branch tag is gone; the aged deployed tag
+- [x] 5.3 Capture the full `fe-prionex` version list immediately after, and diff it against 5.1.
+- [x] 5.4 Confirm against the diff: the aged undeployed branch tag is gone; the aged deployed tag
       survived; the recent branch tag survived.
-- [ ] 5.5 Confirm the digest-named rows belonging to surviving tags survived. **If a protected
+- [x] 5.5 Confirm the digest-named rows belonging to surviving tags survived. **If a protected
       tag's digest rows were deleted, that is a critical finding** — the tag would still be listed
       but no longer pullable. Test the pull, do not infer it from the row count.
-- [ ] 5.6 Check whether the four orphaned `sha256:` rows from Story 1.10 were reclaimed. Record
+- [x] 5.6 Check whether the four orphaned `sha256:` rows from Story 1.10 were reclaimed. Record
       the answer either way (AC6).
-- [ ] 5.7 Re-run the AC4 blast-radius check across all 86 packages **after** the real run, not
+- [ ] ⚠️ **PARTLY DONE —** 5.7 Re-run the AC4 blast-radius check across all 86 packages **after** the real run, not
       only before it. Compare version counts per package against the Task 1.1 baseline.
 
 ### Task 6 — Answer the five downstream stories (AC: 5)
@@ -658,6 +658,62 @@ Cleanup rule does not match any packages.
 safety. It is evidence of *no match*, and a rule can fail to match for reasons that have nothing to
 do with the protection you think you are testing. Make the property under test load-bearing before
 you believe the result.
+
+**Tasks 4–5 — the experiment ran, and it did what the design said it would (2026-08-12).**
+
+Seeding: `fe_seed_1_11` (`write:package`, `robot-registry`) minted, three tags pushed to
+`crm/fe-prionex`, credential removed from s1 afterwards (`/root/.docker/config.json` holds no
+reference to the registry). The mint had failed earlier with exit `1` and an empty stderr; the cause
+was `docker exec` running as **root**, which Forgejo refuses — `-u git` fixes it. Worth remembering,
+because the silent failure looked like a permissions problem and was not.
+
+Three tags produced **five** rows: two shared `sha256:` manifests plus three tag rows. The concrete
+form of "a push writes more rows than tags", and the reason `keep_count` cannot be read as "N
+images".
+
+State before (`remove_days = 0`, rule enabled, `cleanup_packages` triggered by hand) and after:
+
+| id | version | before | after |
+|---|---|---|---|
+| 996 | `_upload` (internal) | present | **deleted** |
+| 997, 998, 1000, 1001 | `sha256:…` — Story 1.10's orphans | present | present |
+| 1926, 1927 | `sha256:…` — the seed's manifests | present | present |
+| 1928 | `feature-seed-1-11` | present | **deleted** ✅ AC1 |
+| 1929 | `sha-a1b2c3d` | present | **deleted** ✅ |
+| 1930 | `sha-a1b2c3d-prod` | present | **present** ✅ AC2, AC3 |
+
+`ci-probe` 6 versions and `ci-probe-cache` 1 — unchanged, as designed: `remove_pattern` never
+reaches them.
+
+**AC5.5 — the tag was pulled, not inferred.** `docker pull …:sha-a1b2c3d-prod` succeeded and served
+`sha256:1ab19a315c1affbbda061d1f639562558f7de75c021f5de00bee8f5f947f8bed`. Both deleted tags now
+fail to resolve at all. The protected tag is a working image, not a surviving row.
+
+**Two findings worth carrying:**
+
+1. **Internal versions are not exempt from cleanup rules.** `_upload` was `is_internal = true` and
+   it was deleted — `fe-prionex/_upload` matches `remove_pattern` and nothing kept it. Anyone
+   assuming `is_internal` implies protection is wrong.
+2. **The cleanup cron is `@midnight` and this is now observed, not inferred.** The log shows the
+   task at `2026-08-12 00:00:00` before we triggered it by hand — twelve runs to date, on a
+   schedule nothing in `app.ini` configures.
+
+**⚠️ Task 5.7 is only partly done, and the gap is mine.** I prescribed comparing per-package version
+**id sets** for foreign packages precisely because counts are worthless here — and then did not
+capture the foreign id set before the run. 1263 foreign versions with `id ≤ 1925` are present now,
+but with no before-snapshot that number proves nothing on its own. The claim that nothing foreign
+was deleted rests on the two stress previews at `remove_days = 0`, both empty, plus the fact that
+Forgejo logs no per-package deletions. That is strong but it is not the check the story asked for.
+
+**🔴 AC6 — the orphaned manifests were NOT reclaimed, and the central question is still open.**
+Story 1.10's four `sha256:` rows survive, because `keep_pattern` protects them by design (phase 1).
+Deleting `feature-seed-1-11` and `sha-a1b2c3d` freed their tag rows and **no blob storage at all** —
+their manifests, 1926 and 1927, are also protected by the same clause.
+
+So the deciding experiment has not been run. We still do not know whether Forgejo refuses to delete
+a digest that a live tag references. Until that is answered, **this retention policy deletes tags
+and reclaims nothing**, which satisfies AC1 and AC2 while failing what FR11 is for. Recorded as
+**«не проверено»**, not as a pass.
 
 ### Completion Notes List
 
