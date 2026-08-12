@@ -252,9 +252,9 @@ and deleting an image.
       contains no `^`, `$`, `\A`, `\z`. Remember patterns are case-insensitive and auto-anchored.
 - [x] 2.6 Decide explicitly what happens to `ci-probe` and `ci-probe-cache`, and record it.
 
-### Task 3 — Preview before enabling (AC: 4) 🛑 **BLOCKED — web UI only, needs Oleg**
+### Task 3 — Preview before enabling (AC: 4) — 3.1 done; 3.2–3.4 need the UI
 
-- [ ] 3.1 Create the rule **disabled**, with the Task 2 field values.
+- [x] 3.1 Create the rule **disabled**, with the Task 2 field values. ✅ Rule `id = 1` exists, `enabled = f`.
 - [ ] 3.2 Run the rule's preview. Capture its complete output into the story — not a summary of
       it, the list.
 - [ ] 3.3 Assert against the capture: zero versions outside `crm/fe-prionex`. If even one
@@ -578,10 +578,53 @@ experiment for whether this retention policy does anything at all**, not merely 
 step. Recorded here so the result cannot be quietly skipped.
 
 
+**Task 3.1 — the rule exists, disabled (2026-08-12, on Oleg's explicit authorisation).**
+
+With no API and no CLI, the row was written directly. One `INSERT`, inside a transaction, into
+`package_cleanup_rule` — a table that had never held a row. Read back verbatim:
+
+```
+id              | 1
+enabled         | f          ← disabled. A disabled rule is never evaluated.
+owner_id        | 2          ← confirmed: "CRM", type 1 (organization)
+type            | container
+keep_count      | 0
+remove_days     | 14
+match_full_name | t
+keep_pattern    | fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64})
+remove_pattern  | fe-prionex/.+
+```
+
+Both patterns survived the shell intact — `\d`, `\.` and the brace quantifiers are byte-for-byte
+what Task 2 specified. Both were compiled beforehand wrapped as `\A(?:…)\z` with the
+case-insensitive flag, exactly as Forgejo wraps them, and run against the eleven-case table: all
+eleven verdicts matched the hand-check.
+
+**A robustness property worth recording, since the insert bypassed the form's validation:** even if
+the anchoring were not applied, `remove_pattern` would still be safe. `api-prionex/auth-service/…`
+does not *contain* the substring `fe-prionex/`, so an unanchored match fails too. The rule's safety
+does not rest on the anchoring behaving as documented.
+
+Post-write verification: exactly **1** row in `package_cleanup_rule`; `fe-prionex` 5 versions,
+`ci-probe` 6, `ci-probe-cache` 1, `hub-web` 17 — all unchanged. Nothing was deleted.
+
+**🔴 A finding that invalidates Task 5.7 as written.** The CRM container version count went from
+**1197** at Task 1 baseline to **1317** about forty minutes later — **+120 versions**, none of them
+ours. The backend team pushed a full build round while this story was being implemented.
+
+Consequence: **comparing total or per-package version counts against a baseline cannot detect
+whether the rule deleted anything**, because 80 of the 86 packages change on their own, upward,
+continuously. Task 5.7 must be re-specified: capture the per-package version **id sets** for the
+packages we do not own, and assert that no id present before is absent after. Only a disappearance
+is evidence; a changed count is noise. An increase must never be read as "nothing was deleted".
+
+This also sharpens the blast radius from Task 1: it is not a static 1185 versions belonging to other
+teams — it is a registry receiving roughly 120 new versions per build round while we work in it.
+
 ### Completion Notes List
 
-**🛑 HALT after Task 2. Tasks 3–8 cannot be executed by this agent — the mechanism has no
-non-interactive interface at all.**
+**🛑 HALT after Task 3.1. The rule now exists, disabled. Tasks 3.2–8 need the web UI — the
+mechanism has no non-interactive interface for previewing or enabling.**
 
 Established on the instance, not assumed:
 
@@ -608,9 +651,9 @@ than discovered at implementation time.
 (the complete policy, hand-checked against all four evaluation steps for eleven representative
 versions, including the two that prove other teams' packages are untouchable).
 
-**What Oleg needs to do, precisely.** In the web UI, org `CRM` → Settings → Packages → add a
-cleanup rule with the seven field values in the table above. Save it **disabled**. Run the preview.
-Capture the complete list it produces. The single thing that matters in that output: **no version
+**What Oleg needs to do, precisely.** The rule is already there, disabled, with every field set. In
+the web UI, org `CRM` → Settings → Packages, open it and run the **preview**. Capture the complete
+list it produces. The single thing that matters in that output: **no version
 outside `crm/fe-prionex` may appear.** If any `api-prionex/*` or `hub-*` version does, the anchoring
 assumption is wrong and the rule must not be enabled — that result is more valuable than a
 successful one, and it is exactly the check that cannot be done from here.
