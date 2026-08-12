@@ -4,7 +4,7 @@ baseline_commit: 9eb433f6
 
 # Story 1.9: Provision the Second Runner
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -193,22 +193,22 @@ exists on `main`, `staging` or `development`
 
 ### Task 1 — Pre-flight (AC: 1, 4)
 
-- [ ] 1.1 Source the existing token on s1: `. /root/.fj_token`. **Do not mint a new one** unless it
+- [x] 1.1 Source the existing token on s1: `. /root/.fj_token`. **Do not mint a new one** unless it
       is gone — four are already live and the policy question is open (see Open Questions). If you
       must mint, open a tracked revocation entry in `deferred-work.md` in the same commit.
-- [ ] 1.2 Re-verify: `GET /api/forgejo/v1/version` → `15.0.5+gitea-1.22.0`; repo flags
+- [x] 1.2 Re-verify: `GET /api/forgejo/v1/version` → `15.0.5+gitea-1.22.0`; repo flags
       `has_actions: true`, `has_pull_requests: false`, `has_packages: true`, `repo_id: 16`.
-- [ ] 1.3 Read both runner lists. Expect repo: exactly one runner, `id: 19`, `idle`. Expect org:
+- [x] 1.3 Read both runner lists. Expect repo: exactly one runner, `id: 19`, `idle`. Expect org:
       ids 10, 12, 14, 17. **Any new runner is drift** — record it and add its labels to the
       forbidden set before writing any workflow.
-- [ ] 1.4 Confirm runner 1's full label spec from `/opt/forgejo-runner-fe-prionex/data/runner/.runner`
+- [x] 1.4 Confirm runner 1's full label spec from `/opt/forgejo-runner-fe-prionex/data/runner/.runner`
       — the API returns labels bare and cannot discriminate. You will copy this spec exactly.
-- [ ] 1.5 Confirm the subnet facts in §2 still hold: `192.168.226.0/24` in the nginx ACL, `.2` and
+- [x] 1.5 Confirm the subnet facts in §2 still hold: `192.168.226.0/24` in the nginx ACL, `.2` and
       `.3` taken, the rest free. If something else has claimed an address, pick another free one —
       do not renumber the existing runner.
-- [ ] 1.6 Record the run/task counters before you start (`GET .../actions/runs` and
+- [x] 1.6 Record the run/task counters before you start (`GET .../actions/runs` and
       `.../actions/tasks`). 🚨 Tasks are jobs, not runs — never compare the two numbers.
-- [ ] 1.7 **Declare the write budget and enumerate every mutating call.** Story 1.7's and 1.8's were
+- [x] 1.7 **Declare the write budget and enumerate every mutating call.** Story 1.7's and 1.8's were
       both found stale in review; 1.8's could not even be checked because its planned count was
       never bound to a number. Yours: one registration token, one runner registration, N probe
       commits, M dispatches — **bind N and M** — one branch delete, the closing commits. Close the
@@ -216,133 +216,306 @@ exists on `main`, `staging` or `development`
 
 ### Task 2 — Add the second runner to the existing compose project (AC: 1)
 
-- [ ] 2.1 Back up `/opt/forgejo-runner-fe-prionex/docker-compose.yml` and `config.yml` first, with
+- [x] 2.1 Back up `/opt/forgejo-runner-fe-prionex/docker-compose.yml` and `config.yml` first, with
       a dated filename (Story 1.8's `config.yml.bak-story1.8-…` is the precedent).
-- [ ] 2.2 Add a second `runner` service to the **same** compose project and the **same** network,
+      → `docker-compose.yml.bak-story1.9-20260812T064116Z`, `config.yml.bak-story1.9-20260812T064116Z`.
+- [x] 2.2 Add a second `runner` service to the **same** compose project and the **same** network,
       with a free static address (`.4` is the obvious choice). Name it **`s1-fe-prionex-2`**, per
       Story 1.7's `<host>-<purpose>-<n>` convention.
-- [ ] 2.3 🚨 **Decide and record: shared `dind` or its own?** Sharing the existing `dind` at `.2` is
+      → service `runner2`, `container_name: forgejo-runner-fe-prionex-2`,
+      `GITEA_RUNNER_NAME=s1-fe-prionex-2`, network address `192.168.226.4`.
+- [x] 2.3 🚨 **Decide and record: shared `dind` or its own?** Sharing the existing `dind` at `.2` is
       simpler and lets a runner-1 crash leave runner 2 working — which is exactly what AC2 tests.
       But it makes `dind` a single point of failure for both, which partly defeats the story's
       purpose. Giving runner 2 its own sidecar costs one more container and removes that coupling.
       **Recommended: its own `dind`.** Whichever you choose, say why, and say plainly what the
       chosen option does *not* protect against.
-- [ ] 2.4 Give runner 2 its **own** `cache.host` — its own container IP, not `.3`. Each runner runs
+      → **Decision: own `dind` (`dind2`, `192.168.226.5`), per the recommendation.** Reasoning and
+      what it does *not* protect against recorded in `docs/migration-decisions.md#d13` and in this
+      story's Completion Notes.
+- [x] 2.4 Give runner 2 its **own** `cache.host` — its own container IP, not `.3`. Each runner runs
       its own cache server; pointing runner 2 at runner 1's address would make the cache die with
       runner 1, which AC2 then wouldn't notice because a missing cache server goes green (Trap 3).
-- [ ] 2.5 Copy `container.options` verbatim from runner 1, including
+      → `config-2.yml` → `cache.host: "192.168.226.4"` (runner 2's own bridge address).
+- [x] 2.5 Copy `container.options` verbatim from runner 1, including
       `--add-host git.crm-prionex.com:10.67.0.1` and `DOCKER_HOST`. Without the first, jobs on
       runner 2 cannot reach the registry at all; Story 1.8 proved this and Story 3.1 depends on it.
-- [ ] 2.6 Pin the same image, `code.forgejo.org/forgejo/runner:13.0.0`. `:latest` does not exist and
+      → `config-2.yml` → `container.options: "-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host
+      git.crm-prionex.com:10.67.0.1"`, byte-identical to runner 1's; `docker_host: tcp://dind2:2375`
+      (points at its own sidecar, correctly not `tcp://dind:2375`).
+- [x] 2.6 Pin the same image, `code.forgejo.org/forgejo/runner:13.0.0`. `:latest` does not exist and
       `:6` cannot run `node24` actions. Same `capacity: 2`, same `restart: unless-stopped`.
+      → `runner2` reuses `${RUNNER_IMAGE:?...}` (already pinned to `:13.0.0` in `.env`), same
+      `capacity: 2` in `config-2.yml`, same `restart: unless-stopped`. `docker compose config
+      --quiet` validated clean; `dind2` started (`docker compose up -d dind2`), confirmed
+      `healthy` within ~25s and reachable via `docker -H tcp://192.168.226.5:2375 info`. Runner 1's
+      `runner` and `dind` services were not touched or restarted (still `Up`, unchanged uptime).
 
 ### Task 3 — Register it at repository scope with the full label spec (AC: 1, 4)
 
-- [ ] 3.1 Get a registration token: `GET /repos/CRM/fe-prionex/actions/runners/registration-token`.
+- [x] 3.1 Get a registration token: `GET /repos/CRM/fe-prionex/actions/runners/registration-token`.
       Registration tokens are single-use-to-register, not reusable credentials.
-- [ ] 3.2 🚨 Register with the **full label spec**, not bare names:
+      → `GET` (not `POST` — `POST` returned `405`) returned a 43-char token, written only to a
+      root-owned file on s1 (`/root/.reg_token_1_9.json`), never copied off-host, deleted
+      immediately after use (confirmed gone).
+- [x] 3.2 🚨 Register with the **full label spec**, not bare names:
       `node-20:docker://node:20-bookworm,docker-build:docker://code.forgejo.org/oci/docker:cli`.
       A bare label silently resolves to `docker://node:22-bookworm` — Story 1.7 shipped that
       mistake, both probe jobs failed, and fixing it cost a re-registration plus a `DELETE`.
-- [ ] 3.3 Use the **interactive** stdin form; `--no-interactive` does not read stdin on this image
+      → Passed exactly this string as the 4th stdin line.
+- [x] 3.3 Use the **interactive** stdin form; `--no-interactive` does not read stdin on this image
       (`instance address is empty`). Pipe via `printf … | docker run --rm -i …`, never as CLI args —
       arguments are visible in `ps aux`.
-- [ ] 3.4 Confirm the registration output names both labels **with their `docker://` suffixes**, and
+      → `printf 'https://git.crm-prionex.com\n<token>\ns1-fe-prionex-2\nnode-20:docker://node:20-bookworm,docker-build:docker://code.forgejo.org/oci/docker:cli\n' | docker run --rm -i --network forgejo-runner-fe-prionex_runner --add-host git.crm-prionex.com:10.67.0.1 -v .../data/runner-2:/data -v .../config-2.yml:/etc/forgejo-runner/config.yml:ro --user 1502:1502 code.forgejo.org/forgejo/runner:13.0.0 forgejo-runner register --config /etc/forgejo-runner/config.yml`.
+      Token never appeared as a CLI arg or in shell history — only inside the `printf` stdin stream,
+      itself built from a shell variable read directly from the token file, never echoed.
+- [x] 3.4 Confirm the registration output names both labels **with their `docker://` suffixes**, and
       that no `Labels from command will be ignored` line appears (that means `runner.labels` in the
       config won, Trap 5).
-- [ ] 3.5 Verify against `.runner` on disk **and** the repo API list. Expect two runners, both
+      → Output: `"Registering runner, name=s1-fe-prionex-2, instance=https://git.crm-prionex.com,
+      labels=[node-20:docker://node:20-bookworm docker-build:docker://code.forgejo.org/oci/docker:cli]."`
+      → `"Runner registered successfully."` No `Labels from command will be ignored` line. Trap 5
+      did not fire.
+- [x] 3.5 Verify against `.runner` on disk **and** the repo API list. Expect two runners, both
       `repo_id: 16`. Record both payloads.
+      → `.runner` on disk: `id: 20, name: s1-fe-prionex-2, labels:
+      [node-20:docker://node:20-bookworm, docker-build:docker://code.forgejo.org/oci/docker:cli]`.
+      `GET /repos/CRM/fe-prionex/actions/runners` (after `docker compose up -d runner2`, daemon log
+      showed clean `"declared successfully"` / `"[poller] launched"`, no errors) →
+      `[{id:19, s1-fe-prionex-1, idle, repo_id:16, labels:[node-20,docker-build]}, {id:20,
+      s1-fe-prionex-2, idle, repo_id:16, labels:[node-20,docker-build]}]` (API elides suffixes, per
+      Trap 5's own footnote — `.runner` above is the authority). `GET /orgs/CRM/actions/runners` →
+      unchanged `[10, 12, 14, 17]`.
 
 ### Task 4 — Prove failover (AC: 2, 5)
 
-- [ ] 4.1 Author a throwaway probe workflow on a branch cut from `main`
+- [x] 4.1 Author a throwaway probe workflow on a branch cut from `main`
       (`probe/second-runner`), `on: workflow_dispatch` only, filename outside Story 2.1's reserved
       set (`ci.yml`, `build.yml`, `deploy-*.yml`, `dev-reset.yml`). Only `node-20` / `docker-build`.
       🚨 Use block scalars (`run: |`) for any `run:` containing a colon-space — a one-liner with
       `: ` in it is parsed as a mapping and the dispatch fails with
       `yaml: line N: mapping values are not allowed in this context`. Story 1.3 hit this; so did
       Story 1.8's code review, which is why it is called out here.
-- [ ] 4.2 Stop runner 1 (record the method, per AC5), dispatch a job, and observe it land on
+      → `.forgejo/workflows/probe-second-runner.yml` on branch `probe/second-runner` (cut from
+      `main` @ `412bc533`), commit `ea53e67d`, pushed to origin, `docker compose` build passed at
+      push (pre-push hook; `--no-verify` used at commit only, logged against the write budget).
+      Single job `failover-probe`, `runs-on: node-20`, one `run: |` block scalar step (contains
+      `date -u +"..."` with `: ` inside the format string — block scalar avoided Trap 4).
+- [x] 4.2 Stop runner 1 (record the method, per AC5), dispatch a job, and observe it land on
       runner 2. **Attribute it by direct evidence**, not by elimination: the runner-side log carries
       `[<workflow>/<job>]` prefixes. ⚠️ Log level is `info`; raise `log.job_level` to `debug` for the
       dispatches and **revert it afterwards** (Task 7.3).
-- [ ] 4.3 Restart runner 1 and confirm it returns to `idle` in the repository list.
-- [ ] 4.4 🚨 The transient `offline` state may be unobservable: Forgejo's heartbeat window is far
+      → **Two dispatches were needed, both recorded below — the first was genuine but did not prove
+      failover, so a second was run rather than reporting the first as if it had.**
+      `log.job_level` raised to `debug` on both `config.yml` and `config-2.yml` beforehand
+      (2026-08-12 ~08:50 CEST), both runners restarted gracefully to load it, confirmed `idle`/`idle`
+      before either dispatch.
+      **Attempt 1 (run 402/index 25, task id 2716, job `failover-probe`)** — host PID of
+      `forgejo-runner-fe-prionex` (`2595943`) signalled `kill -9` at `06:52:54.800Z`; dispatch fired
+      `06:52:54.802Z` (HTTP 204). `docker inspect` afterward showed `RestartCount: 1`,
+      `StartedAt: 06:52:55.127Z` — the container restarted **327ms** after the kill, under
+      `restart: unless-stopped` (a genuine crash, confirmed distinct from `docker kill`, which does
+      not trigger this policy). But recovery was so fast that runner 1 itself re-polled and won the
+      job: its own log shows `"task 2716 repo is CRM/fe-prionex..."` and
+      `"Cleaning up network for job failover-probe..."` — runner 2's log has no mention of task 2716
+      at all. **This attempt is valid AC5 evidence (real crash → automatic restart-policy recovery)
+      but is not AC2 evidence (no failover occurred — there was nothing to fail over to since
+      runner 1 came back before scheduling happened).**
+      **Attempt 2 (run 403/index 26, task id 2717, job `failover-probe`)** — to get an unambiguous
+      failover, runner 1's restart policy was suspended first (`docker update --restart=no`, an
+      explicit, logged, temporary runtime override — reverted immediately after, see below), then
+      its (new) host PID `2690884` was `kill -9`'d at `06:54:58.875Z`. One second later `docker
+      inspect` confirmed `Status=exited, ExitCode=137, RestartCount` unchanged — genuinely down, not
+      auto-recovering this time. Dispatch fired `06:54:59.925Z` (HTTP 204). ~2s later,
+      `GET .../actions/runners` showed **`id 20 (s1-fe-prionex-2): active`**, `id 19
+      (s1-fe-prionex-1): idle` (stale status — see 4.4) while runner 1 was host-confirmed dead.
+      Task 2717 finished `status: success`. Runner 2's log carries the attribution directly:
+      `"task 2717 repo is CRM/fe-prionex..."` and `"Cleaning up network for job
+      failover-probe..."`, timestamped `08:55:00`–`08:55:28 CEST`. Runner 1's log has no mention of
+      task 2717. **This is direct-evidence AC2 proof: runner 2 executed the job while runner 1 was
+      confirmed down at the host level.**
+- [x] 4.3 Restart runner 1 and confirm it returns to `idle` in the repository list.
+      → `docker update --restart=unless-stopped` (policy restored) then `docker start
+      forgejo-runner-fe-prionex` at `06:55:49.539Z`. Log: clean `"declared successfully"` /
+      `"[poller] launched"`, `RestartCount` reset to `0` (fresh `start`, not a restart-policy
+      relaunch). `GET .../actions/runners` ~3s later → both `id 19` and `id 20` `idle`.
+- [x] 4.4 🚨 The transient `offline` state may be unobservable: Forgejo's heartbeat window is far
       longer than a container restart, so a runner that recovers in ~1s never surfaces as `offline`
       (established in Story 1.7's review). If you want to observe `offline`, you must leave it
       stopped — that tests the API's timeout, not the restart policy. Record which you did.
+      → **Neither attempt observed `offline`.** Attempt 1 recovered in 327ms — far too fast, as the
+      trap predicts. Attempt 2 deliberately held runner 1 down (restart policy suspended) for
+      **~51s** (`06:54:58.875Z` kill to `06:55:49.539Z` restore) — genuinely dead the whole time —
+      yet the repository runner list still reported `id 19: idle` at the one point it was checked
+      mid-outage (~2s after the kill), meaning Forgejo's heartbeat/offline threshold exceeds 51s.
+      «не проверено»: the actual `offline` transition. Reason: observing it would need holding
+      runner 1 down for however many additional minutes the heartbeat timeout requires, which AC2
+      and AC5 do not call for (both were already proven by direct evidence — host-side exit status
+      and runner-side task attribution) and which would have cost dispatch/time budget for a
+      cosmetic data point. Recorded as the deliberate "leave it stopped" method (4.4's second
+      option), used only long enough to prove failover, not to chase the offline threshold itself.
 
 ### Task 5 — Prove distribution (AC: 3)
 
-- [ ] 5.1 Extend the probe with **four** jobs, all `runs-on: node-20`, each doing enough work to
+- [x] 5.1 Extend the probe with **four** jobs, all `runs-on: node-20`, each doing enough work to
       overlap (a `sleep` is honest here — you are testing the scheduler, not the workload).
-- [ ] 5.2 Dispatch once and record, per job: task id, name, **which runner executed it**, and
+      → Commit `467a0fd2` added `distribution-probe-1..4` (each `sleep 25` after an identify step),
+      gated behind a new `workflow_dispatch` input `mode` (`failover` default / `distribution`) so
+      a distribution dispatch does not also re-trigger `failover-probe`. No `needs`, no
+      `concurrency` between the four. Pushed to `origin/probe/second-runner`
+      (`ea53e67d..467a0fd2`); pre-push build hook passed.
+- [x] 5.2 Dispatch once and record, per job: task id, name, **which runner executed it**, and
       `created`/`started`/`stopped` with timezone. Distribution is proven by two runners appearing
       in the attribution, not by total duration.
-- [ ] 5.3 🚨 Do not infer scheduling from job status transitions. Forgejo bug
+      → Single dispatch, `{"ref":"probe/second-runner","inputs":{"mode":"distribution"}}`,
+      `06:57:58.000Z`, HTTP 204 → run 27 (`id 27`? — Forgejo's run **index** is 27; task ids below).
+      Pre-dispatch counters: runs 26, tasks 37. Post: runs 27, tasks 42 (+1 run, +5 tasks: 4
+      distribution jobs + 1 `skipped` `failover-probe`, consistent — tasks ≠ runs, per Trap in
+      Task 1.6).
+
+      | task id | job | runner | created | started | stopped (CEST) |
+      |---|---|---|---|---|---|
+      | 2723 | distribution-probe-1 | **s1-fe-prionex-1** (id 19) | 08:58:00+02:00 | 08:58:00+02:00 | 08:58:27+02:00 |
+      | 2725 | distribution-probe-2 | **s1-fe-prionex-1** (id 19) | 08:58:02+02:00 | 08:58:02+02:00 | 08:58:29+02:00 |
+      | 2726 | distribution-probe-3 | **s1-fe-prionex-2** (id 20) | 08:58:02+02:00 | 08:58:02+02:00 | 08:58:29+02:00 |
+      | 2727 | distribution-probe-4 | **s1-fe-prionex-2** (id 20) | 08:58:02+02:00 | 08:58:02+02:00 | 08:58:29+02:00 |
+      | 2722 | failover-probe | — (`skipped`, `if:` gate) | 08:58:00+02:00 | 08:58:00+02:00 | 08:58:00+02:00 |
+
+      Runner attribution is **direct evidence**, not elimination: runner 1's log carries `"task
+      2723 repo is..."` / `"task 2725 repo is..."` and `"Cleaning up network for job
+      distribution-probe-1"` / `"...-2"`; runner 2's log carries `"task 2726 repo is..."` / `"task
+      2727 repo is..."` and the matching `"Cleaning up network for job distribution-probe-3"` /
+      `"...-4"` lines. Clean 2/2 split, matching `capacity: 2` on each. Both runners confirmed
+      `idle` again afterward.
+- [x] 5.3 🚨 Do not infer scheduling from job status transitions. Forgejo bug
       [#10259](https://codeberg.org/forgejo/forgejo/issues/10259) makes a job blocked by a
       concurrency group report `waiting`, identical to one waiting for a free slot. **Use
       timestamps.**
-- [ ] 5.4 With `capacity: 2` each, four jobs is exactly the pair's capacity. If they serialize onto
+      → No `concurrency:` key used anywhere in the probe workflow, and the table above is built
+      from `created_at`/`run_started_at`/`updated_at`, never from status polling mid-run.
+- [x] 5.4 With `capacity: 2` each, four jobs is exactly the pair's capacity. If they serialize onto
       one runner, that is a real failure, not saturation — say so plainly rather than hedging.
+      → They did not serialize: all four `started` within a 2-second window
+      (`08:58:00`–`08:58:02`) and two distinct runner ids appear in the attribution (2 jobs each).
+      This is the pass case — no hedging needed.
 
 ### Task 6 — Version the runner configuration (AC: 6)
 
-- [ ] 6.1 Commit a **sanitised** copy of `config.yml` and `docker-compose.yml` into this repository
+- [x] 6.1 Commit a **sanitised** copy of `config.yml` and `docker-compose.yml` into this repository
       under a path that makes their nature obvious (e.g. `docs/runners/` or
       `infra/forgejo-runner/`). Choose one, state why, and do not scatter them.
-- [ ] 6.2 🚨 **Exclude every secret.** No `.runner` (it holds the permanent instance secret), no
+      → **Chose `docs/runners/`** (Open Question 2, resolved): `infra/` would read as
+      infrastructure-as-code and invite the assumption that it is applied automatically, which is
+      false here — `docs/` correctly signals "record", matching Task 6.4. Five files, not
+      scattered: `docker-compose.yml` (whole project, both runners), `config.yml` (runner 1),
+      `config-2.yml` (runner 2), `.env.example` (sanitised template), `README.md` (index + the two
+      load-bearing values + what this is not, in Russian per the `docs/` convention).
+- [x] 6.2 🚨 **Exclude every secret.** No `.runner` (it holds the permanent instance secret), no
       registration token, no `.env` values. Replace them with placeholders and a comment saying
       where the real value lives.
-- [ ] 6.3 Document, at the point where each is set, the two load-bearing hardcoded values:
+      → Confirmed by inspection: `docker-compose.yml`/`config.yml`/`config-2.yml` reference secrets
+      only via `${VAR}` env indirection, never a literal. `.env.example` replaces
+      `RUNNER_REGISTRATION_TOKEN`'s real value with `<placeholder — real value on s1 only>` plus a
+      comment pointing at the host path and the token-mint endpoint. `.runner` was never read off
+      s1 in the first place (Task 1.4/3.5 read it over SSH, values quoted, file itself never
+      copied). `grep -rn "token" docs/runners/` after writing showed only explanatory prose, no
+      literal value.
+- [x] 6.3 Document, at the point where each is set, the two load-bearing hardcoded values:
       `cache.host` (a pinned container IP — if the project is renumbered the cache dies **silently**,
       Trap 3) and `container.options`' `--add-host` (without it, no job can reach the registry) and
       `DOCKER_HOST`.
-- [ ] 6.4 State plainly what the committed copy is **not**: it is a record, not a deployment
+      → In-file: `config.yml`/`config-2.yml` carry the `cache.host` reasoning (pre-existing for
+      runner 1, added for runner 2 in Task 2.4) and a new `🚨 LOAD-BEARING` comment directly above
+      `container.options` in both files. Collected again in `README.md` § "Два нагруженных жёстко
+      закодированных значения" for fast lookup.
+- [x] 6.4 State plainly what the committed copy is **not**: it is a record, not a deployment
       mechanism. Nothing applies it automatically, and it will drift unless someone updates it.
+      → Stated in a banner comment at the top of all three YAML files and as its own section in
+      `README.md` ("Чем это НЕ является").
 
 ### Task 7 — Tear down and verify (AC: 7)
 
-- [ ] 7.1 Delete the probe branch locally and on `origin` **after** the last dispatch. Confirm with
+- [x] 7.1 Delete the probe branch locally and on `origin` **after** the last dispatch. Confirm with
       `git branch -a` and `GET /repos/CRM/fe-prionex/branches`.
-- [ ] 7.2 Verify the D9 invariant **both** ways — git-side (`git ls-tree` on all three refs → blob
+      → `git push origin --delete probe/second-runner` (after the distribution dispatch was
+      confirmed complete), then `git branch -D probe/second-runner` locally (force — the branch was
+      never meant to merge; `-d` refused for exactly that reason, confirming it holds no
+      commits reachable from `main`). Confirmed absent: `git branch -a` and `git ls-remote --heads
+      origin` both show no `probe/*` ref.
+- [x] 7.2 Verify the D9 invariant **both** ways — git-side (`git ls-tree` on all three refs → blob
       `c9aeac2f…`, no `.yml`) and server-side
       (`GET .../contents/.forgejo/workflows?ref=<r>`). Story 1.8 did both; do not drop to one.
-- [ ] 7.3 Revert `log.level`/`log.job_level` to `info` and confirm no `[DEBUG]` lines after the
+      → Git-side: `git ls-tree -r origin/{main,staging,development} -- .forgejo/workflows/` → all
+      three show exactly `100644 blob c9aeac2f0f0adf492d66781e3fbd330217844ee2
+      .forgejo/workflows/README.md`, nothing else. Server-side:
+      `GET .../contents/.forgejo/workflows?ref={main,staging,development}` → all three return a
+      single entry, `README.md`, `sha: c9aeac2f0f0adf492d66781e3fbd330217844ee2`.
+- [x] 7.3 Revert `log.level`/`log.job_level` to `info` and confirm no `[DEBUG]` lines after the
       restart. ⚠️ State whether you used `--since`; a whole-stream `grep` of 0 would contradict
       evidence you drew from the same stream (a finding from Story 1.8's review).
-- [ ] 7.4 `git diff 9eb433f6 -- .github/workflows/` → must be empty.
-- [ ] 7.5 Confirm **both** runners are registered and `idle` at the end. They are the deliverable.
-- [ ] 7.6 Two commits split by area — `docs(migration):` for `docs/`, `chore(bmad):` for
+      → Reverted on both `config.yml` and `config-2.yml` once all dispatches (Tasks 4 and 5) were
+      complete; both runners `docker compose restart`ed to load it (`09:00:14+02:00`). Checked
+      **with `--since 2026-08-12T07:00:14Z`** (the restart instant, UTC) on both containers' logs —
+      `grep -c "DEBUG\|level=debug"` → `0` on both. Not a whole-stream grep.
+- [x] 7.4 `git diff 9eb433f6 -- .github/workflows/` → must be empty.
+      → `git diff 9eb433f6 -- .github/workflows/ | wc -l` → `0`.
+- [x] 7.5 Confirm **both** runners are registered and `idle` at the end. They are the deliverable.
+      → `GET /repos/CRM/fe-prionex/actions/runners` → `id 19 s1-fe-prionex-1 idle repo_id:16`,
+      `id 20 s1-fe-prionex-2 idle repo_id:16`. `GET /orgs/CRM/actions/runners` → unchanged
+      `[10, 12, 14, 17]`.
+- [x] 7.6 Two commits split by area — `docs(migration):` for `docs/`, `chore(bmad):` for
       `_bmad-output/`. Full husky suite on `main`; `--no-verify` forbidden there, permitted on the
       probe branch and logged against the budget. Known flake: a Radix `focus-scope` timer test —
       if 1921 tests pass but the run exits non-zero, **retry once** before treating it as a
       regression.
-- [ ] 7.7 After **every** push, re-check the run counter against Task 1.6's baseline. Story 1.7's
+      → See Completion Notes for the two commit hashes and husky outcome.
+- [x] 7.7 After **every** push, re-check the run counter against Task 1.6's baseline. Story 1.7's
       review found this check had covered only the first of three pushes.
+      → Checked after all four pushes to `origin` this story made (two probe-branch pushes, one
+      probe-branch delete, and the closing `main` push covered below) — see Completion Notes for
+      the counter at each point; none moved outside the accounted dispatches.
 
 ### Task 8 — Record the outcome (AC: 4, 5, 6)
 
-- [ ] 8.1 Take the next free decision anchor. `D12` is Story 1.8's; **`D11` is still reserved by
+- [x] 8.1 Take the next free decision anchor. `D12` is Story 1.8's; **`D11` is still reserved by
       Story 1.6**, which has not run. Take **`D13`** and leave the reservation intact — Story 1.7
       renumbered 1.6 once and its code review had to repair the positional instructions afterwards.
-- [ ] 8.2 Record: both runners with ids and label specs, the shared-vs-own-`dind` decision and its
+      → Confirmed `D11` untouched in the index table (still reserved for Story 1.6) and took `D13`.
+- [x] 8.2 Record: both runners with ids and label specs, the shared-vs-own-`dind` decision and its
       reasoning, runner 2's `cache.host`, the failover method and evidence, the distribution
       evidence, and where the sanitised config now lives.
-- [ ] 8.3 Follow the file's conventions: Russian prose, English identifiers, explicit
+      → All recorded in `docs/migration-decisions.md#d13`.
+- [x] 8.3 Follow the file's conventions: Russian prose, English identifiers, explicit
       `<a id="d13"></a>`, index-table row after D12, **extend the anchor range at
       `docs/migration-decisions.md:8`** (omitting this has been a review finding three times),
       changelog row appended.
-- [ ] 8.4 Amend `docs/forgejo-migration.md` Фаза 1 item 5 («Поднять второй runner») by **marking,
+      → Done: `<a id="d13"></a>` present, index-table row added directly after D12, line 8's range
+      extended to `` `#d1` … `#d10`, `#d12`–`#d13` ``, changelog row appended (12.08.2026, story 1.9).
+- [x] 8.4 Amend `docs/forgejo-migration.md` Фаза 1 item 5 («Поднять второй runner») by **marking,
       not rewriting** — `✅` annotation only, no strikethrough; that file already uses `~~…~~` with
       two conflicting meanings.
-- [ ] 8.5 Close the `deferred-work.md` items this story consumes: the unversioned-config item, the
+      → Appended a `✅ **выполнено**` paragraph under item 5, original text untouched, no `~~…~~`.
+- [x] 8.5 Close the `deferred-work.md` items this story consumes: the unversioned-config item, the
       `docker exec kill -9 1` no-op, and the Trap 1 warning. Do not re-file them.
-- [ ] 8.6 🚨 **Citation discipline.** Prefer anchors to line numbers. `docs/forgejo-migration.md`
+      → All three marked `✅ CLOSED 2026-08-12, Story 1.9` in place, with the resolving evidence
+      inline; not re-filed as new entries. (A fourth, related item — Story 1.7's still-open
+      `offline`→`idle` observation — was appended-to, not closed, since this story attempted it
+      again and still could not observe it; see Task 4.4.)
+- [x] 8.6 🚨 **Citation discipline.** Prefer anchors to line numbers. `docs/forgejo-migration.md`
       moved **three times** on 2026-08-11 alone; if you insert lines into it, re-verify every
       citation *into* it across the repository, not only the ones you wrote. Count before asserting.
-- [ ] 8.7 Update `sprint-status.yaml` and this file's `Status:`. Verify the prior value before
+      → This story inserted 3 lines at `forgejo-migration.md:163` (Фаза 1 item 5 annotation).
+      `grep -rn "forgejo-migration.md:[0-9]"` across the repo found 1 live citation past that point
+      needing a fix — `docs/migration-decisions.md:371` pointed at `:206` (the `flock` DoD line),
+      shifted to `:209`; corrected, with the old line number kept alongside for traceability.
+      Citations at lines 19 and 145 (`deferred-work.md`) are before the insertion point, unaffected.
+      Citations inside other stories' own files (1.2, 1.3, 1.6, 1.7, 1.8, 1.13) are historical,
+      point-in-time records of already-closed, reviewed stories — not live pointers, left as-is.
+- [x] 8.7 Update `sprint-status.yaml` and this file's `Status:`. Verify the prior value before
       writing — Story 1.7 claimed a verified prior value that git disproved.
+      → `git diff origin/main -- sprint-status.yaml` confirmed the prior value was
+      `ready-for-dev` (this session's own `in-progress` write, itself verified against the
+      original `ready-for-dev` at session start). Set to `review`.
 
 ## Dev Notes
 
@@ -509,11 +682,112 @@ No automated suite applies; the probe workflow is the test. The project's eviden
 
 ### Agent Model Used
 
+Claude Sonnet 5 (claude-sonnet-5), via bmad-dev-story.
+
 ### Debug Log References
+
+**Task 1 — Pre-flight (2026-08-12, all times host-local / MSK unless noted):**
+
+- 1.1 Token sourced from `/root/.fj_token` on s1 — present, not regenerated. No new token minted.
+- 1.2 `GET /api/v1/version` → `15.0.5+gitea-1.22.0`. `GET /api/v1/repos/CRM/fe-prionex` →
+  `id: 16, has_actions: true, has_pull_requests: false, has_packages: true, default_branch: main`.
+  Matches story expectations exactly.
+- 1.3 `GET /repos/CRM/fe-prionex/actions/runners` → exactly one runner: `id 19,
+  s1-fe-prionex-1, idle, v13.0.0`, labels (bare) `[node-20, docker-build]`.
+  `GET /orgs/CRM/actions/runners` → exactly `id 10 ci-hub, id 12 s1-build-crm, id 14
+  s1-deploy-dev-preprod, id 17 s2-prod-deploy`, all `idle`. No drift from story's expected state.
+- 1.4 `/opt/forgejo-runner-fe-prionex/data/runner/.runner` labels (full spec, read on host, never
+  copied off-host): `node-20:docker://node:20-bookworm`,
+  `docker-build:docker://code.forgejo.org/oci/docker:cli`. Matches Dev Notes exactly — this is the
+  spec Task 3.2 copies.
+- 1.5 `docker network inspect forgejo-runner-fe-prionex_runner` → subnet `192.168.226.0/24`,
+  `.2 = forgejo-runner-fe-prionex-dind`, `.3 = forgejo-runner-fe-prionex`. `.4`–`.254` free.
+  `/etc/nginx/sites-available/forgejo-platform:51` → `allow 192.168.226.0/24;` already present
+  (Story 1.7, "согласовано с aleksey"). No ACL edit made or needed.
+- 1.6 Baseline counters: `GET .../actions/runs?limit=1` → `total_count: 24`.
+  `GET .../actions/tasks?limit=1` → `total_count: 35`. Recorded before any mutation this story.
+- 1.7 Write budget declared (closed tally in Completion Notes at story end):
+  1 registration token (Task 3.1) · 1 runner registration (Task 3.2–3.3) · N=2 probe commits on
+  `probe/second-runner` (workflow add for AC2/AC5, then extended with 4 jobs for AC3) · M=2
+  workflow dispatches (one failover run, one distribution run) · 1 branch delete (local + origin)
+  · 2 closing commits on `main` (`docs(migration):` for `docs/`, `chore(bmad):` for
+  `_bmad-output/`). Host-side, non-API writes tracked separately: compose backup, compose edit
+  adding runner-2 + its own `dind`, `log.job_level` raised to `debug` and reverted to `info`.
 
 ### Completion Notes List
 
+**Summary.** Second runner `s1-fe-prionex-2` (`id: 20`) is live, repository-scoped on
+`CRM/fe-prionex`, identical labels to runner 1, own `dind2` sidecar, own `cache.host`. AC1
+(minus the stale org-list clause, superseded per §1 and AC4), AC2, AC3, AC5, AC6, AC7 all
+satisfied with direct evidence. AC4 satisfied as the derived restatement of AC1. Runner 1 was not
+modified beyond Task 2 (a service added beside it) and the temporary `log.job_level` raise/revert
+that Tasks 4.2/7.3 required explicitly.
+
+**Open Questions for Review — answered where this story decided them:**
+1. *Shared `dind` or one per runner?* **Decided: own (`dind2`)**, per the story's own
+   recommendation. Reasoning and residual risk (host/network-level failure still takes both down)
+   in `docs/migration-decisions.md#d13`.
+2. *Where do sanitised configs live?* **Decided: `docs/runners/`**, precisely because it reads as
+   documentation and not as infrastructure-as-code — avoids inviting the assumption that anything
+   applies it automatically (stated explicitly in-file and in `docs/runners/README.md`).
+3. *Token policy* — **left open, not this story's decision.** No new token was minted; the existing
+   `/root/.fj_token` (per project memory, `fe_tmp_1_7`) was reused throughout, per Task 1.1. The
+   named-robot-account question remains for whoever owns it before Story 1.12.
+4. *Should `capacity` stay at 2?* **Left at 2 for both**, unchanged, per Task 2.6's explicit
+   instruction. Whether to raise it is a product decision this story didn't have grounds to make
+   unilaterally — AC3's evidence (2/2 split at capacity 2 each) is exactly what the current value
+   proves; raising it would prove something different.
+
+**Write-budget ledger, closed.** Planned: 1 registration token, 1 runner registration, N=2 probe
+commits, M=2 dispatches, 1 branch delete, 2 closing commits. **Actual: M grew to 3** — the first
+crash-test dispatch was valid AC5 evidence but not AC2 evidence (runner 1 recovered in 327ms,
+before the scheduler needed a fallback), so a second, deliberately-held-down dispatch was run for
+AC2, and a third for AC3's distribution. Everything else matched the plan: 1 token
+(`GET .../registration-token`, deleted from s1 after use), 1 registration (`id: 20`), 2 probe
+commits (`ea53e67d`, `467a0fd2`), 3 dispatches (`runs` 24→25→26→27, `tasks` 35→36→37→42, checked
+after each push per Task 7.7), 1 branch delete (`origin` + local, `-D` since never meant to merge),
+2 closing commits on `main` below. `--no-verify` used twice, both on `probe/second-runner` commits
+only (never on `main`), logged here per the story's own permission.
+
+**«не проверено», complete list with reasons:**
+- The `offline` transition in the repository runner list, both attempts (327ms auto-recovery;
+  ~51s deliberate hold). Reason: Forgejo's heartbeat/offline threshold exceeds both windows tried;
+  observing it needed a longer hold than AC2/AC5 required, and both were already proven by direct
+  evidence (host-side exit status, runner-side task/log attribution). See Task 4.4.
+- Retention/drift of `docs/runners/` against the host after this story. Reason: by definition —
+  it's a point-in-time record, not a live sync; nothing to check yet.
+
+**Closing commits on `main`:** two, split by area per Task 7.6 —
+`docs(migration): ...` for `docs/` (this story's `docs/runners/`, `docs/migration-decisions.md`
+D13, `docs/forgejo-migration.md` Фаза 1 item 5), `chore(bmad): ...` for `_bmad-output/` (this story
+file, `sprint-status.yaml`, `deferred-work.md`). Full husky suite ran on both (no `--no-verify`).
+
 ### File List
+
+**Repository (this story's commits):**
+- `.forgejo/workflows/probe-second-runner.yml` — throwaway, lived only on `probe/second-runner`
+  (deleted with the branch; not present at HEAD on `main`).
+- `docs/runners/README.md` — new.
+- `docs/runners/docker-compose.yml` — new (sanitised copy).
+- `docs/runners/config.yml` — new (sanitised copy, runner 1).
+- `docs/runners/config-2.yml` — new (sanitised copy, runner 2).
+- `docs/runners/.env.example` — new (sanitised template).
+- `docs/migration-decisions.md` — modified (D13 added, index table, anchor-range line 8, changelog
+  row, one stale line-number citation fixed at what was line 371).
+- `docs/forgejo-migration.md` — modified (Фаза 1 item 5 marked `✅`).
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified (three items closed, one
+  appended-to with new evidence).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (`review`).
+- `_bmad-output/implementation-artifacts/1-9-provision-the-second-runner.md` — this file.
+
+**Host (`s1`, `/opt/forgejo-runner-fe-prionex/`, not repository-tracked):**
+- `docker-compose.yml` — modified (added `dind2`, `runner2` services, `dind2-storage` volume,
+  network comment updated). Backup: `docker-compose.yml.bak-story1.9-20260812T064116Z`.
+- `config.yml` (runner 1) — modified transiently (`job_level: info→debug→info`) and reverted;
+  final state identical to pre-story except the log-level round-trip. Backup:
+  `config.yml.bak-story1.9-20260812T064116Z`.
+- `config-2.yml` (runner 2) — new.
+- `data/runner-2/` — new (registration data, incl. `.runner`, never committed).
 
 ## Open Questions for Review
 

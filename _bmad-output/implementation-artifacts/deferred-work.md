@@ -156,19 +156,24 @@
   after Story 1.13's last inventory; no story has acknowledged it. No collision with `node-20`/
   `docker-build`. Whoever owns Story 6-series (production deploy) should confirm this is expected
   and not something to reconcile against.
-- **`docker exec ... kill -9 1` silently no-ops inside the `forgejo/runner:13.0.0` image** — reports
-  `exit=0` but does not deliver the signal; the container does not crash. A genuine crash test needs
-  the signal sent from the **host**, targeting `docker inspect --format '{{.State.Pid}}'`. Worth
-  carrying into Story 1.9 so the second runner's durability proof does not repeat the same false
-  negative.
-- 🔴 **This story itself hit Trap 1 on the first registration attempt — worth repeating loudly for
-  Story 1.9.** Registering with `--labels 'node-20,docker-build'` (bare names, no `:docker://<image>`
-  suffix) silently resolves both to the runner's default image (`node:22-bookworm` on this
-  version) — no error, no warning, `register` reports success. The first probe dispatch caught it
-  (wrong Node major version, no docker CLI); nothing about the registration step itself would
-  have. **Always dispatch a real probe workflow before declaring a runner done** — a clean
-  `register`/`daemon` startup log proves nothing about which images the labels actually resolve
-  to.
+- ✅ **CLOSED 2026-08-12, Story 1.9.** `docker exec ... kill -9 1` silently no-ops inside the
+  `forgejo/runner:13.0.0` image** — reports `exit=0` but does not deliver the signal; the container
+  does not crash. A genuine crash test needs the signal sent from the **host**, targeting
+  `docker inspect --format '{{.State.Pid}}'`. **Not repeated**: Story 1.9's AC5 evidence used
+  host-side `kill -9` against the real PID both times (attempt 1: `2595943`; attempt 2, held down
+  via `docker update --restart=no`: `2690884`), never `docker exec`. See
+  `docs/migration-decisions.md#d13`.
+- ✅ **CLOSED 2026-08-12, Story 1.9.** 🔴 This story (1.7) itself hit Trap 1 on the first
+  registration attempt. Registering with `--labels 'node-20,docker-build'` (bare names, no
+  `:docker://<image>` suffix) silently resolves both to the runner's default image
+  (`node:22-bookworm` on this version) — no error, no warning, `register` reports success. The
+  first probe dispatch caught it (wrong Node major version, no docker CLI); nothing about the
+  registration step itself would have. **Always dispatch a real probe workflow before declaring a
+  runner done** — a clean `register`/`daemon` startup log proves nothing about which images the
+  labels actually resolve to. **Not repeated**: Story 1.9's registration used the full label spec
+  copied verbatim from runner 1's `.runner` on disk; the register output named both `docker://`
+  suffixes and carried no `Labels from command will be ignored` line. See
+  `docs/migration-decisions.md#d13`.
 
 ## Resolved: deployment mechanism (2026-08-11, correct-course)
 
@@ -266,21 +271,20 @@
   It is Forgejo's own mechanism for this, and the direct test would mean starting an uncancellable
   run in another team's repository, which story 1.7's own rules forbid. Recorded here so the gap
   is visible rather than implied by a ticked AC.
-- 📦 **The runner's host configuration is unversioned, and two hardcoded addresses are
-  load-bearing — for Story 1.9.** `/opt/forgejo-runner-fe-prionex/{config.yml,docker-compose.yml}`
-  on s1 is the only record of how the runner is set up. Two values in it are fragile:
-  `cache.host: "192.168.226.3"` (the `runner` container's statically pinned bridge IP) and
+- ✅ **CLOSED 2026-08-12, Story 1.9.** 📦 The runner's host configuration was unversioned, and two
+  hardcoded addresses are load-bearing. `/opt/forgejo-runner-fe-prionex/{config.yml,docker-compose.yml}`
+  on s1 was the only record of how the runner is set up. Two values in it are fragile:
+  `cache.host` (the `runner` container's statically pinned bridge IP) and
   `container.options: -e DOCKER_HOST=tcp://172.17.0.1:2375` (the nested engine's default-bridge
   gateway). Per Trap 3, losing the cache server **does not fail a job** — `actions/setup-node`
   logs `Cache action is only supported on GHES version >= 3.5…` and goes green, caching nothing —
-  so a subnet renumber or a lost IP pin degrades every future CI run silently, and nothing in this
-  repository can detect it. The only reachability assertion was the probe workflow, deleted in
-  Task 10.1.
-  **Reviewed 2026-08-11 — Oleg: carry to Story 1.9**, which provisions the second runner with the
-  same pattern and is the right place to decide whether a sanitised config (never `.runner`, which
-  holds the instance secret) belongs in the repository. Story 2.1 should additionally consider a
-  CI step that *fails* when the cache server is unreachable, so the degradation stops being silent.
-  This closes story 1.7's Open Question 8, which was raised and then filed against nothing.
+  so a subnet renumber or a lost IP pin degrades every future CI run silently.
+  **Resolved:** a sanitised copy of `docker-compose.yml`, `config.yml`, `config-2.yml` and a
+  `.env.example` now lives at `docs/runners/` (never `.runner`, which holds the instance secret),
+  with both load-bearing values called out in-file and in `docs/runners/README.md`. Explicitly
+  recorded as a **record, not a deployment mechanism** — it will drift unless updated by hand. A
+  CI step that fails on an unreachable cache server, so the degradation stops being silent, remains
+  open for Story 2.1 to consider — not attempted here. See `docs/migration-decisions.md#d13`.
 - 🔁 **AC7's crash test was never re-run against the surviving runner registration.** Story 1.7's
   durability proof (`RestartCount` 0→1 after a host-side `SIGKILL` to the real PID) was taken
   before Task 3.5's label fix, i.e. against runner `id: 18`, which was then deregistered and
@@ -297,6 +301,13 @@
   round-tripping `offline` → `idle` in the repository runner list, which needs `FJ_TOKEN` — token
   minting was blocked in the review session. Low value now that the container-level evidence is
   direct; fold into Story 1.9 rather than chasing separately.
+  **Attempted in Story 1.9 (2026-08-12), still not observed — leaving this open rather than
+  claiming it.** Two crash-test attempts against runner 1 (`id: 19`), one recovering in 327ms and
+  one deliberately held down for ~51s (`docker update --restart=no`), both queried
+  `GET .../actions/runners` mid-outage: both times the API still reported `idle`. Forgejo's
+  heartbeat/offline threshold exceeds 51s; observing the transition would need a longer hold than
+  either AC2 or AC5 required, so it wasn't chased further. See
+  `docs/migration-decisions.md#d13` and Story 1.9 Task 4.4.
 - ⚠️ **AD-6 is not the absolute rule story 1.7 recorded — for Story 1.9 and anyone reasoning about
   runner security on s1.** Direct host inspection on 2026-08-11 found **six** runner compose
   projects on s1 (not three or four), and one of them — `/opt/forgejo-runner-deploy` — mounts the
