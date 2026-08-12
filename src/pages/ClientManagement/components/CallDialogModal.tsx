@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { formatDate } from '@/lib/localeFormat'
+import { formatCallDuration } from '@/features/calls/utils/duration'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import type { IncomingModalLoan } from '@/stores/callStore'
@@ -76,12 +77,6 @@ export interface CallDialogModalProps {
   onSearchByPhone?: () => void
   /** Answering has no backend path yet, so the control stays hidden by default. */
   answerEnabled?: boolean
-}
-
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
 /** Manual entry: only digits, length 12, prefix 380 (Ukraine). */
@@ -776,7 +771,7 @@ export function CallDialogModal({
             <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 sm:px-4">
               <Icons.StopWatch size={14} className="text-muted-foreground sm:size-4" />
               <span className="text-muted-foreground text-xs sm:text-sm">
-                {t('pages.clients.modals.callDialog.ringing')} {formatTime(elapsedTime)}
+                {t('pages.clients.modals.callDialog.ringing')} {formatCallDuration(elapsedTime)}
               </span>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
@@ -1092,7 +1087,7 @@ export function CallDialogModal({
                     {callState === 'dialing'
                       ? t('pages.clients.modals.callDialog.elapsedTime')
                       : t('pages.clients.modals.callDialog.talkTime')}
-                    : <span className="font-semibold">{formatTime(elapsedTime)}</span>
+                    : <span className="font-semibold">{formatCallDuration(elapsedTime)}</span>
                   </span>
                 </div>
                 <div className="text-muted-foreground mt-1 text-sm">
@@ -1116,7 +1111,7 @@ export function CallDialogModal({
                     <Icons.StopWatch size={16} className="text-muted-foreground" />
                     <span className="text-foreground text-sm font-medium">
                       {t('pages.clients.modals.callDialog.duration')}:{' '}
-                      <span className="font-semibold">{formatTime(elapsedTime)}</span>
+                      <span className="font-semibold">{formatCallDuration(elapsedTime)}</span>
                     </span>
                   </div>
                   <div className="text-success-500 mt-1 text-sm font-medium">

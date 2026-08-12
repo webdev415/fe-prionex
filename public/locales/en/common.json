@@ -5174,7 +5174,8 @@
             "client": "Client by contracts",
             "thirdParty": "Third party by contracts",
             "view": "View"
-          }
+          },
+          "minimize": "Minimize"
         },
         "callLogCard": {
           "message": "Message",
