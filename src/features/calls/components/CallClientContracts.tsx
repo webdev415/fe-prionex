@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 
-import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Icons } from '@/lib/icons'
 import { formatDate } from '@/lib/localeFormat'
@@ -21,41 +20,48 @@ export interface CallContract {
   lastContact?: string | null
 }
 
-export interface CallContractGroupData {
-  id: string
-  /** Absent for the caller's own contracts; the third party's name otherwise. */
+export interface CallMatchedClient {
+  clientId: number
+  clientName: string
+  /**
+   * The caller reached this client's card as a third party rather than as the
+   * client themselves; the header names them instead of saying "Client".
+   */
   thirdPartyName?: string | null
-  clientId?: number | null
   contracts: CallContract[]
 }
 
-interface CallContractGroupProps {
-  group: CallContractGroupData
-  enabled: boolean
-  onEnabledChange: (enabled: boolean) => void
-  /** The one contract, across every group, the interaction will be filed against. */
-  selectedContractId: string | null
-  onSelectContract: (contractId: string) => void
+interface CallClientContractsProps {
+  client: CallMatchedClient
+  /** Whether the interaction will be written to this client's card. */
+  included: boolean
+  onIncludedChange: (included: boolean) => void
 }
 
 const CLOSED_STATUSES = new Set(['closed', 'paid', 'repaid'])
 
-export function CallContractGroup({
-  group,
-  enabled,
-  onEnabledChange,
-  selectedContractId,
-  onSelectContract,
-}: CallContractGroupProps) {
+/**
+ * One matched client: their header, and their contracts as read-only context.
+ *
+ * The toggle decides only whether the interaction is written to this client's
+ * card. It is not a filter — switching it off changes nothing about what the
+ * operator can see or reach, because they still need the contracts to talk
+ * about while the caller is on the line.
+ */
+export function CallClientContracts({
+  client,
+  included,
+  onIncludedChange,
+}: CallClientContractsProps) {
   const { t } = useTranslation('common')
-  const label = group.thirdPartyName
-    ? `${t('pages.clients.modals.callDialog.contracts.thirdParty', 'Third party by contracts')}: ${group.thirdPartyName}`
+  const label = client.thirdPartyName
+    ? `${t('pages.clients.modals.callDialog.contracts.thirdParty', 'Third party by contracts')}: ${client.thirdPartyName}`
     : t('pages.clients.modals.callDialog.contracts.client', 'Client by contracts')
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <ToggleSwitch checked={enabled} onChange={onEnabledChange} aria-label={label} />
+        <ToggleSwitch checked={included} onChange={onIncludedChange} aria-label={label} />
         <Icons.Info
           size={14}
           className="text-muted-foreground shrink-0"
@@ -63,65 +69,35 @@ export function CallContractGroup({
           aria-hidden
         />
         <span className="text-foreground truncate text-xs font-medium sm:text-sm">{label}</span>
-        {group.clientId != null && (
-          <a
-            href={`/dashboard/clients/${group.clientId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-700 ml-auto shrink-0 text-xs font-medium"
-          >
-            {t('pages.clients.modals.callDialog.contracts.view', 'View')} &gt;
-          </a>
-        )}
+        <a
+          href={`/dashboard/clients/${client.clientId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary-700 ml-auto shrink-0 text-xs font-medium"
+        >
+          {t('pages.clients.modals.callDialog.contracts.view', 'View')} &gt;
+        </a>
       </div>
 
       {/* Horizontal, because a client can hold more contracts than fit the modal
           and the operator scans them side by side rather than scrolling a list. */}
-      <RadioGroup
-        value={selectedContractId ?? ''}
-        onValueChange={onSelectContract}
-        className={cn(
-          'flex gap-3 overflow-x-auto pb-1',
-          !enabled && 'pointer-events-none opacity-50'
-        )}
-        aria-label={label}
-      >
-        {group.contracts.map((contract) => (
-          <ContractCard
-            key={contract.id}
-            contract={contract}
-            selected={contract.id === selectedContractId}
-            disabled={!enabled}
-          />
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {client.contracts.map((contract) => (
+          <ContractCard key={contract.id} contract={contract} />
         ))}
-      </RadioGroup>
+      </div>
     </div>
   )
 }
 
-function ContractCard({
-  contract,
-  selected,
-  disabled,
-}: {
-  contract: CallContract
-  selected: boolean
-  disabled: boolean
-}) {
+function ContractCard({ contract }: { contract: CallContract }) {
   const { t, i18n } = useTranslation('common')
   const closed = CLOSED_STATUSES.has(contract.status.toLowerCase())
   const asDate = (value?: string | null) => (value ? formatDate(value, i18n.language) : '—')
 
   return (
-    <label
-      className={cn(
-        'border-border bg-card flex w-64 shrink-0 cursor-pointer flex-col gap-2 rounded-lg border p-3 transition-colors',
-        selected && 'border-primary ring-primary/30 ring-1',
-        disabled && 'cursor-default'
-      )}
-    >
+    <div className="border-border bg-card flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-center gap-2">
-        <RadioItem value={contract.id} disabled={disabled} aria-label={contract.number} />
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-xs font-medium',
@@ -162,7 +138,7 @@ function ContractCard({
           value={asDate(contract.lastContact)}
         />
       </dl>
-    </label>
+    </div>
   )
 }
 
