@@ -13,13 +13,9 @@ interface CallActionsProps {
   onCancel: () => void
   /** Park the caller. Connected only. */
   onHold?: () => void
-  /** Dismiss the interaction form without filing anything. Connected only. */
-  onIgnoreInteraction?: () => void
   acceptPending?: boolean
   holdPending?: boolean
   cancelPending?: boolean
-  /** True once an interaction has been filed, so there is nothing left to skip. */
-  interactionSettled?: boolean
 }
 
 /**
@@ -33,26 +29,16 @@ export function CallActions({
   onAccept,
   onCancel,
   onHold,
-  onIgnoreInteraction,
   acceptPending = false,
   holdPending = false,
   cancelPending = false,
-  interactionSettled = false,
 }: CallActionsProps) {
   const { t } = useTranslation('common')
 
   return (
     <div className="flex shrink-0 flex-col gap-2 sm:gap-3">
-      {phase === 'connected' && onIgnoreInteraction && !interactionSettled && (
-        <button
-          type="button"
-          onClick={onIgnoreInteraction}
-          className="text-muted-foreground hover:text-foreground text-xs font-medium underline-offset-2 hover:underline"
-        >
-          {t('pages.clients.modals.callDialog.ignoreInteraction', 'Ignore Interaction')}
-        </button>
-      )}
-
+      {/* No "skip saving" control: filing nothing is simply hanging up without
+          having saved, and an interaction cannot be revised once filed. */}
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <Button
           variant="danger"

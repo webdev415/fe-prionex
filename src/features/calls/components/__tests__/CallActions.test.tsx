@@ -9,7 +9,6 @@ function renderActions(over: Partial<Parameters<typeof CallActions>[0]> = {}) {
     onAccept: vi.fn(),
     onCancel: vi.fn(),
     onHold: vi.fn(),
-    onIgnoreInteraction: vi.fn(),
     ...over,
   }
   render(<CallActions {...props} />)
@@ -20,20 +19,23 @@ function renderActions(over: Partial<Parameters<typeof CallActions>[0]> = {}) {
 const buttons = () => screen.getAllByRole('button')
 
 describe('CallActions', () => {
-  it('offers Accept while ringing, never Hold', () => {
+  it('offers hang-up and Accept while ringing, never Hold', () => {
     renderActions({ phase: 'ringing' })
 
-    // Two controls only: hang up, or take the call.
     expect(buttons()).toHaveLength(2)
   })
 
-  it('offers Hold once connected, never Accept', () => {
-    const props = renderActions({ phase: 'connected' })
+  it('offers hang-up and Hold once connected, never Accept', () => {
+    renderActions({ phase: 'connected' })
 
-    // Cancel, Hold, and the Ignore-interaction control.
-    expect(buttons()).toHaveLength(3)
+    // No "skip saving" control: filing nothing is hanging up without saving.
+    expect(buttons()).toHaveLength(2)
+  })
+
+  it('hangs up from either phase', () => {
+    const ringing = renderActions({ phase: 'ringing' })
     fireEvent.click(buttons()[0])
-    expect(props.onIgnoreInteraction).toHaveBeenCalled()
+    expect(ringing.onCancel).toHaveBeenCalledTimes(1)
   })
 
   it('accepting the call reports it once', () => {
@@ -54,13 +56,6 @@ describe('CallActions', () => {
   it('cannot hold twice while the request is in flight', () => {
     renderActions({ phase: 'connected', holdPending: true })
 
-    expect(buttons()[2]).toBeDisabled()
-  })
-
-  it('drops the skip control once an interaction is filed', () => {
-    renderActions({ phase: 'connected', interactionSettled: true })
-
-    // Nothing left to skip; offering it would suggest the save can be undone.
-    expect(buttons()).toHaveLength(2)
+    expect(buttons()[1]).toBeDisabled()
   })
 })
