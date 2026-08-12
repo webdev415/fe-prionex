@@ -4,6 +4,7 @@ import {
   formatLegalDueMonthDay,
   isLegalDueDateOverdue,
   legalDueDateToIso,
+  legalDueDateToPickerDate,
   parseLegalDueDate,
 } from '../legalDueDate'
 
@@ -108,5 +109,46 @@ describe('legalDueDate (offset-less wire values)', () => {
     expect(formatLegalDueDateTime(stored, KYIV, 'uk')).toBe('14.08 01:00')
     expect(isLegalDueDateOverdue(stored, KYIV)).toBe(false)
     vi.useRealTimers()
+  })
+})
+
+// Pickers render a Date on the browser clock and take no timezone, so feeding
+// them the raw instant showed a Kyiv 15:15 deadline as 20:15 to anyone working
+// from UTC+8 — while the card next to it read 15:15.
+describe('legalDueDate (picker round trip)', () => {
+  it('hands the picker the profile wall clock, not the browser one', () => {
+    const picker = legalDueDateToPickerDate('2026-07-23T12:15:00', KYIV)
+    expect(picker?.getHours()).toBe(15)
+    expect(picker?.getMinutes()).toBe(15)
+    expect(picker?.getDate()).toBe(23)
+    expect(picker?.getMonth()).toBe(6)
+    expect(picker?.getFullYear()).toBe(2026)
+  })
+
+  it('survives a reopen without drifting', () => {
+    const stored = '2026-07-23T12:15:00'
+    const shown = legalDueDateToPickerDate(stored, KYIV)
+    expect(legalDueDateToIso(shown!, KYIV)).toBe('2026-07-23T12:15:00.000Z')
+  })
+
+  it('agrees with what the card renders', () => {
+    const stored = '2026-07-23T12:15:00'
+    const picker = legalDueDateToPickerDate(stored, KYIV)
+    const onCard = formatLegalDueDateTime(stored, KYIV, 'uk')
+    const fromPicker = `${String(picker!.getHours()).padStart(2, '0')}:${String(
+      picker!.getMinutes()
+    ).padStart(2, '0')}`
+    expect(onCard.endsWith(fromPicker)).toBe(true)
+  })
+
+  it('follows the profile timezone rather than a fixed offset', () => {
+    const stored = '2026-07-23T12:15:00'
+    expect(legalDueDateToPickerDate(stored, 'America/New_York')?.getHours()).toBe(8)
+    expect(legalDueDateToPickerDate(stored, 'Asia/Singapore')?.getHours()).toBe(20)
+  })
+
+  it('passes a missing deadline straight through', () => {
+    expect(legalDueDateToPickerDate(null, KYIV)).toBeNull()
+    expect(legalDueDateToPickerDate('not a date', KYIV)).toBeNull()
   })
 })

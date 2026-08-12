@@ -132,19 +132,42 @@ export function formatLegalDueMonthDay(
   return formatMonthDay(new Date(year, month - 1, day), language ?? '')
 }
 
+/**
+ * Read counterpart of ``legalDueDateToIso``: the stored instant as a Date whose
+ * *local* Y/M/D/H/M carry the profile-timezone wall clock.
+ *
+ * Date pickers render a Date in browser-local time and have no timezone input,
+ * so handing them the raw instant shows the deadline on the wrong clock — a
+ * Kyiv 15:15 deadline reads 20:15 to someone working from UTC+8. The write side
+ * already reinterprets picker-local components as profile wall clock; this is
+ * the mirror of that, so the value a picker shows is the value it would send
+ * back unchanged (KAN-1000).
+ *
+ * The result is only good for display and for picker round-trips. It is a
+ * different instant from the one stored, so never send it anywhere or compare
+ * it against a real timestamp.
+ */
+export function legalDueDateToPickerDate(
+  iso: string | null | undefined,
+  timezone?: string | null
+): Date | null {
+  const parsed = parseLegalDueDate(iso)
+  if (!parsed) return null
+  const { year, month, day, hour, minute } = calendarPartsInTimezone(
+    parsed,
+    resolveLegalTimezone(timezone)
+  )
+  return new Date(year, month - 1, day, hour, minute)
+}
+
 /** Profile-TZ month/day + HH:mm for kanban cards and detail panels. */
 export function formatLegalDueDateTime(
   iso: string | null | undefined,
   timezone?: string | null,
   language?: string
 ): string {
-  const parsed = parseLegalDueDate(iso)
-  if (!parsed) return ''
-  const { year, month, day, hour, minute } = calendarPartsInTimezone(
-    parsed,
-    resolveLegalTimezone(timezone)
-  )
-  const local = new Date(year, month - 1, day, hour, minute)
+  const local = legalDueDateToPickerDate(iso, timezone)
+  if (!local) return ''
   return `${formatMonthDay(local, language ?? '')} ${formatTimeShort(local, language ?? '')}`
 }
 

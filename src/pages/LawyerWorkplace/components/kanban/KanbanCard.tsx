@@ -23,7 +23,7 @@ import {
   formatLegalDueDateTime,
   formatLegalDueMonthDay,
   legalDueDateToIso,
-  parseLegalDueDate,
+  legalDueDateToPickerDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   CREATE_TASK_PRIORITIES,
@@ -85,7 +85,7 @@ export function KanbanCard({
   const clientCode = task.clientCode ?? null
   const clientName = task.clientName?.trim() || null
 
-  const deadline = parseLegalDueDate(task.deadline)
+  const deadline = legalDueDateToPickerDate(task.deadline, timezone)
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
   const priorityConfig =
