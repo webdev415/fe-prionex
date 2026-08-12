@@ -92,7 +92,7 @@ FR9: Build cache uses `type=registry,ref=<registry>/fe-prionex:buildcache` inste
 `type=gha`.
 
 FR10: The Forgejo Container Registry is enabled, a ~~`ci-bot`~~ `robot-registry` technical user holds a
-`write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`, proven to push). Nothing was created. See `docs/migration-decisions.md#d14`.
+`write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **Проверено 2026-08-12:** s1 использует `robot-registry`/read, s2 — **`robot-deploy`**/read; все семь токенов `robot-deploy` имеют scope ровно `read:package`, так что клауз «только» для s2 установлен. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`). ⚠️ Уточнено code review 2026-08-12: сам секрет **не упражнялся** — доказательство получено на минтованном эквиваленте того же scope; `REGISTRY_TOKEN_RW` остаётся «не проверено». Nothing was created. See `docs/migration-decisions.md#d14`.
 
 FR11: Registry retention removes `<branch>` tags after 14 days while guaranteeing that
 tags currently referenced by a running stand — and the previous N rollback targets — are
@@ -207,7 +207,7 @@ NFR5: The existing DEV and PROD stands remain fully operational and untouched th
 phases 0–6; Forgejo deploys only to newly created stands.
 
 NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only ~~`ci-bot`~~ `robot-registry` holds
-`write:package`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; `robot-registry`/`REGISTRY_TOKEN_RW` is the platform's existing write-capable pair, adopted as-is. See `docs/migration-decisions.md#d14`.
+`write:package`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; `robot-registry`/`REGISTRY_TOKEN_RW` is the platform's existing write-capable pair, adopted as-is. ⚠️ **Область действия утверждения, уточнено code review:** «только `robot-registry`» верно **среди сервисных токенов**. На инстансе три администратора (`platform-admin`, `Ruslan`, `Marina`), а админ обходит package-скоупы — это вне модели угроз данного NFR, а не его нарушение. See `docs/migration-decisions.md#d14`.
 
 NFR7: **NARROWED (2026-08-11, `sprint-change-proposal-2026-08-11-deploy-runner.md`).** Deployment
 no longer authenticates to s2 over SSH (FR19), so **no new deployment key is required**. The
@@ -249,7 +249,7 @@ Technical and infrastructure requirements extracted from the plan that shape sto
   ~~replaced with native `ssh`/`scp` in `run:` steps rather than ported.~~
 - A runner cache server is required for `actions/setup-node` with `cache: npm`.
 - The runner must not be hosted on s2.
-- Secret migration map **(AMENDED 2026-08-11)**: `REGISTRY_TOKEN` (org),
+- Secret migration map **(AMENDED 2026-08-11)**: `REGISTRY_TOKEN` (org), ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
   `SLACK_CD_WEBHOOK_URL` (org). **No SSH secrets are migrated** — deployment runs on the target
   host and needs none; ~~`S1_SSH_HOST/USER/KEY` (repo), `S2_SSH_HOST/USER/KEY` (repo, new key)~~.
   Ports are **not** migrated into CI variables — they already live in per-stand server `.env`
@@ -296,7 +296,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR7 | Epic 3 | Tag scheme `sha-<short>` / `<branch>` / semver / `latest` |
 | FR8 | Epic 3 | `[C]` Per-environment build-args and tag discriminator |
 | FR9 | Epic 3 | Registry-backed build cache replaces `type=gha` |
-| FR10 | Epic 1 | Container Registry enabled, `ci-bot` write token, read-only server tokens |
+| FR10 | Epic 1 | Container Registry enabled, `ci-bot` write token, read-only server tokens | ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
 | FR11 | Epic 1 | Retention policy that never deletes deployed or rollback-target tags |
 | FR12 | Epic 4 | `deploy-dev.yml` dispatch with `ref`, no approval required |
 | FR13 | Epic 5 | `deploy-preprod.yml` dispatch-only with mandatory `image_tag` |
@@ -781,7 +781,7 @@ So that later epics do not stall on missing credentials.
 > longer removes that protection.** The original text ended *"this story removes exactly that
 > accidental protection"*, because it was the story that would place ~~`S1_SSH_*`, `S2_SSH_*`~~
 > into Forgejo. Under the amended FR19 no SSH secret is ever created there, so the legacy deploy
-> job can never reach a server regardless of the placeholder. What remains is `REGISTRY_TOKEN` and
+> job can never reach a server regardless of the placeholder. What remains is `REGISTRY_TOKEN` and ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
 > `SLACK_CD_WEBHOOK_URL`, neither of which lets `CD.yml` deploy — it would still fail, now at the
 > `appleboy/*` steps for want of a host and key. The prerequisite on 1.13 stands on its own merits;
 > the hazard it guarded against is retired.
@@ -790,7 +790,7 @@ So that later epics do not stall on missing credentials.
 
 **Given** the secret migration map in the plan
 **When** organization-level secrets are created
-**Then** `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` exist at the `CRM` organization scope.
+**Then** `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` exist at the `CRM` organization scope. ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
 
 **Given** deployment runs on a deploy runner located on the target host under the amended FR19
 **When** the secret set is reviewed
@@ -1073,7 +1073,7 @@ So that it can be deployed without depending on ghcr.io.
 **Given** the `docker-build` runner label from Story 1.7
 **When** `.forgejo/workflows/build.yml` is created
 **Then** it checks out the code, sets up buildx, logs in to
-`git.crm-prionex.com` using `REGISTRY_TOKEN`, and builds `Dockerfile.prod`
+`git.crm-prionex.com` using `REGISTRY_TOKEN`, and builds `Dockerfile.prod` ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
 **And** the resulting image is pushed to `git.crm-prionex.com/crm/fe-prionex`.
 
 **Given** the workflow is being developed

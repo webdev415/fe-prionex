@@ -251,6 +251,50 @@
   boolean/string mistake would be indistinguishable from a withheld run. It is
   `== 'true'` with a string default, and the gated job did execute when dispatched with `"true"`.
 
+## Opened by code review of story 1.10 (2026-08-12)
+
+- 🔴 **Story 1.11 blocker — the `crm/` registry namespace is SHARED.** s2 holds pulled images
+  `git.crm-prionex.com/crm/hub-migrate`, `crm/hub-web`, `crm/hub-backend`; a separate `infra/`
+  namespace also exists. Under `CRM` there are **87 distinct packages / 620 versions** — only
+  `crm/fe-prionex` is ours. **A retention rule scoped to the `crm` owner rather than to the
+  `crm/fe-prionex` path would delete another team's images.** Story 1.11 writes that rule next.
+- 🧪 **Story 1.11 test case, handed over deliberately (Oleg, 2026-08-12).** Story 1.10 deleted the
+  `reg-check-1-10` **tag** but its constituent manifests survive: four untagged versions of
+  `CRM/fe-prionex` (`sha256:462aa47c…`, `90bd6b13…`, `57c4b5a4…`, `f677b05a…`) plus an `_upload`
+  row, ≈60 MB, created 2026-08-12, still served by digest. **`package_cleanup_rule` on this
+  instance is empty — 0 rows — so nothing will ever collect them.** Left in place on purpose: they
+  are real untagged residue for the retention policy to be tested against. Deleting a *tag* is not
+  deleting an *image* — that is the lesson, and it is what AC6 got wrong.
+- 🔑 **`fe_reg_1_10_ro` (id 99, `robot-registry`, `read:package`) is s1's live pull credential** —
+  a deliverable, not scaffolding. Do not revoke it without replacing s1's `docker login`.
+  ⚠️ **`fe_reg_1_10_rw` (id 100, `robot-registry`, `write:package`) is still live and should be
+  revoked** — its only purposes (the push, the `204` delete) are finished. **Owner: Oleg.**
+  Revocation cannot be done from a token: `gitea admin user` has no delete subcommand in this
+  version, and `DELETE /users/{username}/tokens/{token}` requires **basic auth** (any token gets
+  `401`). The web UI is the working route — Oleg used it on 2026-08-12 to revoke `fe_revoke_tmp`.
+- ⚠️ **Recurring trap, evidenced: cleaning up a token needs `write:user`, and prior stories left
+  their attempt tokens behind.** `platform-admin` carries four abandoned `write:user` tokens —
+  `story21-cleanup-1785925612`, `story21-cleanup2-1785925641`, `story21-cleanup3-1785925657`,
+  `story-3-6-cleanup`. Three from one story suggests it was retried three times. Story 1.10's
+  review walked into the same wall and had to have its own attempt token revoked by hand. **This is
+  the strongest argument yet for settling the token model before Story 1.12** — the count is 94
+  instance-wide (81 on the human admin account), not the 7 the story recorded.
+- ⚠️ **Deviation recorded, not normalised: a production credential was relocated.** s2's
+  `robot-deploy` auth was decoded off the production host and used for a `docker login` on s1 to
+  run the rejection test. Cleaned up afterwards (s1 now holds only `robot-registry`), but the
+  precedent must not stand: **production credentials are not moved to other hosts without an
+  explicit decision.** Consider rotating that token — owner's call.
+- ⚠️ **s1's pull credential is coupled to the write identity.** `fe_reg_1_10_ro` sits on
+  `robot-registry`, which also holds five `write:package` tokens; s2 by contrast uses
+  `robot-deploy`, all of whose tokens are `read:package`. NFR6 is satisfied by *scope*, but a
+  rotation or compromise of `robot-registry` hits both s1's pull and CI's push at once. For
+  Story 1.12 to settle alongside the token model.
+- ⚠️ **Story-template rule, to stop this recurring:** a prohibition in a story's 🚨 **Prohibitions**
+  block **cannot be overridden by a subtask**. Story 1.10 forbade anything but
+  `pull`/`inspect`/`images`/`login` on s2, and Task 6.3 then authorised `docker rmi` there; the
+  execution followed the subtask. No damage — but the next conflict may not be harmless. Either the
+  prohibition or the subtask must be changed **before** execution, by explicit decision.
+
 ## Deferred from: code review of story-1.7 (2026-08-11)
 
 - 🔒 **nginx ACL on s1 was widened and has no rollback owner.** Story 1.7 added
@@ -366,7 +410,7 @@
   from a job-equivalent container (reachable, correctly demanding auth). **Story 3.1 pushes to the
   same registry from the same runner and will fail identically without this line — it is meant to
   persist, do not revert it.** See `docs/migration-decisions.md#d12`.
-- **`ci-bot` vs `robot-registry` substitution — for Story 1.10.** `epics.md:94` (FR10), `:209` (NFR6), `:299` and `:722` name
+- **`ci-bot` vs `robot-registry` substitution — for Story 1.10.** `epics.md:94` (FR10), `:209` (NFR6), `:299` and `:252`, `:299`, `:784`, `:793`, `:1076` (⚠️ code review 2026-08-12: прежняя ссылка `:722` указывала внутрь секции самой Story 1.10 и была неверна; все пять теперь размечены на месте) name
   a technical user `ci-bot`; it does not exist on this instance (`GET /users/ci-bot` → 403, absent
   from `GET /orgs/CRM/members`). The platform's own equivalent is `robot-registry`, one of exactly
   three accounts on the org (`platform-admin`, `robot-deploy`, `robot-registry`), and the org
@@ -380,7 +424,7 @@
   shared registry (610 packages across the org at the time of checking, `fe-prionex` one consumer
   among several), created for naming reasons and then requiring manual sync with the platform's own
   pair — not worth it. `epics.md` FR10, NFR6 and Story 1.10's own AC2 are marked accordingly (not
-  rewritten); `:299` (the FR summary table) and `:722`/`:1076` (Story 1.12/3.1's own mentions) are
+  rewritten); `:299` (the FR summary table) and `:252`, `:299`, `:784`, `:793`, `:1076` (⚠️ code review 2026-08-12: прежняя ссылка `:722` указывала внутрь секции самой Story 1.10 и была неверна; все пять теперь размечены на месте)/`:1076` (Story 1.12/3.1's own mentions) are
   intentionally left for those stories to amend when they run — out of this story's scope. See
   `docs/migration-decisions.md#d14`.
 - ⚠️ **Whether org secrets are exposed to workflows in `CRM/fe-prionex` — «не проверено», Story
