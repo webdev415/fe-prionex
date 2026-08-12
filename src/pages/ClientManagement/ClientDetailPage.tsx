@@ -167,6 +167,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { useTAHotkeyLaunch } from '@/features/taHotkeys/useTAHotkeyLaunch'
+import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
@@ -452,19 +453,6 @@ export function ClientDetailPage() {
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
   const isValidClientId = clientId > 0 && !isNaN(clientId)
-
-  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
-  // in the hook and its pure modules; this only says what "launch" means here.
-  useTAHotkeyLaunch({
-    enabled: isValidClientId,
-    isExecutorOpen: isChainExecutorOpen,
-    onLaunch: (templateId) => {
-      setChainExecutorContactSource(null)
-      setChainExecutorPrefilledPhone(null)
-      setChainExecutorInitialTemplateId(templateId)
-      setIsChainExecutorOpen(true)
-    },
-  })
 
   // Auto-open the chain modal ONLY for the operator who just changed a debt's
   // status on this client — closing a loan (→ closed) or reopening it
@@ -1412,6 +1400,38 @@ export function ClientDetailPage() {
     () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
     [client?.activities]
   )
+
+  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
+  // in the hook and its pure modules; this only says what "launch" means here.
+  //
+  // Declared this far down because it reads `client` and `callSmsHistory`; a
+  // hook call placed above their `const`s throws on every render.
+  useTAHotkeyLaunch({
+    enabled: isValidClientId,
+    isExecutorOpen: isChainExecutorOpen,
+    onLaunch: (templateId) => {
+      // §4: on a hotkey launch only, pre-select the number of a call that ended
+      // in the last 10 minutes — the operator has just hung up and is logging
+      // that conversation. Resolved here, at the keypress, rather than in a memo
+      // so the 10-minute window is measured against the moment of the press.
+      //
+      // Feeding it through prefilledPhone/contactSource reuses the pre-selection
+      // path the phone-row entry point already uses, in both wizard and instant
+      // mode — no new effect in a component that has had races before.
+      const recentPhone = resolveRecentCallPhone({
+        calls: callSmsHistory?.calls ?? [],
+        phones: client?.phones ?? [],
+        nowMs: Date.now(),
+      })
+
+      setChainExecutorContactSource(
+        recentPhone ? classifyContactSource(recentPhone.contactTypeId) : null
+      )
+      setChainExecutorPrefilledPhone(recentPhone?.number ?? null)
+      setChainExecutorInitialTemplateId(templateId)
+      setIsChainExecutorOpen(true)
+    },
+  })
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 

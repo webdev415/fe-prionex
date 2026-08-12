@@ -15,8 +15,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { decideHotkeyLaunch } from './decideHotkeyLaunch'
+import { useTAHotkeyBindings } from './hooks/useTAHotkeys'
 import { resolveHotkeyTarget } from './hotkey'
-import { useTAHotkeyBindings } from './TEMPORARY_bindingsSource'
 
 export function useTAHotkeyLaunch(params: {
   /** False on pages/states where quick-launch must not apply (e.g. no client). */

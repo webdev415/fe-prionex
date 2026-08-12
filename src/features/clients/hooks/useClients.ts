@@ -466,6 +466,11 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
           telephony_type: c.telephony_type ?? null,
           line: '',
           initiated_at: c.initiated_at ?? new Date().toISOString(),
+          // Needed by KAN-973's hotkey phone pre-selection, which asks "did a
+          // call to this client end in the last 10 minutes?". `duration` above
+          // is a display string and `initiated_at` is the wrong end of a call
+          // that may have run for an hour.
+          ended_at: c.ended_at ?? null,
           recording_path: c.recording_path ?? null,
         }
       })
