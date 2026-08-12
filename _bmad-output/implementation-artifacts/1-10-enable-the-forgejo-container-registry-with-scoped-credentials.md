@@ -51,8 +51,11 @@ The platform's equivalents are `robot-registry` and `REGISTRY_TOKEN_RW`. Two hon
   so the plan's text becomes literally true. Costs a second write-capable identity on a shared
   registry for naming reasons, and leaves two credentials where one is needed.
 
-**Task 2 is a 🛑 HARD STOP.** Do not pick (b) by default just because the epic says `ci-bot`, and do
-not pick (a) silently — either way the plan text must be amended, and that is Oleg's call.
+✅ **DECIDED by Oleg, 2026-08-12 — path (a): adopt the platform's credentials.** Use
+`robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`, create nothing, and amend `epics.md`
+FR10 (`:94-95`), NFR6 (`:209-210`) and this story's AC2 to name them. Consistent with how Epic 4's
+correct-course and Story 1.8 resolved the identical situation. **Task 2 is therefore no longer a
+hard stop — execute it and record the rejected option (b) with its reason, do not re-open it.**
 
 ### 3. s2 is PROD, and this story is the first to touch it
 
@@ -190,9 +193,9 @@ they are the hub's platform credentials, confirmed with `aleksey` on 2026-08-11.
       one credential written on s1, K commits. Story 1.9's budget could not be checked because its
       count was left as an unbound letter; close the ledger at the end, not mid-session.
 
-### Task 2 — 🛑 HARD STOP: settle the naming with Oleg (AC: 2, 5)
+### Task 2 — Apply the naming decision Oleg has already taken (AC: 2, 5)
 
-- [ ] 2.1 🛑 Present §2's two paths — **(a) adopt** `robot-registry`/`REGISTRY_TOKEN_RW` and amend
+- [ ] 2.1 ✅ **Decided — adopt (a).** Record §2's two paths — **(a) adopt** `robot-registry`/`REGISTRY_TOKEN_RW` and amend
       the plan, or **(b) create** `ci-bot`/`REGISTRY_TOKEN` to match the plan's text. State the cost
       of (b) plainly: a second write-capable identity on a shared registry, created for naming
       reasons, which then has to be kept in sync with the platform's own.
@@ -438,9 +441,9 @@ No automated suite applies. The project's evidence standard:
 
 ### Blocking
 
-1. **`ci-bot` or `robot-registry`?** Task 2. Adopting means amending FR10, NFR6 and AC2; creating
-   means a second write-capable identity on a shared registry for naming reasons. Recommended:
-   adopt, consistent with how Epic 4 and Story 1.8 resolved the same situation.
+1. ✅ **Resolved before release — adopt `robot-registry` / `REGISTRY_TOKEN_RW`** (Oleg,
+   2026-08-12). FR10, NFR6 and AC2 are amended to match; nothing is created. Recorded here so it is
+   not re-opened.
 
 ### Non-blocking
 
