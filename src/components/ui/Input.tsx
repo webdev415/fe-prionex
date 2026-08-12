@@ -51,9 +51,17 @@ export interface InputProps
  * street address — the fields this app is mostly made of. Setting the strong
  * token here rather than at the call sites is what keeps it consistent: the
  * client, user, seller and project forms are all the same class of field, and
- * a per-call-site rule goes stale the first time someone adds a form. Nothing
- * built on this component is ever a real password field (``PasswordInput``
- * renders its own input), so the token only ever means "do not autofill".
+ * a per-call-site rule goes stale the first time someone adds a form.
+ *
+ * On a text field ``new-password`` only ever means "do not autofill", but on a
+ * real password field it is the token that makes Chrome and Safari offer to
+ * generate and save a credential. Login passwords go through ``PasswordInput``,
+ * which renders its own element and has none of this — but ``Input`` is not
+ * password-free: ``MessagingIntegrationsPage`` passes ``type={field.type}`` and
+ * six integration credentials are typed ``password``. So password-typed fields
+ * fall back to ``off`` here rather than depending on every such call site
+ * remembering to pass it. They keep the opt-outs and the generated name, since
+ * ``off`` is outside ``REQUESTS_REAL_AUTOFILL`` like anything else.
  *
  * All of it backs off for the tokens in ``REQUESTS_REAL_AUTOFILL``: the login
  * form's username, where ``data-lpignore`` would stop LastPass saving the
@@ -96,7 +104,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       value,
       id,
       name,
-      autoComplete = 'new-password',
+      autoComplete = type === 'password' ? 'off' : 'new-password',
       ...props
     },
     ref

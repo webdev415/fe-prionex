@@ -268,13 +268,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // This is why the default here is still `off` while the shared `Input`
     // defaults to `new-password` (KAN-1009), even though both now read their
     // opt-outs from the same module. `Input` leaves the caller's id in place
-    // and has no equivalent of the wrapper trick, so the label is one signal
-    // among three; here it is the only one left, and a date field sitting on
-    // its own is not something Chrome classifies as profile data. The three
-    // that are - date of birth, passport issued and expires - pass
-    // `new-password` at the call site. Aligning the two defaults would let
-    // those three props go, but it changes behaviour for ~35 shipped call
-    // sites for no reported bug, so it is left alone deliberately.
+    // and has no equivalent of the wrapper trick, so there the id and name are
+    // signals too; here only the label and placeholder are left, and neither
+    // reads as profile data on a standalone date field. The three that do -
+    // date of birth, passport issued and expires - pass `new-password` at the
+    // call site. Aligning the two defaults would let those three props go, but
+    // it changes behaviour for ~35 shipped call sites for no reported bug, so
+    // it is left alone deliberately.
     const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect

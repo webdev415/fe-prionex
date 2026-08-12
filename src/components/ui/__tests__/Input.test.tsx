@@ -66,6 +66,19 @@ describe('Input (autofill defence)', () => {
     expect(input.getAttribute('name')).toMatch(/^fld-[A-Za-z0-9_-]+$/)
   })
 
+  // MessagingIntegrationsPage renders this component with type={field.type},
+  // and six integration credentials are typed password. new-password there is
+  // the token that makes browsers offer to generate and save one, over a
+  // third-party secret.
+  it('does not ask a real password field to generate a credential', () => {
+    render(<Input type="password" label="API key" />)
+    const input = screen.getByLabelText('API key')
+    expect(input).toHaveAttribute('type', 'password')
+    expect(input).toHaveAttribute('autocomplete', 'off')
+    expect(input).toHaveAttribute('data-lpignore', 'true')
+    expect(input.getAttribute('name')).toMatch(/^fld-[A-Za-z0-9_-]+$/)
+  })
+
   it('lets a call site override an opt-out attribute', () => {
     render(<Input data-form-type="amount" />)
     const input = screen.getByRole('textbox')
