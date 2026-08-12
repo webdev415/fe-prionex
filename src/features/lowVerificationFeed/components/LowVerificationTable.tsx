@@ -38,6 +38,16 @@ type LowVerificationTableRow = LowVerificationFeedRow & { id: number }
 /** Placeholder for nullable columns (`inn`, `group_name`, the two nullable dates). */
 const EMPTY = '—'
 
+/**
+ * Number of columns this table renders — the width every skeleton of it must
+ * use (LowVerificationFeedTab), so nobody counts the list by hand a second
+ * time. It cannot be derived from `columns` at module scope: that array is
+ * built inside the component because every header goes through `t`. The pair is
+ * kept honest by a test asserting the rendered header count equals this
+ * constant (__tests__/LowVerificationTable.test.tsx).
+ */
+export const LOW_VERIFICATION_COLUMN_COUNT = 9
+
 /** Debt principal is an exact Decimal — always two decimals, never truncated. */
 const AMOUNT_NUMBER_OPTIONS: Intl.NumberFormatOptions = {
   minimumFractionDigits: 2,

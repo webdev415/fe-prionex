@@ -15,10 +15,14 @@
  * cuts").
  */
 
+import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatDate } from '@/lib/localeFormat'
 
 /** Placeholder for a missing or unparseable value (shared table convention). */
 const EMPTY = '—'
+
+/** Length of the `YYYY-MM-DD` head every accepted value starts with. */
+const CALENDAR_DAY_LENGTH = 10
 
 /**
  * Format a `YYYY-MM-DD` backend day in the UI language (en → MM/DD/YYYY,
@@ -26,7 +30,13 @@ const EMPTY = '—'
  */
 export function formatCalendarDay(value: string | null | undefined, language: string): string {
   if (!value) return EMPTY
-  // `formatDate` already returns "—" for an unparseable input, so a malformed
-  // payload degrades instead of rendering "Invalid Date".
-  return formatDate(`${value}T00:00:00`, language)
+  // Only the CALENDAR head is anchored: `…T00:00:00` appended to a full ISO
+  // datetime ("2026-07-29T14:00:00Z") parses as nothing, so a backend that
+  // switched these DATE columns to timestamps would silently blank the whole
+  // column. Slicing first keeps such a payload readable while an impossible or
+  // malformed day still degrades to "—" (isRealCalendarDate rejects both the
+  // wrong shape and days like 2026-02-31).
+  const day = value.slice(0, CALENDAR_DAY_LENGTH)
+  if (!isRealCalendarDate(day)) return EMPTY
+  return formatDate(`${day}T00:00:00`, language)
 }

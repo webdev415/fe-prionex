@@ -97,6 +97,13 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
         return `Confirm & Assign ${String(options.count)} Clients`
       }
+      // A count-based plural key (locales hold floorHint_one/_few/_many/_other).
+      // The month count is the whole point of this hint — it now comes from the
+      // feed's response, so a test has to be able to see the VALUE and not just
+      // the key. Rendered as `<key>:<count>`, deterministic and still key-based.
+      if (key === 'pages.reports.lowVerification.floorHint') {
+        return `${key}:${String(vars?.count)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',

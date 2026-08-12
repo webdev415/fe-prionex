@@ -71,6 +71,12 @@ export interface LowVerificationFeedRow {
  * Response payload. `sell_from`/`sell_to`/`max_verified` echo the filters that
  * were applied and stay null when not requested.
  *
+ * `months_floor` echoes the feed's built-in floor — the backend's
+ * env-configurable `LOW_VERIFICATION_MONTHS_FLOOR`, in months. It is always
+ * present (the server always knows its own floor), which is why it is required
+ * rather than optional: the UI renders the "empty list is normal" explanation
+ * from it instead of keeping a copy that drifts on the next env change.
+ *
  * `total` counts the whole filtered feed (not the returned page) and stays
  * stable across pages. `rows` come pre-sorted by `verified_count` ascending,
  * then the employee's full name, then `client_id` — the UI never re-sorts them.
@@ -83,6 +89,7 @@ export interface LowVerificationFeedResponse {
   sell_from: string | null
   sell_to: string | null
   max_verified: number | null
+  months_floor: number
   rows: LowVerificationFeedRow[]
   total: number
   page: number

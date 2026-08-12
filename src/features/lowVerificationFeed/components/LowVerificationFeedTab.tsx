@@ -18,9 +18,9 @@
  *
  * Both sell bounds default to EMPTY and are INDEPENDENT: either may be set
  * alone, which the backend accepts as an open-ended bound. They can only
- * NARROW the feed's built-in floor (last purchase not older than MONTHS_FLOOR
- * months), never widen it — which is why, unlike the sibling reports, there is
- * no 366-day window cap to mirror here.
+ * NARROW the feed's built-in floor (last purchase not older than the response's
+ * `months_floor` months), never widen it — which is why, unlike the sibling
+ * reports, there is no 366-day window cap to mirror here.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -38,8 +38,8 @@ import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useLowVerificationFeed } from '../hooks'
-import { MAX_VERIFIED_CEILING, parseMaxVerified } from '../utils/maxVerified'
-import { LowVerificationTable } from './LowVerificationTable'
+import { parseMaxVerified } from '../utils/maxVerified'
+import { LOW_VERIFICATION_COLUMN_COUNT, LowVerificationTable } from './LowVerificationTable'
 
 /** URL keys, distinct from the processing (`from/to/dept`) and verification (`sf/st/cf/ct`) tabs. */
 const SELL_FROM_KEY = 'pf'
@@ -66,24 +66,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
  */
 const MAX_SKIP = 2_147_483_647
 const MAX_PAGE = Math.floor(MAX_SKIP / Math.max(...PAGE_SIZE_OPTIONS)) + 1
-
-/** Number of table columns — kept in step with LowVerificationTable for the skeleton. */
-const COLUMN_COUNT = 9
-
-/**
- * How far back the feed's built-in floor reaches, in months — the "last
- * purchase not older than N months" rule the filters can only narrow.
- *
- * MIRRORS the backend's `LOW_VERIFICATION_MONTHS_FLOOR` DEFAULT (see
- * api-prionex `services/client/app/core/config.py`, and the `:-2` in both
- * compose files). The value is env-configurable there and is NOT echoed in the
- * response, so it cannot be read from the data: whoever changes that setting
- * must change this constant in the same breath, or the hint below starts
- * lying. The Ukrainian copy spells the numeral out as "{{months}} місяці",
- * which is only grammatical for 2–4 — a floor outside that range needs the
- * `floorHint` translation revisited too.
- */
-const MONTHS_FLOOR = 2
 
 /** A positive integer read from the URL (optionally capped), or the fallback. */
 function parsePositiveInt(
@@ -122,9 +104,8 @@ export function LowVerificationFeedTab() {
   const sellFrom = rawSellFrom && isRealCalendarDate(rawSellFrom) ? rawSellFrom : undefined
   const sellTo = rawSellTo && isRealCalendarDate(rawSellTo) ? rawSellTo : undefined
 
-  // The number input keeps a user inside `0 .. int32`, so a bad value can only
-  // come from a hand-edited URL; it gets an inline hint rather than the 422 the
-  // backend would answer with.
+  // Whatever the field or a hand-edited URL carries is validated here and gets
+  // an inline hint rather than the 422 the backend would answer with.
   const maxVerified = parseMaxVerified(rawMaxVerified)
 
   const pageSizeFromUrl = parsePositiveInt(searchParams.get(PAGE_SIZE_KEY), DEFAULT_PAGE_SIZE)
@@ -254,6 +235,13 @@ export function LowVerificationFeedTab() {
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, query.data?.total_pages ?? 1)
 
+  // The floor comes from the answer, never from a constant here: the backend
+  // keeps it in an env var (`LOW_VERIFICATION_MONTHS_FLOOR`) and now echoes the
+  // value it actually applied, so the hint below cannot drift out of step with
+  // the environment it describes. `undefined` until the first response — the
+  // hint explains the data, so it has nothing to say before there is any.
+  const monthsFloor = query.data?.months_floor
+
   // The feed drains, so a bookmarked `?pg=` can outlive the rows it pointed at.
   // What the pager shows is the page that actually exists — "Page 5 of 2" over
   // an empty table, with Prev walking down one empty page at a time, is not a
@@ -324,11 +312,14 @@ export function LowVerificationFeedTab() {
         />
         <div className="w-full min-w-0 sm:w-44">
           <Input
-            type="number"
+            // Deliberately NOT type="number": the browser blanks a numeric
+            // input whose value is not a number, so a `?mv=abc` would point its
+            // "must be a whole number" hint at a field that LOOKS empty. A text
+            // input shows the offending value back to the user; the numeric
+            // keypad still comes up on touch, and the rule itself lives in
+            // parseMaxVerified (which the URL bypasses anyway).
+            type="text"
             inputMode="numeric"
-            min={0}
-            max={MAX_VERIFIED_CEILING}
-            step={1}
             label={t('pages.reports.lowVerification.maxVerified')}
             placeholder={t('pages.reports.lowVerification.maxVerifiedPlaceholder')}
             error={maxVerifiedError}
@@ -351,12 +342,18 @@ export function LowVerificationFeedTab() {
         {/* The feed drains between purchase batches: its months-long floor is a
             hard backend rule no filter can widen, so an empty list is a normal
             state and not a failure. Without this note the empty table reads as
-            a bug. The floor length comes from a constant (see MONTHS_FLOOR)
-            rather than the copy, because the backend keeps it in an env var it
-            never returns. */}
-        <p className="text-muted-foreground w-full text-xs">
-          {t('pages.reports.lowVerification.floorHint', { months: MONTHS_FLOOR })}
-        </p>
+            a bug — which is exactly why it renders as soon as there IS an
+            answer (an empty feed is one) and not before: with no response there
+            is no floor to name, and inventing one would be the drift this hint
+            exists to avoid. `count` (not a plain `months` variable) so
+            i18next picks the right plural form — Ukrainian needs three
+            (місяць / місяці / місяців), and the old copy was only grammatical
+            for 2–4. */}
+        {monthsFloor !== undefined && (
+          <p className="text-muted-foreground w-full text-xs">
+            {t('pages.reports.lowVerification.floorHint', { count: monthsFloor })}
+          </p>
+        )}
 
         {/* Pair-level only: the single-field errors live on their fields (see
             above). This one has no single field to sit on. */}
@@ -369,7 +366,9 @@ export function LowVerificationFeedTab() {
 
       {/* Content: an invalid filter shows only the hints above */}
       {hasFilterError ? null : query.isLoading ? (
-        <TableSkeleton columns={COLUMN_COUNT} rows={6} />
+        // The skeleton mirrors the real table's width — the count comes from
+        // LowVerificationTable so the two cannot drift apart.
+        <TableSkeleton columns={LOW_VERIFICATION_COLUMN_COUNT} rows={6} />
       ) : query.isError ? (
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />

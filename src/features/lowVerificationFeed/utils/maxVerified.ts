@@ -2,10 +2,11 @@
  * Parsing for the `max_verified` filter as it travels through the URL.
  *
  * The field is optional (empty = no cap) and the backend accepts an integer in
- * `[0 .. 2147483647]`, answering 422 for anything else. The number input keeps
- * a user inside that range, but the URL is hand-editable, so a value read back
- * from it is validated here and a bad one shows an inline hint instead of
- * firing a request the backend would reject.
+ * `[0 .. 2147483647]`, answering 422 for anything else. The value reaches the
+ * tab as a raw string — typed into a text input (a number input would blank an
+ * unusable one instead of showing it back) or read from a hand-edited URL — so
+ * it is validated here and a bad one shows an inline hint instead of firing a
+ * request the backend would reject.
  */
 
 /** Mirrors the backend's `le=2_147_483_647` bound (int32 ceiling). */

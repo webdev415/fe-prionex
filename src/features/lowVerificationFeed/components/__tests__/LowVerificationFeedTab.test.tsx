@@ -7,7 +7,9 @@ import { LowVerificationFeedTab } from '../LowVerificationFeedTab'
 import { getLowVerificationFeed } from '../../api/lowVerificationFeedApi'
 import type { LowVerificationFeedResponse, LowVerificationFeedRow } from '../../types'
 
-// react-i18next is mocked globally in src/test/setup.ts — t() returns the key.
+// react-i18next is mocked globally in src/test/setup.ts — t() returns the key,
+// except for the floor hint, which the mock renders as `<key>:<count>` so the
+// month count travelling from the response stays assertable.
 
 vi.mock('../../api/lowVerificationFeedApi', () => ({
   getLowVerificationFeed: vi.fn(),
@@ -65,7 +67,10 @@ vi.mock('@/components/ui/DateSelect', () => ({
             onChange?.({ value: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })
           }
         />
-        {onClear && (
+        {/* Same gate as the real component's `showClear` (onClear AND a date
+            actually set) — an unconditional "×" would let a test click a
+            control production does not render. */}
+        {onClear && value && (
           <button type="button" aria-label={clearLabel ?? 'Clear'} onClick={onClear}>
             ×
           </button>
@@ -108,6 +113,8 @@ function makeResponse(
     sell_from: null,
     sell_to: null,
     max_verified: null,
+    // The backend echoes the floor it applied; 2 is its default.
+    months_floor: 2,
     rows,
     total: rows.length,
     page: 1,
@@ -365,6 +372,17 @@ describe('LowVerificationFeedTab', () => {
     expect(document.getElementById(describedBy as string)).toHaveTextContent(
       'pages.reports.lowVerification.invalidSellDate'
     )
+    // An unusable bound is not a value the picker can hold, so it renders no
+    // "×" to take it back — which is exactly why the message names the LINK as
+    // the source and asks for a date instead of pointing at a missing control.
+    expect(
+      screen.queryByRole('button', {
+        name: [
+          'pages.reports.lowVerification.clearSellFrom',
+          'pages.reports.lowVerification.clearSellTo',
+        ][offendingIndex],
+      })
+    ).not.toBeInTheDocument()
   })
 
   it('blocks an inverted sell window but accepts a lone bound after it', async () => {
@@ -394,12 +412,12 @@ describe('LowVerificationFeedTab', () => {
   })
 
   it.each([
-    ['a negative cap', '/?mv=-1'],
-    ['a fractional cap', '/?mv=1.5'],
-    ['a non-numeric cap', '/?mv=abc'],
-  ])('blocks a hand-edited max_verified with %s', async (_case, entry) => {
-    // The number input keeps a user inside 0..int32, so the backend's 422 is
-    // unreachable through the UI; a hand-edited URL gets an inline hint.
+    ['a negative cap', '/?mv=-1', '-1'],
+    ['a fractional cap', '/?mv=1.5', '1.5'],
+    ['a non-numeric cap', '/?mv=abc', 'abc'],
+  ])('blocks a hand-edited max_verified with %s', async (_case, entry, raw) => {
+    // The value can only be this bad from a hand-edited URL; it earns an inline
+    // hint instead of the 422 the backend would answer with.
     mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab([entry])
@@ -417,6 +435,10 @@ describe('LowVerificationFeedTab', () => {
     expect(document.getElementById(describedBy as string)).toHaveTextContent(
       'pages.reports.lowVerification.invalidMaxVerified'
     )
+    // ...and the offending value stays VISIBLE: a number input would coerce
+    // "abc" to an empty string, leaving a hint pointing at a blank field.
+    expect(field).toHaveAttribute('type', 'text')
+    expect(field.value).toBe(raw)
   })
 
   it('pages through the feed with the right skip and keeps the page in the URL', async () => {
@@ -598,7 +620,31 @@ describe('LowVerificationFeedTab', () => {
     // raw key never reaches the DOM, so querying for it would pass vacuously.
     expect(screen.queryByText('Page')).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-    expect(screen.getByText('pages.reports.lowVerification.floorHint')).toBeInTheDocument()
+    // The empty state is exactly the case the hint explains, so it must survive
+    // it — with the floor the ANSWER carried, not a constant of our own.
+    expect(screen.getByText('pages.reports.lowVerification.floorHint:2')).toBeInTheDocument()
+  })
+
+  it('takes the floor hint from the response, not from a constant', async () => {
+    // A different LOW_VERIFICATION_MONTHS_FLOOR in the environment reaches the
+    // copy through the payload alone — nothing here has to be edited with it.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()], { months_floor: 3 }))
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.lowVerification.floorHint:3')).toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.lowVerification.floorHint:2')).not.toBeInTheDocument()
+  })
+
+  it('shows no floor hint before the first answer arrives', async () => {
+    // Nothing to explain yet, and no floor to name: the hint waits rather than
+    // guessing (a guess is the drift it exists to prevent).
+    mockGetFeed.mockImplementation(() => new Promise<LowVerificationFeedResponse>(() => {}))
+
+    renderTab()
+
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalled())
+    expect(screen.queryByText(/floorHint/)).not.toBeInTheDocument()
   })
 
   it('renders "—" for nullable columns and formats the Decimal debt amount', async () => {

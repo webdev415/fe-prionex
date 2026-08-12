@@ -31,5 +31,19 @@ describe('formatCalendarDay', () => {
   it('renders "—" instead of "Invalid Date" for a malformed payload', () => {
     expect(formatCalendarDay('not-a-date', 'en')).toBe('—')
     expect(formatCalendarDay('2026-13-45', 'en')).toBe('—')
+    // A time component alone is not a day either.
+    expect(formatCalendarDay('T00:00:00Z', 'en')).toBe('—')
+  })
+
+  it('formats the calendar day of a value that carries a time component', () => {
+    // These columns are backend DATEs today, but a switch to ISO datetimes must
+    // degrade to the right DAY rather than blanking the whole column: the
+    // anchoring only parses for an exact YYYY-MM-DD.
+    expect(formatCalendarDay('2026-07-29T14:00:00Z', 'en')).toBe('07/29/2026')
+    expect(formatCalendarDay('2026-07-29T14:00:00Z', 'uk')).toBe('29.07.2026')
+    expect(formatCalendarDay('2026-07-29T23:30:00+03:00', 'uk')).toBe('29.07.2026')
+    // The sender's WRITTEN day wins regardless of offset sign — the string is
+    // sliced before any parsing, never timezone-shifted to the viewer's clock.
+    expect(formatCalendarDay('2026-07-29T23:30:00-03:00', 'uk')).toBe('29.07.2026')
   })
 })

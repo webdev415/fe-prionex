@@ -8322,7 +8322,8 @@
         "maxVerified": "Verifications at most",
         "maxVerifiedPlaceholder": "No cap",
         "clearMaxVerified": "Clear the verifications cap",
-        "floorHint": "The list holds clients whose last purchase is no older than {{months}} months; an empty list means there were no purchases in that window.",
+        "floorHint_one": "The list holds clients whose last purchase is no older than {{count}} month; an empty list means there were no purchases in that window.",
+        "floorHint_other": "The list holds clients whose last purchase is no older than {{count}} months; an empty list means there were no purchases in that window.",
         "openClient": "Open client {{id}}",
         "columns": {
           "inn": "Tax ID",
@@ -8336,7 +8337,7 @@
           "bodyAmount": "Debt amount"
         },
         "empty": "No data for the selected filters",
-        "invalidSellDate": "Sale date is not a valid date",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",
         "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
         "forbidden": "You don't have permission to view this report",

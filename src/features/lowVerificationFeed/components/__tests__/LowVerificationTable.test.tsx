@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { LowVerificationTable } from '../LowVerificationTable'
+import { LOW_VERIFICATION_COLUMN_COUNT, LowVerificationTable } from '../LowVerificationTable'
 import type { LowVerificationFeedRow } from '../../types'
 
 // react-i18next is mocked globally in src/test/setup.ts — t() returns the key,
@@ -55,6 +55,15 @@ describe('LowVerificationTable', () => {
     expect(screen.getAllByText('Коваленко Іван Петрович')).toHaveLength(2)
     expect(screen.getAllByText('Дайлер')).toHaveLength(2)
     expect(screen.getAllByText('Полка')).toHaveLength(2)
+  })
+
+  it('renders exactly as many headers as the exported column count promises', () => {
+    // The skeleton of this table is sized from LOW_VERIFICATION_COLUMN_COUNT
+    // while the columns themselves are built inside the component (they need
+    // `t`), so this is what catches the two drifting apart.
+    renderTable([makeRow()])
+
+    expect(screen.getAllByRole('columnheader')).toHaveLength(LOW_VERIFICATION_COLUMN_COUNT)
   })
 
   it('links each row to the client details route built from client_id', () => {
