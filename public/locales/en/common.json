@@ -8251,7 +8251,8 @@
       "tabs": {
         "dashboard": "Dashboard",
         "processing": "Client Processing",
-        "verification": "Third-party verification"
+        "verification": "Third-party verification",
+        "low-verification": "Low verifications"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8310,6 +8311,38 @@
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "lowVerification": {
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Clear sale date to",
+        "maxVerified": "Verifications at most",
+        "maxVerifiedPlaceholder": "No cap",
+        "clearMaxVerified": "Clear the verifications cap",
+        "floorHint": "The list holds clients whose last purchase is no older than {{months}} months; an empty list means there were no purchases in that window.",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "verifiedCount": "Verified",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No data for the selected filters",
+        "invalidSellDate": "Sale date is not a valid date",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
           "retry": "Retry"
         }
       },
