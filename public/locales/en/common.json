@@ -5165,6 +5165,15 @@
             "commentPlaceholder": "Add a comment to the interaction...",
             "save": "Save Interaction",
             "saved": "Interaction saved"
+          },
+          "accept": "Accept",
+          "ignoreInteraction": "Ignore Interaction",
+          "unknownContact": "Unknown contact",
+          "callDuration": "Call Duration",
+          "contracts": {
+            "client": "Client by contracts",
+            "thirdParty": "Third party by contracts",
+            "view": "View"
           }
         },
         "callLogCard": {
