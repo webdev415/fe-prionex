@@ -131,3 +131,42 @@ export function useRejectCall(clientId?: number | null, agentExtension?: string 
     },
   })
 }
+
+/**
+ * Take a ringing inbound call.
+ *
+ * Answering is not instant on the Asterisk side — the caller is parked and then
+ * bridged to this operator — so callers should keep the button disabled while
+ * this is pending. A second attempt would park a caller who is already parked.
+ */
+export function useAnswerCall(clientId?: number | null, agentExtension?: string | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (callId: string) => callService.answerCall(callId, agentExtension),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+      invalidateCallRelatedQueries(queryClient, clientId)
+    },
+    onError: () => {
+      toast.error('Failed to answer call')
+    },
+  })
+}
+
+/** Park the caller, or take them back off hold. */
+export function useHoldCall(clientId?: number | null, agentExtension?: string | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ callId, hold }: { callId: string; hold: boolean }) =>
+      callService.holdCall(callId, hold, agentExtension),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+      invalidateCallRelatedQueries(queryClient, clientId)
+    },
+    onError: () => {
+      toast.error('Failed to hold call')
+    },
+  })
+}
