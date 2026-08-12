@@ -160,6 +160,23 @@ export function legalDueDateToPickerDate(
   return new Date(year, month - 1, day, hour, minute)
 }
 
+/**
+ * Profile-TZ calendar day (`YYYY-MM-DD`) for a stored due date, or `''`.
+ *
+ * The day a deadline belongs to is a profile-timezone question, not a UTC one:
+ * a 01:00 Kyiv deadline is stored as 22:00 the previous UTC day, so anything
+ * slicing a date out of `toISOString()` lands a day early. Filtering and export
+ * both need this to agree with what the card shows (KAN-1000).
+ */
+export function legalDueCalendarDay(
+  iso: string | null | undefined,
+  timezone?: string | null
+): string {
+  const parsed = parseLegalDueDate(iso)
+  if (!parsed) return ''
+  return calendarDateKey(parsed, resolveLegalTimezone(timezone))
+}
+
 /** Profile-TZ month/day + HH:mm for kanban cards and detail panels. */
 export function formatLegalDueDateTime(
   iso: string | null | undefined,

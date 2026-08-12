@@ -425,13 +425,13 @@ export function LegalKanbanBoard() {
   )
 
   const handleExportCsv = useCallback(() => {
-    const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes)
+    const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes, timezone)
     if (exported === 0) {
       toast.info(
         t('pages.lawyerWorkplace.kanban.exportEmpty', 'No tasks match the current filters')
       )
     }
-  }, [filteredColumns, letterTypes, t])
+  }, [filteredColumns, letterTypes, t, timezone])
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
