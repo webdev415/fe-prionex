@@ -230,6 +230,11 @@
   the push stage, so the credentials exist, are valid and carry push rights. Story 1.10's question
   «adopt `robot-registry` as-is or mint `ci-bot`?» can now be decided on preference rather than on
   an unknown. Oleg confirmed with `aleksey` on 2026-08-11 that they are ours to use.
+  ✅ **Closed by Story 1.10 (2026-08-12).** Decided: adopt (path a), nothing created. The push
+  right recorded here was re-proven independently in Story 1.10 with a freshly minted equivalent
+  token (`REGISTRY_TOKEN_RW`'s own value is unreadable — Forgejo secrets are write-only), because
+  this item only established that *some* login-action run once authenticated, not that the
+  credential is reliably usable outside a workflow. See `docs/migration-decisions.md#d14`.
 - ✅ **Answered as a by-product: org secrets ARE visible to workflows in `CRM/fe-prionex`.**
   Story 1.8 listed this as «не проверено» and the spec said Story 1.12 depends on the answer. The
   credentialed job referenced `${{ secrets.REGISTRY_USER }}` / `${{ secrets.REGISTRY_TOKEN_RW }}`
@@ -370,6 +375,14 @@
   only records the substitution. Oleg still needs to confirm with the hub administrator (`aleksey`)
   that `REGISTRY_USER`/`REGISTRY_TOKEN_RW` are `fe-prionex`'s to use — **not done during story
   1.8's session**, and it blocked AC3's credentialed clause (below).
+  ✅ **Closed by Story 1.10 (2026-08-12): adopted `robot-registry` as-is (path a), rejected creating
+  `ci-bot` (path b).** Cost of (b), recorded per Task 2.2: a second write-capable identity on a
+  shared registry (610 packages across the org at the time of checking, `fe-prionex` one consumer
+  among several), created for naming reasons and then requiring manual sync with the platform's own
+  pair — not worth it. `epics.md` FR10, NFR6 and Story 1.10's own AC2 are marked accordingly (not
+  rewritten); `:299` (the FR summary table) and `:722`/`:1076` (Story 1.12/3.1's own mentions) are
+  intentionally left for those stories to amend when they run — out of this story's scope. See
+  `docs/migration-decisions.md#d14`.
 - ⚠️ **Whether org secrets are exposed to workflows in `CRM/fe-prionex` — «не проверено», Story
   1.12 depends on the answer.** Story 1.8 authored a job (`probe-docker-push` in
   `.forgejo/workflows/probe-actions.yml`, on the now-deleted `probe/action-compat` branch) that

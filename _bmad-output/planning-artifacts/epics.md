@@ -91,8 +91,8 @@ environment discriminator in the tag (e.g. `sha-<short>-dev`).
 FR9: Build cache uses `type=registry,ref=<registry>/fe-prionex:buildcache` instead of
 `type=gha`.
 
-FR10: The Forgejo Container Registry is enabled, a `ci-bot` technical user holds a
-`write:package` token, and s1/s2 hold `read:package` tokens only.
+FR10: The Forgejo Container Registry is enabled, a ~~`ci-bot`~~ `robot-registry` technical user holds a
+`write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`, proven to push). Nothing was created. See `docs/migration-decisions.md#d14`.
 
 FR11: Registry retention removes `<branch>` tags after 14 days while guaranteeing that
 tags currently referenced by a running stand — and the previous N rollback targets — are
@@ -206,8 +206,8 @@ NFR4: Every image is immutable and traceable to the exact commit that produced i
 NFR5: The existing DEV and PROD stands remain fully operational and untouched throughout
 phases 0–6; Forgejo deploys only to newly created stands.
 
-NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only `ci-bot` holds
-`write:package`.
+NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only ~~`ci-bot`~~ `robot-registry` holds
+`write:package`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; `robot-registry`/`REGISTRY_TOKEN_RW` is the platform's existing write-capable pair, adopted as-is. See `docs/migration-decisions.md#d14`.
 
 NFR7: **NARROWED (2026-08-11, `sprint-change-proposal-2026-08-11-deploy-runner.md`).** Deployment
 no longer authenticates to s2 over SSH (FR19), so **no new deployment key is required**. The
@@ -725,10 +725,10 @@ So that CI can publish images while servers can only read them.
 **When** the Container Registry is enabled
 **Then** the target path `git.crm-prionex.com/crm/fe-prionex` accepts pushes.
 
-**Given** a technical user `ci-bot`
+**Given** a technical user ~~`ci-bot`~~ `robot-registry`
 **When** its token is created
 **Then** the token carries `write:package` scope
-**And** it is stored as the organization-level secret `REGISTRY_TOKEN`.
+**And** it is stored as the organization-level secret ~~`REGISTRY_TOKEN`~~ `REGISTRY_TOKEN_RW`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** neither `ci-bot` nor `REGISTRY_TOKEN` exists on the instance; Oleg decided to adopt the platform's own `robot-registry`/`REGISTRY_TOKEN_RW` rather than create a second write-capable identity for naming reasons. Push right proven in Story 1.10 (D14). See `docs/migration-decisions.md#d14`.
 
 **Given** s1 and s2 need to pull images
 **When** their registry credentials are created
