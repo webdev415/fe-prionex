@@ -252,7 +252,7 @@ and `docs/runners/README.md`'s drift check is extended to compare the two runner
 
 ## Tasks / Subtasks
 
-### Task 1 — Pre-flight: bind every number before touching anything (AC: 1, 1-bis, 5)
+### Task 1 — Pre-flight: bind every number before touching anything (AC: 1, 1-bis, 5) ✅
 
 - [ ] 1.1 Record the live token count on the instance before minting anything. **Baseline: 96 as of
       2026-08-13** (93 on 2026-08-12 — three appeared in between, none ours).
@@ -275,7 +275,7 @@ and `docs/runners/README.md`'s drift check is extended to compare the two runner
       none. This is the check that keeps a triggered legacy `CD.yml` unable to reach a server; it
       costs one listing and it is the plan's largest retired hazard.
 
-### Task 2 — Name the dependency and its owner (AC: 6)
+### Task 2 — Name the dependency and its owner (AC: 6) ✅
 
 - [ ] 2.1 Record that the OpenBao-side objects were provisioned by Oleg on 2026-08-13 (policies,
       roles, KV paths — see D15) and that **no credential values survive** from that session.
@@ -346,7 +346,7 @@ question, decided by those stories, not this one.
       `bao write -f -field=secret_id auth/approle/role/<role>/secret-id`.
       **A `secret_id` is displayed once.** Do not mint until ready to write all seven secrets.
 - [ ] 4.3 Record the exact issue timestamp of the `fe-prod` `secret_id` (AC2). TTL 7200h ≈ expires
-      2027-06-11; nothing rotates it.
+      2027-06-09 10:56 UTC; nothing rotates it.
 - [ ] 4.4 Verify each role reads only its own path and is denied the other two, as measured on
       2026-08-13 (nine checks). Re-running the full nine is cheap and re-proves the isolation
       against today's state rather than yesterday's record.
@@ -369,7 +369,7 @@ question, decided by those stories, not this one.
 - [ ] 5.4 Delete the token's `access_token` row on `forgejo-postgres` and re-count live tokens
       against Task 1.1. **In the same session.**
 
-### Task 6 — Runner configuration, both of them (AC: 7)
+### Task 6 — Runner configuration, both of them (AC: 7) ✅
 
 - [ ] 6.1 Add `--add-host openbao:172.20.0.5` to `container.options` in
       `/opt/forgejo-runner-fe-prionex/config.yml` **and** `config-2.yml`, alongside the existing
@@ -759,7 +759,11 @@ granting read on its environment. All seven destroyed, then exactly one minted p
 verified: `1` accessor each. **The instance-wide lesson this project keeps relearning applies to
 OpenBao too, not only to Forgejo tokens: minting is easy, and nothing cleans up after you.**
 
-**AC7 — half done. The config change is in place on both runners; the restart is not.**
+**AC7 — closed. Superseded the "half done" state recorded earlier in this session.**
+~~The config change is in place on both runners; the restart is not.~~ Oleg restarted both at
+11:42:41Z, both re-declared with labels `[node-20 docker-build]` within 40 s, and run 486 then
+proved the mapping from inside job containers on both. The paragraph below is kept because it
+records what was true before the restart and what "not yet in effect" meant.
 `--add-host openbao:172.20.0.5` was added to `container.options` in both
 `/opt/forgejo-runner-fe-prionex/config.yml` and `config-2.yml`, with identical LOAD-BEARING
 comments, verified by diff against backups (`config*.yml.bak-1-12`, still on the host). Both live
@@ -813,8 +817,16 @@ still have `log_in_storage = f` and are retrievable only through the web UI. Run
 proved by fail-closed plus attribution, not by reading its bytes. That is sound, and it is not the
 same thing as having read them.
 
-**Still outstanding:** `forgejo-migration.md` §3 (its secrets section predates all of this), and
-AC1's `SLACK_CD_WEBHOOK_URL` value, which no amount of work here can supply.
+**AC6 — closed.** The dependency was named before any work started and its owner is recorded: the
+OpenBao policies, roles and KV paths were provisioned by Oleg on 2026-08-13 (D15), no credential
+value survived that session, and the token needed to read `role_id` / mint `secret_id` was supplied
+by him in-session because this repository cannot mint one. Nothing proceeded on a placeholder: the
+only placeholder in the system is PRE-PROD's KV value, which is labelled as one and exists because
+that backend does not.
+
+**Still outstanding:** AC1's `SLACK_CD_WEBHOOK_URL` value, which no amount of work here can supply.
+(`forgejo-migration.md` §3 was rewritten in Task 8.2 — this line previously said it was outstanding
+and was stale; caught in review.)
 
 ### File List
 
@@ -839,9 +851,205 @@ AC1's `SLACK_CD_WEBHOOK_URL` value, which no amount of work here can supply.
 
 3. **The read mechanism (Task 3)** is a decision this story makes for Epics 3–6. If Oleg wants it
    made differently, it is cheaper to say so before Task 7 than after four stories inherit it.
-4. **`fe-prod`'s `secret_id` expires ~2027-06-11** and nothing rotates it. Owner unnamed.
+4. **`fe-prod`'s `secret_id` expires 2027-06-09 10:56 UTC** and nothing rotates it. Owner unnamed.
 5. **The hub's own prod `secret_id` expires every 720h** with nothing visible rotating it. Not our
    system; worth telling that team.
 6. **`robot-registry` couples s1's pull credential with CI's push credential** — a rotation or
    compromise hits both. `deferred-work.md` asks that the token model be settled alongside this
    story; it is not settled by these ACs.
+
+---
+
+## Appendix — the proven read step, verbatim
+
+**Why this is here.** The step below was proved by run 486 on the throwaway branch
+`probe/openbao-1-12`, and that branch was then deleted. Deleting it left the only working copy in an
+unreachable commit, one `git gc` away from gone — while Epics 3, 4, 5 and 6 are all supposed to
+inherit this exact code. Story 1.8 set the precedent of attaching its probe workflow to its story
+file for the same reason; this story initially failed to follow it, and the omission was caught in
+review.
+
+**This is a record, not a deployment mechanism.** Nothing applies it. When Story 3.3 writes the real
+build workflow it copies from here, keeps the comments (each names what it prevents), and re-proves
+the result rather than trusting this text.
+
+**Two things to change when it is reused.** The `OPENBAO_DEV_*` secret names are hardcoded here
+because the probe only read `dev` — a real workflow selects the pair matching its target
+environment, and must not build the KV path by string-concatenating the secret name (`PREPROD` ->
+`preprod`, which does not exist; the path segment is `pre-prod`). And the two `echo` lines that print
+the values exist only to prove masking works; they have no place in a real build.
+
+```yaml
+# THROWAWAY — Story 1.12, Task 7.3. This branch and this file are deleted once the
+# run is recorded. It exists to prove four things that were all «не проверено»:
+#   1. `--add-host openbao:172.20.0.5` reaches a job container FROM THE RUNNER CONFIG,
+#      not from a flag passed by hand (2026-08-13's 200s were measured with the flag).
+#   2. The OpenBao client Alpine packages (2.6.0) talks to the server (2.6.1).
+#   3. The role_id/secret_id stored in Forgejo repository secrets actually authenticate
+#      — they were proved before storage, never after.
+#   4. `::add-mask::` really redacts what this step exports, including a multi-line
+#      value and one containing a literal `%25`.
+#
+name: openbao-probe-1-12
+
+# TRIGGER, AND THE DEVIATION IT REPRESENTS. Stories 1.8 and 1.9 used
+# `workflow_dispatch` only, so a probe branch could never fire anything by merely
+# existing. That required an API token to dispatch, and this story's token was
+# revoked at the end of Task 5 by design — minting a second one to press a button
+# is worse debt than the deviation.
+#
+# So: `push`, pinned to THIS branch by name. It cannot fire on `main`, `staging` or
+# `development`, and it dies with the branch. The D9 invariant is about
+# `.github/workflows/` executing on protected branches; nothing here touches that,
+# and Task 7.3 re-confirms the invariant on all three after the branch is deleted.
+on:
+  push:
+    branches:
+      - probe/openbao-1-12
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "dev | pre-prod | prod — which KV path to read"
+        required: true
+        default: "dev"
+
+jobs:
+  probe:
+    # FOUR jobs, not one. AC7 requires the proof on BOTH runners, and a single job
+    # lands on whichever is free — proving one runner and telling you nothing about
+    # the other. Each runner has capacity 2, so four concurrent jobs cannot fit on
+    # one. Attribution is by reading each runner's container log for the job id, the
+    # method Story 1.9 used for its distribution evidence.
+    strategy:
+      fail-fast: false
+      matrix:
+        n: [1, 2, 3, 4]
+    runs-on: docker-build
+    steps:
+      # Separate step ON PURPOSE: it handles no secret, and `shell: bash` in the next
+      # step needs bash to already exist. Nothing here may ever touch a credential.
+      - name: Install the client (Task 3 decision — option (a), pinned)
+        run: |
+          set -eu
+          echo "probe slot ${{ matrix.n }} — container $(hostname)"
+          apk add --no-cache openbao=2.6.0-r0 jq bash >/dev/null
+          echo "bao:  $(bao version | head -1)"
+          echo "jq:   $(jq --version)"
+          echo "bash: $(bash --version | head -1)"
+
+      - name: OpenBao login -> KV read -> assert (one process env, nothing to disk)
+        shell: bash
+        env:
+          OPENBAO_ADDR: ${{ secrets.OPENBAO_ADDR }}
+          OPENBAO_DEV_ROLE_ID: ${{ secrets.OPENBAO_DEV_ROLE_ID }}
+          OPENBAO_DEV_SECRET_ID: ${{ secrets.OPENBAO_DEV_SECRET_ID }}
+          # Through env, never interpolated into the script body: a `${{ }}` expansion
+          # inside `run:` is a shell-injection vector, and `github.event.inputs` is the
+          # form this instance's act is known to accept.
+          KV_ENV: ${{ github.event.inputs.environment }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          # ---- Preflight. Two different failures, two different messages. -------
+          # Collapsing them into one timeout is what cost PRIONEX_HUB a break-glass
+          # window on s2 (promote-prod.yml:168-186): `bao` was simply not installed,
+          # and the run died on `command not found` after the file had landed.
+          for _bin in bao jq; do
+            command -v "$_bin" >/dev/null 2>&1 || {
+              echo "::error::'$_bin' missing on this runner — the install step above did not do its job." >&2
+              exit 1; }
+          done
+
+          # Proof that `--add-host` came from the RUNNER CONFIG: the runner injects it
+          # into this container's /etc/hosts. If this line is absent, config.yml /
+          # config-2.yml on s1 lost the mapping (or only one of the two carries it).
+          echo "--- /etc/hosts entries injected by container.options ---"
+          grep -E 'openbao|git\.crm-prionex\.com' /etc/hosts || {
+            echo "::error::no openbao mapping in /etc/hosts — the runner config is not carrying --add-host." >&2
+            exit 1; }
+
+          export BAO_ADDR="$OPENBAO_ADDR"
+          bao status >/dev/null 2>&1 || {
+            echo "::error::OpenBao unreachable at $BAO_ADDR. The hostname resolves via a HARDCODED container IP in the runner's container.options. If forgejo-openbao was recreated its IP changed and both config.yml and config-2.yml on s1 need the new one." >&2
+            exit 1; }
+          echo "server: $(bao status -format=json | jq -r '.version')  client: $(bao version | head -1)"
+
+          # ---- AppRole login. Credentials never enter any argv. ------------------
+          # `jq -n --arg` would MOVE the exposure, not close it: --arg values are jq's
+          # own CLI arguments. The `env` builtin reads from /proc/<pid>/environ (0400),
+          # and `bao write PATH -` takes the body on stdin. PRIONEX_HUB caught the
+          # --arg regression with a kernel-level execve capture, not by reading it.
+          BAO_TOKEN=$(jq -n '{role_id: env.OPENBAO_DEV_ROLE_ID, secret_id: env.OPENBAO_DEV_SECRET_ID}' \
+            | bao write -format=json auth/approle/login - \
+            | jq -r '.auth.client_token')
+          echo "::add-mask::$BAO_TOKEN"
+          export BAO_TOKEN
+          echo "login: ok (token masked)"
+
+          # ---- Masking helper --------------------------------------------------
+          # Workflow-command VALUES are percent-decoded by the runner, so a value
+          # containing a literal "%25" would register "%" as the secret and never
+          # match what is actually printed. Escape only the text handed to
+          # ::add-mask::, never the exported value.
+          # DEVIATION FROM THE HUB, RECORDED: this uses bash parameter expansion,
+          # which busybox ash does not implement — hence `bash` in the install step
+          # and `shell: bash` here. The hub runs on Debian deploy hosts and never
+          # had to say so.
+          _escape_for_mask() {
+            local s=$1
+            s=${s//%/%25}
+            s=${s//$'\r'/%0D}
+            s=${s//$'\n'/%0A}
+            printf '%s' "$s"
+          }
+
+          KV_PATH="fe/${KV_ENV:-dev}/app"
+          echo "reading: secret/$KV_PATH"
+          KV_JSON=$(bao kv get -format=json -mount=secret "$KV_PATH")
+
+          # Revoke immediately after the LAST read: everything below only touches the
+          # already-fetched $KV_JSON, so the token must not be inherited by anything
+          # that follows (in a real build: every docker build/push).
+          bao token revoke -self >/dev/null
+          unset BAO_TOKEN
+
+          count=0
+          while IFS= read -r k; do
+            # An identifier regex alone does NOT close this: `PATH` and `LD_PRELOAD`
+            # match it perfectly. The hub shipped that mistake and its own review
+            # caught the false claim. Denylist is what closes it.
+            printf '%s\n' "$k" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$' \
+              || { echo "::error::refusing to export unsafe OpenBao key name: $k" >&2; exit 1; }
+            case "$k" in
+              PATH|LD_PRELOAD|LD_LIBRARY_PATH|IFS|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|HOME|TMPDIR|DOCKER_CONFIG|DOCKER_HOST|BAO_*|VAULT_*|GITHUB_*)
+                echo "::error::refusing to export reserved OpenBao key name: $k" >&2; exit 1;;
+            esac
+            # Structural extraction by key. NEVER re-parse a concatenated "k=v" text
+            # stream: a value containing a newline re-splits into a new record, and a
+            # crafted value used exactly that to hijack PATH to /tmp/pwned on the hub.
+            v=$(jq -r --arg k "$k" '.data.data[$k]' <<<"$KV_JSON")
+            # Register a mask for EVERY line: ::add-mask:: is parsed one physical log
+            # line at a time, so a multi-line value would leak every line but the first.
+            while IFS= read -r _line || [ -n "$_line" ]; do
+              [ -n "$_line" ] && echo "::add-mask::$(_escape_for_mask "$_line")"
+            done <<<"$v"
+            export "$k=$v"
+            count=$((count+1))
+          done < <(jq -r '.data.data | keys[]' <<<"$KV_JSON")
+          unset KV_JSON
+
+          # ---- Assertions that can actually fail --------------------------------
+          echo "--- assertions ---"
+          [ "$count" -eq 2 ] || { echo "::error::expected 2 keys, got $count" >&2; exit 1; }
+          echo "keys exported: $count"
+          [ -n "${VITE_API_BASE_URL:-}" ] || { echo "::error::VITE_API_BASE_URL empty" >&2; exit 1; }
+          [ -n "${VITE_WS_URL:-}" ]       || { echo "::error::VITE_WS_URL empty" >&2; exit 1; }
+          echo "VITE_API_BASE_URL length: ${#VITE_API_BASE_URL}"
+          echo "VITE_WS_URL length:       ${#VITE_WS_URL}"
+          # Printed deliberately: if masking works these come out as ***, and if it
+          # does not, we learn that here rather than in a production deploy log.
+          echo "VITE_API_BASE_URL value (expect ***): $VITE_API_BASE_URL"
+          echo "VITE_WS_URL value (expect ***):       $VITE_WS_URL"
+          echo "no secret written to \$GITHUB_ENV: $(grep -c VITE "$GITHUB_ENV" 2>/dev/null || echo 0)"
+```
