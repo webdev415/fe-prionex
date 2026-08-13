@@ -74,8 +74,17 @@ status checks.
 
 **Image build and registry (Phases 2, 4)**
 
-FR5: A Forgejo workflow `.forgejo/workflows/build.yml` runs on the `docker-build` runner
-label and builds/pushes the image to `git.crm-prionex.com/crm/fe-prionex`.
+FR5: A Forgejo workflow `.forgejo/workflows/build.yml` runs on the **`node-20`** runner label
+and builds/pushes the image to `git.crm-prionex.com/crm/fe-prionex`. 🔴 **AMENDED 2026-08-13.**
+The original named `docker-build`, and **a workflow written against it cannot run at all.** That
+label resolves to `code.forgejo.org/oci/docker:cli`, which carries **no Node runtime** (measured:
+`command -v node` → absent), so no `uses:` step executes under it — not `docker/*`, not even
+`actions/checkout`. Story 1.8 established this and ran **every** probe job on `node-20`
+(`1-8-…md:1108,1216,1347`); its own code review filed the unamended text against Story 3.1 **by
+name** — *"Story 3.1 will read them and author a workflow that cannot work"* (`1-8-…md:686`) — and
+`docs/forgejo-migration.md` was patched while `epics.md` was not. The build reaches the daemon
+through `DOCKER_HOST` in `container.options`, not through the job image, so `node-20` loses
+nothing.
 
 FR6: The build workflow triggers on push to any branch (including feature branches), push
 to `main`, and tag `v*`, plus `workflow_dispatch` with a `ref` input.
@@ -1245,7 +1254,8 @@ So that it can be deployed without depending on ghcr.io.
 
 **Acceptance Criteria:**
 
-**Given** the `docker-build` runner label from Story 1.7
+**Given** the **`node-20`** runner label from Story 1.7 (🔴 **amended 2026-08-13** — `docker-build`
+carries no Node runtime, so no `uses:` step runs under it; see FR5)
 **When** `.forgejo/workflows/build.yml` is created
 **Then** it checks out the code, sets up buildx, logs in to
 `git.crm-prionex.com` using `REGISTRY_TOKEN`, and builds `Dockerfile.prod` ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
@@ -1256,10 +1266,18 @@ So that it can be deployed without depending on ghcr.io.
 **Then** its only trigger is `workflow_dispatch` with a `ref` input
 **And** a successful push to the registry is confirmed via manual dispatch.
 
-**Given** any action from the `docker/*` family failed to resolve in Story 1.8
+**Given** the per-action verdicts recorded by Story 1.8 (🔴 **premise corrected 2026-08-13** — the
+original read *"any action from the `docker/*` family failed to resolve"*, which is **false**: all
+four of `setup-buildx-action`, `login-action`, `metadata-action` and `build-push-action` resolve,
+see `docs/migration-decisions.md#d12`. What failed was the *push*, for a different reason — the
+`docker-container` buildx driver pushes from its own BuildKit container, which does not inherit the
+job's `--add-host` mapping)
 **When** the workflow is written
-**Then** the recorded native `run:` replacement is used instead
-**And** no unresolvable action remains in the file.
+**Then** either `driver: docker` is set on `setup-buildx-action`, or the recorded native
+`docker build` + `docker push` replacement is used
+**And** no unresolvable action remains in the file
+**And** whichever is chosen, the push is **proven**, not assumed — Story 1.8's push never succeeded
+through the action.
 
 **Given** two builds of the same ref could race to push identical tags
 **When** concurrency is configured
