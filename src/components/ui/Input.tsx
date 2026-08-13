@@ -3,6 +3,7 @@ import { forwardRef, useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT, suppressesAutofill } from './autofill'
 
 const inputVariants = cva(
   'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground placeholder:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
@@ -47,6 +48,54 @@ export interface InputProps
   clearLabel?: string
 }
 
+/**
+ * Autofill defence (KAN-1009): the rendered field defaults to
+ * ``autocomplete="new-password"``, carries the password-manager opt-outs, and
+ * falls back to an opaque generated ``name`` so the classifier has one less
+ * signal to read.
+ *
+ * ``new-password`` rather than ``off`` because Chrome honours ``off`` only
+ * outside its profile groups, and ignores it for person name, phone, email and
+ * street address — the fields this app is mostly made of. Setting the strong
+ * token here rather than at the call sites is what keeps it consistent: the
+ * client, user, seller and project forms are all the same class of field, and
+ * a per-call-site rule goes stale the first time someone adds a form.
+ *
+ * On a text field ``new-password`` only ever means "do not autofill", but on a
+ * real password field it is the token that makes Chrome and Safari offer to
+ * generate and save a credential. Login passwords go through ``PasswordInput``,
+ * which renders its own element and has none of this — but ``Input`` is not
+ * password-free: ``MessagingIntegrationsPage`` passes ``type={field.type}`` and
+ * six integration credentials are typed ``password``. So password-typed fields
+ * fall back to ``off`` here rather than depending on every such call site
+ * remembering to pass it. They keep the opt-outs and the generated name, since
+ * ``off`` is outside ``REQUESTS_REAL_AUTOFILL`` like anything else.
+ *
+ * All of it backs off for the tokens in ``REQUESTS_REAL_AUTOFILL``: the login
+ * form's username, where ``data-lpignore`` would stop LastPass saving the
+ * credential, and the 2FA ``one-time-code`` fields, where it would break the
+ * SMS handoff. The password half of the login form goes through
+ * ``PasswordInput``, which has none of this and is meant not to.
+ *
+ * Passing ``autoComplete`` at a call site is not on its own a way back into
+ * profile autofill. A token outside that set still gets the opt-outs and the
+ * generated name, so the field would be asking Chrome to fill it while telling
+ * every password manager to keep away. Opting a field back in means adding its
+ * token to ``REQUESTS_REAL_AUTOFILL`` in ``./autofill``, deliberately, rather
+ * than one call site quietly disagreeing with the rest of the app.
+ *
+ * Two deliberate limits. The caller's ``id`` stays on the input rather than
+ * moving to the wrapper the way ``DateSelect`` does it: ~100 call sites pass a
+ * semantic id and the app has ~190 ``htmlFor`` references, so relocating it
+ * would cost label association to hide a signal weaker than the visible label
+ * standing next to it. And a blanket ``new-password`` is the wrong token under
+ * WCAG 1.3.5, which wants the real one on fields collecting the user's own
+ * details — ``ProfileSettingsPage`` is the only form in the app that qualifies,
+ * and it is a known exception rather than an oversight. Exempting it means
+ * putting ``email``/``given-name``/``family-name``/``tel`` on the allow-list
+ * and passing them there, which also brings the suggestion dropdown back to
+ * that page.
+ */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
@@ -63,6 +112,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       clearLabel = 'Clear',
       value,
       id,
+      name,
+      autoComplete = type === 'password' ? 'off' : 'new-password',
       ...props
     },
     ref
@@ -71,6 +122,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
+    const suppressAutofill = suppressesAutofill(autoComplete)
+    const fieldName = name ?? (suppressAutofill ? opaqueFieldName('fld', generatedId) : undefined)
 
     const effectiveVariant = error ? 'error' : variant
 
@@ -105,6 +158,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             id={inputId}
+            name={fieldName}
+            autoComplete={autoComplete}
             value={value}
             className={cn(
               inputVariants({ variant: effectiveVariant, inputSize }),
@@ -115,6 +170,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            {...(suppressAutofill ? PASSWORD_MANAGER_OPT_OUT : {})}
             {...props}
           />
           {showClear ? (
