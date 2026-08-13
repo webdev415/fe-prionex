@@ -653,3 +653,24 @@
   Slack is now excluded. The requirement document is written and send-ready; **the missing thing is
   a channel and a named recipient.** Until then the requirement is `не направлено`, AC1/AC2/AC4 of
   Story 1.6 are unsatisfied by definition, and Epic 5 stays blocked.
+
+## Deferred from: story 1-6-secure-the-pre-prod-infrastructure-commitment (2026-08-13)
+
+- 🔴 **The PRE-PROD requirement is written and will not be sent until after all epics** (Oleg,
+  2026-08-13). That makes Epic 5 blocked **by decision**, not by another team's queue — a
+  materially different thing, because no amount of chasing changes it. Story 5.1 asks for exactly
+  what the unsent requirement asks for. **Re-sequencing the plan around this is `correct-course`
+  work and nobody has done it.** Owner: Oleg. See `#d11`.
+- 🔴 **`README.md:136` labels the DEV stand as "Pre-production."** The row reads
+  `72.62.17.132 | 8080 | dev.crm-prionex.online` under an `Environment: Pre-production` heading.
+  Today it is merely wrong; **once a real PRE-PROD exists it becomes actively dangerous** — a
+  reader following it would send a release candidate to DEV, which is the precise failure the
+  whole requirement document exists to prevent. Fixing README was outside Story 1.6's scope;
+  flagging it was not.
+- ⚠️ **The naming question is answered but not by its owner.** Oleg confirmed
+  `api.preprod.crm-prionex.online` as the name to propose. Whether that name is **ours to propose
+  or the infra team's to assign** is still unknown, and it only surfaces when the requirement is
+  finally sent. Recorded so the answer is not mistaken for agreement.
+- ✅ **No discrepancy found between the story's cited facts and the working tree.** Every citation
+  in Task 1 was re-verified at `f7c83434` and all held — compose, nginx, Dockerfile, `.env.example`,
+  `api.ts`, and both `CD.yml` references. Recorded because the task required recording either way.

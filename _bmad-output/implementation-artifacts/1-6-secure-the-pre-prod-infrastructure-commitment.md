@@ -4,9 +4,9 @@ baseline_commit: 42fb1472
 
 # Story 1.6: Secure the PRE-PROD Infrastructure Commitment
 
-Status: in-progress
+Status: review
 
-> **Blocked at Task 3, by design.** The requirement document exists and is send-ready; it has **not
+> **Partial result, honestly recorded — this is the outcome Task 3.3 prescribes.** The requirement document exists and is send-ready; it has **not
 > been sent**, so AC1, AC2 and AC4 are NOT satisfied — their trigger clause is *"when the
 > requirement is submitted"*, and a document in `docs/` is not a submitted requirement. Two of the
 > three questions in Task 3.2 are still unanswered: **which team/person/channel**, and **who
@@ -383,7 +383,7 @@ to, and whether Oleg sends it himself. **Task 3 remains a hard stop and the requ
       of thing this story exists to surface early. Record it, then stop: re-planning Epic 5
       around it is `correct-course` work, not yours.
 
-### Task 5 — Record the decision as D11 in `docs/migration-decisions.md` (AC: 3)
+### Task 5 — Record the decision as D11 in `docs/migration-decisions.md` (AC: 3) ✅
 
 - [ ] 5.1 🚨 **Coordinates in this task were corrected by Story 1.7's code review (2026-08-11) and
       are now expressed structurally — do not re-introduce raw line numbers, they rot.** Story 1.7
@@ -433,7 +433,7 @@ to, and whether Oleg sends it himself. **Task 3 remains a hard stop and the requ
       not a guessed "today"; the existing last rows are `11.08.2026` (Story 1.7 and its code
       review).
 
-### Task 6 — Amend the migration plan (AC: 3)
+### Task 6 — Amend the migration plan (AC: 3) ✅
 
 - [ ] 6.1 `docs/forgejo-migration.md` **Фаза 0, item 2** (line 120) currently reads:
       *«Согласовать с бэкендом/инфрой: сеть и Kong для preprod на s1, DNS-имя
@@ -459,7 +459,7 @@ to, and whether Oleg sends it himself. **Task 3 remains a hard stop and the requ
 - [ ] 6.5 Also update the **Фаза 0 DoD** (line **126**, not 122 — 122 is the struck-through
       item 4) only if item 2's outcome changes it. Otherwise leave it.
 
-### Task 7 — Track the dependency as an explicit blocker on Epic 5 (AC: 3)
+### Task 7 — Track the dependency as an explicit blocker on Epic 5 (AC: 3) ✅
 
 ⚠️ There is **no blocker field anywhere in the tracking system.** `sprint-status.yaml`'s
 `STATUS DEFINITIONS` comment block (lines 8-35) defines status values only — `backlog |
@@ -485,7 +485,7 @@ YAML key; the file is machine-read by the sprint workflows.
       Story 1.6's own AC text in `epics.md`; the derived AC4 lives in this story file, with its
       justification, and stays there.
 
-### Task 8 — Record the out-of-scope findings (AC: none — hygiene)
+### Task 8 — Record the out-of-scope findings (AC: none — hygiene) ✅
 
 - [ ] 8.1 Append a section to `_bmad-output/implementation-artifacts/deferred-work.md`
       (`## Deferred from: story 1-6-secure-the-pre-prod-infrastructure-commitment (<date>)`),
@@ -865,6 +865,35 @@ consequences, stated once so they are not rediscovered:
    secret, finally rather than pending, and **Story 4.5 (deploy notifications) will report success
    and send nothing** unless it is rescoped. That is a plan-level consequence and belongs in
    `correct-course`, not in either story's completion notes alone.
+
+
+**Tasks 5–8 completed under Task 3.3's instruction**, which says plainly: if the submission cannot
+happen, finish 5–8 with the status «не направлено» and let the story sit at `review` with an honest
+partial result rather than a fake complete one.
+
+- **D11 written** in `docs/migration-decisions.md`, placed between D10 and D12 in numeric order,
+  index row added, and the header's anchor range corrected — it still claimed `D11` was «зарезервирован
+  Story 1.6, которая ещё не написана», which stopped being true today. D11 records what was asked,
+  of whom, when, and that **no commitment exists and none can while the requirement is unsent.** It
+  also states its own update rule, so the next person does not edit it: the mutable surface is the
+  response block in the requirement document, not the decision record.
+- **Plan amended.** The `§5 Риски` mitigation cell now carries the real state and both links; `§6
+  Критический путь` is annotated to say the segment is blocked **by decision rather than by a
+  queue**. **Фаза 0 item 2 was deliberately left unmarked** (Task 6.1a): an item that has not moved
+  must not acquire a marker implying it has.
+- **Epic 5 tracked as blocked** in both places that a reader looks: a comment above `epic-5:` in
+  `sprint-status.yaml` (the same mechanism the 1.13-before-1.12 constraint uses, since the schema
+  has no blocker field), and a block in the Epic 5 body in `epics.md` carrying the artifact link,
+  the absence of a date, and the `crm-kong-gateway` naming constraint that Story 5.1 must verify
+  from inside a running container.
+- **Findings recorded**, including `README.md:136` — verified: it does label the DEV stand
+  `Pre-production`.
+
+**AC status, traced rather than asserted.** AC1, AC2 and AC4 all trigger on *«when the requirement
+is submitted»*; it is not submitted, so all three are **unsatisfied by definition**, not by
+oversight. AC3 triggers on *«when the platform team responds»*; there is nobody to respond to an
+unsent document. **The story cannot close, and the reason is a decision rather than a gap in the
+work.**
 
 **Not done and not startable here:** Tasks 3 and 4 are hard stops. Tasks 5–8 (D11, plan amendment,
 Epic 5 blocker registration, out-of-scope findings) are deliberately left until the send status is

@@ -1724,6 +1724,28 @@ its own Kong gateway, and the fact that a candidate was validated there is recor
 registry as the release history. This epic depends on the infrastructure commitment secured
 in Story 1.6.
 
+> 🔴 **BLOCKED AS OF 2026-08-13, by decision rather than by another team's queue.** Story 1.6's
+> requirement is **written and deliberately not sent** — Oleg deferred the submission until after
+> all epics, and Slack was excluded as a route. There is therefore **no committed date, and none
+> can exist** while the requirement is unsent. Artifact:
+> [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
+> decision: [`#d11`](../../docs/migration-decisions.md#d11).
+>
+> **Story 5.1 asks for exactly what the unsent requirement asks for**, so this epic cannot start
+> in the planned order. Re-sequencing around it is `correct-course` work, not an edit inside any
+> story.
+>
+> ⚠️ **The constraint Story 5.1 must carry into its verification**, and the reason it cannot be
+> checked from a compose file alone: inside `crm-network-preprod` the PRE-PROD Kong must be
+> reachable under the name **`crm-kong-gateway`** on port **8000**. `nginx.conf` is baked into the
+> image at `Dockerfile.prod:34` and the image is byte-identical across stands, so there is no
+> per-stand way to point the frontend at a differently-named gateway. Story 5.1's ACs already
+> require resolution to be verified **from inside the running container** — that is why.
+>
+> ⚠️ Until this lands, `secret/fe/pre-prod/app` holds the literal
+> `PLACEHOLDER-preprod-backend-not-provisioned` ([#d15](../../docs/migration-decisions.md#d15)),
+> and any PRE-PROD image built from it is unusable by construction.
+
 ### Story 5.1: Stand Up the Isolated PRE-PROD Backend Network
 
 As a release engineer,

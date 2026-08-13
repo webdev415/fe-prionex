@@ -60,7 +60,7 @@ development_status:
   1-13-stop-forgejo-from-executing-the-legacy-github-workflows: done
   1-4-document-the-github-forgejo-synchronization-model: cancelled
   1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: cancelled
-  1-6-secure-the-pre-prod-infrastructure-commitment: in-progress
+  1-6-secure-the-pre-prod-infrastructure-commitment: review
   1-7-provision-the-primary-forgejo-runner-with-both-labels: done
   1-8-prove-action-compatibility-with-a-smoke-workflow: done
   1-9-provision-the-second-runner: done
@@ -106,6 +106,11 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: PRE-PROD Release Candidate Environment
+  # BLOCKED (2026-08-13): depends on PRE-PROD backend infrastructure from another team.
+  # Story 1.6's requirement is written but DELIBERATELY NOT SENT — Oleg deferred submission
+  # until after all epics. No committed date exists and none can while it is unsent.
+  # See docs/migration-decisions.md#d11 and docs/preprod-infrastructure-requirement.md.
+  # Story 5.1 asks for exactly what that requirement asks for; re-sequencing is correct-course work.
   epic-5: backlog
   5-1-stand-up-the-isolated-pre-prod-backend-network: backlog
   5-2-provision-the-pre-prod-stand-on-s1: backlog
