@@ -316,6 +316,9 @@ function LetterParametersPanelContent({
   )
 
   const resolvedClientProjectId = useMemo(() => {
+    if (noClientLink) {
+      return null
+    }
     if (clientProjectOverride != null && clientProjectOverride > 0) {
       return clientProjectOverride
     }
@@ -328,7 +331,13 @@ function LetterParametersPanelContent({
     }
     const selectedClient = (clientsData?.items ?? []).find((item) => item.id === parsedClientId)
     return selectedClient?.project_id ?? null
-  }, [clientProjectOverride, p.clientProjectId, effectiveClientId, clientsData?.items])
+  }, [
+    noClientLink,
+    clientProjectOverride,
+    p.clientProjectId,
+    effectiveClientId,
+    clientsData?.items,
+  ])
 
   const { data: lawyersData } = useLegalLawyers(
     resolvedClientProjectId != null && resolvedClientProjectId > 0
@@ -356,9 +365,10 @@ function LetterParametersPanelContent({
   const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items])
   const storedContract = p.contractLabel?.trim() ?? ''
   // Auto-select when the client has exactly one contract; otherwise the lawyer picks.
-  const effectiveContract =
-    contractOverride ??
-    (storedContract || (contracts.length === 1 ? (contracts[0].contract_number ?? '') : ''))
+  const effectiveContract = noClientLink
+    ? ''
+    : (contractOverride ??
+      (storedContract || (contracts.length === 1 ? (contracts[0].contract_number ?? '') : '')))
 
   const contractRequired = contracts.length > 1
   const contractIsValid = !contractRequired || Boolean(effectiveContract.trim())
@@ -725,11 +735,12 @@ function LetterParametersPanelContent({
         payload: {
           letter_type_id: effectiveTypeId,
           client_id: noClientLink ? null : clientIdNumber,
+          no_client_link: noClientLink,
           due_date: legalDueDateToIso(effectiveDueDate, timezone),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
           save_sender_email_to_client:
-            letter.direction === 'incoming' ? saveSenderEmail : undefined,
+            letter.direction === 'incoming' && !noClientLink ? saveSenderEmail : undefined,
         },
       },
       {
@@ -904,7 +915,12 @@ function LetterParametersPanelContent({
                 onCheckedChange={(value) => {
                   const next = value === true
                   setNoClientLink(next)
-                  if (next) setClientOverride(null)
+                  if (next) {
+                    setClientOverride(null)
+                    setContractOverride(null)
+                    setClientProjectOverride(null)
+                    setSaveSenderEmail(false)
+                  }
                 }}
                 disabled={confirmMutation.isPending}
               />
@@ -1010,7 +1026,7 @@ function LetterParametersPanelContent({
             })}
           </span>
         </div>
-        {letter.direction === 'incoming' && (
+        {letter.direction === 'incoming' && !noClientLink && (
           <label className="flex w-full cursor-pointer items-center gap-2 self-stretch py-1">
             <Checkbox
               checked={saveSenderEmail}

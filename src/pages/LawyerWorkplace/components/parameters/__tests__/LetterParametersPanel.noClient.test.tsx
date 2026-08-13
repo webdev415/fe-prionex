@@ -13,6 +13,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { LetterDetail } from '../../../types'
 
 const confirmMutate = vi.hoisted(() => vi.fn())
+const lawyersArgs = vi.hoisted(() => [] as unknown[])
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -39,21 +40,24 @@ vi.mock('@/features/lawyerWorkplace', async () => {
     useConfirmLetter: () => ({ mutate: confirmMutate, isPending: false }),
     useLegalClientSearch: () => ({ data: { items: [] }, isFetching: false }),
     useLegalClientContracts: () => ({ data: { items: [] }, isFetching: false }),
-    useLegalLawyers: () => ({
-      data: {
-        items: [
-          {
-            id: 'lawyer-1',
-            user_id: 10,
-            display_name: 'V. Doroshenko',
-            initials: 'VD',
-            is_active: true,
-            active_task_count: 0,
-            max_active_tasks: 50,
-          },
-        ],
-      },
-    }),
+    useLegalLawyers: (args: unknown) => {
+      lawyersArgs.push(args)
+      return {
+        data: {
+          items: [
+            {
+              id: 'lawyer-1',
+              user_id: 10,
+              display_name: 'V. Doroshenko',
+              initials: 'VD',
+              is_active: true,
+              active_task_count: 0,
+              max_active_tasks: 50,
+            },
+          ],
+        },
+      }
+    },
     useLegalLetterTypes: () => ({
       data: {
         items: [
@@ -106,6 +110,7 @@ const letter = {
     dueDate: '2026-09-01',
     dueDateHint: '',
     contractNumber: '',
+    contractLabel: 'CTR-OLD-CLIENT',
   },
 } as unknown as LetterDetail
 
@@ -130,6 +135,7 @@ function checkbox() {
 describe('LetterParametersPanel — no client link', () => {
   beforeEach(() => {
     confirmMutate.mockReset()
+    lawyersArgs.length = 0
   })
 
   it('is off by default', () => {
@@ -172,6 +178,54 @@ describe('LetterParametersPanel — no client link', () => {
     await waitFor(() => expect(confirm).toBeEnabled())
   })
 
+  it("does not submit the unlinked client's contract number", async () => {
+    renderPanel({ clientId: '100', clientLabel: 'Test Client' })
+    fireEvent.click(checkbox())
+
+    const confirm = screen.getByRole('button', { name: /Confirm & create task/i })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    fireEvent.click(confirm)
+
+    await waitFor(() => expect(confirmMutate).toHaveBeenCalledTimes(1))
+    expect(confirmMutate.mock.calls[0][0].payload.contract_number).toBeNull()
+  })
+
+  it('hides the record-sender-mail option, there is no profile to write to', async () => {
+    renderPanel()
+    expect(screen.getByText(/Record mail to client profile/i)).toBeInTheDocument()
+
+    fireEvent.click(checkbox())
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Record mail to client profile/i)).not.toBeInTheDocument()
+    )
+  })
+
+  it('never asks to record the sender against a client that is not there', async () => {
+    renderPanel()
+    const senderBox = screen.getByRole('checkbox', { name: /Record mail to client profile/i })
+    fireEvent.click(senderBox)
+    fireEvent.click(checkbox())
+
+    const confirm = screen.getByRole('button', { name: /Confirm & create task/i })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    fireEvent.click(confirm)
+
+    await waitFor(() => expect(confirmMutate).toHaveBeenCalledTimes(1))
+    expect(confirmMutate.mock.calls[0][0].payload.save_sender_email_to_client).toBeUndefined()
+  })
+
+  // The letter carries the client's project, so without this the lawyer list
+  // stays filtered to a client the operator just unlinked.
+  it("stops filtering lawyers by the unlinked client's project", async () => {
+    renderPanel({ clientId: '100', clientLabel: 'Test Client', clientProjectId: 42 })
+    expect(lawyersArgs.at(-1)).toEqual({ projectId: 42 })
+
+    fireEvent.click(checkbox())
+
+    await waitFor(() => expect(lawyersArgs.at(-1)).toEqual({}))
+  })
+
   it('sends a null client id', async () => {
     renderPanel()
     fireEvent.click(checkbox())
@@ -183,7 +237,12 @@ describe('LetterParametersPanel — no client link', () => {
     await waitFor(() => expect(confirmMutate).toHaveBeenCalledTimes(1))
     expect(confirmMutate.mock.calls[0][0]).toMatchObject({
       messageId: 'msg-1',
-      payload: { client_id: null, letter_type_id: 'complaint', assigned_to_user_id: 10 },
+      payload: {
+        client_id: null,
+        no_client_link: true,
+        letter_type_id: 'complaint',
+        assigned_to_user_id: 10,
+      },
     })
   })
 })
