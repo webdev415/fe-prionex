@@ -1,0 +1,147 @@
+name: CI
+
+# workflow_dispatch only, deliberately. Story 2.1 (this story) proves the four
+# jobs run at all; Story 2.2 is where push/pull_request triggers get added.
+# Adding them here would fire this workflow on every push to three protected
+# branches (main, staging, development) before it has ever been proven green.
+on:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    # node-20, and never `ubuntu-latest`: the CRM org carries an idle runner
+    # under that label belonging to ANOTHER TEAM. Naming it here does not fail
+    # — it resolves, and runs our CI on their infrastructure, which is worse.
+    # node-20 is the label Story 1.7 provisioned for us. (Verification greps
+    # for this string must exclude comment lines; the name has to appear here
+    # so a future reader knows exactly what is forbidden.)
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Separate step from format:check so the job log shows unambiguously
+      # which of the two failed.
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+  typecheck:
+    name: Type Check
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+  test:
+    name: Unit Tests
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:run
+
+      # AC4: record observed peak memory for this job. cgroup v2 exposes a
+      # running peak at memory.peak; some hosts only carry the cgroup v1
+      # memory.max_usage_in_bytes equivalent. Neither path is guaranteed to
+      # exist on every kernel/cgroup configuration, so this step must not
+      # fail the job when a file is absent — it only ever reports what it
+      # can find, in human-readable MB.
+      - name: Record peak memory usage
+        if: always()
+        run: |
+          if [ -f /sys/fs/cgroup/memory.peak ]; then
+            bytes=$(cat /sys/fs/cgroup/memory.peak)
+            mb=$(( bytes / 1024 / 1024 ))
+            echo "Peak memory usage (cgroup v2 memory.peak): ${mb} MB"
+          elif [ -f /sys/fs/cgroup/memory.max_usage_in_bytes ]; then
+            bytes=$(cat /sys/fs/cgroup/memory.max_usage_in_bytes)
+            mb=$(( bytes / 1024 / 1024 ))
+            echo "Peak memory usage (cgroup v1 memory.max_usage_in_bytes): ${mb} MB"
+          else
+            echo "Peak memory usage: neither /sys/fs/cgroup/memory.peak nor /sys/fs/cgroup/memory.max_usage_in_bytes is available on this runner."
+          fi
+
+  build:
+    name: Build
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          # CI-only literal. The ported line was
+          # `${{ secrets.VITE_API_BASE_URL || 'http://localhost:80' }}`
+          # (CI.yml:96-99) and that `||` fallback is exactly the construct NFR8
+          # and D6 forbid: a missing variable must fail the build, not ship a
+          # bundle pointed somewhere silently. This build is a compile-and-bundle
+          # check — its output is never deployed anywhere, so a real API base
+          # URL is not needed here. Real per-environment values are Story
+          # 3.3's job, read from OpenBao at deploy time.
+          VITE_API_BASE_URL: http://ci.invalid
+
+      # Pinned to @v3, not @v4: @v4 fails on this instance with
+      # GHESNotSupportedError (Story 1.8). @v3 is the version Story 1.8
+      # proved works — its own log confirmed "Container for artifact ...
+      # successfully created" and "Artifact has been finalized".
+      #
+      # That proof covers upload only. There is no Actions-artifacts API on
+      # this instance, so retrieval of this artifact is unverified — do not
+      # treat a successful upload here as evidence the artifact can be
+      # downloaded.
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # No Codecov step and no coverage-generating npm script here: FR3 removes
+  # that upload service from this pipeline entirely. Story 2.3 reintroduces
+  # coverage, as an uploaded build artifact rather than a third-party upload.
