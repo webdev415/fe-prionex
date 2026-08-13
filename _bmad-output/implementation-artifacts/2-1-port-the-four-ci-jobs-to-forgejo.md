@@ -4,7 +4,15 @@ baseline_commit: 43e14341
 
 # Story 2.1: Port the Four CI Jobs to Forgejo
 
-Status: ready-for-dev
+Status: review
+
+> **Closing state.** Six of seven ACs are closed with evidence from two green dispatches.
+> **AC4 is not closed and cannot be by this agent:** the peak-memory step ran, but its output is in
+> a job log that no available route can retrieve — no API (404 on three paths), never persisted to
+> storage, and the UI needs a browser session. That is a property of the instance, not of the
+> workflow, and it is recorded in `deferred-work.md` because it breaks the evidence standard every
+> remaining story is written to. Reading run 492's `Unit Tests` job in the web UI closes AC4 in
+> thirty seconds; nothing else will.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -184,7 +192,7 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
 
 ## Tasks / Subtasks
 
-### Task 1 — Bind the facts before writing YAML (AC: 1, 2, 3, 4, 5)
+### Task 1 — Bind the facts before writing YAML (AC: 1, 2, 3, 4, 5) ✅
 
 - [ ] 1.1 Re-read `.github/workflows/CI.yml` and `package.json` and confirm the script strings have
       not drifted from those recorded in Dev Notes.
@@ -193,7 +201,7 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
 - [ ] 1.3 Confirm `node:20-bookworm` is present in **both** dinds — a first run that has to pull it
       distorts every duration Story 2.4 will measure.
 
-### Task 2 — Decide the `VITE_API_BASE_URL` question in writing (AC: 5)
+### Task 2 — Decide the `VITE_API_BASE_URL` question in writing (AC: 5) ✅ — chose (a), CI-only literal `http://ci.invalid`
 
 - [ ] 2.1 Choose (a), (b) or (c) from §3, write the choice and the rejected options into this file,
       and state plainly that no `||` fallback appears in the workflow.
@@ -201,14 +209,14 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
       be installed on `node:20-bookworm` — Debian has no `openbao` package, and D15's decision was
       made for the Alpine image. Do not assume it transfers.
 
-### Task 3 — Declare the budget before spending it (AC: 6)
+### Task 3 — Declare the budget before spending it (AC: 6) ✅ — declared 2, spent 2
 
 - [ ] 3.1 State how many dispatches this story expects to need, before dispatching any. Three of the
       last four stories overran an undeclared or vague budget; 1.8's review found "план был 2" had
       nothing to compare against.
 - [ ] 3.2 Resolve the dispatch route (§7) with Oleg before writing the workflow, not after.
 
-### Task 4 — Write `.forgejo/workflows/ci.yml` (AC: 1, 2, 3, 4, 5, 7)
+### Task 4 — Write `.forgejo/workflows/ci.yml` (AC: 1, 2, 3, 4, 5, 7) ✅
 
 - [ ] 4.1 Four jobs, no `needs:` between them, all `runs-on: node-20`.
 - [ ] 4.2 Each job: `actions/checkout@v6`, `actions/setup-node@v4` with `node-version: '20'` and
@@ -223,7 +231,7 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
 - [ ] 4.7 `on: workflow_dispatch` and nothing else.
 - [ ] 4.8 Grep the finished file for `ubuntu-latest` and for `||` — both must return nothing.
 
-### Task 5 — Prove it (AC: 6)
+### Task 5 — Prove it (AC: 6) ✅ except 5.4 — peak memory is unreadable, see Dev Agent Record
 
 - [ ] 5.1 Commit to a branch, dispatch, and record run id, job ids, per-job duration and which
       runner executed each (attribution from the runners' container logs — the Story 1.9 method,
@@ -234,7 +242,7 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
       nothing about caching (§6).
 - [ ] 5.4 Record the peak memory number from AC4.
 
-### Task 6 — Land it (AC: 1, 6, 7)
+### Task 6 — Land it (AC: 1, 6, 7) ✅
 
 - [ ] 6.1 Merge `.forgejo/workflows/ci.yml` to `main` with the dispatch-only trigger intact.
 - [ ] 6.2 Re-confirm the D9 posture afterwards: `.forgejo/workflows/` on `main`, `staging` and
@@ -242,7 +250,7 @@ job targets a label provisioned by Story 1.7 (`node-20` or `docker-build`).
       Story 2.2. State it explicitly — the invariant has changed shape and every prior story
       asserted the old shape.
 
-### Task 7 — Record (AC: all)
+### Task 7 — Record (AC: all) ✅
 
 - [ ] 7.1 The flaky test from §5 into `deferred-work.md`, with its consequence for Stories 2.5
       and 2.6 named.
@@ -368,11 +376,97 @@ Nothing in `src/`, no `package.json` change, no Dockerfile change.
 
 ### Agent Model Used
 
+Workflow authored by Claude Sonnet 5 as a subagent; context extraction, verification, dispatch and
+recording by Claude Opus 5. Two Haiku subagents ran independent conformance passes on the finished
+YAML (parity against `CI.yml`, and AC/prohibition conformance) before it was committed.
+
 ### Debug Log References
+
+**Declared budget: 2 dispatches. Spent: 2.** Run 492 (cold), run 493 (warm comparison). No dispatch
+was wasted on a failing workflow — both runs were green on their first attempt.
+
+| run | job | task | runner | status | secs |
+|---|---|---|---|---|---|
+| 492 | Lint | 4872 | 20 | success | 174 |
+| 492 | Type Check | 4873 | 20 | success | 121 |
+| 492 | Unit Tests | 4874 | 19 | success | **486** |
+| 492 | Build | 4875 | 19 | success | 151 |
+| 492 | **whole run** | | | success | **487 (8:07)** |
+| 493 | Lint | 4876 | 19 | success | 163 |
+| 493 | Type Check | 4877 | 19 | success | 105 |
+| 493 | Unit Tests | 4878 | 20 | success | 483 |
+| 493 | Build | 4879 | 20 | success | 143 |
+| 493 | **whole run** | | | success | **484 (8:04)** |
 
 ### Completion Notes List
 
+**AC1, AC2, AC3, AC7 — closed.** Four jobs, no `needs:` between them, all `runs-on: node-20`,
+`lint` splitting `npm run lint` and `npm run format:check` into separate steps. `ubuntu-latest`
+appears nowhere in active configuration (verified with comments stripped, since the comment
+naming the forbidden label must stay readable). Both runs green.
+
+**AC5 — closed, and it establishes more than Story 1.8 could.** `upload-artifact@v3` recorded **154
+rows** for run 492 under `artifact_name = 'dist'`, 10,535,201 bytes gzip-encoded, all `status = 2`.
+Two things worth recording beyond the AC:
+
+- **`@v3` writes one row per file, not one per artifact.** Before this run the whole instance held
+  **3** artifacts; it now holds 157. Any future count of "artifacts" on this instance means files.
+- **`retention-days: 1` is applied, not merely accepted.** `expired_unix` is set to
+  **2026-08-14 13:22**, exactly one day after creation. Story 1.8 could only record that the field
+  was accepted without error. **Retrieval remains unverified** — see the finding below.
+
+**AC6 — closed.** Trigger is `workflow_dispatch` and nothing else; the workflow fired only when
+dispatched, twice, and the push that created the branch produced no run.
+
+**AC4 — NOT closed. The number exists and cannot be read.** The peak-memory step ran (the job is
+green and the step is not `continue-on-error`), but its output is in a job log that **cannot be
+retrieved by any route available here**:
+
+- API: `actions/jobs/{id}/logs`, `actions/runs/{run}/jobs/{id}/logs` and `actions/tasks/{id}/logs`
+  all return **404**. This instance has no job-log API, exactly as it has no artifacts API (D12).
+- Storage: `/data/gitea/actions_log` holds **3713** files, highest task id **4867**. Tasks
+  4872–4875 are absent and their `log_in_storage` is still `f` — while the database knows their
+  `log_length` (173, 164, **1265**, 316 lines), so the content existed and never reached disk.
+- The same happened to the Story 1.12 probe: **1 of 4** logs persisted there, **0 of 4** here.
+- The web UI would serve them, but that needs a browser session, which the dev agent has not got.
+
+**This is bigger than one AC.** Every story in Epics 2–6 is written to an evidence standard of
+"recorded from a real run". If job logs are unreadable, that standard is not reachable for anything
+that prints its evidence rather than storing it in the database. **Anything that must be proved
+should be made observable in the database or the filesystem, not in stdout.** Recorded in
+`deferred-work.md`.
+
+**Cache — measured without logs, and the answer is not the expected one.** A second identical
+dispatch on the same branch saved **3 seconds of 487** (0.6%): Lint −11 s, Type Check −16 s,
+Build −8 s, Unit Tests −3 s.
+
+The mechanism is not broken — the cache server is storing: `.cache/actcache` holds **523 MB** on
+runner 1 and **396 MB** on runner 2, populated by these runs. The cache simply is not where the time
+goes. **`Unit Tests` is 486 of 487 seconds of the critical path**, and the other three jobs finish
+inside its shadow. Story 2.4's remediation target is therefore the test job, not `npm ci`.
+
+For scale: the same suite takes ~150 s locally, so the runner is roughly **3× slower** — on a host
+carrying another tenant's production at load average 12.99.
+
+**Distribution proved twice, and the assignment flipped between runs.** Run 492 put Lint and Type
+Check on runner 20 and Unit Tests and Build on 19; run 493 reversed it exactly. Both runners
+therefore execute all four job types, which is stronger than the fixed-assignment evidence a single
+run would have given.
+
+**The flaky test struck again, on this story's own commit.** The pre-commit hook rejected the first
+commit attempt of `ci.yml`: 228 files and 1921 tests passed, and vitest exited non-zero on an
+unhandled `@radix-ui/react-focus-scope` timer error from `DocumentUploadModal.test.tsx`. Run alone,
+that file passes in 1.7 s — it is a full-suite race. **That is 2 failures in 6 full-suite runs
+today, 33%.** Both CI runs happened to be green, which is what a 33% flake looks like when you
+sample twice. Story 2.5 requires five consecutive green runs; at this rate that is roughly a 13%
+proposition, and Story 2.6 would put required status checks on top of it.
+
 ### File List
+
+- `.forgejo/workflows/ci.yml` — **NEW**, the only file this story creates
+- `_bmad-output/implementation-artifacts/2-1-…md` — this record
+- `_bmad-output/implementation-artifacts/deferred-work.md` — log retrieval, flaky test
+- `docs/migration-decisions.md` — changelog row
 
 ---
 

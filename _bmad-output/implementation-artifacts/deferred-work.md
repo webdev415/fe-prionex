@@ -594,3 +594,44 @@
   2026-08-13's earlier attempt, by the subset rule. The work was done with a 2h child of Oleg's
   admin token instead. The policy is harmless and would become useful if the platform team can
   ever attach it; decide whether to keep or drop it.
+
+## Opened by story 2.1 (2026-08-13)
+
+- 🔴 **Job logs are not retrievable by any route the dev agent has, and this undermines the
+  evidence standard of every remaining story.** Established on runs 492 and 493: the API returns
+  **404** for `actions/jobs/{id}/logs`, `actions/runs/{run}/jobs/{id}/logs` and
+  `actions/tasks/{id}/logs`; the storage tree `/data/gitea/actions_log` holds 3713 files with
+  highest task id **4867** while our tasks 4872–4879 are absent and their `log_in_storage` stays
+  `f` — even though the database records their `log_length` (up to 1265 lines), so the content
+  existed and never reached disk. The Story 1.12 probe saw the same thing: **1 of 4** logs
+  persisted, versus **0 of 4** here. The web UI would serve them but needs a browser session.
+  **Consequence, and it is not small:** Epics 2–6 are all written to "recorded from a real run".
+  Anything a story needs to prove must be made observable in the **database or the filesystem**,
+  not printed to stdout. Story 2.1's AC4 (peak memory) is stuck behind exactly this. **Owner:
+  whoever can either fix log persistence on the instance or read the UI on request.**
+- 🔴 **The test suite fails roughly one run in three, and Stories 2.5 and 2.6 are built on it not
+  doing that.** `DocumentUploadModal.test.tsx` leaves a `@radix-ui/react-focus-scope` timer that
+  fires after teardown; vitest counts it as an unhandled error and exits non-zero **with all 1921
+  tests passing**. Observed **2 failures in 6 full-suite runs on 2026-08-13**; the file passes in
+  1.7 s when run alone, so it is a full-suite race, not a broken test. Story 2.5 needs **five
+  consecutive green runs** — at a 33% failure rate that is roughly a 13% proposition — and Story
+  2.6 puts required status checks on top, so merges would block at random. **This should be fixed
+  before 2.5, not after.** Both CI runs in Story 2.1 happened to be green, which is what a 33%
+  flake looks like when you sample twice.
+- ⚠️ **Story 2.4's remediation target is the test job, and the cache is not it.** Measured across
+  runs 492 (cold) and 493 (warm): whole run 487 s → 484 s, a saving of **3 seconds**. The cache
+  server is working — `.cache/actcache` holds 523 MB on runner 1 and 396 MB on runner 2, populated
+  by these runs — `npm ci` simply is not where the time goes. **`Unit Tests` is 486 of the 487
+  seconds**; the other three jobs finish inside its shadow. The same suite takes ~150 s locally, so
+  the runner is about **3× slower**, on a host at load average 12.99 carrying another tenant's
+  production.
+- ⚠️ **`upload-artifact@v3` writes one database row per FILE.** Run 492 produced **154** rows named
+  `dist` (10,535,201 bytes, gzip). The whole instance held 3 artifacts before; it holds 157 now.
+  Any future statement counting "artifacts" on this instance is counting files. ✅ **New evidence
+  beyond Story 1.8:** `retention-days: 1` is *applied*, not merely accepted — `expired_unix` is set
+  to 2026-08-14 13:22, exactly one day after creation. ⚠️ **Retrieval is still unverified** and
+  Story 2.3's AC ("the coverage artifact is downloadable") has no known way to be satisfied.
+- ⚠️ **`.forgejo/workflows/ci.yml` is on `main` only.** `staging` and `development` still carry just
+  the inert `README.md`. Harmless while the trigger is `workflow_dispatch`, but Story 2.2 adds
+  `push` and `pull_request` — it must decide deliberately which branches carry the workflow, rather
+  than discovering the asymmetry when a push to `development` runs nothing.
