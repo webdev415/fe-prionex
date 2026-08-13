@@ -609,8 +609,20 @@
   Anything a story needs to prove must be made observable in the **database or the filesystem**,
   not printed to stdout. Story 2.1's AC4 (peak memory) is stuck behind exactly this. **Owner:
   whoever can either fix log persistence on the instance or read the UI on request.**
-- 🔴 **The test suite fails roughly one run in three, and Stories 2.5 and 2.6 are built on it not
-  doing that.** `DocumentUploadModal.test.tsx` leaves a `@radix-ui/react-focus-scope` timer that
+- ✅ **RESOLVED 2026-08-13 — root cause found and fixed in `src/test/setup.ts`.** Radix's FocusScope
+  restores focus from a `setTimeout(..., 0)` scheduled by its unmount cleanup, and nothing awaited
+  it. With `pool: 'forks'` + `maxWorkers: 1` + `fileParallelism: false`, files run sequentially in
+  one process with a **fresh jsdom per file**, so a timer left pending at the end of one file fired
+  during the next — `CustomEvent` from the new realm, `container` from the old, which jsdom rejects
+  with *"parameter 1 is not of type 'Event'"*. All tests still passed; the run failed on the
+  unhandled error. **Fix:** an `afterEach` that calls RTL `cleanup()` explicitly and then awaits one
+  macrotask, so unmount timers run inside the realm that created them. Explicit `cleanup()` rather
+  than relying on RTL's auto-cleanup makes it independent of hook ordering. **Verified: five
+  consecutive full-suite runs green** (228 files, 1921 tests each), against 2 failures in 6 runs
+  before the fix. Cost: setup phase 5.2s → 9.7s, total run unchanged (~150s). The original entry
+  follows.
+- 🔴 ~~**The test suite fails roughly one run in three, and Stories 2.5 and 2.6 are built on it not
+  doing that.**~~ `DocumentUploadModal.test.tsx` leaves a `@radix-ui/react-focus-scope` timer that
   fires after teardown; vitest counts it as an unhandled error and exits non-zero **with all 1921
   tests passing**. Observed **2 failures in 6 full-suite runs on 2026-08-13**; the file passes in
   1.7 s when run alone, so it is a full-suite race, not a broken test. Story 2.5 needs **five
