@@ -73,8 +73,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Forgejo CI as the Quality Gate
-  epic-2: backlog
-  2-1-port-the-four-ci-jobs-to-forgejo: backlog
+  epic-2: in-progress
+  2-1-port-the-four-ci-jobs-to-forgejo: ready-for-dev
   2-2-trigger-ci-on-pull-requests-and-feature-branches: backlog
   2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: backlog
   2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: backlog
