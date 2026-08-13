@@ -136,9 +136,43 @@ function EditForm({ profile, clientId }: EditFormProps) {
     profile.middle_name?.trim() || legacyNames?.middle || ''
   )
   const [email, setEmail] = useState(profile.email || '')
-  // Moved here from the client panel: it is a client-record edit, so it
-  // belongs with the rest of the form and rides the same PUT.
+  // Moved here from the client panel, but kept as its own single-field write
+  // rather than folded into the personal payload. Two reasons: the personal
+  // save aborts client-side when the name is blank or the tax id is not ten
+  // digits, which would leave a consent flag unsettable for those records; and
+  // riding along in every save would write this mount-time value back over a
+  // change someone else made while the form was open.
   const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
+  const { mutate: updateUbkiOptOut, isPending: isSavingUbkiOptOut } = useUpdateClient()
+
+  const handleToggleUbkiOptOut = (checked: boolean) => {
+    const previous = doNotSendToUbki
+    setDoNotSendToUbki(checked)
+    updateUbkiOptOut(
+      { id: clientId, data: { do_not_send_to_ubki: checked } },
+      {
+        onSuccess: () => {
+          invalidateClientCaches()
+          toast.success(
+            t(
+              'pages.clients.detail.ubki.toasts.optOutSuccess',
+              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
+              { count: 1 }
+            )
+          )
+        },
+        onError: (error) => {
+          setDoNotSendToUbki(previous)
+          toast.error(
+            extractErrorMessage(
+              error,
+              t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
+            )
+          )
+        },
+      }
+    )
+  }
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth || '')
   const [maritalStatus, setMaritalStatus] = useState(profile.marital_status || '')
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
@@ -235,7 +269,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
       tax_id: tid,
-      do_not_send_to_ubki: doNotSendToUbki,
     }
 
     try {
@@ -350,7 +383,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
       tax_id: tid,
-      do_not_send_to_ubki: doNotSendToUbki,
     }
 
     setIsSavingAll(true)
@@ -587,8 +619,8 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <ToggleSwitch
                 checked={doNotSendToUbki}
-                onChange={setDoNotSendToUbki}
-                disabled={!canEditAll}
+                onChange={handleToggleUbkiOptOut}
+                disabled={!canEditAll || isSavingUbkiOptOut}
                 ariaLabel={t(
                   'pages.clients.detail.ubki.doNotSendLabel',
                   'Do not send data to UBKI'

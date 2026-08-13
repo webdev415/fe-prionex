@@ -1104,6 +1104,10 @@ export function ClientDetailPage() {
         id: a.id,
         addressType: a.address_type,
         fullAddress: a.full_address ?? '-',
+        // Carried so the panel can pick the primary address when a client
+        // holds more than one of a type, rather than whatever the API
+        // happened to return first.
+        isPrimary: a.is_primary ?? false,
       })),
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
@@ -1920,12 +1924,20 @@ export function ClientDetailPage() {
           age: client.personalDetails.age,
         })
       : formatDate(client.personalDetails.dateOfBirth)
-  // One row per address type, in a fixed order, so the rows and the dividers
-  // around them stay put for clients missing a type. `actual` is the personal
-  // (residence) address; a client can hold more than one of a type, in which
-  // case the first is shown, matching the previous list order.
-  const personalAddress = client.addresses.find((a) => a.addressType !== 'registration')
-  const registrationAddress = client.addresses.find((a) => a.addressType === 'registration')
+  // Addresses are grouped by type and every one is rendered, which keeps the
+  // previous display logic intact while still giving the panel its required
+  // order: personal group, then registration group, then the divider. Types
+  // are matched exactly rather than by negation — address_type is a free
+  // string and imports carry values beyond the two the editor offers, which
+  // would otherwise all be labelled "personal". Within a group the primary
+  // address leads. An empty group still renders one placeholder row so the
+  // order and both dividers stay put for clients missing a type.
+  const addressesOfType = (type: string) =>
+    client.addresses
+      .filter((a) => a.addressType === type)
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+  const personalAddresses = addressesOfType('actual')
+  const registrationAddresses = addressesOfType('registration')
 
   // Plain consts (not useMemo) because this sits below the component's early
   // returns; the list is small so recomputing per render is negligible.
@@ -3127,22 +3139,32 @@ export function ClientDetailPage() {
                 {/* Address rows differ from the rows above by design: a fixed
                     label column so the label always fits on one line, top
                     alignment, and no truncation — the value wraps instead. */}
-                <div className="flex items-start self-stretch p-0">
-                  <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
-                    {t('pages.clients.detail.personalAddress')}
-                  </label>
-                  <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                    {personalAddress?.fullAddress || '-'}
-                  </p>
-                </div>
-                <div className="flex items-start self-stretch p-0">
-                  <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
-                    {t('pages.clients.detail.registrationAddress')}
-                  </label>
-                  <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                    {registrationAddress?.fullAddress || '-'}
-                  </p>
-                </div>
+                {(personalAddresses.length ? personalAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'personal-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.personalAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
+                {(registrationAddresses.length ? registrationAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'registration-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.registrationAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
 
                 <div className="bg-border h-px w-full self-stretch" />
               </div>

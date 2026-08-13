@@ -169,6 +169,7 @@ const mockProfileData = {
 describe('EditClientModal', () => {
   const mockOnClose = vi.fn()
   const mockUpdateClientAsync = vi.fn().mockResolvedValue(undefined)
+  const mockUpdateClientMutate = vi.fn((_vars, opts) => opts?.onSuccess?.())
   const mockCreateAddress = vi.fn()
   const mockUpdateAddress = vi.fn()
   const mockDeleteAddress = vi.fn()
@@ -196,6 +197,7 @@ describe('EditClientModal', () => {
 
     vi.mocked(useClientsModule.useUpdateClient).mockReturnValue({
       mutateAsync: mockUpdateClientAsync,
+      mutate: mockUpdateClientMutate,
       isPending: false,
       isError: false,
       error: null,
@@ -314,19 +316,33 @@ describe('EditClientModal', () => {
       expect(screen.getByLabelText('Do not send data to UBKI')).toBeChecked()
     })
 
-    it('sends the opt-out flag when saving', async () => {
+    it('writes the flag on its own the moment it is toggled', async () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
       fireEvent.click(screen.getByLabelText('Do not send data to UBKI'))
+
+      // A single-field write, so a consent flag stays settable even when the
+      // personal section fails its name/tax-id validation.
+      await waitFor(() => {
+        expect(mockUpdateClientMutate).toHaveBeenCalledWith(
+          { id: 123, data: { do_not_send_to_ubki: true } },
+          expect.anything()
+        )
+      })
+    })
+
+    it('keeps the flag out of the personal payload', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
       fireEvent.click(screen.getByTestId('edit-client-save-personal'))
 
       await waitFor(() => {
-        expect(mockUpdateClientAsync).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({ do_not_send_to_ubki: true }),
-          })
-        )
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
       })
+      // Sending mount-time state on every save would revert a change made
+      // elsewhere while the form was open.
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data).not.toHaveProperty('do_not_send_to_ubki')
     })
   })
 
