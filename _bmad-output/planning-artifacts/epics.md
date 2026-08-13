@@ -162,9 +162,18 @@ alongside the untouched legacy stand.
 FR26: Stand directories are separated: `~/crm-prionex/fe-prionex-dev/` and
 `~/crm-prionex/fe-prionex-preprod/`.
 
-FR27: PRE-PROD runs on its own Docker network (`crm-network-preprod`) with its own Kong
-gateway, so `crm-kong-gateway` name resolution cannot leak the PRE-PROD frontend onto the
-DEV backend.
+FR27: PRE-PROD runs on its own Docker network — **named by agreement with `CRM/api-prionex`,
+whose stack convention is `crm-preprod-network`** — with its own Kong gateway, so
+`crm-kong-gateway` name resolution cannot leak the PRE-PROD frontend onto the DEV backend.
+**The gateway must answer to `crm-kong-gateway` inside that network**, as a container name or a
+network alias. 🔴 **AMENDED 2026-08-13 (`sprint-change-proposal-2026-08-13-kong-naming.md` §4.1).**
+The original named `crm-network-preprod` and left the *gateway* name implicit — which is why the
+collision stayed invisible until the sibling repository was read. `CRM/api-prionex` parameterises
+its stack through `STACK` and names Kong `${STACK:-crm}-kong-gateway`, producing
+`crm-preprod-kong-gateway`; our `nginx.conf` is baked into a byte-identical image at
+`Dockerfile.prod:34` and **cannot be pointed elsewhere per stand**. The network name moved to
+theirs because ours was a single invented name against a convention already written into three of
+their plans; the alias is the one thing only they can supply.
 
 FR28: A Forgejo runner is registered at the `CRM` organization level with two labels:
 `node-20:docker://node:20-bookworm` for CI jobs and `docker-build` (dind or mounted
@@ -334,7 +343,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR24 | Epic 6 | Rollback via previous `image_tag` with `rollback: true` |
 | FR25 | Epic 4 | `docker-compose.server.yml` parameterized for coexisting stands |
 | FR26 | Epic 4 | Separate stand directories on s1 |
-| FR27 | Epic 5 | Dedicated `crm-network-preprod` with its own Kong |
+| FR27 | Epic 5 | Dedicated network (agreed name, their convention: `crm-preprod-network`) with its own Kong, answering to `crm-kong-gateway` inside it (amended 13.08) |
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
 | FR30 | Epic 4 | `concurrency` plus version-independent server-side `flock` |
@@ -1454,7 +1463,14 @@ missing `DOCKER_IMAGE` fails loudly
 **When** the file is parameterized
 **Then** the network name is supplied by a variable so a stand can be attached to an isolated
 network
-**And** the DEV stand continues to resolve `crm-kong-gateway` on the shared `crm-network`.
+**And** each stand resolves `crm-kong-gateway` inside **whichever network it is attached to** — the
+legacy stand on the shared `crm-network`, the new DEV stand on `crm-dev-network` — **and the story
+records which backend each stand actually reaches.** 🔴 **AMENDED 2026-08-13
+(`sprint-change-proposal-2026-08-13-kong-naming.md` §4.2).** The original clause assumed the new DEV
+stand would keep using the shared network and the legacy Kong; that premise expires the moment
+`CRM/api-prionex` brings up its own DEV stack. Attaching to the wrong network **fails silently by
+serving the wrong backend** rather than erroring, which is why the story must record what it
+reached rather than that it started.
 
 **Given** the parameterized file
 **When** two stands are brought up locally with different variable sets
@@ -1478,6 +1494,19 @@ So that the migration can be exercised without risking the environment the team 
 **Then** it sets `FRONTEND_PORT=8082`, a distinct `CONTAINER_NAME`, and a distinct
 `COMPOSE_PROJECT_NAME`
 **And** the file is readable only by the deploy user.
+
+**Given** `CRM/api-prionex` provisions its new DEV stack on `crm-dev-network` with Kong named
+`crm-dev-kong-gateway` (their `STACK=crm-dev`)
+**When** the new DEV frontend stand is provisioned
+**Then** it is attached to `crm-dev-network`, not to the legacy shared `crm-network`
+**And** it is verified **from inside the running container** that `crm-kong-gateway` resolves to the
+**new** DEV Kong
+**And** if the `crm-kong-gateway` alias is not yet in place on their side, the story records the
+absence and stops rather than falling back to the legacy network — a stand that silently serves the
+legacy backend is the failure this entire line of work exists to prevent.
+
+> 🔴 **ADDED 2026-08-13** by `sprint-change-proposal-2026-08-13-kong-naming.md` §4.3. Epic 4 meets
+> this collision **first**, before Epic 5 does.
 
 **Given** s1 must pull from the Forgejo registry
 **When** registry credentials are configured on the host
@@ -1724,16 +1753,18 @@ its own Kong gateway, and the fact that a candidate was validated there is recor
 registry as the release history. This epic depends on the infrastructure commitment secured
 in Story 1.6.
 
-> 🔴 **BLOCKED AS OF 2026-08-13, by decision rather than by another team's queue.** Story 1.6's
-> requirement is **written and deliberately not sent** — Oleg deferred the submission until after
-> all epics, and Slack was excluded as a route. There is therefore **no committed date, and none
-> can exist** while the requirement is unsent. Artifact:
-> [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
-> decision: [`#d11`](../../docs/migration-decisions.md#d11).
+> 🔴 **BLOCKED AS OF 2026-08-13 — on a naming agreement, not on construction.** Corrected the same
+> day by `sprint-change-proposal-2026-08-13-kong-naming.md` §4.7, which replaced the original
+> reason (*"waiting on infrastructure with no committed date"*). **The infrastructure is planned and
+> being built**: `CRM/api-prionex` already provides a separate network and Kong for DEV, PRE-PROD
+> and PROD (`docs/forgejo-{dev-s1,preprod-s1,prod-s2}-plan.md`). What is missing is that their Kong
+> is named `${STACK:-crm}-kong-gateway` — `crm-preprod-kong-gateway` here — while our image looks
+> for the literal `crm-kong-gateway`, baked in at `Dockerfile.prod:34` and unchangeable per stand.
 >
-> **Story 5.1 asks for exactly what the unsent requirement asks for**, so this epic cannot start
-> in the planned order. Re-sequencing around it is `correct-course` work, not an edit inside any
-> story.
+> **What unblocks this epic is one line on their side:** a network alias `crm-kong-gateway` for Kong
+> inside the stand's network. Artifact:
+> [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
+> decisions: [`#d11`](../../docs/migration-decisions.md#d11) and the proposal above.
 >
 > ⚠️ **The constraint Story 5.1 must carry into its verification**, and the reason it cannot be
 > checked from a compose file alone: inside `crm-network-preprod` the PRE-PROD Kong must be
@@ -1756,11 +1787,11 @@ So that validating a release candidate says something true about production read
 
 **Given** the commitment secured in Story 1.6
 **When** the isolated environment is created on s1
-**Then** a Docker network `crm-network-preprod` exists
+**Then** a Docker network exists under the name agreed with `CRM/api-prionex` (their convention: `crm-preprod-network`) — renamed 13.08, see `sprint-change-proposal-2026-08-13-kong-naming.md` §4.4
 **And** a Kong gateway instance for PRE-PROD runs attached to it.
 
 **Given** `nginx.conf:37-56` resolves `crm-kong-gateway` by name inside its network
-**When** the PRE-PROD frontend container is attached to `crm-network-preprod`
+**When** the PRE-PROD frontend container is attached to that network
 **Then** that name resolves to the PRE-PROD Kong, not the DEV one
 **And** the resolution is verified from inside the running container, not inferred from
 configuration.
@@ -1787,7 +1818,7 @@ So that a release candidate can be validated the way a user would experience it.
 **When** the PRE-PROD stand is provisioned
 **Then** it lives in `~/crm-prionex/fe-prionex-preprod/`
 **And** its `.env` sets `FRONTEND_PORT=8081`, a distinct `CONTAINER_NAME`, a distinct
-`COMPOSE_PROJECT_NAME`, and the `crm-network-preprod` network.
+`COMPOSE_PROJECT_NAME`, and the agreed PRE-PROD network.
 
 **Given** three stands now share s1
 **When** all are running

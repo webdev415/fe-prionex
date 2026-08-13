@@ -106,11 +106,12 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: PRE-PROD Release Candidate Environment
-  # BLOCKED (2026-08-13): depends on PRE-PROD backend infrastructure from another team.
-  # Story 1.6's requirement is written but DELIBERATELY NOT SENT — Oleg deferred submission
-  # until after all epics. No committed date exists and none can while it is unsent.
-  # See docs/migration-decisions.md#d11 and docs/preprod-infrastructure-requirement.md.
-  # Story 5.1 asks for exactly what that requirement asks for; re-sequencing is correct-course work.
+  # BLOCKED (2026-08-13) on a NAMING AGREEMENT, not on construction — corrected the same day by
+  # sprint-change-proposal-2026-08-13-kong-naming.md. CRM/api-prionex already builds a separate
+  # network and Kong for dev/preprod/prod, but names Kong ${STACK}-kong-gateway while our image
+  # has crm-kong-gateway baked in and cannot be changed per stand. What unblocks this epic is one
+  # network alias on their side. NB: Epic 4 hits the same collision FIRST (story 4.2).
+  # See docs/preprod-infrastructure-requirement.md and docs/migration-decisions.md#d11.
   epic-5: backlog
   5-1-stand-up-the-isolated-pre-prod-backend-network: backlog
   5-2-provision-the-pre-prod-stand-on-s1: backlog

@@ -656,11 +656,12 @@
 
 ## Deferred from: story 1-6-secure-the-pre-prod-infrastructure-commitment (2026-08-13)
 
-- 🔴 **The PRE-PROD requirement is written and will not be sent until after all epics** (Oleg,
-  2026-08-13). That makes Epic 5 blocked **by decision**, not by another team's queue — a
-  materially different thing, because no amount of chasing changes it. Story 5.1 asks for exactly
-  what the unsent requirement asks for. **Re-sequencing the plan around this is `correct-course`
-  work and nobody has done it.** Owner: Oleg. See `#d11`.
+- 🔴 ~~**The PRE-PROD requirement is written and will not be sent until after all epics.**~~
+  **CORRECTED the same day by `sprint-change-proposal-2026-08-13-kong-naming.md`.** The dependency is
+  not a build request to an unreachable team: `CRM/api-prionex` is already building a separate
+  network and Kong for all three environments. **Epic 5 waits on a naming agreement — one network
+  alias — not on construction.** The requirement has been rewritten accordingly and remains unsent.
+  Owner: Oleg, and the ask is now small enough to be a message rather than a project.
 - 🔴 **`README.md:136` labels the DEV stand as "Pre-production."** The row reads
   `72.62.17.132 | 8080 | dev.crm-prionex.online` under an `Environment: Pre-production` heading.
   Today it is merely wrong; **once a real PRE-PROD exists it becomes actively dangerous** — a
