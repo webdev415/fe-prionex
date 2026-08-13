@@ -1,4 +1,4 @@
-import { type DragEvent } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
@@ -23,7 +23,7 @@ import {
   formatLegalDueDateTime,
   formatLegalDueMonthDay,
   legalDueDateToIso,
-  parseLegalDueDate,
+  legalDueDateToPickerDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   CREATE_TASK_PRIORITIES,
@@ -85,7 +85,37 @@ export function KanbanCard({
   const clientCode = task.clientCode ?? null
   const clientName = task.clientName?.trim() || null
 
-  const deadline = parseLegalDueDate(task.deadline)
+  const deadline = legalDueDateToPickerDate(task.deadline, timezone)
+
+  // react-datepicker fires onChange twice for one deadline: once when the day
+  // is clicked, again when the time slot is. Saving on each meant two writes
+  // and — once KAN-1000 added the toast — a first one announcing a time nobody
+  // picked. The pick is staged instead and written when the submenu closes.
+  //
+  // The ref is what decides, not the state: dismissing the menu cascades
+  // several onOpenChange(false) calls in one tick, and state set in the first
+  // has not flushed by the third, so all three would save. `undefined` means
+  // untouched, so opening and closing without picking writes nothing. The
+  // state exists only to redraw the calendar around the staged value.
+  const pendingDeadlineRef = useRef<Date | null | undefined>(undefined)
+  const [deadlineMenuOpen, setDeadlineMenuOpen] = useState(false)
+  const [pendingDeadline, setPendingDeadline] = useState<Date | null | undefined>(undefined)
+
+  const stageDeadline = (date: Date | null) => {
+    pendingDeadlineRef.current = date
+    setPendingDeadline(date)
+  }
+
+  const handleDeadlineMenuToggle = (open: boolean) => {
+    setDeadlineMenuOpen(open)
+    const staged = pendingDeadlineRef.current
+    pendingDeadlineRef.current = undefined
+    setPendingDeadline(undefined)
+    if (open || staged === undefined) return
+    onTaskUpdate?.(task.id, {
+      deadline: staged ? legalDueDateToIso(staged, timezone) : null,
+    })
+  }
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
   const priorityConfig =
@@ -477,7 +507,7 @@ export function KanbanCard({
                 </DropdownMenuSub>
 
                 {/* Set deadline — inline calendar + time in submenu */}
-                <DropdownMenuSub>
+                <DropdownMenuSub open={deadlineMenuOpen} onOpenChange={handleDeadlineMenuToggle}>
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
                     <span className="flex items-center gap-2">
                       <Icons.Calendar
@@ -495,12 +525,8 @@ export function KanbanCard({
                     <div className="date-select-wrapper">
                       <DatePicker
                         inline
-                        selected={deadline}
-                        onChange={(date: Date | null) => {
-                          onTaskUpdate?.(task.id, {
-                            deadline: date ? legalDueDateToIso(date, timezone) : null,
-                          })
-                        }}
+                        selected={pendingDeadline === undefined ? deadline : pendingDeadline}
+                        onChange={stageDeadline}
                         showTimeSelect
                         timeFormat="HH:mm"
                         timeIntervals={15}

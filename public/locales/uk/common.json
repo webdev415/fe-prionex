@@ -1048,7 +1048,10 @@
         },
         "exportEmpty": "Немає задач за поточними фільтрами",
         "taskNotFound": "Задачу канбану не знайдено",
-        "transitionSuccess": "Переміщено до {{state}}"
+        "transitionSuccess": "Переміщено до {{state}}",
+        "deadlineSaved": "Дедлайн встановлено на {{deadline}}",
+        "deadlineCleared": "Дедлайн знято",
+        "deadlineSaveFailed": "Дедлайн не збережено"
       },
       "documents": {
         "title": "Документи",

@@ -7,7 +7,8 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import type { LetterDetail } from '../../types'
-import { formatDueDate } from '../../utils/formatters'
+import { formatDueDate, formatLegalDeadline } from '../../utils/formatters'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 
 /** Slug → chip colour, mirrors the letter-type palette used on the parameters panel. */
 const TYPE_COLOURS: Record<string, string> = {
@@ -61,6 +62,7 @@ export interface LetterContextPanelProps {
 export function LetterContextPanel({ letter, task }: LetterContextPanelProps) {
   const { t, i18n } = useTranslation('common')
   const lang = i18n.language
+  const timezone = useLegalProfileTimezone()
 
   const clientId = useMemo(() => {
     const fromReply = letter.replyContext.clientId
@@ -176,11 +178,11 @@ export function LetterContextPanel({ letter, task }: LetterContextPanelProps) {
           <Row label={t('pages.lawyerWorkplace.context.classification.deadline', 'Deadline / SLA')}>
             {dueDate ? (
               <span className="inline-flex flex-col items-end">
-                <span>{formatDueDate(dueDate, lang)}</span>
+                <span>{formatLegalDeadline(dueDate, lang, timezone)}</span>
                 {dueDateHint && <span className="text-error-500 text-[11px]">{dueDateHint}</span>}
               </span>
             ) : deadlineFallback ? (
-              formatDueDate(deadlineFallback, lang)
+              formatLegalDeadline(deadlineFallback, lang, timezone)
             ) : (
               dash
             )}

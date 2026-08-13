@@ -9,6 +9,7 @@ import {
   isLegalDueDateOverdue,
   legalDefaultDueDateIso,
   legalOverdueDueDateIso,
+  parseLegalDueDate,
   resolveLegalTimezone,
 } from '../utils/legalDueDate'
 import type { LegalKanbanTaskItem, LegalLawyer } from './types'
@@ -313,8 +314,8 @@ export function matchesDeadlineFilter(
     return false
   }
 
-  const due = new Date(task.deadline)
-  if (Number.isNaN(due.getTime())) {
+  const due = parseLegalDueDate(task.deadline)
+  if (!due) {
     return false
   }
 

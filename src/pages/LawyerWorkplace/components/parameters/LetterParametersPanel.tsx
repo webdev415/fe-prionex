@@ -23,7 +23,10 @@ import {
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
-import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import {
+  legalDueDateToIso,
+  legalDueDateToPickerDate,
+} from '@/features/lawyerWorkplace/utils/legalDueDate'
 import { addSlaDays } from '@/features/lawyerWorkplace/utils/slaDeadline'
 import type { SlaDayType } from '@/pages/LawyerWorkplace/settings/types'
 import {
@@ -35,7 +38,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
-import { formatDueDate } from '../../utils/formatters'
+import { formatLegalDeadline } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
 import { SenderHistorySection } from './SenderHistorySection'
 
@@ -137,6 +140,7 @@ function applySuggestionResult(
   result: LegalMessageSuggestionsPatchResponse,
   receivedAt: string,
   slaDayType: SlaDayType,
+  timezone: string,
   setLawyerOverride: (value: string | null) => void,
   setDueDateOverride: (value: Date | null) => void,
   options?: {
@@ -151,7 +155,7 @@ function applySuggestionResult(
   if (options?.dueDateManuallyOverridden) {
     return
   }
-  const persistedDueDate = parseLegalDueDate(result.suggested_due_date)
+  const persistedDueDate = legalDueDateToPickerDate(result.suggested_due_date, timezone)
   if (persistedDueDate) {
     setDueDateOverride(persistedDueDate)
     options?.onDueDateAutoApplied?.()
@@ -404,6 +408,7 @@ function LetterParametersPanelContent({
         result,
         letter.receivedAt,
         resolveSlaDayType(typeId),
+        timezone,
         setLawyerOverride,
         setDueDateOverride,
         {
@@ -419,6 +424,7 @@ function LetterParametersPanelContent({
       letter.receivedAt,
       patchSuggestionsMutation,
       resolveSlaDayType,
+      timezone,
     ]
   )
 
@@ -488,6 +494,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -523,6 +530,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -585,6 +593,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -777,7 +786,9 @@ function LetterParametersPanelContent({
 
           {p.dueDate && (
             <ReadonlyField label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}>
-              <span className="text-foreground">{formatDueDate(p.dueDate, i18n.language)}</span>
+              <span className="text-foreground">
+                {formatLegalDeadline(p.dueDate, i18n.language, timezone)}
+              </span>
               {p.dueDateHint && (
                 <span className="text-error-500 ml-2 text-[11px]">{p.dueDateHint}</span>
               )}
