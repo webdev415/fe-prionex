@@ -951,7 +951,8 @@
           "closed": "Closed"
         },
         "clientSearchHint": "Type 2+ characters to search…",
-        "kanbanAccessDenied": "You do not have access to the kanban board"
+        "kanbanAccessDenied": "You do not have access to the kanban board",
+        "noClientLink": "No client link"
       },
       "kanban": {
         "title": "Legal tasks kanban",

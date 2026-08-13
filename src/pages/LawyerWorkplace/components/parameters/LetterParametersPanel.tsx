@@ -269,6 +269,7 @@ function LetterParametersPanelContent({
 
   const [typeOverride, setTypeOverride] = useState<string | null>(null)
   const [clientOverride, setClientOverride] = useState<string | null>(null)
+  const [noClientLink, setNoClientLink] = useState(false)
   const [clientProjectOverride, setClientProjectOverride] = useState<number | null>(null)
   const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
@@ -306,7 +307,7 @@ function LetterParametersPanelContent({
     [dueDateManuallyOverridden, letter.receivedAt, letterTypesData?.items]
   )
   const effectiveTypeId = typeOverride ?? defaultTypeId
-  const effectiveClientId = clientOverride ?? defaultClientId
+  const effectiveClientId = noClientLink ? '' : (clientOverride ?? defaultClientId)
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -704,10 +705,11 @@ function LetterParametersPanelContent({
     !Number.isNaN(effectiveDueDate.getTime()) &&
     (!dueDateManuallyOverridden || !isBeforeStartOfDay(effectiveDueDate))
 
+  const hasClient = Number.isFinite(clientIdNumber) && clientIdNumber > 0
+
   const canConfirm =
     Boolean(effectiveTypeId) &&
-    Number.isFinite(clientIdNumber) &&
-    clientIdNumber > 0 &&
+    (noClientLink || hasClient) &&
     dueDateIsValid &&
     Number.isFinite(lawyerUserIdNumber) &&
     lawyerUserIdNumber > 0 &&
@@ -722,7 +724,7 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: {
           letter_type_id: effectiveTypeId,
-          client_id: clientIdNumber,
+          client_id: noClientLink ? null : clientIdNumber,
           due_date: legalDueDateToIso(effectiveDueDate, timezone),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
@@ -887,12 +889,29 @@ function LetterParametersPanelContent({
               onValueChange={handleClientSelect}
               onSearchChange={setClientSearch}
               isLoading={clientsLoading}
+              disabled={noClientLink}
               emptySearchHint={t(
                 'pages.lawyerWorkplace.parameters.clientSearchHint',
                 'Type 2+ characters to search…'
               )}
               placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
             />
+          )}
+          {!p.clientLockedByEmail && (
+            <label className="flex w-full cursor-pointer items-center gap-2 self-stretch py-1">
+              <Checkbox
+                checked={noClientLink}
+                onCheckedChange={(value) => {
+                  const next = value === true
+                  setNoClientLink(next)
+                  if (next) setClientOverride(null)
+                }}
+                disabled={confirmMutation.isPending}
+              />
+              <span className="text-muted-foreground text-[12px] font-normal">
+                {t('pages.lawyerWorkplace.parameters.noClientLink', 'No client link')}
+              </span>
+            </label>
           )}
         </div>
 
