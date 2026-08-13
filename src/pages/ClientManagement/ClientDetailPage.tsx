@@ -247,10 +247,10 @@ const formatDateAsISO = (d: Date): string => {
   return `${y}-${m}-${day}`
 }
 
-// DISABLED for the release (client requirement): bulk "Send all loans to UBKI"
-// must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
-// The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
-// this flag to true.
+// Gates the bulk "Send all loans to UBKI" action. Currently ON, and the
+// backing routes (/ubki/submit/bulk, /ubki/submit/by-clients) are live —
+// an earlier release turned both off, so treat any comment claiming they
+// are disabled as out of date. Flip to false to hide the action again.
 const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientDetailPage() {
@@ -3996,8 +3996,13 @@ export function ClientDetailPage() {
                                 <Icons.MailSend01 size={16} />
                               ),
                               hidden: !canSubmitToUbki,
-                              disabled:
-                                doNotSendToUbki || isSubmittingToUbki || loan.sentToCreditBureau,
+                              // Already-sent loans stay submittable, as before the
+                              // redesign: the check icon and "Sent on {date}" are
+                              // the state indicator, not a lock. A debt whose data
+                              // was corrected after submission has to be resendable,
+                              // and the only alternative is the bulk action, which
+                              // resends every loan on the client.
+                              disabled: doNotSendToUbki || isSubmittingToUbki,
                               onSelect: () => submitDebtToUbki({ debtId: loan.id, clientId }),
                             },
                             {
@@ -4064,12 +4069,13 @@ export function ClientDetailPage() {
                               key: 'writeoff',
                               label: t('pages.clients.detail.writeOff'),
                               icon: <Icons.MoneyRemove01 size={16} />,
-                              // Write-off is listed for Open *and* Closed loans,
-                              // so it is not gated on this loan's own status —
-                              // only on the permission and on the client having
-                              // something writable at all. The modal restricts
-                              // selection to active debts.
-                              hidden: !canCreateWriteoff || !hasEligibleLoanForWriteoff,
+                              // Hidden on closed loans: the backend rejects a
+                              // write-off against a non-active debt (409
+                              // DEBT_NOT_OPEN), so the action cannot apply here.
+                              // Without this the item renders on a closed card
+                              // and opens the modal on an unrelated active loan,
+                              // because the modal only accepts active debts.
+                              hidden: isClosed || !canCreateWriteoff || !hasEligibleLoanForWriteoff,
                               onSelect: () => {
                                 setWriteoffInitialDebtId(loan.id)
                                 setIsWriteoffOpen(true)
