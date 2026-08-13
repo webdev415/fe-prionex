@@ -38,6 +38,14 @@ export interface InputProps
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   onClear?: () => void
+  /**
+   * Accessible name of the opt-in "×" button. Opt-in: the default stays the
+   * plain "Clear" every existing usage renders. Pass a field-specific
+   * (localized) name when a form places SEVERAL clearable fields side by side —
+   * a row of identical "Clear" buttons is indistinguishable to a screen reader.
+   * Mirrors DateSelect's prop of the same name.
+   */
+  clearLabel?: string
 }
 
 /**
@@ -101,6 +109,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       leftIcon,
       rightIcon,
       onClear,
+      clearLabel = 'Clear',
       value,
       id,
       name,
@@ -168,7 +177,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={onClear}
-              aria-label="Clear"
+              aria-label={clearLabel}
               className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex items-center pr-3"
             >
               <Icons.Cancel01 size={14} />
