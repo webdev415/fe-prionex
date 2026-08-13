@@ -461,6 +461,42 @@ today, 33%.** Both CI runs happened to be green, which is what a 33% flake looks
 sample twice. Story 2.5 requires five consecutive green runs; at this rate that is roughly a 13%
 proposition, and Story 2.6 would put required status checks on top of it.
 
+**Amendment 2026-08-13 — the test job's heap ceiling doubled, on Oleg's instruction, and NOT in
+`package.json`.**
+
+The instruction was "double the memory". Doing that in `test:run` would have doubled it for every
+developer as well, and **the machine this repository is developed on has 16 GB of RAM in total** —
+telling Node it may take all of it as heap, on a script the pre-commit hook runs on every commit,
+guarantees swapping and risks an OOM on the developer's own laptop. So the ceiling was doubled where
+the headroom actually exists.
+
+- `package.json` gains `test:run:ci` — identical to `test:run` except `--max-old-space-size=16384`
+  against `8192`. `test:run` is untouched, so local behaviour does not change.
+- The workflow's test job calls `npm run test:run:ci`, with the reasoning in the file.
+
+**Why a job-level `env:` could not do it:** `test:run` hardcodes `NODE_OPTIONS` through `cross-env`,
+which overwrites whatever the workflow exports. `cross-env-shell` with `${NODE_HEAP_MB:-8192}` was
+tried first and rejected — it passes the value **literally**, without expanding it (verified:
+`NODE_OPTIONS` came out as the string `--max-old-space-size=${NODE_HEAP_MB:-8192}`).
+
+⚠️ **This is a deliberate deviation from AC4**, which names `npm run test:run`. What is tested is
+identical — same vitest, same suite, same config — only the ceiling differs. Recorded rather than
+quietly absorbed.
+
+⚠️ **«Не проверено» on the instance.** The new script was exercised **locally** only: 228 files,
+1921 tests, 152.93 s, green. It has **not** run on a runner, because the API token was revoked at
+the end of this story by design and dispatching needs one. **The first CI dispatch after this
+change is its real test** — Story 2.2's work will be it, unless someone dispatches sooner.
+
+⚠️ **The premise remains unmeasured.** The actual peak was never read — it is in the unreachable
+job log. Doubling a ceiling nobody has measured is precautionary, not corrective; both runs were
+green at 8192, so nothing observed was failing for want of heap. **It will not fix the flaky test**
+— that is a `@radix-ui/react-focus-scope` timer firing after teardown, not a memory problem.
+
+**Headroom check before making the change:** s1 reported ~80 GB available of 125 GB, and the job
+container is not memory-capped, so a 16 GB ceiling on one test job per run is within budget. Host
+load average had risen from 12.99 to 25.82 between measurements, which is worth watching.
+
 ### File List
 
 - `.forgejo/workflows/ci.yml` — **NEW**, the only file this story creates

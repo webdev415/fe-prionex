@@ -73,8 +73,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # CI runs test:run:ci, not test:run — the two differ in exactly one number:
+      # the V8 old-space ceiling, 16384 MB here against 8192 MB locally.
+      #
+      # Why they must differ. `test:run` hardcodes the ceiling through cross-env,
+      # so cross-env overwrites whatever NODE_OPTIONS the workflow exports — a
+      # job-level `env:` cannot raise it. Raising the number in `test:run` itself
+      # would raise it for every developer too, and the machine this repository
+      # is developed on has 16 GB of RAM in total: telling Node it may take all
+      # of it as heap, on every pre-commit hook, guarantees swapping.
+      #
+      # The runner has the headroom the laptop does not: the job container is
+      # NOT memory-capped (the runner container's mem_limit: 2g does not reach
+      # it — job containers are created in the nested dind, which declares no
+      # limit), and s1 reported ~80 GB available.
+      #
+      # ⚠️ This is a deliberate deviation from Story 2.1's AC4, which names
+      # `npm run test:run`. What is tested is identical — same vitest, same
+      # suite, same config; only the ceiling differs. Recorded in the story.
       - name: Run unit tests
-        run: npm run test:run
+        run: npm run test:run:ci
 
       # AC4: record observed peak memory for this job. cgroup v2 exposes a
       # running peak at memory.peak; some hosts only carry the cgroup v1

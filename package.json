@@ -12,6 +12,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "test": "vitest",
     "test:run": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vitest run",
+    "test:run:ci": "cross-env NODE_OPTIONS=--max-old-space-size=16384 vitest run",
     "test:coverage": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vitest run --coverage",
     "preview": "vite preview",
     "typecheck": "tsc -b",
