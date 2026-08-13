@@ -11,8 +11,9 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
-import { LoanFactoringInfo } from './components/LoanFactoringInfo'
 import { LoanCalculationModal } from './components/LoanCalculationModal'
+import { LoanCard, type LoanCardAction } from './components/LoanCard'
+import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import {
@@ -246,10 +247,10 @@ const formatDateAsISO = (d: Date): string => {
   return `${y}-${m}-${day}`
 }
 
-// DISABLED for the release (client requirement): bulk "Send all loans to UBKI"
-// must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
-// The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
-// this flag to true.
+// Gates the bulk "Send all loans to UBKI" action. Currently ON, and the
+// backing routes (/ubki/submit/bulk, /ubki/submit/by-clients) are live —
+// an earlier release turned both off, so treat any comment claiming they
+// are disabled as out of date. Flip to false to hide the action again.
 const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientDetailPage() {
@@ -292,6 +293,9 @@ export function ClientDetailPage() {
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
+  // Loan the write-off modal opens on, so the per-card menu acts on that card's
+  // loan instead of falling back to the modal's first eligible debt.
+  const [writeoffInitialDebtId, setWriteoffInitialDebtId] = useState<number | null>(null)
   // KAN-334 — Reversal (storno) modal open state + optional row preselect.
   const [isReversalOpen, setIsReversalOpen] = useState(false)
   const [reversalInitialPaymentId, setReversalInitialPaymentId] = useState<number | null>(null)
@@ -364,9 +368,11 @@ export function ClientDetailPage() {
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
   // Row IDs whose factoring-agreement info panel is currently expanded.
   // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
-  const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
-  const toggleDebtExpand = (id: number) =>
-    setExpandedDebtIds((prev) => {
+  // KAN-993: RR panels are collapsed by default and expand on chip click
+  // (KAN-339 kept them always visible). Tracks which loans' RR panel is open.
+  const [rrExpandedIds, setRrExpandedIds] = useState<Set<number>>(new Set())
+  const toggleRrExpand = (id: number) =>
+    setRrExpandedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -818,6 +824,9 @@ export function ClientDetailPage() {
 
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // KAN-993 — close/reopen/edit-closure live in the per-card "..." dropdown now,
+  // so we need the permission as a boolean (was a <PermissionGuard> wrapper).
+  const canCloseDebt = useHasPermission(PERMISSIONS.CLIENTS.CLOSE_DEBT)
   // KAN-245 — gate the Loans-tab "Write-off" button on create_writeoffs.
   const canCreateWriteoff = useHasPermission(PERMISSIONS.WRITEOFFS.CREATE)
   // KAN-245 — gate the Payments → "Writes-off" sub-tab's per-loan list.
@@ -1197,6 +1206,9 @@ export function ClientDetailPage() {
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
         eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
+        // KAN-993 — "Debt term (days)" card field (credit_term_days already
+        // populated on the backend; surfaced on the redesigned Loans card).
+        creditTermDays: d.credit_term_days ?? null,
         status: d.status,
         // UBKI outbound submission state (credit bureau)
         sentToCreditBureau: d.sent_to_credit_bureau ?? false,
@@ -1936,10 +1948,6 @@ export function ClientDetailPage() {
     )
   }
 
-  // Show the Closure Date column whenever the table contains at least one
-  // closed loan — otherwise it would be a column full of dashes.
-  const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
-
   // KAN-339: RR is NOT a Debt.status value — debt.status stays active/closed.
   // Restructuring lives in the separate restructuring_agreements list, keyed by
   // debt_id, with its own status lookup (1 Connected · 2 Violated · 3 Cancelled ·
@@ -1967,212 +1975,10 @@ export function ClientDetailPage() {
     ? draftRrDebtIds.has(parseInt(connectRrForm.debtId))
     : false
 
-  // The single loan row currently selected in the grid (drives the bottom
-  // action panel). Null if nothing is selected or the id is no longer present.
-  const selectedLoan = client.loans.find((loan) => loan.id === selectedLoanId) ?? null
-  const selectedLoanOnRr = selectedLoan ? activeRrDebtIds.has(selectedLoan.id) : false
-
-  // Show the "Eligible for Return" column (TABLE460.f53) only when at least
-  // one loan has a populated value AND it diverges from the live Remaining
-  // Debt. If every row matches, the column would carry no information beyond
-  // what Remaining Debt already shows, so we omit it entirely.
-  const showEligibleForReturnColumn = client.loans.some(
-    (loan) => loan.eligibleForReturn != null && loan.eligibleForReturn !== loan.remainingDebtAmount
-  )
-
-  const loanColumns: Column<(typeof client.loans)[0]>[] = [
-    {
-      // KAN-339: status is the first column. The badge shows the loan lifecycle
-      // (Open / Closed) and its COLOR encodes state:
-      //   • closed                     → green
-      //   • open + Connected RR        → yellow
-      //   • open (otherwise)           → red
-      // A separate always-purple "RR" tag marks any loan that has a
-      // restructuring agreement of ANY status (its details render inline below
-      // the row). So an open+violated loan is a red badge WITH a purple RR tag.
-      key: 'status',
-      header: t('pages.clients.detail.tableHeaders.status', 'Status'),
-      align: 'center',
-      render: (loan) => {
-        const isClosed = loan.status === 'closed'
-        const isConnectedRr = !isClosed && connectedRrDebtIds.has(loan.id)
-        return (
-          <div className="flex items-center justify-center gap-1.5">
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                isClosed
-                  ? 'bg-green-100 text-green-800'
-                  : isConnectedRr
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-red-100 text-red-800'
-              )}
-            >
-              {isClosed
-                ? t('pages.clients.detail.loanStatusBadge.closed', 'Closed')
-                : t('pages.clients.detail.loanStatusBadge.open', 'Open')}
-            </span>
-            {rrDebtIds.has(loan.id) && (
-              <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
-                {t('pages.clients.detail.rrTag', 'RR')}
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
-    { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
-    {
-      key: 'counterparty',
-      header: t('pages.clients.detail.tableHeaders.counterparty'),
-      align: 'left',
-    },
-    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
-    ...(hasClosedLoan
-      ? [
-          {
-            key: 'creditClosedDate' as const,
-            header: t('pages.clients.detail.closureDate', 'Closure date'),
-            align: 'left' as const,
-            render: (loan: (typeof client.loans)[0]) =>
-              loan.status === 'closed' && loan.creditClosedDate
-                ? formatDate(loan.creditClosedDate)
-                : '-',
-          },
-        ]
-      : []),
-    {
-      key: 'principalAmount',
-      header: t('pages.clients.detail.tableHeaders.principalAmount'),
-      align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalAmount),
-    },
-    {
-      key: 'principalDebt',
-      header: t('pages.clients.detail.tableHeaders.principalDebt'),
-      align: 'right',
-      render: (loan) =>
-        loan.principalDebt != null ? formatMoneyUAHTwoDecimals(loan.principalDebt) : '-',
-    },
-    ...(showEligibleForReturnColumn
-      ? [
-          {
-            key: 'eligibleForReturn' as const,
-            header: t('pages.clients.detail.tableHeaders.eligibleForReturn'),
-            align: 'right' as const,
-            render: (loan: (typeof client.loans)[0]) =>
-              loan.eligibleForReturn != null
-                ? formatMoneyUAHTwoDecimals(loan.eligibleForReturn)
-                : '-',
-          },
-        ]
-      : []),
-    {
-      key: 'remainingDebtAmount',
-      header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
-      align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.remainingDebtAmount),
-    },
-    {
-      key: 'totalToReturn',
-      header: t('pages.clients.detail.tableHeaders.totalToReturn'),
-      align: 'right',
-      render: (loan) => (
-        <div className="flex flex-col items-end gap-1">
-          <span>{formatMoneyUAHTwoDecimals(loan.totalToReturn)}</span>
-          {loan.needsManualClosureReview && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
-              title={t(
-                'pages.clients.detail.needsManualClosureReviewTooltip',
-                'Fully repaid, but payments to us fell short of the principal. Auto-close is blocked — review and close manually.'
-              )}
-            >
-              <Icons.Warning size={12} strokeWidth={2} />
-              {t('pages.clients.detail.needsManualClosureReview', 'Needs manual closure review')}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      // KAN-339: the former "Actions" column is now "Info". It carries only
-      // informational / non-mutating controls — the agreement-info expansion,
-      // the detailed-calculation (*dc) modal (replacing the old green-check
-      // close icon), and the per-loan UBKI submit (whose sent-state indicator
-      // is inherently row-level). All status-changing actions (close / reopen /
-      // edit closure date / connect RR) live in the selection-driven bottom
-      // action panel below the grid.
-      key: 'info',
-      header: t('pages.clients.detail.tableHeaders.info', 'Info'),
-      align: 'center',
-      render: (loan) => {
-        // Tooltip for the UBKI send button (disabled when the client opted out).
-        const ubkiSendTitle = doNotSendToUbki
-          ? t(
-              'pages.clients.detail.ubki.optedOutTooltip',
-              'Client is opted out of UBKI; submission is disabled.'
-            )
-          : loan.sentToCreditBureau && loan.creditBureauSentDate
-            ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
-                date: formatDate(loan.creditBureauSentDate),
-              })
-            : t('pages.clients.detail.ubki.send', 'Send to UBKI')
-
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={(e) => {
-                // Don't let an action click toggle the row selection.
-                e.stopPropagation()
-                toggleDebtExpand(loan.id)
-              }}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
-              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
-            >
-              <Icons.Info size={18} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })
-              }}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-            >
-              <Icons.Calculate size={18} />
-            </button>
-            {canSubmitToUbki && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  submitDebtToUbki({ debtId: loan.id, clientId })
-                }}
-                disabled={doNotSendToUbki || isSubmittingToUbki}
-                className={cn(
-                  'p-1 disabled:opacity-50',
-                  loan.sentToCreditBureau
-                    ? 'text-primary-700 hover:text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                  doNotSendToUbki ? 'cursor-not-allowed' : ''
-                )}
-                title={ubkiSendTitle}
-              >
-                {loan.sentToCreditBureau ? (
-                  <Icons.Checkmark size={18} strokeWidth={1.5} />
-                ) : (
-                  <Icons.MailSend01 size={18} strokeWidth={1.5} />
-                )}
-              </button>
-            )}
-          </div>
-        )
-      },
-    },
-  ]
+  // KAN-993: the KAN-339 loanColumns grid definition was removed — loans now
+  // render as cards (see LoanCard / LoansCardList). Per-loan actions moved into
+  // each card's "..." dropdown; the RR/factoring info moved to the card's
+  // counterparty tooltip and collapsible RR panel.
 
   type RrRow = (typeof restructuringAgreements)[0]
   // KAN-339: the standalone "Loans on RR" grid was removed; RR details now
@@ -4113,276 +3919,234 @@ export function ClientDetailPage() {
                 {/* Tab 1: Loans */}
                 {activeRightCardTab === 'loans' && (
                   <div className="flex w-full flex-col gap-0">
-                    {/* KAN-339: single unified loans grid — no sub-tabs. Status
-                        is the first column (Open/Closed badge + purple RR tag).
-                        Open loans sort before closed ones. Clicking a row selects
-                        (highlights) it, driving the bottom action panel; clicking
-                        it again clears the selection. Every loan that has a
-                        restructuring agreement shows an always-visible RR detail
-                        line beneath its row; the Info button additionally toggles
-                        the factoring-agreement panel. */}
-                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                      {isLoansLoading ? (
+                    {/* KAN-993: card-based loan list (supersedes the KAN-339
+                        grid). Open loans (always expanded) + Closed loans
+                        (collapsible, collapsed by default), each with a count
+                        badge. Every per-loan action lives in that card's "..."
+                        dropdown (status-dependent); the RR panel is collapsed and
+                        expands on the chip. "Send all to UBKI" stays standalone. */}
+                    {isLoansLoading ? (
+                      <div className="px-3 py-4 md:px-6">
                         <TableSkeleton columns={7} rows={3} />
-                      ) : (
-                        <DataTable
-                          columns={loanColumns}
-                          data={[...client.loans].sort(
-                            (a, b) =>
-                              (a.status === 'closed' ? 1 : 0) - (b.status === 'closed' ? 1 : 0)
-                          )}
-                          className="w-full"
-                          onRowClick={(loan) =>
-                            setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
-                          }
-                          rowClassName={(loan) =>
-                            selectedLoanId === loan.id
-                              ? 'ring-information-400 !bg-information-50 ring-1 ring-inset'
-                              : undefined
-                          }
-                          expandedIds={new Set<number>([...rrDebtIds, ...expandedDebtIds])}
-                          renderExpanded={(loan) => (
-                            <div className="flex flex-col gap-3">
-                              {rrDebtIds.has(loan.id) && renderRrInlineDetails(loan.id)}
-                              {expandedDebtIds.has(loan.id) && (
-                                <LoanFactoringInfo
-                                  legalName={loan.sellerLegalName}
-                                  previousLender={loan.factoringAgreementPreviousLender}
-                                  purchaseDate={loan.factoringAgreementPurchaseDate}
-                                />
-                              )}
-                            </div>
-                          )}
-                        />
-                      )}
-                    </div>
-                    {/* KAN-339: selection-driven action panel. Row-scoped
-                        actions (Close / Reopen / Edit closure date / Connect RR)
-                        enable only when a single loan row is selected AND its
-                        status permits the action; otherwise they are disabled with
-                        an explanatory tooltip. Write-off / Reversal remain
-                        client-scoped (their own modals carry a picker). */}
-                    <div className="flex flex-col gap-2 self-stretch px-3 py-4 md:px-6">
-                      {!selectedLoan && (
-                        <p className="text-muted-foreground text-xs">
-                          {t(
-                            'pages.clients.detail.selectLoanHint',
-                            'Select a loan row to enable actions.'
-                          )}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        {/* Close loan — only for a selected active (open/rr) loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Success size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan || selectedLoan.status !== 'active' || isClosingDebt
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'active'
-                                  ? t(
-                                      'pages.clients.detail.closeLoanDisabledHint',
-                                      'Only an open loan can be closed.'
-                                    )
-                                  : t('pages.clients.detail.closeLoan')
-                            }
-                            onClick={() => {
-                              if (!selectedLoan) return
-                              setCloseLoanConfirm(selectedLoan.id)
-                              setCloseLoanClosureDate(getTodayAtMidnight())
-                              setCloseLoanDateError(null)
-                              setCloseLoanReason('')
-                            }}
-                          >
-                            {t('pages.clients.detail.closeLoan')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Reopen loan — only for a selected closed loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Reload size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan || selectedLoan.status !== 'closed' || isReopeningDebt
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'closed'
-                                  ? t(
-                                      'pages.clients.detail.reopenLoanDisabledHint',
-                                      'Only a closed loan can be reopened.'
-                                    )
-                                  : t('pages.clients.detail.reopenLoan', 'Reopen loan')
-                            }
-                            onClick={() => selectedLoan && setReopenLoanConfirm(selectedLoan.id)}
-                          >
-                            {t('pages.clients.detail.reopenLoan', 'Reopen loan')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Edit closure date — only for a selected closed loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Edit size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan ||
-                              selectedLoan.status !== 'closed' ||
-                              isUpdatingClosureDate
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'closed'
-                                  ? t(
-                                      'pages.clients.detail.editClosureDateDisabledHint',
-                                      'Only a closed loan has a closure date to edit.'
-                                    )
-                                  : t('pages.clients.detail.editClosureDate', 'Edit closure date')
-                            }
-                            onClick={() => {
-                              if (!selectedLoan) return
-                              setEditClosureDateDebtId(selectedLoan.id)
-                              setEditClosureDateValue(
-                                selectedLoan.creditClosedDate
-                                  ? parseISODateAtMidnight(selectedLoan.creditClosedDate)
-                                  : getTodayAtMidnight()
-                              )
-                              setEditClosureDateError(null)
-                            }}
-                          >
-                            {t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Connect RR — for a selected non-closed loan that is not
-                            already on an active restructuring agreement. */}
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.Calculate size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          disabled={
-                            !selectedLoan || selectedLoan.status === 'closed' || selectedLoanOnRr
-                          }
-                          title={
-                            !selectedLoan
-                              ? t(
-                                  'pages.clients.detail.selectLoanHint',
-                                  'Select a loan row to enable actions.'
-                                )
-                              : selectedLoan.status === 'closed'
-                                ? t(
-                                    'pages.clients.detail.connectRRClosedHint',
-                                    'A closed loan cannot be restructured.'
-                                  )
-                                : selectedLoanOnRr
-                                  ? t(
-                                      'pages.clients.detail.connectRROnRrHint',
-                                      'This loan is already on an active restructuring.'
-                                    )
-                                  : t('pages.clients.detail.connectRR')
-                          }
-                          onClick={() => {
-                            if (!selectedLoan) return
-                            setConnectRrForm({
-                              debtId: String(selectedLoan.id),
-                              connectionDate: null,
-                              totalAmount: '',
-                              numPayments: 1,
-                              frequency: '',
-                              intervalDays: '',
-                              dayOfMonth: '',
-                              clampedRows: [],
-                              penaltyAmount: '',
-                              payments: [{ date: null, amount: '' }],
-                            })
-                            setConnectRrError(null)
-                            setIsConnectRrOpen(true)
-                          }}
-                        >
-                          {t('pages.clients.detail.connectRR')}
-                        </Button>
-                        {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
-                        {canCreateWriteoff && hasEligibleLoanForWriteoff && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.MoneyRemove01 size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={() => setIsWriteoffOpen(true)}
-                          >
-                            {t('pages.clients.detail.writeOff')}
-                          </Button>
-                        )}
-                        {/* KAN-334 — Reversal (storno) button, right of Write-off
-                          per Screenshot_14.png. Opens the reallocation modal. */}
-                        {canCreateReversal && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Reload size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={() => setIsReversalOpen(true)}
-                          >
-                            {t('pages.clients.detail.reversal')}
-                          </Button>
-                        )}
-                        {/* Bulk "Send all loans to UBKI" — gated by the same
-                          submit_to_ubki permission as the per-loan send button.
-                          Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
-                          (see the flag definition above). */}
-                        {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.MailSend01 size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={handleBulkSubmitToUbki}
-                            disabled={
-                              doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
-                            }
-                            title={
-                              doNotSendToUbki
-                                ? t(
-                                    'pages.clients.detail.ubki.optedOutTooltip',
-                                    'Client is opted out of UBKI; submission is disabled.'
-                                  )
-                                : ubkiLoanIds.length === 0
-                                  ? t(
-                                      'pages.clients.detail.ubki.noLoansTooltip',
-                                      'This client has no loans to submit.'
-                                    )
-                                  : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
-                            }
-                          >
-                            {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
-                          </Button>
-                        )}
                       </div>
-                    </div>
-                    {/* UBKI submission history — scoped to this client's loans. */}
-                    <div className="px-3 pb-4 md:px-6">
-                      <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
-                    </div>
+                    ) : (
+                      <LoansCardList
+                        loans={client.loans}
+                        renderLoan={(loan, isClosed) => {
+                          const hasRr = rrDebtIds.has(loan.id)
+                          // A loan can carry several agreements; the inline panel
+                          // lists them all, the chip summarises one. Prefer the
+                          // agreement still in force (Connected/Violated, same
+                          // pair `activeRrDebtIds` uses), else the most recently
+                          // created — highest id, since API order isn't defined.
+                          const loanAgreements = restructuringAgreements
+                            .filter((ra) => ra.debt_id === loan.id)
+                            .sort((a, b) => b.id - a.id)
+                          const agreement =
+                            loanAgreements.find(
+                              (ra) =>
+                                ra.status_id === RR_STATUS.Connected ||
+                                ra.status_id === RR_STATUS.Violated
+                            ) ?? loanAgreements[0]
+                          // Tone comes from status_id, never from status_name:
+                          // that string is a `restructuring_statuses` lookup value
+                          // ("Connected"/"Violated"/…), so substring matching on
+                          // "active" never hits and is brittle besides.
+                          const rrStatus = agreement
+                            ? {
+                                label: agreement.status_name ?? '',
+                                tone:
+                                  agreement.status_id === RR_STATUS.Violated
+                                    ? ('violated' as const)
+                                    : agreement.status_id === RR_STATUS.Cancelled
+                                      ? ('cancelled' as const)
+                                      : agreement.status_id === RR_STATUS.Connected
+                                        ? ('active' as const)
+                                        : ('default' as const),
+                              }
+                            : undefined
+                          const onRr = activeRrDebtIds.has(loan.id)
+                          const actions: LoanCardAction[] = [
+                            {
+                              key: 'calc',
+                              label: t(
+                                'pages.clients.detail.detailedCalculation',
+                                'Detailed calculation'
+                              ),
+                              icon: <Icons.Calculate size={16} />,
+                              onSelect: () =>
+                                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber }),
+                            },
+                            {
+                              key: 'ubki',
+                              // Keep the per-loan sent-state visible: the old
+                              // button showed a check + "Sent on {date}", and a
+                              // bare greyed-out item gives no reason why.
+                              label:
+                                loan.sentToCreditBureau && loan.creditBureauSentDate
+                                  ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
+                                      date: formatDate(loan.creditBureauSentDate),
+                                    })
+                                  : loan.sentToCreditBureau
+                                    ? t('pages.clients.detail.ubki.sent', 'Sent')
+                                    : t('pages.clients.detail.ubki.send', 'Send to UBKI'),
+                              icon: loan.sentToCreditBureau ? (
+                                <Icons.Success size={16} />
+                              ) : (
+                                <Icons.MailSend01 size={16} />
+                              ),
+                              hidden: !canSubmitToUbki,
+                              // Already-sent loans stay submittable, as before the
+                              // redesign: the check icon and "Sent on {date}" are
+                              // the state indicator, not a lock. A debt whose data
+                              // was corrected after submission has to be resendable,
+                              // and the only alternative is the bulk action, which
+                              // resends every loan on the client.
+                              disabled: doNotSendToUbki || isSubmittingToUbki,
+                              onSelect: () => submitDebtToUbki({ debtId: loan.id, clientId }),
+                            },
+                            {
+                              key: 'close',
+                              label: t('pages.clients.detail.closeLoan'),
+                              icon: <Icons.Success size={16} />,
+                              hidden: isClosed || !canCloseDebt,
+                              disabled: loan.status !== 'active' || isClosingDebt,
+                              onSelect: () => {
+                                setCloseLoanConfirm(loan.id)
+                                setCloseLoanClosureDate(getTodayAtMidnight())
+                                setCloseLoanDateError(null)
+                                setCloseLoanReason('')
+                              },
+                            },
+                            {
+                              key: 'connectRr',
+                              label: t('pages.clients.detail.connectRR'),
+                              icon: <Icons.Calculate size={16} />,
+                              hidden: isClosed,
+                              disabled: onRr,
+                              onSelect: () => {
+                                setConnectRrForm({
+                                  debtId: String(loan.id),
+                                  connectionDate: null,
+                                  totalAmount: '',
+                                  numPayments: 1,
+                                  frequency: '',
+                                  intervalDays: '',
+                                  dayOfMonth: '',
+                                  clampedRows: [],
+                                  penaltyAmount: '',
+                                  payments: [{ date: null, amount: '' }],
+                                })
+                                setConnectRrError(null)
+                                setIsConnectRrOpen(true)
+                              },
+                            },
+                            {
+                              key: 'reopen',
+                              label: t('pages.clients.detail.reopenLoan', 'Reopen loan'),
+                              icon: <Icons.Reload size={16} />,
+                              hidden: !isClosed || !canCloseDebt,
+                              disabled: isReopeningDebt,
+                              onSelect: () => setReopenLoanConfirm(loan.id),
+                            },
+                            {
+                              key: 'editClosure',
+                              label: t('pages.clients.detail.editClosureDate', 'Edit closure date'),
+                              icon: <Icons.Edit size={16} />,
+                              hidden: !isClosed || !canCloseDebt,
+                              disabled: isUpdatingClosureDate,
+                              onSelect: () => {
+                                setEditClosureDateDebtId(loan.id)
+                                setEditClosureDateValue(
+                                  loan.creditClosedDate
+                                    ? parseISODateAtMidnight(loan.creditClosedDate)
+                                    : getTodayAtMidnight()
+                                )
+                                setEditClosureDateError(null)
+                              },
+                            },
+                            {
+                              key: 'writeoff',
+                              label: t('pages.clients.detail.writeOff'),
+                              icon: <Icons.MoneyRemove01 size={16} />,
+                              // Hidden on closed loans: the backend rejects a
+                              // write-off against a non-active debt (409
+                              // DEBT_NOT_OPEN), so the action cannot apply here.
+                              // Without this the item renders on a closed card
+                              // and opens the modal on an unrelated active loan,
+                              // because the modal only accepts active debts.
+                              hidden: isClosed || !canCreateWriteoff || !hasEligibleLoanForWriteoff,
+                              onSelect: () => {
+                                setWriteoffInitialDebtId(loan.id)
+                                setIsWriteoffOpen(true)
+                              },
+                            },
+                            {
+                              key: 'reversal',
+                              label: t('pages.clients.detail.reversal'),
+                              icon: <Icons.Reload size={16} />,
+                              hidden: !canCreateReversal,
+                              onSelect: () => setIsReversalOpen(true),
+                            },
+                          ]
+                          return (
+                            <LoanCard
+                              key={loan.id}
+                              loan={loan}
+                              isClosed={isClosed}
+                              hasRr={hasRr}
+                              rrStatus={rrStatus}
+                              rrExpanded={rrExpandedIds.has(loan.id)}
+                              onToggleRr={() => toggleRrExpand(loan.id)}
+                              rrPanel={renderRrInlineDetails(loan.id)}
+                              focused={selectedLoanId === loan.id}
+                              dimmed={selectedLoanId !== null && selectedLoanId !== loan.id}
+                              onFocus={() =>
+                                setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
+                              }
+                              actions={actions}
+                            />
+                          )
+                        }}
+                        sendAllButton={
+                          ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki ? (
+                            <Button
+                              variant="secondary"
+                              leftIcon={<Icons.MailSend01 size={20} />}
+                              className="w-fit rounded text-xs md:text-sm"
+                              size="sm"
+                              onClick={handleBulkSubmitToUbki}
+                              disabled={
+                                doNotSendToUbki ||
+                                ubkiLoanIds.length === 0 ||
+                                isBulkSubmittingToUbki
+                              }
+                              title={
+                                doNotSendToUbki
+                                  ? t(
+                                      'pages.clients.detail.ubki.optedOutTooltip',
+                                      'Client is opted out of UBKI; submission is disabled.'
+                                    )
+                                  : ubkiLoanIds.length === 0
+                                    ? t(
+                                        'pages.clients.detail.ubki.noLoansTooltip',
+                                        'This client has no loans to submit.'
+                                      )
+                                    : t(
+                                        'pages.clients.detail.ubki.sendAll',
+                                        'Send all loans to UBKI'
+                                      )
+                              }
+                            >
+                              {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                            </Button>
+                          ) : undefined
+                        }
+                        ubkiHistory={
+                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                        }
+                      />
+                    )}
                   </div>
                 )}
 
@@ -6949,8 +6713,12 @@ export function ClientDetailPage() {
         {/* KAN-245 — Write-off Create Modal (client-scoped per Screenshot_1.png) */}
         <WriteoffCreateModal
           open={isWriteoffOpen}
-          onClose={() => setIsWriteoffOpen(false)}
+          onClose={() => {
+            setIsWriteoffOpen(false)
+            setWriteoffInitialDebtId(null)
+          }}
           debts={loans ?? []}
+          initialDebtId={writeoffInitialDebtId}
         />
 
         {/* KAN-334 — Reversal (storno) Create Modal (per Screenshot_14.png) */}

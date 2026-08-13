@@ -221,6 +221,9 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.counterparty': 'Counterparty',
         'pages.clients.detail.tableHeaders.saleDate': 'Sale Date',
         'pages.clients.detail.tableHeaders.debt': 'Debt',
+        // Carries an interpolation, so it needs a template here for the
+        // formatted value to be observable in assertions.
+        'pages.clients.detail.closedInline': 'Closed: {{date}}',
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
@@ -361,10 +364,12 @@ vi.mock('react-i18next', () => ({
           'The assistant is unavailable — try again in a moment',
       }
       const template = translations[key] || key
-      if (options && typeof template === 'string' && template.includes('{{')) {
+      // Interpolate from `vars`, not `options`: in the `t(key, fallback, vars)`
+      // form `options` is the fallback string, and indexing into it throws.
+      if (vars && typeof vars === 'object' && template.includes('{{')) {
         return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-          name in (options as Record<string, unknown>)
-            ? String((options as Record<string, unknown>)[name])
+          name in (vars as Record<string, unknown>)
+            ? String((vars as Record<string, unknown>)[name])
             : `{{${name}}}`
         )
       }
