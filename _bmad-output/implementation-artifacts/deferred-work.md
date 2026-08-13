@@ -502,3 +502,19 @@
 - ⚠️ **`fe_seed_1_11` was never minted.** `forgejo admin user generate-access-token` exited `1` with
   no message on stderr. Story 1.11's Task 4 is blocked on it, and the cause is undiagnosed —
   the command needs to be run interactively to see the real error.
+
+- 🔴 **FR11 promises storage reclamation the platform cannot deliver — this needs a plan decision,
+  not a story.** Measured on 2026-08-13: Forgejo 15.0.5 cleanup rules operate on **tagged versions
+  only** and never delete digest-named (untagged) container versions, even unreferenced ones. Four
+  orphaned manifests from Story 1.10 survived a rule that had nothing protecting them, at
+  `remove_days = 0`, across four `cleanup_packages` executions. So deleting a `<branch>` tag frees
+  the tag row and **no blob storage whatsoever**. FR11 is written to bound registry growth; the
+  mechanism bounds the tag list instead. Either FR11 is reworded to say what the retention rule
+  actually achieves, or a separate reclamation mechanism is found and specified — nothing in
+  Forgejo's own cron does it. Story 1.11's AC6 is closed as **not achievable by this mechanism**.
+- ⚠️ **The Forgejo log is not a record of cron executions.** One `cleanup_packages` line exists for
+  the container's entire lifetime despite at least four runs. The only reliable evidence is the
+  execution counter on Site Administration → Monitoring → Cron Tasks. Any future story that needs to
+  prove a scheduled task ran must read that counter before and after — a log grep will show nothing
+  and look like a failure.
+

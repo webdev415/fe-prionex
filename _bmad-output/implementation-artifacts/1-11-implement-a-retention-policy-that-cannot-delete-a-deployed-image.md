@@ -715,6 +715,41 @@ a digest that a live tag references. Until that is answered, **this retention po
 and reclaims nothing**, which satisfies AC1 and AC2 while failing what FR11 is for. Recorded as
 **«не проверено»**, not as a pass.
 
+**The deciding experiment — run 2026-08-13, and it answered the story's central question.**
+
+Phase 1 had protected `sha256:` rows by pattern, so the run on 08-12 could not tell whether Forgejo
+would delete a digest a live tag references. So the clause was removed from `keep_pattern`,
+`remove_days` set to `0`, and the rule enabled and executed. Under that configuration **all six
+digest rows were candidates**: nothing kept them, everything passed the age filter, and
+`fe-prionex/.+` matches `fe-prionex/sha256:…` trivially.
+
+**None were deleted.** Not the two manifests of the surviving `sha-a1b2c3d-prod`, and — decisively
+— not the four orphans Story 1.10 left, which no tag references at all and which therefore had no
+protection of any kind.
+
+Confirming the run actually happened mattered, and nearly went wrong. The Forgejo log contains
+**one** `cleanup_packages` line for the container's entire lifetime, so the log is not a record of
+executions. The evidence is the cron task's own execution counter on the admin page: **12** when the
+task was triggered on 08-12, **15** afterwards, last run "now", status ✓. Three further executions,
+including the scheduled midnight one. Without that counter the empty result would have been
+indistinguishable from "the run never happened" — the same failure mode as the first preview.
+
+**Finding: cleanup rules in Forgejo 15.0.5 never delete digest-named container versions.** They
+operate on tagged versions only. Two consequences:
+
+1. **The `sha256:` clause defends against something the mechanism cannot do.** The story's stated
+   central fear — that a `keep_pattern` naming only tags would let a protected image lose its
+   manifests — **is unfounded on this version**. The clause is retained anyway, documented as inert,
+   because it costs nothing and guards against that behaviour changing in a later release.
+2. **🔴 Deleting a tag reclaims no storage. Ever.** The manifests and their blobs stay. FR11 exists
+   to bound registry growth and this policy does not bound it at all — it bounds the *tag list*.
+   **AC6 is not achievable by a cleanup rule** and the four orphans from Story 1.10 are not
+   collectable this way. A separate mechanism is required, and none was found: the
+   `cleanup_packages` cron ran four times across this experiment without touching them.
+
+Recorded as a defect in the plan's premise, not as a story failure. FR11's wording promises
+something the platform does not offer.
+
 ### Completion Notes List
 
 **🛑 HALT after Task 3.1. The rule now exists, disabled. Tasks 3.2–8 need the web UI — the
