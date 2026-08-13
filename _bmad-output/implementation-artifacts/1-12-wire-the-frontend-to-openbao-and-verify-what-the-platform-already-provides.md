@@ -60,6 +60,18 @@ container spawned in a nested dind. Measured on s1, 2026-08-13, in both job imag
 The hub's step calls `bao` three times (`login`, `kv get`, `token revoke -self`) and `jq` five.
 **Copied verbatim into a workflow on our labels, it dies on `bao: command not found`.**
 
+⚠️ **The first version of this section concluded the hub's step "cannot run here". That was wrong,
+and the correction matters more than the original claim.** `code.forgejo.org/oci/docker:cli` is
+Alpine 3.24 with `apk`, and Alpine ships both packages: `openbao-2.6.0-r0` and `jq-1.8.1-r0`.
+Measured on the instance, three runs, from a job-equivalent container:
+
+| | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| container start only | 0.54 s | 0.55 s | 0.55 s |
+| `+ apk add --no-cache openbao jq` | 1.94 s | 1.92 s | 1.85 s |
+
+**The tools cost ~1.35 s.** Whatever else Task 3 weighs, it is not weighing a slow install.
+
 The hub already paid for this lesson on its own side — `promote-prod.yml:168-186` exists because
 `bao` was not installed on s2 and the failure surfaced only after a break-glass window had been
 spent:
@@ -266,21 +278,41 @@ and `docs/runners/README.md`'s drift check is extended to compare the two runner
 🔴 **This is the story's real design decision. Do it in writing, in the story record, before
 touching a workflow file.**
 
-The constraint is §2: neither job image carries `bao` or `jq`. Three options, all live (egress
-measured open on 2026-08-13):
+The constraint is §2: neither job image carries `bao` or `jq` — but on the image that matters, both
+are one `apk add` away, measured at ~1.35 s.
 
-| option | what it costs | what it risks |
+**Which image matters:** the values are needed at **build** time, because Option C bakes `VITE_*`
+into the bundle and Story 3.3 passes them as `--build-arg`. That job runs on the `docker-build`
+label → `code.forgejo.org/oci/docker:cli` → **Alpine 3.24, with `apk`, `wget` and busybox**. The
+`node-20` image (Debian bookworm) has `curl` but no OpenBao package in Debian; it is not where this
+runs, so its poverty does not constrain the choice. Deploy-time reads in Epics 4–6 land on deploy
+runners on the target hosts, where the hub already installs `bao` as a host package — a different
+question, decided by those stories, not this one.
+
+| option | cost | risk |
 |---|---|---|
-| **(a) install at job time** — `apt-get install jq` + download the `bao` binary | seconds to tens of seconds on **every** build and deploy job, in every epic from 3 to 6 | an external download on the critical path of every production deploy; version drift against the hub's `bao` |
-| **(b) HTTP API via `curl`** — two plain requests, credentials on **stdin** (`--data @-`), JSON parsed structurally | one deliberate, documented deviation from the hub | `docker:cli` has no `curl` either, so the read must be pinned to a `node-20`-image step; the hardening properties must be re-argued one by one rather than inherited |
-| **(c) bake a job image** carrying `bao`+`jq` | a new image to build, host and keep current | a fourth thing to maintain; and Epic 3 builds already pin `docker:cli` by label |
+| **(a) `apk add --no-cache openbao jq`, then the hub's step essentially verbatim** | **~1.35 s per job**, measured three times | an Alpine mirror fetch on the critical path of every build; Alpine ships **2.6.0** against the server's **2.6.1** (client/server skew of one patch release) |
+| **(b) HTTP API via `wget`/`curl`, no CLI** | ~0.4 s — still needs `apk add jq` for structural extraction, so the delta against (a) is **~1 s** | every hardening property must be re-argued and re-proved individually instead of inherited; our own code to review, with none of the hub's incident history behind it |
+| **(c) bake a job image with `bao`+`jq`** | an image to build, host and keep current | the `docker-build` label was bound to its image at **registration** time (Stories 1.7/1.9, Trap 5); changing it means re-registering, or a per-job `container:` override that diverges from every other job |
 
-- [ ] 3.1 Choose one. **Recommendation: (b)**, because every hardening property the hub bought
-      survives the translation — `curl -K -` / `--data @-` keeps credentials out of `argv` exactly
-      as `bao write -` does, `::add-mask::` is a runner feature not a CLI feature, structural
-      extraction is a `jq`-vs-`node -e` detail, and the denylist is ours either way. It also removes
-      an external download from the production deploy path. **The cost is that AC4 becomes
-      "reproduce every property", not "copy the file", so each property must be shown present.**
+- [ ] 3.1 Choose one. **Recommendation: (a).** For roughly one second per job we get the hub's
+      reviewed, incident-hardened step almost verbatim — the `jq env` login, the per-line
+      `::add-mask::` with percent-escaping, structural key extraction, the denylist, and
+      `bao token revoke -self`. Option (b) saves that second and spends it on re-arguing five
+      security properties from scratch, in code nobody else on this instance runs. **The deciding
+      factor is not speed, it is that the hub's version has already survived a real `PATH` hijack
+      and two masking failures that were found by running it, not by reading it.**
+      ⚠️ **This reverses the recommendation first written here**, which was (b), on the assumption
+      that installing `bao` meant a manual multi-megabyte download. Alpine packaging it changes the
+      arithmetic; the measurement is in §2.
+- [ ] 3.1a Whichever is chosen, **pin the version** and record the skew: `apk add openbao=2.6.0-r0`
+      rather than floating, so a future Alpine bump is a deliberate change and not a surprise on a
+      production deploy. Record that the client is one patch release behind the server and that
+      this is expected to be compatible — **not verified**, and cheap to verify in Task 7.3.
+- [ ] 3.1b Record the residual risk plainly: option (a) puts an **Alpine mirror fetch on the
+      critical path of every build**. If the mirror is unreachable the build fails before it starts.
+      The preflight in Task 7.2 must distinguish "no `bao`" from "OpenBao unreachable" — they have
+      different causes and different fixes.
 - [ ] 3.2 Whichever is chosen, write the decision, the rejected options and the reason into the
       story record and into `docs/migration-decisions.md` as an amendment to D15. Epics 3–6 inherit
       this; they must not each re-decide it.
