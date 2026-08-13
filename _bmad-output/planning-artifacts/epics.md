@@ -123,7 +123,13 @@ deploying (no pure `docker pull` promotion). On `rollback: true` it pulls an exi
 previously deployed prod tag without rebuilding.
 
 FR18: After a successful PROD deploy the workflow retags the deployed image as
-`prod-current` in the registry.
+`prod-current` **and `prod-<sha>`** in the registry. 🔴 **AMENDED 2026-08-13 (code review of
+Story 1.11).** The original text created `prod-current` only, leaving the rollback target
+addressable solely by its bare `sha-<commit>` tag from FR7 — which the retention rule expires
+after 14 days, deleting the very artifact Story 6.6 relies on. This was asymmetric with FR14,
+which has produced `preprod-current` **and** `preprod-<sha>` since it was written. `prod-<sha>`
+is protected by `keep_pattern` and never expires. See `docs/migration-decisions.md` changelog
+13.08.
 
 FR19: **AMENDED (2026-08-11, `sprint-change-proposal-2026-08-11-deploy-runner.md`).** All deploy
 workflows run on a deploy runner located on the target host and follow the sequence: place the
@@ -1191,7 +1197,7 @@ So that I can deploy that branch to DEV, which pulls fail-fast and would otherwi
 **Given** builds now run on every branch push
 **When** registry growth is considered
 **Then** the 14-day `<branch>` retention rule from Story 1.11 is confirmed to apply to these
-images. ✅ **Confirmed 2026-08-13 (Story 1.11).** A branch tag is deleted once past the threshold — demonstrated on a seeded tag. ⚠️ But the image's blobs remain: only the tag row goes. Do not read this AC as "old branch builds stop consuming space".
+images. ⚠️ **Partly confirmed 2026-08-13 (Story 1.11).** A branch tag is deleted once past the threshold — demonstrated on a seeded tag, **at `remove_days = 0`, not at 14**. The registry cannot backdate a push and database writes were ruled out, so the shipped 14-day threshold is configured and **«не проверено»**. Two further caveats: only the tag row goes, the image's blobs remain; and the `<branch>` shape is deleted by falling through `keep_pattern`, not by being named, so any future protected shape must be added there or it will expire too. Do not read this AC as "old branch builds stop consuming space".
 
 ### Story 3.5: Move the Build Cache to the Registry
 
@@ -1217,7 +1223,7 @@ So that build time does not regress now that GitHub's cache backend is unavailab
 
 **Given** the buildcache tag lives in the same repository as release images
 **When** the retention policy from Story 1.11 is reviewed
-**Then** the buildcache tag is confirmed either exempt from cleanup or safe to regenerate. ✅ **Decided 2026-08-13 (Story 1.11): exempt.** `buildcache` is named explicitly in `keep_pattern` and is never deleted regardless of age. Story 3.5 does not need to handle regeneration.
+**Then** the buildcache tag is confirmed either exempt from cleanup or safe to regenerate. ✅ **Decided 2026-08-13 (Story 1.11): exempt.** `buildcache` is named explicitly in `keep_pattern` and is never deleted regardless of age, so Story 3.5 needs no regeneration path. ⚠️ Pattern-read, never exercised against the running rule.
 
 ### Story 3.6: Verify Commit Traceability and Image Immutability
 
@@ -1678,7 +1684,7 @@ identity.
 **Given** the retention policy from Story 1.11
 **When** it runs
 **Then** `preprod-current` and its target are never deleted
-**And** the previous N `preprod-<sha>` tags are preserved as rollback and audit targets. ✅ **Guaranteed 2026-08-13 (Story 1.11), and N = all.** `preprod-current` and every `preprod-<sha>` / `sha-<sha>-preprod` tag is protected by `keep_pattern`, not by a count — deliberately, because `keep_count` orders by recency across all row kinds and a day of branch builds would push deployment tags out of protection. Verified: a protected tag survived a run at `remove_days = 0` and was pulled successfully.
+**And** the previous N `preprod-<sha>` tags are preserved as rollback and audit targets. ✅ **Protected 2026-08-13 (Story 1.11), N = all** — `preprod-current` and every `preprod-<sha>` is named by `keep_pattern`, deliberately by shape rather than by count, because `keep_count` orders by recency across all row kinds and a day of branch builds would push deployment tags out of protection. ⚠️ **Method, stated precisely:** these two shapes were verified by compiling the stored pattern and matching against them, **not** by pushing them and running the rule. The one tag actually exercised end-to-end was `sha-a1b2c3d-prod`, a different alternative. This story's shapes are the ones FR14 already produces, so the conclusion holds — but it is pattern-read, and this same pattern was once found to contain a dead clause.
 
 **Given** the registry after several candidates
 **When** it is inspected
@@ -1847,7 +1853,7 @@ rather than by digest comparison.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** these tags are protected as the current production and rollback targets. ✅ **Guaranteed 2026-08-13 (Story 1.11).** Story 6.3's rebuilt tags match the protected `(pre)?prod-<sha>` / `sha-<sha>-prod` shapes in `keep_pattern`.
+**Then** these tags are protected as the current production and rollback targets. ⚠️ **CORRECTED 2026-08-13 by code review of Story 1.11.** Of the two tags this story creates, only `prod-current` is protected. The `sha-<commit>` tag — the one that makes the rebuilt commit addressable — matches no `keep_pattern` alternative and expires at 14 days. Under the amended FR18 the deploy that follows produces `prod-<sha>`, which is protected; until then the rebuilt image is addressable only via `prod-current`. Pattern-read, not exercised.
 
 ### Story 6.4: Deploy to Production by Dispatch
 
@@ -1937,16 +1943,21 @@ So that rollback targets and audit history do not depend on inspecting servers.
 
 **Given** a successful production deploy
 **When** the recording step runs
-**Then** it retags the deployed image as `prod-current` using `docker buildx imagetools create`.
+**Then** it retags the deployed image as `prod-current` **and `prod-<sha>`** using
+`docker buildx imagetools create` (amended 2026-08-13, see FR18).
 
 **Given** a subsequent production deploy
 **When** the recording step runs again
 **Then** `prod-current` moves to the new image
-**And** the previous image remains addressable by its own tag as a rollback target.
+**And** the previous image remains addressable by its `prod-<sha>` tag as a rollback target.
+🔴 **AMENDED 2026-08-13 (code review of Story 1.11).** Was "by its own tag" — that is the bare
+`sha-<commit>` from FR7, which the retention rule deletes at 14 days. Rollback would have worked
+for two weeks and then silently stopped. Mirrors Story 5.4, which has always produced
+`preprod-<sha>`.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** `prod-current` and the previous N production tags are never deleted. ✅ **Guaranteed 2026-08-13 (Story 1.11), N = all.** `prod-current` is named explicitly; production `sha-<sha>-prod` tags are protected by shape and never expire.
+**Then** `prod-current` and the previous N production tags are never deleted. ⚠️ **CORRECTED 2026-08-13 by code review of Story 1.11.** The first answer here claimed production rollback tags were protected by a `sha-<sha>-prod` shape. **No story in this plan produces that shape** — it was carried over from Story 3.3's "for example" and asserted onto this AC. As originally written, this story's rollback target was the bare `sha-<commit>` tag, which `keep_pattern` does **not** protect and the rule deletes at 14 days. Closed by amending FR18 and this story to retag `prod-<sha>`, which `keep_pattern` protects by shape. `prod-current` was and remains protected by name. **Never exercised against the running rule** — only `sha-a1b2c3d-prod` was.
 
 **Given** the registry after several releases
 **When** it is inspected

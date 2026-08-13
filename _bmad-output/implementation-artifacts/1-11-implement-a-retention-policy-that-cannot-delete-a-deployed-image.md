@@ -562,7 +562,8 @@ means `[0-9a-f]` also admits `A–F`; harmless.
 **Task 2.6 — `ci-probe` and `ci-probe-cache`:** deliberately **outside** the rule.
 `remove_pattern` is anchored to `fe-prionex/`, so the rule will never collect them. They are Epic 1
 smoke-test residue serving nothing; the right disposal is a one-off deletion at Epic 1 close, not a
-standing policy clause that widens the rule's reach for seven versions. Filed to `deferred-work`.
+standing policy clause that widens the rule's reach for seven versions. Filed to `deferred-work`
+under Story 1.11 — see Open Question 3, which this decision answers.
 
 **The phase-1 / phase-2 split, and the awkward thing it exposes.**
 
@@ -745,7 +746,8 @@ operate on tagged versions only. Two consequences:
    to bound registry growth and this policy does not bound it at all — it bounds the *tag list*.
    **AC6 is not achievable by a cleanup rule** and the four orphans from Story 1.10 are not
    collectable this way. A separate mechanism is required, and none was found: the
-   `cleanup_packages` cron ran four times across this experiment without touching them.
+   `cleanup_packages` cron ran three times across this experiment without touching them (counter
+   12 → 15).
 
 Recorded as a defect in the plan's premise, not as a story failure. FR11's wording promises
 something the platform does not offer.
@@ -785,7 +787,8 @@ not have.
 | tokens minted | 0 | **2** | ❌ `fe_seed_1_11`, `fe_pull_1_11`, both still live |
 | database rows written | 0 | **1** | the rule row, on Oleg's explicit authorisation; every later write was blocked and went through the UI |
 
-Four of seven lines missed. The budget did its job anyway — it is the reason the token count and the
+Five of seven lines missed — rule edits, tags deleted, commits, tokens and database rows; only
+"rules created" and "seeded tags" landed on the declared number. The budget did its job anyway — it is the reason the token count and the
 undeleted tag are stated here rather than forgotten.
 
 **Task 8.2 — `action_run` for `repo_id = 16` is 30, unchanged from the Task 1 baseline.** This story
@@ -803,50 +806,76 @@ created no workflow and none ran.
 
 ### Completion Notes List
 
-**🛑 HALT after Task 3.1. The rule now exists, disabled. Tasks 3.2–8 need the web UI — the
-mechanism has no non-interactive interface for previewing or enabling.**
+**Story complete. The rule is live and its central guarantee has one hole, found by review.**
 
-Established on the instance, not assumed:
+**Final state of the deliverable, read back from the row rather than asserted** (Task 4.2 required
+this and the earlier record only stated it in prose):
 
-- **No API.** `swagger.v1.json` exposes seven package routes (`/packages/{owner}`,
-  `…/{type}/{name}/{version}`, `/files`, `/-/link`, `/-/unlink`, two quota routes). **Zero** contain
-  `cleanup`. There is no endpoint to create, read, preview or enable a cleanup rule.
-- **No CLI.** `forgejo admin` offers `user`, `repo-sync-releases`, `regenerate`, `auth`, `sendmail`.
-  Nothing for packages.
-- **Web UI only** — the route is `org/settings/packages_cleanup_rules_edit`, reachable with an
-  org-owner or site-admin session. A token does not open it; web routes need a session cookie and a
-  CSRF token from a password login.
-- **The preview is a UI feature too.** Prohibition 1 forbids enabling an unpreviewed rule and AC4
-  requires the preview output as evidence, so this is not a step that can be worked around by
-  writing the row directly — and writing the row directly is also a database write, which the
-  Task 4.2 decision ruled out.
+```
+id              | 1
+enabled         | t
+owner_id        | 2      (CRM, organisation)
+type            | container
+keep_count      | 0
+remove_days     | 14
+match_full_name | t
+remove_pattern  | fe-prionex/.+
+keep_pattern    | fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64})
+```
 
-So the story stops here on purpose rather than inventing a route. **This is the second mechanism in
-this migration that turns out to be UI-only** — the first was token revocation, in Story 1.10. The
-pattern is now worth naming: on this Forgejo, anything under *owner settings* has no automation
-surface, and any story that depends on one needs a human step designed in from the start rather
-than discovered at implementation time.
+Cross-checked against the instance after Oleg's edits: `action_run` for `repo_id = 16` is **30**,
+unchanged; `robot-registry` carries **7** tokens; `CRM` holds **86** container packages of which
+**80** are `api-prionex/*`; `fe-prionex` holds 7 versions; `ci-probe` 6 and `ci-probe-cache` 1,
+untouched.
 
-**What is finished and needs nothing further:** Task 1 (baseline, every number bound) and Task 2
-(the complete policy, hand-checked against all four evaluation steps for eleven representative
-versions, including the two that prove other teams' packages are untouchable).
+**🔴 The defect review found, and it is the one this story exists to prevent.** `keep_pattern`
+protects `prod-current` and `sha-<sha>-prod`. **No story in the plan produces `sha-<sha>-prod`** —
+the shape came from Story 3.3's "for example" and was asserted through the whole design. What
+Stories 6.3 and 6.6 actually produce is a bare `sha-<commit>`, which this story's own evaluation
+table rules **deleted**. Production rollback would have worked for fourteen days and then stopped
+silently. Closed by amending **FR18** and **Story 6.6** to retag `prod-<sha>`, restoring symmetry
+with FR14, which has produced `preprod-<sha>` since it was written. The annotations at
+`epics.md:1850` and `:1949` said "Guaranteed" and now say what is true.
 
-**What Oleg needs to do, precisely.** The rule is already there, disabled, with every field set. In
-the web UI, org `CRM` → Settings → Packages, open it and run the **preview**. Capture the complete
-list it produces. The single thing that matters in that output: **no version
-outside `crm/fe-prionex` may appear.** If any `api-prionex/*` or `hub-*` version does, the anchoring
-assumption is wrong and the rule must not be enabled — that result is more valuable than a
-successful one, and it is exactly the check that cannot be done from here.
+**🔴 The AC6 conclusion is under-evidenced and needs one more run.** "Cleanup rules operate on
+tagged versions only" is contradicted by this story's own record: `_upload` was untagged **and**
+internal, and it was deleted. So rules do reach untagged rows, and why the six `sha256:` rows
+survived with nothing protecting them is unexplained. Two candidates: the preview and the run
+disagree on internal rows, or `_upload` was removed by the expired-upload step of the same cron
+task rather than by the rule. Not resolved here.
 
-**One thing worth doing before that:** the backend and hub teams own 1185 of the 1197 container
-versions this rule is evaluated against. By construction it cannot touch them, and the preview is
-there to prove it — but they have no way to know a cleanup rule is about to exist over their
-registry.
+**✅ AC6's "remaining mechanism" is named, and it is already in production use.** The story said
+none was found. It was in the route inventory the whole time — `DELETE /packages/{owner}/{type}/{name}/{version}`.
+Evidence it works: foreign versions carry **605 missing ids** across their range and their count
+fell 1263 → 1223 overnight, while our rule cannot touch them (no foreign version is older than 14
+days). The backend team already prunes its own versions through that endpoint. Most of those gaps
+predate this rule's existence entirely.
+
+**What the review confirmed as not done, beyond the two above:**
+
+- **AC2's trigger clause was never instantiated.** No `prod-current` or `preprod-current` tag
+  existed at any point in the test; "deployed" was simulated by a name shape. Task 4.3 asked for
+  that definition to be recorded concretely and the box was ticked without it.
+- **Task 5.4's "recent branch tag survived on age alone" is unsupported.** At `remove_days = 0` no
+  tag can survive on age. Step 3 of the evaluation order has never been demonstrated to protect
+  anything.
+- **AC4's after-run check** remains unperformable retroactively. A forward baseline now exists:
+  `docs/runners/registry-foreign-baseline.txt`, 83 foreign packages, 1503 versions, each with a
+  count, id range and md5 of its sorted id list. A falling count or a changed md5 at unchanged
+  `max(id)` means versions disappeared.
+
+**Still open on the instance:** `sha-a1b2c3d-prod` (id 1930) seeded material; `fe_seed_1_11` (103)
+and `fe_pull_1_11` (104) live on `robot-registry`; Task 7.2 — the rule is not written into
+`docs/forgejo-migration.md`, whose registry section still presents retention as an unmade choice.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (modified)
+- `_bmad-output/planning-artifacts/epics.md` (modified)
+- `docs/migration-decisions.md` (modified)
+- `docs/runners/registry-foreign-baseline.txt` (new — added by code review)
 
 ---
 

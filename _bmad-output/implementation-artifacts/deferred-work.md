@@ -499,9 +499,15 @@
   `forgejo-runner-telecom` (+dind), `forgejo-runner` (+dind). Versions are split — `runner:13.0.0`
   on three, `runner:12.13.2` on two. Story 1.9 documented a drift-check procedure in
   `docs/runners/README.md`; it does not cover version skew across projects on the same host.
-- ⚠️ **`fe_seed_1_11` was never minted.** `forgejo admin user generate-access-token` exited `1` with
-  no message on stderr. Story 1.11's Task 4 is blocked on it, and the cause is undiagnosed —
-  the command needs to be run interactively to see the real error.
+- ✅ **Resolved 2026-08-12: `fe_seed_1_11` was minted.** The silent exit `1` was `docker exec`
+  running as **root**, which Forgejo refuses outright — `-u git` fixes it. Worth keeping because the
+  failure printed nothing at all and read like a permissions problem.
+  ⚠️ **Two tokens are now live and awaiting revocation:** `fe_seed_1_11` (id 103, `write:package`)
+  and `fe_pull_1_11` (id 104, `read:package`), both on `robot-registry`, which now carries seven
+  tokens where it carried five. Neither has a scripted revocation route — see
+  [[forgejo-token-revocation-is-a-dead-end]] in the same list. Story 1.11 declared a budget of
+  **zero** tokens and minted two; the story's own inherited lesson said to plan revocation before
+  minting, and it was not.
 
 - 🔴 **FR11 promises storage reclamation the platform cannot deliver — this needs a plan decision,
   not a story.** Measured on 2026-08-13: Forgejo 15.0.5 cleanup rules operate on **tagged versions
@@ -518,3 +524,33 @@
   prove a scheduled task ran must read that counter before and after — a log grep will show nothing
   and look like a failure.
 
+## Opened by the code review of story 1.11 (2026-08-13)
+
+- 🔑 **`ci-probe` (6 versions) and `ci-probe-cache` (1) have no owner after Epic 1.** Story 1.11
+  decided deliberately to leave them **outside** the retention rule: `remove_pattern` is anchored to
+  `fe-prionex/`, so the rule will never collect them, and widening it for seven versions is not
+  worth the extra reach. They are Epic 1 smoke-test residue serving nothing. Right disposal is a
+  one-off deletion at Epic 1 close via `DELETE /packages/CRM/container/ci-probe/{version}`, not a
+  standing policy clause. **Owner: whoever closes Epic 1.**
+- ✅ **The mechanism that reclaims registry storage is `DELETE /packages/{owner}/{type}/{name}/{version}`,
+  and the backend team already uses it.** Story 1.11 recorded "a separate mechanism is required, and
+  none was found" — wrong, and its own route inventory contained the answer. Evidence it is in live
+  use: foreign container versions show **605 missing ids** across their id range, and their count
+  fell 1263 → 1223 overnight while our rule provably could not touch them (no foreign version is
+  older than 14 days). Most gaps predate our rule entirely. **This is what Story 1.11's AC6 should
+  have named**, and it is the starting point for whatever bounds registry growth — the cleanup rule
+  never will.
+- 🔴 **The AC6 finding "cleanup rules operate on tagged versions only" is under-evidenced and must
+  be re-run before anything depends on it.** It is contradicted by Story 1.11's own record: `_upload`
+  was untagged **and** internal and was deleted. Two unresolved candidates: the preview and the run
+  disagree about internal rows, or `_upload` was removed by the expired-upload step of the same cron
+  task rather than by the rule. The distinction decides whether untagged digest rows are reachable
+  at all, which decides whether registry growth can ever be bounded by a rule. FR11's defect
+  annotation in `epics.md:99` rests on this.
+- ⚠️ **`sha-a1b2c3d-prod` (id 1930) is seeded test material still sitting in `crm/fe-prionex`.**
+  Left behind when Story 1.11 closed. Delete it before Story 3.1 starts pushing real images, or it
+  will look like a real production tag to anyone reading the registry.
+- ⚠️ **Story 1.11's Task 7.2 was not done:** `docs/forgejo-migration.md` still presents retention as
+  an unmade choice ("Выбрать одно: …") while the rule is live. Every field value is recorded
+  verbatim in `docs/migration-decisions.md`, so nothing is lost — but the migration document
+  contradicts production.
