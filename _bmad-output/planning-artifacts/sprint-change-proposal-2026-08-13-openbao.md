@@ -225,3 +225,86 @@ cross-team dependency. No epic reordering, no rollback of completed work.
 **Open question carried forward:** AppRole secret IDs have a TTL. Nothing in the plan monitors
 credential expiry, and an expired `secret_id` fails every deploy for that environment at once.
 Belongs in Epic 7's documentation at minimum, and probably needs an owner before PROD depends on it.
+
+
+---
+
+## Addendum — provisioned and measured the same day (2026-08-13)
+
+Oleg took option 1 (work through his `admin` session) after `token create` refused a scoped
+provisioner token: OpenBao only lets a token mint children whose policies are a **subset** of its
+own, and `fe-prionex-provisioner` was not among `[admin default]`. The policy itself wrote fine;
+only the token creation failed.
+
+**Created and verified on the instance:**
+
+| object | value |
+|---|---|
+| policies | `fe-dev-read`, `fe-pre-prod-read`, `fe-prod-read` — each grants `read` on `secret/data/fe/<env>/*` and `read,list` on `secret/metadata/fe/<env>/*` and nothing else |
+| roles | `fe-dev`, `fe-pre-prod` — `secret_id_ttl 0`, token `10m/15m` (mirrors `hub-dev`) |
+| | `fe-prod` — `secret_id_ttl` **7200h** (Oleg's number; the hub's prod role uses 720h), token `15m/15m` |
+| KV (v2) | `secret/fe/dev/app`, `secret/fe/pre-prod/app`, `secret/fe/prod/app` |
+
+**KV engine is v2** — established from `hub-dev-read`, which grants `secret/data/…` and
+`secret/metadata/…`; `sys/mounts/secret` is denied to the `admin` policy so it could not be read
+directly.
+
+**Isolation measured, nine checks, all passing.** Each role logged in via AppRole and attempted all
+three paths: reads its own, is denied both others. Test `secret_id`s were issued with
+`num_uses=1` and died on use, so the experiment left no credentials behind.
+
+**Values are sourced, not invented.** Production `VITE_API_BASE_URL=https://api.crm-prionex.online`
+and `VITE_WS_URL=wss://api.crm-prionex.online` were read out of the **bundle production actually
+serves** (`/assets/index-BfP68FMT.js`), which is stronger evidence than any config file — the
+container carries no `VITE_*` in its environment because Option C bakes them in at build time.
+They match the fallbacks at `CD.yml:47-51`, so the GitHub secrets either hold the same values or
+are unset. DEV comes from the same file. **PRE-PROD is a literal placeholder** —
+`PLACEHOLDER-preprod-backend-not-provisioned` — because that backend does not exist yet
+(Story 1.6's standing deferral). It must not be mistaken for a real value.
+
+### The obstacle this found, which would otherwise have surfaced mid-Epic 5
+
+**No runner shares a network with OpenBao,** and the naive fix does not work. Job containers are
+created inside a **nested dind** engine (`docker_host: tcp://dind:2375`) whose network list is only
+`bridge`, `host`, `none` — the host-level `forgejo_forgejo` does not exist there, so
+`container.network: "forgejo_forgejo"` in the runner config cannot resolve it. Port 8200 is
+published only on `10.70.0.1` and `127.0.0.1`, and a container on the host bridge cannot reach
+either (measured: `000`).
+
+**Resolved by connecting both dind engines to `forgejo_forgejo`** and addressing OpenBao by IP from
+the job container:
+
+```
+forgejo-runner-fe-prionex-dind     runner=192.168.226.2   forgejo_forgejo=172.20.0.6
+forgejo-runner-fe-prionex-dind-2   runner=192.168.226.5   forgejo_forgejo=172.20.0.7
+forgejo-openbao                    forgejo_forgejo=172.20.0.5
+```
+
+Measured from a container inside **each** dind, with `--add-host openbao:172.20.0.5`:
+`http://openbao:8200/v1/sys/seal-status` → **200** on both.
+
+⚠️ **Only the first dind was connected initially.** The second was found still isolated and
+connected afterwards. Had that gone unnoticed, jobs landing on runner 2 would have failed while
+runner 1 succeeded — an intermittent failure with no obvious cause, in a pair Story 1.9 built
+specifically so work distributes across both. **Any future change to one runner must be applied and
+verified on both**; `docs/runners/README.md`'s drift check does not currently compare them.
+
+⚠️ **The `--add-host openbao:172.20.0.5` line is fragile** in exactly the way
+`--add-host git.crm-prionex.com:10.67.0.1` already is: a container IP, hardcoded. If OpenBao is
+recreated it may take a different address and every deploy will fail on an opaque connection error.
+Story 1.12 must add a preflight step that fails loudly and names the cause, rather than letting a
+`bao` timeout speak for itself.
+
+### Still outstanding
+
+1. **Runner config not yet edited.** `--add-host openbao:…` is not in `config.yml` or `config-2.yml`;
+   the reachability was proven with the flag passed manually. Editing both files and restarting both
+   runners — then re-proving the registry access those files also carry — is Story 1.12's work.
+2. **`OPENBAO_ADDR` and the six `role_id`/`secret_id` values are not yet in Forgejo repository
+   secrets.** Writing them needs a Forgejo API token, which on this instance cannot be revoked by
+   any scripted route, so it was deliberately not minted at the end of a long session.
+3. **`fe-prod`'s `secret_id_ttl` is 7200h (~10 months), not the hub's 720h.** Oleg's decision. It
+   still expires, and nothing rotates it. The requirement does not disappear, it moves out of the
+   first year.
+4. **The hub's own production `secret_id` expires every 720h** and nothing visible rotates it. Not
+   our system; worth telling that team before their production deploy fails on a stale credential.
