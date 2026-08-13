@@ -1927,11 +1927,14 @@ export function ClientDetailPage() {
   // Addresses are grouped by type and every one is rendered, which keeps the
   // previous display logic intact while still giving the panel its required
   // order: personal group, then registration group, then the divider. Types
-  // are matched exactly rather than by negation — address_type is a free
-  // string and imports carry values beyond the two the editor offers, which
-  // would otherwise all be labelled "personal". Within a group the primary
-  // address leads. An empty group still renders one placeholder row so the
-  // order and both dividers stay put for clients missing a type.
+  // are matched exactly rather than by negation: address_type is an
+  // unconstrained varchar, so an unexpected value should read as absent rather
+  // than be silently labelled "personal". Only 'registration' and 'actual' are
+  // ever written — the importer accepts no other prefix (import-service
+  // validator, _ADDRESS_TYPE_PREFIXES) and both are the only values present in
+  // the data. Within a group the primary address leads. An empty group still
+  // renders one placeholder row so the order and both dividers stay put for
+  // clients missing a type.
   const addressesOfType = (type: string) =>
     client.addresses
       .filter((a) => a.addressType === type)

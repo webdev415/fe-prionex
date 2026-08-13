@@ -153,12 +153,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
       {
         onSuccess: () => {
           invalidateClientCaches()
+          // Direction-specific keys: the optOut/optIn pair above them is
+          // bulk-phrased ("{{count}} client(s) …"), and passing a ternary as
+          // i18next's defaultValue does nothing once the key resolves — every
+          // toggle reported "opted out", including re-enabling.
           toast.success(
-            t(
-              'pages.clients.detail.ubki.toasts.optOutSuccess',
-              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
-              { count: 1 }
-            )
+            checked
+              ? t('pages.clients.detail.ubki.toasts.optOutSingle', 'Client opted out of UBKI')
+              : t('pages.clients.detail.ubki.toasts.optInSingle', 'Client re-enabled for UBKI')
           )
         },
         onError: (error) => {
