@@ -374,7 +374,16 @@ question, decided by those stories, not this one.
       banner). Today it compares each file only against the host and cannot see divergence between
       the pair.
 
-### Task 7 — Write and prove the read step (AC: 4)
+### Task 7 — Write and prove the read step (AC: 4) ✅
+
+> ✅ **Run 486, four jobs, all green, 2026-08-13 12:17Z.** Fired by push on the throwaway branch
+> `probe/openbao-1-12` (deleted afterwards; D9 re-confirmed on all three protected branches — only
+> `README.md` under `.forgejo/workflows/`). Evidence is in the Dev Agent Record under «Task 7».
+>
+> ⚠️ **Deviation, recorded:** the probe triggered on `push` pinned to that branch rather than
+> `workflow_dispatch` as Stories 1.8/1.9 did. Dispatching needs an API token, and this story's
+> token was revoked at the end of Task 5 by design; minting a second one to press a button is
+> worse debt than a trigger that cannot fire on a protected branch and dies with its branch.
 
 - [ ] 7.1 Implement the chosen mechanism as a single `run:` block — login, read, export, revoke —
       with every hardening measure commented with what it prevents.
@@ -760,11 +769,41 @@ all temporary scripts removed from `/root`. The OpenBao token was a 2h child of 
 and expires on its own; its `bao login` helper inside the container was removed before use, so no
 admin token was left in the container filesystem.
 
-**Not done, and why:** Task 3 (the read-mechanism decision) and Task 7 (write and prove the read
-step) are untouched. Task 3 is a design decision that binds Epics 3–6 and should be taken
-deliberately, not folded into a provisioning session; Task 7 depends on it and on the runner
-restart. Task 6.4's repository copies are updated; Task 8's documentation amendments are partly
-done (this record) and partly outstanding (D15 amendment, `forgejo-migration.md` §3).
+**Task 3 — decided (Oleg, 2026-08-13): option (a).** `apk add --no-cache openbao=2.6.0-r0 jq`, then
+the hub's step reproduced. The measurements that decided it are in §2; the reasoning and the
+rejected options are in `docs/migration-decisions.md#d15`. The first recommendation written here
+was (b) and rested on the assumption that installing `bao` meant a manual multi-megabyte download;
+Alpine packaging it changed the arithmetic, and option (b) turned out not to remove the mirror
+dependency at all — `jq` is still required for structural extraction.
+
+**Task 7 — done. Run 486, four jobs, all green, 2026-08-13 12:17Z.** Every one of the four
+«не проверено» items became evidence:
+
+1. **`--add-host` reaches the job container from the runner config**, not from a hand-passed flag.
+   The job printed its own `/etc/hosts`: `172.20.0.5 openbao` alongside
+   `10.67.0.1 git.crm-prionex.com`. Nobody passed a flag; the runner injected both.
+2. **Alpine's 2.6.0 client talks to the 2.6.1 server**: `server: 2.6.1  client: OpenBao v2.6.0
+   (cgo)`, with login and `kv get` both succeeding. The one-patch skew is no longer an assumption.
+3. **The credentials stored in Forgejo authenticate after storage**, not merely before it —
+   `login: ok`, `keys exported: 2`. This was the only remaining gap in AC2: Forgejo secret values
+   cannot be read back, so a real job was the only instrument that could close it.
+4. **`::add-mask::` redacts what the step exports.** Both values were printed deliberately and both
+   came out `***`, while their lengths (34 and 32) match `https://api.dev.crm-prionex.online` and
+   `wss://api.dev.crm-prionex.online`. `$GITHUB_ENV` contained no `VITE` key: 0.
+
+**AC7 across both runners — how strong the evidence actually is, stated precisely.** Attribution
+comes from each runner's own container log, the method Story 1.9 used: `s1-fe-prionex-1` (id 19)
+took tasks 4697 and 4698, `s1-fe-prionex-2` (id 20) took 4699 and 4700 — two and two, which four
+concurrent jobs against capacity 2 make unavoidable. All four succeeded and all four carry
+`log_length = 31`, i.e. every one ran the script to its last line. **The `/etc/hosts` check fails
+closed** — a missing `openbao` line exits 1 before anything else happens — so all four containers
+had the mapping. **Direct log evidence exists for runner 20 only:** three of the four task logs
+still have `log_in_storage = f` and are retrievable only through the web UI. Runner 19 is therefore
+proved by fail-closed plus attribution, not by reading its bytes. That is sound, and it is not the
+same thing as having read them.
+
+**Still outstanding:** `forgejo-migration.md` §3 (its secrets section predates all of this), and
+AC1's `SLACK_CD_WEBHOOK_URL` value, which no amount of work here can supply.
 
 ### File List
 
