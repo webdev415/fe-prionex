@@ -60,7 +60,7 @@ development_status:
   1-13-stop-forgejo-from-executing-the-legacy-github-workflows: done
   1-4-document-the-github-forgejo-synchronization-model: cancelled
   1-5-publish-the-interim-regulation-for-the-legacy-dev-stand: cancelled
-  1-6-secure-the-pre-prod-infrastructure-commitment: ready-for-dev
+  1-6-secure-the-pre-prod-infrastructure-commitment: in-progress
   1-7-provision-the-primary-forgejo-runner-with-both-labels: done
   1-8-prove-action-compatibility-with-a-smoke-workflow: done
   1-9-provision-the-second-runner: done

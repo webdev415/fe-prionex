@@ -4,7 +4,13 @@ baseline_commit: 42fb1472
 
 # Story 1.6: Secure the PRE-PROD Infrastructure Commitment
 
-Status: ready-for-dev
+Status: in-progress
+
+> **Blocked at Task 3, by design.** The requirement document exists and is send-ready; it has **not
+> been sent**, so AC1, AC2 and AC4 are NOT satisfied — their trigger clause is *"when the
+> requirement is submitted"*, and a document in `docs/` is not a submitted requirement. Two of the
+> three questions in Task 3.2 are still unanswered: **which team/person/channel**, and **who
+> sends it**.
 
 > **Deliberately not started (2026-08-10, Oleg: "backend api ещё не готово").** The PRE-PROD
 > backend API isn't ready yet, so requesting the network/Kong commitment from the platform team
@@ -117,7 +123,7 @@ them.
 
 ## Tasks / Subtasks
 
-### Task 1 — Verify every fact the requirement will assert (AC: 1, 2, 4)
+### Task 1 — Verify every fact the requirement will assert (AC: 1, 2, 4) ✅
 
 The document goes to another team. A wrong line number or a stale port in it costs credibility
 and, worse, invites them to build the wrong thing. Verify before writing; do not copy the
@@ -160,7 +166,7 @@ point of this task is that **you** checked them.
 - [ ] 1.8 Note anything that turns out **not** to match; correct the document rather than the
       repository, and record the discrepancy for Task 8.
 
-### Task 2 — Write `docs/preprod-infrastructure-requirement.md` (AC: 1, 2, 4)
+### Task 2 — Write `docs/preprod-infrastructure-requirement.md` (AC: 1, 2, 4) ✅
 
 - [ ] 2.1 **Path: `docs/preprod-infrastructure-requirement.md`.** Flat under `docs/`, beside
       `forgejo-migration.md` and `migration-decisions.md`. Do **not** create
@@ -294,7 +300,50 @@ point of this task is that **you** checked them.
       into whatever channel he uses: the one-paragraph consequence, the four concrete asks
       (network + Kong named `crm-kong-gateway`, DNS + TLS, port `8081`, API hostname), a link
       to `docs/preprod-infrastructure-requirement.md`, and one explicit question — **"когда
-      реалистично?"**. Put this summary under **`### Debug Log References`** in this story
+      реалистично?"**. Put this summary under **`### Debug Log References
+
+**Send-ready summary (Task 3.1).** Paste as-is into whatever channel Oleg chooses. It is deliberately
+short — the document carries the detail.
+
+```
+Коллеги, нужна инфраструктура под стенд PRE-PROD для фронтенда (fe-prionex).
+
+Суть: фронтенд ходит в бэкенд по имени crm-kong-gateway, и это имя запечено в
+образ на сборке — образ побайтово одинаков для всех стендов, указать другой адрес
+негде. Значит, если PRE-PROD подключить к общей сети crm-network, он молча уйдёт
+в DEV-овский Kong: стенд поднимется, ошибок не будет, и каждый релиз будет
+проверен против данных и версий DEV, а в прод поедет на основании этой проверки.
+
+Просим:
+1) отдельную сеть crm-network-preprod на s1, за вами, а не создаваемую скриптом
+   деплоя;
+2) второй Kong в этой сети, доступный внутри неё под именем crm-kong-gateway на
+   порту 8000 (имя контейнера или сетевой алиас) — иначе фронтенд не заработает;
+3) DNS preprod.crm-prionex.online + TLS, публикуемый порт 8081 на s1
+   (постоянный: стендов будет три);
+4) внешнее имя PRE-PROD Kong — api.preprod.crm-prionex.online + сертификат.
+
+Отдельный вопрос: за этим Kong будут собственные экземпляры сервисов со своими
+БД, или они смотрят в базу DEV? И кто обновляет их версии относительно
+релиз-кандидата? Второй Kong перед DEV-данными даёт ту же фиктивную проверку,
+только с правильной схемой сети.
+
+Детали и проверенные ссылки на код: docs/preprod-infrastructure-requirement.md
+
+Главный вопрос — когда реалистично? Отказ или сокращение объёма тоже ответ, он
+позволит перепланировать заранее.
+```
+
+**Answers received from Oleg, 2026-08-13:**
+
+- `api.preprod.crm-prionex.online` — **confirmed** as the name to propose (Task 3.2, question 3).
+- Separate `crm-network-preprod` with its own Kong — **confirmed** as the right ask.
+- **Slack is not to be used**, neither as the channel for this requirement nor as a thing to
+  repair. See the completion notes for what that closes and what it costs.
+
+**Still unanswered (Task 3.2, questions 1 and 2):** which team, which person or channel this goes
+to, and whether Oleg sends it himself. **Task 3 remains a hard stop and the requirement is
+`не направлено`.**`** in this story
       file's Dev Agent Record — not in `docs/`, and do not invent a new subsection for it.
 - [ ] 3.2 **Stop and ask Oleg**, giving him exactly these three questions:
   1. Which team and which person/channel does this go to? (The repo does not say. Migration
@@ -786,6 +835,41 @@ the claim gets tested, not here.
 ### Debug Log References
 
 ### Completion Notes List
+
+**Task 1 — every citation re-verified at `f7c83434`, and all of them held.** `name: fe-prionex`
+(`docker-compose.server.yml:4`), `container_name` (`:9`), `"${FRONTEND_PORT:-8080}:80"` (`:11`),
+the external `crm-network` block (`:13,34-36`); both `set $kong_upstream http://crm-kong-gateway:8000;`
+lines (`nginx.conf:39,50`) with their resolvers (`:38,49`); `COPY nginx.conf` (`Dockerfile.prod:34`)
+and `EXPOSE 80` (`:37`) with **no `ssl` directive anywhere in `nginx.conf`**; the four Kong routes
+ending in `... etc` (`.env.example:17-20,21`); `withCredentials: true` (`src/lib/api.ts:18`); the
+four hostnames (`CD.yml:47,51,57,61`) and the ad-hoc `docker network create` (`:185`).
+**No discrepancies** — nothing to correct for Task 8.
+
+**Task 2 — `docs/preprod-infrastructure-requirement.md` written**, in Russian, flat under `docs/`,
+leading with the consequence rather than the ask. It carries all four asks, the naming constraint
+that is the story's real content, the datastore question, the CORS requirement that follows from
+`withCredentials`, the TLS-termination question that follows from the container serving plain HTTP,
+and a facts table citing every line it relies on.
+
+**Confirmed by Oleg 2026-08-13:** `api.preprod.crm-prionex.online` is the name to propose, and the
+separate `crm-network-preprod` with its own Kong is the right ask.
+
+**Decision recorded — Slack is out of scope, and here is what that costs.** Oleg's instruction was
+*«slack не трогаем»*, both as a route for this requirement and as a thing to repair. Two
+consequences, stated once so they are not rediscovered:
+
+1. **This requirement needs a channel that is not Slack.** Task 3.2's first question therefore
+   stands open and is now the single thing blocking the story.
+2. **`SLACK_CD_WEBHOOK_URL` stays a dead `example.invalid` stub permanently.** It stops being an
+   open blocker and becomes an accepted state. Story 1.12's AC1 closes as «не проверено» for that
+   secret, finally rather than pending, and **Story 4.5 (deploy notifications) will report success
+   and send nothing** unless it is rescoped. That is a plan-level consequence and belongs in
+   `correct-course`, not in either story's completion notes alone.
+
+**Not done and not startable here:** Tasks 3 and 4 are hard stops. Tasks 5–8 (D11, plan amendment,
+Epic 5 blocker registration, out-of-scope findings) are deliberately left until the send status is
+known — recording a decision record for a requirement that has not been sent would date-stamp a
+commitment that does not exist.
 
 ### File List
 

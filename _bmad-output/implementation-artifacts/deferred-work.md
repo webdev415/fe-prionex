@@ -635,3 +635,21 @@
   the inert `README.md`. Harmless while the trigger is `workflow_dispatch`, but Story 2.2 adds
   `push` and `pull_request` — it must decide deliberately which branches carry the workflow, rather
   than discovering the asymmetry when a push to `development` runs nothing.
+
+## Decision recorded 2026-08-13 — Slack is out of scope
+
+- 🔴 **`SLACK_CD_WEBHOOK_URL` will not be restored. Oleg's instruction: «slack не трогаем».** This
+  closes the item as an *accepted state* rather than an open blocker, and two things follow that
+  must not be rediscovered later:
+  1. **Story 1.12's AC1 is closed as «не проверено» for that secret, finally rather than pending.**
+     The name exists at org scope; the value is Story 1.13's `example.invalid` stub and is
+     unrecoverable because Forgejo secret values are write-only.
+  2. **Story 4.5 — «Notify Slack on deploy start, success and failure» — cannot work as written.**
+     A deploy workflow posting to that webhook will succeed at every step and deliver nothing. The
+     story needs rescoping or cancelling, and that is `correct-course` work, not something either
+     1.12 or 4.5 can decide from inside itself. **Owner: Oleg, before Epic 4 starts.**
+- ⚠️ **Story 1.6 has no route to the other team, and Slack was the only one on the table.**
+  Migration work is tracked file-system-only (`project_key: NOKEY`), Jira `KAN` is feature work, and
+  Slack is now excluded. The requirement document is written and send-ready; **the missing thing is
+  a channel and a named recipient.** Until then the requirement is `не направлено`, AC1/AC2/AC4 of
+  Story 1.6 are unsatisfied by definition, and Epic 5 stays blocked.
