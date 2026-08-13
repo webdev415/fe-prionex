@@ -674,3 +674,45 @@
 - ✅ **No discrepancy found between the story's cited facts and the working tree.** Every citation
   in Task 1 was re-verified at `f7c83434` and all held — compose, nginx, Dockerfile, `.env.example`,
   `api.ts`, and both `CD.yml` references. Recorded because the task required recording either way.
+
+## 🔴 Cross-repo collision found 2026-08-13 — `api-prionex`'s stack naming breaks our baked-in Kong name
+
+Found by reading `~/Workspace/api-prionex_f` (repo `CRM/api-prionex`, same Forgejo instance, worked
+in parallel — its HEAD `4d168619` records run **496** on the same runners our runs 492/493 used).
+**This was found before the PRE-PROD requirement was sent, which is the only reason it is cheap.**
+
+**The collision.** Their per-stand plans parameterise everything through `STACK`, and their Kong
+container is `container_name: ${STACK:-crm}-kong-gateway` (`docker-compose.server.yml:684`):
+
+| stand | their `STACK` | Kong container | their network |
+|---|---|---|---|
+| DEV | `crm-dev` | `crm-dev-kong-gateway` | `crm-dev-network` |
+| PRE-PROD | `crm-preprod` | `crm-preprod-kong-gateway` | `crm-preprod-network` |
+| PROD | `crm-prod` | `crm-prod-kong-gateway` | `crm-prod-network` |
+
+**Our image looks for `crm-kong-gateway:8000`** (`nginx.conf:39,50`), baked in at
+`Dockerfile.prod:34`. It will not resolve on any of the three. Today's stands work only because
+`STACK` is unset there and the default `crm` renders the name we expect.
+
+**Two mismatches of different kinds — do not conflate them.**
+
+1. **Network name is solvable on our side.** We ask for `crm-network-preprod`; their plan says
+   `crm-preprod-network`. Story 4.1 already intends to parameterise our compose network, so this is
+   an agreement on a value, not a redesign.
+2. **Kong's container name is NOT solvable on our side, at all.** It is baked into a byte-identical
+   image, and making it per-stand would destroy the very image identity the promotion model depends
+   on. **The only cheap fix is on their side: a network alias `crm-kong-gateway` for Kong inside
+   each stand's network** — one line per stack, no change to our image.
+
+**Scope is wider than Epic 5.** Epic 4's new DEV stand (Story 4.2, port 8082) hits
+`crm-dev-kong-gateway` the same way and hits it **sooner**. Epic 6 inherits it for `crm-prod`.
+
+⚠️ **Unverified, and it matters:** their PROD plan sets `KONG_PORT=8330` because `8000` collided
+with the live production on s2. That is presumably the *published host* port while Kong still
+listens on 8000 inside the network — but our nginx hardcodes the **port** as well as the name, so
+**this must be confirmed, not assumed.**
+
+**Consequence for Story 1.6's requirement document.** It is currently written as "please build us
+X". It should be rewritten as a **reconciliation**: their plan already provides a separate network
+and Kong per stand, so the ask is no longer "create it" but "name it so our image can reach it".
+That rewrite is `correct-course` work. **Owner: Oleg.**
