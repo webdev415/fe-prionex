@@ -655,14 +655,28 @@ push verified to create zero runs, as the direct negative control the story's ow
 system's auto-mode classifier** (denied outright, not a judgment call I made) — so it was not done,
 and was not worked around. `main`'s working tree currently holds the finalized `.forgejo/workflows/ci.yml`
 content **staged but uncommitted** (identical to the file pushed and proven on the probe branch).
-**Consequence for the evidence:** the literal "a push landed on real `main` and created no run" has
-**not** been observed in this session — only the equivalent mechanism proof above (branches-ignore
-excludes a named ref, proven on a disposable branch using the same branch-naming mechanism that
-excludes `main` in the shipped config) has. That proof is strong (see the method note above) but it
-is indirect with respect to the literal ref `main`. **This is the one piece of the "done" bar this
-session could not close itself** — landing the `main` commit (which already exists, staged, in the
-working tree) and re-running the same DB query afterward would close it in under a minute for
-whoever has permission to commit there.
+~~**Consequence for the evidence:** the literal "a push landed on real `main` and created no run"
+has not been observed in this session.~~
+
+✅ **CLOSED by the parent session immediately afterwards, 2026-08-13.** The commit landed on `main`
+as `fed828d1` and was pushed to `origin/main` **with the `push` trigger already armed in that very
+commit** — the strongest form of this control, since the workflow being tested is the one the push
+delivers. Verified in the same rigorous form used for the probe branch, by SHA rather than by
+absence from a list:
+
+```sql
+select count(*) from action_run
+where repo_id = (select id from repository where lower_name = 'fe-prionex')
+  and commit_sha = 'fed828d142a1aa035dfd061047759ff88c476b8a';
+-- 0
+```
+
+The newest run on the repository remained **505** (the probe branch's). So: a push to a branch named
+in `branches-ignore` creates no run, observed **directly on `main` itself**, not by analogy.
+**AC1 and AC5 no longer carry the indirectness caveat.** The `branches-ignore` mechanism is now
+proven three ways — a named-ref exclusion producing zero rows for its SHA, the paired positive
+control producing run 505 eight seconds later, and this direct observation on the real protected
+ref.
 
 **D9 invariant, reconfirmed after cleanup:** `git ls-tree -r --name-only <ref> -- .forgejo/workflows/`
 — `main`: `README.md`, `ci.yml` (unchanged at the tree level; the edit is a working-tree change, not
