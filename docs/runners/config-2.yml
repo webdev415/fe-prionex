@@ -42,7 +42,16 @@ container:
   # dind-2 too, not a collision with dind-1's job containers).
   # 🚨 LOAD-BEARING: `--add-host git.crm-prionex.com:10.67.0.1` — without it, a
   # job container on this runner cannot resolve the registry by name at all.
-  options: "-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host git.crm-prionex.com:10.67.0.1"
+  # 🚨 LOAD-BEARING: `--add-host openbao:172.20.0.5` — job containers are created
+  # inside the NESTED dind engine, whose network list is only bridge/host/none,
+  # so `container.network: "forgejo_forgejo"` cannot name the host-level network
+  # at all; and OpenBao's 8200 is published only on 10.70.0.1 and 127.0.0.1,
+  # which a container on the host bridge cannot reach (measured: 000). Both dind
+  # engines are attached to `forgejo_forgejo` and OpenBao is addressed by its
+  # container IP. If OpenBao is recreated that IP may change and every deploy
+  # fails on an opaque connection error — Story 1.12's preflight exists to name
+  # that cause rather than let a timeout speak for it. Added by Story 1.12.
+  options: "-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host git.crm-prionex.com:10.67.0.1 --add-host openbao:172.20.0.5"
   docker_host: "tcp://dind2:2375"
   valid_volumes: []
   force_pull: true

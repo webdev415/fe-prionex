@@ -69,7 +69,7 @@ development_status:
   # Renamed 2026-08-13 from `1-12-migrate-secrets-and-variables-into-forgejo`: the story was
   # rewritten and re-titled by sprint-change-proposal-2026-08-13-openbao.md §4.1, and the old key
   # described work that is not being done. No other artifact referenced the old key.
-  1-12-wire-the-frontend-to-openbao-and-verify-what-the-platform-already-provides: ready-for-dev
+  1-12-wire-the-frontend-to-openbao-and-verify-what-the-platform-already-provides: in-progress
   epic-1-retrospective: optional
 
   # Epic 2: Forgejo CI as the Quality Gate

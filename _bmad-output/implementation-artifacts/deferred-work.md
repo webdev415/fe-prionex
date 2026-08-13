@@ -554,3 +554,43 @@
   an unmade choice ("Выбрать одно: …") while the rule is live. Every field value is recorded
   verbatim in `docs/migration-decisions.md`, so nothing is lost — but the migration document
   contradicts production.
+
+## Opened by story 1.12 provisioning (2026-08-13)
+
+- 🔴 **`/usr/local/bin/bao` on s1 is a `docker exec` wrapper that silently authenticates as
+  `admin`, and it has no owner.** 530 bytes, mode **755** (world-readable), created 2026-08-07,
+  its own header says *«Story 3.2 / BLOCKER 2 — обёртка … Удалить после провижининга»* — it was not
+  deleted. It does `exec docker exec -i -e BAO_ADDR=… -e BAO_TOKEN forgejo-openbao bao "$@"`, so
+  when `BAO_TOKEN` is empty docker passes nothing and the in-container client falls back to a token
+  carrying `admin`. **Any command run through it without an explicit token appears to succeed with
+  full admin rights.** This turned nine isolation checks into nine false positives during Story
+  1.12 before controls caught it; raw HTTP behaves correctly (no auth → 403, empty → 403).
+  Two things follow, and neither is ours to decide alone: the wrapper is `PRIONEX_HUB`'s leftover
+  and should probably be removed by that team, and **every OpenBao assertion in Epics 3–6 must go
+  over HTTP with an explicit `X-Vault-Token`, never through the host wrapper.** Recorded as a
+  method rule in Story 1.12's Dev Agent Record.
+- 🔴 **`SLACK_CD_WEBHOOK_URL` is still the `example.invalid` stub.** Story 1.12 verified presence
+  and could not verify value — Forgejo secret values are write-only and the original is
+  unrecoverable. **Owner: whoever created it on 2026-08-10.** Epic 4's Story 4.5 (deploy
+  notifications) is the story that discovers this if nobody restores it first; it will report
+  success and send nothing.
+- ⚠️ **`OPENBAO_PROD_SECRET_ID` expires 2027-06-09 10:56 UTC and nothing rotates it.** Issued
+  2026-08-13T11:02:06Z with `secret_id_ttl` 7200h (Oleg's number; the hub's prod role uses 720h).
+  When it expires, **every production deploy fails at once**, with an authentication error that
+  names nothing about credential age. There is no monitoring of credential expiry anywhere in this
+  plan. Belongs in Epic 7's documentation at minimum and needs an owner before PROD depends on it.
+- ⚠️ **The hub's own production `secret_id` expires every 720h** with nothing visible rotating it.
+  Not our system; worth telling that team before their production deploy fails on a stale
+  credential.
+- ⚠️ **Runner configs are patched but not restarted.** `--add-host openbao:172.20.0.5` is in both
+  `/opt/forgejo-runner-fe-prionex/config.yml` and `config-2.yml` on the host, identical, with
+  backups at `*.bak-1-12`. **Neither runner has been restarted, so the change is not in effect**,
+  and the in-job proof (a job container resolving `openbao` by name) has not been performed —
+  today's `200`s used the flag passed manually, which proves the network path, not the config.
+  Story 1.12 Task 7.3 owns the proof; the restart is Oleg's.
+- ⚠️ **The `fe-provisioner` OpenBao policy exists and is attached to nothing.** Written 2026-08-13
+  while trying to create a scoped provisioner token; the token creation failed both by role
+  (`403` on `auth/token/roles/*` and `auth/token/create/*` — `admin` lacks both) and, on
+  2026-08-13's earlier attempt, by the subset rule. The work was done with a 2h child of Oleg's
+  admin token instead. The policy is harmless and would become useful if the platform team can
+  ever attach it; decide whether to keep or drop it.

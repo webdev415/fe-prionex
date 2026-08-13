@@ -4,7 +4,7 @@ baseline_commit: 4c88b0e1
 
 # Story 1.12: Wire the Frontend to OpenBao and Verify What the Platform Already Provides
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -289,7 +289,7 @@ measured open on 2026-08-13):
       step rather than inherited by every subsequent `docker build`/`push`/`compose`. Option (b)
       must do the same via `POST /v1/auth/token/revoke-self`.
 
-### Task 4 — Read and mint the six values, verify the KV contents (AC: 2, 3) — **gated on Task 2.2**
+### Task 4 — Read and mint the six values, verify the KV contents (AC: 2, 3) ✅
 
 - [ ] 4.1 With Oleg's OpenBao token in-session, read the three `role_id`s:
       `bao read -field=role_id auth/approle/role/<role>/role-id` for `fe-dev`, `fe-pre-prod`,
@@ -308,7 +308,7 @@ measured open on 2026-08-13):
       is still the literal placeholder. **An extra key nobody expected is a finding, not noise** —
       it is what the denylist in Task 7 exists for.
 
-### Task 5 — Write the seven repository secrets (AC: 2) — **gated on Task 4**
+### Task 5 — Write the seven repository secrets (AC: 2) ✅
 
 - [ ] 5.1 Mint a Forgejo token, scope `write:repository`, on `platform-admin` (§4). Record its name
       and id.
@@ -629,11 +629,114 @@ Nothing in `src/`, `Dockerfile*`, or `docker-compose*.yml` changes in this story
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — provisioning session 2026-08-13, out of the usual create/dev split
+because Oleg asked for the work to be carried out directly.
+
 ### Debug Log References
+
+All timestamps UTC. Host clock on s1 is UTC+2; `ls` shows local, `bao` and `date -u` show UTC.
+
+| when | what | result |
+|---|---|---|
+| 10:56:47 | first mint + write of all seven | 7 × `PUT 201` (created, so none pre-existed) |
+| ~10:58 | first isolation matrix | **invalid — see below**, discarded |
+| 11:00 | controls over raw HTTP | no-auth 403, bogus 403, admin 200 |
+| 11:01 | isolation matrix, second run | clean diagonal, 9/9 |
+| 11:02:06 | destroy strays, re-mint, re-write | 7 destroyed, 3 × login 200 **before** storing, 6 × `PUT 204` |
+| 11:05 | runner configs patched | both, identical `options`, diff verified |
+| 11:08 | token cleanup | 97 → 96, back to baseline |
 
 ### Completion Notes List
 
+**AC1 — done, one part deliberately left open.** Five `CRM` org secrets confirmed present, ids
+21–25, all created 2026-08-10, names matching D14. Read from the Forgejo database, not the API:
+secret *names* are stored in clear there and only values are encrypted, so this needed no token and
+left nothing to revoke. `REGISTRY_TOKEN_RW`/`_RO` remain **«не проверено»** — unchanged, Story 1.10
+exercised minted equivalents. `SLACK_CD_WEBHOOK_URL` is present by name and **still holds the
+`example.invalid` stub**; unrecoverable, needs whoever created it on 2026-08-10. **AC1 is closed as
+«не проверено» for that secret, not as done.**
+
+**AC1-bis — done, and stronger than asked.** Zero secrets of an SSH shape exist anywhere on the
+instance, not merely in `CRM`: `where name ilike '%SSH%'` returns 0 rows across all 53 secrets.
+
+**AC2 — done.** Seven secrets at repository scope on `CRM/fe-prionex`, none at org scope (queried
+explicitly). Before this story the repository held **no** secrets and **no** variables at all, so
+any eighth name appearing there is a finding. `OPENBAO_ADDR` is `http://openbao:8200` — the
+hostname the `--add-host` mapping creates, so a future IP change is one config edit rather than
+seven secret rewrites. **`OPENBAO_PROD_SECRET_ID` issued 2026-08-13T11:02:06Z; `secret_id_ttl` is
+25920000s = 7200h; it expires 2027-06-09 10:56 UTC and nothing rotates it.**
+
+**AC3 — done.** All three paths exist as KV v2 and hold exactly `VITE_API_BASE_URL` and
+`VITE_WS_URL`, unsuffixed. `dev` → `https://api.dev.crm-prionex.online` / `wss://…`; `prod` →
+`https://api.crm-prionex.online` / `wss://api.crm-prionex.online`, matching the bundle production
+serves; `pre-prod` → `PLACEHOLDER-preprod-backend-not-provisioned` on both keys. No extra key on
+any path.
+
+**AC4.4 isolation — 9/9, on the second attempt. The first attempt was an artifact and is worth
+more than the result.** The first matrix reported every role reading every path — the opposite of
+the 13.08 record. The cause was two of my own bugs compounding: `bao write -f -field=secret_id …
+num_uses=1` combines `-f` (no data) with data and returns nothing, so `secret_id` was empty, login
+failed, and `BAO_TOKEN` ended up empty — at which point **the host's `bao` silently authenticated
+as `admin`**. All nine "successes" were the admin token reading its own instance.
+
+🔴 **Root cause worth carrying forward: `/usr/local/bin/bao` on s1 is not the OpenBao client.** It
+is a 530-byte `#!/bin/sh` wrapper, mode **755**, left behind by `PRIONEX_HUB`'s Story 3.2
+("Удалить после провижининга" — it was not), which does
+`exec docker exec -i -e BAO_ADDR=… -e BAO_TOKEN forgejo-openbao bao "$@"`. When `BAO_TOKEN` is
+empty, docker passes nothing and the in-container client falls back to a token that carries
+`admin`. **Consequence: any command run through the host `bao` without an explicit token appears to
+succeed with full admin rights.** Verified against raw HTTP, which behaves correctly — no auth
+header → 403, empty token → 403, admin token → 200. **Every OpenBao assertion in this and later
+stories must go over HTTP with an explicit `X-Vault-Token`, never through the host wrapper.** The
+second matrix did exactly that and produced the clean diagonal, with all three controls passing.
+
+**AC2 hardened beyond the wording.** Because Forgejo secret values are write-only, "the value was
+written" is not the same as "the value works", and a wrong `secret_id` fails identically to a
+missing one but costs far more to diagnose. So the re-issue pass **logged in with each credential
+before storing it** — three logins, three `200`s — and stored that exact value. What remains
+unproven is only the transport into Forgejo, which the `204` confirms.
+
+**Stray credentials found and destroyed.** After the first pass the roles carried 3, 2 and 2 live
+`secret_id` accessors instead of 1 each — unused credentials minted by the broken attempt, each
+granting read on its environment. All seven destroyed, then exactly one minted per role and
+verified: `1` accessor each. **The instance-wide lesson this project keeps relearning applies to
+OpenBao too, not only to Forgejo tokens: minting is easy, and nothing cleans up after you.**
+
+**AC7 — half done. The config change is in place on both runners; the restart is not.**
+`--add-host openbao:172.20.0.5` was added to `container.options` in both
+`/opt/forgejo-runner-fe-prionex/config.yml` and `config-2.yml`, with identical LOAD-BEARING
+comments, verified by diff against backups (`config*.yml.bak-1-12`, still on the host). Both live
+files now carry a byte-identical `options` line. **Neither runner has been restarted, so the change
+is not yet in effect** — restarting containers is blocked for this agent and was handed to Oleg.
+The in-job proof (a job container actually resolving `openbao`) belongs to Task 7.3 and has not
+been performed; today's `200`s were measured with the flag passed manually, which proves the
+network path, not the configuration.
+
+`docs/runners/README.md` now carries a runner-to-runner drift check: `options` must be byte-identical
+between the two, `cache.host` and `docker_host` must differ. The existing check compared each file
+only against the host and could not see the class of divergence that nearly shipped on 13.08.
+
+**Token accounting closed.** Baseline 96 at session start (up from the 93 recorded on 2026-08-12 —
+three appeared in between, none ours). One Forgejo token `fe_1_12_secrets` (`write:repository`)
+minted by Oleg, used, and revoked by deleting its `access_token` row: 97 → 96. Both token files and
+all temporary scripts removed from `/root`. The OpenBao token was a 2h child of Oleg's admin session
+and expires on its own; its `bao login` helper inside the container was removed before use, so no
+admin token was left in the container filesystem.
+
+**Not done, and why:** Task 3 (the read-mechanism decision) and Task 7 (write and prove the read
+step) are untouched. Task 3 is a design decision that binds Epics 3–6 and should be taken
+deliberately, not folded into a provisioning session; Task 7 depends on it and on the runner
+restart. Task 6.4's repository copies are updated; Task 8's documentation amendments are partly
+done (this record) and partly outstanding (D15 amendment, `forgejo-migration.md` §3).
+
 ### File List
+
+- `docs/runners/config.yml` — `--add-host openbao:…` + LOAD-BEARING comment (mirrors host)
+- `docs/runners/config-2.yml` — same, byte-identical `options` line
+- `docs/runners/README.md` — new runner-to-runner drift check
+- `_bmad-output/implementation-artifacts/1-12-…md` — this record
+- On s1, not in the repository: `/opt/forgejo-runner-fe-prionex/config.yml`, `config-2.yml`
+  (patched, backups `*.bak-1-12` retained until the restart is verified)
 
 ---
 
