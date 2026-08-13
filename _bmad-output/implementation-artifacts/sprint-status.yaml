@@ -65,7 +65,7 @@ development_status:
   1-8-prove-action-compatibility-with-a-smoke-workflow: done
   1-9-provision-the-second-runner: done
   1-10-enable-the-forgejo-container-registry-with-scoped-credentials: done
-  1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: review
+  1-11-implement-a-retention-policy-that-cannot-delete-a-deployed-image: done
   1-12-migrate-secrets-and-variables-into-forgejo: backlog
   epic-1-retrospective: optional
 

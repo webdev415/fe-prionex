@@ -4,7 +4,7 @@ baseline_commit: 2cea6569
 
 # Story 1.11: Implement a Retention Policy That Cannot Delete a Deployed Image
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
