@@ -14,19 +14,26 @@ import { formatDate, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 /**
  * KAN-993 — one loan rendered as a card row (supersedes the KAN-339 grid row).
  *
- * Four zones flex between fixed min-widths, so the blocks compress toward
+ * Three content zones flex between min-widths, so the blocks compress toward
  * their minimums as the card narrows:
- *   - meta/counterparty   flex 1 1 240px / min 190px   (grid 96px 1fr)
- *   - amounts (3 cols)    flex 1 1 330px / min 290px    (grid 76px 76px 200px)
- *   - secondary dates     flex 1 0 160px / min 150px    (grid 118px 1fr)
- *   - "..." actions menu  flex 0 0 34px, pushed right (margin-left:auto)
+ *   - meta/counterparty   flex 1 1 240px / min 170px   (grid 96px 1fr)
+ *   - amounts (3 cols)    flex 1 1 400px / min 344px
+ *   - secondary dates     flex 1 0 205px / min 205px   (grid 118px 1fr)
+ *
+ * The "..." menu is NOT a fourth flex item: it is absolutely positioned at the
+ * card's top-right, with the row reserving right padding for it. As a flex
+ * item it was the last thing in the row, so a narrow panel pushed it off the
+ * card entirely and took every per-loan action with it.
  *
  * Values WRAP rather than overflow: a long counterparty/loan number/label
- * breaks onto another line inside its own cell and the card grows in height,
- * so the page never scrolls horizontally. The column definitions stay fixed,
- * which is what keeps the amounts on one plane and the date values aligned
- * across cards even when a neighbouring cell wraps. Zones are top-aligned so
- * a taller card doesn't shift its amounts block relative to its neighbours.
+ * breaks onto another line inside its own cell and the card grows in height.
+ * The row itself also wraps — when the panel is too narrow for all three
+ * zones, the dates block drops to a second line instead of overflowing, so
+ * the page never scrolls horizontally (AC #2/#13). The column definitions
+ * stay identical on every card, which is what keeps the amounts on one plane
+ * and the date values aligned across cards even when a neighbouring cell
+ * wraps. Zones are top-aligned so a taller card doesn't shift its amounts
+ * block relative to its neighbours.
  *
  * Colored status badges are gone — status is conveyed by which section
  * (Open/Closed) the card sits in. Closed cards are veiled by a translucent
@@ -195,11 +202,13 @@ export function LoanCard({
   // strings like "Including payments: …", which must still wrap as a sentence.
   const money = (v: number | null | undefined) =>
     v == null ? '—' : formatMoneyUAHTwoDecimals(v).replace(/ /g, ' ')
-  // legacy_f53 present → the column is the lawful figure and says so.
-  const isLawful = loan.eligibleForReturn != null
-  // It equals remaining_debt_amount on ~40% of debts; only spell the plain
-  // remaining debt out as well when the two actually differ.
-  const lawfulDiffers = isLawful && loan.eligibleForReturn !== loan.remainingDebtAmount
+  // legacy_f53 is populated on ~47% of debts but equals remaining_debt_amount
+  // on ~40% of ALL debts, so "present" is a poor test: it would stamp "(Lawful)"
+  // over a number identical to the plain remaining debt on ~198k rows. Keep the
+  // pre-redesign column rule instead — surface the lawful figure only when it
+  // actually diverges, which is what "where applicable" means in the spec.
+  const isLawful =
+    loan.eligibleForReturn != null && loan.eligibleForReturn !== loan.remainingDebtAmount
   // Only describe the payments split when payments actually moved the number;
   // otherwise the breakdown reads "X (X − ₴ 0.00)", which is noise.
   const hasPayments = loan.totalToReturn !== loan.remainingDebtAmount
@@ -240,11 +249,50 @@ export function LoanCard({
         />
       )}
 
+      {/* Zone 4 — "..." actions menu. Absolutely positioned rather than a flex
+          item so it can never be pushed off a narrow card; the row below
+          reserves `pr` for it. No z-index: on a closed card it sits under the
+          veil like the rest of the content, and the veil is pointer-events-none
+          so the trigger stays clickable. */}
+      {/* z-10 is required, not decorative: the row below is `relative` and comes
+          later in DOM order, so without it the row paints over this button and
+          eats the clicks. Stays under the z-20 closed-card veil. */}
+      <div className="absolute top-3.5 right-[18px] z-10 flex items-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t('pages.clients.detail.moreActions', 'More actions')}
+              // Opening the menu must not also toggle card focus/dimming.
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:bg-muted flex h-8 w-8 items-center justify-center rounded"
+            >
+              <Icons.MoreVertical size={20} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {visibleActions.map((a) => (
+              <DropdownMenuItem
+                key={a.key}
+                disabled={a.disabled}
+                onSelect={a.onSelect}
+                className={cn(a.danger && 'text-destructive focus:text-destructive')}
+              >
+                {a.icon}
+                {a.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       {/* `.loan-row`: zones top-aligned so wrapping in one cell doesn't shift
-          a neighbour's vertical position (AC #3). */}
-      <div className="relative flex min-w-0 items-start gap-2.5 px-[18px] py-3.5">
-        {/* Zone 1 — meta / counterparty (flex 1 1 240px, min 190px) */}
-        <div className="flex min-w-[190px] flex-[1_1_240px] flex-col gap-1">
+          a neighbour's vertical position (AC #3). `flex-wrap` is the overflow
+          escape hatch — the dates block drops to its own line rather than
+          pushing content past the card edge. */}
+      <div className="relative flex min-w-0 flex-wrap items-start gap-2.5 py-3.5 pr-[52px] pl-[18px]">
+        {/* Zone 1 — meta / counterparty (flex 1 1 240px, min 170px) */}
+        <div className="flex min-w-[170px] flex-[1_1_240px] flex-col gap-1">
           <MetaLine label={t('pages.clients.detail.tableHeaders.loanNumber')}>
             <span className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="text-foreground min-w-0 text-[15px] font-bold break-words">
@@ -339,17 +387,14 @@ export function LoanCard({
           </MetaLine>
         </div>
 
-        {/* Zone 2 — amounts (flex 1 1 330px, min 290px; cols 76/76/200) */}
-        {/* Columns are identical on every card, so the amounts stay on one
-            plane (AC #3) — the requirement asks for that alignment "without
-            fixing exact column widths", so these are minmax() rather than the
-            mockup's 76/76/200, which was sized for its sample data and cannot
-            hold a real seven-figure amount. The third column is wide enough to
-            keep "Including payments: ₴ …" on one line in both locales; it still
-            wraps rather than overflows if the card is squeezed below that.
-            min-width matches the true content width (104+104+240 + 32 gap +
-            16 padding) so the grid can never overflow its flex box. */}
-        <div className="border-border grid min-w-[496px] flex-[1_1_496px] grid-cols-[minmax(104px,1fr)_minmax(104px,1fr)_minmax(240px,1.4fr)] items-start gap-x-4 gap-y-[3px] border-x pr-1 pl-3">
+        {/* Zone 2 — amounts. Columns are identical on every card, so the
+            amounts stay on one plane (AC #3) — the requirement asks for that
+            alignment "without fixing exact column widths", so these are
+            minmax(): they hold a common amount at the floor and grow with the
+            card, keeping large values on one line whenever there is room.
+            min-width matches the true content width (88+88+120 + 32 gap + 16
+            padding = 344) so the grid can never overflow its flex box. */}
+        <div className="border-border grid min-w-[344px] flex-[1_1_400px] grid-cols-[minmax(88px,1fr)_minmax(88px,1fr)_minmax(120px,1.4fr)] items-start gap-x-4 gap-y-[3px] border-x pr-1 pl-3">
           <AmountCell
             label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
             value={money(loan.principalAmount)}
@@ -377,9 +422,9 @@ export function LoanCard({
             // lawful figure differs from it) and the payments-adjusted total.
             // Neither may push the other out.
             secondary={
-              lawfulDiffers || hasPayments ? (
+              isLawful || hasPayments ? (
                 <>
-                  {lawfulDiffers && (
+                  {isLawful && (
                     <span className="block">
                       {t('pages.clients.detail.remainingDebtPlain', 'Remaining debt: {{amount}}', {
                         amount: money(loan.remainingDebtAmount),
@@ -416,10 +461,12 @@ export function LoanCard({
           />
         </div>
 
-        {/* Zone 3 — secondary dates. min-width = 118px label col + 6px gap +
-            ~78px for the widest value ("31-07-2018") + 24px padding, so a date
-            never has to break. */}
-        <div className="flex min-w-[226px] flex-[1_0_226px] flex-col gap-1 px-3">
+        {/* Zone 3 — secondary dates. min-width = 118px label col (fixed, so
+            values align vertically — AC #3) + 6px gap + ~65px for the widest
+            value ("31-07-2018") + 16px padding, so a date never has to break.
+            When the row runs out of room this block wraps to its own line
+            rather than forcing the card wider. */}
+        <div className="flex min-w-[205px] flex-[1_0_205px] flex-col gap-1 px-2">
           <SecRow label={t('pages.clients.detail.tableHeaders.issueDate')} value={loan.issueDate} />
           <SecRow
             label={t('pages.clients.detail.tableHeaders.purchaseDateFa', 'Purchase date (FA)')}
@@ -433,34 +480,6 @@ export function LoanCard({
                 : '—'
             }
           />
-        </div>
-
-        {/* Zone 4 — "..." actions dropdown (flex 0 0 34px, pushed right) */}
-        <div className="ml-auto flex flex-[0_0_34px] shrink-0 items-center justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('pages.clients.detail.moreActions', 'More actions')}
-                className="text-muted-foreground hover:bg-muted flex h-8 w-8 items-center justify-center rounded"
-              >
-                <Icons.MoreVertical size={20} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {visibleActions.map((a) => (
-                <DropdownMenuItem
-                  key={a.key}
-                  disabled={a.disabled}
-                  onSelect={a.onSelect}
-                  className={cn(a.danger && 'text-destructive focus:text-destructive')}
-                >
-                  {a.icon}
-                  {a.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 

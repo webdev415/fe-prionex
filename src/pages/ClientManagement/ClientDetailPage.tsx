@@ -851,6 +851,10 @@ export function ClientDetailPage() {
         })),
     [paymentsSection, reversedPaymentIds]
   )
+  const hasEligibleLoanForWriteoff = useMemo(
+    () => (loans ?? []).some((d) => d.status === 'active'),
+    [loans]
+  )
   // Debt ids of the client's already-loaded loans, used for the
   // "Send all loans to UBKI" bulk action and the submission-history filter.
   const ubkiLoanIds = useMemo(() => (loans ?? []).map((d) => d.id), [loans])
@@ -4015,10 +4019,12 @@ export function ClientDetailPage() {
                               key: 'writeoff',
                               label: t('pages.clients.detail.writeOff'),
                               icon: <Icons.MoneyRemove01 size={16} />,
-                              // Per-loan eligibility: the client-level check
-                              // rendered Write-off on cards that were not
-                              // themselves writable.
-                              hidden: !canCreateWriteoff || loan.status !== 'active',
+                              // Write-off is listed for Open *and* Closed loans,
+                              // so it is not gated on this loan's own status —
+                              // only on the permission and on the client having
+                              // something writable at all. The modal restricts
+                              // selection to active debts.
+                              hidden: !canCreateWriteoff || !hasEligibleLoanForWriteoff,
                               onSelect: () => {
                                 setWriteoffInitialDebtId(loan.id)
                                 setIsWriteoffOpen(true)
