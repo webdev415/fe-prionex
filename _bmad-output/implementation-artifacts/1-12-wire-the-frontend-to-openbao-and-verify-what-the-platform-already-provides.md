@@ -273,10 +273,16 @@ and `docs/runners/README.md`'s drift check is extended to compare the two runner
 - [ ] 2.3 If the token is not supplied, **stop after Task 3 and record the absence.** Do not
       placeholder your way past it.
 
-### Task 3 — Decide the read mechanism on paper before writing any YAML (AC: 4)
+### Task 3 — Decide the read mechanism on paper before writing any YAML (AC: 4) ✅
 
 🔴 **This is the story's real design decision. Do it in writing, in the story record, before
 touching a workflow file.**
+
+> ✅ **DECIDED 2026-08-13 (Oleg): option (a)** — `apk add --no-cache openbao=2.6.0-r0 jq`, then the
+> hub's step reproduced almost verbatim. Recorded in `docs/migration-decisions.md#d15`. Epics 3–6
+> inherit this and must not re-decide it. The two obligations it carries — pinning the version and
+> a preflight that distinguishes "no `bao`" from "OpenBao unreachable" — are 3.1a and 3.1b below
+> and carry into Task 7.
 
 The constraint is §2: neither job image carries `bao` or `jq` — but on the image that matters, both
 are one `apk add` away, measured at ~1.35 s.
@@ -295,7 +301,7 @@ question, decided by those stories, not this one.
 | **(b) HTTP API via `wget`/`curl`, no CLI** | ~0.4 s — still needs `apk add jq` for structural extraction, so the delta against (a) is **~1 s** | every hardening property must be re-argued and re-proved individually instead of inherited; our own code to review, with none of the hub's incident history behind it |
 | **(c) bake a job image with `bao`+`jq`** | an image to build, host and keep current | the `docker-build` label was bound to its image at **registration** time (Stories 1.7/1.9, Trap 5); changing it means re-registering, or a per-job `container:` override that diverges from every other job |
 
-- [ ] 3.1 Choose one. **Recommendation: (a).** For roughly one second per job we get the hub's
+- [x] 3.1 Choose one. **Chosen: (a).** For roughly one second per job we get the hub's
       reviewed, incident-hardened step almost verbatim — the `jq env` login, the per-line
       `::add-mask::` with percent-escaping, structural key extraction, the denylist, and
       `bao token revoke -self`. Option (b) saves that second and spends it on re-arguing five
@@ -313,9 +319,8 @@ question, decided by those stories, not this one.
       critical path of every build**. If the mirror is unreachable the build fails before it starts.
       The preflight in Task 7.2 must distinguish "no `bao`" from "OpenBao unreachable" — they have
       different causes and different fixes.
-- [ ] 3.2 Whichever is chosen, write the decision, the rejected options and the reason into the
-      story record and into `docs/migration-decisions.md` as an amendment to D15. Epics 3–6 inherit
-      this; they must not each re-decide it.
+- [x] 3.2 Decision, rejected options and reasoning recorded in `docs/migration-decisions.md#d15`
+      (addendum «Механизм чтения», 2026-08-13) and above.
 - [ ] 3.3 Confirm the token-revocation step is part of the design: the hub calls
       `bao token revoke -self` after its **last** read, so the token is dead for the rest of the
       step rather than inherited by every subsequent `docker build`/`push`/`compose`. Option (b)
