@@ -96,7 +96,7 @@ FR10: The Forgejo Container Registry is enabled, a ~~`ci-bot`~~ `robot-registry`
 
 FR11: Registry retention removes `<branch>` tags after 14 days while guaranteeing that
 tags currently referenced by a running stand — and the previous N rollback targets — are
-never deleted.
+never deleted. 🔴 **DEFECT, measured 2026-08-13 (Story 1.11):** the first half is achievable and is live; the implied purpose — bounding registry growth — **is not**. Forgejo 15.0.5 cleanup rules operate on **tagged versions only** and never delete digest-named versions, even unreferenced ones. Deleting a `<branch>` tag frees the tag row and **no blob storage**. FR11 bounds the tag list, not the registry. Either reword FR11 or specify a separate reclamation mechanism — Forgejo's own cron does not do it. See `docs/migration-decisions.md` changelog 13.08 and `deferred-work.md`.
 
 **Deployment (Phases 5, 6, 7)**
 
@@ -1191,7 +1191,7 @@ So that I can deploy that branch to DEV, which pulls fail-fast and would otherwi
 **Given** builds now run on every branch push
 **When** registry growth is considered
 **Then** the 14-day `<branch>` retention rule from Story 1.11 is confirmed to apply to these
-images.
+images. ✅ **Confirmed 2026-08-13 (Story 1.11).** A branch tag is deleted once past the threshold — demonstrated on a seeded tag. ⚠️ But the image's blobs remain: only the tag row goes. Do not read this AC as "old branch builds stop consuming space".
 
 ### Story 3.5: Move the Build Cache to the Registry
 
@@ -1217,7 +1217,7 @@ So that build time does not regress now that GitHub's cache backend is unavailab
 
 **Given** the buildcache tag lives in the same repository as release images
 **When** the retention policy from Story 1.11 is reviewed
-**Then** the buildcache tag is confirmed either exempt from cleanup or safe to regenerate.
+**Then** the buildcache tag is confirmed either exempt from cleanup or safe to regenerate. ✅ **Decided 2026-08-13 (Story 1.11): exempt.** `buildcache` is named explicitly in `keep_pattern` and is never deleted regardless of age. Story 3.5 does not need to handle regeneration.
 
 ### Story 3.6: Verify Commit Traceability and Image Immutability
 
@@ -1678,7 +1678,7 @@ identity.
 **Given** the retention policy from Story 1.11
 **When** it runs
 **Then** `preprod-current` and its target are never deleted
-**And** the previous N `preprod-<sha>` tags are preserved as rollback and audit targets.
+**And** the previous N `preprod-<sha>` tags are preserved as rollback and audit targets. ✅ **Guaranteed 2026-08-13 (Story 1.11), and N = all.** `preprod-current` and every `preprod-<sha>` / `sha-<sha>-preprod` tag is protected by `keep_pattern`, not by a count — deliberately, because `keep_count` orders by recency across all row kinds and a day of branch builds would push deployment tags out of protection. Verified: a protected tag survived a run at `remove_days = 0` and was pulled successfully.
 
 **Given** the registry after several candidates
 **When** it is inspected
@@ -1847,7 +1847,7 @@ rather than by digest comparison.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** these tags are protected as the current production and rollback targets.
+**Then** these tags are protected as the current production and rollback targets. ✅ **Guaranteed 2026-08-13 (Story 1.11).** Story 6.3's rebuilt tags match the protected `(pre)?prod-<sha>` / `sha-<sha>-prod` shapes in `keep_pattern`.
 
 ### Story 6.4: Deploy to Production by Dispatch
 
@@ -1946,7 +1946,7 @@ So that rollback targets and audit history do not depend on inspecting servers.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** `prod-current` and the previous N production tags are never deleted.
+**Then** `prod-current` and the previous N production tags are never deleted. ✅ **Guaranteed 2026-08-13 (Story 1.11), N = all.** `prod-current` is named explicitly; production `sha-<sha>-prod` tags are protected by shape and never expire.
 
 **Given** the registry after several releases
 **When** it is inspected

@@ -4,7 +4,7 @@ baseline_commit: 2cea6569
 
 # Story 1.11: Implement a Retention Policy That Cannot Delete a Deployed Image
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -297,37 +297,37 @@ and deleting an image.
 
 ### Task 6 — Answer the five downstream stories (AC: 5)
 
-- [ ] 6.1 For each of `epics.md:1193`, `:1219`, `:1678`, `:1848`, `:1947`, state whether the rule
+- [x] 6.1 For each of `epics.md:1193`, `:1219`, `:1678`, `:1848`, `:1947`, state whether the rule
       as configured satisfies it. Annotate each line in `epics.md` at source with the answer, the
       way Story 1.10's review did — the later story reads that line, not this file.
-- [ ] 6.2 `buildcache` (`:1219`) needs a real decision: exempt via `keep_pattern`, or allowed to
+- [x] 6.2 `buildcache` (`:1219`) needs a real decision: exempt via `keep_pattern`, or allowed to
       expire because Story 3.5 can regenerate it. Either is defensible; leaving it implicit is not.
-- [ ] 6.3 Where the rule cannot satisfy a requirement, record the gap in `deferred-work.md`
+- [x] 6.3 Where the rule cannot satisfy a requirement, record the gap in `deferred-work.md`
       against the story that will hit it.
 
 ### Task 7 — Record the outcome (AC: 3, 4, 5, 6)
 
-- [ ] 7.1 Add a decision record to `docs/migration-decisions.md` covering: the single-rule
+- [x] 7.1 Add a decision record to `docs/migration-decisions.md` covering: the single-rule
       constraint and the shared namespace, `match_full_name` as the scoping mechanism, the chosen
       field values verbatim, N and its justification, the preview evidence, the measured test
       result, and what happened to the orphaned digests.
-- [ ] 7.2 Document the rule in `docs/forgejo-migration.md` where the registry is described, so the
+- [ ] ⚠️ **NOT DONE —** 7.2 Document the rule in `docs/forgejo-migration.md` where the registry is described, so the
       configuration is reconstructable without database access.
-- [ ] 7.3 State plainly which parts remain **«не проверено»** — anything the seeding method could
+- [x] 7.3 State plainly which parts remain **«не проверено»** — anything the seeding method could
       not exercise at the real 14-day threshold belongs on that list.
-- [ ] 7.4 Record the rule's field values somewhere a human can restore them from. The rule lives
+- [x] 7.4 Record the rule's field values somewhere a human can restore them from. The rule lives
       in a database this repository does not own; if it is lost, nothing here reconstructs it.
 
 ### Task 8 — Commit and close the ledger (AC: all)
 
-- [ ] 8.1 Commit with hooks — **`--no-verify` is prohibited on `main`**, including for docs-only
+- [x] 8.1 Commit with hooks — **`--no-verify` is prohibited on `main`**, including for docs-only
       changes.
-- [ ] 8.2 After every push, re-check `GET /repos/CRM/fe-prionex/actions/runs` `total_count`
+- [x] 8.2 After every push, re-check `GET /repos/CRM/fe-prionex/actions/runs` `total_count`
       against the Task 1 baseline. This story creates no workflow, so it must not change.
       *(Also carried forward from Story 1.10, where it was never done.)*
-- [ ] 8.3 Close the write budget from Task 1.5: state the actual counts against the declared ones
+- [x] 8.3 Close the write budget from Task 1.5: state the actual counts against the declared ones
       and explain any difference.
-- [ ] 8.4 Update `sprint-status.yaml` and this file's `Status:`. Verify the prior value before
+- [x] 8.4 Update `sprint-status.yaml` and this file's `Status:`. Verify the prior value before
       writing it.
 
 ---
@@ -749,6 +749,57 @@ operate on tagged versions only. Two consequences:
 
 Recorded as a defect in the plan's premise, not as a story failure. FR11's wording promises
 something the platform does not offer.
+
+**Tasks 6–8 — closing out (2026-08-13).**
+
+**The rule is live.** `enabled = true`, `remove_days = 14`, `keep_count = 0`,
+`match_full_name = true`, both patterns byte-identical to the Task 2 design, re-verified against the
+eleven-case table after Oleg's edits. One defect was caught in that verification and is worth
+recording because it is an easy mistake: the `sha256:` clause was first appended **outside** the
+`fe-prionex/(…)` group, making it a top-level alternative. Since patterns are anchored whole, that
+branch requires the *entire* full name to be `sha256:<64 hex>` — impossible when `match_full_name`
+prefixes every name with `package/`. The clause was dead. Harmless in the widening direction, but it
+protected nothing. Comparing the stored string against the intended one caught it; reading it would
+not have.
+
+**AC5 — all five downstream requirements answered at source** in `epics.md`, plus FR11 itself:
+
+| line | answer |
+|---|---|
+| `:1193` Story 3.4 — 14-day branch expiry applies | ✅ confirmed, with the caveat that only the tag row goes |
+| `:1219` Story 3.5 — `buildcache` | ✅ **exempt** — named in `keep_pattern`, never expires |
+| `:1678` Story 5.4 — `preprod-current` + previous N | ✅ guaranteed, **N = all**, protected by shape |
+| `:1848` Story 6.3 — rebuilt production tags | ✅ guaranteed, match the protected shapes |
+| `:1947` Story 6.6 — `prod-current` + previous N | ✅ guaranteed, **N = all** |
+| `:97` **FR11 itself** | 🔴 **defect** — bounds the tag list, not registry growth |
+
+**Task 1.5 budget, closed against the declared numbers:**
+
+| | declared | actual | |
+|---|---|---|---|
+| cleanup rules created | 1 | 1 | ✅ |
+| rule edits | ≤ 3 | **7** | ❌ over — the phase-2 experiment and the misplaced-clause correction were not foreseen |
+| seeded tags pushed | 3 | 3 | ✅ |
+| tags deleted | 3 | **2** | the third, `sha-a1b2c3d-prod`, is still in the registry |
+| commits | 2 | **7** | ❌ over — the story ran across two days with a UI-blocked handover at each step |
+| tokens minted | 0 | **2** | ❌ `fe_seed_1_11`, `fe_pull_1_11`, both still live |
+| database rows written | 0 | **1** | the rule row, on Oleg's explicit authorisation; every later write was blocked and went through the UI |
+
+Four of seven lines missed. The budget did its job anyway — it is the reason the token count and the
+undeleted tag are stated here rather than forgotten.
+
+**Task 8.2 — `action_run` for `repo_id = 16` is 30, unchanged from the Task 1 baseline.** This story
+created no workflow and none ran.
+
+**Still open, and deliberately not closed by marking a box:**
+
+- `sha-a1b2c3d-prod` (id 1930) — seeded test material, does not belong in the registry.
+- `fe_seed_1_11` (id 103) and `fe_pull_1_11` (id 104) on `robot-registry`, both live. The account now
+  carries seven tokens where it carried five. Revocation is a database row deletion; there is no
+  other route on this version.
+- **Task 7.2 not done** — the rule is recorded in `docs/migration-decisions.md` but not in
+  `docs/forgejo-migration.md`'s registry section. The values are reconstructable from the decision
+  record, so this is documentation placement, not lost information.
 
 ### Completion Notes List
 
