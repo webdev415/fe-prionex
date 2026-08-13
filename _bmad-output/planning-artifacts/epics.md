@@ -179,10 +179,18 @@ directory that does not depend on the Forgejo version.
 **Cutover and decommissioning (Phases 7, 8)**
 
 FR31: `[C]` The commit currently running in PROD is identified from the running container on
-s2 and **rebuilt** into the Forgejo registry under `sha-<commit>` and `prod-current` to enable
-a cutover deploy. The image is not pulled from ghcr — no action is taken on GitHub, and that
-includes its registry — so the cutover deploy is commit-identical but not byte-identical to
-what production currently serves.
+s2 and **rebuilt** into the Forgejo registry under `sha-<commit>`, `prod-current` **and
+`prod-<sha>`** to enable a cutover deploy. The image is not pulled from ghcr — no action is
+taken on GitHub, and that includes its registry — so the cutover deploy is commit-identical
+but not byte-identical to what production currently serves. 🔴 **AMENDED 2026-08-13
+(`sprint-change-proposal-2026-08-13-openbao.md` §4.2).** The original text created
+`sha-<commit>` and `prod-current` only — the same defect the FR18 amendment fixed the same
+day, arriving here by the same route. `sha-<commit>` matches no `keep_pattern` alternative and
+the retention rule expires it at 14 days, so the cutover image would have been addressable
+only through `prod-current` — a moving name, useless as a rollback target the moment the next
+deploy claims it. FR32 validates the cutover by a `rollback: true` deploy **against that
+imported tag**, so the tag it names must be one that survives. `prod-<sha>` is protected by
+shape.
 
 FR32: The cutover is validated by running `deploy-prod.yml` with `rollback: true` against
 that imported tag — exercising the full mechanism without changing what is served.
@@ -281,8 +289,15 @@ Technical and infrastructure requirements extracted from the plan that shape sto
   stands will coexist indefinitely and this plan does not say which is authoritative.
 - `[C]` `Dockerfile.prod` keeps its `ARG VITE_API_BASE_URL` / `ARG VITE_WS_URL` build-time
   contract unchanged; no `entrypoint.sh` runtime-config layer is introduced.
-- `[C]` `VITE_API_BASE_URL_PREPROD` / `VITE_WS_URL_PREPROD` must be added as repo variables
-  alongside the existing `_DEV` / `_PROD` pairs.
+- `[C]` ~~`VITE_API_BASE_URL_PREPROD` / `VITE_WS_URL_PREPROD` must be added as repo variables
+  alongside the existing `_DEV` / `_PROD` pairs.~~ **AMENDED 2026-08-13
+  (`sprint-change-proposal-2026-08-13-openbao.md`).** The `_DEV` / `_PROD` pairs this was
+  written against are GitHub's; no `VITE_*` repository variable was ever created in Forgejo. All
+  six values now live in OpenBao at `secret/fe/{dev,pre-prod,prod}/app` as
+  `VITE_API_BASE_URL` / `VITE_WS_URL` — unsuffixed, because the path carries the environment.
+  The PRE-PROD pair exists but holds `PLACEHOLDER-preprod-backend-not-provisioned`: that
+  backend is not provisioned (Story 1.6), and the placeholder is named so it cannot be mistaken
+  for a value.
 
 ### UX Design Requirements
 
@@ -310,7 +325,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR15 | Epic 6 | `deploy-prod.yml` dispatch with `image_tag` + optional `rollback` |
 | FR16 | Epic 6 | `[C]` Promotion guard by commit SHA against `preprod-<sha>` |
 | FR17 | Epic 6 | `[C]` Rebuild on the release path, pull-only on the rollback path |
-| FR18 | Epic 6 | Retag to `prod-current` after successful deploy |
+| FR18 | Epic 6 | Retag to `prod-current` **and `prod-<sha>`** after successful deploy (amended 13.08) |
 | FR19 | Epic 4 | Deploy sequence: scp → down → fail-fast pull → up → health check |
 | FR20 | Epic 4 | Health check parameterized by container name and published port |
 | FR21 | Epic 6 | Post-deploy PROD smoke check incl. log scan for ERROR |
@@ -323,7 +338,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
 | FR30 | Epic 4 | `concurrency` plus version-independent server-side `flock` |
-| FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry (ghcr unreachable) |
+| FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08) |
 | FR32 | Epic 6 | Cutover validated by a no-op `rollback: true` deploy |
 | FR33 | — | **Cancelled** — no action on GitHub. File deletion only, via Story 7.2 |
 | FR34 | — | **Cancelled** — no action on GitHub. Server-side key rotation only, via Story 7.5 |
@@ -772,11 +787,34 @@ marked as deployed
 **And** the aged undeployed branch tag is removed
 **And** the test result is recorded rather than assumed.
 
-### Story 1.12: Migrate Secrets and Variables into Forgejo
+### Story 1.12: Wire the Frontend to OpenBao and Verify What the Platform Already Provides
+
+> **RE-TITLED AND REWRITTEN 2026-08-13** by `sprint-change-proposal-2026-08-13-openbao.md` §4.1.
+> Previous title: ~~Migrate Secrets and Variables into Forgejo~~. The story was written on the
+> assumption that migration means **creating** organization secrets in Forgejo. Two facts read off
+> the instance while implementing Story 1.11 invalidate that from opposite directions: the
+> registry and Slack secrets **already exist** at org scope under the names D14 recorded, and the
+> platform **already runs a secrets manager** (`forgejo-openbao`, OpenBao 2.6.1 on s1) that the
+> plan never mentions. Run as written, the story would report creating things that are there —
+> the same failure mode Story 1.10's review caught when `ci-bot` turned out never to have existed.
+>
+> **Oleg's decision, 2026-08-13: `fe-prionex` follows the `CRM/PRIONEX_HUB` pattern** — Forgejo
+> holds only AppRole bootstrap credentials; application values are read from OpenBao at run time.
+> This overrode the recommendation (`CRM/api-prionex`'s shape: secrets straight in Forgejo, on the
+> grounds that the frontend consumes one credential and an AppRole chain adds a dependency for
+> nothing). The decision looks better than the recommendation — see `docs/migration-decisions.md`
+> for what the hub's hardening buys and why it was worth inheriting.
 
 As a developer,
-I want the secrets the new workflows need present in Forgejo at the right scope,
-So that later epics do not stall on missing credentials.
+I want the frontend's build values read from OpenBao through its own AppRole, and the secrets the
+platform already provides verified rather than recreated,
+So that later epics do not stall on missing credentials, and this repository does not become a
+third incompatible secrets pattern on an instance that already carries two.
+
+> ⚠️ **This story does not buy confidentiality, and must not claim it.** The six `VITE_*` values
+> are public URLs baked into a bundle any visitor can read in devtools. Storing them in OpenBao
+> buys uniformity with the neighbours and a working chain for when the frontend does acquire a
+> real secret. That is the whole of the benefit.
 
 > **Prerequisite: Story 1.13 must be complete.** Until `.forgejo/workflows/` suppresses the
 > `.github/workflows/` fallback, putting credentials into Forgejo arms the legacy `CD.yml` deploy
@@ -794,10 +832,26 @@ So that later epics do not stall on missing credentials.
 
 **Acceptance Criteria:**
 
-**Given** the secret migration map in the plan
-**When** organization-level secrets are created
-**Then** `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` exist at the `CRM` organization scope. ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
+**AC1 — verification, not creation.**
+**Given** the `CRM` organization already holds `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`,
+`REGISTRY_USER`, `REGISTRY_USER_RO` and `SLACK_CD_WEBHOOK_URL` (read from the instance 2026-08-12)
+**When** the secret inventory is reviewed
+**Then** each is confirmed present and its scope recorded
+**And** **nothing is created that already exists**
+**And** it is recorded that `REGISTRY_TOKEN_RW` / `_RO` themselves remain **«не проверено»** —
+Story 1.10 exercised minted equivalents of the same scope, not these secrets.
 
+> 🔴 **`SLACK_CD_WEBHOOK_URL` is present by name and dead by value.** Story 1.13 overwrote it with
+> a non-resolving `example.invalid` stub; Forgejo secret values are write-only, so the original
+> webhook URL is **unrecoverable** and whoever created it on 2026-08-10 must supply it again
+> (`deferred-work.md`, review of Story 1.13). An AC1 that checks names would pass on this secret
+> and leave Epic 4's deploy notifications silently dead. **AC1 is satisfied for this secret only
+> by a recorded owner and a re-supplied value, or by an explicit «не проверено, значение
+> заглушка» entry naming who restores it.** Presence of the name is not evidence.
+
+⚠️ **`REGISTRY_TOKEN` / `ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
+
+**AC1-bis — retained unchanged from the original story.**
 **Given** deployment runs on a deploy runner located on the target host under the amended FR19
 **When** the secret set is reviewed
 **Then** **no SSH secret of any kind is created in Forgejo**
@@ -811,16 +865,118 @@ reach a server, which makes D9's suppression permanent rather than procedural.
 > `CD.yml` from deploying, because it was the story that would place SSH credentials in Forgejo.
 > It no longer does.
 
-**Given** Option C requires per-environment build variables
-**When** repository variables are created
-**Then** `VITE_API_BASE_URL_DEV`, `VITE_WS_URL_DEV`, `VITE_API_BASE_URL_PREPROD`,
-`VITE_WS_URL_PREPROD`, `VITE_API_BASE_URL_PROD` and `VITE_WS_URL_PROD` all exist
-**And** no hardcoded fallback value is introduced for any of them.
+**AC2 — AppRole bootstrap.**
+**Given** the `PRIONEX_HUB` pattern
+**When** `fe-prionex` repository secrets are created
+**Then** `OPENBAO_ADDR`, `OPENBAO_DEV_ROLE_ID`, `OPENBAO_DEV_SECRET_ID`,
+`OPENBAO_PREPROD_ROLE_ID`, `OPENBAO_PREPROD_SECRET_ID`, `OPENBAO_PROD_ROLE_ID` and
+`OPENBAO_PROD_SECRET_ID` exist at **repository** scope
+**And** **no AppRole credential is created at organization scope**
+**And** the date `OPENBAO_PROD_SECRET_ID` was issued is recorded, because its
+`secret_id_ttl` is **7200h** and nothing rotates it.
 
+> ⚠️ **The names do not match the roles, and the mismatch is deliberate.** The Forgejo secrets
+> carry `PREPROD` because the hub's do; the OpenBao role is `fe-pre-prod` and the KV path is
+> `secret/fe/pre-prod/app`. **Neither may be derived from the other by string manipulation** —
+> a path assembled from the secret name yields `secret/fe/preprod/app`, which does not exist.
+>
+> ⚠️ **`role_id` is re-readable; `secret_id` is shown once.** A mistyped `secret_id` cannot be
+> re-read, only re-minted, and the failed one stays in the accessor list. Write all seven in one
+> session with `bao` open alongside.
+>
+> **TTLs as provisioned 2026-08-13:** `fe-dev` and `fe-pre-prod` have `secret_id_ttl 0` (no
+> expiry); `fe-prod` has `7200h` (~10 months, Oleg's number — the hub's prod role uses `720h`).
+> The expiry requirement does not disappear, it moves out of the first year. An expired
+> `secret_id` fails every deploy for that environment at once.
+
+**AC3 — KV layout.**
+**Given** the hub uses `secret/hub/{dev,pre-prod,prod}/app`
+**When** the frontend's paths are created
+**Then** they are `secret/fe/{dev,pre-prod,prod}/app` (KV v2)
+**And** each holds `VITE_API_BASE_URL` and `VITE_WS_URL` for that environment — unsuffixed,
+because the path carries the environment
+**And** it is recorded that these values are **not confidential** — they are baked into a public
+bundle — and live in OpenBao for uniformity with the platform, not for secrecy
+**And** the PROD pair is recorded as **sourced from the bundle production actually serves**
+(`/assets/index-BfP68FMT.js`), not from a config file, because Option C bakes them in at build
+time and the running container carries no `VITE_*` in its environment
+**And** the PRE-PROD pair is recorded as a **literal placeholder**
+(`PLACEHOLDER-preprod-backend-not-provisioned`) because that backend does not exist yet
+(Story 1.6), named so it cannot be mistaken for a value.
+
+**AC4 — the read step is inherited, not invented.**
+**Given** the hardening in `PRIONEX_HUB`'s deploy workflows
+**When** the frontend's OpenBao read step is written
+**Then** it reproduces: AppRole login built with `jq -n` and piped to `bao write … -` on
+**stdin** — never `argv`, where `/proc` exposes it host-wide; `::add-mask::` on the returned
+token; `unset BAO_TOKEN` immediately after the KV read; key-name validation rejecting
+`PATH|LD_PRELOAD|LD_LIBRARY_PATH|IFS|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|HOME|TMPDIR|DOCKER_CONFIG|DOCKER_HOST|BAO_*|VAULT_*|GITHUB_*`;
+and no secret written to disk — no `mktemp` scratch file, registry credentials reaching `curl`
+only through `-K -`
+**And** each measure carries a comment naming what it prevents — the key-name validation exists
+because a crafted secret value **did** hijack `PATH` to `/tmp/pwned` in a live incident on this
+platform
+**And** any deliberate deviation from the hub's version is recorded with its reason.
+
+**AC5 — retained from the original, now confirmed already true.**
 **Given** ports already live in per-stand server `.env` files
 **When** the variable set is reviewed
-**Then** `FRONTEND_PORT` is absent from Forgejo variables
+**Then** `FRONTEND_PORT` is absent from Forgejo variables — **confirmed absent 2026-08-12**
 **And** the rationale (no duplicated state) is recorded.
+
+**AC6 — the dependency is named, not assumed.**
+**Given** the AppRole, its policy and the KV paths must be created inside OpenBao
+**When** the story starts
+**Then** the owner of that work is named and the request is recorded as sent
+**And** if it has not been fulfilled, the story **records the absence explicitly** rather than
+proceeding on a placeholder.
+
+> ✅ **Largely discharged 2026-08-13, before the story was written** — see the addendum to
+> `sprint-change-proposal-2026-08-13-openbao.md`. Oleg worked through his own `admin` session
+> after `token create` refused a scoped provisioner token (OpenBao only lets a token mint
+> children whose policies are a subset of its own). Provisioned and measured: three policies
+> (`fe-dev-read`, `fe-pre-prod-read`, `fe-prod-read`, each granting `read` on
+> `secret/data/fe/<env>/*` and `read,list` on `secret/metadata/fe/<env>/*` and nothing else),
+> three roles, three KV paths. **Isolation measured, not argued:** each role logged in and
+> attempted all three paths — reads its own, denied on both others, nine checks, nine passes.
+> Test `secret_id`s were issued with `num_uses=1` and died on use, so **no credential values
+> exist from that session** — AC2's six values must be read and minted fresh.
+>
+> **What AC6 still owns:** the OpenBao admin token is not held by this repository and cannot be
+> minted without an existing one. Any step touching `auth/approle/role/fe-*` is gated on Oleg
+> supplying it in-session.
+
+**AC7 — the runners can actually reach OpenBao, both of them.**
+**Given** no runner shared a network with OpenBao until 2026-08-13, and the obvious fix does not
+work — job containers live in a nested dind (`docker_host: tcp://dind:2375`) whose network list
+is only `bridge`/`host`/`none`, so the host-level `forgejo_forgejo` cannot be named in
+`container.network` at all, and port 8200 is published only on `10.70.0.1` and `127.0.0.1`
+where a container on the host bridge cannot reach it (measured: `000`)
+**When** the runner configuration is changed
+**Then** `--add-host openbao:172.20.0.5` is added to `container.options` in **both**
+`config.yml` and `config-2.yml`, both runners are restarted, and reachability is re-proven on
+**each** (`http://openbao:8200/v1/sys/seal-status` → 200)
+**And** the registry access those same `options` lines already carry is **re-proven after the
+restart**, not assumed to have survived it
+**And** a preflight step fails loudly naming the cause when OpenBao is unreachable, rather than
+letting a `bao` timeout speak for itself
+**And** `docs/runners/README.md`'s drift check is extended to **compare the two runners against
+each other**, which it does not currently do.
+
+> 🔴 **This AC exists because of a near miss.** Only the first dind was connected to
+> `forgejo_forgejo` initially; the second was found isolated and connected afterwards. Had that
+> gone unnoticed, every job landing on runner 2 would have failed while runner 1 succeeded — an
+> intermittent fault with no obvious cause, in a runner pair Story 1.9 built precisely so work
+> spreads across both. **Any future change to one runner must be applied and verified on both.**
+>
+> ⚠️ **`--add-host openbao:172.20.0.5` is fragile in exactly the way
+> `--add-host git.crm-prionex.com:10.67.0.1` already is:** a container IP, hardcoded. If OpenBao
+> is recreated it may take a different address and every deploy fails on an opaque connection
+> error. That is what the preflight is for.
+>
+> ⚠️ **«Не проверено»: whether `bao` is present in the job image at all.** AC4's read step needs
+> the CLI on the runner. If it is absent, every deploy in Epics 4–6 gains an install step, and
+> the story should establish this now rather than let Epic 5 discover it.
 
 ### Story 1.13: Stop Forgejo from Executing the Legacy GitHub Workflows
 
@@ -1143,8 +1299,13 @@ backend.
 **Given** Option C keeps Vite variables baked in at build time
 **When** the build workflow runs
 **Then** it accepts a target environment of `dev`, `preprod` or `prod`
-**And** it passes `VITE_API_BASE_URL` and `VITE_WS_URL` as `--build-arg` from the matching
-repository variables created in Story 1.12.
+**And** it passes `VITE_API_BASE_URL` and `VITE_WS_URL` as `--build-arg`, read at run time from
+the OpenBao path `secret/fe/<env>/app` via the AppRole chain established in Story 1.12. 🔴
+**AMENDED 2026-08-13 (`sprint-change-proposal-2026-08-13-openbao.md` §4.3).** The original text
+said "from the matching repository variables created in Story 1.12" — those variables are no
+longer created; `fe-prionex` follows the `PRIONEX_HUB` pattern and the values live in OpenBao.
+**The path segment is `pre-prod`, not `preprod`** — do not derive it from the `PREPROD` in the
+Forgejo secret names. The values are **not confidential**: they are baked into a public bundle.
 
 **Given** the fallback pattern at `CD.yml:47-74` silently defaults to the production API
 **When** the Forgejo build workflow is written
@@ -1842,7 +2003,11 @@ recorded deployment — not assumed from a branch name
 
 **Given** the rebuilt image
 **When** the current production state is recorded
-**Then** it also carries the tag `prod-current`.
+**Then** it also carries the tags `prod-current` **and `prod-<sha>`**. 🔴 **AMENDED 2026-08-13
+(`sprint-change-proposal-2026-08-13-openbao.md` §4.2, following the amended FR31).** This story
+previously created `prod-<sha>` nowhere, leaving the rebuilt cutover image protected only under
+a moving name. `prod-<sha>` is created here, at rebuild time, rather than waited for from the
+next deploy.
 
 **Given** the rebuilt image
 **When** it is compared with what production serves
@@ -1853,7 +2018,7 @@ rather than by digest comparison.
 
 **Given** the retention policy from Story 1.11
 **When** it runs
-**Then** these tags are protected as the current production and rollback targets. ⚠️ **CORRECTED 2026-08-13 by code review of Story 1.11.** Of the two tags this story creates, only `prod-current` is protected. The `sha-<commit>` tag — the one that makes the rebuilt commit addressable — matches no `keep_pattern` alternative and expires at 14 days. Under the amended FR18 the deploy that follows produces `prod-<sha>`, which is protected; until then the rebuilt image is addressable only via `prod-current`. Pattern-read, not exercised.
+**Then** these tags are protected as the current production and rollback targets. ⚠️ **CORRECTED 2026-08-13 by code review of Story 1.11, then closed the same day by the amended FR31.** As first written this story created `sha-<commit>` and `prod-current`, and only the latter was protected — `sha-<commit>` matches no `keep_pattern` alternative and expires at 14 days. The first repair leaned on the *next* deploy to produce `prod-<sha>` under the amended FR18, which left the cutover image addressable only via a moving name in the window before it. **Under the amended FR31 this story now creates `prod-<sha>` itself**, so the protected tag exists from the moment of the rebuild. `sha-<commit>` still expires at 14 days and is still not a rollback target. Pattern-read, not exercised.
 
 ### Story 6.4: Deploy to Production by Dispatch
 
