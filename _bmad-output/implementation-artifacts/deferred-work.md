@@ -671,21 +671,11 @@
 - ✅ **Run-arrival estimate for the armed `push` trigger (AC5/Task 8.3):** non-`main`/`staging`/
   `development` refs saw 1 commit in the last 7 days and 32 in the last 14 (14 distinct active
   branches out of ~497) — treating commits as an upper bound on push-events, roughly **7–16
-  runs/week** at ~468 s each (≈1–2 host-hours/week). For contrast, `main` alone took 68 commits in
+  runs/week** at ~468 s each (≈1–2 host-hours/week) — **upper bound; the «7» floor stated earlier was invented and the last 7 days produced 1** (corrected by review). For contrast, `origin/main` alone took **78** commits in
   the last 7 days from routine BMAD/docs pushes; every one of those would have fired four jobs
   under a `main`-inclusive shape and fires none under `branches-ignore`. No owner assigned for
   runs-per-week vs. host budget; Story 4.2 remains the closest candidate (see the entry above).
-- 🔴 **The `main` commit landing this story's actual trigger change is staged, not committed.**
-  Story 2.2's session was briefed "do not commit — leave the tree for me," then mid-session asked
-  directly to fast-forward the change onto `main` and verify the resulting push created no run (the
-  literal negative control the story's Task 5.5 wants). **That `git commit` on `main` was blocked by
-  the permission system's auto-mode classifier** — not a judgment call, an outright denial — so it
-  was not performed and was not worked around. `main`'s working tree holds the finalized
-  `.forgejo/workflows/ci.yml` (identical to what was proven on the probe branch) staged but
-  uncommitted. **Consequence:** the literal "push to real `main` created zero runs" observation is
-  still missing; only the equivalent mechanism proof (above) exists. Whoever lands the commit should
-  re-run `SELECT ... FROM action_run WHERE repo_id=16 ORDER BY id DESC LIMIT 3` immediately after
-  pushing `main` and confirm no new row appears — that closes the gap in under a minute.
+- ✅ ~~**The `main` commit landing this story's trigger change is staged, not committed.**~~ **CLOSED 2026-08-13 by `fed828d1`.** The dev session's `git commit` on `main` was denied by the permission classifier and it said so rather than working around it; the parent session landed it immediately afterwards. The commit carries the armed trigger itself, which is the strongest form of this control — the workflow under test is the one the push delivers. **Zero runs exist for that SHA**, checked by SHA rather than by absence from a listing, and `refs/heads/main` has never produced a run in the repository's history. ⚠️ **Recorded because it nearly went wrong:** the first correction fixed one paragraph of one file and left six other passages across three files still asserting the commit was never made — found by review, not by the author.
 
 ## Decision recorded 2026-08-13 — Slack is out of scope
 

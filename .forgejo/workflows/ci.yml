@@ -5,8 +5,12 @@ name: CI
 # `push` fires on every branch EXCEPT main/staging/development
 # (`branches-ignore`), which is FR2's "push on feature branches" read
 # literally. It deliberately excludes the three long-lived branches so a
-# documentation-only commit landing on any of them does not spend four jobs
-# (~487s each) on a host shared with another tenant's production. Verified
+# documentation-only commit landing on any of them does not spend a run —
+# four concurrent jobs, ~468-487s of wall clock and ~810 job-seconds — on a
+# host shared with another tenant's production. (An earlier version of this
+# comment said "four jobs (~487s each)", which overstated the cost roughly
+# fourfold: 487s is the whole run, not each job. Measured on run 505: Lint
+# 143s, Type Check 86s, Unit Tests 467s, Build 113s.) Verified
 # empirically on Forgejo 15.0.5+gitea-1.22.0 that `branches-ignore` is
 # honoured (see Story 2.2's Dev Agent Record for the probe-branch evidence:
 # a push naming this branch in `branches-ignore` produced zero runs, the same
@@ -28,6 +32,10 @@ name: CI
 #
 # `workflow_dispatch` is retained alongside `push`: it costs nothing idle,
 # and it is the only manual fallback if a trigger turns out not to fire.
+# 🚨 LOAD-BEARING: the `branches-ignore` filter is what keeps this workflow off
+# tags, not the absence of a `tags:` clause. A ref filter of any kind makes
+# Forgejo skip non-branch refs; simplify this to a bare `on: push:` with no
+# filter and it fires on every tag push AND on main/staging/development.
 on:
   workflow_dispatch:
   push:

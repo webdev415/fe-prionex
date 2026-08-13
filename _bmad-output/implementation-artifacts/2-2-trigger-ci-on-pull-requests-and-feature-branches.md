@@ -679,8 +679,7 @@ control producing run 505 eight seconds later, and this direct observation on th
 ref.
 
 **D9 invariant, reconfirmed after cleanup:** `git ls-tree -r --name-only <ref> -- .forgejo/workflows/`
-— `main`: `README.md`, `ci.yml` (unchanged at the tree level; the edit is a working-tree change, not
-yet committed); `origin/staging`: `README.md` only; `origin/development`: `README.md` only. Matches
+— `main`: `README.md`, `ci.yml` (the trigger edit landed as `fed828d1`); `origin/staging`: `README.md` only; `origin/development`: `README.md` only. Matches
 pre-story state exactly. Probe branch deleted both locally (`git branch -D`) and on the remote
 (`git push origin --delete`) — the pre-push build hook still ran on the deletion push, added no run.
 
@@ -690,7 +689,7 @@ days — most of the repository's ~497 branches are inactive. By contrast, `main
 commits in the last 7 days (routine BMAD/docs pushes) — every one of which would have fired four
 jobs under a naive `branches: ['**']` or `[main, staging, development]` shape, and fires **none**
 under `branches-ignore`. Treating commit count as an upper bound on push-events (a push often
-batches several commits into one trigger), the chosen shape adds on the order of **7–16 runs/week**
+batches several commits into one trigger), the chosen shape adds **up to ~16 runs/week** (32 feature-branch commits over 14 days ÷ 2, one run per commit as an upper bound since Forgejo's default auto-cancel collapses rapid pushes). 🔴 **Corrected by review 2026-08-13: the previously stated range «7–16» had an invented floor.** Nothing derived the 7, and the story's own 7-day measurement was **1**, seven times below it. The honest statement is an upper bound with a wide, bursty distribution beneath it — the last 7 days produced 1
 at ~468 s each — roughly **1–2 hours of run wall-clock per week**, not the ~9 hours/week a `main`-
 inclusive shape would have added at the observed docs-push rate.
 
@@ -705,7 +704,7 @@ interpretation) that stayed with the coordinating agent throughout.
 
 ### Completion Notes List
 
-**AC1 — the triggers exist and name the right refs.** Mostly closed, with one stated asymmetry.
+**AC1 — the triggers exist and name the right refs. Partly closed and PARTLY DEFERRED — two shortfalls, not one.** 🔴 **Corrected by review 2026-08-13:** this previously read *«mostly closed, with one stated asymmetry»*, which undercounted. AC1 has a `pull_request` clause of its own (`epics.md:1106`), and **that clause is deferred exactly as AC2 and AC3 are** — every deferral record written by this story names only AC2/AC3, so an AC1 marked satisfied would carry the `pull_request` half into the archive as done. It is not done. The second shortfall is the branch-set asymmetry below.
 `.forgejo/workflows/ci.yml` on `main` now runs on `push` with `branches-ignore: [main, staging,
 development]` plus `workflow_dispatch`; `pull_request` is deliberately absent (see AC2). The set of
 branches carrying the file (`main` only) does **not** fully match the set the `push` trigger names
@@ -746,14 +745,13 @@ fix. Per D7, this is recorded, not remediated; GitHub's legacy files are Story 7
 
 **AC5 — the cost of arming the triggers is stated before they are armed.** **Closed.** Budget
 declared before any push (Task 3.1/3.2) and matched exactly (2 pushes, 1 run, 0 writes to protected
-branches, 0 PRs). Run-arrival estimate recorded above: roughly 7–16 runs/week at ~468 s each under
-the chosen `branches-ignore` shape, versus the ~68 commits/week landing on `main` alone that a
+branches, 0 PRs). Run-arrival estimate recorded above: **up to ~16 runs/week** (floor corrected by review — see AC5) at ~468 s each under
+the chosen `branches-ignore` shape, versus the **78** commits/week landing on `origin/main` alone (re-measured; the story first said 68) that a
 `main`-inclusive shape would have charged in full — the host's 7.2 GiB free / load 11–17 was
 recorded before triggering and was not materially different from Story 2.1's session.
 
-**Outstanding from this session, for the parent:** the `.forgejo/workflows/ci.yml` edit is staged
-on `main`'s working tree but not committed (commit blocked by the permission system when the
-coordinator asked for it directly); `deferred-work.md`, `docs/migration-decisions.md`,
+**Outstanding from this session, for the parent:** ~~the `.forgejo/workflows/ci.yml` edit is staged
+on `main`'s working tree but not committed~~ — ✅ **CLOSED 2026-08-13 by `fed828d1`** — the commit landed on `main` with the trigger armed in that very commit, and zero runs exist for its SHA (checked by SHA, not by absence from a listing); `refs/heads/main` has never produced a run. Verified again by review. Remaining: `deferred-work.md`, `docs/migration-decisions.md`,
 `_bmad-output/implementation-artifacts/sprint-status.yaml` and this story file are edited but
 likewise uncommitted. Landing the `main` commit and re-running the run-count query afterward (`push`
 to `main` should create no run) is the one remaining piece of direct evidence this session could not
@@ -761,8 +759,8 @@ produce itself.
 
 ### File List
 
-- `.forgejo/workflows/ci.yml` — **edited, uncommitted** on `main` (trigger block only, per Task 4;
-  proven correct on a disposable probe branch, not yet committed to `main`'s history)
+- `.forgejo/workflows/ci.yml` — trigger block only, per Task 4; proven on a disposable probe branch
+  and **committed to `main` as `fed828d1`**
 - `_bmad-output/implementation-artifacts/2-2-trigger-ci-on-pull-requests-and-feature-branches.md` — this file (Dev Agent Record, task checkboxes, Status)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — updated (Task 8.1/8.2/8.3/8.4)
 - `docs/migration-decisions.md` — updated (Task 8.5, changelog row)
@@ -795,11 +793,7 @@ not appear in the final tree.
 
 ### Still open
 
-4. **The literal negative control on `main` itself.** The story's Task 5.5 and this session's
-   "done" bar both ultimately want a push that lands on real `main` and creates no run. That commit
-   is staged in `main`'s working tree but was not committed — the permission system blocked the
-   `git commit` when asked for directly mid-session. Landing it and re-running the run-count query
-   is a one-command follow-up for whoever can commit to `main`.
+4. ~~**The literal negative control on `main` itself.**~~ ✅ **CLOSED 2026-08-13 by `fed828d1`** — the commit landed on `main` with the trigger armed in that very commit, and zero runs exist for its SHA (checked by SHA, not by absence from a listing); `refs/heads/main` has never produced a run. Verified again by review.
 5. **`ci.yml` is still `main`-only (§2, Task 2.2's declined half).** Propagation to `staging`/
    `development` was recommended but not executed this session (see item 2 above). A feature
    branch cut from either produces silence, not an error, until this is revisited.
@@ -807,7 +801,7 @@ not appear in the final tree.
    This story makes their PR path *reachable* if `has_pull_requests` is ever turned on. Someone
    should own bulk remediation before Story 2.5 opens five real pull requests.
 7. **Run arrival rate vs. host budget.** Story 2.4 owns the 15-minute per-run budget; nothing owns
-   runs-per-day on a host at load 11–17 with 7.2 GiB free. AC5 records an estimate (7–16 runs/week);
+   runs-per-day on a host at load 11–17 with 7.2 GiB free. AC5 records an estimate (up to ~16 runs/week, floor corrected by review);
    it does not assign an owner. Story 4.2 is the closest candidate (`deferred-work.md:141-146`).
 8. **`development` has no branch protection** (`migration-decisions.md:579-580`) while `main` and
    `staging` do. If push triggers make `development` a CI-bearing ref (once propagated), that
