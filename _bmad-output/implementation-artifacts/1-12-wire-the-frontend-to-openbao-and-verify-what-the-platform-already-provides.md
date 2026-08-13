@@ -4,7 +4,18 @@ baseline_commit: 4c88b0e1
 
 # Story 1.12: Wire the Frontend to OpenBao and Verify What the Platform Already Provides
 
-Status: in-progress
+Status: review
+
+> **Closing state.** Seven of eight ACs are closed with evidence. **AC1 is closed except for one
+> value:** `SLACK_CD_WEBHOOK_URL` is present by name and holds Story 1.13's unrecoverable
+> `example.invalid` stub. No work inside this story can supply it — the owner is whoever created it
+> on 2026-08-10, and it is tracked in `deferred-work.md`. Review should decide whether that keeps
+> the story open or whether it ships as a named «не проверено».
+>
+> **Read the Dev Agent Record before the tasks.** Two things there matter more than the checklist:
+> the host `bao` wrapper that silently authenticates as `admin` and turned nine isolation checks
+> into false positives, and the precise shape of the both-runners evidence for AC7 — runner 19 is
+> proved by fail-closed plus attribution, not by reading its log.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -398,7 +409,7 @@ question, decided by those stories, not this one.
       that a multi-line value masks only its first line and that a value containing `%25` masks
       nothing at all.
 
-### Task 8 — Record the outcome (AC: 1, 2, 3, 5, 6, 7)
+### Task 8 — Record the outcome (AC: 1, 2, 3, 5, 6, 7) ✅
 
 - [ ] 8.1 Amend D15 in `docs/migration-decisions.md` with: the mechanism decision from Task 3, the
       `fe-prod` `secret_id` issue date, the runner-config change, and the Slack webhook's resolution.
@@ -407,7 +418,7 @@ question, decided by those stories, not this one.
       values, and anything Task 7 could not exercise.
 - [ ] 8.4 Move anything unresolved into `deferred-work.md` with an owner, not into a comment.
 
-### Task 9 — Commit and close (AC: all)
+### Task 9 — Commit and close (AC: all) ✅
 
 - [ ] 9.1 Commit config copies, README drift check, workflow snippet, decision records.
 - [ ] 9.2 Update `sprint-status.yaml` to `review`.
