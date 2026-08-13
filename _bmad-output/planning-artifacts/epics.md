@@ -616,8 +616,12 @@ So that Epic 5 is not blocked waiting on another team's queue.
 
 **Given** PRE-PROD requires isolation from DEV at the network level
 **When** the requirement is submitted to the backend/infrastructure team
-**Then** it specifies a dedicated Docker network `crm-network-preprod` and its own Kong
-gateway instance on s1
+**Then** it specifies a dedicated Docker network — **named by agreement with `CRM/api-prionex`
+(their convention: `crm-preprod-network`)** — and its own Kong gateway instance on s1, **answering
+to `crm-kong-gateway` inside that network**. 🔴 **AMENDED 2026-08-13
+(`sprint-change-proposal-2026-08-13-kong-naming.md`).** `crm-network-preprod` was our own invented
+name; they are already building the network under theirs, so the requirement asks for the **alias**,
+not for the network
 **And** it explains that a shared `crm-network` makes `crm-kong-gateway` resolve to the DEV
 backend, rendering PRE-PROD validation fictional.
 
@@ -1767,7 +1771,7 @@ in Story 1.6.
 > decisions: [`#d11`](../../docs/migration-decisions.md#d11) and the proposal above.
 >
 > ⚠️ **The constraint Story 5.1 must carry into its verification**, and the reason it cannot be
-> checked from a compose file alone: inside `crm-network-preprod` the PRE-PROD Kong must be
+> checked from a compose file alone: inside the PRE-PROD network the Kong must be
 > reachable under the name **`crm-kong-gateway`** on port **8000**. `nginx.conf` is baked into the
 > image at `Dockerfile.prod:34` and the image is byte-identical across stands, so there is no
 > per-stand way to point the frontend at a differently-named gateway. Story 5.1's ACs already

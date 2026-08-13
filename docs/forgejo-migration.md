@@ -86,7 +86,7 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 - порт `8080` захардкожен по умолчанию — нужен разный `FRONTEND_PORT`;
 - **главное:** сеть `crm-network` внешняя и общая, nginx резолвит `crm-kong-gateway` по имени → preprod-фронт уедет на dev-бэкенд.
 
-Нужно: параметризовать имена (`COMPOSE_PROJECT_NAME`, `CONTAINER_NAME`), развести каталоги (`~/crm-prionex/fe-prionex-dev` / `-preprod`), и **согласовать с бэкендом отдельную сеть `crm-network-preprod` с собственным Kong**. Без второго Kong-стенда на s1 preprod получается фиктивным.
+Нужно: параметризовать имена (`COMPOSE_PROJECT_NAME`, `CONTAINER_NAME`), развести каталоги (`~/crm-prionex/fe-prionex-dev` / `-preprod`), и **согласовать с бэкендом отдельную сеть с собственным Kong**. Без второго Kong-стенда на s1 preprod получается фиктивным. 🔴 **Уточнено 13.08.2026:** имя `crm-network-preprod` было нашим собственным; `CRM/api-prionex` уже строит отдельную сеть и Kong для всех трёх сред под своими именами (`crm-{dev,preprod,prod}-network`), поэтому мы принимаем их именование, а просим **сетевой алиас `crm-kong-gateway`** для Kong внутри сети стенда — см. [#d11](./migration-decisions.md#d11) и `sprint-change-proposal-2026-08-13-kong-naming.md`.
 
 Сюда же — хардкоды в healthcheck-шаге, который портируется из CD: `docker inspect ... fe-prionex` (`CD.yml:224`) и `curl localhost:8080` (`CD.yml:233`). При трёх стендах с разными именами и портами копирование «как есть» даст зелёный healthcheck на мёртвом стенде. Оба места параметризовать вместе с compose.
 

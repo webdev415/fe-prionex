@@ -27,6 +27,19 @@ As a release engineer,
 I want a confirmed commitment from the platform team for the PRE-PROD backend environment,
 so that Epic 5 is not blocked waiting on another team's queue.
 
+> 🔴 **AMENDED 2026-08-13, after the story's document was written but before it was sent.**
+> `sprint-change-proposal-2026-08-13-kong-naming.md` changed what this story asks for. Every task
+> below that says "ask them to create `crm-network-preprod` with its own Kong" is superseded:
+> `CRM/api-prionex` is **already building** a separate network and Kong for DEV, PRE-PROD and PROD,
+> under its own names. **We adopt their network names and ask for one thing only — a network alias
+> `crm-kong-gateway` for their Kong inside each stand's network** — because that name is baked into
+> our image and cannot be changed per stand. The requirement document has been rewritten
+> accordingly; the task text below is left as written, per this project's rule that records are not
+> rewritten retroactively.
+>
+> ✅ Also answered since: the PRE-PROD services **have their own databases** (Oleg, 2026-08-13),
+> which closes Task 2.4's question.
+
 ## 🚨 Read this before anything else: this story cannot be finished by the dev agent alone
 
 This is the **only story in the plan whose acceptance depends on a person outside this
