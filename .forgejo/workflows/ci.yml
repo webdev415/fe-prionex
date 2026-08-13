@@ -1,11 +1,40 @@
 name: CI
 
-# workflow_dispatch only, deliberately. Story 2.1 (this story) proves the four
-# jobs run at all; Story 2.2 is where push/pull_request triggers get added.
-# Adding them here would fire this workflow on every push to three protected
-# branches (main, staging, development) before it has ever been proven green.
+# Story 2.2: push is now armed, pull_request is not.
+#
+# `push` fires on every branch EXCEPT main/staging/development
+# (`branches-ignore`), which is FR2's "push on feature branches" read
+# literally. It deliberately excludes the three long-lived branches so a
+# documentation-only commit landing on any of them does not spend four jobs
+# (~487s each) on a host shared with another tenant's production. Verified
+# empirically on Forgejo 15.0.5+gitea-1.22.0 that `branches-ignore` is
+# honoured (see Story 2.2's Dev Agent Record for the probe-branch evidence:
+# a push naming this branch in `branches-ignore` produced zero runs, the same
+# push with the branch NOT named produced one).
+#
+# `pull_request` is intentionally absent. The repository's pull-request unit
+# (`has_pull_requests`) is disabled on this instance for a named reason (a PR
+# opened from any of ~497 branches whose head commit predates this workflow
+# would fall through to legacy `.github/workflows/CI.yml` on another team's
+# runner — see `docs/migration-decisions.md` D9). Enabling that unit is out
+# of scope for this story; AC2/AC3 (pull_request behaviour) are recorded as
+# deferred, not closed, until that decision is made explicitly.
+#
+# No `concurrency` block: Forgejo already auto-cancels an earlier run of the
+# same workflow on the same ref for `push` events by default, without one
+# (`docs/migration-decisions.md` D8). Adding a block to get behaviour that is
+# already the default was Story 1.12's mistake — a test that cannot fail
+# proves nothing.
+#
+# `workflow_dispatch` is retained alongside `push`: it costs nothing idle,
+# and it is the only manual fallback if a trigger turns out not to fire.
 on:
   workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
+      - staging
+      - development
 
 jobs:
   lint:

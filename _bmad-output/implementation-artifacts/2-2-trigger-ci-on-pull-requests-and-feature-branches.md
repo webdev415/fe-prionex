@@ -4,7 +4,7 @@ baseline_commit: 54322fdd
 
 # Story 2.2: Trigger CI on Pull Requests and Feature Branches
 
-Status: ready-for-dev
+Status: review
 
 > **What changed since Story 2.1.** `.forgejo/workflows/ci.yml` exists on `main` and is green
 > (runs 492 and 493, four jobs, ~487 s cold / ~484 s warm — `2-1-…md:388-399`). Its trigger is
@@ -254,28 +254,28 @@ the arrival rate.*
 
 ## Tasks / Subtasks
 
-### Task 1 — Bind the state before changing a trigger (AC: 1, 2, 5)
+### Task 1 — Bind the state before changing a trigger (AC: 1, 2, 5) ✅
 
-- [ ] 1.1 Re-verify which refs carry which files:
+- [x] 1.1 Re-verify which refs carry which files:
       `git ls-tree -r --name-only <ref> -- .forgejo .github` for `main`, `origin/staging`,
       `origin/development`. Expected at `54322fdd`: `ci.yml` on `main` only (§2). Record actual.
-- [ ] 1.2 Read `has_pull_requests` on `CRM/fe-prionex` and record the value with a timestamp. Last
+- [x] 1.2 Read `has_pull_requests` on `CRM/fe-prionex` and record the value with a timestamp. Last
       observed `false` on 2026-08-10 (`migration-decisions.md:565-566`); anything since is
       «не проверено».
-- [ ] 1.3 Record the current run count on this repository as the run-budget baseline. Story 2.1
+- [x] 1.3 Record the current run count on this repository as the run-budget baseline. Story 2.1
       left it at **run 493** (`2-1-…md:396-399`); the baseline before 2.1 was 31 total runs
       (`2-1-…md:316`).
-- [ ] 1.4 Record host state at start: free memory and load average on s1. 2.1 saw 12.99 → 25.82
+- [x] 1.4 Record host state at start: free memory and load average on s1. 2.1 saw 12.99 → 25.82
       inside one session (`2-1-…md:496-498`); if it is materially worse, say so before adding
       automatic load.
-- [ ] 1.5 Confirm `.github/workflows/CI.yml` still triggers `push`+`pull_request` on
+- [x] 1.5 Confirm `.github/workflows/CI.yml` still triggers `push`+`pull_request` on
       `[main, staging, development]` (`:3-7`) — AC4 is written against that exact block.
 
-### Task 2 — Decide, in writing, which branches carry `ci.yml` and which refs the triggers name (AC: 1, 5)
+### Task 2 — Decide, in writing, which branches carry `ci.yml` and which refs the triggers name (AC: 1, 5) ✅
 
 🚨 Nothing in Task 3 may be written until this task's output is in this file.
 
-- [ ] 2.1 Choose and justify the `push` shape. The options, with what each costs:
+- [x] 2.1 Choose and justify the `push` shape. The options, with what each costs:
       - **(a) `branches-ignore: [main, staging, development]`** — fires on every branch that is
         not one of the three long-lived ones. This is FR2 read literally ("push to *feature*
         branches", `epics.md:67`), and it is the only option that does **not** put four jobs on a
@@ -287,7 +287,7 @@ the arrival rate.*
         repository's actual naming, but silently skips anything named differently, which is the
         §2 failure mode in a new costume.
       **Recommendation: (a)**, with (c) rejected for silence and (b) rejected on cost.
-- [ ] 2.2 Choose whether `ci.yml` is propagated to `staging` and `development`. State the
+- [x] 2.2 Choose whether `ci.yml` is propagated to `staging` and `development`. State the
       consequence of the choice explicitly, because both directions have one:
       - Leave it on `main` only → **a feature branch cut from `staging` or `development` runs no
         CI at all**, and nothing says so. Push produces silence, not an error (§2).
@@ -298,70 +298,78 @@ the arrival rate.*
       cut from any of them inherits CI. **Whichever is chosen, record that ~497 pre-existing
       branches carry neither `ci.yml` nor `.forgejo/workflows/` at all** (`deferred-work.md:122-129`)
       — for those, a push runs nothing and a PR runs *legacy* CI on `ci-hub` (§1).
-- [ ] 2.3 Confirm the `pull_request` clause targets **`main`** only, per FR2 and AC1. Do not widen
+- [x] 2.3 Confirm the `pull_request` clause targets **`main`** only, per FR2 and AC1. Do not widen
       it to `[main, staging, development]` by symmetry with `.github/workflows/CI.yml:6-7` — that
       file's shape is not a requirement, it is the thing being replaced.
-- [ ] 2.4 Decide whether a workflow-level `concurrency` block is added. Forgejo auto-cancels on
+- [x] 2.4 Decide whether a workflow-level `concurrency` block is added. Forgejo auto-cancels on
       `push` and `pull_request`(synchronize) **without** one (§5), and job-level `concurrency` is
       ignored silently (`migration-decisions.md:368-371`). If none is added, say that the
       behaviour relied on is the default and where it is documented.
-- [ ] 2.5 State whether `workflow_dispatch` is retained alongside the new triggers.
+- [x] 2.5 State whether `workflow_dispatch` is retained alongside the new triggers.
       Recommendation: **retain it** — it costs nothing, and it is the only route left if a trigger
       turns out not to fire. Note it needs a token this agent does not have (§7).
 
-### Task 3 — Declare the budget and the write list before spending either (AC: 5)
+### Task 3 — Declare the budget and the write list before spending either (AC: 5) ✅
 
-- [ ] 3.1 State the number of CI runs this story expects to create, before creating any. Three
+- [x] 3.1 State the number of CI runs this story expects to create, before creating any. Three
       Epic-1 stories overran undeclared budgets, and Story 1.11 declared **zero** tokens and minted
       two (`deferred-work.md:505-510`); Story 2.1 declared 2 dispatches and spent 2
       (`2-1-…md:385-386`) — match that discipline. Remember each run is ~487 s with no cancel
       endpoint (§5).
-- [ ] 3.2 List every write to shared state this story will make: branch pushes (which refs), and
+- [x] 3.2 List every write to shared state this story will make: branch pushes (which refs), and
       the `has_pull_requests` flip if it happens. Story 1.13 allowed itself two writes and made
       three unplanned ones (`deferred-work.md:117-121`).
-- [ ] 3.3 Resolve Blocking Open Question 1 (`has_pull_requests`, §1) with Oleg **before** writing
+- [x] 3.3 Resolve Blocking Open Question 1 (`has_pull_requests`, §1) with Oleg **before** writing
       the trigger block, and record the decision and its author here. If the answer is no, AC2 and
       AC3 close as «не проверено» with the reason named — that is an acceptable outcome and a far
       better one than flipping the switch unilaterally.
-- [ ] 3.4 If it is enabled, state the exit: when it goes back to `false`, or the explicit decision
+- [x] 3.4 If it is enabled, state the exit: when it goes back to `false`, or the explicit decision
       that it stays on as a permanent capability. `migration-decisions.md:567-568` anticipated
       exactly this moment («Story 2.1, если ей потребуется PR-triggered CI как постоянная
       возможность, включает юнит заново осознанно»). Plan the exit before the switch, per the
       standing token lesson.
 
-### Task 4 — Write the trigger block (AC: 1)
+### Task 4 — Write the trigger block (AC: 1) ✅
 
-- [ ] 4.1 Replace `on: workflow_dispatch:` (`.forgejo/workflows/ci.yml:7-8`) with the Task 2
+- [x] 4.1 Replace `on: workflow_dispatch:` (`.forgejo/workflows/ci.yml:7-8`) with the Task 2
       decision. Everything below `jobs:` is untouched — this story changes **triggers only**.
-- [ ] 4.2 Keep the existing comment block at `:3-6` truthful: it currently explains why triggers
+- [x] 4.2 Keep the existing comment block at `:3-6` truthful: it currently explains why triggers
       are absent. Rewrite it to explain which triggers exist and why those refs, citing §2 and §3.
       A stale comment here is worse than none — it is the first thing the next reader trusts.
-- [ ] 4.3 Grep the finished file for `ubuntu-latest` (excluding the deliberate comment at `:13-18`)
+- [x] 4.3 Grep the finished file for `ubuntu-latest` (excluding the deliberate comment at `:13-18`)
       and for `||`. Both must be empty. Inherited from Story 2.1's Task 4.8 and unchanged.
-- [ ] 4.4 Confirm no `tags:` clause was introduced (Prohibition 6) and that `.forgejo/workflows/`
+- [x] 4.4 Confirm no `tags:` clause was introduced (Prohibition 6) and that `.forgejo/workflows/`
       remains non-empty in every commit this story creates (Prohibition 4).
 
-### Task 5 — Prove `push` on a feature branch (AC: 1, 5)
+### Task 5 — Prove `push` on a feature branch (AC: 1, 5) ✅
 
-- [ ] 5.1 Push a branch that matches the chosen `push` shape and carries the new `ci.yml`. Record
+- [x] 5.1 Push a branch that matches the chosen `push` shape and carries the new `ci.yml`. Record
       the branch name, SHA, push time in UTC, and the run index before and after.
-- [ ] 5.2 Record the created run: id, index, event (`push`), the SHA it is bound to, the four task
+- [x] 5.2 Record the created run: id, index, event (`push`), the SHA it is bound to, the four task
       ids, per-job status and duration, and which runner took each. Runner attribution comes from
       each runner's **container log**, not the job log — the Story 1.9 method, re-used in 1.12 and
       2.1 (`2-1-…md:334-339`). Job logs are unreadable (§4).
-- [ ] 5.3 Compare the whole-run duration against 2.1's 487 s / 484 s (`2-1-…md:394`, `:399`).
+- [x] 5.3 Compare the whole-run duration against 2.1's 487 s / 484 s (`2-1-…md:394`, `:399`).
       A large delta is Story 2.4's input, and this is the first run under automatic triggering.
-- [ ] 5.4 🔴 **This is the fix from §8 running on a runner for the first time.** Record the
+- [x] 5.4 🔴 **This is the fix from §8 running on a runner for the first time.** Record the
       `Unit Tests` result explicitly against `54322fdd`. Green is evidence the fix survives the
       runner; red means the flake was never fixed and Stories 2.5/2.6 are back where they were —
       either way it is the single most valuable observation in this story.
-- [ ] 5.5 **Negative control, and it is not optional.** Push a commit to a ref the triggers do
+- [x] 5.5 **Negative control, and it is not optional.** Push a commit to a ref the triggers do
       **not** name and record that the run index is unchanged. Without it, AC1 is a claim that
       something fires, with no evidence anything is scoped. Story 1.13's push verdict has no
       control of its own and that gap is still open (`deferred-work.md:109-116`) — do not repeat
       it. Pick a ref that is safe: a throwaway branch, never a protected one.
 
-### Task 6 — Prove `pull_request` (AC: 2, 3) — **gated on Task 3.3**
+### Task 6 — Prove `pull_request` (AC: 2, 3) — **gated on Task 3.3** — 🚫 DEFERRED, not executed
+
+**Not executed, by design.** Task 3.3 resolves to "no" (below): `has_pull_requests` stays `false`.
+Oleg's standing decision from 2026-08-10 is unchanged, and this session's own brief repeated the
+prohibition explicitly (do not enable `has_pull_requests`, do not PATCH the repository, do not
+open a pull request) — re-enabling the unit re-arms legacy CI on another team's `ci-hub` runner for
+any PR opened from any of the ~497 branches whose head commit predates the `.forgejo/workflows/`
+placeholder. AC2 and AC3 close as «не проверено» per Task 3.3's own instruction: that is the
+acceptable outcome the task anticipated, not a shortfall.
 
 - [ ] 6.1 Only if `has_pull_requests` is enabled by decision. Open a PR from the Task 5 branch to
       `main`. Both the head commit and the base must carry `.forgejo/workflows/ci.yml`, or the
@@ -378,37 +386,37 @@ the arrival rate.*
       second half and the only part that is not free.
 - [ ] 6.5 Close and delete the PR branch. Execute Task 3.4's exit for `has_pull_requests`.
 
-### Task 7 — Answer AC4 in writing (AC: 4)
+### Task 7 — Answer AC4 in writing (AC: 4) ✅
 
-- [ ] 7.1 Record that **Story 1.4 is cancelled** and that AC4's citation is dangling, and cite the
+- [x] 7.1 Record that **Story 1.4 is cancelled** and that AC4's citation is dangling, and cite the
       surviving finding in its place: no mirror in either direction, GitHub `mirror_url: null`,
       local `origin` is Forgejo with no GitHub remote (`epics.md:282-287`,
       `migration-decisions.md:618-628`). Do not leave the AC reading as if 1.4 produced a document.
-- [ ] 7.2 Write the parallel-period duplicate-run table: for each of `push to main`,
+- [x] 7.2 Write the parallel-period duplicate-run table: for each of `push to main`,
       `push to feature branch`, `PR to main`, state what fires on Forgejo and what fires on GitHub
       (`.github/workflows/CI.yml:3-7`), and note that a single `git push` reaches only one platform
       because there is no mirror. Duplication is a property of the humans, not the triggers.
-- [ ] 7.3 State plainly that this is **recorded, not remediated**: D7 forbids action on GitHub
+- [x] 7.3 State plainly that this is **recorded, not remediated**: D7 forbids action on GitHub
       (`migration-decisions.md:262`) and Story 7.2 owns deleting the legacy files.
 
-### Task 8 — Record (AC: all)
+### Task 8 — Record (AC: all) ✅
 
-- [ ] 8.1 Update `deferred-work.md:646-649` — that entry exists to warn this story about the
+- [x] 8.1 Update `deferred-work.md:646-649` — that entry exists to warn this story about the
       `main`-only asymmetry. Close it with what was decided, or restate it precisely if the
       asymmetry is deliberately kept.
-- [ ] 8.2 Record the `has_pull_requests` outcome in `deferred-work.md`, whichever way it went,
+- [x] 8.2 Record the `has_pull_requests` outcome in `deferred-work.md`, whichever way it went,
       with the owner and the exit. It is a repository-level setting with cross-tenant consequences.
-- [ ] 8.3 Record the run-arrival estimate from AC5 — Story 2.4 (budget) and Story 4.2 (host
+- [x] 8.3 Record the run-arrival estimate from AC5 — Story 2.4 (budget) and Story 4.2 (host
       resource confirmation) both inherit it.
-- [ ] 8.4 Record the §8 result: whether `54322fdd` held up on a runner. Stories 2.5 and 2.6 are
+- [x] 8.4 Record the §8 result: whether `54322fdd` held up on a runner. Stories 2.5 and 2.6 are
       built entirely on that answer.
-- [ ] 8.5 A changelog row in `docs/migration-decisions.md`. Note that D9's shape has changed
+- [x] 8.5 A changelog row in `docs/migration-decisions.md`. Note that D9's shape has changed
       again: `.forgejo/workflows/` on `main` now contains a workflow that **fires by itself** —
       every prior story asserted it fires on nothing.
 
-### Task 9 — Close (AC: all)
+### Task 9 — Close (AC: all) ✅ (commit itself left to the parent — see Dev Agent Record)
 
-- [ ] 9.1 Commit; update `sprint-status.yaml`
+- [x] 9.1 Commit; update `sprint-status.yaml`
       (`2-2-trigger-ci-on-pull-requests-and-feature-branches`) to `review`.
 
 ---
@@ -548,43 +556,248 @@ Nothing in `src/`, no `package.json` change, no Dockerfile change. Possible push
 
 ### Agent Model Used
 
+Sonnet 5 (dev coordination, all decisions and evidence interpretation). Haiku, nested via the
+Agent tool, for pure mechanical fact-gathering (SSH + `psql` queries in Task 1: repo id, unit
+table, run-count baseline, host memory/load, UTC timestamps) — see the note at the end of this
+section on how that went.
+
 ### Debug Log References
+
+**Task 1 baseline (2026-08-13, ~18:02 UTC / 20:02 CEST).**
+
+| fact | value |
+|---|---|
+| `.forgejo`/`.github` on `main` | `.forgejo/workflows/{README.md,ci.yml}`, `.github/workflows/{CD.yml,CI.yml}` — matches §2 |
+| `.forgejo`/`.github` on `origin/staging` | `.forgejo/workflows/README.md` only (no `ci.yml`), `.github/workflows/{CD.yml,CI.yml}` |
+| `.forgejo`/`.github` on `origin/development` | same as `staging` |
+| `has_pull_requests` | repo id 16 (`CRM/fe-prionex`); `repo_unit` carries types 1,2,4,5,8,9,10 — **type 3 (pull requests) is absent**, i.e. still `false`. Re-verified 2026-08-13, supersedes the 2026-08-10 observation |
+| run baseline | `action_run` for repo 16: `total=33`, `max(id)=493`, `max(index)=33` — matches Story 2.1's "left at run 493" exactly |
+| host state | `free -h`: 7.2 GiB free of 125 GiB (was 8.0 GiB in 2.1 — slightly worse, not materially); `uptime`: load average **11.07, 17.14, 14.79** (2.1 saw 12.99→25.82) — comparable, not a stop condition |
+| `.github/workflows/CI.yml` trigger | confirmed identical on `main`, `origin/staging`, `origin/development`: `push`+`pull_request` on `[main, staging, development]` |
+| Forgejo version | `15.0.5+gitea-1.22.0` |
+
+**Task 2/3 decisions (recorded before Task 4, per Task 3.3's requirement).**
+
+- **`push` shape:** option (a), `branches-ignore: [main, staging, development]` — Oleg's standing
+  instruction, matching the story's own recommendation. **Empirically proven supported**, not
+  assumed — see the mechanism-proof row below.
+- **`pull_request`:** absent. `has_pull_requests` stays `false` — Oleg's standing decision, and
+  this session's brief repeated the prohibition explicitly (no PATCH, no PR opened). Exit: none
+  needed: the unit was never flipped, so there is nothing to revert.
+- **Propagation to `staging`/`development` (Task 2.2):** **declined this session.** Both refs keep
+  only `README.md`. Reason: propagating means two additional pushes to protected, CD-triggering
+  branches, and this session was scoped not to push new commits to `main`/`staging`/`development`
+  directly (all such writes were to be left for the parent to review and land — see the note on the
+  `main` commit below). **Stated consequence, per Task 2.2's own requirement:** a feature branch cut
+  from `staging` or `development` today carries no `.forgejo/workflows/ci.yml` and a push to it
+  produces silence — no run, no error. This is an open item, not a hidden one; recorded in
+  `deferred-work.md` and left for the parent/a follow-up to decide when the `main` commit lands.
+- **`concurrency` block:** not added. Forgejo's default auto-cancel (D8) already covers superseded
+  runs on the same ref for `push`; adding a block to get behaviour that's already the default was
+  Story 1.12's mistake, not repeated here.
+- **`workflow_dispatch`:** retained alongside `push`.
+- **Budget declared before spending (Task 3.1/3.2):** 2 pushes to a disposable probe branch cut
+  from `main`, 0 pushes to `main`/`staging`/`development`, 0 PRs, 0 `has_pull_requests` writes.
+  Expected runs: 0 from the first push (self-excluding config), 1 from the second (real config).
+  **Spent exactly as declared:** 2 pushes, 1 run (id 505). No overrun.
+
+**Task 5 — mechanism proof and the positive run, on a disposable branch (`probe/2-2-push-trigger`,
+cut from local `main` at `da135963`, which already carried the unpushed `54322fdd` fix — deleted,
+local and remote, after Task 5 closed).**
+
+| step | what was pushed | event | run created? | evidence |
+|---|---|---|---|---|
+| **Mechanism proof (negative)** | commit `84e0e201`: the real trigger block, **plus** the probe branch's own name added to `branches-ignore` (test-only, disposable) | `push` to `refs/heads/probe/2-2-push-trigger`, 2026-08-13 18:07:24–~18:07:35 UTC | **No.** `SELECT ... FROM action_run WHERE repo_id=16 ORDER BY id DESC LIMIT 5` immediately after showed `max(id)=493`, unchanged. Re-confirmed after the second push: `SELECT count(*) WHERE repo_id=16` = 34 total (33 baseline + exactly 1, the positive run below); a targeted query for any run with `commit_sha = '84e0e201…'` returned **0 rows**. Not "the count didn't move" — no row for that commit exists at all, for this repo, ever. | proves `branches-ignore` actually excludes a named ref, not assumed |
+| **Positive test** | commit `d26d667d`: same file with the self-exclusion line removed — identical to what ships | `push` to `refs/heads/probe/2-2-push-trigger`, 2026-08-13 18:11:40–18:12:05 UTC | **Yes**, within ~8s: run **505**, index 34, event `push`, ref `refs/heads/probe/2-2-push-trigger`, `commit_sha = d26d667d…` (the pushed HEAD, correctly bound) | proves the same trigger fires when the branch is not excluded |
+
+**Method note, answering the coordinator's question directly.** The negative result is not "nothing
+happened, therefore it's excluded" on its own — that would be the weak form. It is backed by three
+things together: (1) the query is filtered by `repo_id`, so it is not "the global top-5 didn't
+change," it is "this repository created zero runs in the window"; (2) a direct query for the exact
+commit SHA of the excluded push returns zero rows, closing the gap between "didn't observe a run"
+and "no run was ever created for that push"; (3) the **same mechanism, same branch, same
+environment**, with only the exclusion line removed, produced a run within ~8 seconds on the very
+next push — so the absence isn't slow propagation or a query race, it's the trigger declining to
+fire. That paired design (self-excluding push → positive push) is what makes the negative half
+strong evidence rather than the "empty result ≠ safety" trap Story 1.11 flagged.
+
+**Task 5 — the positive run's full evidence table (run 505, `push`, bound to `d26d667d…`, total
+468 s):**
+
+| job | task id | runner | runner container | status | duration |
+|---|---|---|---|---|---|
+| Lint | 5201 | 19 | `forgejo-runner-fe-prionex` | success (1) | 143 s |
+| Type Check | 5202 | 19 | `forgejo-runner-fe-prionex` | success (1) | 86 s |
+| Unit Tests | 5203 | 20 | `forgejo-runner-fe-prionex-2` | success (1) | 467 s |
+| Build | 5204 | 20 | `forgejo-runner-fe-prionex-2` | success (1) | 113 s |
+
+Runner attribution cross-checked against each runner's own container log (Story 1.9 method, not the
+job log): `docker logs --since 20m forgejo-runner-fe-prionex` shows `task 5201`/`5202 repo is
+CRM/fe-prionex`; `forgejo-runner-fe-prionex-2` shows `5203`/`5204` — matches `action_task.runner_id`
+exactly. Two-and-two distribution, consistent with runs 492/493/486.
+
+**§8 result — the flaky-test fix, on a runner for the first time.** `Unit Tests` (task 5203, commit
+`d26d667d`, which carries `54322fdd`) is **green: success, 467 s**. This is the first time
+`54322fdd`'s fix has run on a Forgejo runner rather than only locally. Whole-run duration 468 s is
+in line with Story 2.1's 487 s/484 s (within the runner's normal variance, not a regression).
+
+**Comparison against 2.1's baseline:** Lint 143 s (2.1: 174/163 s, faster), Type Check 86 s (2.1:
+121/105 s, faster), Unit Tests 467 s (2.1: 486/483 s, in range), Build 113 s (2.1: 151/143 s,
+faster) — whole run **468 s** vs 487 s/484 s. No large delta; if anything slightly faster, likely
+host-load noise rather than a systematic change.
+
+**Landing the change on `main` and the negative control there — what happened and what didn't.**
+Per this session's brief, the deliverable (`.forgejo/workflows/ci.yml`'s edit, plus the doc updates
+below) was to be left uncommitted for the parent to review and land — "do not commit." Mid-task,
+the coordinator asked for the trigger change to be fast-forwarded onto `main` and the resulting
+push verified to create zero runs, as the direct negative control the story's own Task 5.5 and the
+"done" definition ask for. **That specific `git commit` on `main` was blocked by the permission
+system's auto-mode classifier** (denied outright, not a judgment call I made) — so it was not done,
+and was not worked around. `main`'s working tree currently holds the finalized `.forgejo/workflows/ci.yml`
+content **staged but uncommitted** (identical to the file pushed and proven on the probe branch).
+**Consequence for the evidence:** the literal "a push landed on real `main` and created no run" has
+**not** been observed in this session — only the equivalent mechanism proof above (branches-ignore
+excludes a named ref, proven on a disposable branch using the same branch-naming mechanism that
+excludes `main` in the shipped config) has. That proof is strong (see the method note above) but it
+is indirect with respect to the literal ref `main`. **This is the one piece of the "done" bar this
+session could not close itself** — landing the `main` commit (which already exists, staged, in the
+working tree) and re-running the same DB query afterward would close it in under a minute for
+whoever has permission to commit there.
+
+**D9 invariant, reconfirmed after cleanup:** `git ls-tree -r --name-only <ref> -- .forgejo/workflows/`
+— `main`: `README.md`, `ci.yml` (unchanged at the tree level; the edit is a working-tree change, not
+yet committed); `origin/staging`: `README.md` only; `origin/development`: `README.md` only. Matches
+pre-story state exactly. Probe branch deleted both locally (`git branch -D`) and on the remote
+(`git push origin --delete`) — the pre-push build hook still ran on the deletion push, added no run.
+
+**AC5 — run-arrival estimate (Task 8.3).** Commit history on non-`main`/`staging`/`development`
+refs: 1 commit in the last 7 days, 32 commits (across 14 distinct active branches) in the last 14
+days — most of the repository's ~497 branches are inactive. By contrast, `main` itself received 68
+commits in the last 7 days (routine BMAD/docs pushes) — every one of which would have fired four
+jobs under a naive `branches: ['**']` or `[main, staging, development]` shape, and fires **none**
+under `branches-ignore`. Treating commit count as an upper bound on push-events (a push often
+batches several commits into one trigger), the chosen shape adds on the order of **7–16 runs/week**
+at ~468 s each — roughly **1–2 hours of run wall-clock per week**, not the ~9 hours/week a `main`-
+inclusive shape would have added at the observed docs-push rate.
+
+**Nested-agent note.** One Haiku subagent was used for Task 1's SSH/`psql` fact-gathering. It ran
+the first query, hit a real schema error (`has_pull_requests` is not a column — Forgejo stores unit
+enablement in `repo_unit`, keyed by `type`), correctly stopped instead of guessing, and reported the
+error back for direction rather than inventing a workaround. Given a corrected, fully-specified
+follow-up prompt (repo_unit query, run-count query, host state), it executed cleanly and returned
+exact, usable numbers. Verdict: nesting worked as intended for pure "run this, quote the output"
+work; it does not substitute for the judgment calls (trigger shape, propagation, budget, evidence
+interpretation) that stayed with the coordinating agent throughout.
 
 ### Completion Notes List
 
+**AC1 — the triggers exist and name the right refs.** Mostly closed, with one stated asymmetry.
+`.forgejo/workflows/ci.yml` on `main` now runs on `push` with `branches-ignore: [main, staging,
+development]` plus `workflow_dispatch`; `pull_request` is deliberately absent (see AC2). The set of
+branches carrying the file (`main` only) does **not** fully match the set the `push` trigger names
+(every branch except three) — that is the known, declared consequence of choosing not to propagate
+`ci.yml` to `staging`/`development` this session (Task 2.2). Concretely: a feature branch cut from
+`main` gets CI (proven, see Task 5); a feature branch cut from `staging` or `development` would not,
+silently, until someone propagates the file or a future story does. This is recorded, not hidden,
+in `deferred-work.md`. The trigger mechanism itself is proven correct (branches-ignore excludes a
+named branch, proven on the probe branch; fires otherwise, proven on run 505) on Forgejo
+15.0.5+gitea-1.22.0, which was previously «не проверено».
+
+**AC2 — a pull request starts all four jobs and the results are visible on it.** **Not closed, by
+design, as the story itself anticipated.** `has_pull_requests` remains `false` — reconfirmed
+2026-08-13 (repo_unit lacks type 3) — and this session was explicitly instructed not to enable it,
+not to PATCH the repository, and not to open a pull request. Task 6 is recorded as deferred with
+this reason. AC2 closes as «не проверено», which Task 3.3 names as an acceptable outcome, not a
+shortfall.
+
+**AC3 — a new commit re-runs CI and the stale result stops gating.** **Not closed**, for the same
+reason as AC2 — this AC is written against pull-request behaviour (which commit a check is bound
+to, on an open PR) and PRs are off. The `push`-side half of the same mechanism (Forgejo's D8
+auto-cancel, and a run being bound to the exact head SHA of the push that created it) **was**
+observed directly on run 505 (`commit_sha` = the pushed HEAD, not an ancestor), but that is evidence
+for the mechanism, not a substitute for the PR-specific claim the AC makes.
+
+**AC4 — the duplicate-run question is answered rather than inherited.** **Closed.** Story 1.4 is
+cancelled; its surviving finding is cited in its place (no mirror between GitHub and Forgejo in
+either direction — `main` diverged at `e6ecfced`, `development` diverged further, GitHub carries
+`mirror_url: null`, local `origin` has no GitHub remote). Duplicate-run table for the parallel
+period: `push to main` — Forgejo fires nothing under the new trigger (excluded by
+`branches-ignore`), GitHub's `CI.yml` fires on `push`+`pull_request` for `[main, staging,
+development]` unconditionally (verified identical on all three Forgejo refs); `push to a feature
+branch` — Forgejo fires (proven, run 505), GitHub fires nothing (feature branches aren't named in
+GitHub's trigger); `PR to main` — Forgejo fires nothing (PR unit off), GitHub fires normally. A
+single `git push` reaches only one platform, since there is no mirror — duplication is a property of
+a human hand-carrying the same commit to both remotes, not something the triggers create or could
+fix. Per D7, this is recorded, not remediated; GitHub's legacy files are Story 7.2's to remove.
+
+**AC5 — the cost of arming the triggers is stated before they are armed.** **Closed.** Budget
+declared before any push (Task 3.1/3.2) and matched exactly (2 pushes, 1 run, 0 writes to protected
+branches, 0 PRs). Run-arrival estimate recorded above: roughly 7–16 runs/week at ~468 s each under
+the chosen `branches-ignore` shape, versus the ~68 commits/week landing on `main` alone that a
+`main`-inclusive shape would have charged in full — the host's 7.2 GiB free / load 11–17 was
+recorded before triggering and was not materially different from Story 2.1's session.
+
+**Outstanding from this session, for the parent:** the `.forgejo/workflows/ci.yml` edit is staged
+on `main`'s working tree but not committed (commit blocked by the permission system when the
+coordinator asked for it directly); `deferred-work.md`, `docs/migration-decisions.md`,
+`_bmad-output/implementation-artifacts/sprint-status.yaml` and this story file are edited but
+likewise uncommitted. Landing the `main` commit and re-running the run-count query afterward (`push`
+to `main` should create no run) is the one remaining piece of direct evidence this session could not
+produce itself.
+
 ### File List
+
+- `.forgejo/workflows/ci.yml` — **edited, uncommitted** on `main` (trigger block only, per Task 4;
+  proven correct on a disposable probe branch, not yet committed to `main`'s history)
+- `_bmad-output/implementation-artifacts/2-2-trigger-ci-on-pull-requests-and-feature-branches.md` — this file (Dev Agent Record, task checkboxes, Status)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — updated (Task 8.1/8.2/8.3/8.4)
+- `docs/migration-decisions.md` — updated (Task 8.5, changelog row)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — updated (`2-2-…` → `review`)
+
+No files under `src/`, no `package.json`/Dockerfile changes. Probe branch `probe/2-2-push-trigger`
+was created, pushed, exercised, and deleted (local + remote) entirely within this session; it does
+not appear in the final tree.
 
 ---
 
 ## Open Questions for Review
 
-### Blocking
+### Resolved this session
 
-1. **`has_pull_requests` is `false`, and only Oleg can decide it changes (§1).** AC2 and AC3
-   describe pull requests; the repository does not currently have them. Turning the unit on
-   re-opens the exposure Oleg closed on 2026-08-10 with «ci-hub не надо запускать» — any PR opened
-   from any of ~497 branches whose head commit predates the placeholder executes legacy
-   `.github/workflows/CI.yml` on another team's runner. **Decide before Task 4, and record the
-   exit before the switch, not after.** Current value is «не проверено» since 2026-08-10.
-2. **Which branches carry `ci.yml` (§2, Task 2.2).** The file is on `main` only. Left as is, a
-   feature branch cut from `staging` or `development` runs no CI and says nothing. Propagating
-   means two pushes to CD-triggering refs — proven safe by D9, but they are shared protected
-   branches and the write must be declared.
+1. **`has_pull_requests`.** Decided by Oleg (repeated explicitly in this session's brief): stays
+   `false`. Reconfirmed live 2026-08-13 — `repo_unit` for repo 16 has no row of `type = 3`. Not
+   flipped, not PATCHed. AC2/AC3 close as «не проверено» — the acceptable outcome the story itself
+   named.
+2. **Which branches carry `ci.yml` (§2, Task 2.2).** Decided: **`main` only, for now.**
+   Propagating to `staging`/`development` was recommended by the story but declined this session
+   because it means two more pushes to protected, CD-triggering branches, and this session's writes
+   to `main`/`staging`/`development` were scoped to the single reviewed change already staged on
+   `main`. **Consequence recorded, not hidden:** a feature branch cut from `staging` or
+   `development` today gets no CI, silently. Open item for the parent or a follow-up story.
+3. **`branches-ignore` support on Forgejo 15.0.5+gitea-1.22.0.** **Proven supported**, not assumed
+   — see the mechanism-proof row in Debug Log References (a push naming its own branch in
+   `branches-ignore` produced zero runs for this repository; the identical push without that line
+   produced one, within ~8 seconds).
 
-### Non-blocking
+### Still open
 
-3. **`branches-ignore` support on Forgejo 15.0.5 is «не проверено».** The recommended `push`
-   shape depends on it. If it turns out unsupported, Task 2.1 falls back to (b) or (c) and the
-   AC5 cost estimate changes materially.
-4. **The 497 uncovered branches (`deferred-work.md:122-129`) remain outside every story's scope.**
-   This story makes their PR path *reachable* if Question 1 is answered yes. Someone should own
-   bulk remediation before Story 2.5 opens five real pull requests.
-5. **Run arrival rate vs. host budget.** Story 2.4 owns the 15-minute per-run budget; nothing owns
-   runs-per-day on a host at load 25.82 with 8.0 GiB free. AC5 records the number; it does not
-   assign an owner. Story 4.2 is the closest candidate (`deferred-work.md:141-146`).
-6. **`development` has no branch protection** (`migration-decisions.md:579-580`) while `main` and
-   `staging` do. If push triggers make `development` a CI-bearing ref, that asymmetry is worth a
-   decision rather than an accident.
-7. **No cancel endpoint exists in this API version** (`migration-decisions.md:581-585`). Once
-   triggers are armed, an accidental run costs ~487 s of a shared host with no stop button. Worth
-   knowing before Story 2.5 opens five PRs.
+4. **The literal negative control on `main` itself.** The story's Task 5.5 and this session's
+   "done" bar both ultimately want a push that lands on real `main` and creates no run. That commit
+   is staged in `main`'s working tree but was not committed — the permission system blocked the
+   `git commit` when asked for directly mid-session. Landing it and re-running the run-count query
+   is a one-command follow-up for whoever can commit to `main`.
+5. **`ci.yml` is still `main`-only (§2, Task 2.2's declined half).** Propagation to `staging`/
+   `development` was recommended but not executed this session (see item 2 above). A feature
+   branch cut from either produces silence, not an error, until this is revisited.
+6. **The 497 uncovered branches (`deferred-work.md:122-129`) remain outside every story's scope.**
+   This story makes their PR path *reachable* if `has_pull_requests` is ever turned on. Someone
+   should own bulk remediation before Story 2.5 opens five real pull requests.
+7. **Run arrival rate vs. host budget.** Story 2.4 owns the 15-minute per-run budget; nothing owns
+   runs-per-day on a host at load 11–17 with 7.2 GiB free. AC5 records an estimate (7–16 runs/week);
+   it does not assign an owner. Story 4.2 is the closest candidate (`deferred-work.md:141-146`).
+8. **`development` has no branch protection** (`migration-decisions.md:579-580`) while `main` and
+   `staging` do. If push triggers make `development` a CI-bearing ref (once propagated), that
+   asymmetry is worth a decision rather than an accident.
+9. **No cancel endpoint exists in this API version** (`migration-decisions.md:581-585`). Once
+   triggers are armed, an accidental run costs ~468–487 s of a shared host with no stop button.
+   Worth knowing before Story 2.5 opens five PRs.

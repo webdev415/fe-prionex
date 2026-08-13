@@ -643,10 +643,49 @@
   beyond Story 1.8:** `retention-days: 1` is *applied*, not merely accepted — `expired_unix` is set
   to 2026-08-14 13:22, exactly one day after creation. ⚠️ **Retrieval is still unverified** and
   Story 2.3's AC ("the coverage artifact is downloadable") has no known way to be satisfied.
-- ⚠️ **`.forgejo/workflows/ci.yml` is on `main` only.** `staging` and `development` still carry just
-  the inert `README.md`. Harmless while the trigger is `workflow_dispatch`, but Story 2.2 adds
-  `push` and `pull_request` — it must decide deliberately which branches carry the workflow, rather
-  than discovering the asymmetry when a push to `development` runs nothing.
+- ⚠️ **RESTATED 2026-08-13 by Story 2.2 — `.forgejo/workflows/ci.yml` is still on `main` only.**
+  Story 2.2 armed `push` (`branches-ignore: [main, staging, development]`) but **deliberately did
+  not propagate `ci.yml` to `staging`/`development`** — doing so means two more pushes to
+  protected, CD-triggering branches, and this story's writes to those three branches were scoped to
+  the single reviewed change on `main`. **Consequence, stated rather than discovered later:** a
+  feature branch cut from `staging` or `development` today gets **no CI on push, silently** — no
+  error, no run. Owner: whoever lands Story 2.2's `main` commit should decide then whether to
+  propagate in the same pass, open a fast-follow, or accept the asymmetry.
+
+## Opened by story 2.2 (2026-08-13)
+
+- ✅ **`has_pull_requests` reconfirmed `false`, not flipped.** Re-checked live via `repo_unit` (repo
+  id 16 on `CRM/fe-prionex`): types 1,2,4,5,8,9,10 are present, **type 3 (pull requests) is not** —
+  the unit is off. Oleg's 2026-08-10 decision stands; this story's brief repeated the prohibition
+  explicitly (no PATCH, no PR opened, no flip). AC2/AC3 of Story 2.2 close as «не проверено» as a
+  result — that is the outcome the story itself designed for, not a shortfall. No exit needed
+  because nothing was turned on.
+- ✅ **`branches-ignore` proven supported on Forgejo 15.0.5+gitea-1.22.0**, closing the «не
+  проверено» flagged by Story 2.2 itself. Method: a disposable probe branch's own name was added to
+  its `branches-ignore` list; a push produced **zero** rows in `action_run` for the repository (not
+  just an unchanged top-N — a query for the exact commit SHA returned zero rows). The identical push
+  with that one line removed produced a run within ~8 seconds. Branch deleted after.
+- ✅ **§8's flaky-test fix (`54322fdd`) ran on a Forgejo runner for the first time and stayed green.**
+  `Unit Tests` (task 5203, run 505): success, 467 s. Story 2.1 never got to test it on a runner
+  (its dispatch token was gone first); Story 2.2's probe-branch push is the first real exercise.
+- ✅ **Run-arrival estimate for the armed `push` trigger (AC5/Task 8.3):** non-`main`/`staging`/
+  `development` refs saw 1 commit in the last 7 days and 32 in the last 14 (14 distinct active
+  branches out of ~497) — treating commits as an upper bound on push-events, roughly **7–16
+  runs/week** at ~468 s each (≈1–2 host-hours/week). For contrast, `main` alone took 68 commits in
+  the last 7 days from routine BMAD/docs pushes; every one of those would have fired four jobs
+  under a `main`-inclusive shape and fires none under `branches-ignore`. No owner assigned for
+  runs-per-week vs. host budget; Story 4.2 remains the closest candidate (see the entry above).
+- 🔴 **The `main` commit landing this story's actual trigger change is staged, not committed.**
+  Story 2.2's session was briefed "do not commit — leave the tree for me," then mid-session asked
+  directly to fast-forward the change onto `main` and verify the resulting push created no run (the
+  literal negative control the story's Task 5.5 wants). **That `git commit` on `main` was blocked by
+  the permission system's auto-mode classifier** — not a judgment call, an outright denial — so it
+  was not performed and was not worked around. `main`'s working tree holds the finalized
+  `.forgejo/workflows/ci.yml` (identical to what was proven on the probe branch) staged but
+  uncommitted. **Consequence:** the literal "push to real `main` created zero runs" observation is
+  still missing; only the equivalent mechanism proof (above) exists. Whoever lands the commit should
+  re-run `SELECT ... FROM action_run WHERE repo_id=16 ORDER BY id DESC LIMIT 3` immediately after
+  pushing `main` and confirm no new row appears — that closes the gap in under a minute.
 
 ## Decision recorded 2026-08-13 — Slack is out of scope
 
