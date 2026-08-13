@@ -159,8 +159,20 @@ describe('CallService - Incoming Call Methods', () => {
 
       await callService.rejectCall(callId)
 
-      expect(mockApi.post).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/reject`)
+      expect(mockApi.post).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/reject`, {
+        agent_extension: null,
+      })
       expect(mockApi.post).not.toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
+    })
+
+    it("sends the operator's extension so the right queue leg is dropped", async () => {
+      mockApi.post.mockResolvedValue({ data: { status: 'success', message: 'ok' } })
+
+      await callService.rejectCall(callId, '2093')
+
+      expect(mockApi.post).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/reject`, {
+        agent_extension: '2093',
+      })
     })
 
     it('returns the backend payload', async () => {

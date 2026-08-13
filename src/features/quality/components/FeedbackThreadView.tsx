@@ -41,11 +41,13 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
   const task = taskQuery.data ?? null
 
   if (detailQuery.isLoading) {
-    return <div className="p-4 text-sm text-gray-400">{t('common.loading', 'Loading…')}</div>
+    return (
+      <div className="text-muted-foreground p-4 text-sm">{t('common.loading', 'Loading…')}</div>
+    )
   }
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <div className="p-4 text-sm text-red-500">
+      <div className="text-error-600 p-4 text-sm">
         {t('pages.training.errors.loadFeedbackFailed', 'Failed to load feedback')}
       </div>
     )
@@ -107,7 +109,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+    <div className="bg-card flex flex-col gap-3 rounded-xl p-4 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-dark-500 font-medium">
@@ -116,13 +118,13 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               feedback.feedback_type.replace(/_/g, ' ')
             )}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {new Date(feedback.created_at).toLocaleString()}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isOverdue ? (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+            <span className="bg-error-50 text-error-700 rounded-full px-2 py-0.5 text-xs font-medium">
               {t('pages.training.feedback.overdue', 'Overdue')}
             </span>
           ) : null}
@@ -136,10 +138,10 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 feedback.status === 'completed'
-                  ? 'bg-green-100 text-green-700'
+                  ? 'bg-success-50 text-success-700'
                   : feedback.status === 'read'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-information-50 text-information-700'
+                    : 'bg-muted text-muted-foreground'
               }`}
             >
               {t(`pages.training.feedback.status.${feedback.status}`, feedback.status)}
@@ -149,16 +151,18 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
       </header>
 
       {isCorrection && deadlineIso ? (
-        <div className={`text-xs ${isOverdue ? 'font-medium text-red-600' : 'text-gray-500'}`}>
+        <div
+          className={`text-xs ${isOverdue ? 'text-error-600 font-medium' : 'text-muted-foreground'}`}
+        >
           {t('pages.training.feedback.deadline', 'Deadline')}:{' '}
           {new Date(deadlineIso).toLocaleString()}
         </div>
       ) : null}
 
-      <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+      <div className="bg-muted text-foreground rounded-md p-3 text-sm">
         {feedback.text}
         {feedback.timestamp_ms != null ? (
-          <div className="mt-1 font-mono text-xs text-gray-500">
+          <div className="text-muted-foreground mt-1 font-mono text-xs">
             {formatTs(feedback.timestamp_ms)}
           </div>
         ) : null}
@@ -172,10 +176,10 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                 reply.author_role === viewerRole
                   ? 'bg-primary-50 text-primary-900 self-end'
-                  : 'self-start bg-gray-100 text-gray-700'
+                  : 'bg-muted text-foreground self-start'
               }`}
             >
-              <div className="text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t(`pages.training.feedback.role.${reply.author_role}`, reply.author_role)} ·{' '}
                 {new Date(reply.created_at).toLocaleString()}
               </div>
@@ -184,21 +188,21 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
           ))}
         </ul>
       ) : (
-        <div className="text-xs text-gray-400">
+        <div className="text-muted-foreground text-xs">
           {t('pages.training.feedback.threadEmpty', 'No replies yet.')}
         </div>
       )}
 
       {returnOpen ? (
-        <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-2">
-          <label className="text-xs font-medium text-red-700">
+        <div className="border-error-200 bg-error-50 flex flex-col gap-2 rounded-md border p-2">
+          <label className="text-error-700 text-xs font-medium">
             {t('pages.training.feedback.returnReason', 'Reason for revision')}
           </label>
           <textarea
             rows={2}
             value={returnComment}
             onChange={(e) => setReturnComment(e.target.value)}
-            className="w-full rounded-md border border-red-200 px-2 py-1 text-sm"
+            className="border-error-200 w-full rounded-md border px-2 py-1 text-sm"
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -228,7 +232,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
           value={replyText}
           onChange={(e) => setReplyText(e.target.value)}
           placeholder={t('pages.training.feedback.replyPlaceholder', 'Write a reply…')}
-          className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
+          className="border-border w-full rounded-md border px-2 py-1 text-sm"
         />
         <div className="flex flex-wrap justify-end gap-2">
           {canMarkRead ? (
@@ -313,8 +317,8 @@ function lifecycleLabel(status: CorrectionTaskStatus): LifecycleLabel {
 }
 
 const LIFECYCLE_BADGE: Record<LifecycleLabel, string> = {
-  open: 'bg-amber-100 text-amber-700',
-  done: 'bg-blue-100 text-blue-700',
-  confirmed: 'bg-green-100 text-green-700',
-  returned: 'bg-red-100 text-red-700',
+  open: 'bg-warning-50 text-warning-700',
+  done: 'bg-information-50 text-information-700',
+  confirmed: 'bg-success-50 text-success-700',
+  returned: 'bg-error-50 text-error-700',
 }

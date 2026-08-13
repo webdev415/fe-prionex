@@ -2,6 +2,7 @@
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
+import { useV3UiEnabled } from '@/features/scoring/hooks/useV3Scores'
 import { useAuthStore } from '@/stores/authStore'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
@@ -27,6 +28,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
 import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
@@ -227,10 +229,10 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="truncate text-sm font-semibold text-white">
+              <div className="text-foreground truncate text-sm font-semibold">
                 {minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">
+              <div className="text-muted-foreground text-xs">
                 {minimizedCall.displayPhone || minimizedCall.phoneNumber}
               </div>
             </div>
@@ -239,24 +241,24 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           {/* Status badge */}
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${getStatusColor()}`} />
-            <span className="text-xs font-medium text-white">{getStatusText()}</span>
+            <span className="text-foreground text-xs font-medium">{getStatusText()}</span>
           </div>
 
           {/* Call details — hidden in 'initial' state since nothing has been committed yet */}
           {minimizedCall.callState !== 'initial' && (
-            <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+            <div className="border-border flex flex-col gap-2 border-t pt-2">
               {minimizedCall.callType && (
                 <div className="flex items-center gap-2">
-                  <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
-                  <span className="text-xs text-gray-300 capitalize">
+                  <Icons.Phone size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                  <span className="text-muted-foreground text-xs capitalize">
                     {minimizedCall.callType.replace('-', ' ')}
                   </span>
                 </div>
               )}
               {minimizedCall.elapsedTime !== undefined && minimizedCall.elapsedTime > 0 && (
                 <div className="flex items-center gap-2">
-                  <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                  <span className="text-xs text-gray-300">
+                  <Icons.StopWatch size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                  <span className="text-muted-foreground text-xs">
                     {t('pages.clients.modals.callDialog.talkTime')}:{' '}
                     {formatTime(minimizedCall.elapsedTime)}
                   </span>
@@ -276,10 +278,10 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="truncate text-sm font-semibold text-white">
+              <div className="text-foreground truncate text-sm font-semibold">
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">
+              <div className="text-muted-foreground text-xs">
                 {minimizedCall.callData?.phone || minimizedCall.phoneNumber}
               </div>
             </div>
@@ -288,23 +290,23 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           {/* Status badge */}
           <div className="flex items-center gap-2">
             <div className="bg-primary-500 h-2 w-2 rounded-full" />
-            <span className="text-xs font-medium text-white">
+            <span className="text-foreground text-xs font-medium">
               {t('pages.clients.modals.callRecording.title')}
             </span>
           </div>
 
           {/* Call details */}
-          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+          <div className="border-border flex flex-col gap-2 border-t pt-2">
             {minimizedCall.callData?.type && (
               <div className="flex items-center gap-2">
-                <Icons.Info size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">{minimizedCall.callData.type}</span>
+                <Icons.Info size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">{minimizedCall.callData.type}</span>
               </div>
             )}
             {minimizedCall.callData?.operator && (
               <div className="flex items-center gap-2">
-                <Icons.User size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.User size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {t('pages.clients.modals.callRecording.operator')}:{' '}
                   {minimizedCall.callData.operator}
                 </span>
@@ -312,8 +314,8 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             )}
             {minimizedCall.callData?.duration && (
               <div className="flex items-center gap-2">
-                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.StopWatch size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {t('pages.clients.modals.callRecording.duration')}:{' '}
                   {minimizedCall.callData.duration}
                 </span>
@@ -321,8 +323,8 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             )}
             {minimizedCall.callData?.date && minimizedCall.callData?.time && (
               <div className="flex items-center gap-2">
-                <Icons.Calendar size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.Calendar size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {minimizedCall.callData.date} {minimizedCall.callData.time}
                 </span>
               </div>
@@ -391,7 +393,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
                   <TooltipContent
                     side="right"
                     sideOffset={8}
-                    className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+                    className="border-border bg-card max-w-sm border p-4 shadow-xl"
                   >
                     {getTooltipContent()}
                   </TooltipContent>
@@ -495,27 +497,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user: authUser } = useAuth()
   const agentExtension = authUser?.asterisk_extension || null
 
+  // The call-service is the only authority on a call being over. Without this,
+  // a window whose call ended is cleared solely by the bubble's own polling —
+  // which needs the bubble mounted and the lookup to succeed, and leaves the
+  // window suppressing the incoming popup whenever either fails.
+  const handleCallSettled = useCallback((callId: string) => {
+    useCallStore.getState().closeWindowForCall(callId)
+  }, [])
+
   // Handle incoming calls
-  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension, {
+    onCallSettled: handleCallSettled,
+  })
 
-  // One call window at a time: if a call modal is already open or minimized when
-  // the call arrives, the operator keeps only the bell. The decision is latched
-  // per call rather than subscribed, because the popup itself sets openCallModal
-  // on mount and a live read would make it suppress itself on the next render.
-  const [popupSuppressed, setPopupSuppressed] = useState(false)
-  const suppressionDecidedFor = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!incomingCall) {
-      suppressionDecidedFor.current = null
-      setPopupSuppressed(false)
-      return
-    }
-    if (suppressionDecidedFor.current === incomingCall.call_id) return
-    suppressionDecidedFor.current = incomingCall.call_id
-    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
-    setPopupSuppressed(openCallModal !== null || existing !== null)
-  }, [incomingCall])
+  // One call window at a time. False until the answer is known — see the hook
+  // for why the popup may not render before then.
+  const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
   // Which client the operator picked when the number is shared. Reset per call
   // so a previous choice never leaks onto the next caller.
@@ -735,6 +732,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { unprocessedCount: legalUnprocessedCount } = useLegalInboxSummary({
     enabled: canViewLegalWorkplace,
   })
+
+  // v3 work list is per brand: only brands cut over after the KAN-794 sign-off
+  // get the nav entry.
+  const v3UiEnabled = useV3UiEnabled()
 
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
@@ -964,6 +965,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
           },
           {
+            // Shadow-run report (KAN-794) — always visible to anyone who can see
+            // scoring config. It is how the brand is reviewed BEFORE cutover, so
+            // it must NOT be behind the cutover switch.
+            path: '/dashboard/system-settings/scoring-v3-monitoring',
+            label: t('navigation.scoringV3Monitoring', 'v3 Shadow-Run Report'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          {
+            // v3 tunables (KAN-792). Sits next to the shadow-run report because
+            // that is where tau actually gets decided.
+            path: '/dashboard/system-settings/scoring-v3-settings',
+            label: t('navigation.scoringV3Settings', 'v3 Scoring Settings'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          // Scoring v3 operator work list (KAN-791). Hidden until THIS brand has
+          // passed the shadow-run sign-off (KAN-794) — flipped per brand from the
+          // scoring config, no rebuild.
+          ...(v3UiEnabled
+            ? [
+                {
+                  path: '/dashboard/operator-work-list',
+                  label: t('navigation.operatorWorkList', 'Priority Work List'),
+                  icon: 'chart-01',
+                  // operators' own queue — see routes/index.tsx
+                  requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW_PRIORITY_SCORES,
+                },
+              ]
+            : []),
+          {
             path: '/dashboard/system-settings/repayment-configuration',
             label: t('navigation.repaymentConfiguration'),
             icon: 'chart-01',
@@ -1070,7 +1102,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount])
+  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
@@ -1220,8 +1252,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
 
         {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && !popupSuppressed && (
+        {incomingCall && canShowIncomingPopup && (
           <CallDialogModal
+            // A queue can replace one ringing call with another without the
+            // popup ever unmounting, and the modal resets its timer and state
+            // on `open`, not on the call. Without a per-call identity the
+            // second call inherits the first's "Ringing MM:SS" and, if the
+            // first had already ended, its auto-close countdown.
+            key={incomingCall.call_id}
             open={true}
             onClose={dismissIncomingCall}
             initialState="incoming"

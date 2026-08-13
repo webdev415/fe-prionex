@@ -515,7 +515,9 @@ export function GenerateDocumentModal({
         </div>
       ) : (
         /* ---- Form ---- */
-        <div className="flex flex-col gap-4 p-4 md:p-6">
+        // Scroll the form within the modal: with many document types the list
+        // used to push the Generate button off the bottom of the screen.
+        <div className="flex max-h-[calc(90vh-180px)] flex-col gap-4 overflow-y-auto p-4 md:p-6">
           {/* Credit */}
           <div>
             <label className="text-foreground mb-1 block text-sm font-medium">

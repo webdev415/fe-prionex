@@ -13,17 +13,25 @@
  * timer, the same backend state polling, and the same auto-dismiss timer.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
 import { invalidateCallRelatedQueries } from '@/features/calls/utils/queryInvalidation'
+import { getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+
+/**
+ * Consecutive not-found polls before a call window is discarded. The poll runs
+ * every 2 s, so this trades a few seconds of a stale bar against never dropping
+ * a live one on a single blip.
+ */
+const NOT_FOUND_POLLS_BEFORE_DISCARD = 3
 
 export function MinimizedCallBubble() {
   const { t } = useTranslation('common')
@@ -42,7 +50,54 @@ export function MinimizedCallBubble() {
 
   // Poll backend call state while minimized and call is active
   const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
-  const { data: callDetails } = useCallDetails(activeCallId)
+  const {
+    data: callDetails,
+    error: callDetailsError,
+    errorUpdatedAt,
+    dataUpdatedAt,
+  } = useCallDetails(activeCallId)
+
+  // A call the backend does not recognise will never reach a terminal state, so
+  // the auto-dismiss below can never fire and the bar sits there indefinitely —
+  // counting as a call in progress and suppressing every incoming-call popup.
+  //
+  // But one not-found is not proof. This also polls a *ringing* inbound call,
+  // whose id arrives on the socket, and discarding that window mid-ring costs
+  // the operator the caller card and the hang-up control with no way back.
+  // Losing a stale bar slowly is far cheaper than losing a live one quickly, so
+  // require the answer to repeat before acting on it.
+  const notFoundStreak = useRef(0)
+  useEffect(() => {
+    if (activeCallId === null) {
+      notFoundStreak.current = 0
+      return
+    }
+    // Deliberately not `if (callDetails)`: the query keeps the last successful
+    // data when a later poll fails, so a call the backend has since forgotten
+    // would reset its own streak on every poll and never be discarded — the
+    // stuck bar this exists to clear. Only a success *newer* than the error
+    // counts.
+    if (dataUpdatedAt >= errorUpdatedAt) {
+      notFoundStreak.current = 0
+      return
+    }
+    if (!minimizedCall || !callDetailsError) return
+    // 404: no such call. 422: the id is not even one the backend can parse.
+    const status = getErrorStatus(callDetailsError)
+    if (status !== 404 && status !== 422) return
+    notFoundStreak.current += 1
+    if (notFoundStreak.current < NOT_FOUND_POLLS_BEFORE_DISCARD) return
+    setOpenCallModal(null)
+    clearMinimizedCall()
+  }, [
+    activeCallId,
+    callDetailsError,
+    errorUpdatedAt,
+    dataUpdatedAt,
+    minimizedCall,
+    setOpenCallModal,
+    clearMinimizedCall,
+  ])
 
   // Live elapsed time: compute from the snapshot + time passed since minimized.
   // Only advance the timer for dialing/connected — otherwise 'initial' or 'ended'
@@ -226,10 +281,10 @@ export function MinimizedCallBubble() {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="truncate text-sm font-semibold text-white">
+              <div className="text-foreground truncate text-sm font-semibold">
                 {minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">
+              <div className="text-muted-foreground text-xs">
                 {minimizedCall.displayPhone || minimizedCall.phoneNumber}
               </div>
             </div>
@@ -238,24 +293,24 @@ export function MinimizedCallBubble() {
           {/* Status badge */}
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${getStatusColor()}`} />
-            <span className="text-xs font-medium text-white">{getStatusText()}</span>
+            <span className="text-foreground text-xs font-medium">{getStatusText()}</span>
           </div>
 
           {/* Call details — hidden in 'initial' state since the user hasn't confirmed a call type or started dialing */}
           {minimizedCall.callState !== 'initial' && (
-            <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+            <div className="border-border flex flex-col gap-2 border-t pt-2">
               {minimizedCall.callType && (
                 <div className="flex items-center gap-2">
-                  <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
-                  <span className="text-xs text-gray-300 capitalize">
+                  <Icons.Phone size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                  <span className="text-muted-foreground text-xs capitalize">
                     {minimizedCall.callType.replace('-', ' ')}
                   </span>
                 </div>
               )}
               {liveElapsedTime > 0 && (
                 <div className="flex items-center gap-2">
-                  <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                  <span className="text-xs text-gray-300">
+                  <Icons.StopWatch size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                  <span className="text-muted-foreground text-xs">
                     {t('pages.clients.modals.callDialog.talkTime')}: {formatTime(liveElapsedTime)}
                   </span>
                 </div>
@@ -274,10 +329,10 @@ export function MinimizedCallBubble() {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="truncate text-sm font-semibold text-white">
+              <div className="text-foreground truncate text-sm font-semibold">
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">
+              <div className="text-muted-foreground text-xs">
                 {minimizedCall.callData?.phone || minimizedCall.phoneNumber}
               </div>
             </div>
@@ -286,23 +341,23 @@ export function MinimizedCallBubble() {
           {/* Status badge */}
           <div className="flex items-center gap-2">
             <div className="bg-primary-500 h-2 w-2 rounded-full" />
-            <span className="text-xs font-medium text-white">
+            <span className="text-foreground text-xs font-medium">
               {t('pages.clients.modals.callRecording.title')}
             </span>
           </div>
 
           {/* Call details */}
-          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+          <div className="border-border flex flex-col gap-2 border-t pt-2">
             {minimizedCall.callData?.type && (
               <div className="flex items-center gap-2">
-                <Icons.Info size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">{minimizedCall.callData.type}</span>
+                <Icons.Info size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">{minimizedCall.callData.type}</span>
               </div>
             )}
             {minimizedCall.callData?.operator && (
               <div className="flex items-center gap-2">
-                <Icons.User size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.User size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {t('pages.clients.modals.callRecording.operator')}:{' '}
                   {minimizedCall.callData.operator}
                 </span>
@@ -310,8 +365,8 @@ export function MinimizedCallBubble() {
             )}
             {minimizedCall.callData?.duration && (
               <div className="flex items-center gap-2">
-                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.StopWatch size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {t('pages.clients.modals.callRecording.duration')}:{' '}
                   {minimizedCall.callData.duration}
                 </span>
@@ -319,8 +374,8 @@ export function MinimizedCallBubble() {
             )}
             {minimizedCall.callData?.date && minimizedCall.callData?.time && (
               <div className="flex items-center gap-2">
-                <Icons.Calendar size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
+                <Icons.Calendar size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-muted-foreground text-xs">
                   {minimizedCall.callData.date} {minimizedCall.callData.time}
                 </span>
               </div>
@@ -353,7 +408,7 @@ export function MinimizedCallBubble() {
       {(minimizedCall.callState === 'dialing' ||
         minimizedCall.callState === 'connected' ||
         minimizedCall.callState === 'ended') && (
-        <span className="flex items-center gap-1 text-xs text-gray-300 tabular-nums">
+        <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
           <Icons.StopWatch size={12} strokeWidth={1.5} />
           {formatTime(liveElapsedTime)}
         </span>
@@ -443,7 +498,7 @@ export function MinimizedCallBubble() {
           <TooltipContent
             side="bottom"
             sideOffset={8}
-            className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+            className="border-border bg-card max-w-sm border p-4 shadow-xl"
           >
             {getTooltipContent()}
           </TooltipContent>

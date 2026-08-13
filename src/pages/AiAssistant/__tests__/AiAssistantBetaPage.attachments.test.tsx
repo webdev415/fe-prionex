@@ -23,7 +23,8 @@ vi.mock('sonner', () => ({
 }))
 
 import { toast } from 'sonner'
-import { sendChatMessage } from '@/features/aiAssistant/api'
+import { AssistantChatStreamError, sendChatMessage } from '@/features/aiAssistant/api'
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS } from '@/features/aiAssistant/attachments'
 
 const mockedSendChatMessage = vi.mocked(sendChatMessage)
 
@@ -69,12 +70,26 @@ function makeImageFile(name = 'shot.png', type = 'image/png', content = 'png-byt
   return new File([content], name, { type })
 }
 
+function makeFile(name: string, type: string, content = `${name}-bytes`): File {
+  return new File([content], name, { type })
+}
+
 function pasteFiles(files: File[]) {
   fireEvent.paste(getTextarea(), {
     clipboardData: {
       items: files.map((file) => ({ kind: 'file', getAsFile: () => file })),
     },
   })
+}
+
+function dropFiles(files: File[]) {
+  const dropZone = screen.getByTestId('pending-attachments-dropzone')
+  fireEvent.drop(dropZone, { dataTransfer: { files, types: ['Files'] } })
+}
+
+function pickFiles(files: File[]) {
+  const input = screen.getByTestId('attach-image-input') as HTMLInputElement
+  fireEvent.change(input, { target: { files } })
 }
 
 describe('AiAssistantBetaPage attachments', () => {
@@ -112,39 +127,36 @@ describe('AiAssistantBetaPage attachments', () => {
     pasteFiles([makeImageFile()])
 
     const chips = await screen.findByTestId('pending-attachments')
-    expect(chips.querySelectorAll('img')).toHaveLength(1)
+    await waitFor(() => expect(chips.querySelectorAll('img')).toHaveLength(1))
 
     fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.attachImageRemove' }))
     expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
     expect(URL.revokeObjectURL).toHaveBeenCalled()
   })
 
-  it('caps pasted images at 3 and warns about the overflow', async () => {
+  it(`caps attachments at ${MAX_ATTACHMENTS} and warns about the overflow`, async () => {
     renderPage()
-    pasteFiles([
-      makeImageFile('1.png'),
-      makeImageFile('2.png'),
-      makeImageFile('3.png'),
-      makeImageFile('4.png'),
-    ])
+    pasteFiles(
+      Array.from({ length: MAX_ATTACHMENTS + 1 }, (_, index) => makeImageFile(`${index}.png`))
+    )
 
     const chips = await screen.findByTestId('pending-attachments')
-    await waitFor(() => expect(chips.querySelectorAll('img')).toHaveLength(3))
-    expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachImageTooMany')
+    await waitFor(() => expect(chips.querySelectorAll('img')).toHaveLength(MAX_ATTACHMENTS))
+    expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTooMany')
   })
 
   it('rejects unsupported types and oversized images', async () => {
     renderPage()
     pasteFiles([makeImageFile('a.gif', 'image/gif')])
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachImageUnsupported')
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachUnsupported')
     )
 
     const big = makeImageFile('big.png')
-    Object.defineProperty(big, 'size', { value: 5 * 1024 * 1024 + 1 })
+    Object.defineProperty(big, 'size', { value: MAX_ATTACHMENT_BYTES + 1 })
     pasteFiles([big])
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachImageTooLarge')
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTooLarge')
     )
     expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
   })
@@ -152,7 +164,7 @@ describe('AiAssistantBetaPage attachments', () => {
   it('sends pasted images with the text and renders the thumbnail in the feed', async () => {
     renderPage()
     pasteFiles([makeImageFile()])
-    await screen.findByTestId('pending-attachments')
+    await screen.findByTestId('pending-attachment-image')
 
     fireEvent.change(getTextarea(), { target: { value: 'что на скрине?' } })
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
@@ -170,10 +182,170 @@ describe('AiAssistantBetaPage attachments', () => {
     expect(await screen.findByAltText('pages.aiAssistant.attachedImageAlt')).toBeInTheDocument()
   })
 
+  it('accepts a PDF picked from the file dialog and shows name, size and type', async () => {
+    renderPage()
+    const pdf = makeFile('borg.pdf', 'application/pdf')
+    Object.defineProperty(pdf, 'size', { value: 2048 })
+    pickFiles([pdf])
+
+    const card = await screen.findByTestId('pending-attachment-document')
+    expect(card).toHaveTextContent('borg.pdf')
+    expect(card).toHaveTextContent('2 KB')
+    // The image preview must not be used for documents.
+    expect(screen.queryByTestId('pending-attachment-image')).not.toBeInTheDocument()
+  })
+
+  it('accepts a dropped CSV whose type the OS did not report', async () => {
+    renderPage()
+    dropFiles([makeFile('rows.csv', '')])
+
+    const card = await screen.findByTestId('pending-attachment-document')
+    expect(card).toHaveTextContent('rows.csv')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('rejects an executable and an archive', async () => {
+    renderPage()
+    pickFiles([makeFile('setup.exe', 'application/x-msdownload')])
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachUnsupported')
+    )
+
+    vi.mocked(toast.error).mockClear()
+    dropFiles([makeFile('pack.zip', 'application/zip')])
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachUnsupported')
+    )
+    expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
+  })
+
+  it('rejects a document above the size limit before sending it', async () => {
+    renderPage()
+    const huge = makeFile('huge.xlsx', 'application/vnd.ms-excel')
+    Object.defineProperty(huge, 'size', { value: MAX_ATTACHMENT_BYTES + 1 })
+    pickFiles([huge])
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTooLarge')
+    )
+    expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
+    expect(mockedSendChatMessage).not.toHaveBeenCalled()
+  })
+
+  it('sends a document with the text and keeps the card in the feed', async () => {
+    renderPage()
+    pickFiles([makeFile('borg.pdf', 'application/pdf', 'pdf-bytes')])
+    await screen.findByTestId('pending-attachment-document')
+
+    fireEvent.change(getTextarea(), { target: { value: 'розбери документ' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+    expect(mockedSendChatMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'розбери документ',
+        attachments: [
+          {
+            type: 'document',
+            mime: 'application/pdf',
+            data_b64: btoa('pdf-bytes'),
+            filename: 'borg.pdf',
+          },
+        ],
+      }),
+      expect.anything()
+    )
+    expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
+    const bubbleCard = await screen.findByTestId('message-attachment-document')
+    expect(bubbleCard).toHaveTextContent('borg.pdf')
+  })
+
+  it('shows the server wording when the backend rejects this particular file (422)', async () => {
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({
+        status: 422,
+        message: 'документ 62914560 байт перевищує ліміт 52428800 байт (50MB)',
+      })
+    )
+    renderPage()
+    pickFiles([makeFile('borg.pdf', 'application/pdf')])
+    await screen.findByTestId('pending-attachment-document')
+
+    fireEvent.change(getTextarea(), { target: { value: 'розбери документ' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'документ 62914560 байт перевищує ліміт 52428800 байт (50MB)'
+      )
+    )
+    expect(
+      await screen.findByText('документ 62914560 байт перевищує ліміт 52428800 байт (50MB)')
+    ).toBeInTheDocument()
+    // The typed text comes back so the operator can retry without re-typing.
+    await waitFor(() => expect(getTextarea().value).toBe('розбери документ'))
+  })
+
+  it('shows the total-cap wording on a 413, not the single-file one', async () => {
+    // Different rejection, different advice: 422 means "fix this file", 413
+    // means "send fewer at a time". Collapsing them sends the operator hunting
+    // for an oversized file that does not exist.
+    const totalCapMessage =
+      'Сумарний розмір вкладень перевищує ліміт — надішліть файли меншими партіями.'
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({
+        status: 413,
+        code: 'attachments_total_too_large',
+        message: totalCapMessage,
+      })
+    )
+    renderPage()
+    pickFiles([makeFile('borg.pdf', 'application/pdf'), makeFile('rows.csv', 'text/csv')])
+    await waitFor(() =>
+      expect(screen.getAllByTestId('pending-attachment-document')).toHaveLength(2)
+    )
+
+    fireEvent.change(getTextarea(), { target: { value: 'розбери документи' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(totalCapMessage))
+    expect(await screen.findByText(totalCapMessage)).toBeInTheDocument()
+    await waitFor(() => expect(getTextarea().value).toBe('розбери документи'))
+  })
+
+  it('falls back to the batch wording when a 413 carries no readable body', async () => {
+    mockedSendChatMessage.mockRejectedValueOnce(new AssistantChatStreamError({ status: 413 }))
+    renderPage()
+    fireEvent.change(getTextarea(), { target: { value: 'привіт' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTotalTooLarge')
+    )
+  })
+
+  it('does not show the gateway wording when the size limit fires before our service', async () => {
+    // Kong's request-size-limiting answers `kong.response.error(413, "Request
+    // size limit exceeded")` — English, phrased in bytes, and with no machine
+    // code. Passing it through would leave the operator with a message that
+    // neither names the problem in their language nor says what to do.
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({ status: 413, message: 'Request size limit exceeded' })
+    )
+    renderPage()
+    fireEvent.change(getTextarea(), { target: { value: 'привіт' } })
+    fireEvent.keyDown(getTextarea(), { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('pages.aiAssistant.attachTotalTooLarge')
+    )
+    expect(toast.error).not.toHaveBeenCalledWith('Request size limit exceeded')
+  })
+
   it('does not send an image without text and explains why', async () => {
     renderPage()
     pasteFiles([makeImageFile()])
-    await screen.findByTestId('pending-attachments')
+    await screen.findByTestId('pending-attachment-image')
 
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 

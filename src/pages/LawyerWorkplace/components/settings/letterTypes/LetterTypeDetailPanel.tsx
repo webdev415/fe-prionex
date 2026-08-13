@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { Icons } from '@/lib/icons'
 import type { LetterTypeConfig } from '../../../settings/types'
 import { LetterTypeBasicInfoSection } from './detail/LetterTypeBasicInfoSection'
 import { LetterTypeDetailFooter } from './detail/LetterTypeDetailFooter'
@@ -33,6 +35,7 @@ export function LetterTypeDetailPanel({
   isDeleting = false,
   readOnly = false,
 }: LetterTypeDetailPanelProps) {
+  const { t } = useTranslation('common')
   const handleDraftChange = (next: LetterTypeConfig) => {
     if (readOnly) return
     onDraftChange(next)
@@ -72,7 +75,19 @@ export function LetterTypeDetailPanel({
         />
       </div>
 
-      {!readOnly && (
+      {readOnly ? (
+        // Don't silently drop the Save/Discard footer — a hidden save button reads
+        // as "the button disappeared". Show why it's unavailable instead.
+        <div className="border-border flex shrink-0 items-start gap-2 border-t px-4 py-4 sm:px-5 lg:px-6">
+          <Icons.Warning size={16} strokeWidth={1.5} className="text-warning-500 mt-0.5 shrink-0" />
+          <p className="text-muted-foreground text-[12px] leading-snug">
+            {t(
+              'pages.lawyerWorkplace.settings.readOnlyFooterNotice',
+              'Saving is unavailable — you do not have permission to change department settings. If you should have access, sign out and sign in again to refresh your permissions.'
+            )}
+          </p>
+        </div>
+      ) : (
         <LetterTypeDetailFooter
           isDirty={isDirty}
           isSaving={isSaving}

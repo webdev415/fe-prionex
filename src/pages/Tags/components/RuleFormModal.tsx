@@ -84,7 +84,7 @@ function CronPreview({
 }) {
   const humanized = humanizeCronLocal(expression, t)
   if (humanized === expression) return null
-  return <p className="text-xs text-green-600">{humanized}</p>
+  return <p className="text-success-600 text-xs">{humanized}</p>
 }
 
 // Dropdown options loaded from tagConfigStore (manageable via Settings tab)
@@ -446,11 +446,11 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
               {isEdit ? (
-                <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={2} />
               ) : (
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
               )}
             </div>
           }
@@ -567,7 +567,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-muted-foreground text-xs">
                   {t(`pages.tags.rules.triggerHelpers.${triggerType}`, '')}
                 </p>
               </div>
@@ -577,7 +577,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 <div className="space-y-1.5">
                   <Label>{t('pages.tags.rules.eventName', 'Event name')}</Label>
                   <select
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                    className="border-border bg-card text-foreground w-full rounded-md border px-3 py-2 text-sm"
                     value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
                     onChange={(e) => {
                       if (e.target.value === '__custom__') {
@@ -614,7 +614,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   {errors.trigger_event?.message && (
                     <p className="text-error-500 text-xs">{errors.trigger_event.message}</p>
                   )}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-muted-foreground text-xs">
                     {t('pages.tags.rules.eventHint', 'Select a system event or enter your own')}
                   </p>
                 </div>
@@ -677,7 +677,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Conditions */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.rules.conditions', 'Conditions')}</Label>
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t(
                   'pages.tags.rules.conditionsHelp',
                   'All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.'
@@ -808,7 +808,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       type="button"
                       variant="ghost"
                       size="icon-xs"
-                      className="self-start text-gray-400 hover:text-red-500"
+                      className="text-muted-foreground hover:text-error-500 self-start"
                       onClick={() => remove(index)}
                       aria-label={t('actions.remove', 'Remove')}
                     >
@@ -821,7 +821,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-muted-foreground hover:text-foreground text-xs"
                   onClick={() => append({ field: '', op: 'eq', value: '' })}
                   leftIcon={<Icons.Add size={12} />}
                 >

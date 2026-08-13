@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -21,12 +21,23 @@ import {
   useLegalLetterTypes,
 } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
+import type { SearchType } from '@/api/clientSearchApi'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { LegalLetterType } from '@/features/lawyerWorkplace'
 import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
+
+// Same client-search criteria as the "New outgoing letter" modal so a lawyer can
+// look a client up by phone / name / email / TIN / contract — not only by name.
+const CLIENT_SEARCH_TYPES: { value: SearchType; labelKey: string; fallback: string }[] = [
+  { value: 'phone', labelKey: 'search.phoneNumber', fallback: 'Phone number' },
+  { value: 'name', labelKey: 'search.fullName', fallback: 'Full name' },
+  { value: 'email', labelKey: 'search.email', fallback: 'Email' },
+  { value: 'tin', labelKey: 'search.tin', fallback: 'TIN' },
+  { value: 'contract_number', labelKey: 'search.contractNumber', fallback: 'Contract number' },
+]
 
 interface CreateKanbanTaskModalProps {
   open: boolean
@@ -143,14 +154,16 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
+  const [clientSearchType, setClientSearchType] = useState<SearchType>('phone')
   const [priority, setPriority] = useState<TaskPriority>('normal')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowAtDefaultTime())
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
     debouncedClientSearch,
-    { enabled: open && debouncedClientSearch.length >= 2 }
+    { enabled: open && debouncedClientSearch.length >= 2, searchType: clientSearchType }
   )
+  const activeClientSearchType = CLIENT_SEARCH_TYPES.find((o) => o.value === clientSearchType)
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
   const letterTypes = useMemo(
@@ -172,17 +185,24 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [lawyers]
   )
 
-  useEffect(() => {
-    if (!open) return
-    requestAnimationFrame(() => {
-      setLawyerUserId(assignableLawyers[0]?.user_id ?? null)
-      setLetterTypeId(letterTypes[0]?.id ?? null)
+  // Reset the form only when the modal transitions closed → open, adjusting state
+  // during render (React's recommended pattern) rather than in an effect. The
+  // previous effect re-ran on every assignableLawyers/letterTypes reference change
+  // (any background refetch of lawyers/letter-types), which wiped the client and
+  // other fields the user had already picked — read as "the form keeps resetting
+  // / errors while I fill it in".
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
       setClientId('')
       setClientSearch('')
       setPriority('normal')
       setDeadline(getTomorrowAtDefaultTime())
-    })
-  }, [assignableLawyers, letterTypes, open])
+      setLawyerUserId(assignableLawyers[0]?.user_id ?? null)
+      setLetterTypeId(letterTypes[0]?.id ?? null)
+    }
+  }
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
@@ -302,7 +322,40 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                 >
                   {t('pages.lawyerWorkplace.kanban.createTask.clearClient', 'Clear')}
                 </button>
-              ) : null}
+              ) : (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-foreground border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
+                    >
+                      <Icons.Search size={12} strokeWidth={1.5} className="text-muted-foreground" />
+                      {activeClientSearchType
+                        ? t(activeClientSearchType.labelKey, activeClientSearchType.fallback)
+                        : ''}
+                      <Icons.ArrowDown
+                        size={13}
+                        strokeWidth={1.5}
+                        className="text-muted-foreground"
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    {CLIENT_SEARCH_TYPES.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        className="cursor-pointer text-[13px]"
+                        onClick={() => {
+                          setClientSearchType(opt.value)
+                          setClientSearch('')
+                        }}
+                      >
+                        {t(opt.labelKey, opt.fallback)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <SearchableSelect
               options={clientOptions}

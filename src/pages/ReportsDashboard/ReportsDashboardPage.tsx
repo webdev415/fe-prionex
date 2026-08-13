@@ -1,12 +1,15 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports dashboard with KPIs and agent performance metrics.
- * Integrates with Report Service backend API.
+ * Main page for viewing reports. Hosts three tabs (active tab in the URL via
+ * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
+ * (default), the "Відпрацювання за ЦД" client processing report, and the
+ * "Верифікація 3-х осіб" third-party verification report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import {
   KPICard,
   PeriodTabs,
@@ -35,6 +38,9 @@ import {
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { ClientProcessingTab } from '@/features/clientProcessing'
+import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
+import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
 // Error State Component
@@ -58,10 +64,10 @@ function ErrorState({ message }: { message: string }) {
 }
 
 // ============================================================================
-// Main Component
+// Dashboard Tab (the pre-tabs page content, unchanged)
 // ============================================================================
 
-export function ReportsDashboardPage() {
+function DashboardTab() {
   const { t } = useTranslation('common')
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('today')
 
@@ -197,36 +203,6 @@ export function ReportsDashboardPage() {
     })
   }
 
-  // Check token expiry in useEffect to avoid impure operations during render
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      const token = localStorage.getItem(SESSION.TOKEN_KEY)
-
-      // Decode and check token expiry
-      if (token) {
-        try {
-          const base64Url = token.split('.')[1]
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-          const payload = JSON.parse(atob(base64))
-          const now = Math.floor(Date.now() / 1000)
-          const isExpired = payload.exp && payload.exp < now
-
-          if (isExpired) {
-            console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
-            // Clear expired token
-            localStorage.removeItem(SESSION.TOKEN_KEY)
-            // Force logout
-            setTimeout(() => {
-              window.location.href = '/login'
-            }, 1000)
-          }
-        } catch (e) {
-          console.error('[ReportsDashboard] Failed to decode token:', e)
-        }
-      }
-    }
-  }, [isAuthenticated, projectId, user])
-
   // Check if user is authenticated
   if (!isAuthenticated || !user) {
     return (
@@ -279,11 +255,11 @@ export function ReportsDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col items-start gap-4 self-stretch sm:gap-5">
-      {/* Page Header */}
+      {/* Tab header: period tabs + export. The page title (h1) lives in the
+          tab host so it renders on every tab; an empty first grid cell keeps
+          the PeriodTabs centered on lg screens. */}
       <div className="flex flex-col gap-3 self-stretch lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4">
-        <span className="text-foreground text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl lg:justify-self-start">
-          {t('pages.reports.title')}
-        </span>
+        <div className="hidden lg:block" aria-hidden />
         <div className="flex w-full justify-center lg:w-auto">
           <div className="bg-card flex w-full max-w-md items-center justify-center gap-1 rounded-lg p-1 shadow-sm sm:w-auto sm:max-w-none">
             <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
@@ -449,6 +425,122 @@ export function ReportsDashboardPage() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Main Component — tab host
+// ============================================================================
+
+const REPORT_TABS = ['dashboard', 'processing', 'verification'] as const
+type ReportsTab = (typeof REPORT_TABS)[number]
+
+const DEFAULT_REPORTS_TAB: ReportsTab = 'dashboard'
+
+/** Unknown/absent `?tab=` values fall back to the default tab. */
+function resolveReportsTab(rawTab: string | null): ReportsTab {
+  return REPORT_TABS.includes(rawTab as ReportsTab) ? (rawTab as ReportsTab) : DEFAULT_REPORTS_TAB
+}
+
+export function ReportsDashboardPage() {
+  const { t } = useTranslation('common')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
+
+  const activeTab: ReportsTab = resolveReportsTab(searchParams.get('tab'))
+
+  // DEV-only token expiry check, at the host level so it covers every tab.
+  // Kept in useEffect to avoid impure operations during render.
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const token = localStorage.getItem(SESSION.TOKEN_KEY)
+
+      // Decode and check token expiry
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const payload = JSON.parse(atob(base64))
+          const now = Math.floor(Date.now() / 1000)
+          const isExpired = payload.exp && payload.exp < now
+
+          if (isExpired) {
+            console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
+            // Clear expired token
+            localStorage.removeItem(SESSION.TOKEN_KEY)
+            // Force logout
+            setTimeout(() => {
+              window.location.href = '/login'
+            }, 1000)
+          }
+        } catch (e) {
+          console.error('[ReportsDashboard] Failed to decode token:', e)
+        }
+      }
+    }
+  }, [isAuthenticated, user])
+
+  // Page-tab switches push a history entry (Back returns to the previous
+  // tab); only filter updates inside the tabs use `replace`.
+  //
+  // The report tabs' filter params (`?from/?to/?dept` for processing,
+  // `?sf/?st/?cf/?ct` for verification) are deliberately KEPT when switching
+  // tabs: the filters must survive a round-trip through the dashboard
+  // (documented contract of both tabs, and the key sets don't collide). A
+  // slightly "dirty" dashboard URL is accepted cosmetics.
+  const handleTabChange = (tab: ReportsTab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
+      if (tab === DEFAULT_REPORTS_TAB) next.delete('tab')
+      else next.set('tab', tab)
+      return next
+    })
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 self-stretch">
+      {/* Page title — shared by every tab */}
+      <h1 className="text-foreground text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+        {t('pages.reports.title')}
+      </h1>
+
+      {/* Tab strip. Manual activation: switching a page tab unmounts the
+          panel, refires its requests and pushes a history entry — far too
+          expensive to happen on every arrow keypress. */}
+      <SegmentedTabs<ReportsTab>
+        variant="underline"
+        activation="manual"
+        className="self-stretch"
+        items={REPORT_TABS.map((tab) => ({ id: tab, label: t(`pages.reports.tabs.${tab}`) }))}
+        value={activeTab}
+        onChange={handleTabChange}
+        ariaLabel={t('pages.reports.title')}
+        idPrefix="reports"
+      />
+
+      <div
+        role="tabpanel"
+        id={segmentedTabPanelId('reports', activeTab)}
+        aria-labelledby={segmentedTabId('reports', activeTab)}
+        // Deliberately NOT focusable: the ARIA APG rule that a tabpanel needs
+        // `tabIndex={0}` applies only to panels with no focusable content.
+        // Every panel here is full of it (export button, period tabs, date
+        // pickers, department sub-tabs), so a tabIndex would only add a
+        // useless extra stop on the way through the page.
+        className="flex flex-1 flex-col self-stretch"
+      >
+        {activeTab === 'processing' ? (
+          <ClientProcessingTab />
+        ) : activeTab === 'verification' ? (
+          <ThirdPartyVerificationTab />
+        ) : (
+          <DashboardTab />
+        )}
+      </div>
     </div>
   )
 }

@@ -171,7 +171,14 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _transientRetryCount?: number
 }
 
-function isTransientFailure(error: AxiosError): boolean {
+/**
+ * Transient backend failure = 502/503/504 response OR a network-level
+ * failure (timeout / DNS / connection refused). Exported so feature code
+ * can classify errors the same way this client's retry logic does — e.g.
+ * to show a "temporarily unavailable" message instead of a generic error.
+ */
+export function isTransientFailure(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false
   if (error.response) {
     return TRANSIENT_RETRY_STATUSES.has(error.response.status)
   }

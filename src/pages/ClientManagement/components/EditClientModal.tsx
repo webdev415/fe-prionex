@@ -560,6 +560,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <DateSelect
                 value={ymdToDate(dateOfBirth)}
+                autoComplete="new-password"
                 onChange={({ value }) => setDateOfBirth(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
@@ -715,6 +716,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <DateSelect
                 value={ymdToDate(issuedDate)}
+                autoComplete="new-password"
                 onChange={({ value }) => setIssuedDate(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
@@ -730,6 +732,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <DateSelect
                 value={ymdToDate(expiresDate)}
+                autoComplete="new-password"
                 onChange={({ value }) => setExpiresDate(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}

@@ -79,8 +79,8 @@ export function LeaveFeedbackButton({
       </Button>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-1 w-80 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
-          <label className="text-xs font-medium text-gray-700">
+        <div className="border-border bg-card absolute right-0 z-20 mt-1 w-80 rounded-lg border p-3 shadow-lg">
+          <label className="text-foreground text-xs font-medium">
             {t('pages.training.feedback.typeLabel', 'Type')}
           </label>
           <select
@@ -90,7 +90,7 @@ export function LeaveFeedbackButton({
               setFeedbackType(next)
               if (next === 'correction_task' && !deadline) setDeadline(defaultDeadline())
             }}
-            className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm"
+            className="border-border mt-1 mb-2 w-full rounded-md border px-2 py-1.5 text-sm"
           >
             {FEEDBACK_TYPES.map((ft) => (
               <option key={ft} value={ft}>
@@ -99,18 +99,18 @@ export function LeaveFeedbackButton({
             ))}
           </select>
 
-          <label className="text-xs font-medium text-gray-700">
+          <label className="text-foreground text-xs font-medium">
             {t('pages.training.feedback.text', 'Feedback text')}
           </label>
           <textarea
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
+            className="border-border mt-1 mb-2 w-full rounded-md border px-2 py-1 text-sm"
           />
 
           {getCurrentTimeMs ? (
-            <label className="mb-2 flex items-center gap-2 text-xs text-gray-700">
+            <label className="text-foreground mb-2 flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
                 checked={includeTimestamp}
@@ -122,7 +122,7 @@ export function LeaveFeedbackButton({
 
           {isCorrectionTask ? (
             <>
-              <label className="text-xs font-medium text-gray-700">
+              <label className="text-foreground text-xs font-medium">
                 {t('pages.training.feedback.deadline', 'Deadline')}
               </label>
               <input
@@ -130,7 +130,7 @@ export function LeaveFeedbackButton({
                 required
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
+                className="border-border mt-1 mb-2 w-full rounded-md border px-2 py-1 text-sm"
               />
             </>
           ) : null}

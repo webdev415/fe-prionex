@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -408,12 +409,12 @@ export function EmailThreadPanel({
         aria-busy={isLoading || undefined}
       >
         {isLoading ? (
-          <div className="flex w-full max-w-md flex-col gap-3 px-6">
+          <div className="flex w-full max-w-md animate-pulse flex-col gap-3 px-6">
             <span className="sr-only">{title}</span>
-            <div className="bg-muted h-4 w-40 animate-pulse rounded" />
-            <div className="bg-muted h-3 w-full animate-pulse rounded" />
-            <div className="bg-muted mt-4 h-24 w-full animate-pulse rounded-xl" />
-            <div className="bg-muted h-24 w-full animate-pulse rounded-xl" />
+            <div className="bg-muted h-4 w-40 rounded" />
+            <div className="bg-muted h-3 w-full rounded" />
+            <div className="bg-muted mt-4 h-24 w-full rounded-xl" />
+            <div className="bg-muted h-24 w-full rounded-xl" />
           </div>
         ) : (
           <div className="flex max-w-sm flex-col items-center px-6 text-center">
@@ -549,6 +550,20 @@ export function EmailThreadPanel({
               {letter.subject}
             </h3>
           </div>
+          {letter.clientId && letter.clientCode ? (
+            <Link
+              to={`/dashboard/clients/${letter.clientId}`}
+              className="text-secondary-800 hover:text-secondary-700 flex shrink-0 items-center gap-1 text-[11px] font-medium hover:underline"
+              title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
+            >
+              <Icons.User size={12} strokeWidth={1.5} />
+              <span className="max-w-[160px] truncate">
+                {letter.clientName
+                  ? `${letter.clientName} · ${letter.clientCode}`
+                  : letter.clientCode}
+              </span>
+            </Link>
+          ) : null}
         </div>
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">

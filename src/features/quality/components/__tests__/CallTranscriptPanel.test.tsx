@@ -397,11 +397,11 @@ describe('CallTranscriptPanel — v7 format', () => {
 
     const crit = screen.getByTestId('transcript-v7-tag-2')
     expect(crit).toHaveTextContent('тиск / звинувачення')
-    expect(crit.className).toContain('text-[#c8492f]')
+    expect(crit.className).toContain('text-error-700')
 
     const unknown = screen.getByTestId('transcript-v7-tag-3')
     expect(unknown).toHaveTextContent('нове діло')
-    expect(unknown.className).toContain('text-[#5b6472]') // info fallback
+    expect(unknown.className).toContain('text-muted-foreground') // info fallback
   })
 
   it('lists tagged turns as key moments and seeks on click', () => {
@@ -688,12 +688,12 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2, business style)', () 
     render(<CallTranscriptPanel callId="c1" />)
 
     const negBubble = screen.getByText('Слухаю.').closest('div')
-    expect(negBubble?.className).toContain('border-l-[#d1495b]')
+    expect(negBubble?.className).toContain('border-l-[var(--color-error-500)]')
     const posBubble = screen.getByText(/w1 w2 w3 w4 w5/).closest('div')
-    expect(posBubble?.className).toContain('border-l-[#3aa66b]')
+    expect(posBubble?.className).toContain('border-l-[var(--color-success-500)]')
     const plainBubble = screen.getByText('Перебиваю відповідь.').closest('div')
-    expect(plainBubble?.className).not.toContain('border-l-[#d1495b]')
-    expect(plainBubble?.className).not.toContain('border-l-[#3aa66b]')
+    expect(plainBubble?.className).not.toContain('border-l-[var(--color-error-500)]')
+    expect(plainBubble?.className).not.toContain('border-l-[var(--color-success-500)]')
   })
 
   it('renders the client dynamics strip: smoothed bars, raw+smoothed tooltip, peak dot, seek', () => {
@@ -741,7 +741,7 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2, business style)', () 
     expect(chips).toHaveTextContent('полегшення')
     const trend = screen.getByTestId('transcript-v7-audio-trend')
     expect(trend).toHaveTextContent('↑') // improved
-    expect(trend.className).toContain('text-[#3aa66b]')
+    expect(trend.className).toContain('text-success-600')
   })
 
   it('marks «тон ≠ слова» turns with a text badge and lists them among key moments', () => {
@@ -901,7 +901,7 @@ describe('CallTranscriptPanel — 31B conclusion block (step B)', () => {
     // Header: yellow grade badge with the score, one-liner in the body.
     const grade = screen.getByTestId('transcript-conclusion-grade')
     expect(grade).toHaveTextContent('35/100')
-    expect(grade.className).toContain('bg-yellow-100')
+    expect(grade.className).toContain('bg-warning-50')
     expect(screen.getByTestId('transcript-conclusion-oneliner')).toHaveTextContent(
       'Тиск без ідентифікації.'
     )
@@ -986,7 +986,7 @@ describe('CallTranscriptPanel — 31B conclusion block (step B)', () => {
 
     const grade = screen.getByTestId('transcript-conclusion-grade')
     expect(grade).toHaveTextContent('red') // no score → raw grade word
-    expect(grade.className).toContain('bg-red-100')
+    expect(grade.className).toContain('bg-error-50')
     expect(screen.queryByTestId('transcript-conclusion-calc')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-conclusion-strengths')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-conclusion-tone')).not.toBeInTheDocument()

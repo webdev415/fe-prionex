@@ -32,6 +32,14 @@ import {
   FACT_REF_TAG,
   rehypeAssistantMarkers,
 } from './assistantMarkers'
+import { resolveAssistantSource } from './assistantFiles'
+import {
+  AssistantBlockedRef,
+  AssistantExternalRef,
+  AssistantFileCard,
+  AssistantImage,
+  AssistantUnresolvableRef,
+} from './AssistantFileAttachment'
 
 // Register only the languages the assistant realistically emits — keeps the
 // Prism bundle lean (PrismLight ships no languages by default).
@@ -325,6 +333,66 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
   )
 }
 
+/**
+ * `![alt](path)` из ответа ассистента. Ссылка на файл моста — это то, что
+ * ассистент только что построил: график рисуем прямо в пузыре, выгрузку
+ * (csv/xlsx) отдаём карточкой. Всё, что ведёт наружу, картинкой НЕ становится:
+ * см. {@link resolveAssistantSource}.
+ */
+function ImageRenderer({ src, alt }: ComponentPropsWithoutRef<'img'>) {
+  const resolved = resolveAssistantSource(typeof src === 'string' ? src : undefined)
+
+  switch (resolved.type) {
+    case 'internal':
+      return resolved.kind === 'image' ? (
+        <AssistantImage url={resolved.url} name={resolved.name} alt={alt} />
+      ) : (
+        <AssistantFileCard
+          url={resolved.url}
+          name={resolved.name}
+          kind={resolved.kind}
+          label={alt}
+        />
+      )
+    case 'external':
+      return <AssistantExternalRef href={resolved.href} text={alt} />
+    // Модель потеряла токен, переписывая свой же ответ. Битый `<img>` тут
+    // выглядел бы как поломка CRM — показываем, что ссылку надо перезапросить.
+    case 'unresolvable':
+      return <AssistantUnresolvableRef text={alt} />
+    default:
+      return <AssistantBlockedRef text={alt} />
+  }
+}
+
+/**
+ * `[текст](path)`. Ссылка на файл моста превращается в карточку-выгрузку, а не
+ * в голый URL. Внешняя ссылка остаётся ссылкой, но открывается только руками
+ * оператора. У всего остального href отбирается — текст остаётся, перехода нет.
+ */
+function LinkRenderer({ href, children }: ComponentPropsWithoutRef<'a'>) {
+  const resolved = resolveAssistantSource(href)
+  const text = nodeToText(children)
+
+  switch (resolved.type) {
+    case 'internal':
+      return (
+        <AssistantFileCard
+          url={resolved.url}
+          name={resolved.name}
+          kind={resolved.kind}
+          label={text}
+        />
+      )
+    case 'external':
+      return <AssistantExternalRef href={resolved.href} text={text} />
+    default:
+      // У ссылки текст и есть содержимое: снимаем href, текст оставляем на
+      // месте. Так же обходится и `javascript:` — обезврежено, но не потеряно.
+      return <>{children}</>
+  }
+}
+
 /** Инлайн-ссылка на карточку клиента `/dashboard/clients/:id` с иконкой. */
 function ClientRef({ id, label }: { id: number; label: string }) {
   return (
@@ -396,6 +464,8 @@ export function MarkdownMessage({
       // so `pre` is a transparent passthrough (no nested <pre> styling).
       pre: ({ children: preChildren }) => <>{preChildren}</>,
       table: TableRenderer,
+      img: ImageRenderer,
+      a: LinkRenderer,
     }
 
     // Кастомные теги (`fact-ref`/`client-ref`) не входят в тип Components

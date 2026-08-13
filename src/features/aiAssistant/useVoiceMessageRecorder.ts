@@ -1,12 +1,13 @@
 /**
  * Voice-message recorder: long-press on the mic records an audio note that is
- * sent to POST /chat as an `audio` attachment (backend PR #638 — the gateway
- * transcribes it server-side). Limits mirror the backend: ≤10MB decoded,
- * recording auto-stops at 120s.
+ * sent to POST /chat as an `audio` attachment (the gateway transcribes it
+ * server-side). The recording auto-stops at 120s and is dropped past
+ * {@link MAX_VOICE_MESSAGE_BYTES} — a device-side guard against a runaway
+ * recording, not the chat's attachment size limit.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MAX_AUDIO_BYTES, MAX_VOICE_MESSAGE_SECONDS } from './attachments'
+import { MAX_VOICE_MESSAGE_BYTES, MAX_VOICE_MESSAGE_SECONDS } from './attachments'
 
 export type VoiceRecorderStatus = 'idle' | 'recording'
 
@@ -145,7 +146,7 @@ export function useVoiceMessageRecorder(
       teardown()
       if (discarded) return
       if (blob.size === 0) return
-      if (blob.size > MAX_AUDIO_BYTES) {
+      if (blob.size > MAX_VOICE_MESSAGE_BYTES) {
         optionsRef.current.onError('tooLarge')
         return
       }

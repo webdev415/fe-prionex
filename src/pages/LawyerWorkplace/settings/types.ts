@@ -74,11 +74,17 @@ export type SyncInterval = '15m' | '30m' | '1h' | '4h' | 'daily'
 
 export type RoutingMatchType = 'sender_domain' | 'subject_keyword' | 'default'
 
+// 'assign_type' assigns a letter type; 'move_to_working' parks matched letters
+// into «Робочі листи» (no letter type).
+export type RoutingAction = 'assign_type' | 'move_to_working'
+
 export interface MailboxRoutingRule {
   id: string
   matchType: RoutingMatchType
   value: string
+  // Empty string for a 'move_to_working' rule (it carries no letter type).
   letterTypeId: string
+  action: RoutingAction
   isActive: boolean
   priority: number
 }

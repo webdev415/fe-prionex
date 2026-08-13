@@ -51,6 +51,8 @@ export interface TagDefinition extends Tag {
   sort_order?: number
   /** Restrict to departments; omit / empty = all departments */
   department_ids?: number[] | null
+  /** When true and default_ttl_hours is set, expires_at skips Sat/Sun */
+  skip_weekends?: boolean
   updated_at?: string
   is_deleted?: boolean
 }
@@ -82,6 +84,7 @@ export interface TagDefinitionCreate extends TagCreate {
   is_related_tag?: boolean
   sort_order?: number
   department_ids?: number[] | null
+  skip_weekends?: boolean
 }
 
 export interface TagUpdate {
@@ -109,6 +112,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   is_related_tag?: boolean
   sort_order?: number
   department_ids?: number[] | null
+  skip_weekends?: boolean
 }
 
 export interface TagsListResponse {

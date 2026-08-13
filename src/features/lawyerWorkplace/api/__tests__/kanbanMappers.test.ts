@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { buildKanbanColumnMovePatch, mapLegalKanbanItemToTask } from '../kanbanMappers'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  buildKanbanColumnMovePatch,
+  mapLegalKanbanItemToTask,
+  matchesDeadlineFilter,
+} from '../kanbanMappers'
 import type { KanbanTask } from '@/pages/LawyerWorkplace/kanban/kanbanData'
 import type { LegalKanbanTaskItem } from '../types'
 import {
   isLegalDueDateOverdue,
   legalDefaultDueDateIso,
+  legalDueCalendarDay,
   legalOverdueDueDateIso,
 } from '../../utils/legalDueDate'
 
@@ -17,6 +22,7 @@ const baseTask: KanbanTask = {
   title: 'Legal: Complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
+  clientId: 10,
   deadline: legalDefaultDueDateIso(TZ),
   closedAt: null,
   priority: 'medium',
@@ -85,5 +91,75 @@ describe('mapLegalKanbanItemToTask — letter grouping', () => {
   it('keeps a standalone letter_count of 0 as-is (no letter linked)', () => {
     const task = mapLegalKanbanItemToTask({ ...baseItem, letter_count: 0 }, [], TZ)
     expect(task.letterCount).toBe(0)
+  })
+})
+
+describe('mapLegalKanbanItemToTask — column resolution', () => {
+  it('routes a real non-legacy prod letter type to in_progress, not "Не визначено"', () => {
+    // Regression: prod letter types (e.g. type_1785239278754 / УБКІ) are not in
+    // the legacy KNOWN_TYPES set. They must NOT collapse to the "not_defined" column.
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: 'type_1785239278754', status: 'pending', is_overdue: false },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('in_progress')
+  })
+
+  it('routes a real non-legacy letter type to overdue when past due', () => {
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: 'type_1785239278754', status: 'pending', is_overdue: true },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('overdue')
+  })
+
+  it('keeps letters with no letter type at all in "not_defined"', () => {
+    const task = mapLegalKanbanItemToTask(
+      { ...baseItem, letter_type_id: null, status: 'pending' },
+      [],
+      TZ
+    )
+    expect(task.columnId).toBe('not_defined')
+  })
+})
+
+// The card, the deadline filter and the CSV export each decide which calendar
+// day a deadline falls on. Before KAN-1000 all three read the offset-less wire
+// value the same wrong way and so agreed with each other; fixing only the card
+// would have left them disagreeing by a day.
+describe('matchesDeadlineFilter (offset-less wire values)', () => {
+  const dueTask = (deadline: string): KanbanTask => ({
+    ...baseTask,
+    deadline,
+    columnId: 'in_progress',
+  })
+
+  it('places a late-evening deadline on the profile-timezone day', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-20T09:00:00Z'))
+    // 22:00 UTC on Aug 31 is 01:00 on Sep 1 in Kyiv, so it is out of this month.
+    expect(legalDueCalendarDay('2026-08-31T22:00:00', TZ)).toBe('2026-09-01')
+    expect(matchesDeadlineFilter(dueTask('2026-08-31T22:00:00'), 'this_month', TZ)).toBe(false)
+    expect(matchesDeadlineFilter(dueTask('2026-08-31T12:00:00'), 'this_month', TZ)).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it('decides from the same day the card renders', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-20T09:00:00Z'))
+    for (const stored of [
+      '2026-08-19T21:00:00',
+      '2026-08-20T00:30:00',
+      '2026-08-31T12:00:00',
+      '2026-08-31T22:00:00',
+      '2026-09-01T08:00:00',
+    ]) {
+      const day = legalDueCalendarDay(stored, TZ)
+      const withinMonth = day >= '2026-08-20' && day <= '2026-08-31'
+      expect(matchesDeadlineFilter(dueTask(stored), 'this_month', TZ)).toBe(withinMonth)
+    }
+    vi.useRealTimers()
   })
 })

@@ -108,6 +108,35 @@ export interface CallStateEventData {
   project_id?: number
   total_duration?: number
   hangup_cause?: number
+  /**
+   * Set as soon as the answer is seen, ahead of `state` reaching ACTIVE — so
+   * this, not `state`, is what tells you a call has been taken.
+   *
+   * Deliberately not `CallOutcome`: the call-service records this as a free
+   * string and emits values outside that union — `rejected`, `missed`, and the
+   * Asterisk dispositions rendered in `lib/callOutcome.ts` (`cancel`,
+   * `unavailable`, `congestion`, …). Typing it as the union would promise an
+   * exhaustiveness that does not hold on the wire. Compare against
+   * `CallOutcome.ANSWERED` after lower-casing.
+   */
+  outcome?: string | null
+  /**
+   * The operator who picked up, present only when that is actually known —
+   * i.e. the answering leg's channel was identifiable. Absent means "somebody
+   * answered but we cannot say who", which consumers should treat as unknown
+   * rather than falling back to a guess.
+   */
+  answered_by?: string | null
+  /**
+   * The record's current agent, which changes meaning as the call progresses:
+   * the first-rung operator while the queue is still ringing, and the answerer
+   * once the answering leg has been adopted — which happens at DialEnd, before
+   * `state` reaches ACTIVE.
+   *
+   * Adoption only occurs when the answering channel is identifiable, so this is
+   * not a reliable answer to "who picked up". Use `answered_by` for that.
+   */
+  agent_extension?: string
   [key: string]: unknown
 }
 

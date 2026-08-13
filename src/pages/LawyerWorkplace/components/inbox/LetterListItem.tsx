@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatLetterTime } from '../../utils/formatters'
@@ -42,6 +43,7 @@ export interface LetterListItemProps {
 
 export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemProps) {
   const { t, i18n } = useTranslation('common')
+  const navigate = useNavigate()
   const displayStatus = letter.status
   const status = STATUS_KEYS[displayStatus]
   const typeColour = letter.letterType
@@ -133,15 +135,45 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
         )}
 
         {letter.clientCode ? (
-          <div className="flex items-center gap-1">
-            {letter.clientName ? (
-              <>
-                <span className="text-foreground text-[11px]">{letter.clientName}</span>
-                <span className="text-muted-foreground text-[11px]"> · </span>
-              </>
-            ) : null}
-            <span className="text-muted-foreground text-[11px]">{letter.clientCode}</span>
-          </div>
+          // This item is itself a <button>, so the client link can't be a nested
+          // <a>; use a role="link" span that navigates to the client card and
+          // stops the click from also selecting the letter.
+          letter.clientId ? (
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate(`/dashboard/clients/${letter.clientId}`)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation()
+                  navigate(`/dashboard/clients/${letter.clientId}`)
+                }
+              }}
+              className="flex cursor-pointer items-center gap-1 hover:underline"
+              title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
+            >
+              {letter.clientName ? (
+                <>
+                  <span className="text-foreground text-[11px]">{letter.clientName}</span>
+                  <span className="text-muted-foreground text-[11px]"> · </span>
+                </>
+              ) : null}
+              <span className="text-muted-foreground text-[11px]">{letter.clientCode}</span>
+            </span>
+          ) : (
+            <div className="flex items-center gap-1">
+              {letter.clientName ? (
+                <>
+                  <span className="text-foreground text-[11px]">{letter.clientName}</span>
+                  <span className="text-muted-foreground text-[11px]"> · </span>
+                </>
+              ) : null}
+              <span className="text-muted-foreground text-[11px]">{letter.clientCode}</span>
+            </div>
+          )
         ) : (
           <em className="text-error-700 text-[11px] italic">
             {t('pages.lawyerWorkplace.letterItem.unidentified', 'unidentified')}
