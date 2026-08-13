@@ -6145,7 +6145,9 @@
           "bank_transfer": "Bank transfer",
           "online_gateway": "Online payment",
           "card": "Card"
-        }
+        },
+        "email": "E-mail",
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)"
       },
       "debtSummary": {
         "title": "Debt Summary",

@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Icons } from '@/lib/icons'
 import {
   Select,
@@ -135,6 +136,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
     profile.middle_name?.trim() || legacyNames?.middle || ''
   )
   const [email, setEmail] = useState(profile.email || '')
+  // Moved here from the client panel: it is a client-record edit, so it
+  // belongs with the rest of the form and rides the same PUT.
+  const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth || '')
   const [maritalStatus, setMaritalStatus] = useState(profile.marital_status || '')
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
@@ -189,6 +193,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [workError, setWorkError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
 
+  const emailTrimmed = email.trim()
+  const emailChanged = emailTrimmed !== (profile.email ?? '').trim()
+
   const invalidateClientCaches = () => {
     queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId), exact: true })
     queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
@@ -216,12 +223,19 @@ function EditForm({ profile, clientId }: EditFormProps) {
       first_name: fn,
       last_name: ln,
       middle_name: middleName.trim() ? middleName.trim() : undefined,
-      email: email.trim() ? email.trim() : undefined,
+      // Send the address only when the operator changed it: imports left
+      // invalid addresses in the data and ClientUpdate validates with
+      // EmailStr, so resubmitting an untouched one rejects the whole save
+      // and blocks edits to unrelated fields. Clearing sends null rather
+      // than undefined — the backend applies dict(exclude_unset=True), so
+      // undefined would silently leave the old address in place.
+      email: emailChanged ? emailTrimmed || null : undefined,
       date_of_birth: dateOfBirth || undefined,
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
       tax_id: tid,
+      do_not_send_to_ubki: doNotSendToUbki,
     }
 
     try {
@@ -324,12 +338,19 @@ function EditForm({ profile, clientId }: EditFormProps) {
       first_name: fn,
       last_name: ln,
       middle_name: middleName.trim() ? middleName.trim() : undefined,
-      email: email.trim() ? email.trim() : undefined,
+      // Send the address only when the operator changed it: imports left
+      // invalid addresses in the data and ClientUpdate validates with
+      // EmailStr, so resubmitting an untouched one rejects the whole save
+      // and blocks edits to unrelated fields. Clearing sends null rather
+      // than undefined — the backend applies dict(exclude_unset=True), so
+      // undefined would silently leave the old address in place.
+      email: emailChanged ? emailTrimmed || null : undefined,
       date_of_birth: dateOfBirth || undefined,
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
       tax_id: tid,
+      do_not_send_to_ubki: doNotSendToUbki,
     }
 
     setIsSavingAll(true)
@@ -550,6 +571,28 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 disabled={!canEditAll}
                 inputSize="md"
                 className="disabled:bg-muted rounded-md"
+              />
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
+            <div className="flex flex-1 items-center justify-between gap-3">
+              <label
+                className="text-foreground text-xs font-medium sm:text-sm"
+                title={t(
+                  'pages.clients.detail.ubki.doNotSendHint',
+                  'When enabled, this client is excluded from all UBKI submissions.'
+                )}
+              >
+                {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+              </label>
+              <ToggleSwitch
+                checked={doNotSendToUbki}
+                onChange={setDoNotSendToUbki}
+                disabled={!canEditAll}
+                ariaLabel={t(
+                  'pages.clients.detail.ubki.doNotSendLabel',
+                  'Do not send data to UBKI'
+                )}
               />
             </div>
           </div>

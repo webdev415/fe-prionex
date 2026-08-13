@@ -5043,7 +5043,7 @@
         "linkedContact": "Пов'язаний контакт",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
-        "personalAddress": "Особиста адреса",
+        "personalAddress": "Адреса проживання",
         "organizationName": "Назва організації",
         "position": "Посада",
         "experience": "Досвід роботи",
@@ -5491,7 +5491,9 @@
         "assignSearcher": "Призначити розшукувача",
         "minimizeModal": "Згорнути вікно",
         "saveDraftRRSuccess": "Чернетку збережено",
-        "connectRRError": "Не вдалося підключити реструктуризацію"
+        "connectRRError": "Не вдалося підключити реструктуризацію",
+        "email": "Електронна пошта",
+        "dateOfBirthWithAge": "{{date}} ({{age}} років)"
       },
       "modals": {
         "addNote": {
