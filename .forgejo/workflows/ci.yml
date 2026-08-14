@@ -43,6 +43,16 @@ on:
       - main
       - staging
       - development
+  # Added 2026-08-14, Story 2.2 AC2/AC3, once Oleg enabled the pull-request unit.
+  # FR2 asks for both this and the push trigger above, so a branch that is BOTH
+  # pushed and part of an open PR produces TWO runs per push — one `push`, one
+  # `pull_request` — at ~468s each. That is measured, not assumed; see the story's
+  # Dev Agent Record. If the cost is judged too high, dropping the `push` trigger
+  # for PR branches is the lever, not dropping this one: this is the half that
+  # gates merges.
+  pull_request:
+    branches:
+      - main
 
 jobs:
   lint:
