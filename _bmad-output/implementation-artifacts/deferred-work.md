@@ -883,6 +883,20 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   🚨 **The rule it imposes, recorded because four stories depend on it:** *the deploy must work
   without it.* Stories 4.3, 4.8, 5.3 and 6.4 are written, proven and closed with **no** notification
   step; 4.5 adds the step to all of them afterwards. No deploy story may block on the channel.
+- ✅ **SETTLED 2026-08-14 by measurement — and the answer is neither of the two guesses.** With a
+  token: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **404**. **There is no artifacts API**,
+  so the original Story 1.8 claim stands and my `403`-is-not-`404` reasoning was wrong — the `403`
+  was the generic refusal for an unauthenticated call, and the router tells the truth only once you
+  authenticate. **But the web download route is real:**
+  `/CRM/fe-prionex/actions/runs/{index}/artifacts/{name}` exists and serves the file — it just
+  redirects an API token to `/user/login`, because web routes need a **browser session**, not a
+  token.
+  **Therefore, precisely:** a *developer* can download the artifact from the run page; an *agent*
+  cannot. Story 2.3's AC says *"a developer opens the run page … the coverage artifact is
+  downloadable"* — **that AC is satisfiable as written**, and its verification is a thirty-second
+  human click, the same shape as Story 2.1's unread peak-memory line. What is NOT available is any
+  programmatic retrieval, so nothing downstream may be built on fetching an artifact from CI.
+  ⚠️ Original entry follows, kept because the reasoning error in it is instructive.
 - 🔬 **Story 2.3's blocker is unproven and may be phantom.** The standing claim «there is no
   Actions-artifacts API on this instance» was inferred from `404` on **quota** endpoints. Measured
   2026-08-14 unauthenticated: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **403**, the web
