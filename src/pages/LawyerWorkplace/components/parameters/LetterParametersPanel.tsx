@@ -270,6 +270,7 @@ function LetterParametersPanelContent({
   const [typeOverride, setTypeOverride] = useState<string | null>(null)
   const [clientOverride, setClientOverride] = useState<string | null>(null)
   const [noClientLink, setNoClientLink] = useState(false)
+  const unlinkedClientIdRef = useRef<string | null>(null)
   const [clientProjectOverride, setClientProjectOverride] = useState<number | null>(null)
   const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
@@ -565,6 +566,54 @@ function LetterParametersPanelContent({
       .catch(() => {
         // Keep local selection visible even if persistence fails.
       })
+  }
+
+  const persistClientSuggestion = (clientId: number | null) => {
+    if (!effectiveTypeId || isReadOnly) return Promise.resolve()
+    return patchSuggestionsMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: { letter_type_id: effectiveTypeId, client_id: clientId },
+      })
+      .then(() => undefined)
+  }
+
+  // Picking a client writes through immediately, which is what makes the
+  // client's name appear on the letter and across the inbox list. Unlinking has
+  // to write through the same way, or those labels keep naming a client the
+  // operator just detached — every one of them reads the persisted
+  // `suggested_client_id`, including the sender title, which the mapper
+  // deliberately overrides with the client name (KAN-1008).
+  const handleNoClientLinkToggle = (next: boolean) => {
+    if (next) {
+      unlinkedClientIdRef.current = effectiveClientId || null
+      setNoClientLink(true)
+      setClientOverride(null)
+      setContractOverride(null)
+      setClientProjectOverride(null)
+      setSaveSenderEmail(false)
+      void persistClientSuggestion(null).catch(() => {
+        // Leaving the box ticked while the labels still name the client is the
+        // exact confusion this fixes, so fail visibly rather than silently.
+        setNoClientLink(false)
+        unlinkedClientIdRef.current = null
+        toast.error(
+          t('pages.lawyerWorkplace.parameters.noClientLinkFailed', 'Could not unlink the client')
+        )
+      })
+      return
+    }
+
+    setNoClientLink(false)
+    const restored = unlinkedClientIdRef.current
+    unlinkedClientIdRef.current = null
+    if (!restored) return
+    setClientOverride(restored)
+    const parsed = Number(restored)
+    if (!Number.isFinite(parsed) || parsed <= 0) return
+    void persistClientSuggestion(parsed).catch(() => {
+      // Keep local selection visible even if persistence fails.
+    })
   }
 
   const handleClientSelect = (clientId: string) => {
@@ -912,16 +961,7 @@ function LetterParametersPanelContent({
             <label className="flex w-full cursor-pointer items-center gap-2 self-stretch py-1">
               <Checkbox
                 checked={noClientLink}
-                onCheckedChange={(value) => {
-                  const next = value === true
-                  setNoClientLink(next)
-                  if (next) {
-                    setClientOverride(null)
-                    setContractOverride(null)
-                    setClientProjectOverride(null)
-                    setSaveSenderEmail(false)
-                  }
-                }}
+                onCheckedChange={(value) => handleNoClientLinkToggle(value === true)}
                 disabled={confirmMutation.isPending}
               />
               <span className="text-muted-foreground text-[12px] font-normal">
