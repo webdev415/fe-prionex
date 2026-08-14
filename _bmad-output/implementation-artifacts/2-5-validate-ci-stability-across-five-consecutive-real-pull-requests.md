@@ -4,7 +4,7 @@ baseline_commit: 8e10a6fa
 
 # Story 2.5: Validate CI Stability Across Five Consecutive Real Pull Requests
 
-Status: review
+Status: done
 
 > **This story spends more shared infrastructure than any story before it, and it is the only story
 > in Epic 2 whose deliverable can be faked without anyone noticing.** Ten CI runs, ~85 minutes of
@@ -634,9 +634,31 @@ known, not retroactively.
 
 ### Agent Model Used
 
-_To be filled by the dev agent. Record the coordinator model and any subagent use, per the convention
-in Stories 2.2 and 2.4: a subagent's report is not evidence until the coordinator re-runs the
-load-bearing query itself._
+**Implementation:** Claude Sonnet, as dev-story coordinator (the standing Epic 2 model split:
+create-story Opus, dev-story Sonnet, code-review Opus). **The dev agent left this section as the
+template placeholder; it was filled in by the Story 2.5 review**, which is itself a finding — in a
+story whose deliverable is provenance, the provenance of the record was the one thing unrecorded.
+Whether any of the ~60 database figures in Tasks 3–5 were produced by a subagent rather than
+first-hand is **not reconstructible from the dev agent's record**. It is now moot for correctness,
+because the review re-ran every load-bearing query itself (below), but the convention was not
+followed and the next story should not repeat it.
+
+**Review:** Claude Opus 5, as review coordinator, with Haiku subagents used only for mechanical
+citation retrieval and three same-capability adversarial layers (Blind Hunter, Edge Case Hunter,
+Acceptance Auditor). Per the convention in Stories 2.2 and 2.4, **no subagent report was treated as
+evidence.** The review independently re-queried, against the live database on 2026-08-14:
+
+- all ten `action_run` rows (535–544) — `id`, `index`, `event`, `ref`, `workflow_id`, `status`,
+  `commit_sha`, `started`, `stopped`; every duration in Task 4.1's table reproduced exactly;
+- `count(*) = 54`, `max(id) = 544`, `max(index) = 54` for repo 16, against the 44/534/44 baseline —
+  confirming **exactly ten runs created and none unrecorded**;
+- all 40 `action_run_job` rows joined to `action_task` — every per-job duration and `runner_id` in
+  the record reproduced exactly;
+- all 80 `commit_status` rows across the five head SHAs, plus the newest-row-per-context check;
+- all seven `pull_request` rows, including `merge_base`, which independently corroborates §3;
+- git-side: each PR head's parent, the five merge commits' parentage, and blob/tree identity of
+  `ci.yml`, `src/`, `package.json`, `package-lock.json`, `vitest.config.ts` across all five head
+  SHAs (see §4 verification below).
 
 ### Debug Log References
 
@@ -645,14 +667,28 @@ load-bearing query itself._
 - **1.1** Working tree clean at story-open; only `sprint-status.yaml` (this story's own
   ready-for-dev→in-progress edit) and the untracked story file itself differ from HEAD. `git rev-parse
   HEAD` = `8e10a6faae25c019ebd8b8997ab69b816fd2c596`, matches the frontmatter `baseline_commit:
-  8e10a6fa`. **Every branch this story cuts is cut from `8e10a6fa`** (re-verified per-branch at 3.1).
+  8e10a6fa`. ~~**Every branch this story cuts is cut from `8e10a6fa`**~~ **(re-verified per-branch at
+  3.1).** 🔴 **Review correction: that bolded sentence is false, and it cites as confirmation the very
+  records that refute it.** Only PR 1's branch was cut from `8e10a6fa`. §3 requires each branch to be
+  cut from **current `main` HEAD at the moment of cutting**, and `main` advanced with every merge, so
+  PRs 2–5 were correctly cut from `2933f88a`, `d1956306`, `468d0d05` and `25b3fc57` respectively (as
+  3.1 states per PR). **The behaviour was right; the summary sentence was wrong.** Review verified
+  each head commit's parent equals the claimed base, and independently against
+  `pull_request.merge_base` in the database — all five match. Also: Task 1.1 asks for a *clean* tree
+  and the entry records that it was not (a modified `sprint-status.yaml` plus the untracked story
+  file); the subtask is checked `[x]` with no deviation noted.
 - **1.2** Read `.forgejo/workflows/ci.yml` in full. Confirmed: four jobs (`lint`, `typecheck`, `test`,
   `build`), all `runs-on: node-20`; `test` job runs `npm run test:coverage:ci` (`:160`); triggers
   `:40-57` — `workflow_dispatch`, `push` with `branches-ignore: [main, staging, development]`,
   `pull_request` with `branches: [main]`. Matches Dev Notes exactly. No stop condition triggered.
 - **1.3** `select type, count(*) from repo_unit where repo_id=16 group by type` → 8 rows, types
   `{1,2,3,4,5,8,9,10}`. Type 3 (pull requests) present, count 1. Pull-request unit is enabled.
-  Queried 2026-08-14T19:13Z.
+  Queried 2026-08-14 ~17:13**Z** (= 19:13 CEST). 🔴 **Review correction: this originally read
+  "2026-08-14T19:13Z", i.e. CEST wall-clock stamped with a UTC suffix.** Read literally it puts
+  fact-binding two hours *after* the runs it is supposed to precede (run 535 started 17:25 UTC),
+  which inverts the story's central integrity claim of "declared before spending". The ordering is
+  in fact correct — 1.4's `last_online` at 17:15 UTC and run 535's start at 17:25 UTC both follow
+  17:13 UTC — but only once the suffix is fixed.
 - **1.4** `docker ps` on s1: `forgejo-runner-fe-prionex` (up 30h) + `forgejo-runner-fe-prionex-dind`
   (healthy, up 3d); `forgejo-runner-fe-prionex-2` (up 30h) + `-dind-2` (healthy, up 2d) — all four
   containers running. DB: `action_runner` rows 19 (`s1-fe-prionex-1`) and 20 (`s1-fe-prionex-2`), both
@@ -760,7 +796,9 @@ Then one block per PR follows in Task 3.
 - **3.1** Branch cut from `main` HEAD `8e10a6faae25c019ebd8b8997ab69b816fd2c596` (verified equal to
   `origin/main` immediately before `checkout -b`).
 - **3.2** One commit, `784d1cc91ec147224bbabb92a0e27a3bb85f3fa4` — `sprint-status.yaml`:
-  `2-5-… ready-for-dev → in-progress`. Pushed; local pre-commit hook ran the full local suite first
+  `2-5-… backlog → in-progress` (review correction: recorded here and at 2.2/File List as
+  "ready-for-dev → in-progress", but the value at `8e10a6fa` was `backlog`; the commit's actual diff
+  is `backlog → in-progress`). Pushed; local pre-commit hook ran the full local suite first
   (228 files / 1921 tests, all green, ~152 s) — this is the repo's own hook, not part of the ten CI
   runs counted here.
 - **3.3** PR opened via `POST /api/v1/repos/CRM/fe-prionex/pulls` (token, `FJ_TOKEN=` prefix
@@ -984,6 +1022,50 @@ standing practice of committing routine tracking and documentation updates direc
 
 ---
 
+### Review addendum (2026-08-14) — the three claims the dev agent asserted without a query behind them
+
+The dev agent's record sourced every duration, SHA and context to a named table. Three load-bearing
+claims were **asserted rather than queried**. The review closed all three against the live database.
+All three turned out to be true — but they were not evidenced when the story was submitted, and the
+first of them is the one AC1 calls load-bearing.
+
+- 🔑 **"No manual reruns" — now evidenced, not asserted.** The dev agent repeated *"no manual rerun
+  used"* five times with no query behind it, and the contiguity argument in 4.1 does **not** close it:
+  a Forgejo *Rerun* re-executes jobs under the **existing** `action_run.id`, so an unbroken id range
+  535–544 is fully consistent with a rerun having happened. The column that does close it is
+  `attempt`. Queried across runs 535–544:
+
+  | check | result |
+  |---|---|
+  | jobs per run | **4** on all ten runs — no extra job rows |
+  | `action_task` rows per job | **exactly 1** on all 40 jobs — no re-dispatch |
+  | `max(action_run_job.attempt)` | **1** on all ten runs |
+  | `max(action_task.attempt)` | **1** on all ten runs |
+  | `action_task.id` range | **5633–5672, contiguous, 40 rows** — no hidden or discarded task |
+
+  **Every job ran exactly once, on its first and only attempt. AC1's "green on its first and only
+  execution" is now proven from the data rather than promised by the operator.**
+
+- 🔑 **"`ci-hub` was never triggered" — the dev agent's evidence could not have shown it.** The cited
+  evidence was `workflow_id = ci.yml` on rows from `action_run where repo_id = 16`. A run dispatched
+  to another team's runner would still appear in that query, and the query is scoped to one
+  repository, so it establishes neither half. The review closed it properly, instance-wide:
+
+  - `action_task` joined to `action_runner` over the session window (unix 1786728000–1786733500):
+    **only runners 19 (`s1-fe-prionex-1`) and 20 (`s1-fe-prionex-2`) executed anything — 20 tasks
+    each.** All three `ci-hub` runners (`action_runner` ids 8, 9, 10) executed **zero** tasks.
+  - `select count(*) from action_run where started between …` across **all repositories on the
+    instance**: **10**. This story's ten runs are the only runs that started anywhere on the host in
+    that window. No collateral run, no foreign-runner execution.
+
+- 🔑 **§4's "five runs of the same pipeline" — the dev agent proved the weaker claim.** The record
+  asserts that nothing under the Prohibitions was *touched*. §4 asks for something stronger: that the
+  ten runs measured **one** pipeline against **one** code tree. Verified by object identity across all
+  five head SHAs and the baseline: `.forgejo/workflows/ci.yml` blob `40eca52a…`, `src/` tree
+  `aa8ceadb…`, plus identical `package.json`, `package-lock.json`, `vitest.config.ts` and
+  `.github/workflows/` — **one distinct value each, seven refs.** §4's counter-reset condition
+  genuinely never came close to firing.
+
 ### Task 4 — Evaluation against the budget
 
 **4.1 Full ten-run tabulation** (all values from `action_run` / `action_run_job` / `action_task`,
@@ -1006,7 +1088,42 @@ standing practice of committing routine tracking and documentation updates direc
 
 **Budget baseline reconciliation:** `action_run` before this story: `max(id)=534`. This story created
 ids **535–544 inclusive — exactly 10, matching the declared budget exactly.** Zero resets, zero
-extra runs. **Declared 10 (Task 2.1), spent 10.**
+extra runs. **Declared 10 (Task 2.1), spent 10.** (Review: independently confirmed — `count(*)` moved
+44→54 and `max(index)` 44→54, so no run was created and hidden.)
+
+🔴 **Review correction: Task 2.1 declared three quantities and the dev agent reconciled only one.**
+The other two were left as pre-spend estimates and then restated elsewhere as though measured — the
+exact "arithmetic presented as measurement" failure this story inherited from Story 2.4 (`:554`).
+Measured from the rows in the table above:
+
+| Declared (Task 2.1) | Actual | Delta |
+|---|---|---|
+| 10 runs | **10 runs** (ids 535–544) | ✅ exact |
+| ~9200 job-seconds | **8447 job-seconds** (sum of the 40 job durations above) | **−753 s, −8.2%** |
+| ~80–85 min wall clock | **4685 s ≈ 78.1 min** (run 535 `started` → run 544 `stopped`) | ~2–7 min under |
+
+The estimate was conservative in the right direction — the story spent **less** than it declared on
+every axis — but Open Question 3's *"this story spends ~9200 job-seconds"* is the declaration, not
+the measurement. The measured figure is **8447**.
+
+🔴 **Review correction: §6's per-PR cost model is falsified by this story's own timestamps, and the
+dev agent cited it as confirmation instead.** §6 states in bold that the `push` and `pull_request`
+runs *"do not overlap — they queue"* and prices one PR at the **sum** of the two runs (~964 s,
+"not `max()`"). The runs demonstrably overlap: run 536 `started` 1786728391 — 84 s after run 535
+started and **431 s before run 535 stopped**. Measured per-PR wall clock:
+
+| PR | push run | pull_request run | wall clock (push `started` → PR `stopped`) |
+|---|---|---|---|
+| 1 | 535 | 536 | **650 s** |
+| 2 | 537 | 538 | **653 s** |
+| 3 | 539 | 540 | **650 s** |
+| 4 | 541 | 542 | **646 s** |
+| 5 | 543 | 544 | **650 s** |
+
+**~11 minutes per PR, not the ~16 §6 predicted** — a 33% overestimate. Job-level queueing inside the
+`pull_request` run is real (see 4.4 below); run-level serialisation is not. Future stories should
+budget ~11 min of wall clock per PR. The whole-session figure (78 min) landed inside §6's 80–85 min
+estimate only because inter-PR overhead — merging, cutting the next branch — absorbed the difference.
 
 **4.2 Pass/fail against 900 s, per run, not average:**
 
@@ -1023,7 +1140,21 @@ extra runs. **Declared 10 (Task 2.1), spent 10.**
 Three of ten runs fall **outside** the 513–558 s baseline band, all on the high side, all
 `pull_request` runs: **566 s (PR 1), 567 s (PR 2), 564 s (PR 3)** — 6–9 s above the 558 s upper
 bound. One run (512 s, PR 5 push) sits 1 s below the 513 s lower bound — within measurement noise,
-not flagged. **These are not explained by host load**: Debug Log 1.7 recorded load average 2.88–4.38
+not flagged.
+
+> 🔴 **Review correction.** AC3 says *"any run outside that band flagged rather than smoothed"* — it
+> grants no noise exemption, and Task 4.3 itself forbids smoothing. 512 s **is** outside the band.
+> Flagging a 6 s excursion above while dismissing a 1 s excursion below applies the same band
+> asymmetrically in adjacent sentences. **The honest count is four of ten runs outside the band:
+> 566, 567, 564 (high, all `pull_request`) and 512 (low, `push`).** The 512 s run is not interesting
+> — but "not interesting" is a judgement to state, not a reason to change the count. Note further
+> that all four excursions are 1–9 s against a band whose own source calls it ±45 s of host-load
+> noise: **every excursion sits well inside the stated noise floor.** The defensible reading is that
+> all ten runs are consistent with Story 2.4's baseline and none of the four is signal. What follows
+> below is a real mechanism (queueing) and it is worth recording — but it explains a difference
+> smaller than the measurement noise of the thing it is being compared against.
+
+**These are not explained by host load**: Debug Log 1.7 recorded load average 2.88–4.38
 before this story started, markedly *lower* than Story 2.4's 11–17, so host contention predicts
 these runs should be faster, not slower, than the 2.4 baseline — the opposite of what was observed.
 **The explanation that fits the data is the queuing structure recorded in §6 and confirmed in 4.4
@@ -1034,7 +1165,7 @@ explanation, not proven by elimination of every alternative.
 
 **4.4 `push` vs `pull_request` systematic difference — measured, not computed:**
 
-| | push (mean) | pull_request (mean) | difference |
+| | push run | pull_request run | difference |
 |---|---|---|---|
 | PR 1 | 515 s | 566 s | +51 s |
 | PR 2 | 514 s | 567 s | +53 s |
@@ -1047,8 +1178,35 @@ explanation, not proven by elimination of every alternative.
 commit, by 41–53 s, mean +46.8 s.** This confirms Story 2.2's single-pair finding (461 s vs
 503–510 s, ~45 s) as a **real, repeatable effect**, not noise — five-for-five in the same direction,
 with a tight range (41–53 s) around the same magnitude Story 2.2 measured. **Labelled measured, not
-computed**: each number above is a direct `stopped − started` read from `action_run`, and the "mean
-of 5" row is the only arithmetic performed on top of those direct reads.
+computed**: each number above is a direct `stopped − started` read from `action_run`; the difference
+column and the "mean of 5" row are the arithmetic performed on top of those direct reads. (Review:
+the first four header cells originally read "push (mean)"/"pull_request (mean)" — rows 1–5 are single
+observations, not means; corrected. Every value in the table was recomputed from the live rows and
+matches: 51, 53, 43, 41, 46; mean 46.8.)
+
+🔑 **Review addendum — the mechanism is directly measurable, and the dev agent stopped one query
+short of proving it.** 4.3 above calls queueing *"the fitting explanation, not proven by elimination
+of every alternative"*, and the `deferred-work.md` handoff called it *"as best understood"*. It is
+better than that: `action_run_job.started` — a column the dev agent had already dumped at 1.6 and
+recorded durations from at 3.4 — settles it outright. For each run, the offset between the run's
+`started` and its `Unit Tests` job's `started` (that job being 96–99% of the critical path):
+
+| PR | push run: `Unit Tests` wait | pull_request run: `Unit Tests` wait |
+|---|---|---|
+| 1 | 535 → **1 s** | 536 → **56 s** |
+| 2 | 537 → **1 s** | 538 → **56 s** |
+| 3 | 539 → **1 s** | 540 → **56 s** |
+| 4 | 541 → **1 s** | 542 → **52 s** |
+| 5 | 543 → **1 s** | 544 → **50 s** |
+
+**The `push` run's four jobs claim all four slots immediately; the `pull_request` run's critical job
+waits 50–56 s for one to free.** That wait *is* the +41…53 s delta. Decisively: the `Unit Tests` job
+itself is **faster** on the `pull_request` runs (505–511 s) than on the paired `push` runs
+(511–520 s) — so the `pull_request` *pipeline* is not slower at all; only its start is delayed.
+**This means the +46.8 s must not be read as an intrinsic property of the `pull_request` event.** It
+is a slot-contention artefact of running two triggers on one commit against four slots, and it would
+shrink or disappear with more runner capacity. The handoff in `deferred-work.md` has been corrected
+accordingly.
 
 **4.5 Job→runner distribution across ten runs:**
 
@@ -1138,7 +1296,106 @@ contexts, read from `commit_status` rows (never transcribed from job names), ide
 five head SHAs, every one reaching terminal `success` state on every SHA — see Task 5 above for the
 verbatim list and full detail. No discrepancy to report to Story 2.6.
 
-**All four Acceptance Criteria are closed. No AC was deferred.**
+**All four Acceptance Criteria are closed. No AC was deferred.** (Review qualifier: AC2 is closed
+*vacuously* — its condition, "any run that is not green", never obtained. The AC2 note above is
+honest about this; this summary line was not. **Story 2.6 inherits a taxonomy that is written down
+but has never been operated**, so it carries no precedent for how a real failure would be handled.)
+
+---
+
+### Review Findings — Story 2.5 (code review, 2026-08-14, Opus 5 coordinator)
+
+**Verdict: APPROVED.** All four ACs are genuinely supported. The review re-ran every load-bearing
+query first-hand against the live database and **every factual number in the dev agent's record
+reproduced exactly** — all ten run durations, all 40 per-job durations and `runner_id`s, all 80
+`commit_status` rows, all five merges and merge-bases. Nothing was fabricated, nothing was hidden,
+no unrecorded run exists, and no prohibition was breached. The defects below are in the **layer above
+the numbers** — attribution, summary sentences, and one materially wrong hand-off — not in the
+evidence itself.
+
+**Independently confirmed by the review (not taken from the record):** `count(*)` 44→54 and
+`max(id)` 534→544 on `action_run` for repo 16 — exactly ten runs created, none unrecorded; every job
+`attempt = 1` with exactly one `action_task` per job (no reruns); `ci-hub` runners (ids 8, 9, 10)
+executed **zero** tasks and only ten runs started **instance-wide** in the session window; all five
+branch parents equal the claimed `main` head, corroborated independently by `pull_request.merge_base`;
+`ci.yml`, `src/`, `package.json`, `package-lock.json` and `vitest.config.ts` byte-identical across
+all five head SHAs and the baseline; no run on any of the five merge commits.
+
+- [x] **[Review][Patch] 🔴 HIGH — the 497-branch hand-off to Story 2.6 was inverted, and pointed 2.6
+      at the one unsafe option** [`deferred-work.md`]. The record told 2.6 that a stale-branch PR
+      produces contexts that are "**not** any of the eight" and so "can never go green", and on that
+      basis offered a four-context `(pull_request)`-only gate as "a legitimate narrower choice".
+      **Both halves are false.** The legacy `.github/workflows/CI.yml` carries `name: CI` and job
+      names `Lint`/`Type Check`/`Unit Tests`/`Build` — identical to the Forgejo pipeline — so it
+      writes **the same four `CI / … (pull_request)` strings**. Proven by `action_run` **286**
+      (2026-08-10, PR #1): `workflow_id = CI.yml`, all four jobs on **runner id 10 = `ci-hub`**, two
+      of its four contexts `success`. **The real risk is a false green, not a permanent red:** under
+      a four-context gate a stale-branch PR with a green legacy `ci-hub` run satisfies the gate
+      completely. The four `(push)` contexts are the only part a stale branch cannot forge. **Fixed:
+      hand-off rewritten with the evidence, recommendation reversed to "require all eight", and the
+      known eight-context side effect (`staging`/`development` head branches never produce `(push)`
+      contexts) documented.** Also recorded: `workflow_dispatch` runs write no `commit_status` at all
+      (runs 492, 493), so the eight are the complete gating set — a question 2.6 would otherwise have
+      spent a run to answer.
+- [x] **[Review][Patch] 🟠 MEDIUM — AC1's load-bearing "no manual reruns" had no query behind it**
+      [story `3.4`–`3.6`]. Asserted five times, never evidenced; and the run-id contiguity argument
+      cannot close it, because a Forgejo *Rerun* re-executes under the **existing** `action_run.id`.
+      **Fixed: verified via `attempt` — 4 jobs/run, exactly 1 `action_task` per job, `attempt = 1`
+      on all 40 jobs and tasks, task ids 5633–5672 contiguous. The claim is true and now proven.**
+- [x] **[Review][Patch] 🟠 MEDIUM — §6's cost model is falsified by the story's own timestamps, and
+      the record cited it as confirmation** [story §6 / Task 4.3, `migration-decisions.md`]. §6 says
+      the two runs "do not overlap — they queue" and prices a PR at their **sum** (~964 s). Run 536
+      started 84 s after run 535 started and **431 s before it stopped**. Measured per-PR wall clock
+      is **646–653 s (~11 min)**, not ~964 s; whole session 4685 s ≈ 78 min. The falsified form had
+      already propagated into `migration-decisions.md` as settled fact. **Fixed in both files.**
+- [x] **[Review][Patch] 🟠 MEDIUM — the queueing attribution was under-evidenced, then over-stated**
+      [story Task 4.3/4.4]. Hedged as "the fitting explanation" while the proving query sat one
+      column away. **Fixed: `action_run_job.started` shows `Unit Tests` waits 1 s on every `push` run
+      and 50–56 s on every `pull_request` run — that wait *is* the delta.** Conversely the record
+      then over-read +46.8 s as a property of the `pull_request` event; the `Unit Tests` job is in
+      fact *faster* on `pull_request` runs (505–511 s vs 511–520 s). It is slot contention and would
+      vanish with more capacity. Corrected in both files.
+- [x] **[Review][Patch] 🟠 MEDIUM — budget reconciled on one of three declared axes** [story Task
+      4.1]. Declared 10 runs / ~9200 job-seconds / ~80–85 min; only the run count was reconciled,
+      and the *estimate* was then restated as measurement in Open Question 3. **Fixed: measured
+      8447 job-seconds (−8.2%) and 78.1 min. All three axes now reconciled.**
+- [x] **[Review][Patch] 🟠 MEDIUM — `Agent Model Used` left as the template placeholder** [story].
+      In the one story whose deliverable is provenance, the provenance of the record was blank —
+      no way to tell whether any figure came from a subagent. **Fixed.**
+- [x] **[Review][Patch] 🟢 LOW — AC3's baseline band applied asymmetrically** [Task 4.3]. 512 s is
+      outside 513–558 but dismissed as noise while a 6 s excursion above was flagged. AC3 grants no
+      noise exemption. **Fixed: honest count is four of ten — and all four sit inside the ±45 s
+      noise floor the band's own source states, so none is signal.**
+- [x] **[Review][Patch] 🟢 LOW — "every branch is cut from `8e10a6fa`" is false** [Debug 1.1]. True
+      only of PR 1; PRs 2–5 were correctly cut from successive `main` heads. Behaviour right, summary
+      sentence wrong, and it cited the refuting records as confirmation. **Fixed.**
+- [x] **[Review][Patch] 🟢 LOW — "`ci-hub` was never triggered" rested on evidence that could not
+      show it** [Task 3.5]. A repo-16 `workflow_id` query establishes neither half. Claim is true;
+      **fixed by substituting instance-wide runner evidence.**
+- [x] **[Review][Patch] 🟢 LOW — assorted record errors.** Debug 1.3 timestamp `19:13Z` was CEST
+      stamped as UTC (reads as fact-binding *after* the runs it precedes — inverts the story's
+      integrity claim); PR 1 recorded as `ready-for-dev → in-progress` when the commit's diff is
+      `backlog → in-progress`; Task 4.4's table headed "(mean)" over single-run rows; hand-off said
+      "20/20 total job-slots" for 40 (20 each); Open Question 4 left in creation-time voice asking a
+      question the story answered. **All fixed.**
+- [x] **[Review][Patch] 🟢 LOW — "five first-attempt merges into protected `main`" over-reads.**
+      `main`'s rule is permissive and `merger_id = 1` is an admin it exempts. Nothing was bypassed
+      because nothing was gating. **Fixed: qualifier added in the story and the hand-off, since 2.6
+      would otherwise inherit false reassurance.**
+- [x] **[Review][Defer] 🟢 §2's anti-padding guard is unreachable by construction — a create-story
+      defect, not a dev defect.** §2 says "if the fifth PR has nothing honest to carry, stop and say
+      so", but Task 2.2 defines PR N's content as PR N−1's evidence, so the stop condition can never
+      fire. Relatedly, the genuinely independent changes §2 named as supply (`deferred-work.md`, the
+      changelog row) went **direct to `main`** while the self-referential ones filled the PRs. The
+      deviation the dev agent stated ("not a developer's feature work") is narrower than the one
+      actually taken. **Deferred: §2 explicitly authorised the story file's progress records as
+      supply, so the letter was met; the design flaw belongs to whoever writes the next story of
+      this shape.**
+- [x] **[Review][Defer] 🟢 Ten greens bound the flake rate only loosely, and all ten are warm-cache
+      samples from one 78-minute window at unusually low host load.** Task 4.3's ruling-out of host
+      load also rests on a single pre-session `uptime`, not the per-run check the task specifies.
+      **Deferred: closing these costs further CI runs on the shared host, which this review will not
+      spend. Recorded as an explicit limit in the hand-off so 2.6 does not over-read the evidence.**
 
 ### File List
 
@@ -1172,11 +1429,17 @@ _None known at creation time. All preconditions verified present (§1)._
    `CI /` ones — such a PR can never go green. **This is a bigger problem after 2.6 than before it**
    and should be recorded as 2.6's inheritance (Task 6.4).
 3. **Nothing owns runs-per-day on a shared host.** Story 2.4 owns the per-run budget; this story
-   spends ~9200 job-seconds in one session, roughly five times any prior story. Story 2.2's Open
-   Question 7 raised this and assigned no owner.
-4. **No story has yet merged a pull request into protected `main` through the API** (Task 3.8). If
-   it is refused, the five merges need Oleg's hand, and the sequence stalls between PRs rather than
-   failing. Worth knowing before the session starts, not at PR 1.
+   spent **8447 job-seconds measured** (not the ~9200 declared — see the Task 4.1 reconciliation) in
+   one session, roughly five times any prior story. Story 2.2's Open Question 7 raised this and
+   assigned no owner.
+4. ✅ **ANSWERED by this story — question left in creation-time voice, resolved at review.** It read:
+   *"No story has yet merged a pull request into protected `main` through the API. If it is refused,
+   the five merges need Oleg's hand."* It was not refused: **five API merges, five first attempts,
+   zero refusals** (3.8 ×5). But the reassurance is weaker than it sounds and Story 2.6 should not
+   bank on it — `main`'s rule is permissive (`required_approvals: 0`, `enable_push_whitelist: false`,
+   `enable_status_check: false`, `apply_to_admins: false`, re-verified at review) and the merging
+   identity was `merger_id = 1`, an admin the rule exempts by construction. **Nothing was bypassed
+   because nothing was gating.** "Protected `main`" here means a rule exists, not that it blocks.
 5. **`ci.yml` is still `main`-only.** Not exercised by this story (every branch is cut from `main`),
    but a developer cutting from `staging` or `development` gets silence rather than an error, and
    that will bite the first person who does it after 2.6.

@@ -1031,11 +1031,25 @@ reconstructed from a run of its own.
   CI / Build (pull_request)
   ```
 
-  **This is the exact set of eight to require** if Story 2.6 marks all eight as required status
-  checks; if it marks only the four `(pull_request)` contexts (the ones that actually gate a merge
-  decision — the `(push)` contexts fire and resolve on the branch ref before the PR view has
-  anything to show), that is a legitimate narrower choice, but it should be a stated choice, not a
-  default arrived at by not reading this list.
+  **This is the exact set of eight to require.** 🔴 **Corrected by the Story 2.5 review (2026-08-14):
+  an earlier version of this hand-off said that marking only the four `(pull_request)` contexts was
+  "a legitimate narrower choice." It is not — it is the one unsafe choice.** See the 497-branch item
+  below: the legacy `.github/workflows/CI.yml` carries `name: CI` and job names `Lint`, `Type Check`,
+  `Unit Tests`, `Build` — byte-identical to the Forgejo pipeline's — so it writes to **the same four
+  `(pull_request)` context strings**. Those four therefore do not identify which pipeline ran. The
+  four `(push)` contexts are what distinguish them, because a stale branch produces none at all.
+
+  ⚠️ **`workflow_dispatch` is a third armed trigger but adds no ninth context** — verified against
+  the live DB by the review: `ci.yml` runs 492 and 493 (`event = workflow_dispatch`) produced **zero**
+  `commit_status` rows. Manually dispatched runs never write statuses, so the eight above are the
+  complete gating set for this workflow. Story 2.6 does not need to spend a run to establish this.
+
+  ⚠️ **Requiring all eight has one known false-negative, and 2.6 must decide it deliberately.** The
+  `push` trigger carries `branches-ignore: [main, staging, development]`. A PR whose **head** branch
+  is `staging` or `development` (a release-style PR) therefore never produces the four `(push)`
+  contexts and can never satisfy an eight-context gate. Feature-branch PRs — the normal case — are
+  unaffected. Choose consciously: eight contexts blocks stale-branch PRs *and* release PRs; four
+  contexts blocks neither.
 
 - ✅ **Budget verdict: all ten runs passed 900 s individually — closest was 567 s, 333 s (37%) of
   margin.** min 512 s, max 567 s, mean 539.2 s (mean reported for completeness only; the pass/fail
@@ -1048,39 +1062,139 @@ reconstructed from a run of its own.
 - ✅ **The `push`/`pull_request` pairing is now a five-for-five confirmed effect, not a single
   observation.** Every PR's `pull_request` run ran slower than its `push` run on the identical
   commit, by 41–53 s (mean +46.8 s) — matching Story 2.2's original single-pair reading of ~45 s.
-  **Mechanism, as best understood:** the `push` run's jobs claim the four job slots first; the
-  `pull_request` run's jobs queue behind them and only start as slots free up (both runners cap at
-  2 concurrent jobs — 4 slots total, `1-7:427`, `1-9:247`). This is a structural property of "one
-  commit, two triggers, four slots," not a defect — but it means **any required-check budget or SLA
-  Story 2.6 sets should be measured against the `pull_request` context specifically**, since that is
-  reliably the slower of the pair and is also the one that actually gates a merge.
+  **Mechanism — proven by the review, not inferred.** The `push` run's jobs claim the four job slots
+  first; the `pull_request` run's jobs queue behind them and start as slots free up (both runners cap
+  at 2 concurrent jobs — 4 slots total, `1-7:427`, `1-9:247`). The per-job `started` timestamps in
+  `action_run_job` settle it: **`Unit Tests` — 96–99% of the critical path — starts 1 s after run
+  start on every one of the five `push` runs, and 50–56 s after run start on every one of the five
+  `pull_request` runs.** The whole +41…53 s delta is that slot wait; the `Unit Tests` job itself is
+  actually marginally *faster* on the `pull_request` runs (505–511 s) than on the `push` runs
+  (511–520 s). **This is queueing, not a slower pipeline** — it would shrink or vanish with more
+  runner capacity, so do not treat +47 s as an intrinsic property of the `pull_request` event.
+
+  ⚠️ **Correction to the §6 planning model, which this story's data falsifies.** §6 of Story 2.5
+  states the two runs "do not overlap — they queue," and prices a PR at the **sum** of the two runs
+  (~964 s). They do overlap: run 536 started 84 s after run 535 started and 431 s before it stopped.
+  **Measured per-PR wall clock is 646–653 s (~11 min), not ~964 s (~16 min)** — 535→536: 650 s,
+  537→538: 653 s, 539→540: 650 s, 541→542: 646 s, 543→544: 650 s. Whole session, run 535 `started` to
+  run 544 `stopped`: **4685 s ≈ 78 min for five PRs.** Budget future stories at ~11 min of wall clock
+  per PR, not ~16. Job-level queueing is real; run-level serialisation is not.
+
+  It follows that **any required-check budget or SLA Story 2.6 sets should be measured against the
+  `pull_request` context specifically**, since that is reliably the slower of the pair and is the one
+  that gates the merge — but note the dependency: the delta exists *because* a paired `push` run
+  takes the slots first. If that pairing ever changes, the SLA basis changes with it.
 
 - 🔴 **The 497-branch legacy-fallback hazard, restated in Story 2.6's terms.** D9's suppression
   (`.forgejo/workflows/` stops the fallback to `.github/workflows/CI.yml`) resolves **at the commit
   being run, not at `main`** (`migration-decisions.md#d9`). 497 of 501 remote branches still carry a
   head commit that predates this suppression. **Consequence once Story 2.6 turns on required
   status checks:** a PR opened from one of those 497 branches will run the *legacy* workflow — on
-  `ci-hub`, another team's runner — and will produce `commit_status` contexts that are **not** any
-  of the eight `CI / …` strings above. If the required-check set is the eight (or four) `CI / …`
-  contexts, **such a PR can never satisfy them and can never go green, no matter what the code
-  does** — not a flake, not a code failure, a structural dead end. This was worked around
-  procedurally for this story's five PRs (§3: every branch cut fresh from current `main`), which is
-  sufficient for five PRs but does **not** close the underlying hazard — Story 2.2's Open Question 6
-  asked for an owner and still has none (`2-2-…md:841-843`). **This gets materially worse, not
-  better, once 2.6 lands**: today a stale-branch PR just runs the wrong pipeline; after 2.6, it runs
-  the wrong pipeline *and is permanently unmergeable* under the required-check gate. Whoever plans
-  2.6 should decide, explicitly, whether bulk remediation of the 497 branches is a precondition for
-  turning required checks on, or whether it is an accepted rough edge with a documented workaround
-  (e.g., a repo rule that -- outside Story 2.6's current scope -- rejects PRs from branches whose
-  merge-base with `main` predates the D9 commit).
+  `ci-hub`, another team's runner.
+
+  🔴 **Corrected by the Story 2.5 review (2026-08-14). The original text here said such a PR
+  "will produce `commit_status` contexts that are **not** any of the eight `CI / …` strings above"
+  and therefore "can never go green." That is false, and false in the dangerous direction.**
+
+  **Evidence, first-hand from the live DB — the counter-example has been sitting there since
+  2026-08-10.** `action_run` id **286**, `workflow_id = CI.yml` (the legacy file), `event =
+  pull_request`, `ref = refs/pull/1/head` — Story 1.13's fallback probe. All four of its jobs
+  executed on **`action_runner` id 10, name `ci-hub`**. The `commit_status` rows it wrote for SHA
+  `6f641c1f` are:
+
+  ```
+  CI / Lint (pull_request)        success
+  CI / Type Check (pull_request)  success
+  CI / Unit Tests (pull_request)  failure
+  CI / Build (pull_request)       failure
+  ```
+
+  Byte-identical to four of the eight above, because `.github/workflows/CI.yml` and
+  `.forgejo/workflows/ci.yml` share `name: CI` and share all four job display names. Forgejo derives
+  the context as `<workflow name> / <job name> (<event>)`, so **the context string cannot tell the
+  two pipelines apart.** Two of those four legacy contexts went `success`.
+
+  **The real hazard is therefore the opposite of what was written, and worse:**
+
+  - Under a **four-context** `(pull_request)`-only gate, a stale-branch PR whose legacy `ci-hub` run
+    happens to be green **satisfies the gate completely** — a false green, produced by a pipeline
+    that never ran this repository's tests, on a runner Oleg has forbidden. The gate would not
+    block; it would rubber-stamp.
+  - Under an **eight-context** gate, the same PR produces no `(push)` contexts at all (its branch
+    carries no `.forgejo/workflows/`, and the legacy `push` trigger is `branches: [main, staging,
+    development]`, which a feature branch does not match — so nothing fires on the branch ref). The
+    four `(push)` checks stay permanently absent and the PR is correctly blocked.
+
+  **So: require all eight. That is what makes the gate mean anything.** The four `(push)` contexts
+  are not decorative — they are the only part of the set a stale branch cannot forge.
+
+  This was worked around procedurally for this story's five PRs (§3: every branch cut fresh from
+  current `main`), which is sufficient for five PRs but does **not** close the underlying hazard —
+  Story 2.2's Open Question 6 asked for an owner and still has none (`2-2-…md:841-843`). Whoever
+  plans 2.6 should decide, explicitly, whether bulk remediation of the 497 branches is a
+  precondition for turning required checks on, or whether it is an accepted rough edge with a
+  documented workaround (e.g. a repo rule — outside Story 2.6's current scope — rejecting PRs from
+  branches whose merge-base with `main` predates the D9 commit).
 
 - ℹ️ **No Task 5.3 finding to hand forward** — the context count was exactly eight and the strings
   matched the expected `CI / {Lint,Type Check,Unit Tests,Build}` × `{push,pull_request}` form on
-  every one of the five SHAs. Nothing to normalise, nothing to flag beyond the two items above.
+  every one of the five SHAs. Nothing to normalise. **The strings themselves were re-verified against
+  the live `commit_status` rows by the Story 2.5 review** — but note that the strings being *correct*
+  was never the risk; what they *guarantee* is, and that is the corrected 497-branch item above.
 
 - ℹ️ **Runner job-assignment is not pinned to job type.** Across the ten runs, the 2/2 split between
-  runners 19 and 20 was clean on every run (20/20 total job-slots across the ten runs, confirmed
-  both here and in Story 2.4), but *which* runner drew {Lint, Type Check} vs {Unit Tests, Build} flipped starting at PR 4 of
-  this story with no runner-config change (Prohibition 10 held throughout). Not actionable for Story
-  2.6, but worth knowing if a future story tries to reason about per-runner cache warmth by job type
-  — that assumption does not hold.
+  runners 19 and 20 was clean on every run (**40 job-slots total across the ten runs — 20 on runner
+  19, 20 on runner 20**), but *which* runner drew {Lint, Type Check} vs {Unit Tests, Build} flipped
+  starting at PR 4 of this story with no runner-config change (Prohibition 10 held throughout). Not
+  actionable for Story 2.6, but worth knowing if a future story tries to reason about per-runner
+  cache warmth by job type — that assumption does not hold.
+
+- ⚠️ **Four limits on how far this evidence reaches. Story 2.6 should not over-read it.**
+  1. **The merges prove less than they look like.** Five first-attempt API merges into `main`
+     succeeded — but `main`'s rule is permissive (`required_approvals: 0`,
+     `enable_push_whitelist: false`, `enable_status_check: false`, `apply_to_admins: false`) and the
+     merging identity was `merger_id = 1`, an admin the rule exempts by construction. Nothing was
+     bypassed because nothing was gating. This says nothing about post-2.6 merge behaviour.
+  2. **`enable_push: true` with no whitelist means the PR gate is not the only way into `main`.**
+     This story itself committed directly to `main` six times. Required status checks gate PR
+     merges; they do not close the direct-push route. If 2.6's intent is "nothing reaches `main`
+     ungated," required checks alone do not achieve it.
+  3. **`pull_request` runs test `refs/pull/N/head` — the branch tip in isolation, not a merge
+     preview against current `main`** (confirmed: `ref = refs/pull/N/head` on all five). With
+     `block_on_outdated_branch: false`, a PR that was green against an older `main` stays green and
+     merges into a `main` it was never tested against. 2.6 should decide whether to set
+     `block_on_outdated_branch: true`.
+  4. **All ten runs are warm-cache samples inside one 78-minute window at unusually low host load
+     (2.88–4.38 vs Story 2.4's 11–17).** The cold-cache path — first run after a cache eviction or
+     runner rebuild — was not measured here, and ten greens bound the flake rate only loosely. This
+     is good evidence that the pipeline is stable; it is not proof that it cannot fail under a gate.
+
+## Deferred from: code review of story-2.5 (2026-08-14)
+
+- **§2's anti-padding guard is unreachable by construction — a create-story defect, not a dev
+  defect.** §2 of Story 2.5 says "if the fifth PR has nothing honest to carry, **stop and say so**",
+  but Task 2.2 defines PR N's content as PR N−1's CI evidence, so the supply is generated by the
+  sequence being measured and the stop condition can never fire. Relatedly, the genuinely
+  independent changes §2 named as candidate supply (`deferred-work.md` entries, the
+  `migration-decisions.md` changelog row) were committed **direct to `main`** after PR 5, while the
+  self-referential ones filled the five PRs — inverting §2's intent. The deviation the dev agent
+  stated ("not a developer's feature work") is narrower than the one actually taken: four fifths of
+  the PR supply was self-generated. §2 did explicitly authorise "this story file's own progress
+  records" as supply, so the letter was met and the story is not being marked down for it.
+  **Owner needed:** whoever writes the next story that has to manufacture its own PR supply should
+  either name a supply that exists independently of the story, or drop the anti-padding guard as
+  unenforceable rather than carry it as decoration.
+
+- **The stability evidence is narrower than "ten green runs" sounds, and nothing here closes it.**
+  All ten runs are **warm-cache** samples taken inside a single 78-minute window at unusually low
+  host load (2.88–4.38 vs Story 2.4's 11–17). Consequences left open: (a) the **cold-cache** path —
+  the first run after a cache eviction or runner rebuild — has never been measured against the 900 s
+  budget; (b) ten consecutive greens bound the per-run failure probability only loosely, so this is
+  good evidence of stability but not proof that the pipeline cannot fail under a merge gate;
+  (c) Task 4.3 was required to check each run's `started` timestamp against host load and instead
+  used one `uptime` taken before PR 1, so the "not host load" attribution is not falsifiable from
+  the recorded data (the queueing mechanism has since been proven directly, which is what actually
+  settles that question). **Closing any of these costs further CI runs on a shared host carrying
+  another tenant's production; the Story 2.5 review deliberately did not spend them.** Story 2.6
+  should treat the budget verdict as "stable under warm, lightly-loaded conditions", not as
+  unconditional.
