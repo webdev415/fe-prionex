@@ -58,6 +58,7 @@
 
 **Actionable follow-ups this story created and did not track anywhere:**
 
+- ⛔ **SUPERSEDED 2026-08-13 — Oleg's decision «slack не трогаем»; the secret will not be restored. See the Slack decision section below. Original entry follows.**
 - 🔴 **Re-provision the org Actions secret `SLACK_CD_WEBHOOK_URL` before Story 1.12.** Story 1.13
   overwrote its value with a non-resolving `example.invalid` stub. Forgejo secret values are
   write-only, so the original webhook URL is **unrecoverable** — whoever created it on
@@ -229,6 +230,7 @@
   protected (permanent) and open for whoever executes the deletion next, token already provisioned
   (`/root/.fj_token_3_1` on s1, `write:package`).
   *Original finding, kept for the reasoning:*
+- ✅ **RESOLVED 2026-08-14 by Story 3.1 (run 512).** `driver: docker` works; the push landed and the image is pullable. Original entry follows.
 - 🔴 **`--add-host` on `container.options` is necessary but NOT sufficient for `docker/build-push-action`.**
   Story 1.8's `#d12` records the `--add-host git.crm-prionex.com:10.67.0.1` line as a permanent
   Story 3.1 prerequisite. Re-dispatching the credentialed probe during code review proved that
@@ -424,6 +426,7 @@
 
 ## Deferred from: story 1-8-prove-action-compatibility-with-a-smoke-workflow (2026-08-11)
 
+- ✅ **RESOLVED 2026-08-14 — Story 3.1 pushed successfully with both the `--add-host` mapping and `driver: docker` in place.** Original entry follows.
 - 🔴 **Registry DNS/egress finding and its fix — Story 3.1 prerequisite.** From inside a job
   container, `git.crm-prionex.com` resolves to the **public** IP `185.185.49.127` (split-horizon —
   the s1 host itself resolves it to `10.70.0.1`), and connecting there fails
@@ -452,6 +455,7 @@
   rewritten); `:299` (the FR summary table) and `:252`, `:299`, `:784`, `:793`, `:1076` (⚠️ code review 2026-08-12: прежняя ссылка `:722` указывала внутрь секции самой Story 1.10 и была неверна; все пять теперь размечены на месте)/`:1076` (Story 1.12/3.1's own mentions) are
   intentionally left for those stories to amend when they run — out of this story's scope. See
   `docs/migration-decisions.md#d14`.
+- ✅ **ANSWERED — org secrets do reach workflows here without a repo-level copy (Story 1.8, re-confirmed by Story 3.1's login). Original entry follows.**
 - ⚠️ **Whether org secrets are exposed to workflows in `CRM/fe-prionex` — «не проверено», Story
   1.12 depends on the answer.** Story 1.8 authored a job (`probe-docker-push` in
   `.forgejo/workflows/probe-actions.yml`, on the now-deleted `probe/action-compat` branch) that
@@ -460,6 +464,7 @@
   enabling input** — see next entry — so this session produced no direct evidence either way.
   Repo-level secrets are confirmed empty (`[]`); whether the **org**-level secrets resolve inside a
   repo workflow at all was not established.
+- ✅ **RESOLVED 2026-08-14 — Story 3.1's run 512 exercised both actions against the real registry and pushed.** Original entry follows.
 - 🔴 **AC3's credentialed clause (`docker/login-action` + `docker/build-push-action` against a real
   push) was not exercised — blocked on human confirmation, carried forward for whoever revisits
   it.** Task 2.1 of story 1.8 requires Oleg to confirm with `aleksey` that `REGISTRY_USER`/
@@ -486,6 +491,7 @@
 
 ## Opened by story 1.11 implementation (2026-08-12)
 
+- ✅ **RESOLVED — the story was rewritten by `sprint-change-proposal-2026-08-13-openbao.md` before it ran.** Original entry follows.
 - 🔴 **Story 1.12 is written against a premise that is already false, and mostly already done.**
   Its AC1 requires `REGISTRY_TOKEN` and `SLACK_CD_WEBHOOK_URL` to exist at `CRM` organisation
   scope. Verified on the instance: `REGISTRY_TOKEN_RW`, `REGISTRY_TOKEN_RO`, `REGISTRY_USER`,
@@ -566,6 +572,7 @@
   have named**, and it is the starting point for whatever bounds registry growth — the cleanup rule
   never will. ✅ **CORRECTED 2026-08-14:** the `cleanup_sha256` cron does reclaim dangling `sha256:*`
   versions and their blobs — see the withdrawn FR11 entry above.
+- ✅ **ANSWERED 2026-08-14 — it does not hold; `cleanup_sha256` deletes unreferenced digest rows after 24h. Original entry follows.**
 - 🔴 **The AC6 finding "cleanup rules operate on tagged versions only" is under-evidenced and must
   be re-run before anything depends on it.** ✅ **RE-RUN AND ANSWERED 2026-08-14 — it does not hold;
   the deletions happen, by a different cron, after a 24-hour grace period.** Original text follows.
@@ -625,6 +632,7 @@
 - ⚠️ **The hub's own production `secret_id` expires every 720h** with nothing visible rotating it.
   Not our system; worth telling that team before their production deploy fails on a stale
   credential.
+- ✅ **RESOLVED 2026-08-13 — Oleg restarted both runners; run 486 proved the mapping reaches job containers on both. Original entry follows.**
 - ⚠️ **Runner configs are patched but not restarted.** `--add-host openbao:172.20.0.5` is in both
   `/opt/forgejo-runner-fe-prionex/config.yml` and `config-2.yml` on the host, identical, with
   backups at `*.bak-1-12`. **Neither runner has been restarted, so the change is not in effect**,
