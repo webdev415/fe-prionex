@@ -16,9 +16,15 @@ import { formatDate, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
  *
  * Three content zones flex between min-widths, so the blocks compress toward
  * their minimums as the card narrows:
- *   - meta/counterparty   flex 1 1 240px / min 170px   (grid 96px 1fr)
- *   - amounts (3 cols)    flex 1 1 400px / min 344px
- *   - secondary dates     flex 1 0 205px / min 205px   (grid 118px 1fr)
+ *   - meta/counterparty   flex 1 1 300px / min 170px   (grid 88px 1fr)
+ *   - amounts (3 cols)    flex 1 1 400px / min 342px
+ *   - secondary dates     flex 1 0 200px / min 200px   (grid 112px 1fr)
+ *
+ * Those bases are tuned so that at 100% zoom on a full-width panel nothing has
+ * to wrap: the widest real counterparty stays on one line, and so does the
+ * "including payments" line under the remaining-debt column. The dates block
+ * is deliberately the narrowest — its content is fixed-length — which is what
+ * pays for the other two. Type is 14px for values, 12px for everything else.
  *
  * The "..." menu is NOT a fourth flex item: it is absolutely positioned at the
  * card's top-right, with the row reserving right padding for it. As a flex
@@ -106,23 +112,23 @@ const RR_TONE: Record<NonNullable<LoanCardProps['rrStatus']>['tone'], string> = 
 /** Zone 1 line — mockup `.loan-meta-line`: grid 96px | 1fr, baseline-aligned. */
 function MetaLine({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[96px_1fr] items-baseline gap-x-2">
-      <span className="text-muted-foreground text-[12.5px]">{label}</span>
+    <div className="grid grid-cols-[88px_1fr] items-baseline gap-x-2">
+      <span className="text-muted-foreground text-[12px]">{label}</span>
       <span className="min-w-0">{children}</span>
     </div>
   )
 }
 
-/** Zone 3 row — grid 118px | 1fr. The label column width is FIXED so values
+/** Zone 3 row — grid 112px | 1fr. The label column width is FIXED so values
  * line up vertically across rows regardless of label length (AC #3). The label
  * wraps if it must; the value does not — these are dates and day counts, and
  * `break-words` happily splits "31-07-2018" at its hyphens. The zone's
  * min-width below reserves enough room for the value instead. */
 function SecRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[118px_minmax(0,1fr)] items-baseline gap-x-1.5">
-      <span className="text-muted-foreground text-[12.5px] break-words">{label}</span>
-      <span className="text-foreground text-[12.5px] whitespace-nowrap">{value}</span>
+    <div className="grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-1.5">
+      <span className="text-muted-foreground text-[12px] break-words">{label}</span>
+      <span className="text-foreground text-[12px] whitespace-nowrap">{value}</span>
     </div>
   )
 }
@@ -148,7 +154,7 @@ function AmountCell({
   const valueEl = (
     <span
       className={cn(
-        'text-foreground block text-[15px] font-bold whitespace-nowrap tabular-nums',
+        'text-foreground block text-[14px] font-bold whitespace-nowrap tabular-nums',
         valueTooltip != null &&
           'border-muted-foreground/40 w-fit cursor-help border-b border-dashed'
       )}
@@ -158,9 +164,7 @@ function AmountCell({
   )
   return (
     <div className="min-w-0">
-      <span className="text-muted-foreground mb-[3px] block text-[12.5px] break-words">
-        {label}
-      </span>
+      <span className="text-muted-foreground mb-[3px] block text-[12px] break-words">{label}</span>
       {valueTooltip != null ? (
         <TooltipProvider>
           <Tooltip>
@@ -172,7 +176,7 @@ function AmountCell({
         valueEl
       )}
       {secondary != null && (
-        <span className="text-muted-foreground mt-px block text-[13px] break-words">
+        <span className="text-muted-foreground mt-px block text-[12px] break-words">
           {secondary}
         </span>
       )}
@@ -291,11 +295,13 @@ export function LoanCard({
           escape hatch — the dates block drops to its own line rather than
           pushing content past the card edge. */}
       <div className="relative flex min-w-0 flex-wrap items-start gap-2.5 py-3.5 pr-[52px] pl-[18px]">
-        {/* Zone 1 — meta / counterparty (flex 1 1 240px, min 170px) */}
-        <div className="flex min-w-[170px] flex-[1_1_240px] flex-col gap-1">
+        {/* Zone 1 — meta / counterparty. Basis is sized so a long counterparty
+            ("Егроши (НП) - Финбуст (ЕГ-ФБ)", ~212px at 14px bold) stays on one
+            line at 100% zoom; it still wraps rather than overflows if squeezed. */}
+        <div className="flex min-w-[170px] flex-[1_1_300px] flex-col gap-1">
           <MetaLine label={t('pages.clients.detail.tableHeaders.loanNumber')}>
             <span className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-foreground min-w-0 text-[15px] font-bold break-words">
+              <span className="text-foreground min-w-0 text-[14px] font-bold break-words">
                 № {loan.loanNumber}
               </span>
               {hasRr && (
@@ -346,10 +352,10 @@ export function LoanCard({
           </MetaLine>
 
           <MetaLine label={t('pages.clients.detail.tableHeaders.saleDate')}>
-            <span className="text-foreground text-[15px] font-bold break-words">
+            <span className="text-foreground text-[14px] font-bold break-words">
               {loan.saleDate}
               {isClosed && loan.creditClosedDate && (
-                <span className="text-muted-foreground ml-2 text-[12.5px] font-normal">
+                <span className="text-muted-foreground ml-2 text-[12px] font-normal">
                   (
                   {t('pages.clients.detail.closedInline', 'Closed: {{date}}', {
                     // Raw ISO in the model — the edit-closure action parses it.
@@ -366,7 +372,7 @@ export function LoanCard({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="decoration-muted-foreground/60 text-foreground cursor-help text-[15px] font-bold break-words underline decoration-dotted underline-offset-4">
+                  <span className="decoration-muted-foreground/60 text-foreground cursor-help text-[14px] font-bold break-words underline decoration-dotted underline-offset-4">
                     {loan.counterparty}
                   </span>
                 </TooltipTrigger>
@@ -394,7 +400,7 @@ export function LoanCard({
             card, keeping large values on one line whenever there is room.
             min-width matches the true content width (88+88+120 + 32 gap + 16
             padding = 344) so the grid can never overflow its flex box. */}
-        <div className="border-border grid min-w-[344px] flex-[1_1_400px] grid-cols-[minmax(88px,1fr)_minmax(88px,1fr)_minmax(120px,1.4fr)] items-start gap-x-4 gap-y-[3px] border-x pr-1 pl-3">
+        <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3">
           <AmountCell
             label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
             value={money(loan.principalAmount)}
@@ -466,7 +472,7 @@ export function LoanCard({
             value ("31-07-2018") + 16px padding, so a date never has to break.
             When the row runs out of room this block wraps to its own line
             rather than forcing the card wider. */}
-        <div className="flex min-w-[205px] flex-[1_0_205px] flex-col gap-1 px-2">
+        <div className="flex min-w-[200px] flex-[1_0_200px] flex-col gap-1 px-2">
           <SecRow label={t('pages.clients.detail.tableHeaders.issueDate')} value={loan.issueDate} />
           <SecRow
             label={t('pages.clients.detail.tableHeaders.purchaseDateFa', 'Purchase date (FA)')}
