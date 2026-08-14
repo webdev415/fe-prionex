@@ -952,7 +952,8 @@
         },
         "clientSearchHint": "Type 2+ characters to search…",
         "kanbanAccessDenied": "You do not have access to the kanban board",
-        "noClientLink": "No client link"
+        "noClientLink": "No client link",
+        "noClientLinkFailed": "Could not unlink the client"
       },
       "kanban": {
         "title": "Legal tasks kanban",

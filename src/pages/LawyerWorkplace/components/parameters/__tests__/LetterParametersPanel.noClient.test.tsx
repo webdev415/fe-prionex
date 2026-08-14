@@ -13,6 +13,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { LetterDetail } from '../../../types'
 
 const confirmMutate = vi.hoisted(() => vi.fn())
+const patchSuggestions = vi.hoisted(() => vi.fn())
 const lawyersArgs = vi.hoisted(() => [] as unknown[])
 
 vi.mock('react-i18next', () => ({
@@ -73,7 +74,7 @@ vi.mock('@/features/lawyerWorkplace', async () => {
         ],
       },
     }),
-    usePatchMessageSuggestions: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+    usePatchMessageSuggestions: () => ({ mutateAsync: patchSuggestions }),
     usePatchMessageContract: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
   }
 })
@@ -135,6 +136,7 @@ function checkbox() {
 describe('LetterParametersPanel — no client link', () => {
   beforeEach(() => {
     confirmMutate.mockReset()
+    patchSuggestions.mockReset().mockResolvedValue({})
     lawyersArgs.length = 0
   })
 
@@ -244,5 +246,61 @@ describe('LetterParametersPanel — no client link', () => {
         assigned_to_user_id: 10,
       },
     })
+  })
+})
+
+// Picking a client writes through immediately, which is what puts the client's
+// name on the letter and across the inbox list — all four labels read the
+// persisted suggestion. Unlinking has to write through too, or they keep naming
+// a client the operator just detached.
+describe('LetterParametersPanel — unlinking is persisted', () => {
+  beforeEach(() => {
+    confirmMutate.mockReset()
+    patchSuggestions.mockReset().mockResolvedValue({})
+    lawyersArgs.length = 0
+  })
+
+  it('clears the stored client suggestion when the box is ticked', async () => {
+    renderPanel({ clientId: '100', clientLabel: 'Test Client' })
+
+    fireEvent.click(checkbox())
+
+    await waitFor(() => expect(patchSuggestions).toHaveBeenCalledTimes(1))
+    expect(patchSuggestions.mock.calls[0][0]).toMatchObject({
+      messageId: 'msg-1',
+      payload: { letter_type_id: 'complaint', client_id: null },
+    })
+  })
+
+  it('puts the client back when the box is unticked', async () => {
+    renderPanel({ clientId: '100', clientLabel: 'Test Client' })
+
+    fireEvent.click(checkbox())
+    await waitFor(() => expect(patchSuggestions).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(checkbox())
+
+    await waitFor(() => expect(patchSuggestions).toHaveBeenCalledTimes(2))
+    expect(patchSuggestions.mock.calls[1][0].payload.client_id).toBe(100)
+  })
+
+  it('unticks itself when the unlink cannot be saved', async () => {
+    patchSuggestions.mockRejectedValue(new Error('offline'))
+    renderPanel({ clientId: '100', clientLabel: 'Test Client' })
+
+    fireEvent.click(checkbox())
+
+    // Staying ticked while the labels still name the client is the confusion
+    // this fixes, so a failed save must not look like a success.
+    await waitFor(() => expect(checkbox()).toHaveAttribute('data-state', 'unchecked'))
+  })
+
+  it('does not patch a letter that has no type yet', async () => {
+    renderPanel({ letterType: '', clientId: '100', clientLabel: 'Test Client' })
+
+    fireEvent.click(checkbox())
+
+    await waitFor(() => expect(checkbox()).toHaveAttribute('data-state', 'checked'))
+    expect(patchSuggestions).not.toHaveBeenCalled()
   })
 })
