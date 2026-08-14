@@ -809,3 +809,30 @@ listens on 8000 inside the network — but our nginx hardcodes the **port** as w
 X". It should be rewritten as a **reconciliation**: their plan already provides a separate network
 and Kong per stand, so the ask is no longer "create it" but "name it so our image can reach it".
 That rewrite is `correct-course` work. **Owner: Oleg.**
+
+
+## Decision recorded 2026-08-14 — pull requests stay enabled, and the risk is accepted
+
+- 🔴 **`has_pull_requests` is ON and stays ON (Oleg, 2026-08-14).** It was deliberately off since
+  2026-08-10; Story 2.2 enabled it to prove AC2/AC3 and Oleg has now kept it. **What this buys:**
+  Stories 2.5 and 2.6 become reachable — they need real pull requests and could not be done at all
+  otherwise.
+  **What it costs, stated plainly because it is an accepted risk and not a solved one:** D9's
+  suppression of the legacy `.github/workflows/` is **per commit**. Roughly **497 of 501 branches**
+  have heads that predate the `.forgejo/workflows/` placeholder. **A pull request opened from any of
+  them runs `.github/workflows/CI.yml` — four jobs on `ubuntu-latest`, which resolves to another
+  team's runner.** Nothing in the repository prevents this today; the four runs of 2026-08-14 avoided
+  it only because the probe branch was cut from current `main`.
+  **This closes on its own when Story 7.2 deletes the legacy workflow files.** Until then it is open
+  by choice.
+  **Cheaper mitigations, none of them done, in rising order of effort:** require PRs to be up to date
+  with `main` before merge (branch protection already exists on `main`); back-merge `main` into the
+  handful of branches anyone actually still opens PRs from; or bring Story 7.2 forward, since the
+  legacy files serve nothing now that CI, build and push all run on Forgejo.
+- ⚠️ **Every PR now costs two CI runs per commit** — `push` and `pull_request`, ~964 s of wall clock
+  and ~1620 job-seconds, measured 2026-08-14 across runs 513–516. FR2 asks for both triggers. If the
+  cost needs cutting, drop the `push` trigger for PR branches rather than the `pull_request` one.
+- 🔴 **Story 2.6 must choose among eight required-check contexts, not four.** Statuses are named per
+  event: `CI / Lint (push)` and `CI / Lint (pull_request)` are distinct. Requiring the `(push)` set
+  would gate on checks a PR-only flow need not produce; requiring the `(pull_request)` set leaves
+  direct pushes to feature branches ungated. Decide deliberately, with the reason recorded.
