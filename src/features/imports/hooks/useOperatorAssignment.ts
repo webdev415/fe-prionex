@@ -45,7 +45,7 @@ export function useOperatorAssignmentExecute() {
       // execute rejects (e.g. invalid operator_id), nothing else transitions
       // its status, so we cancel explicitly.
       try {
-        await importsApi.cancelImportJob(jobId)
+        await importsApi.cancelImportJob(jobId, { onlyIfNotStarted: true })
       } catch (cancelError) {
         console.error('Failed to cancel orphaned operator assignment job:', cancelError)
       }

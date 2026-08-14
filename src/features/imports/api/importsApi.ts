@@ -307,10 +307,23 @@ export async function exportImportJobErrors(jobId: number | string): Promise<Blo
  * Cancels an ongoing or pending import job.
  *
  * @param jobId - Import job ID
+ * @param options.onlyIfNotStarted - Cancel only if no worker has begun writing.
+ *   Pass this when cleaning up after a FAILED execute request: a timeout or 502
+ *   does not mean the job did not start, and cancelling a running import aborts
+ *   it at its next batch boundary, leaving the file half-applied. The check runs
+ *   server-side in one statement, so it cannot race the worker the way a
+ *   fetch-status-then-cancel from here would.
  * @returns Success response
  */
-export async function cancelImportJob(jobId: number | string): Promise<CancelImportResponse> {
-  const response = await api.post(`/api/v1/import/jobs/${jobId}/cancel`)
+export async function cancelImportJob(
+  jobId: number | string,
+  options?: { onlyIfNotStarted?: boolean }
+): Promise<CancelImportResponse> {
+  const response = await api.post(
+    `/api/v1/import/jobs/${jobId}/cancel`,
+    undefined,
+    options?.onlyIfNotStarted ? { params: { only_if_not_started: true } } : undefined
+  )
 
   // Transform backend response to frontend format
   return transformCancelResponse(response.data)

@@ -63,6 +63,17 @@ export function BulkContactTagAssignmentPage() {
           setActiveJobId(preview.job_id)
           setState('processing')
         },
+        onError: () => {
+          // Leave preview state. This job is not executable again either way:
+          // if it never started the hook has just cancelled it, and if it did
+          // start it is already running -- and in both cases the backend
+          // rejects a second execute for the same job. Staying on the preview
+          // screen would leave the Confirm button wired to that dead job_id and
+          // turn a retry into a second failure. A job that really is running
+          // stays visible in the bulk job banner.
+          setPreview(null)
+          setState('upload')
+        },
       }
     )
   }

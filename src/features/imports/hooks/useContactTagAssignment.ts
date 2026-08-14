@@ -47,9 +47,12 @@ export function useContactTagAssignmentExecute() {
     onError: async (error, { jobId }) => {
       toast.error(getErrorMessage(error))
       // Cancel the orphaned job so the BulkJobBanner doesn't surface it as
-      // "Queued" indefinitely after a failed execute.
+      // "Queued" indefinitely after a failed execute -- but only if it really is
+      // orphaned. This handler also fires on a timeout or 502 for a job that
+      // started fine, and cancelling that one aborts a live import at its next
+      // batch boundary, leaving the file half-applied.
       try {
-        await importsApi.cancelImportJob(jobId)
+        await importsApi.cancelImportJob(jobId, { onlyIfNotStarted: true })
       } catch (cancelError) {
         console.error('Failed to cancel orphaned contact tag job:', cancelError)
       }
