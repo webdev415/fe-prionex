@@ -724,11 +724,31 @@ the coordinator's plate.
 expected 7 versions in `crm/fe-prionex` (citing `1-11-…md:828`). The actual count at the start of
 this session was **3**. Four versions present at Story 1.11's close are gone. `sha-a1b2c3d-prod`
 (id 1930) is one of the surviving three, so Task 4.3's target still exists and the AC6 decision
-still applies — but the other four are gone by a mechanism not investigated in this session (most
-likely the retention rule's own `remove_days` sweep, since `sha-a1b2c3d-prod`, the only
-`keep_pattern`-protected row, is exactly the one that survived). Recorded as a finding, not chased
-further — out of this story's scope to explain, but load-bearing for whoever next reads this
-registry's history.
+still applies — but the other four are gone. ~~Most likely the retention rule's own
+`remove_days` sweep, since `sha-a1b2c3d-prod`, the only `keep_pattern`-protected row, is exactly the
+one that survived.~~
+
+🔴 **That guess was wrong twice over, and review established the real cause on 2026-08-14.** The
+deletion was done by the **`cleanup_sha256` cron** — a mechanism separate from
+`package_cleanup_rule` entirely, which consults neither `remove_days` nor `keep_pattern`. It removes
+container versions whose version string is `sha256:*` and which **no index manifest references**,
+subject to its own 24-hour minimum age. Server log, verbatim: *"Removing 4 entries from
+`package_version` and `package_property`"* at `2026-08-14 00:00:00`.
+
+Both halves of the guess were checkable and false. **Arithmetically impossible:** `remove_days` is
+14 and the rows were two days old — the commit message accompanying this very text says so, so the
+commit contradicted its own artifact. **And the stated reason was untrue:** `sha-a1b2c3d-prod` was
+not the only protected row — `keep_pattern` carries an explicit `sha256:[0-9a-f]{64}` alternative
+that both surviving digests match. The real discriminator is that those two are *index children* of
+`sha-a1b2c3d-prod` while Story 1.10's four were referenced by nothing.
+
+**This also withdraws FR11's defect annotation**, which rested on Story 1.11's conclusion that
+Forgejo never reclaims digest rows. It does; Story 1.11's measurement window fell inside the
+24-hour grace period, and the log said so at the time in plain words.
+
+⚠️ **The transferable lesson is about method, not about the registry.** This story wrote, correctly,
+that job logs are unretrievable on this instance — and then generalised that into not reading the
+**server** log, where the answer to its own flagged open question had been sitting for eight hours.
 
 **Task 2/3/4 — decisions, in writing:**
 

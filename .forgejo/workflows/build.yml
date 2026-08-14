@@ -20,6 +20,11 @@ on:
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: false
+# ⚠️ Known gap, for Story 3.2 to close rather than inherit: the pushed tag is a
+# fixed literal, so two dispatches on DIFFERENT refs push the same tag while
+# sitting in DIFFERENT concurrency groups — the collision AC5 names is not
+# actually guarded here. Harmless while the tag is a throwaway proof; it stops
+# being harmless the moment 3.2 makes tags meaningful.
 
 jobs:
   build-and-push:

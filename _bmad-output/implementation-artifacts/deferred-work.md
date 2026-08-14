@@ -214,7 +214,7 @@
   checkable artifact. Story 3.1's own probe (`probe/3-1-build-publish`, deleted after use) carried
   the identical `driver: docker` line and pushed `git.crm-prionex.com/crm/fe-prionex:build-check-3-1`
   on the first dispatch — run 512, job 5661 (`Build and Push`), task 5283, runner 19
-  (`s1-fe-prionex-1`), started 08:18:59+02:00, stopped 08:21:29+02:00, **170s**, status success.
+  (`s1-fe-prionex-1`), started 08:18:59+02:00, stopped 08:21:49+02:00, **170s**, status success.
   Confirmed server-side: `GET /packages/CRM/container/fe-prionex/build-check-3-1` → `200`,
   `creator.login: robot-registry`, `created_at: 2026-08-14T08:21:46+02:00`; manifest digest
   `sha256:61095d9b4dcaabcf2592f99bcd89399141c8b33d9d017550f9932c4f0c0d7660` (content hash of the
@@ -528,15 +528,21 @@
   **zero** tokens and minted two; the story's own inherited lesson said to plan revocation before
   minting, and it was not.
 
-- 🔴 **FR11 promises storage reclamation the platform cannot deliver — this needs a plan decision,
-  not a story.** Measured on 2026-08-13: Forgejo 15.0.5 cleanup rules operate on **tagged versions
-  only** and never delete digest-named (untagged) container versions, even unreferenced ones. Four
-  orphaned manifests from Story 1.10 survived a rule that had nothing protecting them, at
-  `remove_days = 0`, across four `cleanup_packages` executions. So deleting a `<branch>` tag frees
-  the tag row and **no blob storage whatsoever**. FR11 is written to bound registry growth; the
-  mechanism bounds the tag list instead. Either FR11 is reworded to say what the retention rule
-  actually achieves, or a separate reclamation mechanism is found and specified — nothing in
-  Forgejo's own cron does it. Story 1.11's AC6 is closed as **not achievable by this mechanism**.
+- ✅ ~~**FR11 promises storage reclamation the platform cannot deliver.**~~ **WITHDRAWN 2026-08-14 by
+  Story 3.1's review — the premise was a measurement artefact.** Forgejo 15.0.5 runs a **second,
+  separate** cleanup that nobody in this plan had looked at: the **`cleanup_sha256` cron**. It is
+  independent of `package_cleanup_rule`, consults neither `remove_days` nor `keep_pattern`, and
+  deletes container versions whose version string is `sha256:*` and which **no index manifest
+  references** — with its own **24-hour** minimum age. It removed Story 1.10's four orphaned digest
+  rows at `2026-08-14 00:00:00` (`4 entries from package_version`, `30 from package_file`), and the
+  blobs went with them: **zero unreferenced `package_blob` rows remain.** 🔴 **Why Story 1.11
+  concluded the opposite:** its measurement window fell entirely inside that grace period, and the
+  server log said so at the time — *«4 out of 4 container image(s) are not deleted because they were
+  created less than 24h0m0s ago»*. «Did not delete» was read as «never deletes». The half that still
+  stands: deleting a **tag** frees no blob storage. **Method lesson:** the answer was in
+  `docker logs forgejo` for eight hours. Story 1.11 and Story 3.1 both generalised «job logs are
+  unretrievable on this instance» — true — into not reading the **server** log, which is a different
+  thing entirely. Reword FR11; no new mechanism is needed.
 - ⚠️ **The Forgejo log is not a record of cron executions.** One `cleanup_packages` line exists for
   the container's entire lifetime despite at least four runs. The only reliable evidence is the
   execution counter on Site Administration → Monitoring → Cron Tasks. Any future story that needs to
@@ -558,16 +564,22 @@
   fell 1263 → 1223 overnight while our rule provably could not touch them (no foreign version is
   older than 14 days). Most gaps predate our rule entirely. **This is what Story 1.11's AC6 should
   have named**, and it is the starting point for whatever bounds registry growth — the cleanup rule
-  never will.
+  never will. ✅ **CORRECTED 2026-08-14:** the `cleanup_sha256` cron does reclaim dangling `sha256:*`
+  versions and their blobs — see the withdrawn FR11 entry above.
 - 🔴 **The AC6 finding "cleanup rules operate on tagged versions only" is under-evidenced and must
-  be re-run before anything depends on it.** It is contradicted by Story 1.11's own record: `_upload`
+  be re-run before anything depends on it.** ✅ **RE-RUN AND ANSWERED 2026-08-14 — it does not hold;
+  the deletions happen, by a different cron, after a 24-hour grace period.** Original text follows.
+  It is contradicted by Story 1.11's own record: `_upload`
   was untagged **and** internal and was deleted. Two unresolved candidates: the preview and the run
   disagree about internal rows, or `_upload` was removed by the expired-upload step of the same cron
   task rather than by the rule. The distinction decides whether untagged digest rows are reachable
   at all, which decides whether registry growth can ever be bounded by a rule. FR11's defect
   annotation in `epics.md:99` rests on this.
 - ⚠️ **`sha-a1b2c3d-prod` (id 1930) is seeded test material still sitting in `crm/fe-prionex`.**
-  Left behind when Story 1.11 closed. Delete it before Story 3.1 starts pushing real images, or it
+  Left behind when Story 1.11 closed. ⚠️ **Now stale as written — Story 3.1 has already pushed
+  (`build-check-3-1`, 2026-08-14), and the deletion was blocked by the permission classifier as a
+  destructive action against the production registry.** Still to be removed, now with a real image
+  beside it. Original text follows. Delete it before Story 3.1 starts pushing real images, or it
   will look like a real production tag to anyone reading the registry.
 - ⚠️ **Story 1.11's Task 7.2 was not done:** `docs/forgejo-migration.md` still presents retention as
   an unmade choice ("Выбрать одно: …") while the rule is live. Every field value is recorded
