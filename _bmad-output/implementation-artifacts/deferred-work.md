@@ -993,7 +993,12 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   (13.2%) on run 531 — Story 2.1's AC4, open since 2026-08-11, is now answered. Story 2.1's doubling
   of the heap ceiling (8192→16384 MB) was confirmed precautionary rather than corrective: even the
   original 8192 MB ceiling would have had 62% headroom over the measured peak.
-- ℹ️ **`probe/2-1-peak-memory` (commit `4fc90b78`) still has not merged to `main`.** It carries the
-  peak-memory-in-artifact-name fix and the coverage-retention 1→7-day change. Story 2.4 declined to
-  merge it unilaterally (measurement story, not a scope to make a production-CI-behaviour call) and
-  left it as a recorded, owner-assigned decision (**Owner: Oleg**) rather than silent drift.
+- ✅ **`probe/2-1-peak-memory` (commit `4fc90b78`) is merged.** ⚠️ **Superseding the first version of
+  this entry, which recorded it as still outstanding** — Story 2.4 declined to merge it unilaterally
+  (measurement story, not a scope to make a production-CI-behaviour call) and left it as an
+  owner-assigned decision; **Oleg took it the same day and it fast-forwarded into `main`.** So the
+  peak-memory-in-artifact-name step and the coverage-retention 1→7-day change are now live on `main`,
+  not stranded on a probe branch. **The merge cost no CI run** — `main` is in `branches-ignore`
+  (`ci.yml:40-44`) and no PR was open. `origin/probe/2-1-peak-memory` is deliberately left stale at
+  `4fc90b78`: pushing it would fire a `push` run for commits already on `main`. Safe to delete; do
+  not push it.

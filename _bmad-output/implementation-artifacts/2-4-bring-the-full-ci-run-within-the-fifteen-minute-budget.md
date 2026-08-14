@@ -763,7 +763,21 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
       currently living only on a probe branch. **Whichever way, it is a decision recorded here, not a
       drift.**
 
-      **Decision: does NOT merge as part of this story. Owner: Oleg.** This story's mandate is
+      🔴 **RESOLVED 2026-08-14 by Oleg: «probe/2-1-peak-memory влей». Merged.** Fast-forward into
+      `main` (`main` was an ancestor, so no merge commit), bringing `4fc90b78` (peak memory into the
+      artifact name, coverage retention 1→7 days) plus this story's three documentation commits.
+      **The merge spent no CI run**, exactly as 8.2 predicted: `main` is in `branches-ignore`
+      (`ci.yml:40-44`, re-read immediately before merging) and no PR was open to be closed. Run
+      count for this story stands at **1 declared, 1 spent** — the merge did not change it, and the
+      "whoever pushes it makes the count 2" note in the Completion Notes is superseded: pushing
+      `main` is free, pushing the probe branch would not have been.
+      ⚠️ `origin/probe/2-1-peak-memory` remains at `4fc90b78` and was deliberately **not** pushed —
+      pushing it now would fire a `push` run for commits that are already on `main`. The remote
+      branch is stale by design and safe to delete.
+
+      **The reasoning below is retained as the state before Oleg's decision, not withdrawn.**
+
+      **Decision (superseded): does NOT merge as part of this story. Owner: Oleg.** This story's mandate is
       measurement (§1), and merging `4fc90b78` (a real change to `ci.yml`'s behaviour, not a
       documentation edit) is a judgement call about production CI behaviour that belongs to the person
       who owns the retention-days decision embedded in the same commit, not to a coordinator executing
@@ -1121,10 +1135,11 @@ numbers happened to match on cross-check.
    blob mtimes — see Task 4.1's write-up). AC1 closed for free. This story spent exactly **one** new
    run (Task 5.1, commit `6d7911b2`, pushed 2026-08-14T15:31:02Z) as the AC2 warm-cache measurement.
    `.cache/actcache` was never cleared on either runner.
-2. **Does `probe/2-1-peak-memory` merge to `main` as part of this story?** It carries Story 2.1's AC4
-   fix (peak memory into the artifact name) and Oleg's retention decision (1→7 days). Both are
-   currently living only on a probe branch. Merging is out of this story's stated scope but leaving
-   them stranded is worse than either alternative. **Owner: Oleg** (Task 8.1).
+2. **RESOLVED 2026-08-14 — Oleg said merge, and it is merged.** `probe/2-1-peak-memory`
+   fast-forwarded into `main`; Story 2.1's AC4 fix (peak memory into the artifact name) and the
+   coverage-retention 1→7-day change are now live on `main`. No CI run was spent (`main` is in
+   `branches-ignore`). `origin/probe/2-1-peak-memory` is stale at `4fc90b78` and safe to delete —
+   see Task 8.1.
 
 ### Non-blocking
 
