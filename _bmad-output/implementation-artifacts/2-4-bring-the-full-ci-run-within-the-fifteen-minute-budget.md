@@ -4,7 +4,7 @@ baseline_commit: 4fc90b78
 
 # Story 2.4: Bring the Full CI Run Within the Fifteen-Minute Budget
 
-Status: in-progress
+Status: review
 
 > **Read §1 before you read the epic's ACs.** The title says *"bring within"*. **The run is already
 > within.** The last measured whole run is **540 s against a 900 s budget** — run 522,
@@ -509,74 +509,262 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
 
 ### Task 5 — Establish the warm measurement and prove the cache hit (AC: 2)
 
-- [ ] 5.1 Create the warm run: same branch, unchanged `package-lock.json`, one push (or dispatch).
+- [x] 5.1 Create the warm run: same branch, unchanged `package-lock.json`, one push (or dispatch).
       Count it against the Task 3.1 budget, including the `pull_request` duplicate if applicable.
-- [ ] 5.2 Prove the restore **hit**, from the runner container log (`Cache restored from key: …`,
+
+      **Done.** Commit `6d7911b2` (Tasks 1–4 write-up), pushed to `origin/probe/2-1-peak-memory` at
+      `2026-08-14T15:31:02Z`. `package-lock.json` confirmed byte-identical to commit `3d698492`
+      (`git diff 3d698492 6d7911b2 -- package-lock.json` → empty) and to `4fc90b78`
+      (`git diff 3d698492 4fc90b78 -- package-lock.json` → empty) — this is the same npm-cache-key
+      lineage as run 522. `git diff --stat 4fc90b78 6d7911b2` shows only the story file and
+      `sprint-status.yaml` changed — no prohibited file touched. Result: `action_run` **id 534, index
+      44**, event **push** (confirmed the only event for this commit — no `pull_request` duplicate,
+      matching the Task 3.1 declaration).
+- [x] 5.2 Prove the restore **hit**, from the runner container log (`Cache restored from key: …`,
       `1-7:634-648`) and/or the `.cache/actcache` delta from Task 2.4. **Not from a green job**
       (Prohibition 5).
-- [ ] 5.3 Record per-job runner attribution for the warm run and, per job, whether it hit a warm or
+
+      **Available evidence, stated at the honest limit of what this instance can prove — no "green job"
+      claim made (Prohibition 5):**
+      1. The direct route (`Cache restored from key: …` in the runner container log) is confirmed
+         **unavailable for this run too** — grepped explicitly for run 534's exact window
+         (17:31–17:41 CEST) on both runners: no cache-restore/save/GC line at all fired during it, on
+         either runner (checked with the same `grep -iE 'cache (restored|saved|not found|miss)'` and
+         `module=cacheproxy` patterns as Task 4.1). This is the same structural gap established in
+         Task 4.1, now confirmed a third time (runs 522, 531, 534 all show it).
+      2. **Disk evidence:** four new cache blobs appeared during run 534's window, each ~103.9 MB, one
+         per job, timed within 0–3 s of that job's own `stopped` time (runner 1:
+         `cache/1a/26` @ 17:32:28 CEST ≈ Type Check's stop 17:32:31; `cache/1b/27` @ 17:33:22 ≈ Lint's
+         stop 17:33:24; runner 2: `cache/16/22` @ 17:32:54 ≈ Build's stop 17:32:57; `cache/17/23` @
+         17:39:35 ≈ Unit Tests' stop 17:39:38). This proves each job performed a **save** at job end,
+         which — established in Task 4.1 — happens on this instance's cache-proxy implementation
+         regardless of whether the preceding restore was a hit or a miss. **A save event is therefore
+         not, by itself, proof of a hit.**
+      3. **The strongest available evidence is a hash-determinism argument, not a log read.** The npm
+         cache key is a deterministic hash of `package-lock.json` + OS/arch (§2a; `1-7:634-648`).
+         `package-lock.json` is confirmed byte-identical across `3d698492` → `4fc90b78` → `6d7911b2`
+         (git diff, above). Therefore run 534's `setup-node` cache key is necessarily the **same** key
+         string as run 522's (`node-cache-linux-x64-npm-b5f94888…331a00`, "KEY_B") — no other key hash
+         has been observed anywhere in the runner logs since KEY_B first appeared during run 522
+         (re-checked: `grep -n 'b5f94888'` across the full retained log on both runners finds only the
+         two 2026-08-14T16:42:28/29+02:00 GC-deletion lines from run 531's window, no new key string
+         since). Since KEY_B's content was successfully saved during run 522 and remained the active
+         key for this lock-file hash through runs 531 and 534, the `setup-node` **restore** step in
+         run 534 had a matching key to restore from.
+      **Verdict: warm, on the balance of the strongest evidence this instance can produce** — a
+      restore *content* line was never observed for any real run on this instance (recorded as a
+      standing gap, not papered over), so this is deliberately labelled a hash-determinism argument
+      cross-checked against disk activity, **not** the direct "Cache restored from key" proof §3
+      describes. If a future story gets API/log access restored, re-verifying this with a direct log
+      line would close the gap cleanly.
+- [x] 5.3 Record per-job runner attribution for the warm run and, per job, whether it hit a warm or
       cold cache — remember the two caches are independent (§2c).
-- [ ] 5.4 Record the `npm ci` step duration on both runs and state the cold→warm delta. Compare with
+
+      Run 534: **Lint** (task 5629) → runner **19**, **Type Check** (task 5630) → runner **19**,
+      **Build** (task 5632) → runner **20**, **Unit Tests** (task 5631) → runner **20**. 2/2 split
+      again. Per the Task 5.2 argument, **all four jobs on both runners** were warm on the npm key —
+      the key is per-lock-file, not per-runner, but each runner keeps its **own physical cache blob
+      store** (§2c), and each runner's own blob listing does show new content in the run 534 window
+      (both runners' `cache/` directories grew), consistent with each runner's independent cache proxy
+      already holding KEY_B from its own earlier save (runner 1 saved KEY_B content during run 522;
+      runner 2 saved KEY_B content during run 522's Build/Unit Tests jobs too — both runners'
+      `1786714xxx`-era blobs). No cold-cache runner was observed in this run.
+- [x] 5.4 Record the `npm ci` step duration on both runs and state the cold→warm delta. Compare with
       Story 2.1's **3 s of 487** (`deferred-work.md:684-686`, `2-1-…md:439-446`) and say whether the
       cache is still not the lever.
-- [ ] 5.5 Record the warm whole-run wall clock and per-job durations.
+
+      **«не проверено» for the isolated step duration — recorded as a gap, not guessed.** `action_run_job`
+      / `action_task` carry only **job-level** `started`/`stopped`, not per-step timing; the only place
+      a per-step `npm ci` duration could come from is the job log, which is confirmed unreadable on
+      this instance (§3, `deferred-work.md:651-662`). This is a structural limit of the available
+      tables, not an oversight — the same tables were checked for a step-level column in Task 1.4 and
+      none exists (`action_run_job` schema: `id, run_id, repo_id, owner_id, commit_sha,
+      is_fork_pull_request, name, attempt, handle, workflow_payload, job_id, needs, runs_on, task_id,
+      status, started, stopped, created, updated` — no step-level fields).
+      **What can honestly be said instead:** whole-job durations for Lint/Type Check/Build (the three
+      short jobs, where `npm ci` is a larger fraction of total time) show no consistent
+      cold-vs-warm pattern that survives host-load noise: Lint 154 s (run 522) → 133 s (run 531) →
+      139 s (run 534); Type Check 99 s → 83 s → 86 s; Build 126 s → 108 s → 111 s. All three runs share
+      the same (warm, per Task 5.2's argument) cache key, so this variance (±10–20 s) is host-load
+      noise (`load 11–17`, §Infrastructure facts), not cache signal — which is itself consistent with
+      Story 2.1's finding that **the cache saves only ~3 s of ~487 s** (`deferred-work.md:684-686`): a
+      3 s effect would be invisible against ±10–20 s of host-load noise on this shared box. **The cache
+      is still not the lever** — this story adds no evidence that changes that verdict.
+- [x] 5.5 Record the warm whole-run wall clock and per-job durations.
+
+      **Run 534 (warm): whole run 513 s.** Lint 139 s (runner 19), Type Check 86 s (runner 19),
+      **Unit Tests 512 s** (runner 20), Build 111 s (runner 20). `started=1786721465`
+      (2026-08-14T15:31:05Z), `stopped=1786721978` (2026-08-14T15:39:38Z), both from `action_run`,
+      cross-checked against the summed per-job/`action_task` rows above.
 
 ### Task 6 — Evaluate against the budget and record distribution (AC: 3, 4)
 
-- [ ] 6.1 State the warm whole-run duration against **900 s**, in seconds and as remaining margin.
+- [x] 6.1 State the warm whole-run duration against **900 s**, in seconds and as remaining margin.
       Name `Unit Tests` as the dominant job with its share of the critical path. **If the run exceeds
       900 s, stop and report** — do not remediate on the spot (§6, Prohibitions 1 and 3).
-- [ ] 6.2 State the four-job distribution across runner ids for at least one real CI run, and that it
+
+      **AC3 CLOSED — the run does not exceed 900 s, so remediation is not triggered.** Run 534 (warm):
+      **513 s against 900 s — 387 s (43%) of margin remaining.** `Unit Tests` is the dominant job at
+      **512 of 513 s (99.8% of the critical path)** — Lint (139 s), Type Check (86 s) and Build (111 s)
+      all finish and their runner sits idle for the remainder, exactly as §1/§6 predicted. No
+      remediation was applied, none was needed, and Prohibitions 1/3 were never approached.
+- [x] 6.2 State the four-job distribution across runner ids for at least one real CI run, and that it
       is a split rather than a queue. Compare with Story 1.9's synthetic 2/2 proof
       (`1-9:376-389`) and note that this is the first time it has been checked on the CI workflow.
-- [ ] 6.3 State the effect of distribution on total duration — expected: **near zero**, because
+
+      **Checked on real CI for all nine runs harvested this session (492, 493, 505, 513, 514, 515, 516,
+      522, 531), not just one.** Every single one is a clean **2/2 split** between runner 19
+      (`s1-fe-prionex-1`) and runner 20 (`s1-fe-prionex-2`) — never a 3/1, never a 4/0, never a queue.
+      Which pair of jobs lands on which runner **varies run to run** (e.g. run 492: Build+Unit Tests
+      → 19, Lint+Type Check → 20; run 493: the opposite pairing; run 522: Lint+Type Check → 19, Unit
+      Tests+Build → 20) — the scheduler is not pinning job *names* to a runner, only balancing load at
+      dispatch time. This is the **first time distribution has been checked on the real CI workflow**
+      (Story 1.9's 2/2 proof, `1-9:376-389`, used a synthetic four-job probe workflow, not `ci.yml`).
+      The result matches Story 1.9's prediction exactly, as §5 expected given `capacity: 2` on both
+      runners (config re-verified live in Task 1.2).
+- [x] 6.3 State the effect of distribution on total duration — expected: **near zero**, because
       `Unit Tests` is ~539 of ~540 s. Give the single-runner counterfactual (~693 s) and label it
       **arithmetic, not measurement** (Prohibition 7).
-- [ ] 6.4 Confirm no job queued behind another workflow (e.g. `build.yml`) during the measured runs;
+
+      **Effect on duration: negligible, confirmed rather than assumed.** Across all nine runs, `Unit
+      Tests` is consistently 96–99% of the whole-run duration regardless of which runner it lands on
+      (539/540 = 99.8% for run 522; 486/487 = 99.8% for run 492; 557/558 = 99.8% for run 531).
+      Whichever runner draws `Unit Tests` determines the run's wall clock almost entirely; the other
+      three jobs finish and their runner sits idle for the remainder. **Single-runner counterfactual
+      (arithmetic, not measured):** with one runner at `capacity: 2`, four jobs run in two waves of
+      two. Worst case puts `Unit Tests` in the second wave, behind whichever job started first on that
+      runner: `154 s (Lint) + 539 s (Unit Tests) ≈ 693 s` using run 522's own numbers — comfortably
+      inside 900 s, but the margin drops from ~360 s to ~207 s. **This is arithmetic composed from
+      measured job durations, not a measured run** — no runner was taken offline (Prohibition 2,
+      `1-9:84-85`).
+- [x] 6.4 Confirm no job queued behind another workflow (e.g. `build.yml`) during the measured runs;
       if it did, that is the more interesting AC4 finding and belongs in the record.
+
+      **No queueing observed.** For every run harvested (492 through 531), each job's `action_task`
+      `started` timestamp is within 0–1 s of its `action_run`'s own `started` timestamp (e.g. run 522:
+      run `started=1786714263`, Lint/Type Check task `started=1786714263`, Unit Tests/Build task
+      `started=1786714264` — 1 s later, not queued) — i.e. every job began essentially the instant the
+      run was dispatched, with no visible wait for a runner slot. This is consistent with §5's
+      "four slots for four jobs, queueing is arithmetically impossible" absent contention from another
+      workflow, and no such contention was observed in any of the nine runs studied.
 
 ### Task 7 — Answer the two questions Story 2.1 handed forward (AC: 5)
 
-- [ ] 7.1 **Peak memory (AC5).** Report the figure from Task 2.3 in MB, with run index and cgroup
+- [x] 7.1 **Peak memory (AC5).** Report the figure from Task 2.3 in MB, with run index and cgroup
       source, against the 16384 MB ceiling. State plainly whether the doubling Story 2.1 applied
       *"precautionary, not corrective"* (`2-1-…md:491-494`) was warranted by the measured peak.
-- [ ] 7.2 **`force_pull: true` (§7).** From the runner container logs of the runs this story spent,
+
+      **AC5 CLOSED. Peak memory = 2163 MB**, from `action_artifact.artifact_name = 'peak-memory-2163mb'`
+      for run 531 (`id=531, index=43`, commit `4fc90b78`, `Unit Tests` job, `runner_id=20`). Cgroup
+      source is not itself recoverable (it is written into the artifact's *content*, e.g.
+      `peak-memory.txt`, which this story cannot download — the artifact-download route is
+      session-gated and does not work for an agent, `deferred-work.md` SETTLED 2026-08-14 entry) —
+      only the *name*, which is exactly what `4fc90b78` was written to make readable without a job log
+      (§8). The artifact **is not** `peak-memory-unknownmb`, so both cgroup files the script checks
+      resolved cleanly; which one it was is «не проверено» and does not block AC5, which only asks for
+      the MB figure.
+      **Against the 16384 MB ceiling: 2163 / 16384 ≈ 13.2%.** Story 2.1's doubling (8192→16384 MB,
+      `2-1-…md:491-494`) was explicitly *"precautionary, not corrective"* — the measured peak confirms
+      that framing was right: even the **original, undoubled** 8192 MB ceiling would have had **62%**
+      headroom over the observed peak (8192−2163=6029 MB spare). The doubling was not needed to avoid
+      an OOM on this evidence, though it is cheap insurance and this story is not the one to reverse it
+      (that would be touching `package.json`, Prohibition/scope boundary).
+- [x] 7.2 **`force_pull: true` (§7).** From the runner container logs of the runs this story spent,
       state whether `node:20-bookworm` was re-pulled per job or served from the dind image cache, and
       what it cost in seconds. **Change no runner configuration** (Prohibition 2). If the logs do not
       answer it, say «не проверено» and leave it — the budget does not need it.
 
+      **«не проверено» — and this is itself the finding, not a gap left by inattention.** The
+      `[DEBUG] pulling image 'docker.io/library/node:20-bookworm' … forcePull=true` line **does**
+      exist in the runner container log format (confirmed: 27 occurrences on runner 1, all from Story
+      1.9's 2026-08-11 probe-workflow runs, e.g. `[probe-actions/probe-node20]`) — but, exactly like
+      the cache-restore line in Task 4.1, it **never appears for a real, server-dispatched CI job**
+      (checked explicitly around run 522's and run 531's exact time windows on both runners: zero
+      matches). This is the same structural gap as the cache evidence: real job step content/`docker
+      pull` orchestration output is not forwarded to the runner container's own log the way the Story
+      1.9 probe's was. No runner configuration was read or changed beyond `config.yml`/`.runner`
+      (Prohibition 2). The budget does not need this number (§7: *"the budget is not tight"*), so it is
+      left open rather than guessed at.
+
 ### Task 8 — Decide what this story does with the probe branch (AC: 5, 6)
 
-- [ ] 8.1 State whether `probe/2-1-peak-memory` (`4fc90b78`: peak memory into the artifact name,
+- [x] 8.1 State whether `probe/2-1-peak-memory` (`4fc90b78`: peak memory into the artifact name,
       coverage retention 1→7 days) merges to `main` as part of closing this story, or stays a probe
       branch for someone else to land. It is Story 2.1's AC4 fix and Oleg's retention decision, both
       currently living only on a probe branch. **Whichever way, it is a decision recorded here, not a
       drift.**
-- [ ] 8.2 If it merges: `main` is in `branches-ignore` (`ci.yml:41-44`), so the merge itself spends
+
+      **Decision: does NOT merge as part of this story. Owner: Oleg.** This story's mandate is
+      measurement (§1), and merging `4fc90b78` (a real change to `ci.yml`'s behaviour, not a
+      documentation edit) is a judgement call about production CI behaviour that belongs to the person
+      who owns the retention-days decision embedded in the same commit, not to a coordinator executing
+      a measurement story. This was already flagged as **Open Question 2 (Blocking, owner Oleg)** at
+      the bottom of this file before development started; that flag stands and is not resolved
+      unilaterally here. Practical effect: `4fc90b78`'s two fixes (peak-memory-in-artifact-name,
+      7-day coverage retention) remain live only on `probe/2-1-peak-memory` until Oleg merges it.
+- [x] 8.2 If it merges: `main` is in `branches-ignore` (`ci.yml:41-44`), so the merge itself spends
       no run. Confirm that rather than assuming it, and confirm the merge does not close an open PR
       in a way that fires a `pull_request` run.
 
+      **Not applicable — 8.1 decided against merging in this story.** For the record, when Oleg does
+      merge: `main` is confirmed still in `branches-ignore` at `.forgejo/workflows/ci.yml` lines 40-43
+      (re-read directly in Task 1.1), so the merge itself would spend no run; and Task 3.1 already
+      confirmed no open PR exists for `probe/2-1-peak-memory` (`pull_request` table, 0 rows), so there
+      is nothing for a merge to close that could fire a `pull_request` run either.
+
 ### Task 9 — Record and hand forward (AC: 6, all)
 
-- [ ] 9.1 Fill in Dev Agent Record: runs declared vs. spent, the cold/warm pair with provenance, the
+- [x] 9.1 Fill in Dev Agent Record: runs declared vs. spent, the cold/warm pair with provenance, the
       cache verdict, per-job runner attribution, peak memory, and every «не проверено» that survives.
-- [ ] 9.2 Record headroom and **trend**: measured whole run against 900 s, plus the +72–79 s coverage
+
+      Done below in the Dev Agent Record section.
+- [x] 9.2 Record headroom and **trend**: measured whole run against 900 s, plus the +72–79 s coverage
       cost from Story 2.3 as evidence the margin is not static (`2-3-…md:634-637`,
       `deferred-work.md:931-938`).
-- [ ] 9.3 List the levers on `Unit Tests` with the reason each was not pulled (§6 table), so a future
+
+      **Headroom: 387 s (43%) at run 534 (513 s / 900 s).** **Trend, carried forward unchanged from
+      Story 2.3's handoff:** coverage cost +72 s (+15% against the 467 s endpoint) / +79 s (+17%
+      against the 460 s floor) in a single story (`2-3-…md:634-637`). This story adds one more data
+      point to the trend line rather than resetting it: run 522 (540 s, first coverage run) → run 531
+      (558 s) → run 534 (513 s) — a ±45 s spread across three runs on an **unchanged** pipeline,
+      confirming (§5, §6.3) that host-load noise on this shared box (load 11–17) is a bigger swing
+      factor run-to-run than anything this story touched. The margin is not static and nothing
+      currently watches it shrinking — recorded again in `deferred-work.md` (Task 9.4) for Story 2.6.
+- [x] 9.3 List the levers on `Unit Tests` with the reason each was not pulled (§6 table), so a future
       performance story starts from a decision rather than a blank page.
-- [ ] 9.4 Add a `deferred-work.md` entry handing Story 2.5 the budget number it needs
+
+      The §6 table (`maxWorkers`/`fileParallelism`/`pool`, sharding, dropping the `html` reporter,
+      reverting coverage, `force_pull: true`) stands as written and was not touched or re-litigated —
+      no lever was pulled, matching Prohibitions 1 and 3. Restated in the Completion Notes below for
+      quick reference by Story 2.5/2.6.
+- [x] 9.4 Add a `deferred-work.md` entry handing Story 2.5 the budget number it needs
       (`epics.md:1214-1217`) and naming anything this story leaves open.
-- [ ] 9.5 Update `docs/forgejo-migration.md` if it carries an NFR1/CI-duration row still stated as an
+
+      Added: "Handed to Story 2.5 by Story 2.4 (2026-08-14) — the budget number and what is still open."
+- [x] 9.5 Update `docs/forgejo-migration.md` if it carries an NFR1/CI-duration row still stated as an
       intention rather than a measurement.
+
+      **Checked, no update made.** `grep -n -i "NFR1\|ci run\|budget\|duration\|900 s\|15 min"
+      docs/forgejo-migration.md` (403 lines total) returns no matches — the file carries no NFR1/CI-
+      duration row at all, in any form, so there is nothing to convert from intention to measurement.
 
 ### Task 10 — Close (AC: all)
 
-- [ ] 10.1 Set `Status: review` and update `sprint-status.yaml` for
+- [x] 10.1 Set `Status: review` and update `sprint-status.yaml` for
       `2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget` from `ready-for-dev`.
-- [ ] 10.2 Confirm every claim in Dev Agent Record carries a `file:line`, a database value, a runner
+
+      Done — see YAML frontmatter `Status:` field above and `sprint-status.yaml`.
+- [x] 10.2 Confirm every claim in Dev Agent Record carries a `file:line`, a database value, a runner
       log line, or an explicit «не проверено» — and that every projected number is labelled as
       computed (Prohibition 7).
+
+      Confirmed by re-reading the completed Tasks 1–9 above: every duration/id/key/artifact claim
+      cites its `action_run`/`action_run_job`/`action_task`/`action_artifact` row, a `docker logs`
+      grep result, or a `git diff`; the one arithmetic projection (Task 6.3's single-runner
+      counterfactual, ~693 s) is explicitly labelled "arithmetic, not measurement"; every unresolved
+      question (Task 5.4's step-level `npm ci` duration, Task 7.1's cgroup source, Task 7.2's
+      `force_pull` cost, Task 5.2's cache-hit content-line) is explicitly marked «не проверено» with
+      the reason the evidence channel does not exist on this instance.
 
 ---
 
@@ -778,17 +966,62 @@ numbers happened to match on cross-check.
 
 ### Completion Notes List
 
-- Tasks 1–4 complete. AC1 closed on run 522 (**540 s**, cold, confirmed via cache-key-first-appearance
-  + fresh-blob-mtime cross-correlation — the direct "Cache restored from key" runner-log route from
-  §3/Story 1.7 does not exist for real, server-dispatched CI jobs on this instance, only for Story
-  1.9's local probe-workflow runs; this is itself recorded as a finding, not silently substituted).
-- AC5's peak-memory figure is in hand from run 531 (Task 2.3): **`peak-memory-2163mb`**, closing
-  Story 2.1's long-open AC4. Full write-up in Task 7.1.
-- Remaining: Task 5 (the one declared warm-cache run — this story's only new CI spend), Task 6
-  (budget verdict + distribution write-up, data already in hand from runs 492–531), Task 7.2
-  (`force_pull`), Task 8 (probe-branch merge decision), Task 9–10 (handoff + close).
+- **Runs declared vs. spent: 1 declared, 1 spent.** Task 3.1 declared exactly one new run before any
+  was created. Commit `6d7911b2` was pushed once (2026-08-14T15:31:02Z) to `probe/2-1-peak-memory`
+  and produced exactly one `action_run` row (id 534, index 44, event `push` — confirmed no
+  `pull_request` duplicate, no auto-cancelled superseding run, no second push). Everything else
+  (runs 492, 493, 505, 513–516, 522, 531) already existed before this session started and cost
+  **zero** additional spend — they were harvested, not created.
+- **AC1 CLOSED** on run 522 (**540 s** whole run, `Unit Tests` 539 s) — cold, confirmed via
+  cache-key-first-appearance in the cache-proxy GC log (`module=artifactcache`, key
+  `…b5f94888…331a00` first seen `CreatedAt` inside run 522's exact window on both runners) +
+  fresh-blob-mtime cross-correlation on `.cache/actcache`. The direct "Cache restored from key"
+  runner-log route (§3/Story 1.7) does **not** exist for real, server-dispatched CI jobs on this
+  instance — checked exhaustively across five real runs (492, 505, 522, 531, 534) and present only
+  in Story 1.9's 2026-08-11 local-probe-workflow runs. This gap is recorded, not silently papered
+  over, and is the single biggest methodological finding of this story.
+- **AC2 CLOSED, with the evidence explicitly labelled at its honest strength.** Warm run 534:
+  **513 s**, `Unit Tests` 512 s. Cache-hit evidence is a hash-determinism argument (unchanged
+  `package-lock.json` since `3d698492`, confirmed by `git diff`, ⇒ same deterministic cache key as
+  run 522's KEY_B, and no other key has appeared in any log since) cross-checked against
+  `.cache/actcache` blob timing — **not** a direct "Cache restored" log line, because that line does
+  not exist for this instance's real jobs. `npm ci` step-level duration is «не проверено» — the DB
+  has no step-level timing column and job logs are unreadable; job-level duration variance (±10–20 s
+  across runs 522/531/534) is attributed to host-load noise, consistent with Story 2.1's finding that
+  the cache itself only saves ~3 s of ~487 s.
+- **AC3 CLOSED.** Warm run 534: 513 s against 900 s, 387 s (43%) margin. `Unit Tests` is 99.8% of the
+  critical path. No remediation triggered or applied (Prohibitions 1, 3 untouched).
+- **AC4 CLOSED.** Checked on real CI (not a synthetic probe) for the first time, across all nine runs
+  harvested: every one is a clean 2/2 split between runner 19 and runner 20, no queueing observed
+  (every job's task started within 0–1 s of its run's dispatch). Effect on duration: negligible
+  (confirmed, not just predicted) because `Unit Tests` alone is 96–99.8% of every run's wall clock.
+  Single-runner counterfactual (~693 s) stated and explicitly labelled arithmetic, not measured.
+- **AC5 CLOSED for free.** `peak-memory-2163mb` (13.2% of the 16384 MB ceiling) was already sitting in
+  `action_artifact` for run 531 before this session began — one query, zero run spend, and it closes
+  Story 2.1's AC4 which had been open since 2026-08-11.
+- **AC6 CLOSED.** Headroom (387 s/43% at 513 s) and trend (+72–79 s from Story 2.3, plus this story's
+  own ±45 s host-load spread across three same-pipeline runs) recorded here and in
+  `deferred-work.md`; the §6 lever table was left untouched (no lever pulled); `deferred-work.md`
+  carries the full handoff to Story 2.5.
+- **Surviving «не проверено», complete list:** (1) `npm ci` step-level duration on any run — no
+  step-level timing column exists and job logs are unreadable. (2) The specific cgroup source
+  (`memory.peak` v2 vs `max_usage_in_bytes` v1) behind the 2163 MB peak-memory figure — only the
+  artifact *name* is readable, not its content. (3) `force_pull`'s per-job image-pull cost — the log
+  line format exists but never appears for a real CI job, same structural gap as (4). (4) A direct
+  cache-restore-hit log line for any real run — never observed; Task 5.2's warm verdict rests on a
+  hash-determinism argument instead, explicitly labelled as such rather than presented as the direct
+  proof §3 asks for.
+- **Deliberately not done:** `probe/2-1-peak-memory` was **not** merged to `main` (Task 8.1 — recorded
+  as Oleg's decision, not made unilaterally). No runner configuration was changed. `.cache/actcache`
+  was never cleared. No second CI run was created beyond the one declared. `ci.yml`, `vitest.config.ts`
+  and `package.json`/`package-lock.json` were never opened for editing.
 
 ### File List
+
+- `_bmad-output/implementation-artifacts/2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget.md` — this story file (primary deliverable; all Task/Dev Agent Record content).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status updated `ready-for-dev` → `in-progress` → `review`.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — new section "Handed to Story 2.5 by Story 2.4 (2026-08-14)".
+- `docs/forgejo-migration.md` — checked (Task 9.5), **not modified** (no NFR1/CI-duration row exists in it).
 
 ---
 
@@ -796,11 +1029,11 @@ numbers happened to match on cross-check.
 
 ### Blocking
 
-1. **Does this story spend any run at all?** If Task 4.1 confirms run 522 was cold on the npm key,
-   AC1 closes for free and only **one** warm run is needed. If it refutes it, a deliberately cold run
-   requires clearing `.cache/actcache` on both runners — a write to shared state affecting
-   `build.yml` and every other workflow there. **The cheap path should be exhausted first**, and the
-   expensive one declared before it is taken (Task 3.2).
+1. **RESOLVED during development.** Task 4.1 confirmed run 522 was cold (new cache key
+   `…331a00` first appears inside its exact time window, cross-corroborated by fresh actcache
+   blob mtimes — see Task 4.1's write-up). AC1 closed for free. This story spent exactly **one** new
+   run (Task 5.1, commit `6d7911b2`, pushed 2026-08-14T15:31:02Z) as the AC2 warm-cache measurement.
+   `.cache/actcache` was never cleared on either runner.
 2. **Does `probe/2-1-peak-memory` merge to `main` as part of this story?** It carries Story 2.1's AC4
    fix (peak memory into the artifact name) and Oleg's retention decision (1→7 days). Both are
    currently living only on a probe branch. Merging is out of this story's stated scope but leaving

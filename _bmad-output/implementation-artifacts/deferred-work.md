@@ -940,3 +940,41 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   `coverage` (780 files → 1 row, measured) but did not touch `dist`, which was outside its scope.
   Two runs per PR commit means ~308 rows per commit from `dist` alone. Whoever revisits Story 2.1's
   build job should apply the same treatment; the mechanism and the measurement are recorded here.
+
+## Handed to Story 2.5 by Story 2.4 (2026-08-14) — the budget number, and what is still open
+
+- ✅ **The budget number Story 2.5 needs (`epics.md:1214-1217`): the pipeline is comfortably inside
+  15 minutes, three first-hand measurements in hand, not one.** Cold run **522**: 540 s. Push run
+  **531** (peak-memory evidence, same lock file): 558 s. Warm run **534** (this story's one budgeted
+  spend): **513 s against 900 s — 387 s (43%) of margin**. `Unit Tests` is 96–99.8% of the critical
+  path on every run measured (492 through 534, nine runs total). The ±45 s spread across three runs
+  on an unchanged pipeline is host-load noise (`load 11–17` on shared host s1), not a trend signal —
+  keep that in mind if Story 2.5's "five consecutive green" pushes ever look surprisingly slow or
+  fast; it is very likely the host, not the change under test.
+- ⚠️ **The margin is shrinking and nothing watches it.** Story 2.3's coverage instrumentation cost
+  +72–79 s (a fifth of the margin) in one story (`2-3-…md:634-637`). No mechanism in `ci.yml` or
+  elsewhere flags a budget regression before it lands — it would need someone to notice by eye.
+  Three more changes that size and the 900 s budget is gone. Whether Story 2.6 (required checks)
+  should own an automated threshold is an open question for whoever plans it, not decided here.
+- 🔴 **Cache-hit evidence has a hard ceiling on this instance, and it will affect any future story
+  that needs to prove a cache result.** The direct evidence route described in `2-1-…md`/`1-7:634-648`
+  (`Cache restored from key: …` in the runner container log) **does not exist for real,
+  server-dispatched CI jobs** — confirmed absent across five real runs checked (492, 505, 522, 531,
+  534) and present only in Story 1.9's 2026-08-11 local-probe-workflow runs. Story 2.4 fell back to a
+  hash-determinism argument (unchanged `package-lock.json` ⇒ same cache key ⇒ the key that was saved
+  by an earlier run must be what a later run restores) cross-checked against `.cache/actcache`
+  blob-mtime timing — defensible, but weaker than a direct log line, and it is the ceiling, not a
+  gap this story left by not trying harder. Any future story needing cache-hit proof should expect
+  the same ceiling rather than re-discover it.
+- ⚠️ **`force_pull: true`'s cost remains «не проверено».** Same structural gap as above — the
+  `docker pull … forcePull=true` line exists in the runner log format (confirmed, Story 1.9 probe
+  runs) but never appears for a real CI job. Not worth a story on its own while the budget has
+  margin (§7 of Story 2.4), but the same evidence ceiling applies if anyone picks it up later.
+- ℹ️ **Peak memory closed:** `Unit Tests` peaked at **2163 MB** against the 16384 MB ceiling
+  (13.2%) on run 531 — Story 2.1's AC4, open since 2026-08-11, is now answered. Story 2.1's doubling
+  of the heap ceiling (8192→16384 MB) was confirmed precautionary rather than corrective: even the
+  original 8192 MB ceiling would have had 62% headroom over the measured peak.
+- ℹ️ **`probe/2-1-peak-memory` (commit `4fc90b78`) still has not merged to `main`.** It carries the
+  peak-memory-in-artifact-name fix and the coverage-retention 1→7-day change. Story 2.4 declined to
+  merge it unilaterally (measurement story, not a scope to make a production-CI-behaviour call) and
+  left it as a recorded, owner-assigned decision (**Owner: Oleg**) rather than silent drift.
