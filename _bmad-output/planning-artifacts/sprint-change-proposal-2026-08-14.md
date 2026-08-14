@@ -4,8 +4,12 @@
 **Trigger:** Accumulated divergences from two days of implementation (Stories 1.12, 2.1, 2.2, 3.1),
 gathered on Oleg's instruction to «либо идти по плану, либо корректировать курс».
 **Mode:** batch.
-**Scope classification:** **Moderate** — one story cancelled, four amended, one FR amended, one
-recorded mitigation withdrawn as false. No epic redefinition, no rollback of completed work.
+**Scope classification:** **Moderate** — one story **resequenced to last** (Oleg overrode the
+recommendation to cancel it), four amended, one FR amended, one recorded mitigation withdrawn as
+false. No epic redefinition, no rollback of completed work.
+
+**Outcome, 2026-08-14: accepted and applied**, with §4.1 decided against the recommendation — see
+there for the reasoning and for the rule that came with it.
 
 ---
 
@@ -16,7 +20,7 @@ evidence that produced it.
 
 | # | Where | The divergence |
 |---|---|---|
-| A | Story 4.5 | Its only delivery channel is permanently dead by decision |
+| A | Story 4.5 | Its only delivery channel does not exist — **kept and resequenced to last, not cancelled** |
 | B | Story 2.3 | Its blocker rests on an inference that new evidence contradicts |
 | C | Story 2.6 | It names four required checks; the system produces eight contexts |
 | D | Story 6.5 | The neighbouring repo already has a stronger gate than the one it specifies |
@@ -117,7 +121,7 @@ deletion** — which is a different and much weaker statement than the one recor
 
 ## 3. Recommended Approach
 
-**Direct adjustment.** One cancellation, four amendments, one FR annotation, one correction of a
+**Direct adjustment.** One resequencing (recommendation was cancellation; overridden), four amendments, one FR annotation, one correction of a
 false record. No rollback; no epic resequencing — in particular **Story 7.2 stays where it is**,
 because §F removes the reason to move it.
 
