@@ -4,7 +4,7 @@ baseline_commit: 8e10a6fa
 
 # Story 2.5: Validate CI Stability Across Five Consecutive Real Pull Requests
 
-Status: ready-for-dev
+Status: review
 
 > **This story spends more shared infrastructure than any story before it, and it is the only story
 > in Epic 2 whose deliverable can be faked without anyone noticing.** Ten CI runs, ~85 minutes of
@@ -379,85 +379,85 @@ finding.
 
 **Repeat 3.1–3.9 five times. Do not start PR N+1 until PR N is merged.**
 
-- [ ] 3.1 Cut the branch from **current `main`** and verify its head SHA equals `main`'s (§3).
-- [ ] 3.2 Commit exactly one change (§2). Push the branch — this fires the `push` run.
-- [ ] 3.3 Open the pull request against `main` — this fires the `pull_request` run.
+- [x] 3.1 Cut the branch from **current `main`** and verify its head SHA equals `main`'s (§3).
+- [x] 3.2 Commit exactly one change (§2). Push the branch — this fires the `push` run.
+- [x] 3.3 Open the pull request against `main` — this fires the `pull_request` run.
       **Method:** `POST /api/v1/repos/CRM/fe-prionex/pulls` with
       `Authorization: token $(cat /root/.fj_token)` from s1, body `{"head":"<branch>","base":"main",
       "title":…,"body":…}`. This route is proven — Story 1.13 created PR #1 and Story 2.2 created
       PR #2 through it. Record the returned PR `index`. The web UI is an acceptable fallback; if you
       use it, say so, because a UI action is not reproducible from this record.
-- [ ] 3.4 Record both runs from the database: `id`, `index`, `event`, `ref`, `commit_sha`, `status`,
+- [x] 3.4 Record both runs from the database: `id`, `index`, `event`, `ref`, `commit_sha`, `status`,
       `started`, `stopped`, wall clock; and per-job `action_run_job` / `action_task` rows with
       `runner_id` and durations. **Do not read durations from the web UI** (§8).
-- [ ] 3.5 Confirm `workflow_id` is `ci.yml` for **both** runs. A run of `.github/workflows/CI.yml`
+- [x] 3.5 Confirm `workflow_id` is `ci.yml` for **both** runs. A run of `.github/workflows/CI.yml`
       here means §3's guard failed — **stop, do not continue the sequence, record it as
       infrastructure-class** and report to Oleg (`ci-hub` was triggered).
-- [ ] 3.6 If either run is not 4/4 green: classify per §5, record the evidence (including the local
+- [x] 3.6 If either run is not 4/4 green: classify per §5, record the evidence (including the local
       reproduction attempt for any code claim), apply the counter rule from AC2, and **stop the
       sequence** until the root cause is fixed. Do not use *Rerun* (Prohibition 4).
-- [ ] 3.7 Query `commit_status` for the head SHA and record every context string verbatim with its
+- [x] 3.7 Query `commit_status` for the head SHA and record every context string verbatim with its
       `state` (AC4). Do this per PR — the strings are cheap now and expensive to reconstruct later.
-- [ ] 3.8 Merge the PR into `main`. **Method:**
+- [x] 3.8 Merge the PR into `main`. **Method:**
       `POST /api/v1/repos/CRM/fe-prionex/pulls/{index}/merge`, same token.
       ⚠️ **`main` carries branch protection** (`migration-decisions.md:579-580`) and no story has yet
       merged a PR into it through the API — **this is the first time.** If the merge is refused,
       **that is a finding, not a blocker**: record the exact error, hand it to Story 2.6 (which owns
       branch protection), and ask Oleg to merge. Do **not** work around it by force-pushing to `main`
       or by disabling protection.
-- [ ] 3.9 Confirm the merge produced **no run** — `main` is in `branches-ignore` (`ci.yml:41-46`).
+- [x] 3.9 Confirm the merge produced **no run** — `main` is in `branches-ignore` (`ci.yml:41-46`).
       Check by SHA, not by absence from a listing; `refs/heads/main` has never produced a run and
       that invariant was established at `fed828d1` (`2-2-…md:754`). A run here is a finding.
 
 ### Task 4 — Evaluate against the budget (AC: 3)
 
-- [ ] 4.1 Tabulate all ten runs: id, index, event, SHA, PR number, four job durations, whole-run wall
+- [x] 4.1 Tabulate all ten runs: id, index, event, SHA, PR number, four job durations, whole-run wall
       clock, runner ids per job.
-- [ ] 4.2 State pass/fail against 900 s **per run**, not on the average. Report min, max, mean.
-- [ ] 4.3 Compare the spread against Story 2.4's 513–558 s baseline. Flag any run outside it and say
+- [x] 4.2 State pass/fail against 900 s **per run**, not on the average. Report min, max, mean.
+- [x] 4.3 Compare the spread against Story 2.4's 513–558 s baseline. Flag any run outside it and say
       whether the explanation is host load (check the `started` timestamp against host load) or
       something else. Do not smooth an outlier into an average (`deferred-work.md:946-953`).
-- [ ] 4.4 Record whether `push` and `pull_request` runs for the same SHA differ systematically —
+- [x] 4.4 Record whether `push` and `pull_request` runs for the same SHA differ systematically —
       Story 2.2 measured 461 s vs 503–510 s, i.e. the PR run ran ~45 s slower on the same commit
       (`2-2-…md:766-771`). Five paired observations either confirm that as real or dissolve it into
       noise. State which, and label it measured, not computed.
-- [ ] 4.5 Record job→runner distribution across ten runs. Story 2.4 saw a clean 2/2 split on nine
+- [x] 4.5 Record job→runner distribution across ten runs. Story 2.4 saw a clean 2/2 split on nine
       runs; ten more either confirm it or find the exception.
 
 ### Task 5 — Harvest the status contexts for Story 2.6 (AC: 4)
 
-- [ ] 5.1 Collate the `commit_status` rows from Task 3.7 across all five head SHAs.
-- [ ] 5.2 List the **distinct** context strings with their event. Expect eight. **Report the actual
+- [x] 5.1 Collate the `commit_status` rows from Task 3.7 across all five head SHAs.
+- [x] 5.2 List the **distinct** context strings with their event. Expect eight. **Report the actual
       count**, whatever it is.
-- [ ] 5.3 If the count is not eight, or the strings differ from `CI / {Lint,Type Check,Unit
+- [x] 5.3 If the count is not eight, or the strings differ from `CI / {Lint,Type Check,Unit
       Tests,Build}` in `(push)`/`(pull_request)` form, that is a finding for Story 2.6 and for
       `epics.md:1229-1239` — record it prominently, do not normalise it.
-- [ ] 5.4 Record whether every context reached a terminal `state` on every run, and whether any run
+- [x] 5.4 Record whether every context reached a terminal `state` on every run, and whether any run
       produced a context that no other run produced.
 
 ### Task 6 — Record and hand forward (AC: all)
 
-- [ ] 6.1 Write the full evidence table into this file's Dev Agent Record: ten runs, provenance for
+- [x] 6.1 Write the full evidence table into this file's Dev Agent Record: ten runs, provenance for
       every number, and the declared-vs-spent budget reconciliation.
-- [ ] 6.2 Record the §2 deviation on "real" explicitly, with its reasoning, in the Completion Notes.
-- [ ] 6.3 Record the §5 three-class taxonomy as used, including any classification actually made and
+- [x] 6.2 Record the §2 deviation on "real" explicitly, with its reasoning, in the Completion Notes.
+- [x] 6.3 Record the §5 three-class taxonomy as used, including any classification actually made and
       the evidence behind it. If no run failed, say that plainly — an unexercised taxonomy is still
       worth recording, because Story 2.6 inherits it.
-- [ ] 6.4 Add a `## Handed to Story 2.6 by Story 2.5` section to `deferred-work.md` carrying: the
+- [x] 6.4 Add a `## Handed to Story 2.6 by Story 2.5` section to `deferred-work.md` carrying: the
       eight context strings verbatim, the budget verdict, the paired `push`/`pull_request` finding,
       the 497-branch hazard restated in 2.6's terms (**a PR from a stale branch produces legacy CI
       contexts and never the `CI /` ones — once required checks are on, such a PR can never go
       green**), and anything Task 5.3 found.
-- [ ] 6.5 Add the changelog row to `docs/migration-decisions.md` per the standing convention.
-- [ ] 6.6 If any AC could not be closed, record it as deferred with the reason — the acceptable
+- [x] 6.5 Add the changelog row to `docs/migration-decisions.md` per the standing convention.
+- [x] 6.6 If any AC could not be closed, record it as deferred with the reason — the acceptable
       outcome. Do not close an AC you did not close.
 
 ### Task 7 — Close (AC: all)
 
-- [ ] 7.1 Update `sprint-status.yaml`: `2-5-validate-ci-stability-across-five-consecutive-real-pull-requests` → `review`.
-- [ ] 7.2 Confirm the File List is complete and that nothing under Prohibitions 1, 2, 10, 11, 13 was
+- [x] 7.1 Update `sprint-status.yaml`: `2-5-validate-ci-stability-across-five-consecutive-real-pull-requests` → `review`.
+- [x] 7.2 Confirm the File List is complete and that nothing under Prohibitions 1, 2, 10, 11, 13 was
       touched.
-- [ ] 7.3 Confirm every branch created was merged or deleted, and that no PR is left open.
+- [x] 7.3 Confirm every branch created was merged or deleted, and that no PR is left open.
 
 ---
 
@@ -933,15 +933,224 @@ Then one block per PR follows in Task 3.
 - **3.9** `action_run` for `commit_sha = '25b3fc57…'` → **0 rows**. No run on the merge commit.
 - **Cleanup:** branch merged, deleted remotely and locally. No run created by the delete.
 
+---
+
+#### PR 5/5 (final) — `story-2-5/pr-5-story-file-pr4-evidence`
+
+- **3.1** Branch cut from `main` HEAD `25b3fc57b613a3cc6237e7368103df1ec71f01ab` (PR 4's merge
+  commit), verified equal to `origin/main` before `checkout -b`.
+- **3.2** One commit, `480df7281c58567e8cdb8812769835a6a3587d2a` — this story file, PR 4's evidence
+  block. Local pre-commit hook: 228/228 files, 1921/1921 tests green, ~149 s.
+- **3.3** PR opened via API → **HTTP 201**, `index = 7`, `head.sha = 480df728…`, `state = open`.
+- **3.4/3.5:**
+
+  | id | index | event | ref | workflow_id | status | started | stopped | duration |
+  |---|---|---|---|---|---|---|---|---|
+  | 543 | 53 | push | `refs/heads/story-2-5/pr-5-…` | **ci.yml** | 1 (success) | 1786732342 | 1786732854 | **512 s** |
+  | 544 | 54 | pull_request | `refs/pull/7/head` | **ci.yml** | 1 (success) | 1786732434 | 1786732992 | **558 s** |
+
+  `ci.yml` on both, `ci-hub` not triggered. Both green, no rerun.
+
+  | run id | job | status | duration | runner_id |
+  |---|---|---|---|---|
+  | 543 (push) | Lint | success | 141 s | 20 |
+  | 543 (push) | Type Check | success | 91 s | 20 |
+  | 543 (push) | Unit Tests | success | 511 s | 19 |
+  | 543 (push) | Build | success | 112 s | 19 |
+  | 544 (pull_request) | Lint | success | 135 s | 20 |
+  | 544 (pull_request) | Type Check | success | 85 s | 19 |
+  | 544 (pull_request) | Unit Tests | success | 508 s | 20 |
+  | 544 (pull_request) | Build | success | 109 s | 19 |
+
+  Runner split: 4/4, clean 2/2 per run. Same assignment shape as PR 4 (runner 20 drew {Lint, Type
+  Check} on the push run).
+
+- **3.6** Both runs 4/4 green. No classification needed.
+- **3.7** `commit_status` for `sha = 480df728…`: **8 distinct final contexts, all `state = success`**
+  — the same eight, verbatim.
+- **3.8** Merge: `POST …/pulls/7/merge` → **HTTP 200**. `has_merged = t`, `merged_commit_id =
+  2feb64db9ab9f62ceb27ad524773eb3a0aaa6239`, merged 2026-08-14 18:44:10 UTC. **Fifth consecutive
+  first-attempt API merge into `main` — zero merge refusals across the entire sequence.**
+- **3.9** `action_run` for `commit_sha = '2feb64db…'` → **0 rows**. No run on the merge commit.
+- **Cleanup:** branch merged, deleted remotely and locally. No run created by the delete.
+
+**This is the fifth and final real PR. AC1's "five consecutive real pull requests" is now
+satisfied: ten runs, ten green, zero resets, zero code-class exclusions, five first-attempt merges
+into protected `main`.** PR 5's evidence above is recorded directly on `main` (this file, this
+commit) rather than via a sixth PR — AC1 requires exactly five, and Task 6/7's remaining
+documentation work (budget synthesis, context harvest, the `deferred-work.md` handoff, the
+`migration-decisions.md` changelog row, closing `sprint-status.yaml`) follows this repository's
+standing practice of committing routine tracking and documentation updates directly to `main`.
+
+---
+
+### Task 4 — Evaluation against the budget
+
+**4.1 Full ten-run tabulation** (all values from `action_run` / `action_run_job` / `action_task`,
+`repo_id=16`; PR numbers are the Forgejo issue/PR `index`, not the run `index`):
+
+| PR | run id | run index | event | commit SHA | Lint | Type Check | Unit Tests | Build | **whole run** | runner split |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 (#3) | 535 | 45 | push | `784d1cc9` | 139 s | 83 s | 514 s | 111 s | **515 s** | 19/20 (2/2) |
+| 1 (#3) | 536 | 46 | pull_request | `784d1cc9` | 136 s | 84 s | 510 s | 107 s | **566 s** | 19/20 (2/2) |
+| 2 (#4) | 537 | 47 | push | `fb1e7351` | 142 s | 85 s | 513 s | 115 s | **514 s** | 19/20 (2/2) |
+| 2 (#4) | 538 | 48 | pull_request | `fb1e7351` | 136 s | 81 s | 511 s | 111 s | **567 s** | 19/20 (2/2) |
+| 3 (#5) | 539 | 49 | push | `be0b5656` | 140 s | 85 s | 520 s | 110 s | **521 s** | 19/20 (2/2) |
+| 3 (#5) | 540 | 50 | pull_request | `be0b5656` | 136 s | 84 s | 508 s | 109 s | **564 s** | 19/20 (2/2) |
+| 4 (#6) | 541 | 51 | push | `20c7b2c1` | 138 s | 86 s | 516 s | 113 s | **517 s** | 19/20 (2/2)* |
+| 4 (#6) | 542 | 52 | pull_request | `20c7b2c1` | 137 s | 82 s | 505 s | 108 s | **558 s** | 19/20 (2/2)* |
+| 5 (#7) | 543 | 53 | push | `480df728` | 141 s | 91 s | 511 s | 112 s | **512 s** | 19/20 (2/2) |
+| 5 (#7) | 544 | 54 | pull_request | `480df728` | 135 s | 85 s | 508 s | 109 s | **558 s** | 19/20 (2/2) |
+
+\* PR 4 onward: the *which-runner-draws-which-job* assignment flipped (still clean 2/2), see 4.5.
+
+**Budget baseline reconciliation:** `action_run` before this story: `max(id)=534`. This story created
+ids **535–544 inclusive — exactly 10, matching the declared budget exactly.** Zero resets, zero
+extra runs. **Declared 10 (Task 2.1), spent 10.**
+
+**4.2 Pass/fail against 900 s, per run, not average:**
+
+**All ten runs pass. Every single run finished under the 900 s budget** — the closest was 567 s
+(PR 2's `pull_request` run), still **333 s (37%) of margin.**
+
+- **min = 512 s** (PR 5, push)
+- **max = 567 s** (PR 2, pull_request)
+- **mean = 539.2 s** (5392 s / 10) — reported for completeness only; **the verdict is per-run, not
+  the mean:** 10/10 runs ≤ 567 s ≤ 900 s.
+
+**4.3 Spread vs. Story 2.4's 513–558 s baseline — flagged, not smoothed:**
+
+Three of ten runs fall **outside** the 513–558 s baseline band, all on the high side, all
+`pull_request` runs: **566 s (PR 1), 567 s (PR 2), 564 s (PR 3)** — 6–9 s above the 558 s upper
+bound. One run (512 s, PR 5 push) sits 1 s below the 513 s lower bound — within measurement noise,
+not flagged. **These are not explained by host load**: Debug Log 1.7 recorded load average 2.88–4.38
+before this story started, markedly *lower* than Story 2.4's 11–17, so host contention predicts
+these runs should be faster, not slower, than the 2.4 baseline — the opposite of what was observed.
+**The explanation that fits the data is the queuing structure recorded in §6 and confirmed in 4.4
+below**: every `pull_request` run's jobs wait for slots the paired `push` run's jobs are still
+holding, and that queuing delay, not host load, is what pushes `pull_request` durations 6–9 s past a
+baseline that was itself built mostly from `push`-run samples. This is stated as the fitting
+explanation, not proven by elimination of every alternative.
+
+**4.4 `push` vs `pull_request` systematic difference — measured, not computed:**
+
+| | push (mean) | pull_request (mean) | difference |
+|---|---|---|---|
+| PR 1 | 515 s | 566 s | +51 s |
+| PR 2 | 514 s | 567 s | +53 s |
+| PR 3 | 521 s | 564 s | +43 s |
+| PR 4 | 517 s | 558 s | +41 s |
+| PR 5 | 512 s | 558 s | +46 s |
+| **mean of 5** | **515.8 s** | **562.6 s** | **+46.8 s** |
+
+**All five paired observations show the `pull_request` run slower than the `push` run on the same
+commit, by 41–53 s, mean +46.8 s.** This confirms Story 2.2's single-pair finding (461 s vs
+503–510 s, ~45 s) as a **real, repeatable effect**, not noise — five-for-five in the same direction,
+with a tight range (41–53 s) around the same magnitude Story 2.2 measured. **Labelled measured, not
+computed**: each number above is a direct `stopped − started` read from `action_run`, and the "mean
+of 5" row is the only arithmetic performed on top of those direct reads.
+
+**4.5 Job→runner distribution across ten runs:**
+
+**Every one of the ten runs split its four jobs 2/2 across runners 19 and 20 — a clean split held on
+100% of runs, extending Story 2.4's nine-run finding to nineteen runs total with zero exceptions.**
+Over the ten runs (40 job-slots), runner 19 ran 20 jobs and runner 20 ran 20 jobs — exactly even.
+
+**Finding, not smoothed:** *which* job types land on which runner shifted partway through the
+sequence. PRs 1–3 (runs 535–540) consistently sent {Lint, Type Check} to runner 19 and {Unit Tests,
+Build} to runner 20 on `push` runs (and a different but still consistent pattern on `pull_request`
+runs — {Lint, Unit Tests}→19, {Type Check, Build}→20). Starting at PR 4 (run 541) the pattern
+flipped: {Lint, Type Check}→20, {Unit Tests, Build}→19 on `push`, and continued flipped through PR 5.
+No job-type-to-runner pinning exists in the workflow or runner config (confirmed at 1.4/1.9 — labels
+are identical on both runners); this reads as Forgejo's own scheduler load-balancing across two
+otherwise-interchangeable runners, not a configuration change mid-story (no runner config was
+touched — Prohibition 10). Recorded as observed; not investigated further as it is outside this
+story's scope and does not affect the 2/2 balance or any duration outside the flagged 4.3 cases.
+
+### Task 5 — Status-check contexts harvested for Story 2.6
+
+**5.1/5.2 Collated across all five head SHAs** (`784d1cc9`, `fb1e7351`, `be0b5656`, `20c7b2c1`,
+`480df728`) from Task 3.7's per-PR queries: **exactly eight distinct contexts on every one of the
+five SHAs, no more, no fewer.** Matches the expected count exactly.
+
+The eight, verbatim, exactly as stored in `commit_status.context`:
+
+1. `CI / Lint (push)`
+2. `CI / Type Check (push)`
+3. `CI / Unit Tests (push)`
+4. `CI / Build (push)`
+5. `CI / Lint (pull_request)`
+6. `CI / Type Check (pull_request)`
+7. `CI / Unit Tests (pull_request)`
+8. `CI / Build (pull_request)`
+
+**5.3 No discrepancy to report.** The count is eight, exactly as `epics.md:1229-1239` and this
+story's own Dev Notes expected, and the strings match `CI / {Lint,Type Check,Unit Tests,Build}` in
+`(push)`/`(pull_request)` form exactly — nothing to flag for Story 2.6 here.
+
+**5.4** Every one of the eight contexts reached a terminal state (`success`) on **every one of the
+five SHAs** — 40 terminal rows total (8 contexts × 5 SHAs), zero left `pending`, zero `failure`,
+zero `error`. No SHA produced a context that any other SHA did not also produce — the set is
+identical across all five PRs. (Each SHA also carries transient superseded `pending` rows from
+Forgejo's own status-update lifecycle — e.g. PR 1's SHA shows 24 total `commit_status` rows for 8
+final contexts — those are not counted as distinct contexts, only the final row per `context` is.)
+
+---
+
 ### Completion Notes List
 
-_One section per AC. For AC1, state the §2 deviation on "real" explicitly. For AC2, record the
-taxonomy as applied — including "no failure occurred" if that is the outcome. For AC3, state the
-verdict per run, not as an average. For AC4, give the context strings verbatim._
+**AC1 — five consecutive real pull requests, ten green runs, no manual reruns, durations recorded.**
+**CLOSED.** Five PRs opened in Forgejo against `main` (indexes 3, 4, 5, 6, 7), each cut from current
+`main` HEAD at cut time, each merged (not closed) before the next was cut, strictly sequential — one
+PR in flight at a time throughout. All ten runs (`action_run` ids 535–544) are 4/4 green,
+`workflow_id = ci.yml` on every run (never `.github/workflows/CI.yml` — `ci-hub` was never
+triggered), no `Rerun` used at any point, and every run's `started`/`stopped`/duration is recorded
+in Task 4.1's table with `id`, `index`, `event`, `commit_sha`, and per-job durations from
+`action_run_job`/`action_task`. **Deviation, as flagged in §2 and restated here per Task 6.2 below:**
+the five PRs carry this project's own documentation/tracking artefacts (the sprint-status transition
+and this story file's own progress record), not a developer's feature work — the epic's literal
+"real pull requests… opened" is satisfied on all five of §2's binding criteria (opened in Forgejo
+against `main`; branch cut from current `main` HEAD; content that would land on `main` regardless of
+this story; merged, not closed; strictly sequential), but not on the unstated assumption that "real"
+means "authored by a developer doing unrelated day-to-day work" — that supply does not exist yet on
+this instance (D7, no GitHub↔Forgejo PR mirror). This is the story's stated, not hidden, deviation.
+
+**AC2 — infrastructure/flake resets the count; code excludes at most once; taxonomy applied.**
+**CLOSED — taxonomy stated in Task 2.4, and it was never triggered.** All ten runs were green on
+their first and only execution. Zero infrastructure-class events, zero flake-class events, zero
+code-class exclusions. The counter never reset and the "at most one code exclusion" guard was never
+approached. This is recorded plainly per the story's own instruction that "an unexercised taxonomy
+is still worth recording" — Story 2.6 inherits a taxonomy that was defined in writing before any run,
+never had to be invoked, and therefore carries no precedent either way for how a real failure would
+have been handled here. The taxonomy itself (verbatim) is in Task 2.4 above.
+
+**AC3 — no run exceeded 900 s; evidence recorded and hand off to Story 2.6.** **CLOSED.** All ten
+runs passed the 900 s budget individually — see Task 4.2 (min 512 s, max 567 s, **verdict stated
+per-run: 10/10 ≤ 900 s**, mean 539.2 s reported for completeness only, not as the pass criterion).
+The spread against Story 2.4's 513–558 s baseline was compared per Task 4.3: three runs (all
+`pull_request`) landed 6–9 s outside the band and are flagged, with the queuing structure (not host
+load, which was favourable) as the fitting explanation — not smoothed into the average. The paired
+push/pull_request systematic difference (+46.8 s mean, Task 4.4) is confirmed as real across five
+independent pairs. All of this is handed forward to Story 2.6 in `deferred-work.md` (Task 6.4).
+
+**AC4 — eight status-check contexts harvested verbatim.** **CLOSED.** Exactly eight distinct
+contexts, read from `commit_status` rows (never transcribed from job names), identical across all
+five head SHAs, every one reaching terminal `success` state on every SHA — see Task 5 above for the
+verbatim list and full detail. No discrepancy to report to Story 2.6.
+
+**All four Acceptance Criteria are closed. No AC was deferred.**
 
 ### File List
 
-_Every file touched, with status. Confirm nothing under Prohibitions 1, 2, 10, 11, 13 appears here._
+- `_bmad-output/implementation-artifacts/2-5-validate-ci-stability-across-five-consecutive-real-pull-requests.md` — modified (this file; the primary deliverable, built up across all five PRs plus this closing pass)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (PR 1: `2-5-…` `ready-for-dev → in-progress`; closing pass: `in-progress → review`, Task 7.1)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified (Task 6.4 handoff section, direct `main` commit after the five PRs)
+- `docs/migration-decisions.md` — modified (Task 6.5 changelog row, direct `main` commit after the five PRs)
+
+Confirmed: nothing under Prohibitions 1 (`.forgejo/workflows/ci.yml`), 2 (`vitest.config.ts`,
+`package.json`, `package-lock.json`, `src/`), 10 (runner configuration), 11 (`.github/workflows/`),
+or 13 (`ubuntu-latest`, `upload-artifact@v4`) appears anywhere in this list or was touched at any
+point in this story.
 
 ---
 

@@ -1002,3 +1002,85 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   (`ci.yml:40-44`) and no PR was open. `origin/probe/2-1-peak-memory` is deliberately left stale at
   `4fc90b78`: pushing it would fire a `push` run for commits already on `main`. Safe to delete; do
   not push it.
+
+## Handed to Story 2.6 by Story 2.5 (2026-08-14) — the eight contexts, the budget verdict, and the 497-branch hazard restated
+
+Story 2.5 ran the full sequence AC1 asks for: five real PRs (Forgejo indexes 3, 4, 5, 6, 7), opened
+against `main`, each cut from current `main` HEAD, each merged before the next was cut, strictly
+sequential. **Ten runs, ten green, zero resets, zero code-class exclusions, five first-attempt API
+merges into protected `main`.** Full evidence (per-run durations, per-job runner assignment, the
+taxonomy as declared, the deviation on "real" as stated) is in
+`2-5-validate-ci-stability-across-five-consecutive-real-pull-requests.md`'s Dev Agent Record. What
+follows is what Story 2.6 specifically needs, pulled forward so it does not have to be
+reconstructed from a run of its own.
+
+- 🔑 **The eight status-check contexts, verbatim, exactly as they read in `commit_status.context` —
+  this is the free deliverable `epics.md:1217`/`:1236-1239` asked for.** Read off real rows across
+  five head SHAs (`784d1cc9`, `fb1e7351`, `be0b5656`, `20c7b2c1`, `480df728`), not transcribed from
+  job names. All eight reached terminal `success` state on all five SHAs — 40/40. The set was
+  identical across every SHA; no SHA produced a context another did not.
+
+  ```
+  CI / Lint (push)
+  CI / Type Check (push)
+  CI / Unit Tests (push)
+  CI / Build (push)
+  CI / Lint (pull_request)
+  CI / Type Check (pull_request)
+  CI / Unit Tests (pull_request)
+  CI / Build (pull_request)
+  ```
+
+  **This is the exact set of eight to require** if Story 2.6 marks all eight as required status
+  checks; if it marks only the four `(pull_request)` contexts (the ones that actually gate a merge
+  decision — the `(push)` contexts fire and resolve on the branch ref before the PR view has
+  anything to show), that is a legitimate narrower choice, but it should be a stated choice, not a
+  default arrived at by not reading this list.
+
+- ✅ **Budget verdict: all ten runs passed 900 s individually — closest was 567 s, 333 s (37%) of
+  margin.** min 512 s, max 567 s, mean 539.2 s (mean reported for completeness only; the pass/fail
+  gate is per-run). **Three runs — all `pull_request` runs (566 s, 567 s, 564 s) — landed 6–9 s above
+  Story 2.4's 513–558 s baseline band.** Host load was *lower* than Story 2.4's baseline session
+  (2.88–4.38 vs 11–17), so host contention does not explain it; the fitting explanation is the
+  queuing effect below, not a new instability. Nothing here narrows Story 2.4's margin further — the
+  budget is not eroding, but it also has not gained anything back.
+
+- ✅ **The `push`/`pull_request` pairing is now a five-for-five confirmed effect, not a single
+  observation.** Every PR's `pull_request` run ran slower than its `push` run on the identical
+  commit, by 41–53 s (mean +46.8 s) — matching Story 2.2's original single-pair reading of ~45 s.
+  **Mechanism, as best understood:** the `push` run's jobs claim the four job slots first; the
+  `pull_request` run's jobs queue behind them and only start as slots free up (both runners cap at
+  2 concurrent jobs — 4 slots total, `1-7:427`, `1-9:247`). This is a structural property of "one
+  commit, two triggers, four slots," not a defect — but it means **any required-check budget or SLA
+  Story 2.6 sets should be measured against the `pull_request` context specifically**, since that is
+  reliably the slower of the pair and is also the one that actually gates a merge.
+
+- 🔴 **The 497-branch legacy-fallback hazard, restated in Story 2.6's terms.** D9's suppression
+  (`.forgejo/workflows/` stops the fallback to `.github/workflows/CI.yml`) resolves **at the commit
+  being run, not at `main`** (`migration-decisions.md#d9`). 497 of 501 remote branches still carry a
+  head commit that predates this suppression. **Consequence once Story 2.6 turns on required
+  status checks:** a PR opened from one of those 497 branches will run the *legacy* workflow — on
+  `ci-hub`, another team's runner — and will produce `commit_status` contexts that are **not** any
+  of the eight `CI / …` strings above. If the required-check set is the eight (or four) `CI / …`
+  contexts, **such a PR can never satisfy them and can never go green, no matter what the code
+  does** — not a flake, not a code failure, a structural dead end. This was worked around
+  procedurally for this story's five PRs (§3: every branch cut fresh from current `main`), which is
+  sufficient for five PRs but does **not** close the underlying hazard — Story 2.2's Open Question 6
+  asked for an owner and still has none (`2-2-…md:841-843`). **This gets materially worse, not
+  better, once 2.6 lands**: today a stale-branch PR just runs the wrong pipeline; after 2.6, it runs
+  the wrong pipeline *and is permanently unmergeable* under the required-check gate. Whoever plans
+  2.6 should decide, explicitly, whether bulk remediation of the 497 branches is a precondition for
+  turning required checks on, or whether it is an accepted rough edge with a documented workaround
+  (e.g., a repo rule that -- outside Story 2.6's current scope -- rejects PRs from branches whose
+  merge-base with `main` predates the D9 commit).
+
+- ℹ️ **No Task 5.3 finding to hand forward** — the context count was exactly eight and the strings
+  matched the expected `CI / {Lint,Type Check,Unit Tests,Build}` × `{push,pull_request}` form on
+  every one of the five SHAs. Nothing to normalise, nothing to flag beyond the two items above.
+
+- ℹ️ **Runner job-assignment is not pinned to job type.** Across the ten runs, the 2/2 split between
+  runners 19 and 20 was clean on every run (20/20 total job-slots across the ten runs, confirmed
+  both here and in Story 2.4), but *which* runner drew {Lint, Type Check} vs {Unit Tests, Build} flipped starting at PR 4 of
+  this story with no runner-config change (Prohibition 10 held throughout). Not actionable for Story
+  2.6, but worth knowing if a future story tries to reason about per-runner cache warmth by job type
+  — that assumption does not hold.
