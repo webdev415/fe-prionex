@@ -165,20 +165,56 @@ jobs:
       # exist on every kernel/cgroup configuration, so this step must not
       # fail the job when a file is absent — it only ever reports what it
       # can find, in human-readable MB.
+      # AC4 of Story 2.1 asked for the peak recorded. The first version printed
+      # it — and that number was unreadable for two days, because job logs on
+      # this instance reach neither the API (404 on three routes) nor storage
+      # (`log_in_storage` stays false; 0 of 4 logs persisted for run 492).
+      #
+      # 🚨 So the number goes where it CAN be read: into the artifact's NAME,
+      # which lands in `action_artifact.artifact_name` in the database. One SQL
+      # query returns it, forever, with no log, no browser and no human. This is
+      # the project's own rule applied literally — prove it in the database or
+      # the filesystem, never in stdout.
+      #
+      # `$GITHUB_ENV` is used deliberately here and would be forbidden for a
+      # secret: the runner creates that file world-readable (0644) before the
+      # step body runs. A memory figure is not a secret. `with:` cannot see
+      # shell variables, so this is the only route from the measurement to the
+      # artifact name.
+      #
+      # `if: always()` on both steps, unlike the coverage upload below: a run
+      # that died is exactly when the peak is most worth having.
       - name: Record peak memory usage
         if: always()
         run: |
           if [ -f /sys/fs/cgroup/memory.peak ]; then
             bytes=$(cat /sys/fs/cgroup/memory.peak)
             mb=$(( bytes / 1024 / 1024 ))
-            echo "Peak memory usage (cgroup v2 memory.peak): ${mb} MB"
+            source="cgroup v2 memory.peak"
           elif [ -f /sys/fs/cgroup/memory.max_usage_in_bytes ]; then
             bytes=$(cat /sys/fs/cgroup/memory.max_usage_in_bytes)
             mb=$(( bytes / 1024 / 1024 ))
-            echo "Peak memory usage (cgroup v1 memory.max_usage_in_bytes): ${mb} MB"
+            source="cgroup v1 memory.max_usage_in_bytes"
           else
-            echo "Peak memory usage: neither /sys/fs/cgroup/memory.peak nor /sys/fs/cgroup/memory.max_usage_in_bytes is available on this runner."
+            mb="unknown"
+            source="neither cgroup v2 memory.peak nor cgroup v1 memory.max_usage_in_bytes exists on this runner"
           fi
+          echo "Peak memory usage (${source}): ${mb} MB"
+          echo "PEAK_MB=${mb}" >> "$GITHUB_ENV"
+          printf 'peak_mb=%s\nsource=%s\nheap_ceiling_mb=16384\n' "${mb}" "${source}" > peak-memory.txt
+
+      # The payload is three lines; the POINT is the name. `peak-memory-1487mb`
+      # in `action_artifact.artifact_name` is the measurement itself, readable
+      # by `select artifact_name from action_artifact where run_id = ?`.
+      # A run where neither cgroup file exists yields `peak-memory-unknownmb`,
+      # which is also a finding rather than a silence.
+      - name: Publish peak memory as an artifact name
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: peak-memory-${{ env.PEAK_MB }}mb
+          path: peak-memory.txt
+          retention-days: 7
 
       # Archive before upload: `actions/upload-artifact@v3` writes one
       # database row per FILE, not one per upload. Story 2.1 proved this
@@ -201,7 +237,15 @@ jobs:
         with:
           name: coverage
           path: coverage.tar.gz
-          retention-days: 1
+          # 7 days, not 1 (raised 2026-08-14 by Oleg's decision). The first
+          # rationale for flagging this was wrong: it worried about opening
+          # coverage after a FAILED run, but the steps above carry no
+          # `if: always()`, so a failed run produces no artifact at all. The
+          # real case is a GREEN run consulted later than the same day — 24h
+          # covers "next morning" and fails Friday→Monday. Cost of 7 days at
+          # 3.9 MB per run and daily cadence is ~28 MB, negligible beside the
+          # 154 `dist` rows kept on the same terms.
+          retention-days: 7
 
   build:
     name: Build
