@@ -429,13 +429,13 @@ the dependency:
 
 **Runs after Task 6's PR is green, and reuses it — it costs no CI run of its own.**
 
-- [ ] 4.1 With a pull request open and all eight contexts `success`, `PATCH` the rule to add a ninth
+- [x] 4.1 With a pull request open and all eight contexts `success`, `PATCH` the rule to add a ninth
       context that cannot exist (e.g. `CI / Does Not Exist (push)`). Verify by `GET`.
-- [ ] 4.2 Attempt the merge. Record the exact status code and response body.
-- [ ] 4.3 Interpret per §4: blocked → the semantic holds, AC5 closes, AC1's justification stands.
+- [x] 4.2 Attempt the merge. Record the exact status code and response body.
+- [x] 4.3 Interpret per §4: blocked → the semantic holds, AC5 closes, AC1's justification stands.
       Merged → 🔴 **stop and report to Oleg**; record AC1's eight-context justification as **not
       established**, and do not close the story quietly.
-- [ ] 4.4 Remove the ninth context immediately and verify by `GET` that exactly the eight remain.
+- [x] 4.4 Remove the ninth context immediately and verify by `GET` that exactly the eight remain.
       This is Prohibition 7 and it is not optional.
 
 ### Task 5 — The negative tests (AC: 2, 3)
@@ -460,21 +460,21 @@ the dependency:
 
 ### Task 6 — The positive test (AC: 4)
 
-- [ ] 6.1 Cut a branch from current `main` carrying the real change named in Task 2.3. Push, open
+- [x] 6.1 Cut a branch from current `main` carrying the real change named in Task 2.3. Push, open
       the PR.
-- [ ] 6.2 Wait for all eight contexts to reach `success`. Record run ids, indexes, events, SHAs, per-
+- [x] 6.2 Wait for all eight contexts to reach `success`. Record run ids, indexes, events, SHAs, per-
       job durations and `runner_id` per job from the database.
-- [ ] 6.3 **Before merging, hand this PR to Task 4** — AC5's ninth-context test needs exactly this
+- [x] 6.3 **Before merging, hand this PR to Task 4** — AC5's ninth-context test needs exactly this
       state and reusing it saves two CI runs.
-- [ ] 6.4 After Task 4.4 restores the eight, merge. Record the merge response.
-- [ ] 6.5 Confirm the merge to `main` produced **no** CI run — `main` is in `branches-ignore`. Check
+- [x] 6.4 After Task 4.4 restores the eight, merge. Record the merge response.
+- [x] 6.5 Confirm the merge to `main` produced **no** CI run — `main` is in `branches-ignore`. Check
       by SHA, not by absence from a listing.
 
 ### Task 7 — The failover test (AC: 6)
 
-- [ ] 7.1 Record runner 1's `docker inspect` state and its host PID **before** anything. Write the
+- [x] 7.1 Record runner 1's `docker inspect` state and its host PID **before** anything. Write the
       revert commands into the Dev Agent Record **before** executing the stop (§6).
-- [ ] 7.2 `docker update --restart=no`, read the host PID, `kill -9` it, and confirm
+- [x] 7.2 `docker update --restart=no`, read the host PID, `kill -9` it, and confirm
       `Status=exited, ExitCode=137` by `docker inspect` — **not** by the API, which reports stale
       state (§6).
 - [ ] 7.3 Cut a branch from current `main` with a real change, push, open the PR, and let all eight
@@ -851,6 +851,141 @@ true✓, `status_check_contexts` the same 8 strings in the same order✓, `apply
 **3.4 —** the 8 stored strings compared against Task 1.5's database rows: identical set, identical
 spelling, identical spacing (`CI / <Job> (<event>)`). Byte-identical, confirmed.
 
+#### Task 6.1–6.2 — Positive-test PR (AC4), opened and green
+
+Branch `story-2-6/pr-1-review-fix-and-gate-config` cut from `origin/main` (`0ba3e7e3`), carrying two
+real changes (§7, Task 2.3): Story 2.5's unpushed review-findings fix (`c8ddfbca`, was `694f6a06`
+before rebase) and this story's own Task 1–5 record (rollback snapshot, budget, gate write/read-back,
+AC2/AC3 evidence). PR opened via API → **HTTP 201**, **PR #9**, `head.sha =
+4e0441b63466a2fc96eee3f80de50746357a748e`.
+
+Two runs: `action_run.id 547` (`push`, `index 57`) and `548` (`pull_request`, `index 58`), both bound
+to `4e0441b6…`. Both reached terminal state (`status = 1`, success) — `547` wall clock **600 s**,
+`548` **601 s** (started 1786739661/1786739797, stopped 1786740261/1786740398 — Unix epoch seconds).
+Slightly above Story 2.5's 512–567 s range but under the 900 s budget and consistent with the higher
+host load recorded in Task 1.7 (7.48 vs Story 2.5's 2.88–4.38) — not read as a regression, per the
+Dev Notes anti-pattern.
+
+**All eight contexts `success`**, confirmed directly from `commit_status` (`DISTINCT ON (context)`,
+latest row per context):
+
+```
+CI / Build (pull_request)       success
+CI / Build (push)               success
+CI / Lint (pull_request)        success
+CI / Lint (push)                success
+CI / Type Check (pull_request)  success
+CI / Type Check (push)          success
+CI / Unit Tests (pull_request)  success
+CI / Unit Tests (push)          success
+```
+
+**Per-job runner attribution and duration**, joined `action_run_job.run_id → action_run.id` and
+`action_task.job_id → action_run_job.id` (the first join attempt used `action_task.job_id =
+action_run.id` directly, which happened to return plausible-looking numbers by coincidence — caught
+and corrected before being recorded as evidence):
+
+| run | job | attempt | runner_id | duration (s) |
+|---|---|---|---|---|
+| 547 (push) | Build | 1 | 19 | 111 |
+| 547 (push) | Lint | 1 | 19 | 134 |
+| 547 (push) | Type Check | 1 | 20 | 86 |
+| 547 (push) | Unit Tests | 1 | 20 | 511 |
+| 548 (pull_request) | Build | 1 | 19 | 109 |
+| 548 (pull_request) | Lint | 1 | 19 | 134 |
+| 548 (pull_request) | Type Check | 1 | 20 | 82 |
+| 548 (pull_request) | Unit Tests | 1 | 19 | 509 |
+
+All eight jobs `attempt = 1` — no reruns. Both runners (19, 20) drew jobs — this PR ran at full
+two-runner capacity, before Task 7 stops runner 1. PR left **open** at this point — Task 6.3 hands it
+to Task 4 for the ninth-context test before merging.
+
+#### Task 4 — Prove the missing-context semantic (AC5) — the story's central finding
+
+With PR #9 open and all eight contexts `success` (Task 6.2), `PATCH` added a ninth context that can
+never exist:
+
+```json
+{"status_check_contexts": [
+  "CI / Lint (push)", "CI / Type Check (push)", "CI / Unit Tests (push)", "CI / Build (push)",
+  "CI / Lint (pull_request)", "CI / Type Check (pull_request)", "CI / Unit Tests (pull_request)", "CI / Build (pull_request)",
+  "CI / Does Not Exist (push)"
+]}
+```
+
+**HTTP 200**, and an independent `GET` confirmed all 9 strings stored verbatim, including the
+impossible one.
+
+**Merge attempt**, `POST /pulls/9/merge` with `{"Do":"merge"}`:
+
+```
+HTTP 405
+{"message":"not allowed to merge [reason: Not all required status checks successful]","url":"https://git.crm-prionex.com/api/swagger"}
+```
+
+**Blocked** — byte-identical refusal message to AC3's red-check test. `GET /pulls/9` confirmed
+`state: open`, `merged: false` immediately after. **The missing-context semantic holds: a required
+context with no `commit_status` row blocks the merge exactly like a `failure` row does.** §3's design
+is sound — the `(push)` half of the eight-context set is genuinely unforgeable by a stale branch, not
+decoration. AC1's eight-context justification **stands**, established by direct measurement rather
+than assumption.
+
+Immediately after, `PATCH` removed the ninth context (request body: the original eight strings only,
+`status_check_contexts` field only — no other field touched). Independent `GET` confirmed **exactly
+eight** remain, byte-identical to Task 3's set, in the same order. No ninth context left behind.
+
+#### Task 6.4–6.5 — Merge and post-merge check
+
+`POST /pulls/9/merge` with `{"Do":"merge"}` after Task 4.4 restored the eight → **HTTP 200**.
+Independent `GET /pulls/9` confirmed `state: closed`, `merged: true`, `merged_at:
+2026-08-14T22:58:47+02:00`, `merge_commit_sha: 3fc7f92d5c6af47b7911b245a0662543971a16e2`,
+`merged_by: platform-admin`. **AC4 satisfied**: a PR with all eight contexts green merged
+successfully once the ninth-context probe was cleared.
+
+Post-merge, queried `action_run` for `commit_sha = '3fc7f92d5c6af47b7911b245a0662543971a16e2'` (the
+merge commit) → **0 rows**. No CI run was created for the merge to `main`, confirmed by SHA per Task
+6.5 — `main` sits in `ci.yml`'s `branches-ignore`, consistent with every prior story's observation.
+
+#### Task 7.1 — Runner 1 state before the stop, and the revert written down first
+
+`docker inspect forgejo-runner-fe-prionex` (re-read fresh immediately before touching anything, not
+reused from Task 1.6):
+
+```
+Status=running Running=true RestartPolicy=unless-stopped Pid=906908 RestartCount=0
+StartedAt=2026-08-13T11:42:41.120223671Z
+```
+
+Unchanged from Task 1.6's baseline — same PID, same restart policy, `RestartCount: 0`. This is
+runner id **19** (`s1-fe-prionex-1`), confirmed by the `/data/.runner` mapping in Task 1.6.
+
+**Revert commands, written down before the stop, per §6:**
+
+```
+docker update --restart=unless-stopped forgejo-runner-fe-prionex
+docker start forgejo-runner-fe-prionex
+```
+
+**Stop method, per §6 — host-side PID only, restart policy suspended first:**
+
+```
+docker update --restart=no forgejo-runner-fe-prionex
+PID=$(docker inspect --format '{{.State.Pid}}' forgejo-runner-fe-prionex)
+kill -9 $PID
+docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' forgejo-runner-fe-prionex   # expect: exited 137
+```
+
+`docker kill` and `docker exec … kill -9 1` are **not used** — both are recorded no-ops on this image
+(Story 1.9, §6). Verification is by `docker inspect` throughout, never by the Forgejo API, which
+Story 1.9 observed reporting stale `idle` for a host-dead runner.
+
+#### Task 7.2 — Runner 1 stopped, confirmed by `docker inspect`
+
+Executed exactly the sequence above: `docker update --restart=no`, PID read fresh as `906908`
+(matching Task 7.1), `kill -9 906908`. **Result:** `Status=exited ExitCode=137 Running=false` —
+signal 9 (128+9=137), confirmed by `docker inspect`, not the API. Runner 1 (id 19) is down. Task 7.3
+opens the failover PR next, while only runner 20 is available.
+
 ### Completion Notes List
 
 #### AC1 — why all eight contexts, not a four-context subset
@@ -935,7 +1070,32 @@ used for this one disposable, never-merged probe commit only; every other commit
 story went through the hooks normally. This is the deliberate mechanism §8 describes, not a
 shortcut around review — the whole point of AC3 is a commit that fails these exact checks remotely.
 
-_AC5, AC6 notes follow as their tasks complete below._
+#### AC4 — a pull request with all required checks green merges
+
+PR #9 (`story-2-6/pr-1-review-fix-and-gate-config` → `main`), all eight contexts `success` (Task
+6.2), merged via `POST /pulls/9/merge` → **HTTP 200**; confirmed by independent `GET`: `merged:
+true`, `merge_commit_sha: 3fc7f92d…`. Post-merge, `action_run` has zero rows for that SHA — the merge
+itself triggered no CI run (`main` is in `branches-ignore`). Run ids 547/548, contexts and per-job
+runner attribution are in the Task 6.1–6.2 Debug Log entry above.
+
+#### AC5 — the missing-context semantic, measured (this story's central finding)
+
+**Verdict: BLOCKED.** A required context with no `commit_status` row blocks the merge, exactly like a
+`failure` row does — Forgejo does not treat "never ran" as "not applicable." Full evidence in the
+Task 4 Debug Log entry above: ninth context `CI / Does Not Exist (push)` added to the eight while
+PR #9 sat fully green, merge attempted, refused with the identical `405` / "Not all required status
+checks successful" message AC3 produced for an actual failure. Ninth context removed and verified
+gone within the same round trip.
+
+**What this means for AC1.** §4 stated plainly: everything in §3 rests on this semantic being true.
+It is. That means the `(push)` half of the eight-context set is genuinely unforgeable by a stale
+branch carrying only the legacy workflow — a stale branch produces zero `(push)` contexts, and zero
+now provably blocks rather than being silently ignored. AC1's eight-context justification is
+**established**, not merely argued. Had the merge instead succeeded, this would be the opposite
+report: a finding for Oleg that the entire gate design admits the 497-branch hazard regardless of
+context count, and AC1 would be recorded as not established. That branch did not occur.
+
+_AC6 notes follow as Task 7 completes below._
 
 ### File List
 
