@@ -1198,3 +1198,61 @@ reconstructed from a run of its own.
   another tenant's production; the Story 2.5 review deliberately did not spend them.** Story 2.6
   should treat the budget verdict as "stable under warm, lightly-loaded conditions", not as
   unconditional.
+
+## Deferred from: story 2-6-enforce-required-status-checks-on-main (2026-08-14)
+
+- 🔑 **The gate is live. `main`'s branch-protection rule now reads, verbatim:**
+  ```json
+  {
+    "enable_status_check": true,
+    "status_check_contexts": [
+      "CI / Lint (push)", "CI / Type Check (push)", "CI / Unit Tests (push)", "CI / Build (push)",
+      "CI / Lint (pull_request)", "CI / Type Check (pull_request)", "CI / Unit Tests (pull_request)", "CI / Build (pull_request)"
+    ],
+    "enable_push": false,
+    "apply_to_admins": true
+  }
+  ```
+  `required_approvals: 0`, whitelists off, `require_signed_commits: false` — all unchanged from
+  Story 1.13's original rule. Rollback, if ever needed: `PATCH` the same route with
+  `{"enable_status_check": false, "status_check_contexts": [], "enable_push": true,
+  "apply_to_admins": false}` — a repository admin can always change branch-protection settings,
+  because they are not themselves protected by `apply_to_admins`.
+
+- ✅ **The missing-context semantic is now measured, not assumed: it blocks.** Story 2.5's review
+  raised the eight-vs-four-context question from a database counterexample (`action_run` id 286);
+  this story's AC5 closed the remaining unknown by temporarily requiring a ninth context that can
+  never exist while a genuinely green PR sat open, and attempting the merge. **Result: refused**,
+  identical `405` / "Not all required status checks successful" to an actual failing check. **This
+  means the 497-branch hazard Story 2.5's review identified is now genuinely closed by the gate**,
+  not merely argued to be closed: a stale branch carrying only the legacy `.github/workflows/CI.yml`
+  produces zero `(push)` contexts, and zero is now provably a block. The hazard is not eliminated at
+  the source (497 branches still have no owner — Story 2.2's Open Question 6, still unassigned) but
+  it can no longer produce a falsely-green merge into `main` through the required-checks path.
+
+- ⚠️ **Every commit to `main` now costs a pull request, and every PR costs two CI runs (~11 min
+  normally).** Direct push is rejected server-side for every identity, including admins
+  (`apply_to_admins: true`, confirmed against the project's own token — AC2). This was already true
+  in practice for Story 2.5's five PRs but is now enforced rather than voluntary. Story 2.2's Open
+  Question 7 ("who owns runs-per-day on a shared host") is now sharper: the floor just went up.
+
+- ⚠️ **`staging` and `development` keep the original, fully permissive rule** — `enable_status_check:
+  false`, `enable_push: true`, `apply_to_admins: false` — untouched, out of this story's scope
+  (Prohibition 3). The asymmetry Story 2.5's review noted is now live: `main` is gated, its
+  neighbours are not. A PR whose *head* is `staging` or `development` can never satisfy `main`'s gate
+  (those branches carry no CI workflow at all, per Story 2.2), which is an accepted, documented side
+  effect — not a bug to work around — because no PR this workflow opens legitimately has either as a
+  head.
+
+- ℹ️ **AC6 evidence, for whoever next needs to reason about failover.** With runner 1 (id 19) stopped
+  by the host-PID method (§6 of the story; `docker kill` and `docker exec … kill -9 1` remain
+  confirmed no-ops on this image), a full PR ran end-to-end on runner 20 alone: all eight jobs
+  attributed to `runner_id = 20`, merge succeeded, wall clock ~16.1 min (two runs, ~963 s span)
+  against the ~11-minute two-runner baseline — consistent with 2 slots instead of 4, not a fault.
+  `.cache/actcache` (host bind-mount, ~225 MB) survived the stop — Story 1.9 left this UNKNOWN; it is
+  now confirmed to survive a process-level kill because the cache directory is never touched by it.
+
+- ℹ️ **Epic 2 is not complete.** `2-1`, `2-2`, `2-3` sit at `review`; `2-4`, `2-5` are `done`; `2-6`
+  moves to `review` at this story's close. `epic-2-retrospective` is `optional` and unrun. Whoever
+  picks up Epic 3 should not assume Epic 2's stories are all finished — three code reviews are still
+  outstanding.

@@ -4,7 +4,7 @@ baseline_commit: 694f6a06
 
 # Story 2.6: Enforce Required Status Checks on Main
 
-Status: ready-for-dev
+Status: review
 
 > **This is the first story in the project that can lock the team out of its own release branch, and
 > the first whose success depends on a Forgejo semantic nobody has tested.**
@@ -477,42 +477,42 @@ the dependency:
 - [x] 7.2 `docker update --restart=no`, read the host PID, `kill -9` it, and confirm
       `Status=exited, ExitCode=137` by `docker inspect` — **not** by the API, which reports stale
       state (§6).
-- [ ] 7.3 Cut a branch from current `main` with a real change, push, open the PR, and let all eight
+- [x] 7.3 Cut a branch from current `main` with a real change, push, open the PR, and let all eight
       contexts complete on runner 20 alone. Expect ~20–25 min at half capacity.
-- [ ] 7.4 Record per-job `runner_id` from `action_task` and confirm **every** job ran on runner 20.
+- [x] 7.4 Record per-job `runner_id` from `action_task` and confirm **every** job ran on runner 20.
       Record the duration against the ~11-minute two-runner baseline.
-- [ ] 7.5 Merge the PR. Record the response — this is AC6's actual claim: merges proceed.
-- [ ] 7.6 🔑 Revert: `docker update --restart=unless-stopped`, `docker start`, then verify
+- [x] 7.5 Merge the PR. Record the response — this is AC6's actual claim: merges proceed.
+- [x] 7.6 🔑 Revert: `docker update --restart=unless-stopped`, `docker start`, then verify
       `Running=true`, `RestartCount`, and that the runner re-registers and reaches `idle`. **Record
       the verification, not just the commands.**
-- [ ] 7.7 Confirm `.cache/actcache` survived the restart — Story 1.9 left this UNKNOWN and it is one
+- [x] 7.7 Confirm `.cache/actcache` survived the restart — Story 1.9 left this UNKNOWN and it is one
       query's worth of new knowledge.
 
 ### Task 8 — Record and hand forward (AC: all)
 
-- [ ] 8.1 Write the full evidence into the Dev Agent Record: the before/after rule bodies, every API
+- [x] 8.1 Write the full evidence into the Dev Agent Record: the before/after rule bodies, every API
       write with its response, the run table, the eight contexts as stored, the AC5 verdict, and the
       declared-vs-spent budget reconciliation.
-- [ ] 8.2 Record the AC1 deviation (all eight rather than a four-context subset) and the AC5 addition,
+- [x] 8.2 Record the AC1 deviation (all eight rather than a four-context subset) and the AC5 addition,
       each with its reasoning.
-- [ ] 8.3 Add a handoff section to `deferred-work.md`: the final rule state verbatim, the AC5 verdict
+- [x] 8.3 Add a handoff section to `deferred-work.md`: the final rule state verbatim, the AC5 verdict
       and what it means for the 497-branch hazard, the cost the gate now imposes on every commit, and
       the `staging`/`development`-as-head side effect.
-- [ ] 8.4 Add the changelog row to `docs/migration-decisions.md`. This decision — the gate, its
+- [x] 8.4 Add the changelog row to `docs/migration-decisions.md`. This decision — the gate, its
       contents and `apply_to_admins: true` — deserves a **decision record (D-number)**, not just a
       changelog line; it changes how everyone works with `main`.
-- [ ] 8.5 Record whether Epic 2 is now complete (2.1–2.4 are `review`/`done`, 2.5 `done`), and what
+- [x] 8.5 Record whether Epic 2 is now complete (2.1–2.4 are `review`/`done`, 2.5 `done`), and what
       remains before `epic-2` could move to `done`.
 
 ### Task 9 — Close (AC: all)
 
-- [ ] 9.1 Confirm no probe branch, no open PR, no ninth context, and no runner left stopped or with
+- [x] 9.1 Confirm no probe branch, no open PR, no ninth context, and no runner left stopped or with
       `--restart=no` (Prohibitions 4, 7).
 - [ ] 9.2 Update `sprint-status.yaml`: `2-6-enforce-required-status-checks-on-main` → `review`.
 - [ ] 9.3 The closing commit goes through a pull request like everything else now does (§7). If the
       gate blocks it unexpectedly, that is a finding — record it, do not disable the gate
       (Prohibition 8).
-- [ ] 9.4 Confirm the File List is complete and nothing under the Prohibitions was touched.
+- [x] 9.4 Confirm the File List is complete and nothing under the Prohibitions was touched.
 
 ---
 
@@ -666,8 +666,10 @@ The files record it. Both must agree at the end, and Task 3.3 is what makes that
 
 ### Agent Model Used
 
-_To be filled by the dev agent. Record the coordinator model and any subagent use; a subagent's
-report is not evidence until the coordinator re-runs the load-bearing query itself._
+Coordinator: Claude Sonnet 5 (`claude-sonnet-5`), acting as DEV coordinator for this story. No
+subagents were used — every API write, database query, and infrastructure command in this record
+was executed and read directly by the coordinator; none of the evidence above was produced or
+reported by a delegated agent.
 
 ### Debug Log References
 
@@ -986,6 +988,105 @@ Executed exactly the sequence above: `docker update --restart=no`, PID read fres
 signal 9 (128+9=137), confirmed by `docker inspect`, not the API. Runner 1 (id 19) is down. Task 7.3
 opens the failover PR next, while only runner 20 is available.
 
+#### Task 7.3–7.7 — Failover PR, per-job attribution, merge, and verified revert
+
+Branch `story-2-6/pr-2-ac5-and-failover` cut from `origin/main` (`3fc7f92d`, the state right after
+PR #9's merge), carrying the Task 4/6/7.1–7.2 record as its real change. PR opened via API → **HTTP
+201**, **PR #10**, `head.sha = e4f71274c15d4daf96b7249589000b5df7a3355c`. Runner 1 was already
+stopped (Task 7.2) before this branch was pushed.
+
+Two runs created: `id 549` (`push`, `index 59`) and `550` (`pull_request`, `index 60`). Polled every
+60 s (foreground blocking loop). Run 549 reached terminal at `stopped=1786742180`; run 550 at
+`stopped=1786742553`. **All eight contexts `success`**, confirmed from `commit_status`.
+
+**Per-job runner attribution** (Task 7.4), same corrected join as Task 6.2:
+
+| run | job | attempt | runner_id | duration (s) |
+|---|---|---|---|---|
+| 549 (push) | Build | 1 | **20** | 107 |
+| 549 (push) | Lint | 1 | **20** | 132 |
+| 549 (push) | Type Check | 1 | **20** | 82 |
+| 549 (push) | Unit Tests | 1 | **20** | 506 |
+| 550 (pull_request) | Build | 1 | **20** | 109 |
+| 550 (pull_request) | Lint | 1 | **20** | 132 |
+| 550 (pull_request) | Type Check | 1 | **20** | 80 |
+| 550 (pull_request) | Unit Tests | 1 | **20** | 505 |
+
+**Every one of the eight jobs ran on runner 20** — none on runner 19 (confirmed stopped), none on
+any foreign runner (10/12/14/17). All `attempt = 1`, no reruns.
+
+**Duration vs baseline:** whole-run wall clock — run 549 **590 s**, run 550 **721 s**. First job
+start (`549.started = 1786741590`) to last job stop (`550.stopped = 1786742553`) spans **963 s
+(~16.1 min)** — under the declared 20–25 min budget for half capacity, and the two runs still
+overlapped (both waiting on the same two runner-20 slots, serialising the eight jobs into
+roughly two-at-a-time waves) rather than queueing fully end-to-end. Against Story 2.5's ~11-minute
+two-runner baseline, roughly **1.5×**, consistent with going from 4 slots to 2.
+
+**Merge** (Task 7.5): `POST /pulls/10/merge` `{"Do":"merge"}` → **HTTP 200**. Independent `GET`:
+`state: closed`, `merged: true`, `merged_at: 2026-08-14T23:23:36+02:00`, `merge_commit_sha:
+fca036f07738ed90fa5d8b7eddec4d6fbfe245a1`. **This is AC6's actual claim, satisfied: merges proceed
+via the second runner alone.**
+
+**Revert** (Task 7.6), executed immediately after the merge response was confirmed:
+
+```
+docker update --restart=unless-stopped forgejo-runner-fe-prionex
+docker start forgejo-runner-fe-prionex
+```
+
+→ `docker inspect`: `Status=running Running=true RestartPolicy=unless-stopped Pid=1414511
+RestartCount=0` (new PID — the container process restarted, as expected). **Re-registration
+verified, not assumed:** polled `action_runner.last_online` for id 19 every 5 s for 45 s — it
+advanced every poll (`21:24:03 → 21:24:09 → … → 21:24:49`), proving live heartbeats resumed.
+Independently, `GET /actions/runners` shows **both** runner 19 and runner 20 with `"status":"idle"`.
+Runner 1 is fully back: process running, restart policy restored, registered, idle.
+
+**Cache check** (Task 7.7): `/opt/forgejo-runner-fe-prionex/data/runner/.cache/actcache` on the host
+(mounted into the container at `/data/.cache/actcache`) — **225 MB**, `cache/` subdirectory present
+with 56 entries, `bolt.db` present and current. A host-side kill of the runner process never touches
+this bind-mounted directory, so survival was expected, but Story 1.9 explicitly left it UNKNOWN —
+this is the one query's worth of new knowledge: **confirmed, the cache survives a host-PID stop and
+restart of the runner container.**
+
+#### Task 8.1 — Consolidated evidence: rule before/after, run table, budget reconciliation
+
+**Rule, before (Task 1.3 snapshot) vs. after (Task 3.1, unchanged through story close):**
+
+| Field | Before | After |
+|---|---|---|
+| `enable_status_check` | `false` | **`true`** |
+| `status_check_contexts` | `null` | **8 strings** (Task 1.5, byte-identical, order preserved) |
+| `enable_push` | `true` | **`false`** |
+| `apply_to_admins` | `false` | **`true`** |
+| `required_approvals` | `0` | `0` (unchanged, Prohibition 2) |
+| `enable_push_whitelist` / `enable_merge_whitelist` / `require_signed_commits` | `false` | unchanged |
+
+Every write was read back independently by `GET` and compared field by field (Task 3.3, Task 4.1,
+Task 4.4) — no divergence was ever observed between what was sent and what was stored.
+
+**Full run table** (repo 16, `action_run`, baseline `max(id) = 544` before this story, Task 1.4):
+
+| id | index | event | PR | sha | purpose | result |
+|---|---|---|---|---|---|---|
+| 545 | 55 | push | #8 (probe) | `7a6e78f3…` | AC3 red check | `failure` (deliberate) |
+| 546 | 56 | pull_request | #8 (probe) | `7a6e78f3…` | AC3 red check | `failure` (deliberate); ran to completion after PR was closed — no cancel endpoint exists |
+| 547 | 57 | push | #9 | `4e0441b6…` | AC4/AC5 real-change PR | `success` |
+| 548 | 58 | pull_request | #9 | `4e0441b6…` | AC4/AC5 real-change PR | `success` |
+| 549 | 59 | push | #10 | `e4f71274…` | AC6 failover PR | `success`, all jobs on runner 20 |
+| 550 | 60 | pull_request | #10 | `e4f71274…` | AC6 failover PR | `success`, all jobs on runner 20 |
+
+**Budget reconciliation** (declared in Task 2.1): ~8 runs total across 4 PRs (AC3 ≈2, AC4/AC5 ≈2 +0,
+AC6 ≈2, closing ≈2). **Spent through Task 7: 6 runs** (545–550), `max(action_run.id)` now **550**.
+The closing PR (Task 9.3) is expected to add the final ~2 runs, landing the story at ~8 total,
+matching the declaration exactly. No AC5 run was spent — it reused PR #9's existing green state as
+designed, at the cost of two API round trips only.
+
+**Contexts as stored, final state**: exactly the eight from Task 1.5/Task 3.4, unchanged at story
+close (Task 4.4 removed the temporary ninth and this was the last write to `status_check_contexts`).
+
+**AC5 verdict, restated for the consolidated record**: **BLOCKED** — a required context with no
+`commit_status` row prevents the merge. Measured directly against PR #9, not assumed.
+
 ### Completion Notes List
 
 #### AC1 — why all eight contexts, not a four-context subset
@@ -1095,11 +1196,73 @@ now provably blocks rather than being silently ignored. AC1's eight-context just
 report: a finding for Oleg that the entire gate design admits the 497-branch hazard regardless of
 context count, and AC1 would be recorded as not established. That branch did not occur.
 
-_AC6 notes follow as Task 7 completes below._
+#### AC6 — with one runner stopped, merges still proceed via the second
+
+Runner 1 (id 19) was stopped by the only method that actually works on this image — host-side
+`kill -9` on the real PID, with `docker update --restart=no` set first so the restart policy would
+not immediately undo the test (§6; `docker kill` and `docker exec … kill -9 1` are both recorded
+no-ops and were not used). Confirmed down by `docker inspect` (`Status=exited ExitCode=137`), never
+by the Forgejo API, which Story 1.9 showed reports stale state.
+
+With runner 1 down, PR #10 was opened, ran, and merged: all eight required contexts reached
+`success`, **every one of the eight jobs ran on runner 20** (`action_task.runner_id = 20`
+throughout — see the Task 7.3–7.7 Debug Log table), and the merge succeeded (`merged: true`,
+`fca036f0…`). The two-run wall clock (~16.1 min end-to-end) came in under the declared 20–25 min
+half-capacity budget and roughly 1.5× Story 2.5's ~11-minute two-runner baseline — consistent with
+going from 4 concurrent slots to 2, not a sign of anything broken.
+
+Runner 1 was restored immediately after the merge was confirmed and the restoration was **verified,
+not assumed**: `docker inspect` shows `Running=true` with `restart: unless-stopped` restored, and
+`action_runner.last_online` was observed advancing on a 5-second poll for 45 seconds, proving live
+re-registration rather than a stale row. `GET /actions/runners` independently shows both runners
+`idle`. `.cache/actcache` (225 MB) survived the stop — new knowledge Story 1.9 left open.
+
+**AC6 fully satisfied**, with the revert verified before moving on, per the non-negotiable rule for
+this story.
+
+#### Task 8.2 — Deviations recorded explicitly
+
+**AC1 deviation** (also stated inline in the Acceptance Criteria section above): the epic
+(`epics.md:1229-1239`) asked for a named four-context subset and framed the two four-context sets
+as the alternatives. This story chose the **full eight-context set** instead, because §3/Story 2.5's
+review found the epic's premise inverted — the legacy `.github/workflows/CI.yml` produces the same
+four `(pull_request)` context strings from a foreign runner (`action_run` id 286), making a
+four-`(pull_request)`-context gate admit a falsely-green stale-branch PR. The `(push)` half is the
+part a stale branch cannot forge. Accepted side effect: a PR whose head is `staging` or
+`development` can never satisfy the gate (those branches carry no CI workflow) — out of scope for
+this story to fix, and every PR this workflow actually opens is a feature branch, unaffected.
+
+**AC5 addition**: not in the epic. Added because the entire eight-context argument in §3 is
+contingent on an untested Forgejo semantic — whether a required context with no `commit_status` row
+blocks a merge or is silently ignored. §4 required this be measured, not assumed, before AC1 could
+be considered closed. It was measured (Task 4, reusing PR #9 at zero extra CI cost): **blocked**.
+AC1's justification is therefore established by direct evidence, not merely argued from the run 286
+counterexample alone.
+
+#### Task 8.5 — Epic 2 status
+
+Per `sprint-status.yaml`: `2-1` through `2-3` are **`review`** (not yet `done`), `2-4` and `2-5` are
+`done`, `2-6` (this story) is being set to `review` at story close. `epic-2-retrospective` is
+`optional` and has not been run. **Epic 2 is not complete.** Before `epic-2` can move to `done`:
+2.1, 2.2, 2.3 and 2.6 need their code reviews resolved and status advanced to `done`, and the
+retrospective (currently optional) would need to run if the team wants it before closing the epic.
+This story does not change that list — it only adds itself to it.
 
 ### File List
 
-_Every file touched, with status. Confirm the throwaway `src/` probe file is absent from `main`._
+| File | Status |
+|---|---|
+| `_bmad-output/implementation-artifacts/2-6-enforce-required-status-checks-on-main.md` | Modified (this file — primary deliverable) |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | Modified (Task 8.3 handoff section) |
+| `docs/migration-decisions.md` | Modified (D16 decision record + changelog row, Task 8.4) |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | Modified (status → `in-progress` → `review`, Task 9.2) |
+| `src/__probe_ac3__/probe.ts` | Created on disposable branch `story-2-6/probe-ac3-red-check` only, **never merged**, branch deleted local+remote (Task 5.5). Confirmed absent from `main`: `git ls-tree -r origin/main --name-only \| grep probe` → no match. |
+
+No file under the Prohibitions list was touched: `.forgejo/workflows/ci.yml` unchanged (Task 1.1
+verified this before any write), `.github/workflows/` untouched, `staging`/`development` protection
+rules untouched, no runner configuration file changed beyond the documented stop/revert, no
+`vitest.config.ts` / `package.json` / `package-lock.json` change, nothing under `src/` landed on
+`main`.
 
 ---
 
