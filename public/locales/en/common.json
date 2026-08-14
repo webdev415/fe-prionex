@@ -6224,6 +6224,8 @@
             "submitError": "Submission to UBKI failed",
             "optOutSuccess": "{{count}} client(s) opted out of UBKI",
             "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
+            "optOutSingle": "Client opted out of UBKI",
+            "optInSingle": "Client re-enabled for UBKI",
             "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
           },
           "sentRef": "Sent · ref {{ref}}",
@@ -6303,7 +6305,9 @@
           "bank_transfer": "Bank transfer",
           "online_gateway": "Online payment",
           "card": "Card"
-        }
+        },
+        "email": "E-mail",
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)"
       },
       "debtSummary": {
         "title": "Debt Summary",

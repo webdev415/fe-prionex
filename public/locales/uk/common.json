@@ -5186,7 +5186,7 @@
         "linkedContact": "Пов'язаний контакт",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
-        "personalAddress": "Особиста адреса",
+        "personalAddress": "Адреса проживання",
         "organizationName": "Назва організації",
         "position": "Посада",
         "experience": "Досвід роботи",
@@ -5574,6 +5574,8 @@
             "submitError": "Не вдалося надіслати до УБКІ",
             "optOutSuccess": "{{count}} клієнт(ів) виключено з УБКІ",
             "optInSuccess": "{{count}} клієнт(ів) відновлено для УБКІ",
+            "optOutSingle": "Клієнта виключено з УБКІ",
+            "optInSingle": "Клієнта відновлено для УБКІ",
             "bulkQueued": "Поставлено в чергу {{count}} кредит(ів) для УБКІ — результати з'являться в історії надсилань."
           },
           "sentRef": "Надіслано · номер {{ref}}",
@@ -5648,7 +5650,9 @@
         "assignSearcher": "Призначити розшукувача",
         "minimizeModal": "Згорнути вікно",
         "saveDraftRRSuccess": "Чернетку збережено",
-        "connectRRError": "Не вдалося підключити реструктуризацію"
+        "connectRRError": "Не вдалося підключити реструктуризацію",
+        "email": "Електронна пошта",
+        "dateOfBirthWithAge": "{{date}} ({{age}} років)"
       },
       "modals": {
         "addNote": {

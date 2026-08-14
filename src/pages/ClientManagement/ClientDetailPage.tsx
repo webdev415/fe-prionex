@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -75,8 +75,7 @@ import {
   MessagingTabSkeleton,
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { useUpdateClient, clientKeys } from '@/features/clients/hooks/useClients'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import { cn } from '@/lib/utils'
 import { decideChainAutoOpen } from '@/lib/taChainAutoOpen'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
@@ -653,35 +652,11 @@ export function ClientDetailPage() {
 
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
-  const { mutate: updateClientMutate, isPending: isUpdatingUbkiOptOut } = useUpdateClient()
   // Client opt-out flag (backend exposes it on the client detail response).
   const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
-  const handleToggleUbkiOptOut = (checked: boolean) => {
-    updateClientMutate(
-      { id: clientId, data: { do_not_send_to_ubki: checked } },
-      {
-        onSuccess: () => {
-          // Refresh the full client record so the toggle reflects persisted state.
-          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
-          toast.success(
-            t(
-              'pages.clients.detail.ubki.toasts.optOutSuccess',
-              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
-              { count: 1 }
-            )
-          )
-        },
-        onError: () => {
-          toast.error(
-            t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
-          )
-        },
-      }
-    )
-  }
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
@@ -1069,6 +1044,7 @@ export function ClientDetailPage() {
       // Personal details (nested for compatibility)
       personalDetails: {
         tin: profile.tax_id,
+        email: profile.email ?? '',
         dateOfBirth: profile.date_of_birth ?? '',
         age: profile.age ?? '',
         documentType: profile.passport?.document_type ?? '',
@@ -1165,6 +1141,10 @@ export function ClientDetailPage() {
         id: a.id,
         addressType: a.address_type,
         fullAddress: a.full_address ?? '-',
+        // Carried so the panel can pick the primary address when a client
+        // holds more than one of a type, rather than whatever the API
+        // happened to return first.
+        isPrimary: a.is_primary ?? false,
       })),
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
@@ -1610,7 +1590,7 @@ export function ClientDetailPage() {
     comment: '',
   })
   const [activeClientCardTab, setActiveClientCardTab] = useState<
-    'related' | 'personal' | 'passport' | 'work'
+    'related' | 'personal' | 'passport'
   >('related')
   // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
   // hooks can gate on it for lazy loading.
@@ -1958,6 +1938,42 @@ export function ClientDetailPage() {
   //                        status badge turns yellow.
   //   • activeRrDebtIds  — has a Connected (1) or Violated (2) agreement →
   //                        already-on-active-RR, so Connect RR is disabled.
+  // ── Sidebar panel values ───────────────────────────────────────────────
+  // Department is a qualifier on the responsible employee's name rather than
+  // its own row; drop the bracket entirely when either half is missing.
+  const responsibleEmployeeWithDepartment =
+    client.responsibleEmployee && client.department && client.department !== '-'
+      ? `${client.responsibleEmployee} (${client.department})`
+      : client.responsibleEmployee
+  // Date of birth carries the age inline. The model keeps the raw ISO value —
+  // other consumers parse it — so format for display here. `age` is computed
+  // server-side per request, so it is always current.
+  const dateOfBirthWithAge = !client.personalDetails.dateOfBirth
+    ? '-'
+    : client.personalDetails.age
+      ? t('pages.clients.detail.dateOfBirthWithAge', '{{date}} ({{age}} years)', {
+          date: formatDate(client.personalDetails.dateOfBirth),
+          age: client.personalDetails.age,
+        })
+      : formatDate(client.personalDetails.dateOfBirth)
+  // Addresses are grouped by type and every one is rendered, which keeps the
+  // previous display logic intact while still giving the panel its required
+  // order: personal group, then registration group, then the divider. Types
+  // are matched exactly rather than by negation: address_type is an
+  // unconstrained varchar, so an unexpected value should read as absent rather
+  // than be silently labelled "personal". Only 'registration' and 'actual' are
+  // ever written — the importer accepts no other prefix (import-service
+  // validator, _ADDRESS_TYPE_PREFIXES) and both are the only values present in
+  // the data. Within a group the primary address leads. An empty group still
+  // renders one placeholder row so the order and both dividers stay put for
+  // clients missing a type.
+  const addressesOfType = (type: string) =>
+    client.addresses
+      .filter((a) => a.addressType === type)
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+  const personalAddresses = addressesOfType('actual')
+  const registrationAddresses = addressesOfType('registration')
+
   // Plain consts (not useMemo) because this sits below the component's early
   // returns; the list is small so recomputing per render is negligible.
   const rrDebtIds = new Set<number>()
@@ -2849,7 +2865,7 @@ export function ClientDetailPage() {
                       <span className="bg-muted-foreground/25 inline-block h-5 w-24 animate-pulse rounded-full" />
                     ) : clientTags && clientTags.length > 0 ? (
                       <>
-                        {clientTags.slice(0, 3).map((tag) => (
+                        {clientTags.map((tag) => (
                           <button
                             key={tag.id}
                             type="button"
@@ -2872,17 +2888,6 @@ export function ClientDetailPage() {
                             />
                           </button>
                         ))}
-                        {clientTags.length > 3 && (
-                          <button
-                            type="button"
-                            onClick={() => setIsTagModalOpen(true)}
-                            className="bg-muted text-muted-foreground hover:bg-muted rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
-                          >
-                            {t('pages.tags.showMore', '+{{count}} more', {
-                              count: clientTags.length - 3,
-                            })}
-                          </button>
-                        )}
                         <button
                           type="button"
                           onClick={() => setTraceModal({ open: true })}
@@ -2916,20 +2921,16 @@ export function ClientDetailPage() {
               <div className="flex flex-col gap-1 self-stretch">
                 <div className="flex min-h-8 items-center self-stretch p-0">
                   <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
-                    {t('pages.clients.detail.department')}
-                  </label>
-                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                    {client.department || '-'}
-                  </p>
-                </div>
-                <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleEmployee')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_employee_id && (
                       <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.responsibleEmployee}
+                        {/* Department no longer has its own row — it is the
+                            responsible employee's department, so it reads as a
+                            qualifier on the name. Omitted when either side is
+                            missing rather than rendering an empty bracket. */}
+                        {responsibleEmployeeWithDepartment}
                       </p>
                     )}
                     {/* Reassign trigger is always visible; warn-on-click happens on
@@ -2966,29 +2967,58 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                 </div>
-                {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
+                {/* The UBKI opt-out toggle moved into the Edit Client form —
+                    it is a client-record edit, gated by edit_clients. */}
+
+                <div className="bg-border h-px w-full self-stretch" />
+
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label
-                    className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]"
-                    title={t(
-                      'pages.clients.detail.ubki.doNotSendHint',
-                      'When enabled, this client is excluded from all UBKI submissions.'
-                    )}
-                  >
-                    {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                    {t('pages.clients.detail.tin')}
                   </label>
-                  <div className="ml-2 flex items-center justify-end">
-                    <ToggleSwitch
-                      checked={doNotSendToUbki}
-                      onChange={handleToggleUbkiOptOut}
-                      disabled={!canEditClient || isUpdatingUbkiOptOut}
-                      ariaLabel={t(
-                        'pages.clients.detail.ubki.doNotSendLabel',
-                        'Do not send data to UBKI'
-                      )}
-                    />
-                  </div>
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {client.personalDetails.tin}
+                  </p>
                 </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                    {t('pages.clients.detail.dateOfBirth')}
+                  </label>
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {dateOfBirthWithAge}
+                  </p>
+                </div>
+                {/* Address rows differ from the rows above by design: a fixed
+                    label column so the label always fits on one line, top
+                    alignment, and no truncation — the value wraps instead. */}
+                {(personalAddresses.length ? personalAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'personal-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.personalAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
+                {(registrationAddresses.length ? registrationAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'registration-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.registrationAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
+
+                <div className="bg-border h-px w-full self-stretch" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
                 <div className="flex flex-1 shrink-0 items-center gap-2.5">
@@ -3298,26 +3328,7 @@ export function ClientDetailPage() {
                       )}
                     />
                   </button>
-                  <button
-                    type="button"
-                    data-tab="work"
-                    onClick={() => setActiveClientCardTab('work')}
-                    title={t('pages.clients.detail.tabs.work')}
-                    className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                      activeClientCardTab === 'work'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
-                        : 'md:border-transparent'
-                    )}
-                  >
-                    <Icons.Briefcase01
-                      size={24}
-                      className={cn(
-                        'shrink-0',
-                        activeClientCardTab === 'work' ? 'text-primary-700' : 'text-foreground'
-                      )}
-                    />
-                  </button>
+                  {/* The Work tab is gone; its fields live in Personal. */}
                   <button
                     type="button"
                     data-tab="passport"
@@ -3369,167 +3380,19 @@ export function ClientDetailPage() {
                 )}
                 {activeClientCardTab === 'personal' && (
                   <>
+                    {/* TIN, date of birth and both addresses now live in the
+                        sidebar panel. The work fields below arrived from the
+                        removed Work tab. */}
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
                         <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.tin')}
+                          {t('pages.clients.detail.email', 'E-mail')}
                         </label>
                       </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.tin}
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                        {client.personalDetails.email || '-'}
                       </p>
                     </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.dateOfBirth')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.dateOfBirth}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.age')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.age}
-                      </p>
-                    </div>
-                    <div className="bg-muted mx-2 h-px self-stretch"></div>
-                    {client.addresses.map((address) => (
-                      <React.Fragment key={address.id}>
-                        <div className="flex items-start self-stretch p-0">
-                          <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                              {address.addressType === 'registration'
-                                ? t('pages.clients.detail.registrationAddress')
-                                : t('pages.clients.detail.personalAddress')}
-                            </label>
-                          </div>
-                          <p className="text-foreground min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {address.fullAddress}
-                          </p>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                    {client.addresses.length === 0 && (
-                      <p className="text-muted-foreground text-xs">-</p>
-                    )}
-                    <div className="bg-muted mx-2 h-px self-stretch"></div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.maritalStatus')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.maritalStatus}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.numberOfFamilyMembers')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.familyMembers}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.incomeLevel')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.incomeLevel}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {activeClientCardTab === 'passport' && (
-                  <>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.documentType')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.documentType}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.passportSeries')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.passportSeries}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.passportNumber')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.passportNumber}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.issuedBy')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.issuedBy}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.issuedDate')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.issuedDate}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.expiresDate')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.expiresDate}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.gender')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.gender}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {activeClientCardTab === 'work' && (
-                  <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
                         <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
@@ -3650,6 +3513,111 @@ export function ClientDetailPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.maritalStatus')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.maritalStatus}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.numberOfFamilyMembers')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.familyMembers}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.incomeLevel')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.incomeLevel}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {activeClientCardTab === 'passport' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.documentType')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.documentType}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.passportSeries')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportSeries}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.passportNumber')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportNumber}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.issuedBy')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedBy}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.issuedDate')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.expiresDate')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.expiresDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.gender')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.gender}
+                      </p>
                     </div>
                   </>
                 )}
