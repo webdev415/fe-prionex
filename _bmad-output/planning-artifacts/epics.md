@@ -65,6 +65,11 @@ FR1: A Forgejo workflow `.forgejo/workflows/ci.yml` runs four independent jobs �
 (`npm run test:run`), `build` (`npm run build`) — on the `node-20` runner label.
 
 FR2: CI triggers on `pull_request` targeting `main` and on `push` to feature branches.
+⚠️ **Cost measured 2026-08-14 (Story 2.2, runs 513–516).** With both triggers live, one commit on a
+pull-request branch produces **two runs** — `push` and `pull_request` — ≈964 s of wall clock and
+≈1620 job-seconds, on a host shared with another tenant's production. This is the price of the
+requirement as written, not a misconfiguration. If it must come down, the lever is the **`push`**
+trigger for PR branches; `pull_request` is the half that gates merges.
 
 FR3: CI publishes the coverage report as a workflow artifact; the `codecov` upload step is
 removed entirely.
@@ -1221,7 +1226,17 @@ So that nothing reaches the release branch without passing the gate.
 
 **Given** two runners are online (Story 1.9) and CI is proven stable (Story 2.5)
 **When** branch protection is configured on `main`
-**Then** the four CI jobs are set as required status checks.
+**Then** the required status checks are set to a named, explicitly chosen subset of the **eight**
+contexts the system actually produces — `CI / {Lint,Type Check,Unit Tests,Build}` in both `(push)`
+and `(pull_request)` forms
+**And** the choice is recorded with its reason, because the two sets fail in opposite directions:
+requiring the `(push)` contexts leaves a pull request that received no branch push permanently
+un-green, while requiring only the `(pull_request)` contexts leaves direct pushes to feature branches
+ungated
+**And** the names are verified against `commit_status` rows from a real run rather than typed from
+the workflow's job names. 🔴 **AMENDED 2026-08-14** (`sprint-change-proposal-2026-08-14.md` §4.3) —
+the original said *"the four CI jobs are set as required status checks"*, which does not name a thing
+that exists: statuses are emitted per event, measured across runs 513–516.
 
 **Given** branch protection is active
 **When** a developer attempts a direct `git push` to `main`
@@ -1619,6 +1634,19 @@ containers
 
 ### Story 4.5: Notify Slack on Deploy Start, Success and Failure
 
+> 🔴 **RESEQUENCED 2026-08-14 (Oleg): kept, but scheduled LAST — after every other story in the
+> plan.** Its channel does not exist yet: `SLACK_CD_WEBHOOK_URL` holds Story 1.13's unrecoverable
+> `example.invalid` stub, and a new incoming webhook has to be created in Slack before any of these
+> ACs can pass. **The notifications work today on GitHub** (`CD.yml:125-263`, three messages, its own
+> live secret), so shipping the migration without them is a deliberate, temporary regression in
+> production observability — not an oversight.
+>
+> 🚨 **The rule this imposes on every deploy story: THE DEPLOY MUST WORK WITHOUT IT** (Oleg,
+> 2026-08-14). Notification is a layer on top of a deploy, never a precondition of one. Stories 4.3,
+> 4.8, 5.3 and 6.4 are written, proven and closed **without** any Slack step; this story adds the
+> step to all of them afterwards. No deploy story may block on the channel, and no deploy story's
+> ACs may be satisfied only when a notification is sent.
+
 As a developer,
 I want deploy outcomes announced in Slack,
 So that the team sees what landed on which stand without watching the runner.
@@ -1712,7 +1740,10 @@ So that a fix applied for one environment cannot silently miss the other two.
 
 **Given** the reuse support established in Story 1.3
 **When** the shared mechanics are factored out
-**Then** the copy, `down`, fail-fast pull, `up -d`, parameterized health check, lock and Slack
+**Then** the copy, `down`, fail-fast pull, `up -d`, parameterized health check, lock and ~~Slack~~
+> ⚠️ **2026-08-14: the shared definition is factored WITHOUT the notification step.** Story 4.5 is
+> resequenced to last and adds it to the shared definition afterwards — a deploy must work without
+> it. Continue reading the clause below with the Slack element deferred.
 steps live in a single reusable definition
 **And** the mechanism used is the one Story 1.3 proved works on this instance.
 
@@ -1899,6 +1930,9 @@ compose copy~~)
 **Given** a successful deploy
 **When** Slack is notified using the Story 4.5 mechanics
 **Then** the message names PRE-PROD and the deployed `image_tag`.
+> ⚠️ **DEFERRED 2026-08-14 — this clause does not gate Story 5.3.** Story 4.5 now runs last and its
+> channel does not exist yet. **The deploy must work without it**: this story closes on a proven
+> deploy with no notification step, and 4.5 adds the step afterwards.
 
 ### Story 5.4: Record the Validated Candidate in the Registry
 
@@ -2145,6 +2179,8 @@ PRE-PROD artifact.
 **Then** it consumes the shared deploy definition from Story 4.8 and acquires the Story 4.4
 lock on the production stand
 **And** Slack is notified on start, success and failure per Story 4.5.
+> ⚠️ **DEFERRED 2026-08-14 — this clause does not gate Story 6.4.** Story 4.5 runs last; **the
+> production deploy must work, and must be provable, without any notification.** 4.5 adds it later.
 
 ### Story 6.5: Guard Promotion by Commit Identity
 
@@ -2159,6 +2195,14 @@ So that the weakened promotion principle still has a real technical barrier behi
 **Then** it extracts the commit SHA from the tag and checks that `preprod-<sha>` exists in the
 registry
 **And** the deploy is refused if it does not.
+
+**Given** `CRM/api-prionex` already gates its own production promotion on
+`ops/deploy/validate-preprod-digests.sh`, comparing the **digests of containers actually running on
+PRE-PROD** against the release manifest, with no bypass flag (established 2026-08-14)
+**When** this guard is designed
+**Then** it is positioned as the **frontend half** of that existing pattern rather than as an
+independent mechanism
+**And** no weaker duplicate of their backend-side check is built beside it.
 
 **Given** Option C means the PROD image is rebuilt and byte-different from the PRE-PROD image
 **When** the guard is documented

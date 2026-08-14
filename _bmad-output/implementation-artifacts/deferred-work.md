@@ -831,7 +831,16 @@ That rewrite is `correct-course` work. **Owner: Oleg.**
   them runs `.github/workflows/CI.yml` — four jobs on `ubuntu-latest`, which resolves to another
   team's runner.** Nothing in the repository prevents this today; the four runs of 2026-08-14 avoided
   it only because the probe branch was cut from current `main`.
-  **This closes on its own when Story 7.2 deletes the legacy workflow files.** Until then it is open
+  🔴 ~~**This closes on its own when Story 7.2 deletes the legacy workflow files.**~~ **THAT WAS
+  WRONG, withdrawn 2026-08-14 by the author of the line.** Forgejo resolves the workflow directory
+  **at the commit being run** — run 514's ref is `refs/pull/2/head` and its `commit_sha` is the PR
+  head — so a pull request from an old branch executes **that commit's** `.github/workflows/`.
+  Deleting the files on `main` does not touch the ~497 branch heads that already carry them.
+  Story 7.2 closes this **only for branches cut or brought up to date after the deletion**, which is
+  a far weaker statement, and the proposal to bring 7.2 forward on this basis is withdrawn with it.
+  **The mitigations that do work, none free:** require PRs to be up to date with `main` before merge
+  (branch protection on `main` already exists); back-merge `main` into the branches anyone actually
+  opens PRs from; or accept the exposure, which is the current state. Until then it is open
   by choice.
   **Cheaper mitigations, none of them done, in rising order of effort:** require PRs to be up to date
   with `main` before merge (branch protection already exists on `main`); back-merge `main` into the
@@ -862,3 +871,21 @@ deploying. Digests, not tags: a tag can be moved, a digest cannot. There is no b
 promotion gate proves **commit** identity, because Option C rebuilds per environment and byte-identity
 was given up. Theirs proves **image digest** identity on the backend side. When 6.5 is written it
 should reference the stronger neighbouring gate rather than invent a weaker one beside it.
+
+
+## Correct-course 2026-08-14 — what it changed, and one thing it could not settle
+
+- ⚠️ **Story 4.5 is kept and resequenced to LAST (Oleg).** Its channel does not exist: the webhook is
+  Story 1.13's unrecoverable stub and a **new incoming webhook must be created in Slack** before any
+  of its ACs can pass. **Owner: Oleg**, and it is the only thing standing between the plan and a
+  capability the team has today — `CD.yml:125-263` sends three notifications on GitHub right now,
+  with its own live secret. Shipping without them is a deliberate, temporary regression.
+  🚨 **The rule it imposes, recorded because four stories depend on it:** *the deploy must work
+  without it.* Stories 4.3, 4.8, 5.3 and 6.4 are written, proven and closed with **no** notification
+  step; 4.5 adds the step to all of them afterwards. No deploy story may block on the channel.
+- 🔬 **Story 2.3's blocker is unproven and may be phantom.** The standing claim «there is no
+  Actions-artifacts API on this instance» was inferred from `404` on **quota** endpoints. Measured
+  2026-08-14 unauthenticated: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **403**, the web
+  download route → **303**. Both routes exist. **One authenticated request against the 154 `dist`
+  rows Story 2.1 already produced settles it** — needs a token, and the token's exit must be planned
+  before it is minted.
