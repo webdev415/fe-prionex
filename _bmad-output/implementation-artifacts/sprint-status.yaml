@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-13
+# last_updated: 2026-08-14
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-13
+last_updated: 2026-08-14
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -77,7 +77,7 @@ development_status:
   2-1-port-the-four-ci-jobs-to-forgejo: review
   2-2-trigger-ci-on-pull-requests-and-feature-branches: review
   2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: review
-  2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: backlog
+  2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: in-progress
   2-5-validate-ci-stability-across-five-consecutive-real-pull-requests: backlog
   2-6-enforce-required-status-checks-on-main: backlog
   epic-2-retrospective: optional
