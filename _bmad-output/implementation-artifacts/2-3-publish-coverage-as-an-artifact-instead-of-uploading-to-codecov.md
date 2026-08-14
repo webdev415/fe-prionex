@@ -4,7 +4,7 @@ baseline_commit: e97709b6
 
 # Story 2.3: Publish Coverage as an Artifact Instead of Uploading to Codecov
 
-Status: ready-for-dev
+Status: review
 
 > **Read §1 before you read the epic's ACs.** The epic assumes `npm run test:coverage` works. **It
 > does not, and it never has on this repository.** `@vitest/coverage-v8` is not installed and cannot
@@ -615,6 +615,92 @@ Files this story must **not** touch: anything under `src/`, `.github/workflows/`
 ---
 
 ## Dev Agent Record
+
+### Agent Model Used
+
+Claude Opus 5 (1M context), directly — the Dev subagent launch was declined, so the work was done in
+the parent session. Story authoring used an Opus subagent over five Haiku retrieval agents.
+
+### Debug Log References
+
+**Budget: 1 CI run declared, 1 spent.** Run 520 exists but is `status = 3` (cancelled) — the probe
+branch's earlier push, auto-cancelled when the real commit landed. That is D8's default auto-cancel
+observed in the wild, without a `concurrency` block, and it cost nothing.
+
+| | baseline (runs 505/513/515) | run 522 | delta |
+|---|---|---|---|
+| `Unit Tests` | 460–467 s | **539 s** | **+72 s (+15%)** |
+| whole run | 468 s | **540 s** | +72 s |
+| `Lint` / `Type Check` / `Build` | 135–143 / 84–86 / 107–113 | 154 / 99 / 126 | noise |
+
+Artifact rows for run 522: **154 × `dist`** (one per file, as always) and **exactly 1 × `coverage`**,
+3,939,632 bytes, no `content_encoding` — it is already a `.tar.gz`.
+
+### Completion Notes List
+
+**AC1 — closed, with a deviation recorded rather than absorbed.** The criterion reads *"`npm run
+test:coverage` runs **after** `npm run test:run`"*. Implemented as **one pass**: `test:coverage:ci`
+replaces `test:run:ci`. `--coverage` runs the same 1921 tests and instruments them, so the literal
+two-pass reading would execute the suite twice — and `Unit Tests` is 467 of the 468-second critical
+path, doubled again on a PR branch where `push` and `pull_request` both fire. Measured cost of the
+one-pass approach: **+72 s on the runner (+15%)**, against **+14 s locally (+9%)**. The gap is real
+and worth keeping: v8 instrumentation is CPU-bound and s1 shares its cores with another tenant's
+production.
+
+🔴 **The dependency did not exist, and that is the story's largest finding.** `@vitest/coverage-v8`
+is an optional peer dependency of `vitest`, absent from `package.json` and from `node_modules`.
+`npm run test:coverage` exited 1 with `MISSING DEPENDENCY` **before a single test ran**, and had done
+so for the life of the repository. **Two silencers in series hid it:** `continue-on-error: true` on
+the coverage step (`CI.yml:72`) and `fail_ci_if_error: false` on the Codecov upload (`:78`), which
+was shipping a `coverage-final.json` that was never produced. **Codecov has therefore been receiving
+nothing, ever.** FR3 removes a step that was already a no-op — worth knowing before someone opens
+that dashboard after the migration and draws the obvious wrong conclusion. Added pinned to the exact
+installed `vitest` version (`4.1.3`); a floating range would let a future major break the loader.
+
+**AC2 — closed.** No codecov step, token or secret exists anywhere in `.forgejo/workflows/`. Verified
+by grepping the active configuration with comments stripped.
+
+**AC3 — closed by a decision, stated rather than inherited.** **Coverage failure fails the job.**
+`continue-on-error: true` is not carried across, because it is precisely the mechanism that hid the
+missing dependency for the life of the repository. A coverage step that cannot fail is a step that
+cannot tell you anything.
+
+**AC4 — closed as far as this agent can close it; the last click is a human's.** The artifact exists:
+one row, `coverage`, 3.94 MB, produced by run 522. **Retrieval is a browser-session route.** Settled
+by measurement 2026-08-14: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **404** with a token
+(there is no artifacts API, and Story 1.8's original claim stands — the earlier `403` was the generic
+refusal for an unauthenticated call), while
+`/CRM/fe-prionex/actions/runs/{index}/artifacts/{name}` **exists and serves the file**, redirecting
+an API token to `/user/login`. So **a developer can download it and an agent cannot** — which is
+exactly what this AC asks for, since it speaks of a developer opening the run page. **Not claimed as
+verified:** the download itself, which needs one click from Oleg, the same shape as Story 2.1's
+unread peak-memory line.
+
+**Archiving was load-bearing, not tidiness.** `upload-artifact@v3` writes **one database row per
+file** on this instance — 154 rows for `dist`'s 154 files, measured in Story 2.1. `coverage/` is
+**780 files, 30 MB**. Uploading it raw would have added ~780 rows per run and ~1560 per PR commit, to
+an instance that held **three** artifacts in total before Story 2.1. One archive is one row: measured,
+1 row.
+
+⚠️ **Making coverage work broke `npm run lint`, and only locally.** `eslint .` walked the newly
+generated report; three of its 780 files trip rules, and `--max-warnings=0` turns that into a failure.
+**CI would never have caught it** — `lint` and `test` are separate jobs with separate checkouts — so
+the trap is a developer-only one: run coverage, then commit, and the hook rejects you for something
+you did not write. `coverage` now joins `dist` in `globalIgnores`. Caught by the pre-commit hook,
+which is the second time today it has earned its runtime.
+
+⚠️ **`retention-days: 1` on the coverage artifact — flagged for review, not defended.** It matches
+Story 2.1's choice for `dist`, but a coverage report is something a developer opens after reading a
+failed run, and one day may be short. Changing it costs one line and one run.
+
+### File List
+
+- `package.json` — `@vitest/coverage-v8@4.1.3` in devDependencies; new `test:coverage:ci` script
+- `package-lock.json` — the dependency tree for the above
+- `.forgejo/workflows/ci.yml` — `test` job: coverage pass, archive step, `upload-artifact@v3`
+- `eslint.config.js` — `coverage` added to `globalIgnores`
+- this story file; `sprint-status.yaml`
+
 
 ### Agent Model Used
 
