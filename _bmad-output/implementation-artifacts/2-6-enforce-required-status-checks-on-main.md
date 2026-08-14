@@ -450,12 +450,12 @@ the dependency:
       - If the push **succeeds**: the gate is not doing its job. The damage is nil — the commit was
         going to `main` anyway — but **stop**, record it as a finding, re-read the rule with `GET`,
         and do not proceed to AC3 until the cause is understood.
-- [ ] 5.2 **AC3.** Cut a probe branch from current `main`. Add a throwaway `.ts` file under `src/`
+- [x] 5.2 **AC3.** Cut a probe branch from current `main`. Add a throwaway `.ts` file under `src/`
       with an unused binding (§8). Push, open the PR.
-- [ ] 5.3 Wait for the `lint` context to reach `failure` — ~140 s, not the full run. Confirm from
+- [x] 5.3 Wait for the `lint` context to reach `failure` — ~140 s, not the full run. Confirm from
       `commit_status` that the failing context is one of the eight.
-- [ ] 5.4 Attempt the merge. Record the exact status code and body. Confirm refusal.
-- [ ] 5.5 Close the PR, delete the probe branch local and remote, and verify the throwaway file
+- [x] 5.4 Attempt the merge. Record the exact status code and body. Confirm refusal.
+- [x] 5.5 Close the PR, delete the probe branch local and remote, and verify the throwaway file
       exists nowhere on `main`.
 
 ### Task 6 — The positive test (AC: 4)
@@ -879,7 +879,63 @@ Verified: `enable_status_check: true`, all eight strings present, taken from `co
 matched field by field. `apply_to_admins: true` per Oleg's 2026-08-14 decision (§2) — the rule now
 binds every identity, including the one this story's own token uses.
 
-_AC2/AC3, AC5, AC6 notes follow as their tasks complete below._
+#### AC2 — direct push to `main` rejected
+
+Committed this file's Task 1–3 progress (`9c9763ec`) directly on local `main` (the commit had to
+reach `main` regardless of transport), then `git push origin main`. Also carried forward a genuine
+pre-existing unpushed commit (`694f6a06`, Story 2.5's review-findings fix, sitting on local `main`
+since before this story started, local ahead of `origin/main` by one commit at session start) — both
+commits were subject to the same push attempt.
+
+**Server response:**
+```
+remote: Forgejo: Not allowed to push to protected branch main
+remote:
+To ssh://git.crm-prionex.com:2222/CRM/fe-prionex.git
+ ! [remote rejected]   main -> main (pre-receive hook declined)
+error: failed to push some refs to 'ssh://git.crm-prionex.com:2222/CRM/fe-prionex.git'
+```
+
+Rejected as expected, by the server's pre-receive hook — not a client-side refusal. `enable_push:
+false` + `apply_to_admins: true` blocks the project's own token exactly as designed; no exemption.
+Per Task 5.1's contingency, local `main` was reset to `origin/main` and both commits were carried
+forward by cherry-pick onto branch `story-2-6/pr-1-review-fix-and-gate-config` (cut from
+`origin/main`), which becomes Task 6's real-change PR. Nothing lost, nothing written twice.
+
+#### AC3 — pull request with a failing required check cannot be merged
+
+Probe branch `story-2-6/probe-ac3-red-check` cut from `origin/main` (`0ba3e7e3`), one throwaway file
+`src/__probe_ac3__/probe.ts` with an unused top-level binding. Pushed and PR opened via API →
+**HTTP 201**, PR #8, `index = 8`, `head.sha = 7a6e78f38a5c203831c35f2c850c255e9b9c4d0a`.
+
+Two runs created: `action_run.id 545` (`push`, index 55) and `546` (`pull_request`, index 56), both
+bound to `7a6e78f3…`. Polled `commit_status` every 10 s; `CI / Lint (push)` reached `failure` at
+~80 s (well inside the ~140 s estimate) — confirmed via direct query, one of the eight required
+contexts. (`CI / Type Check (push)` and `CI / Build (push)` also failed shortly after, since the
+unused binding trips `tsc`'s `noUnusedLocals` too — extra, not required, evidence that the check is
+real.)
+
+**Merge attempt**, `POST /pulls/8/merge` with `{"Do":"merge"}`:
+
+```
+HTTP 405
+{"message":"not allowed to merge [reason: Not all required status checks successful]","url":"https://git.crm-prionex.com/api/swagger"}
+```
+
+Refusal confirmed, and the reason string names required status checks explicitly — not a generic
+conflict or permission error. Cleaned up: PR #8 closed via `PATCH {"state":"closed"}` (verified
+`state: closed`, `merged: false`), remote branch deleted (`DELETE .../branches/...` → `204`), local
+branch deleted, `git fetch --prune` confirms the remote ref is gone. `git ls-tree -r origin/main`
+confirms `src/__probe_ac3__/` exists nowhere on `main`.
+
+**Note on local hooks vs. the probe:** the repo's local `pre-commit` and `pre-push` hooks run the same
+`lint --max-warnings=0` / `tsc -b` checks CI does, so they also reject the probe file — by design,
+since it exists solely to fail those checks. `git commit --no-verify` and `git push --no-verify` were
+used for this one disposable, never-merged probe commit only; every other commit and push in this
+story went through the hooks normally. This is the deliberate mechanism §8 describes, not a
+shortcut around review — the whole point of AC3 is a commit that fails these exact checks remotely.
+
+_AC5, AC6 notes follow as their tasks complete below._
 
 ### File List
 
