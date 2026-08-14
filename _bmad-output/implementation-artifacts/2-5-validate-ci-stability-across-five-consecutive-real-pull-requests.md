@@ -890,6 +890,49 @@ Then one block per PR follows in Task 3.
 - **3.9** `action_run` for `commit_sha = '468d0d05…'` → **0 rows**. No run on the merge commit.
 - **Cleanup:** branch merged, deleted remotely and locally. No run created by the delete.
 
+---
+
+#### PR 4/5 — `story-2-5/pr-4-story-file-pr3-evidence`
+
+- **3.1** Branch cut from `main` HEAD `468d0d05ed728bec6d532d5210d4c66f50382691` (PR 3's merge
+  commit), verified equal to `origin/main` before `checkout -b`.
+- **3.2** One commit, `20c7b2c1f267a63f73d3228ff023c9d48f1f16ec` — this story file, PR 3's evidence
+  block. Local pre-commit hook: 228/228 files, 1921/1921 tests green, ~146 s.
+- **3.3** PR opened via API → **HTTP 201**, `index = 6`, `head.sha = 20c7b2c1…`, `state = open`.
+- **3.4/3.5:**
+
+  | id | index | event | ref | workflow_id | status | started | stopped | duration |
+  |---|---|---|---|---|---|---|---|---|
+  | 541 | 51 | push | `refs/heads/story-2-5/pr-4-…` | **ci.yml** | 1 (success) | 1786731334 | 1786731851 | **517 s** |
+  | 542 | 52 | pull_request | `refs/pull/6/head` | **ci.yml** | 1 (success) | 1786731422 | 1786731980 | **558 s** |
+
+  `ci.yml` on both, `ci-hub` not triggered. Both green, no rerun.
+
+  | run id | job | status | duration | runner_id |
+  |---|---|---|---|---|
+  | 541 (push) | Lint | success | 138 s | **20** |
+  | 541 (push) | Type Check | success | 86 s | **20** |
+  | 541 (push) | Unit Tests | success | 516 s | **19** |
+  | 541 (push) | Build | success | 113 s | **19** |
+  | 542 (pull_request) | Lint | success | 137 s | **20** |
+  | 542 (pull_request) | Type Check | success | 82 s | **19** |
+  | 542 (pull_request) | Unit Tests | success | 505 s | **20** |
+  | 542 (pull_request) | Build | success | 108 s | **19** |
+
+  Runner split: still 4/4, still clean 2/2 per run — **but the assignment flipped** relative to PRs
+  1–3 (there, runner 19 always drew {Lint, Type Check} and runner 20 always drew {Unit Tests,
+  Build}; here runner 20 drew {Lint, Type Check} on the push run, and the split within the
+  pull_request run is mixed). Recorded as observed, not smoothed into "still 2/2" — see Task 4.5.
+
+- **3.6** Both runs 4/4 green. No classification needed.
+- **3.7** `commit_status` for `sha = 20c7b2c1…`: **8 distinct final contexts, all `state = success`**
+  — the same eight, verbatim.
+- **3.8** Merge: `POST …/pulls/6/merge` → **HTTP 200**. `has_merged = t`, `merged_commit_id =
+  25b3fc57b613a3cc6237e7368103df1ec71f01ab`, merged 2026-08-14 18:27:21 UTC. Fourth consecutive
+  first-attempt API merge into `main`.
+- **3.9** `action_run` for `commit_sha = '25b3fc57…'` → **0 rows**. No run on the merge commit.
+- **Cleanup:** branch merged, deleted remotely and locally. No run created by the delete.
+
 ### Completion Notes List
 
 _One section per AC. For AC1, state the §2 deviation on "real" explicitly. For AC2, record the
