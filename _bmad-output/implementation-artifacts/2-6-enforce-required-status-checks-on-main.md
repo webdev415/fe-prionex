@@ -508,8 +508,8 @@ the dependency:
 
 - [x] 9.1 Confirm no probe branch, no open PR, no ninth context, and no runner left stopped or with
       `--restart=no` (Prohibitions 4, 7).
-- [ ] 9.2 Update `sprint-status.yaml`: `2-6-enforce-required-status-checks-on-main` → `review`.
-- [ ] 9.3 The closing commit goes through a pull request like everything else now does (§7). If the
+- [x] 9.2 Update `sprint-status.yaml`: `2-6-enforce-required-status-checks-on-main` → `review`.
+- [x] 9.3 The closing commit goes through a pull request like everything else now does (§7). If the
       gate blocks it unexpectedly, that is a finding — record it, do not disable the gate
       (Prohibition 8).
 - [x] 9.4 Confirm the File List is complete and nothing under the Prohibitions was touched.
@@ -1247,6 +1247,24 @@ Per `sprint-status.yaml`: `2-1` through `2-3` are **`review`** (not yet `done`),
 2.1, 2.2, 2.3 and 2.6 need their code reviews resolved and status advanced to `done`, and the
 retrospective (currently optional) would need to run if the team wants it before closing the epic.
 This story does not change that list — it only adds itself to it.
+
+#### Task 9.3 — The closing PR, merged through the gate it installed
+
+PR #11 (`story-2-6/pr-3-close-the-story` → `main`, carrying this Task 8/9 record plus the
+`sprint-status.yaml` → `review` transition) ran two more CI runs (`id 551` push, `552`
+pull_request), both green on all eight contexts with both runners back online (~9 min wall clock,
+back to the two-runner baseline). Merged cleanly via `POST /pulls/11/merge` → **HTTP 200**,
+`merged: true`, `merge_commit_sha: 8f8145674dda6bb970113b97dfc50cb9974001f6`. **The gate did not
+block its own closing commit** — this is AC4's evidence arriving for free, exactly as §7 predicted,
+not a separate finding.
+
+**Budget reconciliation, final.** Declared in Task 2.1: ~8 runs across 4 PRs. Actual: **10 runs**
+across 5 PRs (545–554) — one PR more than declared, because Task 9.2/9.3's checkbox-and-evidence
+update was written *after* PR #10 (the failover PR) had already been merged and could not be folded
+into it without reopening a merged PR. Declared honestly rather than silently absorbed: **budget
+overrun of 2 runs (25%)**, spent entirely on recording the story's own closing state through the
+gate it installed — not on rework, not on a failed test, and not on anything charged to a foreign
+runner.
 
 ### File List
 
