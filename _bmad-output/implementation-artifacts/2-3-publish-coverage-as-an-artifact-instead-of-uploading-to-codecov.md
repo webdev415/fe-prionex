@@ -625,13 +625,15 @@ the parent session. Story authoring used an Opus subagent over five Haiku retrie
 
 **Budget: 1 CI run declared, 1 spent.** Run 520 exists but is `status = 3` (cancelled) — the probe
 branch's earlier push, auto-cancelled when the real commit landed. That is D8's default auto-cancel
-observed in the wild, without a `concurrency` block, and it cost nothing.
+observed in the wild, without a `concurrency` block. ⚠️ **It cost no *budgeted run*, but it did not
+cost nothing:** Lint 145 s, Type Check 88 s and Build 119 s completed green before the cancel landed,
+and Unit Tests was killed at 334 s — about 686 job-seconds spent. Corrected by review.
 
 | | baseline (runs 505/513/515) | run 522 | delta |
 |---|---|---|---|
-| `Unit Tests` | 460–467 s | **539 s** | **+72 s (+15%)** |
-| whole run | 468 s | **540 s** | +72 s |
-| `Lint` / `Type Check` / `Build` | 135–143 / 84–86 / 107–113 | 154 / 99 / 126 | noise |
+| `Unit Tests` | 460–467 s | **539 s** | **+72 s (+15%) against 467; +79 s (+17%) against 460** |
+| whole run | 461–468 s | **540 s** | +72 s vs 468; +79 s vs 461 |
+| `Lint` / `Type Check` / `Build` | 135–143 / 84–86 / **109–113** | 154 / 99 / 126 | noise |
 
 Artifact rows for run 522: **154 × `dist`** (one per file, as always) and **exactly 1 × `coverage`**,
 3,939,632 bytes, no `content_encoding` — it is already a `.tar.gz`.
@@ -657,8 +659,11 @@ nothing, ever.** FR3 removes a step that was already a no-op — worth knowing b
 that dashboard after the migration and draws the obvious wrong conclusion. Added pinned to the exact
 installed `vitest` version (`4.1.3`); a floating range would let a future major break the loader.
 
-**AC2 — closed.** No codecov step, token or secret exists anywhere in `.forgejo/workflows/`. Verified
-by grepping the active configuration with comments stripped.
+**AC2 — closed.** No codecov step, token or secret exists anywhere in `.forgejo/workflows/`, verified
+by grepping the active configuration with comments stripped — **and no codecov-named secret is
+configured either**, verified against the instance: the `secret` table holds 75 rows and none of them
+is codecov-named, for any owner or repository. The first version of this note checked *references*
+only, which does not reach the AC's second half; corrected by review.
 
 **AC3 — closed by a decision, stated rather than inherited.** **Coverage failure fails the job.**
 `continue-on-error: true` is not carried across, because it is precisely the mechanism that hid the
@@ -666,7 +671,18 @@ missing dependency for the life of the repository. A coverage step that cannot f
 cannot tell you anything.
 
 **AC4 — closed as far as this agent can close it; the last click is a human's.** The artifact exists:
-one row, `coverage`, 3.94 MB, produced by run 522. **Retrieval is a browser-session route.** Settled
+one row, `coverage`, 3.94 MB, produced by run 522.
+
+🔴 **The URL, because Task 5.7 asked for it and the first version of this record did not give it:**
+
+```
+https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/42/artifacts/coverage
+```
+
+**`42` is the run *index*, not `522` which is `action_run.id`** — the web route takes the per-repo
+index and `/actions/runs/522` is a dead URL, since the repository has only 42 runs. Caught by review.
+⏳ **It expires 2026-08-15 13:39 UTC**, exactly 24 h after creation, so the click has under a day of
+shelf life before AC4 needs a fresh run to close against. **Retrieval is a browser-session route.** Settled
 by measurement 2026-08-14: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **404** with a token
 (there is no artifacts API, and Story 1.8's original claim stands — the earlier `403` was the generic
 refusal for an unauthenticated call), while
@@ -689,9 +705,13 @@ the trap is a developer-only one: run coverage, then commit, and the hook reject
 you did not write. `coverage` now joins `dist` in `globalIgnores`. Caught by the pre-commit hook,
 which is the second time today it has earned its runtime.
 
-⚠️ **`retention-days: 1` on the coverage artifact — flagged for review, not defended.** It matches
-Story 2.1's choice for `dist`, but a coverage report is something a developer opens after reading a
-failed run, and one day may be short. Changing it costs one line and one run.
+⚠️ **`retention-days: 1` on the coverage artifact — flagged, and the first rationale for flagging it
+was wrong.** It said *"a developer opens it after reading a failed run"*. **That scenario cannot
+occur:** the archive and upload steps carry no `if: always()`, so **a failed run produces no coverage
+artifact at all**. Caught by review. The real question is narrower: consulting a **green** run's
+coverage later than the same day. 24 h covers "next morning" and fails Friday→Monday. At 3.9 MB per
+run the cost of 7 days is ~28 MB at daily cadence — negligible beside the 154 `dist` rows kept on the
+same terms. **Recommendation: raise to 7, or keep 1 and state the weekend case as accepted.**
 
 ### File List
 

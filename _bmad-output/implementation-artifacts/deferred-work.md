@@ -692,8 +692,11 @@
   `dist` (10,535,201 bytes, gzip). The whole instance held 3 artifacts before; it holds 157 now.
   Any future statement counting "artifacts" on this instance is counting files. ✅ **New evidence
   beyond Story 1.8:** `retention-days: 1` is *applied*, not merely accepted — `expired_unix` is set
-  to 2026-08-14 13:22, exactly one day after creation. ⚠️ **Retrieval is still unverified** and
-  Story 2.3's AC ("the coverage artifact is downloadable") has no known way to be satisfied.
+  to 2026-08-14 13:22, exactly one day after creation. ⚠️ ~~**Retrieval is still unverified** and
+  Story 2.3's AC ("the coverage artifact is downloadable") has no known way to be satisfied.~~
+  ✅ **SUPERSEDED 2026-08-14 — see the SETTLED entry below.** There is no artifacts *API*, but the
+  web route exists and is session-gated, so the AC is satisfiable by a developer and not by an
+  agent. This line said the opposite and was left unswept; caught by Story 2.3's review.
 - ⚠️ **RESTATED 2026-08-13 by Story 2.2 — `.forgejo/workflows/ci.yml` is still on `main` only.**
   Story 2.2 armed `push` (`branches-ignore: [main, staging, development]`) but **deliberately did
   not propagate `ci.yml` to `staging`/`development`** — doing so means two more pushes to
@@ -888,9 +891,10 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   so the original Story 1.8 claim stands and my `403`-is-not-`404` reasoning was wrong — the `403`
   was the generic refusal for an unauthenticated call, and the router tells the truth only once you
   authenticate. **But the web download route is real:**
-  `/CRM/fe-prionex/actions/runs/{index}/artifacts/{name}` exists and serves the file — it just
-  redirects an API token to `/user/login`, because web routes need a **browser session**, not a
-  token.
+  `/CRM/fe-prionex/actions/runs/{index}/artifacts/{name}` **exists and is session-gated** — it redirects an API token to `/user/login`.
+  ⚠️ **Stated precisely, because the first wording overclaimed:** a redirect proves the route
+  exists and wants a browser session; it does **not** prove the file comes out the other side.
+  That remains the unverified click.
   **Therefore, precisely:** a *developer* can download the artifact from the run page; an *agent*
   cannot. Story 2.3's AC says *"a developer opens the run page … the coverage artifact is
   downloadable"* — **that AC is satisfiable as written**, and its verification is a thirty-second
@@ -919,3 +923,20 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   the Codecov dashboard and concludes the migration broke it. And **Story 2.3's AC1 cannot be
   satisfied without a `package.json` change**, which makes it the first story in Epic 2 to touch an
   application dependency rather than only CI configuration.
+
+
+## Handed to Story 2.4 by Story 2.3 (2026-08-14) — the coverage overhead, measured
+
+- ⚠️ **Coverage costs +72–79 s of the critical path, and Story 2.4 owns the budget.** Run 522 with
+  `--coverage`: `Unit Tests` **539 s**, whole run **540 s**. Baselines without it: 467 s (run 505),
+  460 s (513), 460 s (515), whole runs 468/461/461. So **+15% against the 467 s endpoint and +17%
+  against the 460 s floor** — quote the range, not the single figure. Locally the same change costs
+  only ~9% (150 s → 164 s): V8 instrumentation is CPU-bound and s1 shares its cores with another
+  tenant's production, so the runner pays roughly double what a laptop does.
+  **The 15-minute budget still holds** — 540 s against 900 s, six minutes of margin — but Story 2.4
+  should note that the margin shrank by a fifth in one story, and that `Unit Tests` remains 539 of
+  the 540 seconds. The other three jobs finish inside its shadow and optimising them buys nothing.
+- ⚠️ **`dist` is still uploaded unarchived: 154 artifact rows per run.** Story 2.3 archived
+  `coverage` (780 files → 1 row, measured) but did not touch `dist`, which was outside its scope.
+  Two runs per PR commit means ~308 rows per commit from `dist` alone. Whoever revisits Story 2.1's
+  build job should apply the same treatment; the mechanism and the measurement are recorded here.

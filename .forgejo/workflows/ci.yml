@@ -6,7 +6,8 @@ name: CI
 # (`branches-ignore`), which is FR2's "push on feature branches" read
 # literally. It deliberately excludes the three long-lived branches so a
 # documentation-only commit landing on any of them does not spend a run —
-# four concurrent jobs, ~468-487s of wall clock and ~810 job-seconds — on a
+# four concurrent jobs, ~540s of wall clock and ~918 job-seconds since
+# Story 2.3 added coverage (run 522; it was ~468s / ~810 before) — on a
 # host shared with another tenant's production. (An earlier version of this
 # comment said "four jobs (~487s each)", which overstated the cost roughly
 # fourfold: 487s is the whole run, not each job. Measured on run 505: Lint
@@ -120,8 +121,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # CI runs test:coverage:ci — not test:run:ci, not test:coverage. Three
-      # scripts exist (package.json) and this is the only one safe here.
+      # CI runs test:coverage:ci — not test:run:ci, not test:coverage. Five test
+      # scripts exist (package.json); this is the only one safe here.
       #
       # Heap: unchanged reasoning from the `test:run:ci` step this replaces.
       # `test:coverage:ci` is pinned to 16384 MB, matching `test:run:ci`'s
@@ -144,7 +145,7 @@ jobs:
       # vitest.config.ts:30-32), so a second pass amortises nothing. This is a
       # deliberate deviation from the epic's literal Story 2.3 AC1 wording
       # (`npm run test:coverage` after `npm run test:run`), the same shape as
-      # this job's existing `test:run:ci` deviation from Story 2.1's AC4 above.
+      # the `test:run:ci` deviation Story 2.1 recorded, which this block replaces.
       # Recorded in
       # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
       #
@@ -241,9 +242,11 @@ jobs:
       # a token-authenticated call to
       # /api/v1/repos/CRM/fe-prionex/actions/artifacts returns 404) — but the
       # web route /CRM/fe-prionex/actions/runs/{index}/artifacts/{name}
-      # is real and serves the file to a browser session (Story 2.3,
-      # deferred-work.md:886-898). It redirects an API token to /user/login,
-      # so only a human click proves a download — never build a script or a
+      # exists and gates on a browser session (Story 2.3,
+      # deferred-work.md:886-898). It redirects an API token to /user/login —
+      # which proves the route exists and is session-gated, NOT that the file
+      # comes out the other side. Only a human click proves a download. Never
+      # build a script or a
       # later story on programmatic artifact retrieval, it does not work here.
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
