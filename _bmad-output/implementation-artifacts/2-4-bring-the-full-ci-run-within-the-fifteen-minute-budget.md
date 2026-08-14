@@ -109,8 +109,13 @@ reached disk.**
    2.1 and 2.2: `docker logs forgejo-runner-fe-prionex` and `…-2` carry `task NNNN repo is …`
    (`2-2-…md:632-637`, `1-9:384-389`) and, at cache time, `Cache restored from key: node-cache-…`
    (`1-7:634-648`).
+   🔴 **Corrected during development:** this line does **not** appear for real, server-dispatched CI
+   jobs — only for Story 1.9's probe workflow. Do not plan a cache proof around it (Task 4.1).
 2. **The cache directory on disk** — `.cache/actcache` size before and after
-   (`deferred-work.md:686`).
+   (`deferred-work.md:686`), and 🔑 **`.cache/actcache/bolt.db`, which stores plain JSON records
+   carrying `usedAt` per entry — a direct restore-hit record.** This is what actually closed AC2.
+   The real path is `/opt/forgejo-runner-fe-prionex/data/runner{,-2}/.cache/actcache`, not the
+   `/opt/forgejo-runner-fe-prionex/.cache/actcache` this section first gave.
 3. **The database** — durations, runner ids, artifact rows (§8).
 
 ⚠️ **Story 2.1's own standard applies verbatim** (`2-1-…md:242-243`): *"Record whether `npm ci` used
@@ -478,9 +483,16 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
          is …` start line and its `Cleaning up network for job X` end line, the runner container log
          contains **nothing else** for real jobs — confirmed by reading the full raw log between those
          two markers for task 5544/5545 (run 531) verbatim. This means §3's "runner container log"
-         evidence route for cache hit/miss is unavailable for any run this story can create; the
-         actcache-disk route (used above) is the only working one, and it is also the route used for
-         AC2 below.
+         evidence route for cache hit/miss is unavailable for any run this story can create.
+      5. 🔴 **But "the log route is unavailable" is not the same as "no direct evidence exists", and
+         the first version of this record conflated them — corrected by review.** The actcache index
+         at `/opt/forgejo-runner-fe-prionex/data/runner{,-2}/.cache/actcache/bolt.db` stores **plain
+         JSON records, not an opaque binary format**, and each record carries `key`, `size`,
+         `createdAt`, `usedAt` and `complete`. **`usedAt` is a direct, per-entry record of a restore
+         hit.** It was readable all along. Run 522's cold verdict is independently reconfirmed by it:
+         KEY_B's first entries are `id=23` on runner 19 (created 13:33:34) and `id=19` on runner 20
+         (created 13:40:00), and **no KEY_A entry has its `usedAt` bumped during run 522's window
+         either** — so there was no restore-key fallback hit, and the run was cold on both runners.
 - [x] 4.2 **If 4.1 confirms cold:** AC1 closes on run 522 — whole run **540 s**, `Unit Tests` 539 s,
       Lint 154 s, Type Check 99 s, Build 126 s (`2-3-…md:634-636`), verified first-hand in Task 2.1.
       Record per-job runner attribution (§2c). **Do not create a second cold run.** Skip 4.3.
@@ -524,8 +536,43 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
       `1-7:634-648`) and/or the `.cache/actcache` delta from Task 2.4. **Not from a green job**
       (Prohibition 5).
 
-      **Available evidence, stated at the honest limit of what this instance can prove — no "green job"
-      claim made (Prohibition 5):**
+      **AC2 CLOSED — warm, on direct per-entry evidence.**
+
+      🔴 **The first version of this write-up closed AC2 on a hash-determinism argument and recorded
+      that direct proof was structurally unavailable on this instance. That was wrong, and it was the
+      single largest error in the story — corrected by review.** Direct proof exists and is decisive:
+
+      **The actcache index is JSON, not an opaque blob store.**
+      `/opt/forgejo-runner-fe-prionex/data/runner{,-2}/.cache/actcache/bolt.db` holds one record per
+      cache entry with `key`, `size`, `createdAt`, `usedAt`, `complete`. **`usedAt` is the restore
+      hit.** Read live, KEY_B entries:
+
+      | Runner | Entry | `createdAt` | `usedAt` | Meaning |
+      |---|---|---|---|---|
+      | 19 | `id=23`, 103,855,572 B | 13:33:34 (run 522) | **14:42:28** | restored by run **531** |
+      | 19 | `id=25`, 103,883,231 B | 14:44:27 (run 531) | **15:31:17** | restored by run **534** |
+      | 20 | `id=19`, 103,852,836 B | 13:40:00 (run 522) | **14:42:29** | restored by run **531** |
+      | 20 | `id=21`, 103,880,791 B | 14:51:32 (run 531) | **15:31:18** | restored by run **534** |
+
+      Run 534 started at **15:31:05**. A KEY_B entry on **each** runner carries `usedAt` of
+      **15:31:17 / 15:31:18** — 12–13 s in, exactly when `setup-node`'s restore lookup fires and
+      nowhere near any save time. **Run 534's restore hit KEY_B on both runners. AC2 closes on that,
+      not on an inference.**
+
+      ⚠️ **Provenance is one generation later than first written.** Run 534 restored from entries
+      created during **run 531**, not run 522; run 522's entries served run 531. The chain is
+      522 (cold, saves) → 531 (hit, saves) → 534 (hit). Does not change the verdict.
+
+      **The GC lines are duplicate-eviction, not deletion of the key — and they fall inside run 531,
+      not between 531 and 534.** Forgejo's actcache GC keeps the **newest** entry per (key, version)
+      and deletes superseded siblings. At 14:42:28+02:00 runner 19 deleted `ID:19`/`ID:20` (KEY_A) and
+      `ID:22` (KEY_B, `CreatedAt:1786714359`) while **keeping** `id=21` (newest KEY_A) and `id=23`
+      (newest KEY_B); runner 20 did the same in the same second. A TTL explanation is ruled out —
+      deleted `ID:22` and kept `id=23` were created **55 seconds apart**. Run 531's own window is
+      14:42:17–14:51:35 from `action_run`, so the GC ran *inside* it. **KEY_B held a live,
+      `complete: true` entry continuously from 13:33:34 onward, including all of run 534.**
+
+      **Supporting evidence retained from the original write-up, with its inference corrected:**
       1. The direct route (`Cache restored from key: …` in the runner container log) is confirmed
          **unavailable for this run too** — grepped explicitly for run 534's exact window
          (17:31–17:41 CEST) on both runners: no cache-restore/save/GC line at all fired during it, on
@@ -536,10 +583,18 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
          per job, timed within 0–3 s of that job's own `stopped` time (runner 1:
          `cache/1a/26` @ 17:32:28 CEST ≈ Type Check's stop 17:32:31; `cache/1b/27` @ 17:33:22 ≈ Lint's
          stop 17:33:24; runner 2: `cache/16/22` @ 17:32:54 ≈ Build's stop 17:32:57; `cache/17/23` @
-         17:39:35 ≈ Unit Tests' stop 17:39:38). This proves each job performed a **save** at job end,
-         which — established in Task 4.1 — happens on this instance's cache-proxy implementation
-         regardless of whether the preceding restore was a hit or a miss. **A save event is therefore
-         not, by itself, proof of a hit.**
+         17:39:35 ≈ Unit Tests' stop 17:39:38). This proves each job performed a **save** at job end.
+         ⚠️ **A save carries no hit/miss information on this instance — and unlike the first version
+         of this note, that is now demonstrated rather than asserted.** Run 522 (proven **miss**) and
+         runs 531 and 534 (proven **hits**, table above) produce byte-for-byte the same signature:
+         four saves, one per job, ~3 s before each job's stop. The KEY_A history in the deletion log
+         shows the same rule six times over — a restore followed ~70 s later by a fresh full-size
+         save, e.g. `ID:19 … UsedAt:1786713938 CreatedAt:1786697328` → `ID:20 CreatedAt:1786714012`,
+         which is run 520 restoring at 13:25:38 and still writing a fresh 107 MB blob at 13:26:52.
+         **This instance's cache proxy saves on every completed job regardless of restore outcome**,
+         unlike stock `actions/cache`, which skips the save on an exact primary-key hit. The one job
+         across these runs that did **not** save is run 520's Unit Tests — because it was cancelled
+         (`status=3`).
       3. **The strongest available evidence is a hash-determinism argument, not a log read.** The npm
          cache key is a deterministic hash of `package-lock.json` + OS/arch (§2a; `1-7:634-648`).
          `package-lock.json` is confirmed byte-identical across `3d698492` → `4fc90b78` → `6d7911b2`
@@ -551,24 +606,25 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
          since). Since KEY_B's content was successfully saved during run 522 and remained the active
          key for this lock-file hash through runs 531 and 534, the `setup-node` **restore** step in
          run 534 had a matching key to restore from.
-      **Verdict: warm, on the balance of the strongest evidence this instance can produce** — a
-      restore *content* line was never observed for any real run on this instance (recorded as a
-      standing gap, not papered over), so this is deliberately labelled a hash-determinism argument
-      cross-checked against disk activity, **not** the direct "Cache restored from key" proof §3
-      describes. If a future story gets API/log access restored, re-verifying this with a direct log
-      line would close the gap cleanly.
+      **Verdict: warm, proven.** The hash-determinism argument above is retained because it is
+      sound and independently consistent, but it is no longer what AC2 rests on — the `usedAt`
+      timestamps are. 🔴 **The lesson worth carrying forward is not about caching at all: "the log
+      route does not work" was generalised into "no evidence exists", and an answer sat in a
+      plain-JSON file on disk the whole time.** That is the same failure `deferred-work.md:548-551`
+      already records once — *"job logs are unretrievable"* over-generalised into not reading the
+      server log either, leaving an answer in `docker logs` for eight hours. **Second occurrence of
+      the same mistake, in a story that quoted the first one in its own Dev Notes.**
 - [x] 5.3 Record per-job runner attribution for the warm run and, per job, whether it hit a warm or
       cold cache — remember the two caches are independent (§2c).
 
       Run 534: **Lint** (task 5629) → runner **19**, **Type Check** (task 5630) → runner **19**,
       **Build** (task 5632) → runner **20**, **Unit Tests** (task 5631) → runner **20**. 2/2 split
-      again. Per the Task 5.2 argument, **all four jobs on both runners** were warm on the npm key —
-      the key is per-lock-file, not per-runner, but each runner keeps its **own physical cache blob
-      store** (§2c), and each runner's own blob listing does show new content in the run 534 window
-      (both runners' `cache/` directories grew), consistent with each runner's independent cache proxy
-      already holding KEY_B from its own earlier save (runner 1 saved KEY_B content during run 522;
-      runner 2 saved KEY_B content during run 522's Build/Unit Tests jobs too — both runners'
-      `1786714xxx`-era blobs). No cold-cache runner was observed in this run.
+      again. **Both runners were warm, each proven separately** — §2c's warning that the two caches
+      are independent is exactly why this needed checking per runner rather than per run. Runner 19
+      served entry `id=25` (`usedAt` 15:31:17), runner 20 served entry `id=21` (`usedAt` 15:31:18).
+      **Neither entry came from run 522**, as the first version of this note claimed: runner 19's was
+      created at 14:44:27 and runner 20's at 14:51:32, both during **run 531**. Run 522's entries
+      (`id=23` / `id=19`) were the ones run **531** restored. No cold-cache runner in this run.
 - [x] 5.4 Record the `npm ci` step duration on both runs and state the cold→warm delta. Compare with
       Story 2.1's **3 s of 487** (`deferred-work.md:684-686`, `2-1-…md:439-446`) and say whether the
       cache is still not the lever.
@@ -632,11 +688,16 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
       Whichever runner draws `Unit Tests` determines the run's wall clock almost entirely; the other
       three jobs finish and their runner sits idle for the remainder. **Single-runner counterfactual
       (arithmetic, not measured):** with one runner at `capacity: 2`, four jobs run in two waves of
-      two. Worst case puts `Unit Tests` in the second wave, behind whichever job started first on that
-      runner: `154 s (Lint) + 539 s (Unit Tests) ≈ 693 s` using run 522's own numbers — comfortably
-      inside 900 s, but the margin drops from ~360 s to ~207 s. **This is arithmetic composed from
-      measured job durations, not a measured run** — no runner was taken offline (Prohibition 2,
-      `1-9:84-85`).
+      two. `Unit Tests` in the second wave takes **the first slot to free**, i.e. `min` of the two
+      wave-1 durations — not the last. Worst case therefore maximises that minimum by putting the two
+      longest short jobs in wave 1 (Lint 154 s, Build 126 s → first free at **126 s**), giving
+      `126 + 539 = 665 s`; Type Check then runs 154→253 s and does not extend the run. Using run 522's
+      own numbers the bound is **665 s, not the ~693 s this story's §5 first estimated** — that figure
+      assumed `Unit Tests` waited behind Lint specifically, which the scheduler would not do. Still
+      comfortably inside 900 s: margin **235 s** against run 522's own 360 s (both stated against 540 s;
+      the 387 s headline in Task 6.1 is against run 534's 513 s — different baseline, stated so the two
+      are not read as inconsistent). **This is arithmetic composed from measured job durations, not a
+      measured run** — no runner was taken offline (Prohibition 2, `1-9:84-85`).
 - [x] 6.4 Confirm no job queued behind another workflow (e.g. `build.yml`) during the measured runs;
       if it did, that is the more interesting AC4 finding and belongs in the record.
 
@@ -685,6 +746,14 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
       1.9 probe's was. No runner configuration was read or changed beyond `config.yml`/`.runner`
       (Prohibition 2). The budget does not need this number (§7: *"the budget is not tight"*), so it is
       left open rather than guessed at.
+
+      ⚠️ **Corrected by review: "the log line is absent" was again treated as "the answer is
+      unobtainable", which is the same mistake Task 5.2 records.** The log route is genuinely dead,
+      but an image pull leaves a trace outside the log — image `Created`/pull mtimes inside `dind`
+      and `dind2` (`docker exec dind docker images --format '{{.Repository}}:{{.Tag}} {{.CreatedAt}}'`
+      for `node:20-bookworm`, compared across two known run windows). **Nobody checked that.** This
+      stays «не проверено», but as *not yet attempted*, not as a ceiling — the distinction matters
+      because the ceiling framing is what would stop the next reader from trying.
 
 ### Task 8 — Decide what this story does with the probe branch (AC: 5, 6)
 
@@ -760,11 +829,12 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
 
       Confirmed by re-reading the completed Tasks 1–9 above: every duration/id/key/artifact claim
       cites its `action_run`/`action_run_job`/`action_task`/`action_artifact` row, a `docker logs`
-      grep result, or a `git diff`; the one arithmetic projection (Task 6.3's single-runner
-      counterfactual, ~693 s) is explicitly labelled "arithmetic, not measurement"; every unresolved
-      question (Task 5.4's step-level `npm ci` duration, Task 7.1's cgroup source, Task 7.2's
-      `force_pull` cost, Task 5.2's cache-hit content-line) is explicitly marked «не проверено» with
-      the reason the evidence channel does not exist on this instance.
+      grep result, a `bolt.db` entry, or a `git diff`; the one arithmetic projection (Task 6.3's
+      single-runner counterfactual, **665 s** — the ~693 s first written was itself wrong, corrected
+      by review) is explicitly labelled "arithmetic, not measurement"; every unresolved question
+      (Task 5.4's step-level `npm ci` duration, Task 7.1's cgroup source, Task 7.2's `force_pull`
+      cost) is explicitly marked «не проверено» with the reason. **Task 5.2's cache-hit evidence is
+      no longer on that list — it was found, not conceded** (`bolt.db` `usedAt`).
 
 ---
 
@@ -975,17 +1045,27 @@ numbers happened to match on cross-check.
 - **AC1 CLOSED** on run 522 (**540 s** whole run, `Unit Tests` 539 s) — cold, confirmed via
   cache-key-first-appearance in the cache-proxy GC log (`module=artifactcache`, key
   `…b5f94888…331a00` first seen `CreatedAt` inside run 522's exact window on both runners) +
-  fresh-blob-mtime cross-correlation on `.cache/actcache`. The direct "Cache restored from key"
-  runner-log route (§3/Story 1.7) does **not** exist for real, server-dispatched CI jobs on this
-  instance — checked exhaustively across five real runs (492, 505, 522, 531, 534) and present only
-  in Story 1.9's 2026-08-11 local-probe-workflow runs. This gap is recorded, not silently papered
-  over, and is the single biggest methodological finding of this story.
-- **AC2 CLOSED, with the evidence explicitly labelled at its honest strength.** Warm run 534:
-  **513 s**, `Unit Tests` 512 s. Cache-hit evidence is a hash-determinism argument (unchanged
-  `package-lock.json` since `3d698492`, confirmed by `git diff`, ⇒ same deterministic cache key as
-  run 522's KEY_B, and no other key has appeared in any log since) cross-checked against
-  `.cache/actcache` blob timing — **not** a direct "Cache restored" log line, because that line does
-  not exist for this instance's real jobs. `npm ci` step-level duration is «не проверено» — the DB
+  fresh-blob-mtime cross-correlation on `.cache/actcache`, and independently reconfirmed by the
+  actcache index (no KEY_A entry's `usedAt` is bumped in run 522's window either, so there was no
+  restore-key fallback hit).
+- 🔴 **The story's biggest error, and it was mine: I concluded no direct cache-hit evidence exists on
+  this instance, and it does.** The runner container log genuinely carries no
+  `Cache restored from key: …` line for real, server-dispatched CI jobs (checked across runs 492,
+  505, 522, 531, 534; present only in Story 1.9's 2026-08-11 probe runs). I generalised that into
+  "the evidence route does not exist" and closed AC2 on inference. But
+  `.cache/actcache/bolt.db` stores **plain JSON**, one record per entry, carrying `usedAt` — a direct
+  per-entry restore record — and it was readable the whole time. **This is the second occurrence of
+  the failure `deferred-work.md:548-551` already records** ("job logs are unretrievable"
+  over-generalised into not reading the server log, leaving an answer in `docker logs` for eight
+  hours) — in a story that cites that very lesson in its own Dev Notes. Caught by review.
+- **AC2 CLOSED — warm, proven, not inferred.** Run 534: **513 s**, `Unit Tests` 512 s. A KEY_B entry
+  on **each** runner carries `usedAt` 15:31:17 (runner 19, entry `id=25`) and 15:31:18 (runner 20,
+  entry `id=21`) against a run start of 15:31:05 — 12–13 s in, when `setup-node`'s restore fires.
+  Provenance is 522 (cold, saves) → 531 (hit, saves) → 534 (hit); run 534 restored **run 531's**
+  entries, not run 522's, which the first version of this record had one generation off. The GC lines
+  at 14:42:28/29+02:00 are duplicate-eviction inside run 531's own window (14:42:17–14:51:35), not a
+  deletion of KEY_B: the newest entry per key survives on both runners, and deleted `ID:22` vs kept
+  `id=23` were created 55 s apart, which rules out TTL. `npm ci` step-level duration is «не проверено» — the DB
   has no step-level timing column and job logs are unreadable; job-level duration variance (±10–20 s
   across runs 522/531/534) is attributed to host-load noise, consistent with Story 2.1's finding that
   the cache itself only saves ~3 s of ~487 s.
@@ -1006,11 +1086,18 @@ numbers happened to match on cross-check.
 - **Surviving «не проверено», complete list:** (1) `npm ci` step-level duration on any run — no
   step-level timing column exists and job logs are unreadable. (2) The specific cgroup source
   (`memory.peak` v2 vs `max_usage_in_bytes` v1) behind the 2163 MB peak-memory figure — only the
-  artifact *name* is readable, not its content. (3) `force_pull`'s per-job image-pull cost — the log
-  line format exists but never appears for a real CI job, same structural gap as (4). (4) A direct
-  cache-restore-hit log line for any real run — never observed; Task 5.2's warm verdict rests on a
-  hash-determinism argument instead, explicitly labelled as such rather than presented as the direct
-  proof §3 asks for.
+  artifact *name* is readable, not its content. (3) `force_pull`'s per-job image-pull cost — the
+  `docker pull … forcePull=true` line exists in the runner log format but never appears for a real CI
+  job. ⚠️ **This one is now suspect as a «не проверено»:** it was concluded unanswerable by the same
+  reasoning that wrongly declared cache evidence unavailable. The *log* route is genuinely absent, but
+  nobody checked whether the dind image cache answers it directly (`docker images` mtimes on
+  `dind`/`dind2`). **Recorded as unverified-and-probably-answerable rather than as a ceiling.**
+  (4) ~~A direct cache-restore-hit record~~ — **withdrawn. It exists** (`bolt.db`, `usedAt`); AC2
+  closes on it.
+- 🔴 **The closing commit is local-only.** `c865d51d` was not pushed, deliberately: pushing spends an
+  unbudgeted CI run (~513–558 s). Consequence to state rather than leave implicit — **the record on
+  the server is one commit behind this file**, and whoever pushes it makes the run count 2, not the
+  1 declared and spent here. Not a defect; a cost that belongs to whoever pushes.
 - **Deliberately not done:** `probe/2-1-peak-memory` was **not** merged to `main` (Task 8.1 — recorded
   as Oleg's decision, not made unilaterally). No runner configuration was changed. `.cache/actcache`
   was never cleared. No second CI run was created beyond the one declared. `ci.yml`, `vitest.config.ts`

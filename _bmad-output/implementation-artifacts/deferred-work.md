@@ -956,20 +956,39 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   elsewhere flags a budget regression before it lands — it would need someone to notice by eye.
   Three more changes that size and the 900 s budget is gone. Whether Story 2.6 (required checks)
   should own an automated threshold is an open question for whoever plans it, not decided here.
-- 🔴 **Cache-hit evidence has a hard ceiling on this instance, and it will affect any future story
-  that needs to prove a cache result.** The direct evidence route described in `2-1-…md`/`1-7:634-648`
-  (`Cache restored from key: …` in the runner container log) **does not exist for real,
-  server-dispatched CI jobs** — confirmed absent across five real runs checked (492, 505, 522, 531,
-  534) and present only in Story 1.9's 2026-08-11 local-probe-workflow runs. Story 2.4 fell back to a
-  hash-determinism argument (unchanged `package-lock.json` ⇒ same cache key ⇒ the key that was saved
-  by an earlier run must be what a later run restores) cross-checked against `.cache/actcache`
-  blob-mtime timing — defensible, but weaker than a direct log line, and it is the ceiling, not a
-  gap this story left by not trying harder. Any future story needing cache-hit proof should expect
-  the same ceiling rather than re-discover it.
-- ⚠️ **`force_pull: true`'s cost remains «не проверено».** Same structural gap as above — the
-  `docker pull … forcePull=true` line exists in the runner log format (confirmed, Story 1.9 probe
-  runs) but never appears for a real CI job. Not worth a story on its own while the budget has
-  margin (§7 of Story 2.4), but the same evidence ceiling applies if anyone picks it up later.
+- ✅ **Cache-hit evidence IS available on this instance, and the route is worth knowing before anyone
+  spends a day rediscovering it.** ⚠️ **Correction:** the first version of this entry declared a hard
+  evidence ceiling and told future stories to expect it. That was wrong and was caught in review of
+  Story 2.4 the same day.
+  - **What is genuinely absent:** the `Cache restored from key: …` line described in
+    `1-7:634-648`. It does not appear in the runner container log for real, server-dispatched CI
+    jobs — confirmed absent across runs 492, 505, 522, 531, 534, and present only in Story 1.9's
+    2026-08-11 probe-workflow runs. Real jobs emit nothing between `task NNNN repo is …` and
+    `Cleaning up network for job X`.
+  - 🔑 **What works instead:**
+    `/opt/forgejo-runner-fe-prionex/data/runner{,-2}/.cache/actcache/bolt.db` stores **plain JSON
+    records**, one per cache entry, with `key`, `size`, `createdAt`, `usedAt` and `complete`.
+    **`usedAt` is a direct per-entry record of a restore hit** and is what closed Story 2.4's AC2
+    (run 534's restore: `usedAt` 15:31:17 on runner 19 and 15:31:18 on runner 20, against a run start
+    of 15:31:05). Read it read-only; do not write to it.
+  - ⚠️ **Two traps in reading it.** (1) The actcache GC keeps the **newest** entry per (key, version)
+    and deletes superseded siblings — a `deleted cache: &{…Key:X…}` line does **not** mean key X is
+    gone. Story 2.4 nearly reached the opposite conclusion from exactly this. (2) **A save carries no
+    hit/miss information here.** This instance's cache proxy saves on every completed job regardless
+    of restore outcome, unlike stock `actions/cache`, which skips the save on an exact primary-key
+    hit. A proven miss (run 522) and two proven hits (531, 534) produce byte-for-byte the same
+    four-save signature.
+  - 🔴 **The method lesson, which is the part that generalises:** this is the **second** occurrence of
+    the failure at `:548-551` — "route A does not work" generalised into "no evidence exists", while
+    the answer sat in a readable file. First time it cost eight hours on `docker logs`; this time it
+    cost an AC closed on inference instead of proof. **When one evidence route is confirmed dead, the
+    next step is to enumerate the others, not to record a ceiling.**
+- ⚠️ **`force_pull: true`'s cost remains «не проверено» — and this one should be re-attempted, not
+  treated as closed.** The `docker pull … forcePull=true` line exists in the runner log format
+  (confirmed, Story 1.9 probe runs) but never appears for a real CI job. Story 2.4 concluded it
+  unanswerable **by the same over-generalisation corrected above**, and nobody checked the obvious
+  alternative route: image mtimes / `docker images` inside `dind` and `dind2`. Not worth a story on
+  its own while the budget has margin (§7 of Story 2.4), but do not inherit "unanswerable" from it.
 - ℹ️ **Peak memory closed:** `Unit Tests` peaked at **2163 MB** against the 16384 MB ceiling
   (13.2%) on run 531 — Story 2.1's AC4, open since 2026-08-11, is now answered. Story 2.1's doubling
   of the heap ceiling (8192→16384 MB) was confirmed precautionary rather than corrective: even the
