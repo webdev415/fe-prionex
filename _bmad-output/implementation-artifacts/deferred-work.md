@@ -903,3 +903,19 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
   download route → **303**. Both routes exist. **One authenticated request against the 154 `dist`
   rows Story 2.1 already produced settles it** — needs a token, and the token's exit must be planned
   before it is minted.
+
+## 🔴 Found while writing Story 2.3 (2026-08-14) — coverage has never worked, on either platform
+
+- 🔴 **`npm run test:coverage` has never run, and Codecov has been receiving nothing for the life of
+  the repository.** `@vitest/coverage-v8` is an *optional peer dependency* of `vitest@4.1.3`, is
+  **absent from `package.json` devDependencies**, and is **absent from `node_modules/@vitest/`**.
+  Reproduced directly: `npm run test:coverage` → `MISSING DEPENDENCY  Cannot find dependency
+  '@vitest/coverage-v8'`, exit 1, **before a single test runs**. `npm ci` will never install it.
+  **Why nobody noticed:** `CI.yml:70-72` runs it with `continue-on-error: true`, and the Codecov step
+  at `:74-78` uploads a `coverage-final.json` that was never produced, with `fail_ci_if_error: false`.
+  Two independent silencers in series. `git log -S'coverage-v8' -- package.json` finds no commit that
+  ever added the dependency.
+  **Consequences:** FR3 removes a step that was already a no-op — worth knowing before anyone checks
+  the Codecov dashboard and concludes the migration broke it. And **Story 2.3's AC1 cannot be
+  satisfied without a `package.json` change**, which makes it the first story in Epic 2 to touch an
+  application dependency rather than only CI configuration.
