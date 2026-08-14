@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -264,6 +264,99 @@ describe('SearcherFollowupFeedTab', () => {
     expect('timezone' in params).toBe(false)
     // The default still goes out as an explicit pair.
     expect(params.date_start).toBe(params.date_end)
+  })
+
+  describe('midnight rollover — the default window lives in state and re-resolves on focus', () => {
+    // Only Date is faked: real timers keep waitFor / React Query / userEvent
+    // flowing, while setSystemTime moves what "now" (and thus "today") is.
+    // React Query v5's own focus refetching listens to `visibilitychange`,
+    // not `focus`, so the dispatched focus events below reach ONLY the tab's
+    // listener — every refetch asserted here is the component's doing.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      authState.user.timezone = 'Europe/Kyiv'
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    /** Lets any would-be re-render/refetch land before asserting nothing did. */
+    const flush = () =>
+      act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+    it('refires the default window with the new day on a focus after midnight', async () => {
+      // Mounted just before Kyiv midnight (UTC+3 in August)...
+      vi.setSystemTime(new Date('2026-08-14T20:55:00Z')) // 23:55 Aug 14 Kyiv
+      mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+      renderTab()
+      await screen.findByText('Коваленко Іван Петрович')
+      expect(mockGetFeed).toHaveBeenCalledWith(
+        expect.objectContaining({ date_start: '2026-08-14', date_end: '2026-08-14' })
+      )
+
+      // ...left open across it, and focused again the next morning. A render
+      // read of the wall clock would keep YESTERDAY's window here until some
+      // unrelated re-render happened to recompute it.
+      vi.setSystemTime(new Date('2026-08-15T05:00:00Z')) // 08:00 Aug 15 Kyiv
+      fireEvent(window, new Event('focus'))
+
+      await waitFor(() =>
+        expect(mockGetFeed).toHaveBeenLastCalledWith(
+          expect.objectContaining({ date_start: '2026-08-15', date_end: '2026-08-15' })
+        )
+      )
+      expect(mockGetFeed).toHaveBeenCalledTimes(2)
+      // The fields follow the rolled-over default...
+      const [dateFrom, dateTo] = dateInputs()
+      expect(dateFrom.value).toBe('2026-08-15')
+      expect(dateTo.value).toBe('2026-08-15')
+      // ...and an auto-derived value still never lands in the URL.
+      expect(search()).not.toContain('if=')
+      expect(search()).not.toContain('it=')
+    })
+
+    it('treats a same-day focus as a no-op — no extra request', async () => {
+      vi.setSystemTime(new Date('2026-08-14T09:00:00Z'))
+      mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+      renderTab()
+      await screen.findByText('Коваленко Іван Петрович')
+      expect(mockGetFeed).toHaveBeenCalledTimes(1)
+
+      // Hours later, but the same Kyiv calendar day: the functional update
+      // hands back the previous value, so nothing re-renders and the query
+      // key never moves.
+      vi.setSystemTime(new Date('2026-08-14T15:00:00Z'))
+      fireEvent(window, new Event('focus'))
+
+      await flush()
+      expect(mockGetFeed).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a user-picked window alone when the day rolls over', async () => {
+      vi.setSystemTime(new Date('2026-08-14T20:55:00Z'))
+      mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+      renderTab(['/?if=2026-06-01&it=2026-06-30'])
+      await screen.findByText('Коваленко Іван Петрович')
+
+      vi.setSystemTime(new Date('2026-08-15T05:00:00Z'))
+      fireEvent(window, new Event('focus'))
+
+      await flush()
+      // `today` only backs the DEFAULT window: with both bounds picked in the
+      // URL, the rollover neither refetches nor moves what is sent or shown.
+      expect(mockGetFeed).toHaveBeenCalledTimes(1)
+      expect(mockGetFeed).toHaveBeenCalledWith(
+        expect.objectContaining({ date_start: '2026-06-01', date_end: '2026-06-30' })
+      )
+      const [dateFrom, dateTo] = dateInputs()
+      expect(dateFrom.value).toBe('2026-06-01')
+      expect(dateTo.value).toBe('2026-06-30')
+    })
   })
 
   it('round-trips every filter and the page window through the URL (?if=&it=&spg=&sps=)', async () => {

@@ -23,14 +23,15 @@
  * date pair: the backend accepts both bounds or neither (the card's single
  * Metabase `[[…]]` block; half a window answers 400), and the tab always
  * sends both — the DEFAULT is today–today in the profile timezone
- * (Techno-Finance parity: its Card 123 usage defaults to today), computed
- * fresh each render and deliberately NOT written into the URL (an
- * auto-derived value in a shared link would pin "today" to the day the link
- * was made). No 366-day cap to mirror: the backend caps nothing here because
- * the window cannot widen the query's cost.
+ * (Techno-Finance parity: its Card 123 usage defaults to today), held in
+ * state seeded at mount and re-resolved on window focus (an overnight tab
+ * rolls to the new day when the operator returns to it), and deliberately
+ * NOT written into the URL (an auto-derived value in a shared link would pin
+ * "today" to the day the link was made). No 366-day cap to mirror: the
+ * backend caps nothing here because the window cannot widen the query's cost.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -102,7 +103,29 @@ export function SearcherFollowupFeedTab() {
   // differ. The same timezone travels to the backend, which cuts the window's
   // calendar days in it, so the two ends of the request agree on what "today"
   // means.
-  const today = getDateStringInTimezone(new Date(), userTimezone)
+  //
+  // Held in STATE, not read off the wall clock in render (the host page keeps
+  // comparable clock reads inside effects too): seeded once at mount and
+  // re-resolved on window focus, so a tab left open across midnight picks up
+  // the new day the moment the operator comes back to it instead of keeping
+  // yesterday's window until an unrelated re-render. The functional update
+  // returns the previous value while the day is unchanged, so a same-day
+  // focus re-renders nothing. `today` only backs the DEFAULT window below —
+  // user-picked URL bounds never move when the day rolls over.
+  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
+  useEffect(() => {
+    const refreshToday = () =>
+      setToday((prev) => {
+        const next = getDateStringInTimezone(new Date(), userTimezone)
+        return next === prev ? prev : next
+      })
+    // The profile timezone can change what "today" means without the clock
+    // moving (it loads or changes after mount) — re-resolve right away, not
+    // only on the next focus.
+    refreshToday()
+    window.addEventListener('focus', refreshToday)
+    return () => window.removeEventListener('focus', refreshToday)
+  }, [userTimezone])
 
   const rawDateFrom = searchParams.get(DATE_FROM_KEY)
   const rawDateTo = searchParams.get(DATE_TO_KEY)
