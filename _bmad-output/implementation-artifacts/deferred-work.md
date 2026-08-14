@@ -209,6 +209,25 @@
   throwaway tags were deleted afterwards (`204`).
   **What Story 3.1 must carry:** `--add-host` in `container.options` (already permanent) **and**
   `driver: docker` on `setup-buildx-action`. Either alone is insufficient.
+  ✅ **RE-PROVEN 2026-08-14 by Story 3.1 itself, this time in a surviving git ref.** The probe that
+  produced the finding above lived only on a deleted branch and is quoted here as prose, not as a
+  checkable artifact. Story 3.1's own probe (`probe/3-1-build-publish`, deleted after use) carried
+  the identical `driver: docker` line and pushed `git.crm-prionex.com/crm/fe-prionex:build-check-3-1`
+  on the first dispatch — run 512, job 5661 (`Build and Push`), task 5283, runner 19
+  (`s1-fe-prionex-1`), started 08:18:59+02:00, stopped 08:21:29+02:00, **170s**, status success.
+  Confirmed server-side: `GET /packages/CRM/container/fe-prionex/build-check-3-1` → `200`,
+  `creator.login: robot-registry`, `created_at: 2026-08-14T08:21:46+02:00`; manifest digest
+  `sha256:61095d9b4dcaabcf2592f99bcd89399141c8b33d9d017550f9932c4f0c0d7660` (content hash of the
+  stored `manifest.json` blob, `package_file` id 9596), image ≈28.7 MiB across 11 layer/config
+  blobs. **The native `docker build`/`docker push` fallback was not exercised** — `driver: docker`
+  worked on the first attempt and there was no failure to fall back from. The surviving proof now
+  lives in `.forgejo/workflows/build.yml` on `main`, not in a deleted branch.
+  ⚠️ **`sha-a1b2c3d-prod` (id 1930) was NOT deleted** despite this section's own instruction below —
+  the `DELETE /packages/CRM/container/fe-prionex/sha-a1b2c3d-prod` call was blocked by the
+  operator's tool-permission classifier as a destructive production action requiring explicit
+  authorization, and Story 3.1 did not attempt to route around that block. It remains `keep_pattern`-
+  protected (permanent) and open for whoever executes the deletion next, token already provisioned
+  (`/root/.fj_token_3_1` on s1, `write:package`).
   *Original finding, kept for the reasoning:*
 - 🔴 **`--add-host` on `container.options` is necessary but NOT sufficient for `docker/build-push-action`.**
   Story 1.8's `#d12` records the `--add-host git.crm-prionex.com:10.67.0.1` line as a permanent

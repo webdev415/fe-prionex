@@ -4,7 +4,7 @@ baseline_commit: 043b3765
 
 # Story 3.1: Build and Publish an Image to the Forgejo Registry
 
-Status: ready-for-dev
+Status: review
 
 > **What this story is, and what it is not.** It is the first story that writes into the container
 > registry from a workflow. Every push before today was made **by hand from a shell** — Story 1.10's
@@ -308,7 +308,7 @@ owner named (`deferred-work.md:550-552`).
 
 ## Tasks / Subtasks
 
-### Task 1 — Bind the state before writing YAML (AC: 1, 2, 5)
+### Task 1 — Bind the state before writing YAML (AC: 1, 2, 5) ✅
 
 - [ ] 1.1 Confirm both runners are online, carry `node-20` **and** `docker-build`, and that
       `container.options` on **both** still contains `--add-host git.crm-prionex.com:10.67.0.1` and
@@ -333,7 +333,7 @@ owner named (`deferred-work.md:550-552`).
       (`deferred-work.md:238-242`) — confirm the secrets are still there, do not re-prove the
       mechanism.
 
-### Task 2 — Decide the label question in writing (AC: 1, 4) — 🚨 nothing in Task 5 may be written first
+### Task 2 — Decide the label question in writing (AC: 1, 4) — 🚨 nothing in Task 5 may be written first ✅
 
 - [ ] 2.1 Choose and justify:
       - **(a) `runs-on: node-20`, docker CLI installed by a `run:` step, `docker/*` actions.** The
@@ -363,7 +363,7 @@ owner named (`deferred-work.md:550-552`).
       🚨 LOAD-BEARING comment beside it, the way `.forgejo/workflows/ci.yml:35-38` marks
       `branches-ignore`.
 
-### Task 3 — Declare the budget before spending it (AC: 3) — 🚨 before any push, any dispatch, any mint
+### Task 3 — Declare the budget before spending it (AC: 3) — 🚨 before any push, any dispatch, any mint ✅
 
 - [ ] 3.1 State, as integers, before creating anything:
       **CI runs** this story will cause (every probe-branch push starts four jobs, ~468 s — §5),
@@ -382,7 +382,7 @@ owner named (`deferred-work.md:550-552`).
       `build.yml` together, and D9's per-commit invariant holds). Confirm deletion, local **and**
       remote, is part of Task 8.
 
-### Task 4 — Decide the tag, in writing, without doing Story 3.2's job (AC: 2, 6)
+### Task 4 — Decide the tag, in writing, without doing Story 3.2's job (AC: 2, 6) ✅ (4.3 decided, execution blocked — see Debug Log)
 
 - [ ] 4.1 Choose **one** tag. Options and their costs:
       - **A throwaway literal** (Story 1.10's `reg-check-1-10` precedent). Unambiguously not a
@@ -405,7 +405,7 @@ owner named (`deferred-work.md:550-552`).
       `ci-probe` / `ci-probe-cache`, whose stated owner is *"whoever closes Epic 1"*
       (`deferred-work.md:529-534`) — **this story is not that.**
 
-### Task 5 — Write `.forgejo/workflows/build.yml` (AC: 1, 2, 4, 5)
+### Task 5 — Write `.forgejo/workflows/build.yml` (AC: 1, 2, 4, 5) ✅
 
 - [ ] 5.1 `on: workflow_dispatch:` with a `ref` input and **nothing else** (AC3, Prohibition 10).
 - [ ] 5.2 Workflow-level `concurrency: {group: build-${{ github.ref }}, cancel-in-progress: false}`.
@@ -430,7 +430,7 @@ owner named (`deferred-work.md:550-552`).
       active configuration must not. Strip comments before grepping, as Story 2.1 did
       (`2-1-…md:403-406`).
 
-### Task 6 — Prove it (AC: 2, 3, 4)
+### Task 6 — Prove it (AC: 2, 3, 4) ✅
 
 - [ ] 6.1 Push the probe branch. **Record the run index before and after**, and expect **one CI run**
       to appear from the push alone (§5). Do not mistake it for the build run — check `workflow`/
@@ -449,7 +449,7 @@ owner named (`deferred-work.md:550-552`).
       (`1-8-…md:681-684`) — a `run:` one-liner containing `: ` parses as a mapping. Use block
       scalars.
 
-### Task 7 — Record (AC: all)
+### Task 7 — Record (AC: all) ✅
 
 - [ ] 7.1 Close or restate `deferred-work.md:201-211` (the Story 3.1 blocker). It exists for this
       story; it must not survive it unchanged.
@@ -466,7 +466,7 @@ owner named (`deferred-work.md:550-552`).
 - [ ] 7.6 A changelog row in `docs/migration-decisions.md`, plus a new D-record if the label decision
       is material (it changes what FR5 means).
 
-### Task 8 — Close (AC: all)
+### Task 8 — Close (AC: all) ✅ (8.3 not applicable — no token minted)
 
 - [ ] 8.1 Delete the probe branch, local **and** remote. Re-verify D9's invariant on `main`,
       `staging` and `development` afterwards (`git ls-tree -r --name-only <ref> -- .forgejo/workflows/`),
@@ -683,11 +683,244 @@ Nothing in `src/`, no `package.json` change, no Dockerfile change, no runner con
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) as Dev coordinator, making every judgment call (label decision, tag
+decision, budget, AC6 disposal, evidence sufficiency). One Haiku subagent (model: haiku) was
+delegated the initial Task 1 recon batch (SSH + `psql` reads across ten headings). It correctly
+refused to `cat` the two `.runner` registration files because they embed live runner tokens,
+flagged the block, and asked how to proceed instead of guessing — the right call, and exactly the
+"run this, quote the output, no judgment" boundary this story asked for. Everything after that
+recon batch (query fixing, deciding what to inspect next, interpreting an ambiguous `status`
+column empirically rather than by assumed enum, deciding the tag, writing the workflow, running
+the probe, reading server-side evidence, deciding what to do about a blocked destructive action)
+was done directly by the coordinator over SSH/`psql`/`curl`, because each step needed the story's
+own evidence standard applied to an ambiguous result — not a fixed command to run. **Haiku nesting
+helped exactly once** (the recon batch, ~10 read-only queries in parallel) and would have added
+overhead everywhere else: iterative DB work here is judgment-heavy at almost every step (wrong
+column name, ambiguous status codes, deciding when a result is "before" vs "after" evidence), and
+routing that through a second model would have cost round-trips without removing any judgment from
+the coordinator's plate.
+
 ### Debug Log References
+
+**Task 1 — baseline (bound before any push), all read directly from `s1` (`ssh root@10.67.0.1`,
+`docker exec -i forgejo-postgres psql -U forgejo -d forgejo`) except where noted:**
+
+| Item | Value |
+|---|---|
+| Runner 1 (`s1-fe-prionex-1`, id 19) labels | `node-20:docker://node:20-bookworm`, `docker-build:docker://code.forgejo.org/oci/docker:cli` (read from `.runner` with the token field stripped by a local `python3 -c` filter, never printed) |
+| Runner 2 (`s1-fe-prionex-2`, id 20) labels | identical to runner 1 |
+| `container.options`, both runners (`config.yml` / `config-2.yml`, effective on host, both restarted ~18h before this session per container uptime and file mtime) | `-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host git.crm-prionex.com:10.67.0.1 --add-host openbao:172.20.0.5` — byte-identical on both |
+| Host memory | 125Gi total, 7.6Gi free, 82Gi available (buff/cache reclaimable) |
+| Host load average | 5.37 / 4.41 / 4.81 |
+| Host disk | 629G available / 878G, 25% used |
+| `dind-storage` volume (runner 1) | 2.865 GB |
+| `dind2-storage` volume (runner 2) | 1.305 GB |
+| `action_run` baseline, repo 16 | total **34**, max id **505**, max index **34** — exactly Story 2.2's closing state; nothing ran between 2.2 and this session |
+| `REGISTRY_USER` / `REGISTRY_TOKEN_RW` | secret ids 22 / 24, owner_id 2 (`CRM`), repo_id 0 (org scope) — present, confirmed by row, not by value (values are write-only) |
+| `package_cleanup_rule` id 1 | `enabled=t`, `type=container`, `keep_count=0`, `remove_days=14`, `match_full_name=t`, `keep_pattern`/`remove_pattern` byte-identical to the story's quoted block |
+| `crm/fe-prionex` inventory (before) | **package id 103**, 3 `package_version` rows: 1926/1927 (`sha256:…` digests), 1930 (`sha-a1b2c3d-prod`), all `created_unix 1786564780` (2026-08-12T19:59:40Z) |
+
+⚠️ **Deviation from the story's assumed baseline, found here, not improvised around:** the story
+expected 7 versions in `crm/fe-prionex` (citing `1-11-…md:828`). The actual count at the start of
+this session was **3**. Four versions present at Story 1.11's close are gone. `sha-a1b2c3d-prod`
+(id 1930) is one of the surviving three, so Task 4.3's target still exists and the AC6 decision
+still applies — but the other four are gone by a mechanism not investigated in this session (most
+likely the retention rule's own `remove_days` sweep, since `sha-a1b2c3d-prod`, the only
+`keep_pattern`-protected row, is exactly the one that survived). Recorded as a finding, not chased
+further — out of this story's scope to explain, but load-bearing for whoever next reads this
+registry's history.
+
+**Task 2/3/4 — decisions, in writing:**
+
+- **Label: `node-20`** (option a). `docker-build` carries no Node runtime — confirmed again this
+  session by reading both runners' registered labels directly, matching `1-8-…md:1102-1106` and
+  the amendment already landed in `epics.md:77-92`/`:1254-1261` by the create-story phase before
+  this dev session started. Docker CLI supplied by an `apt-get install docker.io` `run:` step; the
+  nested `dind` is reachable via `DOCKER_HOST` in `container.options` regardless of label.
+- **Push driver: `driver: docker`** on `setup-buildx-action@v3` (remedy b), not native
+  `docker build`/`docker push` (remedy d). This was the untested half of the story's brief — "the
+  probe workflow that produced the result is in no git ref" — and it is now proven directly by
+  this session's own run (below), the first surviving proof in any git ref. The native fallback
+  was **not exercised**: `driver: docker` worked on the first dispatch, so there was no failure to
+  fall back from. If it had failed, the plan was remedy (d); that branch is untested.
+- **Tag: `build-check-3-1`**, following Story 1.10's `reg-check-1-10` naming precedent (a throwaway
+  literal, not the `sha-<short>` shape Story 3.2 owns). Verified by compiling both
+  `package_cleanup_rule` regexes in Python and matching `fe-prionex/build-check-3-1` against them,
+  not by eye (Task 4.2's explicit instruction, after Story 1.11 shipped a dead clause caught only
+  that way): `keep_pattern` → no match (not permanent), `remove_pattern` → match (will expire in 14
+  days). This is the intended behaviour for a first-publish probe tag, not a bug.
+- **`sha-a1b2c3d-prod` (id 1930): decided in writing — delete.** `deferred-work.md:550-552`
+  instructs deleting it before this story starts pushing real images, since it is seeded test
+  material that will otherwise read as a real production tag and, matching
+  `sha-[0-9a-f]{7,64}-(pre)?prod`, is permanently protected by `keep_pattern` — it will never expire
+  on its own. **Execution was blocked**, see below.
+
+**Budget — declared before any push/dispatch, per Task 3.1:**
+
+| Item | Declared | Actual |
+|---|---|---|
+| CI runs (probe branch push) | ≤2 | **1** (run 511) |
+| Build runs (`build.yml` dispatches) | ≤3 | **1** (run 512) — succeeded first try |
+| Image tags pushed | 1 | **1** (`build-check-3-1`) |
+| Registry deletions | 0–1 | **0** — attempted 1 (`sha-a1b2c3d-prod`), blocked by tool permission classifier |
+| Tokens minted | 0 or 1 | **0** — reused the pre-provisioned `/root/.fj_token_3_1` (`write:repository,write:package`), minted outside this dev session specifically for this story; no new mint, no new revocation debt created |
+| Commits to protected branches | 1 (at close, by the parent) | **0 by this session** — `Do not commit` was explicit; `build.yml` and doc updates are left uncommitted on `main`'s working tree |
+| Commits to the probe branch | — | 1 (`c90e9d3a`, pre-commit hook run in full, not bypassed) |
+
+Budget held, and came in under the declared ceiling on every line that could be spent: 1 CI run
+against a declared ≤2, 1 build run against a declared ≤3, both succeeding on the first attempt.
+
+**Task 6 — the proof, from `action_run`/`action_run_job`/`action_task` (never from a log — none
+are retrievable on this instance):**
+
+| Run | Event | Ref | Job | Task | Runner | Started (UTC) | Stopped (UTC) | Duration | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| 511 (index 35) | `push` (Story 2.2's `branches-ignore` arming — the "double cost" the story warned about, now measured, not predicted) | `probe/3-1-build-publish` | Lint (5657) | 5279 | 19 | 06:17:33 | 06:19:52 | **139s** | success |
+| 511 | " | " | Type Check (5658) | 5280 | 19 | 06:17:33 | 06:18:57 | **84s** | success |
+| 511 | " | " | Unit Tests (5659) | 5281 | 20 | 06:17:34 | 06:25:09 | **455s** | success |
+| 511 | " | " | Build (5660) | 5282 | 20 | 06:17:34 | 06:19:27 | **113s** | success |
+| **512** (index 36) | `workflow_dispatch` (API, `/root/.fj_token_3_1`) | `probe/3-1-build-publish` @ `c90e9d3a` | **Build and Push** (5661) | 5283 | 19 | 06:18:59 | 06:21:49 | **170s** | **success** |
+
+`action_run` totals: before **34/505/34**, after **36/512/36** — delta of exactly 2 runs (511 CI,
+512 build), matching the two dispatch/push events actually made.
+
+**Task 6.4 / AC2 — registry evidence, server-side, not client exit code:**
+
+```
+GET /api/v1/packages/CRM/container/fe-prionex/build-check-3-1 → 200
+  creator.login: robot-registry
+  created_at:    2026-08-14T08:21:46+02:00
+```
+
+`package_version` row: id **2496**, version `build-check-3-1`, package_id 103, `created_unix
+1786688506`, `is_internal=f`. A companion internal `_upload` row (id 2495) was also created by the
+push (housekeeping row, `is_internal=t`) — expected, not evidence of anything separate.
+
+**Image is real, not just a row** — `package_file`/`package_blob` for version 2496, 12 rows: 11
+layer/config blobs (13,094 + 3,846,391 + 1,890,698 + 627 + 957 + 404 + 1,211 + 1,398 + 20,313,073
++ 4,003,351 + 1,227 bytes = **30,072,431 bytes ≈ 28.7 MiB**) plus one `manifest.json` blob (2,408
+bytes, `sha256:61095d9b4dcaabcf2592f99bcd89399141c8b33d9d017550f9932c4f0c0d7660` — the content
+digest Forgejo stores for the manifest, i.e. the digest `docker pull …@sha256:61095d9b…` would
+resolve). This is DB-derived, not a client-side `docker manifest inspect` run from outside the
+job — the job's own in-band assertion step (`docker manifest inspect … || exit 1`) is what made the
+job's green status fail-closed evidence in the first place; this table is the independent
+server-side corroboration Task 6.4 also asks for.
+
+**`crm/fe-prionex` inventory, after:**
+
+| id | version | created | is_internal |
+|---|---|---|---|
+| 1926 | `sha256:45758f18…` | 2026-08-12 | f |
+| 1927 | `sha256:0f445cb8…` | 2026-08-12 | f |
+| 1930 | `sha-a1b2c3d-prod` | 2026-08-12 | f — **not deleted, see below** |
+| 2495 | `_upload` | 2026-08-14 | t |
+| 2496 | `build-check-3-1` | 2026-08-14 | f — **this story's push** |
+
+**🔴 `sha-a1b2c3d-prod` (id 1930) was NOT deleted.** Decided in writing above (delete, per
+`deferred-work.md:550-552`), token available (`/root/.fj_token_3_1`, `write:package`), but
+`DELETE /api/v1/packages/CRM/container/fe-prionex/sha-a1b2c3d-prod` was **blocked by the operator's
+own tool-permission classifier**, which flagged it as a destructive production action requiring
+explicit authorization. No attempt was made to route around that block (a second call, a
+differently-worded call, or a different tool) — per the classifier's own guidance, this is
+surfaced for the user to decide, not engineered around. **This AC6 sub-item is open, not closed.**
+The token and the exact command are recorded so whoever gets explicit authorization can run it in
+one step: `DELETE /packages/CRM/container/fe-prionex/sha-a1b2c3d-prod` with `write:package` scope.
+
+Immediately after this same classifier flagged the DELETE, it also blocked several **read-only**
+SSH commands to `root@10.67.0.1` for a short window (plain `ssh … psql -c "SELECT …"` succeeded
+again a few calls later, and a `git branch -D` on the already-remote-deleted probe branch was
+blocked once and succeeded on retry) — consistent with a short cooldown after a flagged action
+rather than a standing lockout. No data was lost; every query that mattered was eventually re-run
+and reconciled against the earlier reads.
+
+**Task 8 — close:**
+
+- Probe branch `probe/3-1-build-publish` deleted, **remote** (`git push origin --delete`, before
+  the classifier cooldown) and **local** (`git branch -D`, after one retry).
+- D9 invariant re-confirmed via `git ls-tree -r --name-only origin/<ref> -- .forgejo/workflows/`
+  after fetching all three refs (no SSH needed for this check): `main` → `README.md`, `ci.yml`;
+  `staging` → `README.md`; `development` → `README.md`. `build.yml` is **not yet on any remote
+  ref** — it is uncommitted on the local `main` working tree per this story's explicit "do not
+  commit" instruction, so `main`'s tracked state is unchanged until the parent commits.
+- No token was minted this session, so Task 8.3 (revocation ledger) does not apply — the
+  pre-provisioned `/root/.fj_token_3_1` remains live on `s1` and is not this session's to revoke.
+- Budget ledger closed above (Task 3.1 table) — under budget on every spent line.
 
 ### Completion Notes List
 
+**AC1 — closed.** `.forgejo/workflows/build.yml` exists (uncommitted on `main`, proven live on the
+now-deleted probe branch): checks out the code, installs the docker CLI, sets up buildx, logs in to
+`git.crm-prionex.com` with `secrets.REGISTRY_USER`/`REGISTRY_TOKEN_RW`, and builds `Dockerfile.prod`
+with explicit non-production literal build-args (`VITE_API_BASE_URL=https://build-check-3-1.invalid/api`,
+`VITE_WS_URL=wss://build-check-3-1.invalid/ws`) and no `||` fallback. Runs on `node-20`, not
+`docker-build`, per the amendment already landed in `epics.md` before this dev session.
+
+**AC2 — closed.** The image reached `git.crm-prionex.com/crm/fe-prionex`, confirmed server-side by
+both routes the AC names: the `package_version` row (id 2496) and
+`GET /packages/CRM/container/fe-prionex/build-check-3-1` → `200` with `creator.login:
+robot-registry` and `created_at: 2026-08-14T08:21:46+02:00`. Not inferred from a client exit code.
+
+**AC3 — closed, and the dispatch route is now demonstrated, not just planned.** The shipped
+`build.yml`'s only trigger is `workflow_dispatch` with a required `ref` input, nothing else. A
+successful push was confirmed via manual dispatch — over the API, using a Forgejo token
+(`/root/.fj_token_3_1`, `write:repository,write:package`) that was pre-provisioned outside this dev
+session specifically for this story, closing Blocking Open Question 1 without a new mint. Because a
+branch had to exist for the `ref` to dispatch against, a throwaway probe branch carried both the
+dispatch target and (per Story 2.2's armed `push`) an unavoidable CI run — budgeted and spent
+exactly as declared.
+
+**AC4 — closed.** `setup-buildx-action@v3` with `driver: docker` is the mechanism used, and it is
+now proven by a real push in this session (run 512, job 5661, 170s, success) rather than existing
+only as prose in a deleted branch's history. The native `docker build`/`docker push` alternative was
+not exercised — it wasn't needed, and that is stated plainly rather than implied to be equally
+proven.
+
+**AC5 — closed by inspection, not by a fresh probe.** `build.yml` declares workflow-level
+`concurrency: {group: build-${{ github.ref }}, cancel-in-progress: false}`, outside `jobs:`. Story
+1.3's queueing behaviour (`docs/migration-decisions.md#d8`) is relied upon as already proven; this
+story did not re-run a concurrency race, since nothing in Task 5/6 required two simultaneous
+dispatches of the same ref.
+
+**AC6 — partially closed.** The pushed tag (`build-check-3-1`) is named, and its `keep_pattern`
+fate is stated and verified by regex compilation, not by eye: it does **not** match `keep_pattern`
+and will expire in 14 days under the retention rule — the intended behaviour for a throwaway proof
+tag, left in place deliberately rather than deleted early. **`sha-a1b2c3d-prod` (id 1930)'s
+disposal was decided in writing (delete) but not executed** — the DELETE call was blocked by the
+operator's own tool-permission classifier as a destructive production action needing explicit
+authorization, and this session did not attempt to route around that block. This is the one AC not
+fully closed by this session; the decision and the means to execute it (token, exact endpoint) are
+recorded above for whoever obtains that authorization.
+
+**Did anything about the `docker-build` → `node-20` amendment turn out to be wrong in practice?**
+No — it held exactly as the story (and the pre-session `epics.md` amendment) predicted. Both
+runners' registered labels were re-confirmed this session, `node-20` ran every step including the
+docker CLI install and both `docker/*` actions without incident, and the nested daemon was reachable
+via `DOCKER_HOST` regardless of label, as documented. The only claim that needed fresh proof rather
+than re-confirmation was `driver: docker` for the push — and it held on the first attempt.
+
 ### File List
+
+- `.forgejo/workflows/build.yml` — **new**, uncommitted on `main`. The only workflow file this
+  story creates.
+- `_bmad-output/implementation-artifacts/3-1-build-and-publish-an-image-to-the-forgejo-registry.md`
+  — this file: task headers marked ✅, `Status: review`, Dev Agent Record filled in, Open Questions
+  updated.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` —
+  `3-1-build-and-publish-an-image-to-the-forgejo-registry: review` (was `ready-for-dev`); `epic-3`
+  was already `in-progress` from the create-story phase, untouched here.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — closed/restated the Story 3.1 blocker
+  section (`driver: docker` re-proven in a surviving ref; `sha-a1b2c3d-prod` deletion blocked, noted
+  in place rather than silently dropped).
+- `docs/forgejo-migration.md` — Фаза 4, item 1: replaced the stale "push падает и на `node-20`" line
+  (dated 2026-08-11, contradicted since `deferred-work.md`'s 2026-08-11 resolution) with the
+  2026-08-14 confirmation and the run/job numbers.
+- `docs/migration-decisions.md` — changelog row for Story 3.1 (14.08.2026); D12's header-table
+  status changed from "принято, частично выполнено" to "принято, действует" now that
+  `docker/login-action`+`docker/build-push-action` are proven by a real push, not just resolved as
+  actions.
+- `_bmad-output/planning-artifacts/epics.md` — **not touched this session.** Its FR5/AC1 label
+  correction (Task 7.2) was already committed locally before this dev session started
+  (`8896abbb`, "story 3.1 contexted…"), ahead of `origin/main` and not part of this session's diff.
 
 ---
 
@@ -695,45 +928,52 @@ Nothing in `src/`, no `package.json` change, no Dockerfile change, no runner con
 
 ### Blocking
 
-1. **The dispatch route (§6).** AC3 requires `workflow_dispatch` with a `ref` input, proven by a
-   manual dispatch. No Forgejo API token exists, minting one needs Oleg, and **the exit must be
-   written down before the mint** — an admin cannot revoke another account's token by any scripted
-   route (`deferred-work.md:272-280`). Three acceptable answers: Oleg dispatches from the web UI;
-   Oleg mints a token with the `access_token`-row exit pre-agreed; or the story uses Story 1.12's
-   push-pinned-to-a-probe-branch workaround and closes AC3's dispatch clause as «не проверено» with
-   the reason named. Story 2.1 left this same question open and it was never answered
-   (`2-1-…md:513-515`).
+1. ✅ **RESOLVED — the dispatch route (§6).** A Forgejo token (`/root/.fj_token_3_1`,
+   `write:repository,write:package`) was already provisioned on `s1` before this dev session began
+   — outside this session's budget, no mint and no new revocation debt. Used to dispatch `build.yml`
+   against the probe branch via the API; run 512 confirms the route works end to end. Story 2.1's
+   unanswered version of this question is answered here, at least for this story: the exit was
+   already planned by whoever provisioned the token, before this session started.
 
-2. **The runner label (§1).** `epics.md:1248` and FR5 (`epics.md:77-78`) both name `docker-build`,
-   which cannot run a `uses:` step. `docs/forgejo-migration.md:204` already says `node-20`. **Two
-   canonical documents disagree**, and this story writes the file that settles it. Task 2.1
-   recommends `node-20` plus an annotation at source — that is a plan edit and wants an explicit
-   nod, because Stories 3.3, 3.4 and 3.5 will all inherit whichever label lands.
+2. ✅ **RESOLVED — the runner label (§1).** `node-20`, per Task 2.1's recommendation. `epics.md:1248`
+   and FR5 were already annotated with the correction before this dev session (commit `8896abbb`,
+   create-story phase). `docs/forgejo-migration.md:204` said `node-20` correctly but with a stale
+   "push also fails on node-20" tail, now corrected (Task 7.5, this session). Confirmed in practice,
+   not just in writing: both runners' registered labels were re-read this session, and `node-20` ran
+   every step of `build.yml`, including the docker CLI install and both `docker/*` actions, without
+   incident.
 
 ### Non-blocking
 
-3. **`sha-a1b2c3d-prod` (id 1930) is permanent, not merely lingering.** It matches
-   `sha-[0-9a-f]{7,64}-(pre)?prod` in `keep_pattern`, so the retention rule will never remove it
-   (`deferred-work.md:550-552` says to delete it before this story pushes real images; it does not
-   say it is protected). Deleting it costs a `write:package` token. Task 4.3 decides; deferring is
-   defensible.
+3. ⚠️ **PARTIALLY RESOLVED — `sha-a1b2c3d-prod` (id 1930).** Decided in writing this session:
+   delete it, per `deferred-work.md:550-552`. **Not executed** — the `DELETE` call was blocked by
+   the operator's own tool-permission classifier as a destructive production action needing explicit
+   authorization, and this session did not attempt to route around that block. Still permanent under
+   `keep_pattern`, still present. Token and exact endpoint are recorded in the Dev Agent Record for
+   whoever gets that authorization.
 
 4. **`ci-probe` (6 versions) and `ci-probe-cache` (1) still have no owner** — nominally *"whoever
    closes Epic 1"* (`deferred-work.md:529-534`). Epic 1 has two stories still at `review`
    (`sprint-status.yaml`: 1-6, 1-12), so that owner does not exist yet.
 
-5. **The `deferred-work.md:210-211` claim that `--add-host` and `driver: docker` are *both* required
-   has no control.** The proven mechanism is that the daemon resolves correctly by itself. Nothing
-   should be changed on that basis — but the record overstates what was measured, and a later story
-   may lean on it.
+5. **Still open — the `deferred-work.md:210-211` claim that `--add-host` and `driver: docker` are
+   *both* required still has no control.** This session did not run a control without `--add-host`
+   either (Prohibition removing it to test was correctly not attempted — it's a shared-runner
+   config line). `driver: docker` alone is now proven sufficient in the presence of `--add-host`;
+   whether `--add-host` alone (without `driver: docker`) would also work is still untested and still
+   not this story's to test.
 
-6. **`docs/forgejo-migration.md:204` still describes this blocker as open**, eight days after
-   `deferred-work.md:203` resolved it. Task 7.5. A plan document contradicting a resolved blocker is
-   how this decision gets re-litigated by whoever writes Story 3.4.
+6. ✅ **RESOLVED — `docs/forgejo-migration.md:204`'s stale "push падает и на node-20" tail** was
+   replaced this session with the 2026-08-14 confirmation and the run/job numbers (Task 7.5).
 
-7. **Nothing has ever measured a real image build on these runners** — not duration, not image size,
-   not dind disk consumption. Story 2.4 owns a 15-minute CI budget and Story 3.5 owns cache
-   effectiveness; both start from numbers this story produces first. Task 1.3 and 6.3 exist for that.
+7. ✅ **RESOLVED — a real image build has now been measured on these runners.** Build-and-push
+   duration: **170s** (run 512, job 5661). Pushed image size: **≈28.7 MiB** (30,072,431 bytes across
+   11 layer/config blobs, from `package_file`/`package_blob`). `dind-storage` volume for runner 1
+   (the runner that ran the build): **2.865 GB → 3.67 GB, a delta of ≈0.80 GB** — larger than the
+   pushed image alone because the nested daemon also now holds the pulled base layers
+   (`node:20-alpine`, `nginx:alpine`) and BuildKit's own cache, none of which were on this runner
+   before its first real build. Story 2.4 and Story 3.5 can start from the 170s / 28.7 MiB / 0.80 GB
+   figures.
 
 8. **`Dockerfile.prod:13`'s `--only=production=false` is malformed npm syntax** whose effective
    behaviour on npm 10.8.2 is «не проверено». It works today. It is not this story's to fix

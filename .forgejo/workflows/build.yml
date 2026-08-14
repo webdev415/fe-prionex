@@ -1,0 +1,112 @@
+name: Build and Publish Image
+
+# Story 3.1: first workflow that writes into git.crm-prionex.com/crm/fe-prionex.
+#
+# Trigger is workflow_dispatch ONLY, with a `ref` input, and nothing else
+# (AC3, Prohibition 10). Story 3.2 owns the tagging scheme and the push/tag
+# triggers that go with it (FR6) — adding them here is explicitly out of
+# scope for this story (Prohibition 10).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to build (branch, tag, or SHA).'
+        required: true
+        type: string
+
+# Workflow-level concurrency, per AC5. Story 1.3 proved queueing works at
+# workflow level and is silently ignored at job level
+# (docs/migration-decisions.md#d8) — this block MUST stay outside `jobs:`.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build and Push
+    # 🔴 LABEL DECISION (Story 3.1, Task 2.1 — see also epics.md:1248 and FR5
+    # amendment at epics.md:77-92, and 1-8-prove-action-compatibility-with-a-
+    # smoke-workflow.md:1102-1106). The epic's own AC and FR5 name the
+    # `docker-build` label. That label resolves to
+    # code.forgejo.org/oci/docker:cli, which carries NO Node runtime, so no
+    # `uses:` step of any kind executes under it — not actions/checkout, not
+    # any docker/* action. Story 1.8 proved this and ran every probe job on
+    # `node-20` instead; its own code review filed the unamended epic text as
+    # a defect against this story by name. `node-20` loses nothing: the
+    # nested dind daemon is reachable from every job container regardless of
+    # label, via DOCKER_HOST in container.options (docs/runners/config.yml).
+    # Do NOT "correct" this back to docker-build — the job will not fail
+    # informatively, it will simply not run any step.
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      # docker-build has no Node runtime, so docker/* actions must run on
+      # node-20 instead; that label has no docker CLI of its own, so it is
+      # installed here. The nested dind daemon is already reachable via
+      # DOCKER_HOST in container.options regardless of label
+      # (docs/migration-decisions.md#d12).
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Verify docker CLI reaches the nested daemon
+        run: docker version
+
+      # 🚨 LOAD-BEARING: driver: docker. The action's default
+      # (driver=docker-container) builds and pushes from its OWN BuildKit
+      # container, which does NOT inherit this job container's
+      # --add-host git.crm-prionex.com:10.67.0.1 mapping — the push dies
+      # with a bare `EOF` against the registry's TLS endpoint (recorded in
+      # deferred-work.md, Story 3.1 blocker, and 1-8-…md:657-659). Setting
+      # driver: docker routes the build AND the push through the nested
+      # `dind` daemon itself, which resolves git.crm-prionex.com correctly
+      # on its own (10.70.0.1) because container.options' --add-host applies
+      # to job containers, not to the daemon's containers, and the daemon's
+      # own resolution is what actually carries the push. Do not remove this
+      # line to "simplify" the step — the story that proved it found no
+      # working alternative except native `docker build`/`docker push`.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      # Single throwaway tag — proving a push is this story's job, not the
+      # tagging scheme (Story 3.2, Prohibition 7). No cache-from/cache-to
+      # (Story 3.5 owns registry cache, Prohibition 6), no platforms
+      # (Prohibition 5 — s1 is native amd64, cross-build under QEMU kills
+      # esbuild). Build-args are explicit non-production literals with no
+      # `||` fallback (Prohibition 8, Dockerfile.prod:19-22 has no
+      # defaults) — real values are Story 3.3's, from OpenBao.
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.prod
+          push: true
+          tags: git.crm-prionex.com/crm/fe-prionex:build-check-3-1
+          build-args: |
+            VITE_API_BASE_URL=https://build-check-3-1.invalid/api
+            VITE_WS_URL=wss://build-check-3-1.invalid/ws
+
+      # Fail-closed assertion (§7 / Task 5.8): job logs are not retrievable
+      # on this instance (404 on every logs endpoint), so a green job status
+      # must itself be the evidence. This step only reaches success if the
+      # pushed manifest is actually resolvable from the registry — a client
+      # exit code alone was explicitly rejected as sufficient evidence in
+      # Story 1.10.
+      - name: Assert pushed manifest is resolvable (fail-closed evidence)
+        run: |
+          docker manifest inspect git.crm-prionex.com/crm/fe-prionex:build-check-3-1 \
+            || (echo "Manifest inspect failed — push did not land, or is not visible." && exit 1)
