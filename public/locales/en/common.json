@@ -8275,7 +8275,8 @@
         "dashboard": "Dashboard",
         "processing": "Client Processing",
         "verification": "Third-party verification",
-        "low-verification": "Low verifications"
+        "low-verification": "Low verifications",
+        "searcher-followup": "Unworked searcher finds"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8365,6 +8366,33 @@
         "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "searcherFollowup": {
+        "dateFrom": "Find date from",
+        "dateTo": "Find date to",
+        "invalidDate": "The find date is not a valid calendar date — pick a date to replace it",
+        "invalidRange": "Find date from is later than find date to",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "foundAt": "Find date",
+          "searcher": "Searcher",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastCall": "Last call",
+          "lastCallOutcome": "Call outcome"
+        },
+        "outcome": {
+          "unknown": "Unknown"
+        },
+        "empty": "No searcher finds in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"
