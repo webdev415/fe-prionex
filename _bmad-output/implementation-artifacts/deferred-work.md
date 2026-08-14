@@ -575,12 +575,24 @@
   task rather than by the rule. The distinction decides whether untagged digest rows are reachable
   at all, which decides whether registry growth can ever be bounded by a rule. FR11's defect
   annotation in `epics.md:99` rests on this.
-- ⚠️ **`sha-a1b2c3d-prod` (id 1930) is seeded test material still sitting in `crm/fe-prionex`.**
-  Left behind when Story 1.11 closed. ⚠️ **Now stale as written — Story 3.1 has already pushed
-  (`build-check-3-1`, 2026-08-14), and the deletion was blocked by the permission classifier as a
-  destructive action against the production registry.** Still to be removed, now with a real image
-  beside it. Original text follows. Delete it before Story 3.1 starts pushing real images, or it
-  will look like a real production tag to anyone reading the registry.
+- ✅ ~~**`sha-a1b2c3d-prod` (id 1930) is seeded test material still sitting in `crm/fe-prionex`.**~~
+  **DELETED 2026-08-14 on Oleg's explicit authorisation** (`DELETE /api/v1/packages/CRM/container/fe-prionex/sha-a1b2c3d-prod`
+  → `204`). Two sessions had been blocked from doing this by the permission classifier, correctly —
+  it is a destructive action against a production registry — and both recorded the command rather
+  than routing around it. A `write:package` token was minted for the call and revoked immediately
+  after by deleting its `access_token` row: 96 → 97 → 96.
+
+  🔬 **It leaves a falsifiable prediction behind, which is the point.** That tag was an *index
+  manifest* whose two children are `sha256:45758f18…` (1926) and `sha256:0f445cb8…` (1927), the only
+  reason those two survived the `cleanup_sha256` sweep on 2026-08-14. With the index gone they are
+  now referenced by nothing, so the same cron should delete them **at the next midnight run, once
+  they clear its 24-hour grace period** — leaving `crm/fe-prionex` holding only `build-check-3-1`
+  and the internal `_upload` row. `package_blob` already shows **1 unreferenced blob** immediately
+  after the deletion, consistent with the tag's own manifest being released while its children wait.
+
+  **If those two rows are still present after the next midnight, the `cleanup_sha256` explanation is
+  wrong and FR11's withdrawn defect must be reinstated.** Whoever looks next: one query settles it —
+  `select id, version from package_version pv join package p on p.id=pv.package_id where p.name='fe-prionex'`.
 - ⚠️ **Story 1.11's Task 7.2 was not done:** `docs/forgejo-migration.md` still presents retention as
   an unmade choice ("Выбрать одно: …") while the rule is live. Every field value is recorded
   verbatim in `docs/migration-decisions.md`, so nothing is lost — but the migration document
