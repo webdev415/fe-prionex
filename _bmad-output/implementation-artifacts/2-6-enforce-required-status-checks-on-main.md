@@ -440,7 +440,7 @@ the dependency:
 
 ### Task 5 — The negative tests (AC: 2, 3)
 
-- [ ] 5.1 **AC2.** Commit this story file's Task 1–3 progress (the rollback snapshot, the declared
+- [x] 5.1 **AC2.** Commit this story file's Task 1–3 progress (the rollback snapshot, the declared
       budget, the rule as written and read back) directly on local `main` — a commit that has to
       reach `main` regardless of how it gets there — then attempt `git push origin main`.
       **Expected: rejected.** Record the exact server response verbatim.
