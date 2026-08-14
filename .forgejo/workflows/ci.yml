@@ -120,26 +120,43 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # CI runs test:run:ci, not test:run — the two differ in exactly one number:
-      # the V8 old-space ceiling, 16384 MB here against 8192 MB locally.
+      # CI runs test:coverage:ci — not test:run:ci, not test:coverage. Three
+      # scripts exist (package.json) and this is the only one safe here.
       #
-      # Why they must differ. `test:run` hardcodes the ceiling through cross-env,
-      # so cross-env overwrites whatever NODE_OPTIONS the workflow exports — a
-      # job-level `env:` cannot raise it. Raising the number in `test:run` itself
-      # would raise it for every developer too, and the machine this repository
-      # is developed on has 16 GB of RAM in total: telling Node it may take all
-      # of it as heap, on every pre-commit hook, guarantees swapping.
+      # Heap: unchanged reasoning from the `test:run:ci` step this replaces.
+      # `test:coverage:ci` is pinned to 16384 MB, matching `test:run:ci`'s
+      # ceiling — `test:coverage` (the developer-facing script) stays at
+      # 8192 MB and is untouched, same as `test:run`. `cross-env` hardcodes the
+      # ceiling per-script, so a job-level `env:` cannot raise it; raising it
+      # inside `test:coverage` itself would raise it for every developer too,
+      # and the machine this repo is developed on has 16 GB of RAM total —
+      # telling Node it may take all of it as heap on every pre-commit hook
+      # guarantees swapping. The runner has the headroom the laptop does not
+      # (job container is not memory-capped in the nested dind; s1 reported
+      # ~80 GB available).
       #
-      # The runner has the headroom the laptop does not: the job container is
-      # NOT memory-capped (the runner container's mem_limit: 2g does not reach
-      # it — job containers are created in the nested dind, which declares no
-      # limit), and s1 reported ~80 GB available.
+      # One pass, not two: this step REPLACES what was `test:run:ci`, it does
+      # not run alongside a second, uninstrumented pass. `vitest run --coverage`
+      # executes the identical 228-file suite; only instrumentation differs.
+      # Running both would roughly double `Unit Tests`, already ~467s of a
+      # ~468s whole run (measured run 505) — the suite is serial by config
+      # (`pool: 'forks'`, `maxWorkers: 1`, `fileParallelism: false` in
+      # vitest.config.ts:30-32), so a second pass amortises nothing. This is a
+      # deliberate deviation from the epic's literal Story 2.3 AC1 wording
+      # (`npm run test:coverage` after `npm run test:run`), the same shape as
+      # this job's existing `test:run:ci` deviation from Story 2.1's AC4 above.
+      # Recorded in
+      # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
       #
-      # ⚠️ This is a deliberate deviation from Story 2.1's AC4, which names
-      # `npm run test:run`. What is tested is identical — same vitest, same
-      # suite, same config; only the ceiling differs. Recorded in the story.
-      - name: Run unit tests
-        run: npm run test:run:ci
+      # No `continue-on-error` here, by design (AC3). The legacy pipeline
+      # (.github/workflows/CI.yml:70-72) had `continue-on-error: true` on its
+      # coverage step, paired with `fail_ci_if_error: false` on the Codecov
+      # upload — that pairing is the exact mechanism that let a coverage step
+      # which had never once succeeded (the coverage provider was never
+      # installed) report green for the life of this repository. If coverage
+      # generation fails, this job fails, full stop.
+      - name: Run unit tests with coverage
+        run: npm run test:coverage:ci
 
       # AC4: record observed peak memory for this job. cgroup v2 exposes a
       # running peak at memory.peak; some hosts only carry the cgroup v1
@@ -161,6 +178,29 @@ jobs:
           else
             echo "Peak memory usage: neither /sys/fs/cgroup/memory.peak nor /sys/fs/cgroup/memory.max_usage_in_bytes is available on this runner."
           fi
+
+      # Archive before upload: `actions/upload-artifact@v3` writes one
+      # database row per FILE, not one per upload. Story 2.1 proved this
+      # uploading `dist/` unpackaged — 154 rows for 154 files (see the `dist`
+      # upload below). `vitest.config.ts:26`'s `html` reporter can emit close
+      # to one file per source file the suite touches — up to roughly 1229
+      # candidate files, up to ~8x the `dist` upload, and this job runs twice
+      # per commit once a PR is open (push + pull_request). Archiving into one
+      # file makes the row count exactly 1 regardless of how many files the
+      # html reporter produced. No step here runs on failure: if the coverage
+      # step above failed, the job is already failing (AC3) and there is
+      # nothing trustworthy to archive.
+      - name: Archive coverage report
+        run: tar -czf coverage.tar.gz coverage/
+
+      # Same @v3 pin as the `dist` upload below, same reason — @v4 does not
+      # resolve on this instance (GHESNotSupportedError, Story 1.8).
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.tar.gz
+          retention-days: 1
 
   build:
     name: Build
@@ -196,10 +236,15 @@ jobs:
       # proved works — its own log confirmed "Container for artifact ...
       # successfully created" and "Artifact has been finalized".
       #
-      # That proof covers upload only. There is no Actions-artifacts API on
-      # this instance, so retrieval of this artifact is unverified — do not
-      # treat a successful upload here as evidence the artifact can be
-      # downloaded.
+      # That proof covers upload only. There is still no Actions-artifacts API
+      # on this instance (established by Story 2.3, deferred-work.md:886-898:
+      # a token-authenticated call to
+      # /api/v1/repos/CRM/fe-prionex/actions/artifacts returns 404) — but the
+      # web route /CRM/fe-prionex/actions/runs/{index}/artifacts/{name}
+      # is real and serves the file to a browser session (Story 2.3,
+      # deferred-work.md:886-898). It redirects an API token to /user/login,
+      # so only a human click proves a download — never build a script or a
+      # later story on programmatic artifact retrieval, it does not work here.
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -207,6 +252,10 @@ jobs:
           path: dist/
           retention-days: 1
 
-  # No Codecov step and no coverage-generating npm script here: FR3 removes
-  # that upload service from this pipeline entirely. Story 2.3 reintroduces
-  # coverage, as an uploaded build artifact rather than a third-party upload.
+  # No Codecov step, no Codecov token, no Codecov secret — anywhere in this
+  # file (FR3). Story 2.3 reintroduced coverage generation (`test` job, above:
+  # `test:coverage:ci`, single pass) and publishes it as an uploaded workflow
+  # artifact — archived to one file first, `actions/upload-artifact@v3` — in
+  # place of the third-party upload this comment used to describe as future
+  # work. See
+  # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
