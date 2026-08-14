@@ -4,7 +4,7 @@ baseline_commit: 694f6a06
 
 # Story 2.6: Enforce Required Status Checks on Main
 
-Status: review
+Status: done
 
 > **This is the first story in the project that can lock the team out of its own release branch, and
 > the first whose success depends on a Forgejo semantic nobody has tested.**
@@ -514,6 +514,57 @@ the dependency:
       (Prohibition 8).
 - [x] 9.4 Confirm the File List is complete and nothing under the Prohibitions was touched.
 
+### Review Findings
+
+Code review 2026-08-15, Claude Opus 5 as reviewer (the story was implemented by Sonnet; the reviewer
+was deliberately a different model so as not to inherit the implementer's assumptions). **Every
+load-bearing number below was re-derived by the reviewer directly from the Forgejo database, the
+live API, or `docker inspect` on s1 — no subagent report was accepted as evidence.**
+
+**Context for the whole review.** The dev agent disclosed that it destroyed the uncommitted Task 4,
+6 and 7 evidence with a misdirected `git reset --hard` and rewrote those sections from its own
+session recollection. Those three tasks carry AC5, AC4 and AC6. The review therefore treated every
+number in them as unverified until re-derived. **Result: everything with a durable primary source
+re-derived exactly — all 40 rows of per-job `runner_id` and duration, all ten run ids and wall
+clocks, the merge SHAs and timestamps, and the restored runner's PID. The reconstruction introduced
+no fabricated number in any checkable place.** What could not be re-derived is listed below and is
+inherently ephemeral (HTTP response bodies, a pre-kill PID, a point-in-time `du`), not a lapse of
+diligence.
+
+**Live gate, measured by the reviewer, not read from this file** (`GET
+/api/v1/repos/CRM/fe-prionex/branch_protections`, cross-checked against the `protected_branch`
+table): `enable_status_check: true` ✓, `enable_push: false` ✓, `apply_to_admins: true` ✓,
+`required_approvals: 0` ✓, both whitelists off ✓, `require_signed_commits: false` ✓. The stored
+`status_check_contexts` was diffed **as a set, in SQL** against the real `commit_status.context`
+rows for this story's own head SHAs: **zero rows on both sides of the `EXCEPT`, exactly eight
+distinct contexts — byte-identical, no ninth context left behind** (Task 4.4, Prohibition 7 ✓).
+`staging` verified untouched at the database level (`created_unix == updated_unix == 2026-08-10
+12:33:06 UTC`, Prohibition 3 ✓). `.forgejo/workflows/ci.yml`, `.github/workflows/`, `src/`,
+`package.json` and `vitest.config.ts` are all byte-unchanged across `694f6a06..HEAD` ✓.
+Run 286 — AC1's counterexample — re-queried and confirmed: four jobs, all on `runner_id 10`,
+`workflow_id = CI.yml`, writing four `(pull_request)` contexts byte-identical to four of the eight,
+two of them `success` ✓.
+
+- [x] [Review][Patch] AC5's central `405` is attested by recollection, not reproducible — caveat now recorded [`2-6-…md` Task 4 section] — Forgejo keeps no audit trail for branch-protection changes, so the nine-context `GET` and the blocked-merge `405` cannot be re-derived by anyone. The reviewer established strong circumstantial support instead: `protected_branch.updated_unix` for `main` is **20:57:26 UTC**, which is *not* the Task 3.1 gate write (20:13:01 UTC), so the rule was written at least twice and the last write landed **81 s before** PR #9's merge (20:58:47 UTC) — while that PR had been green since 20:46:38 UTC. No alternative account fits those timestamps. **Verdict accepted as substantiated; recorded as attested-not-reproducible.**
+- [x] [Review][Patch] D16 and the 2.6 handoff asserted a `development` protection rule that does not exist [`docs/migration-decisions.md#d16`, `deferred-work.md`] — both said `development` "остаётся полностью permissive — `enable_status_check: false`, `enable_push: true`, `apply_to_admins: false`, не тронуты". `protected_branch WHERE repo_id = 16` returns exactly **two** rows, `main` and `staging`; there is no `development` rule. The error runs in the unsafe direction — *no rule* is weaker than a permissive rule. This story's own Open Question 4 had it right. Corrected in both documents; the underlying gap deferred.
+- [x] [Review][Patch] Task 8.1 left a wrong budget prediction standing as though it were the outcome [`2-6-…md` Task 8.1] — it predicted the story would land "at ~8 total, **matching the declaration exactly**". Actual, re-derived by the reviewer: `max(action_run.id) = 554` against the Task 1.4 baseline of `544` → **10 runs across 5 PRs, a 25% overrun**. Task 9.3 does reconcile this honestly 180 lines later, but a reader of Task 8.1 was told the budget was met. Prediction removed.
+- [x] [Review][Patch] AC3's "`CI / Lint (push)` reached `failure` at ~80 s" is understated [`2-6-…md` AC3 note] — re-derived: `commit_status.updated_unix = 1786739360` against run 545's `started = 1786739258` gives **102 s**, and the `Lint` job ran 101 s. Conclusion unchanged (still inside the ~140 s estimate). Corrected.
+- [x] [Review][Patch] Task 7.7's "225 MB / 56 entries" could not be re-derived [`2-6-…md` Task 7.7] — a point-in-time `du`, superseded by runs 551–554 (measured 1018 MB / 62 entries at review time) and one of the rewritten-from-memory numbers. **The load-bearing claim is now proven better than the story proved it:** the oldest entry under `.cache/actcache/cache/` has an mtime of **2026-08-11**, three days before the container's post-revert `StartedAt` of `2026-08-14T21:23:50Z`, on a confirmed host bind mount. Caveat recorded; cite the mtime, not the megabytes.
+- [ ] [Review][Defer] Four merged `story-2-6/pr-*` branches left on `origin`, against Task 2.1's own declared write list [`origin`] — deferred, needs an operator action the review was not permitted to take
+- [x] [Review][Defer] `development` has no branch-protection rule at all — the weakest long-lived branch now that `main` is gated [`protected_branch`] — deferred, pre-existing, out of Prohibition 3's scope
+
+**AC6 re-verified independently and in full.** All eight jobs of runs 549/550 carry
+`action_task.runner_id = 20` with `attempt = 1` — matching the story's table row for row, including
+every duration. Runner 1 is genuinely back: `docker inspect` reports `Running=true`,
+`RestartPolicy=unless-stopped`, `Pid=1414511` (the exact PID the story recorded), `--restart=no` not
+left set, and runner 2 likewise `Running=true`. Both runners are registered and `idle`, with
+`last_online` heartbeats **34 seconds stale** at review time — genuinely live, not the stale reading
+Story 1.9 warned about. **Stronger than the story's own proof:** runner 19 went on to execute real
+jobs in runs 551–554, all after the restart. AC2's and AC4's transports are corroborated in git —
+`c8ddfbca` reached `main` only as a parent of merge commit `3fc7f92d`, never by direct push. PR #8 is
+`closed`/`merged: false`, PRs #9–#12 all merged, **zero open pull requests**, probe branch gone from
+`origin`, and `src/__probe_ac3__/` absent from `main`.
+
 ---
 
 ## Dev Notes
@@ -936,6 +987,32 @@ Immediately after, `PATCH` removed the ninth context (request body: the original
 `status_check_contexts` field only — no other field touched). Independent `GET` confirmed **exactly
 eight** remain, byte-identical to Task 3's set, in the same order. No ninth context left behind.
 
+> 🔴 **Evidence caveat added by code review, 2026-08-15 — read this before citing AC5.**
+> This section is one of the three (Task 4, 6, 7) whose working notes the dev agent destroyed with a
+> misdirected `git reset --hard` and **rewrote from its own session recollection**. The review
+> re-derived every number in Task 6 and Task 7 exactly from the database and the host (see Review
+> Findings below). **Task 4's two central artefacts cannot be re-derived by anyone:** the `GET`
+> showing nine stored contexts and the `405` body from the blocked merge are HTTP responses, and
+> Forgejo keeps no audit trail for branch-protection changes — `protected_branch` stores only the
+> *current* state, and the instance has no audit table. **The `405` is therefore attested by the
+> agent's recollection, not by a primary source.**
+>
+> What the review *could* establish from primary sources, and it is strong circumstantial support:
+> - `protected_branch.updated_unix` for `main` = **2026-08-14 20:57:26 UTC**, which is **not** the
+>   Task 3.1 gate write (20:13:01 UTC). The rule was therefore written **at least twice**, and the
+>   last write landed **81 seconds before** PR #9's merge (20:58:47 UTC, confirmed via the API).
+> - PR #9 had been fully green since run 548 stopped at 20:46:38 UTC — so it sat open and green for
+>   ~12 minutes, during which the rule was modified and restored. That window has no other
+>   explanation in the record.
+> - The final stored state is **exactly the eight contexts, byte-identical, no ninth** — verified
+>   independently by the review against both the API and `protected_branch`. Task 4.4 and
+>   Prohibition 7 are satisfied on primary evidence.
+>
+> **Verdict:** AC5's verdict (*blocked*) is accepted as substantiated, because every checkable
+> element around it re-derived exactly and no alternative account fits the timestamps. But it is
+> **attested, not reproducible**, and anyone relying on the missing-context semantic for a future
+> design decision should re-measure it rather than cite this line.
+
 #### Task 6.4–6.5 — Merge and post-merge check
 
 `POST /pulls/9/merge` with `{"Do":"merge"}` after Task 4.4 restored the eight → **HTTP 200**.
@@ -1048,6 +1125,17 @@ this bind-mounted directory, so survival was expected, but Story 1.9 explicitly 
 this is the one query's worth of new knowledge: **confirmed, the cache survives a host-PID stop and
 restart of the runner container.**
 
+> ⚠️ **Corrected by code review, 2026-08-15.** The **"225 MB / 56 entries" figure is one of the
+> rewritten-from-memory numbers and could not be re-derived** — it is a point-in-time `du` that four
+> subsequent CI runs (551–554) have already superseded. Measured at review time: **1018 MB, 62 cache
+> entries**, i.e. +6 entries since Task 7.7, which is consistent with the story's figure but does not
+> confirm it. **The load-bearing claim — that the cache survived — is now proven by a better method
+> than the story used:** the oldest surviving entry under `.cache/actcache/cache/` carries an mtime of
+> **2026-08-11**, three days *before* the container's post-revert `StartedAt` of
+> `2026-08-14T21:23:50Z`, and `docker inspect` confirms the path is a host **bind** mount
+> (`/opt/forgejo-runner-fe-prionex/data/runner → /data`). Content that predates the restart is still
+> there. Cite the mtime, not the megabytes.
+
 #### Task 8.1 — Consolidated evidence: rule before/after, run table, budget reconciliation
 
 **Rule, before (Task 1.3 snapshot) vs. after (Task 3.1, unchanged through story close):**
@@ -1077,9 +1165,17 @@ Task 4.4) — no divergence was ever observed between what was sent and what was
 
 **Budget reconciliation** (declared in Task 2.1): ~8 runs total across 4 PRs (AC3 ≈2, AC4/AC5 ≈2 +0,
 AC6 ≈2, closing ≈2). **Spent through Task 7: 6 runs** (545–550), `max(action_run.id)` now **550**.
-The closing PR (Task 9.3) is expected to add the final ~2 runs, landing the story at ~8 total,
-matching the declaration exactly. No AC5 run was spent — it reused PR #9's existing green state as
-designed, at the cost of two API round trips only.
+No AC5 run was spent — it reused PR #9's existing green state as designed, at the cost of two API
+round trips only.
+
+> ⚠️ **Corrected by code review, 2026-08-15.** This paragraph originally ended by predicting that the
+> closing PR "is expected to add the final ~2 runs, landing the story at ~8 total, **matching the
+> declaration exactly**." **That prediction was wrong and was left standing as though it were the
+> outcome.** The actual figure is **10 runs across 5 PRs** — the honest reconciliation is 180 lines
+> below in the Task 9.3 note, which does declare the 25% overrun. The prediction has been removed
+> here so that a reader of Task 8.1 is not told the budget was met when it was not. Re-derived by the
+> review from primary sources: `max(action_run.id) = 554` against the Task 1.4 baseline of **544**,
+> and `count(*) WHERE repo_id = 16` moved to 64 — **exactly 10 runs (545–554)**, no more, no less.
 
 **Contexts as stored, final state**: exactly the eight from Task 1.5/Task 3.4, unchanged at story
 close (Task 4.4 removed the temporary ninth and this was the last write to `status_check_contexts`).
@@ -1146,8 +1242,11 @@ Probe branch `story-2-6/probe-ac3-red-check` cut from `origin/main` (`0ba3e7e3`)
 
 Two runs created: `action_run.id 545` (`push`, index 55) and `546` (`pull_request`, index 56), both
 bound to `7a6e78f3…`. Polled `commit_status` every 10 s; `CI / Lint (push)` reached `failure` at
-~80 s (well inside the ~140 s estimate) — confirmed via direct query, one of the eight required
-contexts. (`CI / Type Check (push)` and `CI / Build (push)` also failed shortly after, since the
+~102 s (well inside the ~140 s estimate) — confirmed via direct query, one of the eight required
+contexts. *(Corrected by code review 2026-08-15: this originally read "~80 s". Re-derived from
+primary sources — `commit_status.updated_unix = 1786739360` for the `failure` row against run 545's
+`started = 1786739258` gives 102 s, and the `Lint` job itself ran 101 s. The conclusion is unchanged:
+still well inside the ~140 s estimate and far short of the full ~510 s run.)* (`CI / Type Check (push)` and `CI / Build (push)` also failed shortly after, since the
 unused binding trips `tsc`'s `noUnusedLocals` too — extra, not required, evidence that the check is
 real.)
 
