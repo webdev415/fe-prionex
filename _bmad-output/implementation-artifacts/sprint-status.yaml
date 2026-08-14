@@ -79,7 +79,7 @@ development_status:
   2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: review
   2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: done
   2-5-validate-ci-stability-across-five-consecutive-real-pull-requests: done
-  2-6-enforce-required-status-checks-on-main: review
+  2-6-enforce-required-status-checks-on-main: done
   epic-2-retrospective: optional
 
   # Epic 3: Traceable Image Build and Publish

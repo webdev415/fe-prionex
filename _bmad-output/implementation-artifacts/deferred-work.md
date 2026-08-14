@@ -1236,10 +1236,16 @@ reconstructed from a run of its own.
   in practice for Story 2.5's five PRs but is now enforced rather than voluntary. Story 2.2's Open
   Question 7 ("who owns runs-per-day on a shared host") is now sharper: the floor just went up.
 
-- ⚠️ **`staging` and `development` keep the original, fully permissive rule** — `enable_status_check:
-  false`, `enable_push: true`, `apply_to_admins: false` — untouched, out of this story's scope
-  (Prohibition 3). The asymmetry Story 2.5's review noted is now live: `main` is gated, its
-  neighbours are not. A PR whose *head* is `staging` or `development` can never satisfy `main`'s gate
+- ⚠️ **`staging` keeps the original, fully permissive rule** — `enable_status_check: false`,
+  `enable_push: true`, `apply_to_admins: false` — untouched, out of this story's scope
+  (Prohibition 3), and confirmed untouched at the database level (`protected_branch.created_unix ==
+  updated_unix == 2026-08-10 12:33:06 UTC`). 🔴 **`development` has no branch-protection rule at
+  all** — corrected by code review 2026-08-15; this bullet originally attributed the same field
+  values to `development`, describing a rule that does not exist. `protected_branch WHERE repo_id =
+  16` returns exactly **two** rows (`main`, `staging`), and `GET /branch_protections` agrees. Note
+  the direction of the error: *no rule* is weaker than a permissive rule, not equivalent to one.
+  The asymmetry Story 2.5's review noted is now live and sharper than recorded: `main` is gated,
+  `staging` is permissive, `development` is unprotected. A PR whose *head* is `staging` or `development` can never satisfy `main`'s gate
   (those branches carry no CI workflow at all, per Story 2.2), which is an accepted, documented side
   effect — not a bug to work around — because no PR this workflow opens legitimately has either as a
   head.
@@ -1249,10 +1255,53 @@ reconstructed from a run of its own.
   confirmed no-ops on this image), a full PR ran end-to-end on runner 20 alone: all eight jobs
   attributed to `runner_id = 20`, merge succeeded, wall clock ~16.1 min (two runs, ~963 s span)
   against the ~11-minute two-runner baseline — consistent with 2 slots instead of 4, not a fault.
-  `.cache/actcache` (host bind-mount, ~225 MB) survived the stop — Story 1.9 left this UNKNOWN; it is
+  `.cache/actcache` (host bind-mount) survived the stop — Story 1.9 left this UNKNOWN; it is
   now confirmed to survive a process-level kill because the cache directory is never touched by it.
+  **Cite the evidence, not the size:** the story's "~225 MB" is a superseded point-in-time `du`
+  (measured 1018 MB / 62 entries at review time, after four more runs) and was one of the numbers
+  rewritten from the dev agent's recollection. The durable proof, added by the review, is that the
+  oldest entry under `.cache/actcache/cache/` has an mtime of **2026-08-11**, predating the
+  container's post-revert `StartedAt` of `2026-08-14T21:23:50Z`.
 
 - ℹ️ **Epic 2 is not complete.** `2-1`, `2-2`, `2-3` sit at `review`; `2-4`, `2-5` are `done`; `2-6`
   moves to `review` at this story's close. `epic-2-retrospective` is `optional` and unrun. Whoever
   picks up Epic 3 should not assume Epic 2's stories are all finished — three code reviews are still
   outstanding.
+
+## Deferred from: code review of story-2.6 (2026-08-15)
+
+- 🔴 **`development` has no branch-protection rule at all, and that is now the weakest link.**
+  Verified during this review: `protected_branch WHERE repo_id = 16` returns exactly two rows —
+  `main` (gated as of Story 2.6) and `staging` (permissive, untouched since Story 1.13). There is no
+  row for `development`. Story 2.6 recorded this correctly in its own Open Question 4 but both D16
+  and the 2.6 handoff described `development` as carrying a permissive *rule*; that has been
+  corrected in place. **The deferred work is the underlying gap, not the wording:** now that `main`
+  is gated, `development` is the only long-lived branch with neither a gate nor a rule to inspect,
+  and nothing prevents a force-push or a delete on it. Out of Story 2.6's scope (Prohibition 3).
+  Needs an owner and a decision — mirror `staging`'s permissive rule for consistency, gate it, or
+  record deliberately that it stays unprotected.
+
+- ⚠️ **Four merged `story-2-6/pr-*` branches are still on `origin`, against the story's own declared
+  write list.** Task 2.1's declaration item 6 committed to `DELETE` "the probe branch ref … **and
+  the AC6/closing branches after merge**". The probe branch was deleted and verified; the four PR
+  branches were not. All four are fully merged into `main` (`git merge-base --is-ancestor` confirms
+  each), so nothing is lost by deleting them and no CI run is required:
+  ```
+  git push origin --delete story-2-6/pr-1-review-fix-and-gate-config \
+    story-2-6/pr-2-ac5-and-failover story-2-6/pr-3-close-the-story \
+    story-2-6/pr-4-final-checkboxes
+  ```
+  The review could not execute this (the deletion was blocked by the operator's permission policy),
+  so it is handed forward. **It matters more than tidiness here:** the repository is at ~504 remote
+  branches and the 497-stale-branch hazard (Story 2.2's Open Question 6) is precisely the problem of
+  branches nobody deletes. Story 2.5 deleted all five of its own; 2.6 should match that discipline.
+
+- ℹ️ **AC5's semantic is attested, not reproducible — re-measure before building on it.** Forgejo
+  keeps no audit trail for branch-protection changes (`protected_branch` stores only current state;
+  the instance has no audit table), so the `405` that proved "a required context with no
+  `commit_status` row blocks the merge" cannot be re-derived by anyone, and it sits in one of the
+  three sections the dev agent rewrote from recollection after losing its notes. The review found
+  strong circumstantial support (the rule was written a second time at 20:57:26 UTC, 81 s before
+  PR #9's merge, while that PR had been green since 20:46:38 UTC) and accepted the verdict — but a
+  future story that leans on this semantic for a *new* design decision should spend the one API
+  round trip to re-measure it rather than cite Story 2.6.
