@@ -4,7 +4,7 @@ baseline_commit: 4fc90b78
 
 # Story 2.4: Bring the Full CI Run Within the Fifteen-Minute Budget
 
-Status: review
+Status: done
 
 > **Read §1 before you read the epic's ACs.** The title says *"bring within"*. **The run is already
 > within.** The last measured whole run is **540 s against a 900 s budget** — run 522,
@@ -836,7 +836,15 @@ depend on this budget and `epics.md:1227-1228` makes Story 2.6 depend on 2.5.
 - [x] 10.1 Set `Status: review` and update `sprint-status.yaml` for
       `2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget` from `ready-for-dev`.
 
-      Done — see YAML frontmatter `Status:` field above and `sprint-status.yaml`.
+      Done — see the `Status:` field above and `sprint-status.yaml`.
+
+      **Advanced to `done` after code review (2026-08-14).** The review found and corrected the
+      AC2 evidence error (Task 5.2), the one-generation provenance slip (Task 5.3), the unsupported
+      save-signature dismissal, the 693→665 s counterfactual arithmetic, and the false evidence
+      ceiling this story had written into `deferred-work.md`. Both Blocking Open Questions are
+      resolved — the second by Oleg's decision to merge the probe branch. The three surviving
+      «не проверено» hold no AC open, and the non-blocking questions are handoffs to Stories 2.5/2.6,
+      not debts of this one.
 - [x] 10.2 Confirm every claim in Dev Agent Record carries a `file:line`, a database value, a runner
       log line, or an explicit «не проверено» — and that every projected number is labelled as
       computed (Prohibition 7).
