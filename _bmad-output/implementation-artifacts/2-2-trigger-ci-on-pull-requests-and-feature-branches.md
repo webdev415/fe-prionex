@@ -757,6 +757,47 @@ likewise uncommitted. Landing the `main` commit and re-running the run-count que
 to `main` should create no run) is the one remaining piece of direct evidence this session could not
 produce itself.
 
+**AC2 and AC3 — CLOSED 2026-08-14, after Oleg enabled the pull-request unit to test it.**
+
+The unit was `has_pull_requests: false` when this story was written, so both criteria were recorded
+as deferred rather than closed. Oleg enabled it, the `pull_request` trigger was added to `ci.yml`,
+and PR #2 was opened from a branch cut from current `main`.
+
+| run | event | ref | sha | result | wall |
+|---|---|---|---|---|---|
+| 513 | `push` | `refs/heads/probe/2-2-pr-check` | `839e9051` | 4/4 green | 461 s |
+| 514 | `pull_request` | `refs/pull/2/head` | `839e9051` | 4/4 green | 503 s |
+| 515 | `push` | same branch, 2nd commit | `f82eb9b2` | 4/4 green | 461 s |
+| 516 | `pull_request` | `refs/pull/2/head` | `f82eb9b2` | 4/4 green | 510 s |
+
+**AC2** — all four jobs started automatically on the PR event, and the results are visible **as
+checks**: `commit_status` rows exist with contexts `CI / Lint (pull_request)`, `CI / Build (push)`
+and so on, bound to the head SHA.
+
+**AC3** — the second commit produced runs 515 and 516 against the **new** head `f82eb9b2`, and the
+statuses bind to that SHA separately from `839e9051`'s. The previous result therefore stops gating
+by construction: checks attach to a commit, not to a branch.
+
+🔴 **The legacy workflow did not fire once.** Every one of the four runs is `workflow_id = ci.yml`.
+D9's suppression held — **but it held because the head commit carries `.forgejo/workflows/`.** A PR
+opened from any of the ~497 branches whose head predates that placeholder would still fall through
+to `.github/workflows/CI.yml` on another team's runner. Enabling the unit re-opens that window; it
+is not closed by this evidence.
+
+⚠️ **Duplication is real and it is expensive.** One commit on a PR branch costs **two runs** —
+`push` and `pull_request` — 964 s of wall clock and ~1620 job-seconds for a single change. FR2 asks
+for both triggers, so this is the price of the requirement as written, not a misconfiguration. If it
+must come down, the lever is the `push` trigger, not this one: `pull_request` is the half that gates
+merges.
+
+🔴 **Story 2.6 inherits a choice nobody has made: there are eight required-check contexts, not
+four.** Statuses are named per event — `CI / Lint (push)` and `CI / Lint (pull_request)` are
+different contexts. Marking the wrong set required produces a gate that either never goes green or
+never blocks anything.
+
+**Cleanup:** PR #2 closed, branch deleted local and remote. **`has_pull_requests` was left ENABLED**
+— turning it back off is a decision, not cleanup, and it is Oleg's.
+
 ### File List
 
 - `.forgejo/workflows/ci.yml` — trigger block only, per Task 4; proven on a disposable probe branch
