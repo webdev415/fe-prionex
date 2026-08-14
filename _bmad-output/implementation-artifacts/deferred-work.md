@@ -768,6 +768,14 @@
   in Task 1 was re-verified at `f7c83434` and all held — compose, nginx, Dockerfile, `.env.example`,
   `api.ts`, and both `CD.yml` references. Recorded because the task required recording either way.
 
+## ✅ RESOLVED 2026-08-14 — `api-prionex` added the alias, and added a check we did not ask for
+
+`CRM/api-prionex` commit `517e6975`: the `crm-kong-gateway` alias is in their `docker-compose.server.yml`, Kong is now an explicit exception to their 93-container rename, their plan gained a «render with non-empty `STACK`» step, and — beyond the ask — `ops/deploy/post-deploy-checks.sh:427-490` now fails their deploy job if the name does not resolve **from inside the stand's network**, asserting Kong's own `no Route matched` signature so the check proves both DNS and that the thing behind the name is the gateway. Their honest caveat, kept: they have no automated byte-identity gate on the compose render, so the empty-variable regression is a manual comparison.
+
+⚠️ **Still open, and not part of this ask:** DNS, TLS, the external `api.preprod` hostname and CORS (§2.4/§2.5 of `docs/preprod-infrastructure-requirement.md`), and the PRE-PROD stack itself, for which no date has been given.
+
+Original entry follows.
+
 ## 🔴 Cross-repo collision found 2026-08-13 — `api-prionex`'s stack naming breaks our baked-in Kong name
 
 Found by reading `~/Workspace/api-prionex_f` (repo `CRM/api-prionex`, same Forgejo instance, worked
@@ -836,3 +844,21 @@ That rewrite is `correct-course` work. **Owner: Oleg.**
   event: `CI / Lint (push)` and `CI / Lint (pull_request)` are distinct. Requiring the `(push)` set
   would gate on checks a PR-only flow need not produce; requiring the `(pull_request)` set leaves
   direct pushes to feature branches ungated. Decide deliberately, with the reason recorded.
+
+
+## ✅ Answered 2026-08-14 — PRE-PROD version drift is closed structurally, and it strengthens D2
+
+`CRM/api-prionex` answered the question our requirement's §2.3 left open. It is a mechanism, not a
+habit: a push to their `preprod` branch runs `build-images.yml`, which builds every image tagged
+`:<sha>` and in the **same run** invokes `deploy-preprod.yml` with `IMAGE_TAG=<that sha>`. The
+release candidate *is* the head of `preprod`, so the stand cannot lag it.
+
+The reverse direction is gated separately: PROD is manual `workflow_dispatch` with an explicit
+release sha — never derived from a branch head — and `ops/deploy/validate-preprod-digests.sh` compares
+the **digests of the containers actually running on PRE-PROD** against the release manifest before
+deploying. Digests, not tags: a tag can be moved, a digest cannot. There is no bypass flag.
+
+⚠️ **Consequence for Story 6.5, worth acting on rather than filing.** Our [D2](../../docs/migration-decisions.md#d2)
+promotion gate proves **commit** identity, because Option C rebuilds per environment and byte-identity
+was given up. Theirs proves **image digest** identity on the backend side. When 6.5 is written it
+should reference the stronger neighbouring gate rather than invent a weaker one beside it.

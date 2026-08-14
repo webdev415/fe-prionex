@@ -1785,8 +1785,14 @@ in Story 1.6.
 > is named `${STACK:-crm}-kong-gateway` — `crm-preprod-kong-gateway` here — while our image looks
 > for the literal `crm-kong-gateway`, baked in at `Dockerfile.prod:34` and unchangeable per stand.
 >
-> **What unblocks this epic is one line on their side:** a network alias `crm-kong-gateway` for Kong
-> inside the stand's network. Artifact:
+> ~~**What unblocks this epic is one line on their side:** a network alias `crm-kong-gateway` for
+> Kong inside the stand's network.~~ ✅ **DONE 2026-08-14 — `CRM/api-prionex` commit `517e6975`.**
+> The alias is in their `docker-compose.server.yml`, their plan's mass-rename step now carries Kong
+> as an explicit exception, and they added a deploy-blocking runtime check (`AC1.alias`) that probes
+> the name **from inside the stand's network** and asserts Kong's own `no Route matched` signature.
+> **What still blocks this epic:** the PRE-PROD network, Kong and services themselves are on their
+> roadmap with no date given to us, and §2.4/§2.5 of the requirement — DNS, TLS, the external
+> `api.preprod` hostname and CORS — are unanswered. Artifact:
 > [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
 > decisions: [`#d11`](../../docs/migration-decisions.md#d11) and the proposal above.
 >
