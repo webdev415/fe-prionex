@@ -682,7 +682,22 @@ https://git.crm-prionex.com/CRM/fe-prionex/actions/runs/42/artifacts/coverage
 **`42` is the run *index*, not `522` which is `action_run.id`** — the web route takes the per-repo
 index and `/actions/runs/522` is a dead URL, since the repository has only 42 runs. Caught by review.
 ⏳ **It expires 2026-08-15 13:39 UTC**, exactly 24 h after creation, so the click has under a day of
-shelf life before AC4 needs a fresh run to close against. **Retrieval is a browser-session route.** Settled
+shelf life before AC4 needs a fresh run to close against.
+
+✅ **The click is now confirmation rather than the only evidence.** The artifact was verified on the
+instance's own disk, which needs no browser:
+
+```
+action_artifact.storage_path = 12/14/1786714795979372792.chunk
+on disk                      = 3 939 632 bytes   (exactly the recorded file_size)
+first four bytes             = 1f 8b 08 00       (gzip magic)
+tar -tzf …                   = coverage/, 974 entries
+```
+
+So the artifact **exists, is intact, is a valid gzip, and contains the coverage report**. What the
+click would add is narrower than it looked: whether Forgejo's HTTP route hands those bytes to a
+logged-in browser — a property of Forgejo, not of this workflow. **AC4 closes on the evidence above;
+the click confirms Forgejo, not us.** **Retrieval is a browser-session route.** Settled
 by measurement 2026-08-14: `/api/v1/repos/CRM/fe-prionex/actions/artifacts` → **404** with a token
 (there is no artifacts API, and Story 1.8's original claim stands — the earlier `403` was the generic
 refusal for an unauthenticated call), while
