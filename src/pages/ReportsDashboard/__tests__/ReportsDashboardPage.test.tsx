@@ -48,6 +48,11 @@ vi.mock('@/features/lowVerificationFeed', () => ({
   LowVerificationFeedTab: () => <div data-testid="low-verification-feed-tab" />,
 }))
 
+// …and for the searcher follow-up feed (features/searcherFollowup).
+vi.mock('@/features/searcherFollowup', () => ({
+  SearcherFollowupFeedTab: () => <div data-testid="searcher-followup-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -115,6 +120,8 @@ const processingTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.
 const verificationTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.verification' })
 const lowVerificationTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.low-verification' })
+const searcherFollowupTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.searcher-followup' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -138,6 +145,7 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.queryByTestId('client-processing-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -225,6 +233,34 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('pt=2026-06-30')
     expect(search()).toContain('mv=0')
     expect(search()).toContain('pg=3')
+  })
+
+  it('renders the searcher follow-up feed panel for ?tab=searcher-followup', () => {
+    renderPage(['/reports?tab=searcher-followup'])
+
+    expect(screen.getByTestId('searcher-followup-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(searcherFollowupTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-searcher-followup')
+  })
+
+  it('keeps the searcher follow-up filters when switching tabs', async () => {
+    renderPage(['/reports?tab=searcher-followup&if=2026-08-01&it=2026-08-07&spg=2&sps=100'])
+    expect(screen.getByTestId('searcher-followup-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`if/it/spg/sps` vs `pf/pt/mv/pg/ps` vs `sf/st/cf/ct` vs
+    // `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('if=2026-08-01')
+    expect(search()).toContain('it=2026-08-07')
+    expect(search()).toContain('spg=2')
+    expect(search()).toContain('sps=100')
   })
 
   it('pushes a history entry so Back returns to the previous tab', async () => {
