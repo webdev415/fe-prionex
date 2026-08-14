@@ -809,6 +809,47 @@ Then one block per PR follows in Task 3.
 - **Cleanup:** branch merged, then deleted both remotely (`git push origin --delete`) and locally.
   Confirmed no run was created by the delete (`action_run` has no id above 536 after the delete).
 
+---
+
+#### PR 2/5 — `story-2-5/pr-2-story-file-task1-task2-pr1-evidence`
+
+- **3.1** Branch cut from `main` HEAD `2933f88a713a0687fc45e0d2c43d122e911d0c07` (PR 1's merge
+  commit), verified equal to `origin/main` before `checkout -b`.
+- **3.2** One commit, `fb1e7351c0366bf4000b284f92276363a6e22223` — this story file, Task 1 facts +
+  Task 2 plan + PR 1's evidence block. Local pre-commit hook: 228/228 files, 1921/1921 tests green,
+  ~145 s.
+- **3.3** PR opened via API → **HTTP 201**, `index = 4`, `head.sha = fb1e7351…`, `state = open`.
+- **3.4/3.5:**
+
+  | id | index | event | ref | workflow_id | status | started | stopped | duration |
+  |---|---|---|---|---|---|---|---|---|
+  | 537 | 47 | push | `refs/heads/story-2-5/pr-2-…` | **ci.yml** | 1 (success) | 1786729333 | 1786729847 | **514 s** |
+  | 538 | 48 | pull_request | `refs/pull/4/head` | **ci.yml** | 1 (success) | 1786729419 | 1786729986 | **567 s** |
+
+  `ci.yml` on both, `ci-hub` not triggered. Both green, no rerun.
+
+  | run id | job | status | duration | runner_id |
+  |---|---|---|---|---|
+  | 537 (push) | Lint | success | 142 s | 19 |
+  | 537 (push) | Type Check | success | 85 s | 19 |
+  | 537 (push) | Unit Tests | success | 513 s | 20 |
+  | 537 (push) | Build | success | 115 s | 20 |
+  | 538 (pull_request) | Lint | success | 136 s | 19 |
+  | 538 (pull_request) | Type Check | success | 81 s | 20 |
+  | 538 (pull_request) | Unit Tests | success | 511 s | 19 |
+  | 538 (pull_request) | Build | success | 111 s | 20 |
+
+  Runner split: 4/4, clean 2/2 per run.
+
+- **3.6** Both runs 4/4 green. No classification needed.
+- **3.7** `commit_status` for `sha = fb1e7351…`: **8 distinct final contexts, all `state = success`**
+  — the same eight as PR 1, verbatim.
+- **3.8** Merge: `POST …/pulls/4/merge` → **HTTP 200**. `has_merged = t`, `merged_commit_id =
+  d19563060e5cf778650ef65864083f1943d8e71c`, merged 2026-08-14 17:54:02 UTC. Second consecutive
+  first-attempt API merge into `main`.
+- **3.9** `action_run` for `commit_sha = 'd1956306…'` → **0 rows**. No run on the merge commit.
+- **Cleanup:** branch merged, deleted remotely and locally. No run created by the delete.
+
 ### Completion Notes List
 
 _One section per AC. For AC1, state the §2 deviation on "real" explicitly. For AC2, record the
