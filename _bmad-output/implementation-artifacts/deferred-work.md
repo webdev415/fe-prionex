@@ -223,12 +223,16 @@
   blobs. **The native `docker build`/`docker push` fallback was not exercised** — `driver: docker`
   worked on the first attempt and there was no failure to fall back from. The surviving proof now
   lives in `.forgejo/workflows/build.yml` on `main`, not in a deleted branch.
-  ⚠️ **`sha-a1b2c3d-prod` (id 1930) was NOT deleted** despite this section's own instruction below —
-  the `DELETE /packages/CRM/container/fe-prionex/sha-a1b2c3d-prod` call was blocked by the
-  operator's tool-permission classifier as a destructive production action requiring explicit
-  authorization, and Story 3.1 did not attempt to route around that block. It remains `keep_pattern`-
-  protected (permanent) and open for whoever executes the deletion next, token already provisioned
-  (`/root/.fj_token_3_1` on s1, `write:package`).
+  ⚠️ ~~**`sha-a1b2c3d-prod` (id 1930) was NOT deleted** … It remains `keep_pattern`-protected
+  (permanent) and open for whoever executes the deletion next.~~ ✅ **SWEPT 2026-08-15 by Story
+  3.1's code review — it WAS deleted, later the same day, and this entry contradicted an entry in
+  this very file 359 lines below.** Oleg gave explicit authorisation, the `DELETE` returned `204`,
+  and a re-measurement on 2026-08-15 confirms `crm/fe-prionex` now holds exactly one version
+  (`build-check-3-1`). The block by the tool-permission classifier was real and correctly respected;
+  what failed is that the authorisation arrived, the deletion happened, and **four documents were
+  left asserting the opposite** — this line, the Story 3.1 file in three places, and the
+  `migration-decisions.md` changelog row. The classifier is not the finding. Not sweeping the record
+  after the world changed is.
   *Original finding, kept for the reasoning:*
 - ✅ **RESOLVED 2026-08-14 by Story 3.1 (run 512).** `driver: docker` works; the push landed and the image is pullable. Original entry follows.
 - 🔴 **`--add-host` on `container.options` is necessary but NOT sufficient for `docker/build-push-action`.**
@@ -600,6 +604,21 @@
   **If those two rows are still present after the next midnight, the `cleanup_sha256` explanation is
   wrong and FR11's withdrawn defect must be reinstated.** Whoever looks next: one query settles it —
   `select id, version from package_version pv join package p on p.id=pv.package_id where p.name='fe-prionex'`.
+
+  ✅ **SETTLED 2026-08-15 by Story 3.1's code review — the prediction held.** The query was run after
+  the 2026-08-15 00:00 sweep and returns **one row**:
+
+  ```
+  2496|build-check-3-1|f
+  ```
+
+  Rows 1926 and 1927 are gone, and so is the internal `_upload` row 2495 — which nothing predicted,
+  but which is consistent with the same mechanism and closes the "were `_upload` rows removed by the
+  rule or by the expired-upload step" question in favour of the sweep. **FR11's withdrawal stands,
+  now on a prediction that could have failed rather than on an inference.** Nobody was scheduled to
+  run this check; it was due the day the review happened to look, which is luck, not process. The
+  general lesson is worth more than the result: *a falsifiable prediction with no owner and no date
+  in anyone's queue is a coin flip on whether the plan stays correct.*
 - ⚠️ **Story 1.11's Task 7.2 was not done:** `docs/forgejo-migration.md` still presents retention as
   an unmade choice ("Выбрать одно: …") while the rule is live. Every field value is recorded
   verbatim in `docs/migration-decisions.md`, so nothing is lost — but the migration document
@@ -1399,3 +1418,71 @@ Six are deferred here.
   nobody can open the artifact to notice. AC5-shaped criteria ("uploads `dist/` as an artifact")
   are satisfied by a zero-file upload. **Owner: whoever next opens `ci.yml`; `if-no-files-found:
   error` is a one-line change per upload.**
+
+## Deferred from: code review of story-3.1 (2026-08-15)
+
+Story 3.1 was reviewed **before** Story 3.2 was written, deliberately: Epic 2 was closed with three
+stories still in `review`, and Story 2.1's unreviewed claims were built on by three later stories
+before anyone checked them. 3.1 is the foundation of Epic 3 the same way 2.1 was for Epic 2.
+Fourteen findings were patched into the story file, `epics.md`, `docs/migration-decisions.md` and
+`build.yml`. Six are deferred here. The first one is not a defect in what 3.1 built — it is a
+constraint 3.1 created and nobody wrote down.
+
+- 🔴 **`driver: docker` forecloses Story 3.5's registry cache, and 38 documents mention the line
+  while none mention the cost.** `.forgejo/workflows/build.yml:78-81`. The line is marked
+  LOAD-BEARING with an instruction not to remove it, and the reasoning behind it is correct and
+  hard-won: the default `docker-container` driver builds from its own BuildKit container, which does
+  not inherit the job container's `--add-host git.crm-prionex.com:10.67.0.1`, and the push dies with
+  a bare `EOF`. But the **`docker` driver has no cache export** — `--cache-to type=registry` is
+  unsupported on it. FR9 and Story 3.5's AC1 name `type=registry,ref=…:buildcache` explicitly, so
+  **3.5 cannot satisfy its own AC against the workflow as shipped.** Three routes, none free: give
+  the dind daemon the host mapping so `docker-container` can reach the registry; enable the
+  containerd snapshotter; or go native `docker build`/`docker push` with a hand-rolled cache. The
+  story was told not to foreclose later decisions and this is the one it foreclosed — silently,
+  while telling 3.5 not to touch the line. **Owner: Story 3.5, as its first task rather than its
+  first surprise.** Recorded against FR9 in `epics.md`.
+- ⚠️ **The fail-closed assertion stops being fail-closed after the first run.**
+  `.forgejo/workflows/build.yml:114-117` runs `docker manifest inspect …:build-check-3-1 || exit 1`.
+  Because the tag is a **fixed literal**, that asserts *the tag exists*, not that *this run's image
+  is under it* — and the registry accepts tag overwrite, so last-writer-wins is invisible. The build
+  step carries no `id:`, so `docker/build-push-action`'s `digest` output is never captured and there
+  is nothing to compare against. From the second dispatch onward the step passes on the previous
+  run's manifest even if this run pushed nothing. It mattered little while the tag was a throwaway
+  and the step ran once; it matters the moment tags become meaningful. **Owner: Story 3.2 — give the
+  build step an `id:`, and assert the digest this run produced, not the tag's existence.**
+- ⚠️ **The concurrency group keys on the wrong ref, and today degenerates to a constant.**
+  `.forgejo/workflows/build.yml:20-22` uses `group: build-${{ github.ref }}` — the *dispatch* ref —
+  while the content built is `inputs.ref` (`:50`). Two dispatches of the same `inputs.ref` issued
+  from different dispatch refs land in different groups and race for the same tag, which is exactly
+  the hazard AC5 names; two of different `inputs.ref` from the same dispatch ref are serialised for
+  nothing. Since `build.yml` exists only on `main`, `github.ref` is constant in practice, so the
+  group is one global mutex. The file's own comment at `:23-27` names the fixed tag as the cause and
+  misses the key. **Owner: Story 3.2.**
+- 🔑 **`/root/.fj_token_3_1` is live on s1 with no deletion route written anywhere.** Scope
+  `write:repository,write:package`, plaintext file on a host that carries another tenant's
+  production. Story 3.1's Prohibition 14 exists to prevent exactly this state and was satisfied on a
+  technicality — the session did not *mint* it, it *consumed* one someone else had provisioned — and
+  Blocking Open Question 1 was then closed with "the exit was already planned by whoever provisioned
+  the token", for which no evidence is offered. This project's standing finding is that an admin
+  cannot revoke another account's token, so "someone else will handle it" is not a plan.
+  **Owner: Oleg.** *(Note: the separate `write:package` token minted for the `sha-a1b2c3d-prod`
+  deletion was cleanly revoked, `96 → 97 → 96`. This is the other one.)*
+- ⚠️ **The push credential is org-scope write across a shared 87-package namespace, held back by a
+  sentence.** `build.yml:83-88` authenticates with `secrets.REGISTRY_TOKEN_RW` — an **org-level**
+  secret on `robot-registry` with `write:package` over all of `CRM`, a namespace holding 87 packages
+  and 620 versions of which only `fe-prionex` is ours, including another team's `api-prionex/*`.
+  Story 3.1's Prohibition 3 forbids writing outside our own package; a prohibition in a Markdown
+  file is not a permission boundary. One edit to the `tags:` line, or the push/tag triggers Stories
+  3.2 and 3.4 will add, reaches the whole namespace. A `_RO` variant exists; no narrower RW does.
+  **Owner: whoever can ask the platform team for a repository-scoped `write:package` credential —
+  worth asking before Epic 6 puts production deploys on the same token.**
+- ⚠️ **Four robustness gaps in `build.yml`, all cheap, none urgent alone.** (1) No `timeout-minutes`
+  on the job — the only ceiling is the runner's 2h, on a host with capacity 2 shared with another
+  tenant's production. (2) No `docker image prune` and no free-space precheck: one build grew
+  `dind-storage` by **0.80 GB** and nothing bounds the growth, while Stories 3.2–3.6 are about to
+  dispatch repeatedly. (3) `apt-get install docker.io` runs unpinned, unretried and unverified on
+  every build — a Debian mirror hiccup fails the build, and a point release could change whether
+  `docker manifest` (the evidence step) is available at all. (4) Every `uses:` is pinned to a
+  floating major tag (`@v6`, `@v3`, `@v3`, `@v5`) in an epic whose Story 3.6 is about a tag
+  identifying exactly one artifact. **Owner: whoever next opens `build.yml`; all four fit in one PR
+  and one run.**
