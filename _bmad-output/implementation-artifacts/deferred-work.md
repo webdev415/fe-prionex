@@ -672,7 +672,10 @@
   **404** for `actions/jobs/{id}/logs`, `actions/runs/{run}/jobs/{id}/logs` and
   `actions/tasks/{id}/logs`; the storage tree `/data/gitea/actions_log` holds 3713 files with
   highest task id **4867** while our tasks 4872–4879 are absent and their `log_in_storage` stays
-  `f` — even though the database records their `log_length` (up to 1265 lines), so the content
+  `f` 🔴 **— FALSE AS OF 2026-08-16, and it was a timing artefact rather than a fact. All eight of
+  those rows are `log_in_storage = t` today with files on disk. Persistence on this instance is
+  DELAYED, not absent; Story 2.1 sampled within minutes of the run. See the entry opened by Story
+  3.3. This sentence stood for three days and shaped four stories' evidence strategies** — — even though the database records their `log_length` (up to 1265 lines), so the content
   existed and never reached disk. The Story 1.12 probe saw the same thing: **1 of 4** logs
   persisted, versus **0 of 4** here. The web UI would serve them but needs a browser session.
   **Consequence, and it is not small:** Epics 2–6 are all written to "recorded from a real run".
@@ -1616,7 +1619,12 @@ is what is not.
   string and the step now *fails closed* rather than inventing a tag, which is correct but means
   **every automatic build will fail until 3.4 supplies the ref from the event.** Deliberate: a build
   that cannot name its own ref should stop, not guess. **Owner: Story 3.4.**
-- 🔑 **`.claude/settings.json` grants `Bash(ssh root@10.67.0.1:*)` repository-wide.** Added during
+- ✅ **DECIDED 2026-08-16 by Oleg: the rule stays as it is.** The wildcard scope is accepted
+  deliberately — every story in this migration reaches s1 the same way, and narrowing it to a
+  read-only command list would have to be re-widened by the next story that needs a write. Recorded
+  as a decision rather than left as an open item, because an open item nobody intends to act on is
+  indistinguishable from one everybody forgot. The reasoning that raised it is kept below.
+  ~~🔑 **`.claude/settings.json` grants `Bash(ssh root@10.67.0.1:*)` repository-wide.**~~ Added during
   Story 3.2 for read-only database queries, committed to the **shared** settings file rather than
   `settings.local.json`, so it applies to every clone and every future agent session — and the
   wildcard suffix pre-approves writes to the host that runs the registry, both runners and another
@@ -1637,7 +1645,22 @@ is what is not.
 
 ## Opened by story 3.3 (2026-08-15)
 
-- 🔴 **Job logs DID persist, and every story since 2.1 has been designed around them not persisting.**
+- ✅ **SETTLED 2026-08-16 — job-log persistence is DELAYED, not absent. Story 2.1 measured too
+  early, and the whole project has been designed around the wrong conclusion since.** Measured:
+  `select log_in_storage, count(*) from action_task where status=1` → **4128 `t` against 461 `f`**,
+  and the `f` rows are all in the recent id range. Decisively: **tasks 4872–4879 — the exact rows
+  Story 2.1 named as permanently absent — are `t` today**, with files on disk
+  (`/data/gitea/actions_log/CRM/fe-prionex/0a/4874.log.zst` and siblings). The mtimes give the
+  mechanism: 3.3's task 5828 was written at the instant it finished, while 4874 (run 2026-08-13
+  13:27 UTC) has an mtime of 2026-08-14 22:06 UTC — over a day later.
+  🔴 **What that cost.** Story 2.1 deferred AC4 on this, declaring the number unreachable; Story 2.4
+  spent a run to encode a measurement into an artifact *name*; Story 3.2 put its evidence into an
+  image *label*. All three were engineering around a limit that was a sampling artefact.
+  ⚠️ **The technique those stories invented is still worth keeping** — a value in a database column
+  is better evidence than a line in a log, and does not depend on a flush. But *"the log is
+  unreadable, do not try"* was false, and it was load-bearing.
+  *(Original entry follows.)*
+  ~~🔴 **Job logs DID persist, and every story since 2.1 has been designed around them not persisting.**~~
   Story 2.1 established *"job logs are not retrievable on this instance"* — 404 on every API route,
   `log_in_storage` never true, 0 of 4 logs reaching disk. That finding deferred 2.1's AC4, made
   Story 2.4 encode a measurement into an artifact **name**, and made Story 3.2 put its evidence in an
