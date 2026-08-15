@@ -1,13 +1,23 @@
 name: Build and Publish Image
 
-# Story 3.1: first workflow that writes into git.crm-prionex.com/crm/fe-prionex.
+# Story 3.1 created this file: the first workflow that writes into
+# git.crm-prionex.com/crm/fe-prionex. Story 3.2 gave it the tagging scheme
+# (FR7) and rewrote the fail-closed assertion and the concurrency key.
 #
-# Trigger is workflow_dispatch ONLY, with a `ref` input, and nothing else
-# (AC3, Prohibition 10). Story 3.2 owns the tagging scheme (FR7); Story 3.4
-# owns the push/tag triggers (FR6). Adding either here was explicitly out of
-# scope for this story (Prohibition 10).
-# (FR6 was attributed to 3.2 here until 2026-08-15; corrected by Story 3.1's
-# code review against this story's own Prohibition 10 and AC scope note.)
+# Trigger is workflow_dispatch ONLY, with a `ref` input, and nothing else.
+# Story 3.4 owns the push/tag triggers (FR6) — adding them here is out of scope
+# for both 3.1 and 3.2. (FR6 was misattributed to 3.2 in this comment until
+# 2026-08-15; corrected by Story 3.1's code review.)
+#
+# 🔴 Tag shapes are governed by a retention rule that exists ONLY in the Forgejo
+# database — no API, no CLI, not restorable from this repository. Some shapes it
+# protects forever (`latest`, `buildcache`, `prod-current`, `preprod-current`,
+# `v?\d+\.\d+\.\d+.*`, `(pre)?prod-<7-64 hex>`, `sha-<7-64 hex>-(pre)?prod`);
+# everything else under `fe-prionex/` expires at 14 days. Removing a protected
+# tag needs an authorised DELETE plus a write:package token, which on this
+# project has twice required the operator in person. Before adding a tag here,
+# compile the rule against it — see docs/migration-decisions.md, section
+# "Восстановление правила очистки реестра".
 on:
   workflow_dispatch:
     inputs:
@@ -16,17 +26,26 @@ on:
         required: true
         type: string
 
-# Workflow-level concurrency, per AC5. Story 1.3 proved queueing works at
-# workflow level and is silently ignored at job level
+# Workflow-level concurrency, per Story 3.1 AC5. Story 1.3 proved queueing works
+# at workflow level and is silently ignored at job level
 # (docs/migration-decisions.md#d8) — this block MUST stay outside `jobs:`.
+#
+# Keyed on `inputs.ref` since Story 3.2. It was `github.ref` — the ref the
+# DISPATCH was issued against — while the content built comes from `inputs.ref`.
+# Because this file lives only on `main`, `github.ref` was in practice a
+# constant, so the group was one global mutex: it serialised unrelated builds
+# and did not guard the collision it existed for.
+#
+# ⚠️ Story 3.2 could not key this on the built COMMIT, which is what it would
+# take to guard the `sha-` tag completely: `concurrency` is evaluated before the
+# job starts, so nothing resolved after `actions/checkout` is available here.
+# `inputs.ref` is the closest expression that is. Residual gap, recorded rather
+# than hidden: two DIFFERENT refs pointing at the SAME commit still land in
+# different groups and can race for the same `sha-<short>` tag. Two dispatches
+# of the same ref — the common case, and the one AC5 names — are now serialised.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ inputs.ref }}
   cancel-in-progress: false
-# ⚠️ Known gap, for Story 3.2 to close rather than inherit: the pushed tag is a
-# fixed literal, so two dispatches on DIFFERENT refs push the same tag while
-# sitting in DIFFERENT concurrency groups — the collision AC5 names is not
-# actually guarded here. Harmless while the tag is a throwaway proof; it stops
-# being harmless the moment 3.2 makes tags meaningful.
 
 jobs:
   build-and-push:
@@ -94,31 +113,169 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN_RW }}
 
-      # Single throwaway tag — proving a push is this story's job, not the
-      # tagging scheme (Story 3.2, Prohibition 7). No cache-from/cache-to
-      # (Story 3.5 owns registry cache, Prohibition 6), no platforms
-      # (Prohibition 5 — s1 is native amd64, cross-build under QEMU kills
-      # esbuild). Build-args are explicit non-production literals with no
-      # `||` fallback (Prohibition 8, Dockerfile.prod:19-22 has no
-      # defaults) — real values are Story 3.3's, from OpenBao.
+      # ─────────────────────────────────────────────────────────────────────
+      # Story 3.2 — the tagging scheme (FR7).
+      #
+      # 🔴 EVERY VALUE IS READ FROM THE CHECKED-OUT TREE, NEVER FROM THE EVENT.
+      # Under workflow_dispatch, `github.ref` and `github.sha` describe the ref
+      # the DISPATCH was issued against, not `inputs.ref`, which is what the
+      # checkout step actually fetched. Dispatch a build of `feature/x` from
+      # `main` and an event-derived tag set labels that image `main`. This is
+      # the same confusion Story 3.1 shipped in its concurrency key, one step
+      # further down, and it is why `docker/metadata-action` is NOT used here:
+      # its `type=ref` / `type=sha` sources read the event payload, and the only
+      # form ever proven on this instance is `type=raw` (Story 1.8, run 385),
+      # which supplies no sanitizer and therefore no reason to add the action.
+      #
+      # SANITIZER (Story 3.2 AC2), stated so a consumer can reimplement it —
+      # Story 4.3 deploys DEV by ref and must derive the same string:
+      #   1. replace each run of characters outside [a-zA-Z0-9._-] with one `-`
+      #   2. strip leading `.` and `-` (a tag may not start with either)
+      #   3. truncate to 100 chars — the OCI ceiling is 128, and the margin is
+      #      deliberate: Story 3.3 appends `-preprod` (8) to this string.
+      # Validated against all 502 remote branches: 502 distinct outputs, zero
+      # collisions, every output valid per [a-zA-Z0-9_][a-zA-Z0-9._-]{0,127},
+      # longest 100. NOT the `sed 's/refs\/heads\///'` in .github/workflows/
+      # CD.yml, which leaves interior slashes and is a recorded defect.
+      #
+      # SHORT SHA IS PINNED AT 12, deliberately, and not inherited from
+      # `git rev-parse --short` (whose length grows with repository size) nor
+      # from metadata-action's `type=sha` (fixed at 7). The retention rule's
+      # keep_pattern accepts [0-9a-f]{7,64} for the -prod/-preprod-suffixed
+      # shape, so 7 would sit on the floor with zero margin; 12 leaves room and
+      # is still short enough to read. 🔴 Stories 5.4 and 6.5 MUST use this same
+      # 12-character short SHA when they build `preprod-<sha>` / `prod-<sha>`:
+      # the promotion guard compares those strings byte for byte against what is
+      # emitted here, and a length mismatch fails every legitimate release.
+      - name: Compute tags from the checked-out commit
+        id: tags
+        run: |
+          set -euo pipefail
+          FULL_SHA="$(git rev-parse HEAD)"
+          SHORT_SHA="$(printf '%s' "$FULL_SHA" | cut -c1-12)"
+          REF_IN="${{ inputs.ref }}"
+          SANITIZED="$(printf '%s' "$REF_IN" \
+            | sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^[.-]+//' | cut -c1-100)"
+          if [ -z "$SANITIZED" ]; then SANITIZED="ref"; fi
+
+          IMAGE=git.crm-prionex.com/crm/fe-prionex
+
+          # AC1: always. Bare, i.e. no environment discriminator — Story 3.3
+          # owns FR8 and will add one. This shape matches NO keep_pattern
+          # alternative and therefore expires at 14 days, which is a property of
+          # the rule, not an oversight: FR7, NFR4, Story 3.4 AC2 and Story 3.6
+          # AC1 all address images by it, while Story 3.6 AC2 explicitly permits
+          # it to be repointed provided the behaviour is documented. It is.
+          TAGS="${IMAGE}:sha-${SHORT_SHA}"
+
+          # AC2: the branch tag, sanitized above.
+          TAGS="${TAGS},${IMAGE}:${SANITIZED}"
+
+          # AC4: `latest` comes only from `main` — computed here, evaluated on
+          # every run, and DELIBERATELY NOT PUSHED. Decision recorded in the
+          # story and in docs/migration-decisions.md: `latest` is named
+          # literally in the retention rule's keep_pattern, so pushing it is
+          # PERMANENT, and Story 3.3 AC4 is authorised to decide `latest` should
+          # not exist at all. Removing it afterwards needs an authorised DELETE
+          # plus a write:package token. So 3.2 implements the rule and leaves
+          # the switch off; 3.3 owns the verdict and flips it if it wants one.
+          # The evaluated value is published as an image label below, so the
+          # negative half of AC4 is provable from the database rather than from
+          # an absence — job logs are unreadable on this instance.
+          if [ "$SANITIZED" = "main" ]; then LATEST_ELIGIBLE=true; else LATEST_ELIGIBLE=false; fi
+          PUSH_LATEST=false
+
+          if [ "$LATEST_ELIGIBLE" = "true" ] && [ "$PUSH_LATEST" = "true" ]; then
+            TAGS="${TAGS},${IMAGE}:latest"
+          fi
+
+          # AC3 (semver from v*) is NOT implemented here. The trigger that would
+          # produce it is Story 3.4's (FR6, Prohibition 1), no `v*` tag has ever
+          # existed in this repository, and Story 6.5's promotion guard extracts
+          # a commit SHA from the tag — which a semver string does not carry, so
+          # it would reject one by construction. Deferred to 3.4 with that
+          # reasoning recorded rather than silently skipped.
+
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "full_sha=${FULL_SHA}" >> "$GITHUB_OUTPUT"
+          echo "sanitized_ref=${SANITIZED}" >> "$GITHUB_OUTPUT"
+          echo "latest_eligible=${LATEST_ELIGIBLE}" >> "$GITHUB_OUTPUT"
+          echo "Computed tags: ${TAGS}"
+          echo "latest eligible: ${LATEST_ELIGIBLE}; pushed: ${PUSH_LATEST}"
+
+      # No cache-from/cache-to (Story 3.5 owns registry cache — and note that
+      # `driver: docker` above cannot export a registry cache at all, which is
+      # 3.5's first problem to solve, recorded against FR9). No platforms — s1
+      # is native amd64 and cross-build under QEMU kills esbuild. Build-args are
+      # explicit non-production literals with no `||` fallback (Dockerfile.prod
+      # declares no defaults) — real values are Story 3.3's, from OpenBao.
+      #
+      # `labels:` is Story 3.2's, one line, and it is most of Story 3.6 for
+      # free: 3.6 AC1 wants the commit mapping verifiable from image metadata
+      # without a run log, and 3.6 AC3 wants the environment determinable from
+      # the image itself. Every value here comes from the checked-out tree.
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.prod
           push: true
-          tags: git.crm-prionex.com/crm/fe-prionex:build-check-3-1
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.revision=${{ steps.tags.outputs.full_sha }}
+            org.opencontainers.image.version=${{ steps.tags.outputs.short_sha }}
+            org.opencontainers.image.source=git.crm-prionex.com/CRM/fe-prionex
+            org.prionex.ref=${{ steps.tags.outputs.sanitized_ref }}
+            org.prionex.latest-eligible=${{ steps.tags.outputs.latest_eligible }}
           build-args: |
             VITE_API_BASE_URL=https://build-check-3-1.invalid/api
             VITE_WS_URL=wss://build-check-3-1.invalid/ws
 
-      # Fail-closed assertion (§7 / Task 5.8): job logs are not retrievable
-      # on this instance (404 on every logs endpoint), so a green job status
-      # must itself be the evidence. This step only reaches success if the
-      # pushed manifest is actually resolvable from the registry — a client
-      # exit code alone was explicitly rejected as sufficient evidence in
+      # Fail-closed assertion. Job logs are not retrievable on this instance
+      # (404 on every logs endpoint), so a green job status must itself be the
+      # evidence — a client exit code alone was rejected as sufficient in
       # Story 1.10.
-      - name: Assert pushed manifest is resolvable (fail-closed evidence)
+      #
+      # 🔴 Story 3.2 rewrote this. It used to run `docker manifest inspect` on a
+      # fixed literal tag, which asserts that THE TAG EXISTS, not that THIS
+      # RUN'S image is under it — and the registry accepts tag overwrite
+      # silently, so from the second dispatch onward it passed on the previous
+      # run's manifest. That is Story 3.2 AC5: every expected tag must resolve
+      # to the SAME DIGEST, which means the digest this build produced.
+      #
+      # Two guards that look redundant and are not: the digest is validated for
+      # shape BEFORE it is compared, because comparing two empty strings
+      # succeeds and would restore exactly the vacuous check being replaced —
+      # and whether build-push-action populates `digest` under the classic
+      # `docker` driver had never been observed on this instance before now.
+      # `docker manifest inspect -v` is used rather than the bare form because
+      # the bare form prints the manifest BODY, and diffing bodies passes for
+      # any image built from the same Dockerfile.
+      - name: Assert every tag resolves to this run's digest (fail-closed)
         run: |
-          docker manifest inspect git.crm-prionex.com/crm/fe-prionex:build-check-3-1 \
-            || (echo "Manifest inspect failed — push did not land, or is not visible." && exit 1)
+          set -euo pipefail
+          DIGEST='${{ steps.build.outputs.digest }}'
+          echo "Build reported digest: '${DIGEST}'"
+          case "${DIGEST}" in
+            sha256:*) ;;
+            *) echo "FAIL: build step reported no usable digest ('${DIGEST}')." \
+                    "Refusing to compare — an empty digest would make this check vacuous."; exit 1 ;;
+          esac
+          if [ "${#DIGEST}" -ne 71 ]; then
+            echo "FAIL: digest '${DIGEST}' is not sha256: plus 64 hex."; exit 1
+          fi
+
+          IFS=',' read -ra TAGLIST <<< '${{ steps.tags.outputs.tags }}'
+          for TAG in "${TAGLIST[@]}"; do
+            RESOLVED="$(docker manifest inspect -v "${TAG}" \
+              | grep -o '"digest": "sha256:[0-9a-f]\{64\}"' | head -1 \
+              | sed 's/.*"\(sha256:[0-9a-f]*\)"/\1/')" || {
+                echo "FAIL: ${TAG} did not resolve in the registry."; exit 1; }
+            if [ "${RESOLVED}" != "${DIGEST}" ]; then
+              echo "FAIL: ${TAG} resolves to ${RESOLVED}, not this run's ${DIGEST}."; exit 1
+            fi
+            echo "OK: ${TAG} -> ${RESOLVED}"
+          done
+          echo "All ${#TAGLIST[@]} tags resolve to ${DIGEST}."
