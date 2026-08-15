@@ -73,10 +73,17 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Forgejo CI as the Quality Gate
-  epic-2: in-progress
-  2-1-port-the-four-ci-jobs-to-forgejo: review
-  2-2-trigger-ci-on-pull-requests-and-feature-branches: review
-  2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: review
+  # Closed 2026-08-15. The last three stories had been sitting in `review` while 2.4, 2.5 and 2.6
+  # were built on top of them: 2.1 had never been reviewed at all, and 2.2/2.3 had been reviewed
+  # and their findings applied but were never advanced. All three are now closed on evidence.
+  # ⚠️ Closing the epic does NOT close one thing the epic's own goal implies: `staging` and
+  # `development` carry no CI gate at all (`ci.yml` is on `main` only, `pull_request` is scoped to
+  # base `main`), which is narrower than the legacy `.github/workflows/CI.yml` it replaced. That
+  # needs Oleg's decision and is recorded in `deferred-work.md`; Epic 4 meets it first.
+  epic-2: done
+  2-1-port-the-four-ci-jobs-to-forgejo: done
+  2-2-trigger-ci-on-pull-requests-and-feature-branches: done
+  2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov: done
   2-4-bring-the-full-ci-run-within-the-fifteen-minute-budget: done
   2-5-validate-ci-stability-across-five-consecutive-real-pull-requests: done
   2-6-enforce-required-status-checks-on-main: done
