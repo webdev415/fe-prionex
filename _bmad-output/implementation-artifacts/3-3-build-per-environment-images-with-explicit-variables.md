@@ -1,0 +1,597 @@
+---
+baseline_commit: c0de23b0
+---
+
+# Story 3.3: Build Per-Environment Images with Explicit Variables
+
+Status: ready-for-dev
+
+> **What this story is.** Story 3.2 gave images meaningful tags. This one gives them meaningful
+> *contents*: the API and WebSocket URLs for a chosen environment, read from OpenBao at build time
+> and baked into the bundle, with no fallback anywhere. Under Option C the bundle is the artifact —
+> a wrong URL here is not a misconfiguration, it is a wrong build.
+>
+> 🔴 **Do not start Task 5 before reading §1.** The read step Story 1.12 proved and recorded
+> verbatim **cannot run on the job this story must modify.** That is not a detail; it invalidates
+> the decision D15 records, and choosing the replacement is this story's first task.
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+
+## Story
+
+As a release engineer,
+I want each environment's image built with that environment's API and WebSocket URLs and no hidden
+defaults,
+so that a missing variable fails the build instead of shipping a bundle pointed at the wrong backend.
+
+---
+
+## What you are changing, in one screen
+
+One file: `.forgejo/workflows/build.yml`. Four changes:
+
+| # | Change | Why |
+|---|---|---|
+| 1 | An `environment` input — `dev` \| `preprod` \| `prod` | AC1 |
+| 2 | A step that reads `secret/fe/<env>/app` from OpenBao and fails closed | AC1, AC2 |
+| 3 | Real `--build-arg` values replacing 3.1's `build-check-3-1.invalid` literals | AC1, AC5 |
+| 4 | The environment discriminator on the tags | AC3 |
+
+Plus one decision that is not a code change at all: **what `latest` means now** (AC4). Story 3.2
+implemented the rule and deliberately did not push the tag, leaving the verdict here.
+
+**Three things that will bite, stated once:**
+
+- 🔴 **`bao` cannot be installed on this job's image.** §1.
+- 🔴 **The PRE-PROD value in OpenBao is a placeholder, and the value the plan wanted to replace it
+  with does not resolve.** §2.
+- 🔴 **`Dockerfile.prod` declares `ARG` for two variables; the source reads five.** §3.
+
+---
+
+## 🚨 Read this before anything else
+
+### 1. 🔴 The proven read step cannot run here, and D15's decision rests on a premise that is now false
+
+Story 1.12 proved an OpenBao read on run 486 and recorded it **verbatim** in its appendix, precisely
+so this story could copy it. Its install line is:
+
+```yaml
+      - name: Install the client (Task 3 decision — option (a), pinned)
+        run: |
+          apk add --no-cache openbao=2.6.0-r0 jq bash >/dev/null
+```
+
+`apk` is Alpine. **The job this story must modify does not run on Alpine.** Story 1.12's Task 3
+chose option (a) explicitly on the opposite assumption:
+
+> **Which image matters:** the values are needed at **build** time … That job runs on the
+> `docker-build` label → `code.forgejo.org/oci/docker:cli` → **Alpine 3.24, with `apk`** … The
+> `node-20` image (Debian bookworm) has `curl` but no OpenBao package in Debian; **it is not where
+> this runs**, so its poverty does not constrain the choice.
+
+Story 3.1 then established the opposite and shipped it: `build.yml` runs on **`node-20`**, because
+`docker-build` resolves to an image with no Node runtime, under which **no `uses:` step executes at
+all** — not `docker/build-push-action`, not even `actions/checkout` (D17).
+
+**Measured on a job-equivalent `node:20-bookworm` container inside the runner's dind, 2026-08-15:**
+
+| tool | result |
+|---|---|
+| `bao` | **absent** |
+| `apt-cache policy openbao` | **empty — no such package in Debian bookworm** |
+| `jq` | installable, and `build.yml` **already installs it** |
+| `curl` | present |
+| `curl http://openbao:8200/v1/sys/seal-status` | **200** |
+
+**So D15's option (a) is dead for this job and option (b) — the raw HTTP API, which D15 rejected —
+is the cheapest and very possibly the only route.** Three candidates, and Task 2 must choose in
+writing and record the choice as a **deviation from D15**:
+
+- **(i) HTTP API with `curl` + `jq`.** No new dependency; `jq` is already installed. Requires
+  re-deriving the AppRole login and KV read as HTTP calls, and re-deriving the argv-safety property
+  (see §4 trap 4).
+- **(ii) Download the OpenBao binary** from GitHub releases. Egress to `github.com` was measured open
+  in Story 1.12. Adds an unpinned network dependency on the critical path of every build.
+- **(iii) Split the read into a separate `docker-build`-labelled job.** **Blocked** — see §5: values
+  cannot cross a step boundary through `$GITHUB_ENV`, let alone a job boundary.
+
+⚠️ Whatever is chosen, the *properties* the proven step establishes must survive the translation.
+They are listed in §4 and they are the reason the appendix exists. Copying the shape without the
+properties is worse than writing it fresh.
+
+### 2. 🔴 The PRE-PROD value is a placeholder, and its intended replacement does not exist
+
+Measured state of the three KV paths (Story 1.12, AC3):
+
+| path | `VITE_API_BASE_URL` | `VITE_WS_URL` |
+|---|---|---|
+| `secret/fe/dev/app` | `https://api.dev.crm-prionex.online` | `wss://api.dev.crm-prionex.online` |
+| `secret/fe/pre-prod/app` | **`PLACEHOLDER-preprod-backend-not-provisioned`** | same placeholder |
+| `secret/fe/prod/app` | `https://api.crm-prionex.online` | `wss://api.crm-prionex.online` |
+
+Two separate problems, and the second is newer than the first:
+
+1. **The placeholder is still there.** Nothing in the repository records it having been rewritten.
+2. 🔴 **The value the plan intended to replace it with is NXDOMAIN.** Until 2026-08-15 the plan
+   carried `api.preprod.crm-prionex.online`. `dig` returns nothing for it. The real name, measured
+   and now amended into the plan, is **`https://api.crm.preprod.crm-prionex.online`** — one extra
+   `.crm.` segment (`sprint-change-proposal-2026-08-15-preprod-reality.md`).
+
+**Writing the corrected value into OpenBao needs a token this repository cannot mint.** So:
+
+- **`dev` and `prod` are buildable today.** Their values are real and were verified against what
+  production actually serves.
+- **`preprod` is not**, and a build for it would bake `PLACEHOLDER-preprod-backend-not-provisioned`
+  into a bundle. ⚠️ **That must fail the build, not warn** — see AC2. A placeholder is a value; a
+  naïve non-empty check passes it. **This is Decision 4 in §8.**
+
+### 3. 🔴 `Dockerfile.prod` declares two build-args; the source reads five
+
+```
+Dockerfile.prod:19-22   ARG VITE_API_BASE_URL / ARG VITE_WS_URL  (+ matching ENV)
+```
+
+But `grep -rhoE "import\.meta\.env\.[A-Z_]+" src/` returns **five** `VITE_*` names:
+
+| variable | reads | declared as ARG? |
+|---|---|---|
+| `VITE_WS_URL` | 10 | ✅ |
+| `VITE_API_BASE_URL` | 8 | ✅ |
+| `VITE_OPERATOR_PHONE_URL` | 1 | ❌ |
+| `VITE_EASYPAY_PORTAL_API_KEY` | 1 | ❌ |
+| `VITE_BUILD_TS` | 1 | ❌ |
+
+Vite replaces an undeclared `import.meta.env.X` with `undefined` at build time. Each of the three has
+an **in-source fallback**, so the bundle compiles, ships, and behaves wrongly at runtime — the
+websocket one falls back to `localhost`.
+
+**This collides with two of this story's own ACs.** AC2 says an empty or missing variable *fails the
+build with an explicit message naming the variable*. AC5 says `Dockerfile.prod`'s build-time contract
+is *used unchanged*. Three variables the application reads are outside the contract entirely and can
+therefore never fail it.
+
+**Decision 5 in §8.** The honest options are: extend the contract (which AC5 forbids without an
+amendment), or state explicitly that AC2's guarantee covers only the two declared variables and
+record the other three as a known gap with an owner. **Do not resolve it silently by pretending the
+contract covers five.**
+
+### 4. The properties the proven step establishes — carry these, not the syntax
+
+Story 1.12 paid for each of these. If the transport changes, they still hold.
+
+1. **No credential in any argv, ever.** The proven step uses jq's `env` builtin rather than
+   `--arg`, because `--arg` merely moves the exposure into jq's own argv. Under an HTTP variant the
+   equivalent is `curl --data @-` reading the body from **stdin**, never `-d "$body"`.
+2. **Fetch the JSON once, extract structurally.** Never re-parse a `KEY=VALUE` stream: a value with
+   an embedded newline re-splits into a record that gets `export`ed. On the hub this hijacked `PATH`
+   to `/tmp/pwned`.
+3. **A key-name allowlist AND a denylist.** `PATH` and `LD_PRELOAD` both match
+   `^[A-Za-z_][A-Za-z0-9_]*$` perfectly. Keep both checks.
+4. **Revoke the token immediately after the last read** — `bao token revoke -self`, or the HTTP
+   equivalent `POST /v1/auth/token/revoke-self`. The token must not survive into `docker build`.
+5. **Masking has three traps.** Multi-line values mask only their first line; workflow-command values
+   are percent-decoded, so a literal `%25` masks the wrong string; hence the `_escape_for_mask`
+   helper. ⚠️ Note it needs **bash**, not busybox `ash` — a recorded deviation from the hub.
+6. **Assertions that can actually fail.** The probe asserted a key count of exactly 2, non-emptiness
+   on both, that the deliberate `echo`s print `***`, and `grep -c VITE "$GITHUB_ENV"` = 0.
+7. **Two distinct preflight failures with two distinct messages** — missing binary, and OpenBao
+   unreachable. The second must name `--add-host` as the cause, because the failure is otherwise an
+   opaque connection error (§6).
+
+### 5. 🔴 `$GITHUB_ENV` is world-readable, and it decides where the read step lives
+
+Forgejo writes `$GITHUB_ENV` to `…/act/workflow/envs.txt`, created by the runner with mode **0644**
+*before* the step body runs — so `umask 077` inside the step does not cover it. Story 1.12's rule:
+**the read and the consumption belong in the same block.**
+
+But `build.yml` builds through `uses: docker/build-push-action@v5`, whose `build-args:` is a
+**separate step**. The values must cross a step boundary.
+
+✅ **This is resolvable, and the resolution must be stated rather than assumed.** The rule protects
+the **token**, which is confidential. The **URLs are not** — D15 says so in as many words:
+
+> Шесть значений `VITE_*` — публичные URL, вшитые в бандл, который любой посетитель читает в
+> devtools.
+
+and Story 1.12 adds: *"Any sentence in the story record, the commit message or `docs/` implying these
+values are secret is a defect, not a flourish."*
+
+**So: the token never leaves the read block and is revoked inside it. The URLs may cross to the build
+step.** Write that reasoning into the workflow, next to the code that relies on it.
+
+### 6. Reachability, and the one line the whole chain hangs from
+
+`OPENBAO_ADDR` is `http://openbao:8200`. That hostname exists only because both runner configs carry
+`--add-host openbao:172.20.0.5` in `container.options`. Verified 2026-08-15: both
+`/opt/forgejo-runner-fe-prionex/config.yml` and `config-2.yml` carry it, byte-identical, and both
+runners have been restarted since the edit — an older `deferred-work.md` entry says they had not,
+and that entry is stale beneath its own resolution marker.
+
+⚠️ **The IP is hardcoded.** Recreate `forgejo-openbao` and its IP changes and **every build fails**
+on an opaque connection error, with two config files on s1 needing the new value. That is why
+preflight must name this as the cause.
+
+Also confirmed: port 8200 is published only on `10.70.0.1` and `127.0.0.1`, and
+`container.network: "forgejo_forgejo"` **cannot** be used — the nested dind engine's network list is
+only `bridge`/`host`/`none`.
+
+### 7. Credentials — seven repository secrets, and the mapping that derives from nothing
+
+All seven are **repository**-scope on `CRM/fe-prionex` (no AppRole credential at org scope):
+`OPENBAO_ADDR`, and `OPENBAO_{DEV,PREPROD,PROD}_{ROLE_ID,SECRET_ID}`.
+
+> **Name mapping — none of these three derive from each other:**
+>
+> | Forgejo secret | OpenBao role | KV path |
+> |---|---|---|
+> | `OPENBAO_DEV_*` | `fe-dev` | `secret/fe/dev/app` |
+> | `OPENBAO_PREPROD_*` | `fe-pre-prod` | `secret/fe/`**`pre-prod`**`/app` |
+> | `OPENBAO_PROD_*` | `fe-prod` | `secret/fe/prod/app` |
+
+🔴 **A path assembled from the secret name yields `secret/fe/preprod/app`, which does not exist.**
+Four spellings are live in this project and only three are correct in their own place: the Forgejo
+secret says `PREPROD`, the role says `fe-pre-prod`, the KV path says `pre-prod`, and Story 3.2's tag
+suffix will say `-preprod`. **Map them explicitly; never concatenate.**
+
+⚠️ **`OPENBAO_PROD_SECRET_ID` expires 2027-06-09.** `secret_id_ttl 7200h`, issued 2026-08-13.
+Nothing rotates it, nothing monitors it, and when it expires **every production deploy fails at
+once** with an auth error that says nothing about credential age. Not this story's to fix; this
+story is the first to depend on it, so it is the right place to name an owner.
+
+### 8. The five decisions this story must make in writing, before Task 5
+
+1. **The OpenBao transport** — HTTP, downloaded binary, or split job. A deviation from D15 either
+   way; say which and why. *(§1)*
+2. **Which environments this story actually builds.** `dev` and `prod` have real values; `preprod`
+   has a placeholder that cannot be corrected from this repository. Building all three is not
+   available. *(§2)*
+3. **The discriminator's exact shape.** 🔴 **Constrained by live infrastructure, not by the plan:**
+   the retention rule protects `sha-[0-9a-f]{7,64}-(pre)?prod` and nothing else, so `-prod` and
+   `-preprod` are permanent and **`-dev` expires at 14 days** — correct policy, but say it out loud.
+   Story 3.2 pinned the short SHA at **12**; use the same 12 or the promotion guard breaks.
+4. **How a placeholder value is rejected.** A non-empty check passes
+   `PLACEHOLDER-preprod-backend-not-provisioned`. AC2 wants the build to fail. *(§2)*
+5. **`VITE_OPERATOR_PHONE_URL`, `VITE_EASYPAY_PORTAL_API_KEY`, `VITE_BUILD_TS`** — extend the
+   contract, or state that AC2 covers two of five and record the gap with an owner. *(§3)*
+
+And **AC4 is a sixth decision the plan explicitly assigns here**: what `latest` means once one commit
+produces up to three images. Story 3.2 implemented the rule and left the switch off, by Oleg's
+decision, precisely so this story could decide. Note `latest` is `keep_pattern`-**permanent**: pushing
+it is a one-way door. Note also that `docker-compose.server.yml:8` still defaults to
+`ghcr.io/crm-prionex/fe-prionex:latest` — a **ghcr** reference, so it is unaffected by what we push,
+and Story 4.1 owns that line.
+
+### 9. What Story 3.2 hands over, and one collision it could not have known about
+
+- **Short SHA is 12 characters**, pinned deliberately — not git's default, not `metadata-action`'s 7.
+- **The sanitizer** replaces runs of non-`[a-zA-Z0-9._-]` with one `-`, strips leading `.`/`-`, and
+  truncates to **100** — 28 short of the ceiling, *specifically to leave room for this story's
+  `-preprod`*.
+- **The registry folds case on write.** `version` and `lower_version` are identical for every row and
+  the unique key is on the folded column, so a mixed-case reference resolves. Lowercasing on the
+  consumer side is tidiness, not correctness.
+- **A `keep_pattern` guard now refuses** any ref that sanitizes into a protected shape. Adding a
+  discriminator must not defeat it — check the *final* tag, not the pre-suffix one.
+- 🔴 **Branch-name collisions this story creates.** Five `X` / `X-dev` pairs exist among feature
+  branches, so `X` + `-dev` collides with `X-dev` + `-dev`… and since 2026-08-15 there are now
+  branches literally named **`dev`, `preprod` and `prod`** (D19), which produce `dev-dev`,
+  `preprod-preprod`, `prod-prod`. Story 3.2 flagged the first case and could not have known the
+  second. **Decide what happens on collision; do not discover it in the registry.**
+
+### 10. Budget
+
+Every dispatch is a real build on a host shared with another tenant's production. Story 3.2's build
+job ran **124 s and 168 s**. A probe cycle costs **1 CI run + 1 dispatch**; landing costs **2 more CI
+runs** through the gate. ⚠️ **Count the landing.** Story 3.1's ledger and Story 3.2's both omitted it
+and both were caught on review; 3.2 was caught by a subtask it had itself written to prevent exactly
+that.
+
+Building two environments means two dispatches. Say so in Task 3 before spending them.
+
+### Prohibitions
+
+1. **Do not add `push` or `pull_request` or `v*` triggers.** FR6 is **Story 3.4's**.
+2. **Do not touch `driver: docker`** — LOAD-BEARING (D17), and its cache-export limitation is
+   **Story 3.5's** problem, not yours to pre-empt.
+3. **Do not touch `runs-on: node-20`** — see §1 and D17.
+4. **Do not add `cache-from` / `cache-to`.** Story 3.5.
+5. **Do not push any tag matching `keep_pattern`** unless it is a decision recorded in this file.
+   `build.yml` now has a guard; do not weaken it to make a discriminated tag fit.
+6. **No `||` fallback and no hardcoded URL default anywhere** — NFR8, D6. A silent default to the
+   production API is the mine this whole story exists to defuse.
+7. **Do not print an OpenBao value** except through a masking assertion that proves masking works.
+8. **Do not write to OpenBao.** This story reads. The PRE-PROD placeholder needs a token this
+   repository does not have and should not mint.
+9. **Do not modify `Dockerfile.prod`** without recording it as an AC5 deviation — see §3.
+10. **Do not touch `.forgejo/workflows/ci.yml`**, `.github/workflows/` (D7), or the retention rule.
+11. **Do not let any commit you push land without `.forgejo/workflows/` in its tree** (D9) — cut
+    probe branches from `main`/HEAD, never from an old team branch.
+
+---
+
+## Acceptance Criteria
+
+Verbatim from `epics.md`, with this story's reading where the plan is silent or has been overtaken.
+
+**AC1 — an environment is chosen and its values come from OpenBao.**
+
+**Given** Option C keeps Vite variables baked in at build time
+**When** the build workflow runs
+**Then** it accepts a target environment of `dev`, `preprod` or `prod`
+**And** it passes `VITE_API_BASE_URL` and `VITE_WS_URL` as `--build-arg`, read at run time from the
+OpenBao path `secret/fe/<env>/app` via the AppRole chain established in Story 1.12.
+
+*Reading: accepting `preprod` as an input and being able to **build** it are different things — see
+§2. The transport is Decision 1, and it will not be the one Story 1.12 proved.*
+
+**AC2 — no fallback, and a missing value fails loudly.**
+
+**Given** the fallback pattern at `CD.yml:47-74` silently defaults to the production API
+**When** the Forgejo build workflow is written
+**Then** no hardcoded URL fallback exists anywhere in it
+**And** an empty or missing variable fails the build with an explicit message naming the variable.
+
+*Reading: "empty or missing" must be read to include **placeholder** (§2) — otherwise the AC is
+satisfiable by a build that bakes `PLACEHOLDER-…` into a bundle. And the guarantee covers the two
+declared build-args; §3 is why that is not the same as "every variable the app reads".*
+
+**AC3 — the discriminator.**
+
+**Given** one commit can now produce up to three different images
+**When** tags are computed
+**Then** each image carries an environment discriminator, for example `sha-<short>-dev` / `-preprod`
+/ `-prod`
+**And** a bare `sha-<short>` is never ambiguous between environments.
+
+*Reading: "for example" is not a specification, and the live retention rule already constrains the
+answer — `sha-<7–64 hex>-(pre)?prod` is the protected shape. Story 3.2 kept the bare `sha-<short>`
+deliberately, with Story 3.6 AC2's documented-repoint clause as cover; the second clause here is
+about **ambiguity**, and it must be answered rather than assumed away.*
+
+**AC4 — decide what `latest` means.**
+
+**Given** `latest` is produced only from `main`
+**When** the environment discriminator is introduced
+**Then** the meaning of `latest` is decided explicitly — either bound to one environment or dropped
+entirely
+**And** the decision is recorded, because `docker-compose.server.yml:8` currently defaults to a
+`:latest` image reference.
+
+*Reading: this is the AC Story 3.2 deferred here by name. ⚠️ The compose default points at **ghcr**,
+not at our registry, so it is not evidence that anything we push is consumed — Story 4.1 owns it.*
+
+**AC5 — the existing build-time contract, unchanged.**
+
+**Given** `Dockerfile.prod` declares `ARG VITE_API_BASE_URL` and `ARG VITE_WS_URL` at lines 19-22
+**When** the build workflow is implemented
+**Then** that build-time contract is used unchanged
+**And** no runtime-config entrypoint is introduced, consistent with the Option C decision recorded in
+Story 1.2.
+
+*Reading: "unchanged" and AC2's "fails on a missing variable" cannot both hold for the three
+variables outside the contract. §3, Decision 5.*
+
+**AC6 — [DERIVED] the decisions land where the consumers will find them.** Given six decisions this
+story takes that later stories match on, when it closes, then each is recorded in this file **and** in
+`docs/migration-decisions.md` — because Stories 3.4, 3.6, 4.3, 5.2, 5.3 and 6.4 consume them and none
+of them reads this file.
+
+---
+
+## Tasks / Subtasks
+
+### Task 1 — Bind the live state before writing anything (AC: all)
+
+- [ ] 1.1 Re-read `.forgejo/workflows/build.yml` at HEAD: the tag step, the `keep_pattern` guard, the
+      `env:` indirection rule, the build step, the assertion.
+- [ ] 1.2 Re-verify OpenBao reachability from a job-equivalent container and re-confirm `bao` is
+      absent and unavailable via `apt`. **Do not trust §1** — it is a measurement, and measurements
+      age.
+- [ ] 1.3 Re-read the three KV paths' contents. State plainly whether `pre-prod` still holds the
+      placeholder. **Over HTTP with an explicit `X-Vault-Token`, never through the host `bao`
+      wrapper** — that wrapper authenticates as `admin` and turned nine isolation checks into nine
+      false positives in Story 1.12.
+- [ ] 1.4 Confirm both runner configs still carry `--add-host openbao:172.20.0.5` and that
+      `forgejo-openbao` still has that IP.
+- [ ] 1.5 Record the `action_run` baseline and confirm both runners are online.
+
+### Task 2 — Make the six decisions, in writing, before any YAML (AC: 6)
+
+- [ ] 2.1 Decision 1 — the transport, as a recorded deviation from D15's option (a).
+- [ ] 2.2 Decision 2 — which environments this story builds, and what happens to `preprod`.
+- [ ] 2.3 Decision 3 — the discriminator's exact shape, checked against `keep_pattern` by compiling
+      the regex, and against Story 3.2's 12-character short SHA.
+- [ ] 2.4 Decision 4 — how a placeholder is rejected without hardcoding the placeholder's text.
+- [ ] 2.5 Decision 5 — the three undeclared `VITE_*` variables.
+- [ ] 2.6 Decision 6 — `latest`. If the verdict is to push it, say who authorised it and how it comes
+      back out, because `keep_pattern` makes it permanent.
+
+### Task 3 — Declare the budget before spending it (AC: 2)
+
+- [ ] 3.1 State the number of **build dispatches** and the number of **CI runs**, including the ones
+      that landing the story will cost. Both previous Epic 3 stories omitted the landing and both
+      were caught.
+- [ ] 3.2 List every tag this story will push, by exact string, and compile `keep_pattern` against
+      each. A tag not on the list must not be pushed.
+- [ ] 3.3 Confirm no OpenBao token needs minting. Reads use the existing repository secrets.
+
+### Task 4 — Write the read step (AC: 1, 2)
+
+- [ ] 4.1 Add the `environment` input: `dev` | `preprod` | `prod`, required, with the choice
+      constrained rather than free text.
+- [ ] 4.2 Map environment → Forgejo secret pair → KV path **explicitly**, from a literal table. Never
+      concatenate — `preprod` is the spelling that does not exist (§7).
+- [ ] 4.3 Preflight with two distinct failures and two distinct messages: tooling missing, and
+      OpenBao unreachable. The second names `--add-host` as the cause (§6).
+- [ ] 4.4 AppRole login with **no credential in any argv** (§4 trap 1).
+- [ ] 4.5 Read the KV path once; extract structurally; allowlist **and** denylist the key names
+      (§4 traps 2–3).
+- [ ] 4.6 Mask every value, with the percent-escaping helper and its multi-line handling (§4 trap 5).
+- [ ] 4.7 **Revoke the token inside the same block** and unset it (§4 trap 4).
+- [ ] 4.8 Reject empty **and placeholder** values with a message naming the variable and the path
+      (AC2, Decision 4).
+- [ ] 4.9 Pass only the two non-secret URLs out of the block, with the §5 reasoning written next to
+      the code that depends on it.
+
+### Task 5 — Wire the build (AC: 1, 3, 5)
+
+- [ ] 5.1 Replace 3.1's `build-check-3-1.invalid` literals with the values from Task 4.
+- [ ] 5.2 Add the discriminator to the tag set per Decision 3, and re-check the `keep_pattern` guard
+      against the **final** tag.
+- [ ] 5.3 Add an environment label to the image — Story 3.6 AC3 wants the environment determinable
+      *from the image itself, not only from its tag string*, and Story 3.2 deliberately did not emit
+      one because FR8 is yours.
+- [ ] 5.4 Apply Decision 6 for `latest`.
+- [ ] 5.5 Leave `Dockerfile.prod` untouched (AC5), or record the deviation (§3).
+- [ ] 5.6 Grep the finished file and **record the result**: no `${{ }}` inside any `run:` body (the
+      rule Story 3.2's review installed), no `||` value fallback, no hardcoded URL, no new trigger,
+      no cache directives. State the gate in a form that is true of the file — Story 3.1's and 3.2's
+      both failed on their own files as literally written.
+
+### Task 6 — Prove it (AC: 1, 2, 3)
+
+- [ ] 6.1 Dispatch a `dev` build from a probe branch cut from `main`. Record run/job/task ids,
+      runner, duration, status — from the database, never from a job log.
+- [ ] 6.2 Confirm the tag set from `package_version`, filtering `is_internal = false`, and confirm
+      every tag resolves to this run's digest.
+- [ ] 6.3 **Prove the bundle actually carries the value.** The point of the story is what is inside
+      the image, and no AC checks it: extract the built asset and grep for the API URL. A green build
+      that baked `undefined` looks identical to a correct one.
+- [ ] 6.4 **Prove AC2 by making it fail.** Point the read at an environment whose value is empty or
+      placeholder and confirm the build stops with the variable named. An untested failure path is
+      Story 1.12's *"a test that cannot fail proves nothing"*, quoted back at every story since.
+- [ ] 6.5 Confirm masking worked, from evidence that is not a job log.
+- [ ] 6.6 Confirm the token is revoked — a second use of it must fail.
+
+### Task 7 — Record (AC: all)
+
+- [ ] 7.1 Dev Agent Record: budget declared vs spent **including the landing**, durations, digests,
+      the bundle evidence, and every «не проверено» that survives.
+- [ ] 7.2 A **D-record** in `docs/migration-decisions.md` plus a changelog row. Placement: next
+      number after D19, anchor `<a id="dNN"></a>` above the heading, **before**
+      `<a id="changelog"></a>`, and the retention-rule section stays last. Add the summary-table row —
+      Story 3.2's review had to add three of those retroactively.
+- [ ] 7.3 `deferred-work.md`: the three undeclared `VITE_*` variables, the PRE-PROD placeholder with
+      its corrected target value, the `OPENBAO_PROD_SECRET_ID` expiry with an owner, and the
+      discriminator collisions from §9.
+- [ ] 7.4 Amend `epics.md` **in place, no reflow** if any AC was satisfied in an amended form.
+
+### Task 8 — Close (AC: all)
+
+- [ ] 8.1 Commit on a branch; open a PR — `main` is gated (D16).
+- [ ] 8.2 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
+- [ ] 8.3 Update `sprint-status.yaml` to `review`.
+- [ ] 8.4 Close the budget ledger honestly, landing included.
+
+---
+
+## Dev Notes
+
+### The file being modified, as it stands
+
+`.forgejo/workflows/build.yml` after Stories 3.1 and 3.2 and 3.2's code review:
+
+- `workflow_dispatch` only, input `ref`; `concurrency: build-${{ inputs.ref }}`
+- `runs-on: node-20`, `timeout-minutes: 30`
+- installs `docker.io` and `jq`; `docker/setup-buildx-action@v3` with `driver: docker`
+- `docker/login-action@v3` with `secrets.REGISTRY_USER` / `REGISTRY_TOKEN_RW`
+- a tag step that reads `inputs.ref` **through `env:`**, sanitizes it, refuses `keep_pattern` shapes,
+  computes `latest` eligibility without pushing, and emits `sha-<12>` plus the sanitized ref
+- `docker/build-push-action@v5` with `build-args` still pointing at `build-check-3-1.invalid`
+- a fail-closed assertion comparing every tag against this run's digest, via `jq` on
+  `docker manifest inspect -v`
+
+**The rule the whole file now holds:** *no `${{ }}` inside any `run:` body.* It was installed after
+that pattern turned out to be a shell-injection path in a job holding registry write credentials.
+Keep it — it is the only version of "be careful with inputs" that can be checked mechanically.
+
+### Testing standards
+
+Every AC claim is a recorded observation — a database row, a digest, a file on disk — or it is marked
+«не проверено». **Job logs are unretrievable on this instance.** Anything that must be proved has to
+be observable in the database or the filesystem. Story 2.4's technique of encoding a value into an
+artifact *name* is available; Story 3.2's of putting it in an image **label** is cheaper.
+
+⚠️ **The server log IS readable** — `docker logs forgejo` — and two stories in a row generalised
+"job logs are unreadable" into not reading it, costing a false FR11 defect for two days.
+
+### Anti-patterns for this story
+
+- **Copying the 1.12 appendix verbatim.** It will not run. Carry the properties (§4), not the syntax.
+- **Concatenating the KV path from the secret name.** `preprod` does not exist.
+- **Treating a placeholder as a value.** Non-empty is not the test.
+- **Claiming AC2 covers five variables.** It covers two. §3.
+- **Printing a value to "check" it.** Only through a masking assertion.
+- **Pushing `latest` casually.** `keep_pattern` makes it permanent and removal has twice needed Oleg.
+- **Doing Story 3.4's, 3.5's or 3.6's job.** Triggers, cache and immutability respectively.
+- **Believing the plan is self-consistent here.** §1, §3 and §2 are three places where it is not.
+
+### Previous story intelligence
+
+- **3.2** — six decisions, two of which turned out to be made by the plan already; a budget that
+  under-counted by three runs; and two code defects (shell injection, an unenforced prohibition) that
+  only an adversarial review found. Read its Review Findings before starting.
+- **3.1** — `driver: docker` is load-bearing and forecloses Story 3.5's cache; a budget that reported
+  zero commits against four.
+- **1.12** — the proven read step, the three masking traps, the `$GITHUB_ENV` rule, and the host `bao`
+  wrapper that authenticates as `admin`.
+- **1.6** — a story that forbade itself from looking and therefore did not notice that its own
+  requirement had been fulfilled. *Measure the thing; do not infer it from the artifacts.*
+
+### Project Structure Notes
+
+| Path | Change |
+|---|---|
+| `.forgejo/workflows/build.yml` | **UPDATE** — the only executable file |
+| `_bmad-output/implementation-artifacts/3-3-…md` | UPDATE — this record |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | UPDATE — Task 7.3 |
+| `docs/migration-decisions.md` | UPDATE — D-record and changelog row |
+| `_bmad-output/planning-artifacts/epics.md` | UPDATE only if an AC is amended. **In place, no reflow** — Story 3.1 reflowed it and broke four citations including one shipped inside `build.yml` |
+| `Dockerfile.prod` | **Untouched** unless Decision 5 says otherwise, and then it is an AC5 deviation |
+| `.forgejo/workflows/ci.yml`, `.github/workflows/`, `src/` | **Untouched** |
+
+### References
+
+Cite by **search string, not line number** — `epics.md` was reflowed on 2026-08-14 and line-number
+citations across this repository are unreliable.
+
+- `epics.md` — Story 3.3 ACs, FR8, and the consumers 3.4, 3.6, 4.1, 4.3, 5.2, 5.3, 6.4
+- `1-12-…md` — `Appendix — the proven read step, verbatim`, `The three masking traps`,
+  `Name mapping — none of these three derive from each other`
+- `docs/migration-decisions.md` — D6, D15, D17, D18, D19, and `Восстановление правила очистки реестра`
+- `deferred-work.md` — the OpenBao section, and the items Story 3.2's review left for 3.3
+- `sprint-change-proposal-2026-08-15-preprod-reality.md` — the corrected PRE-PROD hostname
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List
+
+---
+
+## Open Questions for Review
+
+### Blocking
+
+1. 🔴 **The PRE-PROD value in OpenBao is a placeholder and this repository cannot write it.** The
+   corrected target is `https://api.crm.preprod.crm-prionex.online` (measured; the plan's previous
+   value was NXDOMAIN). Until someone with an OpenBao token writes it, **`preprod` is not buildable**
+   and AC1 closes for two environments out of three. **Owner: Oleg.**
+
+### Non-blocking
+
+2. **`latest` (AC4)** — the verdict Story 3.2 deferred here. Permanent once pushed.
+3. **Three `VITE_*` variables outside the build-arg contract** (§3) — AC2 cannot cover them without
+   an AC5 amendment.
+4. **`OPENBAO_PROD_SECRET_ID` expires 2027-06-09** with nothing rotating or monitoring it. Every
+   production deploy fails at once when it does.
+5. **The discriminator collides with the new long-lived branch names** — `dev-dev`, `preprod-preprod`,
+   `prod-prod` (§9).
