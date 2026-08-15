@@ -3,9 +3,11 @@ name: Build and Publish Image
 # Story 3.1: first workflow that writes into git.crm-prionex.com/crm/fe-prionex.
 #
 # Trigger is workflow_dispatch ONLY, with a `ref` input, and nothing else
-# (AC3, Prohibition 10). Story 3.2 owns the tagging scheme and the push/tag
-# triggers that go with it (FR6) — adding them here is explicitly out of
+# (AC3, Prohibition 10). Story 3.2 owns the tagging scheme (FR7); Story 3.4
+# owns the push/tag triggers (FR6). Adding either here was explicitly out of
 # scope for this story (Prohibition 10).
+# (FR6 was attributed to 3.2 here until 2026-08-15; corrected by Story 3.1's
+# code review against this story's own Prohibition 10 and AC scope note.)
 on:
   workflow_dispatch:
     inputs:
@@ -29,9 +31,14 @@ concurrency:
 jobs:
   build-and-push:
     name: Build and Push
-    # 🔴 LABEL DECISION (Story 3.1, Task 2.1 — see also epics.md:1248 and FR5
-    # amendment at epics.md:77-92, and 1-8-prove-action-compatibility-with-a-
-    # smoke-workflow.md:1102-1106). The epic's own AC and FR5 name the
+    # 🔴 LABEL DECISION (Story 3.1, Task 2.1 — see the FR5 amendment in
+    # _bmad-output/planning-artifacts/epics.md, searchable as "FR5:", and
+    # 1-8-prove-action-compatibility-with-a-smoke-workflow.md, "Trap 1").
+    # Cited by search string, not by line number: this comment outlives every
+    # edit to those files, and the line numbers it originally carried
+    # (epics.md:1248, :77-92) were invalidated within the same commit range
+    # that shipped it — by this story's own reflow of epics.md. Corrected
+    # 2026-08-15 by Story 3.1's code review. The epic's own AC and FR5 name the
     # `docker-build` label. That label resolves to
     # code.forgejo.org/oci/docker:cli, which carries NO Node runtime, so no
     # `uses:` step of any kind executes under it — not actions/checkout, not

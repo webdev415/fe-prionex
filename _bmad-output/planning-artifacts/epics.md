@@ -82,8 +82,14 @@ status checks.
 FR5: A Forgejo workflow `.forgejo/workflows/build.yml` runs on the **`node-20`** runner label
 and builds/pushes the image to `git.crm-prionex.com/crm/fe-prionex`. 🔴 **AMENDED 2026-08-13.**
 The original named `docker-build`, and **a workflow written against it cannot run at all.** That
-label resolves to `code.forgejo.org/oci/docker:cli`, which carries **no Node runtime** (measured:
-`command -v node` → absent), so no `uses:` step executes under it — not `docker/*`, not even
+label resolves to `code.forgejo.org/oci/docker:cli`, which carries **no Node runtime** ~~(measured:
+`command -v node` → absent)~~ — 🔴 **that parenthetical was corrected 2026-08-15 by Story 3.1's code
+review: no such probe exists.** `command -v node` appears nowhere in the repository. What Story 1.8
+recorded is the conclusion — *"docker-build's image has no Node runtime (Trap 1)"* (`1-8-…md:1103`)
+— reached from the upstream image's contents, not from a command run against it. The conclusion is
+right and Story 3.1's run 512 is downstream evidence for it; the citation dressed it as a
+measurement it never was, in the amendment that is now this plan's authority on the label. So no
+`uses:` step executes under it — not `docker/*`, not even
 `actions/checkout`. Story 1.8 established this and ran **every** probe job on `node-20`
 (`1-8-…md:1108,1216,1347`); its own code review filed the unamended text against Story 3.1 **by
 name** — *"Story 3.1 will read them and author a workflow that cannot work"* (`1-8-…md:686`) — and
@@ -105,14 +111,41 @@ environment discriminator in the tag (e.g. `sha-<short>-dev`).
 FR9: Build cache uses `type=registry,ref=<registry>/fe-prionex:buildcache` instead of
 `type=gha`.
 
+🔴 **CONFLICT, opened 2026-08-15 by Story 3.1's code review — Story 3.5 cannot satisfy this FR
+against the workflow as shipped, and nothing said so.** Story 3.1 set `driver: docker` on
+`setup-buildx-action` (`.forgejo/workflows/build.yml:78-81`) and marked the line **LOAD-BEARING**,
+with an instruction to the next reader not to remove it: the action's default
+(`driver: docker-container`) builds from its own BuildKit container, which does not inherit the job
+container's `--add-host git.crm-prionex.com:10.67.0.1`, and the push dies with a bare `EOF`. That
+diagnosis is sound and hard-won. But the **`docker` driver has no cache export** — `--cache-to
+type=registry` is unsupported on it; it needs `docker-container`, or a daemon with the containerd
+snapshotter enabled. So FR9 and Story 3.5's AC1, which name `cache-to type=registry` explicitly, are
+**unreachable without first solving the registry-resolution problem that `driver: docker` was chosen
+to avoid.** Neither Story 3.1's file, nor `deferred-work.md`, nor this plan recorded the trade-off:
+`driver: docker` appears 38 times across the artifacts and the cache-export limitation zero times.
+**Story 3.5 must budget for this as its first task, not discover it.** Three routes exist and none
+is free: give the dind daemon the host mapping so `docker-container` can reach the registry; enable
+the containerd snapshotter; or drop to native `docker build`/`docker push` with a manual cache
+strategy. **Owner: Story 3.5.**
+
 FR10: The Forgejo Container Registry is enabled, a ~~`ci-bot`~~ `robot-registry` technical user holds a
-`write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **Проверено 2026-08-12:** s1 использует `robot-registry`/read, s2 — **`robot-deploy`**/read; все семь токенов `robot-deploy` имеют scope ровно `read:package`, так что клауз «только» для s2 установлен. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`). ⚠️ Уточнено code review 2026-08-12: сам секрет **не упражнялся** — доказательство получено на минтованном эквиваленте того же scope; `REGISTRY_TOKEN_RW` остаётся «не проверено». Nothing was created. See `docs/migration-decisions.md#d14`.
+`write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **Проверено 2026-08-12:** s1 использует `robot-registry`/read, s2 — **`robot-deploy`**/read; все семь токенов `robot-deploy` имеют scope ровно `read:package`, так что клауз «только» для s2 установлен. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`). ⚠️ Уточнено code review 2026-08-12: сам секрет **не упражнялся** — доказательство получено на минтованном эквиваленте того же scope; ~~`REGISTRY_TOKEN_RW` остаётся «не проверено»~~. ✅ **Упражнён 2026-08-14 (Story 3.1, ран 512):** `docker/login-action` аутентифицировался именно этим секретом, пуш прошёл, и версия в реестре записана с `creator.login: robot-registry`. Снято code review 2026-08-15. Nothing was created. See `docs/migration-decisions.md#d14`.
 
 FR11: Registry retention removes `<branch>` tags after 14 days while guaranteeing that
 tags currently referenced by a running stand — and the previous N rollback targets — are
 never deleted. ~~🔴 **DEFECT, measured 2026-08-13 (Story 1.11):** … Forgejo's own cron does not do it.~~ ✅ **THE DEFECT IS WITHDRAWN — the premise was a measurement artefact, established 2026-08-14 by Story 3.1's review.** Forgejo 15.0.5 runs a **second, separate** cleanup: the `cleanup_sha256` cron, which has nothing to do with `package_cleanup_rule` and consults neither `remove_days` nor `keep_pattern`. It deletes container versions whose version string is `sha256:*` and which **no index manifest references**, subject to its own **24-hour** minimum age. Verbatim from the server log:
-> `2026/08/14 00:00:00 cleanup_sha256.go:146 [I] Removing 4 entries from ` + "`package_version`" + ` and ` + "`package_property`" + `
-The four orphaned digest rows Story 1.11 declared undeletable were deleted, blobs and all — verified: zero unreferenced `package_blob` rows remain. 🔴 **Why 1.11 concluded otherwise:** its entire measurement window fell inside that 24-hour grace period, and the log said so in plain words at the time — *«4 out of 4 container image(s) are not deleted because they were created less than 24h0m0s ago»*. It read «did not delete» as «never deletes». **Deleting a tag still frees no blob storage** — that half stands — but Forgejo does reclaim dangling digest versions, so FR11 needs rewording rather than a new mechanism. **Method lesson, worth more than the correction:** the answer had been sitting in `docker logs forgejo` for eight hours; the story generalised «job logs are unretrievable on this instance», which is true, into not reading the **server** log, which is not.
+> ```
+> 2026/08/14 00:00:00 cleanup_sha256.go:146 [I] Removing 4 entries from package_version and package_property
+> ```
+>
+> *(Quote repaired 2026-08-15 by Story 3.1's code review — it had been committed with literal Go
+> string-concatenation syntax, `` ` + "`package_version`" + ` ``, inside the block labelled
+> "verbatim". It rendered as broken Markdown, and a corrupted quote is a poor foundation for
+> withdrawing a defect. `deferred-work.md` renders the same log line with different counts
+> (`4 entries from package_version`, `30 from package_file`) — the two are not reconciled, and the
+> `package_property` / `package_file` discrepancy means neither should be called verbatim without
+> re-reading `docker logs forgejo`.)*
+The four orphaned digest rows Story 1.11 declared undeletable were deleted, blobs and all — verified: zero unreferenced `package_blob` rows remain. ✅ **CONFIRMED BY PREDICTION, 2026-08-15.** On 2026-08-14 this withdrawal still rested on an explanation rather than a test, and Story 3.1 left a falsifiable one behind: deleting the `sha-a1b2c3d-prod` index manifest orphaned its two children (`sha256:45758f18…` id 1926, `sha256:0f445cb8…` id 1927), which the `cleanup_sha256` account says must be swept at the next midnight once past the 24-hour grace period — *and if they survived, the explanation was wrong and this defect had to be reinstated*. Checked after that midnight: `crm/fe-prionex` holds **exactly one version**, `build-check-3-1`. Both children are gone, and so is the internal `_upload` row. The withdrawal is now founded on a prediction that could have failed and did not. 🔴 **Why 1.11 concluded otherwise:** its entire measurement window fell inside that 24-hour grace period, and the log said so in plain words at the time — *«4 out of 4 container image(s) are not deleted because they were created less than 24h0m0s ago»*. It read «did not delete» as «never deletes». **Deleting a tag still frees no blob storage** — that half stands — but Forgejo does reclaim dangling digest versions, so FR11 needs rewording rather than a new mechanism. **Method lesson, worth more than the correction:** the answer had been sitting in `docker logs forgejo` for eight hours; the story generalised «job logs are unretrievable on this instance», which is true, into not reading the **server** log, which is not.
 
 **Deployment (Phases 5, 6, 7)**
 
