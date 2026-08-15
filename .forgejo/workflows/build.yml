@@ -357,6 +357,12 @@ jobs:
         # after parsing, and cannot execute.
         env:
           REF_IN: ${{ inputs.ref }}
+          # Story 3.3's discriminator. Declared here as well as on the OpenBao
+          # step because `env:` is per-step — a value set on one step is not
+          # visible in the next, and `set -u` turns that into an unbound-variable
+          # abort rather than an empty tag. That is the right failure and it
+          # still cost a dispatch.
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
           FULL_SHA="$(git rev-parse HEAD)"
