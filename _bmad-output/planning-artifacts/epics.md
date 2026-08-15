@@ -1356,12 +1356,12 @@ deterministically.
 
 **Given** a build triggered by a `v*` git tag
 **When** tags are computed
-**Then** the image carries the corresponding semver tags.
+**Then** the image carries the corresponding semver tags. 🔴 **NOT IMPLEMENTED by Story 3.2 — recorded deviation, 2026-08-15.** The `v*` trigger this AC names belongs to Story 3.4 (FR6), no `v*` tag has ever existed in this repository (`git tag` and `git ls-remote --tags` both empty), no deploy story accepts a semver `image_tag`, and Story 6.5's promotion guard extracts a commit SHA from the tag — which a semver string does not carry — so it would reject one by construction. **Story 3.4 must either implement it or take the decision to drop FR7's semver clause; it must not inherit this unexamined.** Annotated here by Story 3.2's code review, which found the deviation recorded in `deferred-work.md` and [D18](../../docs/migration-decisions.md#d18) but not in this file — the one a later story actually reads.
 
 **Given** a build from `main`
 **When** tags are computed
 **Then** the image additionally carries `latest`
-**And** builds from any other ref never produce `latest`.
+**And** builds from any other ref never produce `latest`. 🔴 **The first clause is NOT IMPLEMENTED by Story 3.2 — recorded deviation, 2026-08-15.** The rule is computed on every run and the tag is deliberately not pushed (Oleg, 2026-08-15): `latest` is named literally in the retention rule's `keep_pattern`, so pushing it is permanent, and **Story 3.3 AC4 is authorised to decide `latest` should not exist at all** — removal afterwards costs an authorised `DELETE` plus a `write:package` token. The second clause is closed and proven from the image config label `org.prionex.latest-eligible`. ⚠️ `LATEST_ELIGIBLE=true` has never been produced by any run: no build from `main` has happened. **Story 3.3 AC4 owns the verdict and flips a one-line switch.**
 
 **Given** the tag set has been produced
 **When** the registry is inspected after a build

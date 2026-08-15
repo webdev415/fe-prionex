@@ -1441,7 +1441,9 @@ constraint 3.1 created and nobody wrote down.
   story was told not to foreclose later decisions and this is the one it foreclosed — silently,
   while telling 3.5 not to touch the line. **Owner: Story 3.5, as its first task rather than its
   first surprise.** Recorded against FR9 in `epics.md`.
-- ⚠️ **The fail-closed assertion stops being fail-closed after the first run.**
+- ✅ **CLOSED by Story 3.2** — the assertion now compares this run's digest, shape-guarded, with the
+  tag list validated too. *(Struck 2026-08-15; it had been left open in this file while the work was
+  done, so a reader saw a live item owned by a finished story.)* ~~**The fail-closed assertion stops being fail-closed after the first run.**~~
   `.forgejo/workflows/build.yml:114-117` runs `docker manifest inspect …:build-check-3-1 || exit 1`.
   Because the tag is a **fixed literal**, that asserts *the tag exists*, not that *this run's image
   is under it* — and the registry accepts tag overwrite, so last-writer-wins is invisible. The build
@@ -1450,7 +1452,10 @@ constraint 3.1 created and nobody wrote down.
   run's manifest even if this run pushed nothing. It mattered little while the tag was a throwaway
   and the step ran once; it matters the moment tags become meaningful. **Owner: Story 3.2 — give the
   build step an `id:`, and assert the digest this run produced, not the tag's existence.**
-- ⚠️ **The concurrency group keys on the wrong ref, and today degenerates to a constant.**
+- ✅ **CLOSED by Story 3.2** — re-keyed to `inputs.ref`. ⚠️ **But it re-opens for Story 3.4:** on a
+  `push` event `inputs.ref` is undefined, the group becomes the constant `build-`, and the single
+  global mutex returns under far heavier traffic. *(Struck and re-scoped 2026-08-15.)*
+  ~~**The concurrency group keys on the wrong ref, and today degenerates to a constant.**~~
   `.forgejo/workflows/build.yml:20-22` uses `group: build-${{ github.ref }}` — the *dispatch* ref —
   while the content built is `inputs.ref` (`:50`). Two dispatches of the same `inputs.ref` issued
   from different dispatch refs land in different groups and race for the same tag, which is exactly
@@ -1489,8 +1494,18 @@ constraint 3.1 created and nobody wrote down.
 
 ## Opened by story 3.2 (2026-08-15)
 
-- 🔴 **The registry lowercases image tags, and a consumer that does not will ask for a tag that does
-  not exist.** Story 3.2's sanitizer emitted `probe-3-2-Tag-Scheme` — the image label
+- ⚠️ **The registry STORES image tags lowercased. Whether a mixed-case *reference* fails is
+  unestablished — and Story 3.2's own run suggests it does not.** 🔴 *Rewritten 2026-08-15 by Story
+  3.2's code review: the first version of this entry stated the failure as fact and handed it to
+  Story 4.3 as an instruction. No `docker pull` was ever attempted, and the fail-closed assertion in
+  the same run inspected the **mixed-case** name and succeeded. Forgejo keeps `Version` and
+  `LowerVersion` and resolves through the folded column. ✅ **Settled 2026-08-15 from the database, which is better than a `pull`:**
+  `select version, lower_version … where version <> lower_version` returns **zero rows** — Forgejo
+  folds the case on WRITE, into `version` itself, not merely into an index column — and the unique
+  key is `UQE_package_version_s (package_id, lower_version)`. The write path folds and the lookup
+  key is the folded column, so a mixed-case reference resolves. **Produce whatever you like; it will
+  match case-insensitively.** Lowercasing on the consumer side is tidiness, not a correctness
+  requirement. The original entry had it backwards.* Story 3.2's sanitizer emitted `probe-3-2-Tag-Scheme` — the image label
   `org.prionex.ref` preserves that exact mixed case — and what landed in `package_version` is
   **`probe-3-2-tag-scheme`**. The OCI grammar permits uppercase in a tag; this instance normalises
   anyway. **Owner: Story 4.3**, which deploys DEV by `ref` and must derive the tag itself: the
@@ -1570,3 +1585,52 @@ constraint 3.1 created and nobody wrote down.
   Forgejo, which has no mirror to GitHub in either direction, but it is why `development` cannot
   simply be deleted without checking who still pushes to the GitHub remote. **Owner: Oleg, whenever
   the old model is retired. Not urgent; not forgotten.**
+
+## Deferred from: code review of story-3.2 (2026-08-15)
+
+The review was told the thing that mattered: **one agent wrote this story, implemented it, and
+recorded its own evidence.** "Does the implementation match the story?" proves nothing when both
+came from one mind, so the layers were pointed at the decisions. They found more here than in either
+of the two reviews before it, and the two worst findings were in code. Both are fixed; what follows
+is what is not.
+
+- ⚠️ **A ref can sanitize into another ref's tag, and truncation can do the same.** `%main` →
+  `-main` → strip leading `-` → **`main`**, overwriting the real branch tag; and `cut -c1-100`
+  truncates mid-token with no uniqueness check, so two branches sharing a 100-character prefix
+  produce one tag. Neither has a clean workflow-side fix — both need a registry-side check that a
+  tag is not being repointed to a different digest. **Owner: Story 3.6**, whose AC2 is exactly that
+  question, and which now has two concrete cases to test rather than a hypothetical.
+- ⚠️ **The residual concurrency race has a sharper consequence than Story 3.2 recorded.** Two refs at
+  one commit land in different groups and can race for the same `sha-` tag. Because `Dockerfile.prod`
+  runs `npm ci` with no reproducibility guarantee, the two builds produce **different digests** — so
+  the race does not merely repoint a tag, it makes the fail-closed assertion go **red on a
+  legitimate build**, inverting the one signal this instance has (a green job *is* the evidence).
+  **Owner: Story 3.6.**
+- ⚠️ **`dev`, `preprod` and `prod` now exist as branches** (D19, landed the same day). Story 3.3's
+  environment discriminator will therefore produce `dev-dev`, `preprod-preprod` and `prod-prod` for
+  builds of the long-lived branches. The `-dev` collision handover Story 3.2 wrote does not cover
+  this case because those branches did not exist when it was written. **Owner: Story 3.3.**
+- ⚠️ **Story 3.4 inherits two landmines from 3.2's dispatch-only shape.** (1) The concurrency key
+  becomes the constant `build-` under a `push` event. (2) The `latest` gate and the tag computation
+  both read `inputs.ref`, which a push event does not set — so the sanitizer receives an empty
+  string and the step now *fails closed* rather than inventing a tag, which is correct but means
+  **every automatic build will fail until 3.4 supplies the ref from the event.** Deliberate: a build
+  that cannot name its own ref should stop, not guess. **Owner: Story 3.4.**
+- 🔑 **`.claude/settings.json` grants `Bash(ssh root@10.67.0.1:*)` repository-wide.** Added during
+  Story 3.2 for read-only database queries, committed to the **shared** settings file rather than
+  `settings.local.json`, so it applies to every clone and every future agent session — and the
+  wildcard suffix pre-approves writes to the host that runs the registry, both runners and another
+  tenant's production. It was also absent from the story's File List. **Owner: Oleg — narrow it to
+  the queries it was added for, or move it to `settings.local.json`.**
+- ⚠️ **Three of the four `build.yml` robustness gaps are explicitly declined, not silently skipped.**
+  `timeout-minutes: 30` is now set. Still open: `apt-get install docker.io jq` unpinned and
+  unretried (a Debian mirror hiccup fails the build); no `docker image prune` against +0.80 GB of
+  dind volume per build; all four actions on floating major tags in an epic whose Story 3.6 is about
+  a tag identifying exactly one artifact. Declining is recorded here so the next reader does not have
+  to guess whether they were considered. **Owner: whoever next opens `build.yml` — and this time the
+  item names what "declined" means, because Story 3.2 inherited it and neither did nor declined it.**
+- ⚠️ **The `keep_pattern` guard in `build.yml` is a copy of a rule that lives only in the database.**
+  It will drift the moment anyone edits the retention rule, and nothing detects the drift. It is
+  deliberately a copy — the alternative is a database round trip inside every build — but the
+  duplication is real. **Owner: whoever edits `package_cleanup_rule` next; the guard is at the
+  `case "$SANITIZED"` block and names the rule it mirrors.**

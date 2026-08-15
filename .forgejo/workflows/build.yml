@@ -69,6 +69,11 @@ jobs:
     # Do NOT "correct" this back to docker-build — the job will not fail
     # informatively, it will simply not run any step.
     runs-on: node-20
+    # The only ceiling before this was the runner's own `timeout: 2h`, on a host
+    # with capacity 2 shared with another tenant's production. A hung build held
+    # half the CI capacity for two hours. 30 minutes is generous against the
+    # 168 s this job actually takes and against Story 3.1's 170 s.
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -83,7 +88,17 @@ jobs:
       - name: Install docker CLI
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends docker.io
+          # `jq` joins docker.io here for the fail-closed assertion, which reads
+          # the manifest's Descriptor digest by field name rather than by
+          # position. Both remain unpinned and unretried — a Debian mirror
+          # hiccup fails the build. That is one of four robustness gaps
+          # `deferred-work.md` addressed to "whoever next opens build.yml";
+          # Story 3.2's review pointed out that 3.2 opened the file and neither
+          # did them nor declined them. Declining them here, deliberately:
+          # pinning and retry logic want their own run to validate, and this
+          # change already needs one for the tagging fixes. `timeout-minutes`
+          # below is the one of the four that costs nothing to take now.
+          apt-get install -y --no-install-recommends docker.io jq
 
       - name: Verify docker CLI reaches the nested daemon
         run: docker version
@@ -149,14 +164,36 @@ jobs:
       # emitted here, and a length mismatch fails every legitimate release.
       - name: Compute tags from the checked-out commit
         id: tags
+        # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
+        # `${{ }}` inside the `run:` body. A `${{ }}` expression is substituted
+        # textually BEFORE bash parses the line, so `REF_IN="${{ inputs.ref }}"`
+        # executes whatever a `$(...)`, a backtick or a closing quote in the ref
+        # says — and git permits all of them in a branch name
+        # (`git check-ref-format --branch 'feat/$(id)'` exits 0). By this point
+        # in the job `docker/login-action` has already written REGISTRY_TOKEN_RW
+        # into the docker config: an org-scope `write:package` credential over a
+        # namespace holding another team's production. Found by Story 3.2's own
+        # code review, in Story 3.2's own code. `env:` passes the value as data,
+        # after parsing, and cannot execute.
+        env:
+          REF_IN: ${{ inputs.ref }}
         run: |
           set -euo pipefail
           FULL_SHA="$(git rev-parse HEAD)"
           SHORT_SHA="$(printf '%s' "$FULL_SHA" | cut -c1-12)"
-          REF_IN="${{ inputs.ref }}"
           SANITIZED="$(printf '%s' "$REF_IN" \
             | sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^[.-]+//' | cut -c1-100)"
-          if [ -z "$SANITIZED" ]; then SANITIZED="ref"; fi
+
+          # No silent fallback. An empty result means the ref was composed
+          # entirely of characters outside the tag grammar — every Cyrillic ref
+          # does this, in a project whose whole written record is in Russian.
+          # The first version substituted the literal `ref` here, which is a
+          # value fallback wearing an `if` instead of a `||`: two commits would
+          # land on one meaningless tag and overwrite each other undetected.
+          if [ -z "$SANITIZED" ]; then
+            echo "FAIL: ref '${REF_IN}' sanitizes to an empty string — nothing in it" \
+                 "is legal in a Docker tag. Refusing to invent a tag name."; exit 1
+          fi
 
           IMAGE=git.crm-prionex.com/crm/fe-prionex
 
@@ -169,6 +206,48 @@ jobs:
           TAGS="${IMAGE}:sha-${SHORT_SHA}"
 
           # AC2: the branch tag, sanitized above.
+          #
+          # 🔴 GUARD, not prose. The story's Prohibition 4 says "do not push any
+          # tag matching keep_pattern unless it is a recorded decision" — and
+          # until Story 3.2's code review, nothing enforced it. `inputs.ref` is
+          # documented as "branch, tag, or SHA", every one of these is a legal
+          # git branch name, and each sanitizes to ITSELF straight into a
+          # permanent tag:
+          #
+          #   latest  buildcache  prod-current  preprod-current
+          #   v1.2.3  1.2.3  1.2.3-anything  prod-<7-64 hex>  preprod-<7-64 hex>
+          #   sha-<7-64 hex>-prod  sha-<7-64 hex>-preprod
+          #
+          # This repository already names branches `release-v1.3.1`…`release-v1.4.2`,
+          # so `v1.4.3` as a branch is ordinary, not contrived. Pushing
+          # `prod-current` would repoint the production pointer Epic 6 depends on
+          # — from an image built with throwaway build-args — and no retention
+          # rule will ever remove it: `keep_pattern` is consulted before
+          # `remove_pattern`, so protected means protected at any age. Removal
+          # costs an authorised DELETE plus a `write:package` token, which on
+          # this project has twice required the operator in person.
+          #
+          # The pattern below is the live rule's `keep_pattern`, minus its
+          # `fe-prionex/` prefix and its `sha256:` alternative (a digest can
+          # never be a ref name). Keep it in step with the database — the rule
+          # lives ONLY there and cannot be restored from this repository.
+          case "$SANITIZED" in
+            latest|buildcache|prod-current|preprod-current)
+              PROTECTED=yes ;;
+            [0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*)
+              PROTECTED=yes ;;
+            prod-*|preprod-*|sha-*-prod|sha-*-preprod)
+              PROTECTED=yes ;;
+            *)
+              PROTECTED=no ;;
+          esac
+          if [ "$PROTECTED" = "yes" ]; then
+            echo "FAIL: ref '${REF_IN}' sanitizes to '${SANITIZED}', which matches the" \
+                 "registry retention rule's keep_pattern. That tag would be PERMANENT and" \
+                 "removable only by an authorised DELETE with a write:package token." \
+                 "Refusing. If this is deliberate, it is a decision — record it first."; exit 1
+          fi
+
           TAGS="${TAGS},${IMAGE}:${SANITIZED}"
 
           # AC4: `latest` comes only from `main` — computed here, evaluated on
@@ -182,7 +261,18 @@ jobs:
           # The evaluated value is published as an image label below, so the
           # negative half of AC4 is provable from the database rather than from
           # an absence — job logs are unreadable on this instance.
-          if [ "$SANITIZED" = "main" ]; then LATEST_ELIGIBLE=true; else LATEST_ELIGIBLE=false; fi
+          # ⚠️ The test is case-insensitive and accepts the fully-qualified
+          # spelling, because the registry folds case and `actions/checkout`
+          # accepts `refs/heads/main`. Story 3.2's first version compared
+          # `"$SANITIZED" = "main"` only, so `Main`, `refs/heads/main` and a raw
+          # SHA of main's tip all produced latest_eligible=false — a false
+          # negative on the branch the AC is about, invisible because job logs
+          # are unreadable. Its own review caught it; the fix is here rather
+          # than in the record because the record cannot be executed.
+          case "$(printf '%s' "$REF_IN" | tr 'A-Z' 'a-z')" in
+            main|refs/heads/main) LATEST_ELIGIBLE=true ;;
+            *)                    LATEST_ELIGIBLE=false ;;
+          esac
           PUSH_LATEST=false
 
           if [ "$LATEST_ELIGIBLE" = "true" ] && [ "$PUSH_LATEST" = "true" ]; then
@@ -201,6 +291,11 @@ jobs:
           echo "full_sha=${FULL_SHA}" >> "$GITHUB_OUTPUT"
           echo "sanitized_ref=${SANITIZED}" >> "$GITHUB_OUTPUT"
           echo "latest_eligible=${LATEST_ELIGIBLE}" >> "$GITHUB_OUTPUT"
+          # The raw ref, unsanitized. `sanitized_ref` is NOT the ref: the
+          # sanitizer is not invertible — `a/b` and `a-b` both produce `a-b` —
+          # so a label built from it cannot answer "which ref made this image".
+          # Story 3.2's record claimed it could, in three documents. One line.
+          echo "raw_ref=${REF_IN}" >> "$GITHUB_OUTPUT"
           echo "Computed tags: ${TAGS}"
           echo "latest eligible: ${LATEST_ELIGIBLE}; pushed: ${PUSH_LATEST}"
 
@@ -211,10 +306,13 @@ jobs:
       # explicit non-production literals with no `||` fallback (Dockerfile.prod
       # declares no defaults) — real values are Story 3.3's, from OpenBao.
       #
-      # `labels:` is Story 3.2's, one line, and it is most of Story 3.6 for
-      # free: 3.6 AC1 wants the commit mapping verifiable from image metadata
-      # without a run log, and 3.6 AC3 wants the environment determinable from
-      # the image itself. Every value here comes from the checked-out tree.
+      # `labels:` is Story 3.2's, and it pre-pays Story 3.6 **AC1 only**: the
+      # commit mapping is verifiable from image metadata without a run log.
+      # 3.6 AC3 — "the environment it was built for is determinable from the
+      # image itself" — is NOT served: no environment label is emitted, because
+      # FR8 belongs to Story 3.3 (Prohibition 6). Story 3.2's first version
+      # claimed both ACs here; corrected by its own review, because a 3.6 dev
+      # reading this file would have believed AC3 was already paid for.
       - name: Build and push image
         id: build
         uses: docker/build-push-action@v5
@@ -227,7 +325,8 @@ jobs:
             org.opencontainers.image.revision=${{ steps.tags.outputs.full_sha }}
             org.opencontainers.image.version=${{ steps.tags.outputs.short_sha }}
             org.opencontainers.image.source=git.crm-prionex.com/CRM/fe-prionex
-            org.prionex.ref=${{ steps.tags.outputs.sanitized_ref }}
+            org.prionex.ref=${{ steps.tags.outputs.raw_ref }}
+            org.prionex.ref-sanitized=${{ steps.tags.outputs.sanitized_ref }}
             org.prionex.latest-eligible=${{ steps.tags.outputs.latest_eligible }}
           build-args: |
             VITE_API_BASE_URL=https://build-check-3-1.invalid/api
@@ -253,29 +352,78 @@ jobs:
       # `docker manifest inspect -v` is used rather than the bare form because
       # the bare form prints the manifest BODY, and diffing bodies passes for
       # any image built from the same Dockerfile.
+      #
+      # Three things the first version got wrong, all found by Story 3.2's own
+      # code review and all fixed here:
+      #   1. The tag list had none of the validation the digest had. An empty
+      #      list expands to nothing under `set -u`, the loop body never runs,
+      #      and the step prints "All 0 tags resolve" and exits 0 — restoring
+      #      the vacuous check it exists to remove.
+      #   2. `grep -o … | head -1` assumes the Descriptor digest is the FIRST
+      #      "digest" in the marshalled output. True today by Go struct field
+      #      ordering and single-platform output; false the moment buildx emits
+      #      an index — which is what Story 3.5 must do to get a registry cache,
+      #      since `driver: docker` cannot export one. It would then compare a
+      #      child digest against the index digest and fail every correct build.
+      #      `jq -r '.[0].Descriptor.digest // .Descriptor.digest'` reads the
+      #      field by name. It also removes the SIGPIPE race `head -1` created
+      #      under `pipefail`.
+      #   3. A parse failure was reported as "did not resolve in the registry",
+      #      which sends the next engineer after the wrong cause on an instance
+      #      where the log is unreadable. The two are now separate messages.
       - name: Assert every tag resolves to this run's digest (fail-closed)
+        # Values arrive through `env:`, like the tag step's — see its comment.
+        # These two are workflow-computed rather than dispatch-supplied, so
+        # neither is attacker-controlled; they move anyway so the rule is
+        # uniform and greppable: **no `${{ }}` appears inside any `run:` body in
+        # this file**, which is a gate you can actually run, unlike "be careful".
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS_RAW: ${{ steps.tags.outputs.tags }}
         run: |
           set -euo pipefail
-          DIGEST='${{ steps.build.outputs.digest }}'
           echo "Build reported digest: '${DIGEST}'"
+          # Shape-checked before use: comparing two empty strings succeeds, and
+          # that is precisely the vacuous check being replaced. The hex class is
+          # tested here, not just the length — the first version's message
+          # claimed "64 hex" while the check only counted characters.
           case "${DIGEST}" in
-            sha256:*) ;;
+            sha256:[0-9a-f]*) ;;
             *) echo "FAIL: build step reported no usable digest ('${DIGEST}')." \
                     "Refusing to compare — an empty digest would make this check vacuous."; exit 1 ;;
           esac
-          if [ "${#DIGEST}" -ne 71 ]; then
+          if [ "${#DIGEST}" -ne 71 ] || printf '%s' "${DIGEST#sha256:}" | grep -qv '^[0-9a-f]\{64\}$'; then
             echo "FAIL: digest '${DIGEST}' is not sha256: plus 64 hex."; exit 1
           fi
 
-          IFS=',' read -ra TAGLIST <<< '${{ steps.tags.outputs.tags }}'
+          if [ -z "${TAGS_RAW}" ]; then
+            echo "FAIL: the tag list is empty. Zero tags verified is not a pass."; exit 1
+          fi
+          IFS=',' read -ra TAGLIST <<< "${TAGS_RAW}"
+          if [ "${#TAGLIST[@]}" -lt 2 ]; then
+            echo "FAIL: expected at least the sha- and ref tags, got ${#TAGLIST[@]}."; exit 1
+          fi
+
+          VERIFIED=0
           for TAG in "${TAGLIST[@]}"; do
-            RESOLVED="$(docker manifest inspect -v "${TAG}" \
-              | grep -o '"digest": "sha256:[0-9a-f]\{64\}"' | head -1 \
-              | sed 's/.*"\(sha256:[0-9a-f]*\)"/\1/')" || {
-                echo "FAIL: ${TAG} did not resolve in the registry."; exit 1; }
+            RAW="$(docker manifest inspect -v "${TAG}")" || {
+              echo "FAIL: ${TAG} did not resolve in the registry."; exit 1; }
+            RESOLVED="$(printf '%s' "${RAW}" \
+              | jq -r 'if type == "array" then .[0].Descriptor.digest else .Descriptor.digest end')" || {
+              echo "FAIL: could not PARSE the manifest for ${TAG}. This is a parse failure," \
+                   "not a registry failure — the tag resolved."; exit 1; }
+            case "${RESOLVED}" in
+              sha256:[0-9a-f]*) ;;
+              *) echo "FAIL: parsed '${RESOLVED}' for ${TAG}, which is not a digest." \
+                      "Parse failure, not a registry failure."; exit 1 ;;
+            esac
             if [ "${RESOLVED}" != "${DIGEST}" ]; then
               echo "FAIL: ${TAG} resolves to ${RESOLVED}, not this run's ${DIGEST}."; exit 1
             fi
             echo "OK: ${TAG} -> ${RESOLVED}"
+            VERIFIED=$((VERIFIED + 1))
           done
-          echo "All ${#TAGLIST[@]} tags resolve to ${DIGEST}."
+          if [ "${VERIFIED}" -ne "${#TAGLIST[@]}" ]; then
+            echo "FAIL: verified ${VERIFIED} of ${#TAGLIST[@]} tags."; exit 1
+          fi
+          echo "All ${VERIFIED} tags resolve to ${DIGEST}."
