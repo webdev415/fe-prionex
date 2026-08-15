@@ -4,7 +4,7 @@ baseline_commit: e97709b6
 
 # Story 2.3: Publish Coverage as an Artifact Instead of Uploading to Codecov
 
-Status: review
+Status: done
 
 > **Read §1 before you read the epic's ACs.** The epic assumes `npm run test:coverage` works. **It
 > does not, and it never has on this repository.** `@vitest/coverage-v8` is not installed and cannot
@@ -311,40 +311,40 @@ than left for 2.4 to discover.
 
 ### Task 1 — Bind the facts before changing anything (AC: 1, 2, 5)
 
-- [ ] 1.1 Re-verify §1 on the current tree: `grep -n 'coverage' package.json`,
+- [x] 1.1 Re-verify §1 on the current tree: `grep -n 'coverage' package.json`,
       `ls node_modules/@vitest/`, `node -e "require.resolve('@vitest/coverage-v8')"`, and
       `CI=true npm run test:coverage`. All four are recorded in §1 at `e97709b6`; if any has drifted,
       stop and re-plan rather than proceeding on a stale premise.
-- [ ] 1.2 Confirm `.forgejo/workflows/ci.yml` still matches Dev Notes — in particular that the `test`
+- [x] 1.2 Confirm `.forgejo/workflows/ci.yml` still matches Dev Notes — in particular that the `test`
       job runs `npm run test:run:ci` (`:141-142`), that `upload-artifact@v3` is at `:204`, and that
       the file is 212 lines.
-- [ ] 1.3 Record the current run count on this repository as the run-budget baseline, from
+- [x] 1.3 Record the current run count on this repository as the run-budget baseline, from
       `action_run`, before creating any runs.
-- [ ] 1.4 Confirm both runners are online and carry `node-20`.
+- [x] 1.4 Confirm both runners are online and carry `node-20`.
 
 ### Task 2 — Fix the dependency (AC: 1)
 
-- [ ] 2.1 Add `"@vitest/coverage-v8": "4.1.3"` to `devDependencies` in `package.json`. **Pin exact,
+- [x] 2.1 Add `"@vitest/coverage-v8": "4.1.3"` to `devDependencies` in `package.json`. **Pin exact,
       no caret** — `package-lock.json:10803` states the peer requirement as `4.1.3`, matching
       `vitest@4.1.3` at `:10759`. A caret would let it drift off the peer range on the next install.
-- [ ] 2.2 Run `npm install` (not `npm ci`) to update `package-lock.json`, then confirm
+- [x] 2.2 Run `npm install` (not `npm ci`) to update `package-lock.json`, then confirm
       `node -e "require.resolve('@vitest/coverage-v8')"` succeeds.
-- [ ] 2.3 Prove it locally before spending a run: execute a coverage pass over a **narrow** path and
+- [x] 2.3 Prove it locally before spending a run: execute a coverage pass over a **narrow** path and
       confirm `coverage/` is produced and contains `coverage-final.json` and `index.html`. Do not run
       the full suite locally just to prove the provider resolves.
-- [ ] 2.4 Confirm `.gitignore:36` (`coverage/`) still covers the output directory, and that
+- [x] 2.4 Confirm `.gitignore:36` (`coverage/`) still covers the output directory, and that
       `git status` after 2.3 shows no `coverage/` entries.
 
 ### Task 3 — Declare the budget and the write list before spending either (AC: 5)
 
-- [ ] 3.1 State the number of CI runs this story expects to create, **before creating any**. Story
+- [x] 3.1 State the number of CI runs this story expects to create, **before creating any**. Story
       2.1 declared 2 and spent 2 (`2-1-…md:212`); Story 1.11 declared zero tokens and minted two
       (`deferred-work.md:534`). Remember each run is now ~468–487 s and there is **no cancel
       endpoint** (`migration-decisions.md:581-585`), and that a push to a PR branch produces **two**
       runs, not one (`deferred-work.md:849-851`).
-- [ ] 3.2 List every write to shared state: which refs get pushed, and whether `package.json` /
+- [x] 3.2 List every write to shared state: which refs get pushed, and whether `package.json` /
       `package-lock.json` land on `main` in the same commit as the workflow change.
-- [ ] 3.3 Decide whether a Forgejo API token is needed at all. Stories 2.1 and 2.2 gathered their
+- [x] 3.3 Decide whether a Forgejo API token is needed at all. Stories 2.1 and 2.2 gathered their
       evidence by `docker exec` against the database on s1 — prefer that. **If a token is genuinely
       needed: plan the exit in writing here first**, name the owner, and get Oleg's explicit
       authorisation. An admin cannot revoke another account's token (`deferred-work.md:298-300`), so
@@ -352,91 +352,106 @@ than left for 2.4 to discover.
 
 ### Task 4 — Write the change (AC: 1, 2, 3)
 
-- [ ] 4.1 Add `"test:coverage:ci": "cross-env NODE_OPTIONS=--max-old-space-size=16384 vitest run --coverage"`
+- [x] 4.1 Add `"test:coverage:ci": "cross-env NODE_OPTIONS=--max-old-space-size=16384 vitest run --coverage"`
       to `package.json`. **Do not modify `test:run`, `test:run:ci` or `test:coverage`**
       (Prohibition 5).
-- [ ] 4.2 In `.forgejo/workflows/ci.yml`, **replace** the `test` job's `npm run test:run:ci` step
+- [x] 4.2 In `.forgejo/workflows/ci.yml`, **replace** the `test` job's `npm run test:run:ci` step
       (`:141-142`) with `npm run test:coverage:ci`. One pass, not two (Prohibition 3).
-- [ ] 4.3 Update the comment block at `:123-140` — it currently explains `test:run:ci` vs `test:run`
+- [x] 4.3 Update the comment block at `:123-140` — it currently explains `test:run:ci` vs `test:run`
       and will otherwise describe a step that no longer exists. Keep the heap rationale, which is
       still the reason for the `:ci` variant, and add the one-pass rationale from §2.
-- [ ] 4.4 **No `continue-on-error` on the coverage step** (AC3, Prohibition 9). Write the reason as a
+- [x] 4.4 **No `continue-on-error` on the coverage step** (AC3, Prohibition 9). Write the reason as a
       comment in the YAML, not only in this file — the next reader will be looking at the workflow.
-- [ ] 4.5 Archive before uploading: a step that produces a single file from `coverage/` (e.g.
+- [x] 4.5 Archive before uploading: a step that produces a single file from `coverage/` (e.g.
       `tar -czf coverage.tar.gz coverage/`), then `actions/upload-artifact@v3` with a `name` of
       `coverage`, `path` pointing at that single file, and `retention-days: 1`. **`@v3`, not `@v4`**
       (Prohibition 2). Comment why the archive exists — §4, one database row per file.
-- [ ] 4.6 Keep the peak-memory step (`:150-162`) and its `if: always()`. It is Story 2.1's open AC4
+- [x] 4.6 Keep the peak-memory step (`:150-162`) and its `if: always()`. It is Story 2.1's open AC4
       and coverage makes its number *more* interesting, not less.
-- [ ] 4.7 Grep the finished file: `codecov` must return nothing outside the historical comment at
+- [x] 4.7 Grep the finished file: `codecov` must return nothing outside the historical comment at
       `:210-212` (which Task 8.1 rewrites anyway); `ubuntu-latest` must return nothing outside the
       warning comment at `:60-65`; `upload-artifact@v4` must return nothing; `test:run:ci` must
-      return nothing.
-- [ ] 4.8 Confirm no repository or organisation secret is named for Codecov (AC2). Absence is the
+      return nothing. — ⚠️ **Close-out note 2026-08-15:** holds for *active configuration*, which is
+      what the subtask means; `test:run:ci` does still appear in `ci.yml` **comments** (`:124`,
+      `:127-128`, `:139`, `:148`), deliberately, because they explain what the coverage step
+      replaced. Same shape as Story 2.1's Task 4.8, whose review made the "active configuration
+      only" reading explicit — recorded here so the two stories read the same way.
+- [x] 4.8 Confirm no repository or organisation secret is named for Codecov (AC2). Absence is the
       expected result — record that you checked, not that you assumed.
 
 ### Task 5 — Prove it, and measure what Story 2.4 will inherit (AC: 1, 4, 5)
 
-- [ ] 5.1 Land the change on `main` and let the armed `push`/`pull_request` triggers do their work,
+- [x] 5.1 Land the change on `main` and let the armed `push`/`pull_request` triggers do their work,
       or dispatch deliberately — but count every run against the Task 3.1 budget, including the
       duplicate that a PR branch produces.
-- [ ] 5.2 From the database (`action_run`, `action_run_job`, `action_task` — **not** from logs, §6),
+- [x] 5.2 From the database (`action_run`, `action_run_job`, `action_task` — **not** from logs, §6),
       record: run index, job ids, per-job durations, whole-run duration, and status.
-- [ ] 5.3 Count the artifact rows produced under the `coverage` name. **Expect exactly 1** if Task
+- [x] 5.3 Count the artifact rows produced under the `coverage` name. **Expect exactly 1** if Task
       4.5 was done. If it is not 1, the archive step did not do its job — say so and fix it before
       closing, because the alternative is up to ~1229 rows twice per commit (§4).
-- [ ] 5.4 Confirm `retention-days: 1` is applied by checking `expired_unix` is exactly one day after
+- [x] 5.4 Confirm `retention-days: 1` is applied by checking `expired_unix` is exactly one day after
       creation, as Story 2.1 established for `dist` (`deferred-work.md:693-695`).
-- [ ] 5.5 State the coverage overhead: new `Unit Tests` duration minus the 467 s baseline from run
+- [x] 5.5 State the coverage overhead: new `Unit Tests` duration minus the 467 s baseline from run
       505 (`2-2-…md:631`). This number is currently «не проверено» (§2) and is the whole reason
       Task 5 exists.
-- [ ] 5.6 Compare the whole-run duration against **15 minutes** (`epics.md:1187`). Under: record it
+- [x] 5.6 Compare the whole-run duration against **15 minutes** (`epics.md:1187`). Under: record it
       and hand the number to Story 2.4. Over: record it, flag it as Blocking, and do not close the
       story quietly.
-- [ ] 5.7 **AC4 — ask Oleg to open
+- [x] 5.7 **AC4 — ask Oleg to open
       `/CRM/fe-prionex/actions/runs/{index}/artifacts/coverage` in a browser and confirm the
       download.** Record the run index and the exact URL here first, so the click is thirty seconds.
       Do not attempt it with a token — it redirects to `/user/login` (§3). If Oleg is unavailable,
-      close AC4 as «не проверено» **with the URL recorded**.
+      close AC4 as «не проверено» **with the URL recorded**. — ✅ **URL recorded** (run index 42,
+      not `action_run.id` 522 — the distinction the review caught). ⏳ **The click was never made
+      and can no longer be made against run 522: the artifact expired 2026-08-15 13:39 UTC.** AC4
+      closed on the on-disk evidence instead — 3,939,632 bytes at the recorded `storage_path`, gzip
+      magic, 974 entries under `coverage/` — which proves the artifact rather than Forgejo's HTTP
+      route. What stays «не проверено» is narrow and belongs to Forgejo, not to this workflow, and
+      any future run reproduces the URL in eight minutes.
 
 ### Task 6 — Decide what coverage is *for*, before someone assumes (AC: 3, 5)
 
-- [ ] 6.1 State plainly in this file that coverage is **published, not enforced**: there is no
+- [x] 6.1 State plainly in this file that coverage is **published, not enforced**: there is no
       threshold, no gate, and no `coverage.thresholds` block in `vitest.config.ts:24-28`. A future
       reader will otherwise assume a coverage number means something.
-- [ ] 6.2 If a threshold is wanted, name it as a separate story rather than adding it here — it
+- [x] 6.2 If a threshold is wanted, name it as a separate story rather than adding it here — it
       turns a publishing change into a merge gate, and Story 2.6 owns required checks.
 
 ### Task 7 — Record (AC: all)
 
-- [ ] 7.1 Fill in Dev Agent Record: runs created vs. declared, durations, artifact row count, the AC3
+- [x] 7.1 Fill in Dev Agent Record: runs created vs. declared, durations, artifact row count, the AC3
       decision as executed, and every «не проверено» that survives.
-- [ ] 7.2 Update `docs/forgejo-migration.md:109`, which currently records the codecov verdict as
+- [x] 7.2 Update `docs/forgejo-migration.md:109`, which currently records the codecov verdict as
       «Убрать, coverage — в артефакт» — an intention. Once this lands it is a fact, and the row
       should say so with the run that proves it.
-- [ ] 7.3 Record in `docs/migration-decisions.md` that `@vitest/coverage-v8` was never installed and
+- [x] 7.3 Record in `docs/migration-decisions.md` that `@vitest/coverage-v8` was never installed and
       that `CI.yml:70-78` therefore uploaded nothing. This is a finding about the **inherited
       pipeline**, not about Forgejo, and it is the kind of thing a migration document exists to
       capture.
 
 ### Task 8 — Sweep the stale records this story invalidates (AC: 4)
 
-- [ ] 8.1 Rewrite `.forgejo/workflows/ci.yml:199-202`. It currently says *"There is no
+- [x] 8.1 Rewrite `.forgejo/workflows/ci.yml:199-202`. It currently says *"There is no
       Actions-artifacts API on this instance, so retrieval of this artifact is unverified."* The
       first clause is still true; the second is superseded (§3). Correct it so the next reader does
       not conclude artifacts are unusable.
-- [ ] 8.2 Mark `deferred-work.md:695-696` superseded. It states AC4 *"has no known way to be
+- [x] 8.2 Mark `deferred-work.md:695-696` superseded. It states AC4 *"has no known way to be
       satisfied"*, which `deferred-work.md:886-898` settled two days later. Leave the original
       visible with a supersession marker, matching the convention already used at `:899`.
-- [ ] 8.3 Add a new `deferred-work.md` entry for anything this story opens — at minimum the coverage
+- [x] 8.3 Add a new `deferred-work.md` entry for anything this story opens — at minimum the coverage
       overhead number for Story 2.4, and whether the archive-before-upload pattern should be applied
       retroactively to the `dist` upload's 154 rows.
 
 ### Task 9 — Close (AC: all)
 
-- [ ] 9.1 Set `Status: review`, update `sprint-status.yaml:79` from `backlog`.
-- [ ] 9.2 Confirm every claim in Dev Agent Record carries a `file:line`, a database value, or an
+- [x] 9.1 Set `Status: review`, update `sprint-status.yaml:79` from `backlog`.
+- [x] 9.2 Confirm every claim in Dev Agent Record carries a `file:line`, a database value, or an
       explicit «не проверено».
+- [x] 9.3 **Close-out 2026-08-15.** Code review ran 2026-08-14 (`c18a65f7`, ten findings, all
+      applied) and the story then sat in `review` for a day with every AC closed — the checkboxes
+      above were the only thing outstanding, because this story recorded its progress in prose and
+      never came back to the boxes. Ticked against the Dev Agent Record, with the two qualifications
+      at 4.7 and 5.7 written next to the subtasks they qualify. `Status` → `done`.
 
 ---
 

@@ -4,7 +4,7 @@ baseline_commit: 54322fdd
 
 # Story 2.2: Trigger CI on Pull Requests and Feature Branches
 
-Status: review
+Status: done
 
 > **What changed since Story 2.1.** `.forgejo/workflows/ci.yml` exists on `main` and is green
 > (runs 492 and 493, four jobs, ~487 s cold / ~484 s warm — `2-1-…md:388-399`). Its trigger is
@@ -361,9 +361,19 @@ the arrival rate.*
       control of its own and that gap is still open (`deferred-work.md:109-116`) — do not repeat
       it. Pick a ref that is safe: a throwaway branch, never a protected one.
 
-### Task 6 — Prove `pull_request` (AC: 2, 3) — **gated on Task 3.3** — 🚫 DEFERRED, not executed
+### Task 6 — Prove `pull_request` (AC: 2, 3) — **gated on Task 3.3** — 🚫 deferred at the time, ✅ **EXECUTED 2026-08-14**
 
-**Not executed, by design.** Task 3.3 resolves to "no" (below): `has_pull_requests` stays `false`.
+✅ **Close-out 2026-08-15.** The gate opened the day after this story closed: Oleg enabled the
+pull-request unit specifically to test the behaviour, the `pull_request` clause went into `ci.yml`
+(`ec445428`), and PR #2 was opened, exercised with a second commit, and cleaned up. Every subtask
+below was performed and its evidence is in the Dev Agent Record under **"AC2 and AC3 — CLOSED
+2026-08-14"** (runs 513–516). The boxes are ticked against that evidence rather than re-run.
+⚠️ Two things the original deferral warned about survived the execution and are **not** closed by
+it: the ~497-branch legacy-fallback window that enabling the unit re-opens, and `has_pull_requests`
+being left enabled — a state change this story's exit plan (Task 3.4) intended to reverse. Both are
+Oleg's, both are in `deferred-work.md`.
+
+**Original deferral, kept for the record.** Task 3.3 resolved to "no": `has_pull_requests` stays `false`.
 Oleg's standing decision from 2026-08-10 is unchanged, and this session's own brief repeated the
 prohibition explicitly (do not enable `has_pull_requests`, do not PATCH the repository, do not
 open a pull request) — re-enabling the unit re-arms legacy CI on another team's `ci-hub` runner for
@@ -371,20 +381,29 @@ any PR opened from any of the ~497 branches whose head commit predates the `.for
 placeholder. AC2 and AC3 close as «не проверено» per Task 3.3's own instruction: that is the
 acceptable outcome the task anticipated, not a shortfall.
 
-- [ ] 6.1 Only if `has_pull_requests` is enabled by decision. Open a PR from the Task 5 branch to
+- [x] 6.1 Only if `has_pull_requests` is enabled by decision. Open a PR from the Task 5 branch to
       `main`. Both the head commit and the base must carry `.forgejo/workflows/ci.yml`, or the
-      head falls through to legacy CI on `ci-hub` (§1).
-- [ ] 6.2 Record the run created by the `pull_request` event: id, event type, head SHA, four task
-      ids, statuses. Confirm from the database that the checks are **bound to the head SHA** —
-      that is what AC2's "visible as checks on the pull request" and AC3's "no longer gates the
-      merge" both actually assert.
-- [ ] 6.3 Push a second commit to the same PR head. Record: a new run appears against the new SHA,
-      and the earlier run's state. Expect auto-cancel of the superseded run **without** a
-      `concurrency` block (§5) — if it does **not** cancel, that contradicts
-      `migration-decisions.md:373-376` and is a finding worth more than the AC.
-- [ ] 6.4 Record which SHA each commit-status row points at, before and after. This is AC3's
-      second half and the only part that is not free.
-- [ ] 6.5 Close and delete the PR branch. Execute Task 3.4's exit for `has_pull_requests`.
+      head falls through to legacy CI on `ci-hub` (§1). — PR #2, from `probe/2-2-pr-check`, cut
+      from current `main`. All four runs are `workflow_id = ci.yml`; the legacy workflow never
+      fired.
+- [x] 6.2 Record the run created by the `pull_request` event: id, event type, head SHA, four task
+      ids, statuses. Confirm from the database that the checks are **bound to the head SHA**. —
+      Run 514, `pull_request`, `refs/pull/2/head`, `839e9051`, 4/4 green, 503 s. `commit_status`
+      rows carry per-event contexts (`CI / Lint (pull_request)` etc.) bound to the head SHA.
+- [x] 6.3 Push a second commit to the same PR head. Record: a new run appears against the new SHA,
+      and the earlier run's state. — Second commit `f82eb9b2` produced runs 515 (`push`, 461 s) and
+      516 (`pull_request`, 510 s). ⚠️ **The auto-cancel expectation was not tested**: the second
+      commit followed the first run to completion, so nothing was superseded and there was no
+      opportunity to observe a cancel. D8's claim is neither confirmed nor contradicted here.
+- [x] 6.4 Record which SHA each commit-status row points at, before and after. — Statuses for
+      `f82eb9b2` bind separately from `839e9051`'s: checks attach to a commit, not to a branch, so
+      the stale result stops gating by construction. This is AC3's second half.
+- [x] 6.5 Close and delete the PR branch. Execute Task 3.4's exit for `has_pull_requests`. —
+      ⚠️ **Half done.** PR #2 was closed and the branch deleted local and remote. Task 3.4's exit
+      was **not** executed: `has_pull_requests` was deliberately left **enabled**, because turning
+      it back off is a decision rather than cleanup and it is Oleg's. Story 2.5 then depended on it
+      being on, and Story 2.6's gate now does too — so the exit is not merely unexecuted, it has
+      been overtaken. The ~497-branch legacy-fallback window it was meant to re-close stays open.
 
 ### Task 7 — Answer AC4 in writing (AC: 4) ✅
 
@@ -704,9 +723,21 @@ interpretation) that stayed with the coordinating agent throughout.
 
 ### Completion Notes List
 
-**AC1 — the triggers exist and name the right refs. Partly closed and PARTLY DEFERRED — two shortfalls, not one.** 🔴 **Corrected by review 2026-08-13:** this previously read *«mostly closed, with one stated asymmetry»*, which undercounted. AC1 has a `pull_request` clause of its own (`epics.md:1106`), and **that clause is deferred exactly as AC2 and AC3 are** — every deferral record written by this story names only AC2/AC3, so an AC1 marked satisfied would carry the `pull_request` half into the archive as done. It is not done. The second shortfall is the branch-set asymmetry below.
-`.forgejo/workflows/ci.yml` on `main` now runs on `push` with `branches-ignore: [main, staging,
-development]` plus `workflow_dispatch`; `pull_request` is deliberately absent (see AC2). The set of
+**AC1 — the triggers exist and name the right refs. ✅ CLOSED 2026-08-14; the branch-set asymmetry
+below is a separate, still-open item.** 🔴 **Corrected by review 2026-08-13:** this previously read
+*«mostly closed, with one stated asymmetry»*, which undercounted. AC1 has a `pull_request` clause of
+its own (`epics.md:1106`), and **that clause was deferred exactly as AC2 and AC3 were** — every
+deferral record written by this story names only AC2/AC3, so an AC1 marked satisfied would have
+carried the `pull_request` half into the archive as done. ✅ **Closed on 2026-08-14 (recorded at
+close-out 2026-08-15):** Oleg enabled the pull-request unit, the `pull_request` clause was added to
+`ci.yml` targeting `main`, and it was exercised four times — see the AC2/AC3 section below and, more
+heavily, Story 2.5's five real PRs. All three of AC1's clauses now exist and are proven.
+⚠️ **What is NOT closed by that** is the second shortfall: the branch-set asymmetry, which is now
+tracked as an Epic-wide item in `deferred-work.md` and needs Oleg's decision.
+The original record follows.
+`.forgejo/workflows/ci.yml` on `main` runs on `push` with `branches-ignore: [main, staging,
+development]` plus `workflow_dispatch`; ~~`pull_request` is deliberately absent (see AC2)~~ — added
+2026-08-14. The set of
 branches carrying the file (`main` only) does **not** fully match the set the `push` trigger names
 (every branch except three) — that is the known, declared consequence of choosing not to propagate
 `ci.yml` to `staging`/`development` this session (Task 2.2). Concretely: a feature branch cut from

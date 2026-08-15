@@ -658,8 +658,19 @@
   persisted, versus **0 of 4** here. The web UI would serve them but needs a browser session.
   **Consequence, and it is not small:** Epics 2–6 are all written to "recorded from a real run".
   Anything a story needs to prove must be made observable in the **database or the filesystem**,
-  not printed to stdout. Story 2.1's AC4 (peak memory) is stuck behind exactly this. **Owner:
-  whoever can either fix log persistence on the instance or read the UI on request.**
+  not printed to stdout. ~~Story 2.1's AC4 (peak memory) is stuck behind exactly this.~~ ✅ **AC4 was
+  closed 2026-08-14 at 2163 MB** — by applying the rule in the previous sentence rather than by
+  fixing log retrieval: Story 2.4 put the figure into `action_artifact.artifact_name`, where one SQL
+  query returns it. The diagnosis in this entry stands and is still unowned; only the "stuck"
+  conclusion was wrong. **Owner: whoever can either fix log persistence on the instance or read the
+  UI on request.**
+  ⚠️ **Identifier caveat, added 2026-08-15 by Story 2.1's code review.** Every run number in this
+  section — 492, 493, and the task ids 4872–4879 — is a **global `action_run.id` / `action_task.id`
+  row id**, not the per-repository `index` that the web route `/CRM/fe-prionex/actions/runs/{index}`
+  takes. Story 2.1 closed by asking a human to "read run 492 in the web UI", which as written points
+  at a URL that does not resolve. Story 2.4 hit the same trap (querying by `index` returned 0 rows)
+  and Story 2.3's review hit its own version of it. **Quote both numbers, or say which one you
+  mean.**
 - ✅ **RESOLVED 2026-08-13 — root cause found and fixed in `src/test/setup.ts`.** Radix's FocusScope
   restores focus from a `setTimeout(..., 0)` scheduled by its unmount cleanup, and nothing awaited
   it. With `pool: 'forks'` + `maxWorkers: 1` + `fileParallelism: false`, files run sequentially in
@@ -681,10 +692,25 @@
   2.6 puts required status checks on top, so merges would block at random. **This should be fixed
   before 2.5, not after.** Both CI runs in Story 2.1 happened to be green, which is what a 33%
   flake looks like when you sample twice.
+  🔴 **Two corrections from Story 2.1's code review (2026-08-15), kept because the failure mode is
+  more useful than the fact.** (1) **It was not opened by Story 2.1.** Story 1.9 had already
+  recorded the identical Radix `focus-scope` failure in `DocumentUploadModal.test.tsx` and hit it
+  twice; filing it here as newly discovered discarded prior observations that would have doubled the
+  sample. (2) **"33%" is a same-day n=6 figure and was propagated as a hard rate** — into a
+  quantitative prediction for Story 2.5, and verbatim into the changelog row in
+  `docs/migration-decisions.md`. The confidence interval on 2 of 6 runs spans roughly 4%–78%. The
+  bug was real and the fix was right; the arithmetic dressed a guess as a measurement.
 - ⚠️ **Story 2.4's remediation target is the test job, and the cache is not it.** Measured across
-  runs 492 (cold) and 493 (warm): whole run 487 s → 484 s, a saving of **3 seconds**. The cache
+  runs 492 (cold) and 493 (warm): whole run 487 s → 484 s, a saving of **3 seconds**. ~~The cache
   server is working — `.cache/actcache` holds 523 MB on runner 1 and 396 MB on runner 2, populated
-  by these runs — `npm ci` simply is not where the time goes. **`Unit Tests` is 486 of the 487
+  by these runs — `npm ci` simply is not where the time goes.~~ 🔴 **Swept 2026-08-15 by Story 2.1's
+  code review: that sentence proves a save, not a restore.** Directory growth shows the cache server
+  accepted writes; whether `setup-node` ever *restored* from it is the question Story 2.1's Task 5.3
+  actually asked, and a 0.6% delta is as consistent with "no restore, and `npm ci` is cheap" as with
+  "restore happened". The record was readable all along — per-entry `usedAt` in
+  `.cache/actcache/bolt.db`, found later by Story 2.4, which named its own version of this
+  over-generalisation its biggest error. The conclusion below stands on the durations alone and does
+  not need the cache claim. **`Unit Tests` is 486 of the 487
   seconds**; the other three jobs finish inside its shadow. The same suite takes ~150 s locally, so
   the runner is about **3× slower**, on a host at load average 12.99 carrying another tenant's
   production.
@@ -992,7 +1018,15 @@ should reference the stronger neighbouring gate rather than invent a weaker one 
 - ℹ️ **Peak memory closed:** `Unit Tests` peaked at **2163 MB** against the 16384 MB ceiling
   (13.2%) on run 531 — Story 2.1's AC4, open since 2026-08-11, is now answered. Story 2.1's doubling
   of the heap ceiling (8192→16384 MB) was confirmed precautionary rather than corrective: even the
-  original 8192 MB ceiling would have had 62% headroom over the measured peak.
+  original 8192 MB ceiling would have had ~~62%~~ **~74%** headroom over the measured peak
+  *(arithmetic corrected 2026-08-15 by Story 2.1's code review: (8192−2163)/8192 = 73.6%)*.
+  ⚠️ **What the 2163 MB actually measures, added by the same review.** `memory.peak` is the whole
+  **job cgroup's** lifetime high-water mark, and the step reads it after checkout, `setup-node`,
+  `npm ci` and the test run have all executed in that cgroup. Nothing resets it and nothing samples
+  per-process. So 2163 MB is an upper bound on *everything the job did*, published under a label
+  that reads as the test heap — which is the number the 8192/16384 argument is about, and not the
+  number this is. Anyone sizing a stand from it (Epic 5) should treat it as a job ceiling, not a
+  process measurement.
 - ✅ **`probe/2-1-peak-memory` (commit `4fc90b78`) is merged.** ⚠️ **Superseding the first version of
   this entry, which recorded it as still outstanding** — Story 2.4 declined to merge it unilaterally
   (measurement story, not a scope to make a production-CI-behaviour call) and left it as an
@@ -1305,3 +1339,63 @@ reconstructed from a run of its own.
   PR #9's merge, while that PR had been green since 20:46:38 UTC) and accepted the verdict — but a
   future story that leans on this semantic for a *new* design decision should spend the one API
   round trip to re-measure it rather than cite Story 2.6.
+
+## Deferred from: code review of story-2.1 (2026-08-15)
+
+Story 2.1 was the last Epic 2 story still owed a code review — the workflow every other Epic 2
+story built on shipped, and was reviewed three stories later than it should have been. Fourteen
+findings were patched into the story file, `docs/migration-decisions.md` and the entries above.
+Six are deferred here.
+
+- 🔴 **`staging` and `development` have no CI gate at all, and after Story 2.6 that is a regression
+  against the thing being replaced. This needs a decision, not a patch.** State at HEAD: `ci.yml`
+  exists only on `main`; `ci.yml:42-46` puts all three long-lived branches in `branches-ignore`;
+  `ci.yml:54-56` scopes `pull_request` to base `main`. So a PR into `staging` or `development`
+  fires **no run** and is gated by **nothing** — and it fails silently, which is worse than failing
+  red. The legacy `.github/workflows/CI.yml:4-7` covered all three branches, so Epic 2 has narrowed
+  the gate while its own goal is "CI as the quality gate". Flagged by Story 2.1, RESTATED by Story
+  2.2 (which declined propagation deliberately and for good reasons — two more pushes to protected,
+  CD-triggering branches), and untouched since. **Epic 4 meets this first (story 4.2 deploys DEV),
+  and Epic 6 inherits it. Owner: Oleg — the call is whether the two branches get the gate, get
+  retired, or stay explicitly ungated on the record.**
+- ⚠️ **No `timeout-minutes` on any job, and no `concurrency` block covering `workflow_dispatch` or
+  `pull_request`.** The only ceiling is the runner's own `timeout: 2h`. `Unit Tests` is ~99% of the
+  critical path, and a hang there — the flaky-timer class of failure, now fixed, was exactly this
+  shape — holds one of four runner slots for two hours on a host that carries another tenant's
+  production (load average observed rising 12.99 → 25.82 inside one story). `ci.yml:28-32` declines
+  the concurrency block on the grounds that Forgejo auto-cancels superseded runs, but that default
+  is documented for `push`; dispatch and PR re-triggers still stack. Benign while the trigger was
+  dispatch-only; live since Story 2.2 armed `push` and `pull_request`. Related: `runs-on: node-20`
+  has no fallback label and Forgejo has no queue timeout, so if both runners are down a run waits
+  indefinitely rather than failing — indistinguishable from "still running". **Owner: whoever next
+  opens `ci.yml`; needs one PR through the Story 2.6 gate and one run to validate.**
+- ⚠️ **`test:run:ci` is orphaned.** `package.json:15`. Story 2.3 replaced the workflow step with
+  `test:coverage:ci`; a repo-wide grep finds no workflow, hook or config that calls `test:run:ci` —
+  only prose in five BMAD documents and comments in `ci.yml`. It is the *only* code change Story
+  2.1 made to `package.json`, and the deviation from AC4 that the story defends at length now has
+  no caller. Story 2.3 explicitly forbade removing it, so the deletion needs an owner rather than a
+  drive-by. **Owner: the next story that touches `package.json` scripts.**
+- ⚠️ **The 16384 MB heap ceiling was never justified by measurement, and the measurement says it
+  was not needed.** `package.json:15` and `:17`. Measured peak 2163 MB; the original 8192 already
+  had ~74% headroom. Story 2.4 declined the rollback as out of scope and nobody took it. Note the
+  ceiling is not free: nothing caps the job container, so V8 will grow to 16 GB if the suite ever
+  asks, and the kernel OOM killer — not V8 — becomes the real ceiling on a shared host. **Owner:
+  unassigned. Reverting to 8192 is a one-line change and one CI run.**
+- ⚠️ **The peak-memory step has two failure modes that write a plausible-looking lie into the
+  evidence store.** `ci.yml:187-217`. (1) `bytes=$(cat /sys/fs/cgroup/memory.peak)` runs under
+  `bash -e`, and only *absence* is guarded — a present-but-unreadable file (EACCES under a hardened
+  cgroup namespace, ENODEV on a partial mount) aborts the step and fails a job in which all 1921
+  tests passed, which is precisely the false-red the step's own comment promises to avoid. (2) A
+  non-numeric read (`max` is a legal value there) makes bash resolve `bytes` as a variable name
+  inside `$(( ))`, find it unset, and produce **0** — so `peak-memory-0mb` lands in
+  `action_artifact.artifact_name`, byte-identical in form to a real measurement, in the table this
+  project designated as its evidence store *because* logs are unreadable. Same for a run cancelled
+  mid-flight: both steps are `if: always()`, and `always()` includes cancelled. **Owner: whoever
+  next opens `ci.yml`. Fixes are small — quote the read, validate it is numeric, and stamp the
+  artifact name with the run's conclusion.**
+- ⚠️ **Every `upload-artifact` in `ci.yml` inherits `if-no-files-found: warn`.** `ci.yml:211-217`
+  (peak memory), `:235-248` (coverage), `:295-300` (`dist`). An empty or misplaced output uploads
+  zero files, the step warns, and the run stays **green** — and since retrieval is session-gated,
+  nobody can open the artifact to notice. AC5-shaped criteria ("uploads `dist/` as an artifact")
+  are satisfied by a zero-file upload. **Owner: whoever next opens `ci.yml`; `if-no-files-found:
+  error` is a one-line change per upload.**
