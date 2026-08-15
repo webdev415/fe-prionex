@@ -4,7 +4,7 @@ baseline_commit: 1d7b21c4
 
 # Story 3.2: Apply the Image Tagging Scheme
 
-Status: review
+Status: done
 
 > ~~🔴 **Branch from `1d7b21c4`, not from `main`.**~~ ✅ **Spent. PR #15 merged on 2026-08-15 and
 > this note's own instruction was to delete it once that happened — it shipped to `main` unedited
