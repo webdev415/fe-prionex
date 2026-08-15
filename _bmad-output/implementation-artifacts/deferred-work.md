@@ -1499,9 +1499,13 @@ constraint 3.1 created and nobody wrote down.
   3.2's code review: the first version of this entry stated the failure as fact and handed it to
   Story 4.3 as an instruction. No `docker pull` was ever attempted, and the fail-closed assertion in
   the same run inspected the **mixed-case** name and succeeded. Forgejo keeps `Version` and
-  `LowerVersion` and resolves through the folded column. One `docker pull` on a mixed-case tag would
-  settle it; until someone spends it, produce a string that matches case-insensitively — lowercasing
-  guarantees that — and do not inherit either claim as proven.* Story 3.2's sanitizer emitted `probe-3-2-Tag-Scheme` — the image label
+  `LowerVersion` and resolves through the folded column. ✅ **Settled 2026-08-15 from the database, which is better than a `pull`:**
+  `select version, lower_version … where version <> lower_version` returns **zero rows** — Forgejo
+  folds the case on WRITE, into `version` itself, not merely into an index column — and the unique
+  key is `UQE_package_version_s (package_id, lower_version)`. The write path folds and the lookup
+  key is the folded column, so a mixed-case reference resolves. **Produce whatever you like; it will
+  match case-insensitively.** Lowercasing on the consumer side is tidiness, not a correctness
+  requirement. The original entry had it backwards.* Story 3.2's sanitizer emitted `probe-3-2-Tag-Scheme` — the image label
   `org.prionex.ref` preserves that exact mixed case — and what landed in `package_version` is
   **`probe-3-2-tag-scheme`**. The OCI grammar permits uppercase in a tag; this instance normalises
   anyway. **Owner: Story 4.3**, which deploys DEV by `ref` and must derive the tag itself: the
