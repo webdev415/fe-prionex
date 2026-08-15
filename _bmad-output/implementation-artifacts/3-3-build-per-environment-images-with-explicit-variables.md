@@ -4,7 +4,7 @@ baseline_commit: c0de23b0
 
 # Story 3.3: Build Per-Environment Images with Explicit Variables
 
-Status: ready-for-dev
+Status: review
 
 > **What this story is.** Story 3.2 gave images meaningful tags. This one gives them meaningful
 > *contents*: the API and WebSocket URLs for a chosen environment, read from OpenBao at build time
@@ -568,6 +568,207 @@ citations across this repository are unreliable.
 ## Dev Agent Record
 
 ### Agent Model Used
+
+Claude Opus 5 (1M context), directly — context, implementation and evidence in the parent session,
+with one research subagent for the OpenBao contract.
+
+### Debug Log References
+
+🔴 **Budget: declared 1 CI run + 2 dispatches. Spent 3 CI runs + 6 dispatches, plus the landing.**
+Three times over, and the overrun is entirely mine — three separate plumbing errors in one step,
+each costing a dispatch:
+
+| run | env | outcome |
+|---|---|---|
+| 582, 583 | dev, preprod | ❌ 19 s — dispatched against the pre-fix definition |
+| 584 | dev | ❌ 21 s — same, stale definition |
+| 586 | preprod | ✅ **failed as designed** — placeholder rejected, 20 s |
+| 587 | dev | ❌ 19 s — `ENVIRONMENT: unbound variable` in the tag step |
+| **589** | **dev** | ✅ **success, 107 s** |
+
+Plus CI runs 581, 585, 588 (~510 s each) on the probe branch.
+
+**The three errors, named:**
+
+1. **A dispatch issued before the push had landed** ran the previous definition. The workflow
+   definition comes from the dispatched ref, so pushing and dispatching are not one action.
+2. 🔴 **`export` missing.** `jq -n '{role_id: env.ROLE_ID}'` reads jq's **process environment** —
+   that is the entire reason the `env` builtin is used instead of `--arg`, which would put the
+   secret in jq's argv. The `case` block assigned `ROLE_ID` as a plain shell variable, so jq saw
+   `null`. **The argv-safety property was preserved and then broken by the plumbing around it**, and
+   the failure message blamed the credential. A non-empty check now separates a plumbing failure
+   from a credential failure, because only one of those is worth re-minting a `secret_id` over.
+3. **`env:` is per-step.** `ENVIRONMENT` was declared on the OpenBao step and used in the tag step.
+   `set -u` turned that into an abort rather than an empty discriminator silently mistagging the
+   image — the right failure, and it still cost a dispatch.
+
+Recorded rather than quietly re-run. Story 3.1's ledger and Story 3.2's both under-reported and both
+were caught on review; under-reporting after writing the subtask that forbids it would be the third.
+
+### 🔴 A load-bearing project assumption turned out to be false: job logs persisted
+
+Every story since 2.1 has been designed around *"job logs are not retrievable on this instance"* —
+404 on every API route, `log_in_storage` never true, 0 of 4 logs reaching disk. It is why AC4 was
+declared unclosable in 2.1, why 2.4 encoded a measurement into an artifact **name**, and why 3.2 put
+its evidence in an image **label**.
+
+**All three failures above were diagnosed by reading the job log.**
+
+```
+action_task 5815  log_in_storage = t  log_filename = CRM/fe-prionex/b7/5815.log.zst
+```
+
+The file exists at `/data/gitea/actions_log/…`, zstd-compressed, one JSON object per line with the
+step output in `content`. It gave the exact failing line each time — `FAIL: AppRole login failed`,
+then `ENVIRONMENT: unbound variable` — where the DB alone said only "step 6 failed".
+
+⚠️ **What is established and what is not.** These logs persisted; 2.1's did not. Whether something
+changed on the instance, or whether persistence was always intermittent and 2.1 sampled the wrong
+side of it, is **«не проверено»**. What is certain is that *"the log is unreadable, do not try"* is
+too strong as a standing rule and cost this project real work — 2.1 deferred an AC on it. **Check
+`log_in_storage` before assuming.** Recorded in `deferred-work.md`.
+
+### Completion Notes List
+
+**AC1 — closed for `dev` and `prod`, and `preprod` is accepted-but-unbuildable by design.** The
+`environment` input takes all three. `dev` built end to end (run 589). `preprod` fails at the value
+check, which is the correct behaviour and not a defect — see AC2.
+
+🔴 **The transport is not the one Story 1.12 proved, and could not be.** 1.12 recorded its step
+verbatim so this story could copy it; its install line is `apk add openbao`. This job runs on
+`node-20` (Debian) because Story 3.1 established that `docker-build` has no Node runtime and no
+`uses:` step executes under it. Measured: `bao` absent, `apt-cache policy openbao` empty, no such
+Debian package — while `curl` to `openbao:8200` returns 200. **D15's option (a) is dead for this job
+and option (b), the HTTP API D15 rejected, is the route.** Recorded as a deviation from D15. The
+seven properties 1.12 paid for are carried and labelled `(P1)`–`(P7)` in the file.
+
+**AC2 — closed, and proven by making it fail.** Run 586, `preprod`:
+
+```
+environment=preprod  kv=secret/fe/pre-prod/app
+FAIL: VITE_API_BASE_URL at secret/fe/pre-prod/app is not a URL — it has no scheme.
+This is what a PLACEHOLDER looks like. … (https://api.crm.preprod.crm-prionex.online
+— measured; the value the plan carried before 2026-08-15 was NXDOMAIN). Owner: Oleg.
+```
+
+The login **succeeded** there — so the failure is the value check, not the plumbing. 🔴 **The test is
+a scheme test, not a string match.** `secret/fe/pre-prod/app` holds
+`PLACEHOLDER-preprod-backend-not-provisioned`, and a non-empty check passes it happily — which would
+bake the literal word PLACEHOLDER into a bundle and satisfy AC2 with exactly the failure AC2 exists
+to prevent. Requiring a scheme rejects it on a property rather than a spelling.
+
+**AC3 — closed.** Run 589 pushed exactly two tags:
+
+```
+3185  sha-6332c263783d-dev
+3186  probe-3-3-env-dev
+```
+
+both on manifest blob `sha256:69648259…`. The shape is fixed by the retention rule, not the plan:
+`sha-<hex>-prod` / `-preprod` are permanent, `-dev` expires at 14 days. ⚠️ **The bare `sha-<short>`
+is gone.** FR8 requires a discriminator and AC3 requires the bare form never be ambiguous; under
+Option C one commit yields three images, so it cannot be both. **FR7, NFR4, Story 3.4 AC2 and Story
+3.6 AC1 all address images by the bare form and must now use `sha-<short>-<env>`** — recorded as an
+FR7 deviation.
+
+**AC4 — DECIDED: `latest` is dropped.** Not deferred a second time. It cannot be bound to one of
+three images without an arbitrary choice, and binding it to `prod` would make the most dangerous
+image the one reachable by the laziest reference. Nothing consumes it —
+`docker-compose.server.yml:8` points at **ghcr**, not at us, and Story 4.1 owns that line; FR19 and
+Story 4.3 already forbid `:latest` as a pull fallback. And it is the only irreversible option:
+`keep_pattern` names it literally, so one push makes it permanent. The evaluation is kept and still
+ships as `org.prionex.latest-eligible`, because AC4's negative half is provable from a positive value
+and not from an absence.
+
+**AC5 — closed. `Dockerfile.prod` untouched.** ⚠️ **And AC2's guarantee covers two variables of the
+five `src/` reads** — `VITE_OPERATOR_PHONE_URL`, `VITE_EASYPAY_PORTAL_API_KEY` and `VITE_BUILD_TS`
+are outside the `ARG` contract, get `undefined` baked in, and each has an in-source fallback (the
+websocket one to `localhost`). Closing that needs an AC5 amendment. Deferred with an owner rather
+than resolved by pretending the contract covers five.
+
+**✅ Task 6.3 — the check no AC asks for, and the one that proves the story worked.** The html layer
+was extracted from the registry's **own blob store** (no registry auth needed, the technique Story
+2.3 used for coverage): 162 entries, 115 JS files, 11 MB. It carries
+
+```
+https://api.dev.crm-prionex.online
+wss://api.dev.crm-prionex.online
+```
+
+and neither `build-check-3-1.invalid` nor `PLACEHOLDER` appears. ⚠️ **The first attempt at this was
+worthless and is worth recording:** a `docker create`/`cp` extraction silently produced an empty
+directory, and every "absent" it reported was vacuous. Story 1.11's lesson — *an empty result is not
+evidence of safety* — applied to my own verification. The second attempt has 115 JS files in it, so
+its absences mean something.
+
+**Also fixed while here:** the `keep_pattern` guard was tightened from globs to the rule's own regex.
+The glob form refused `prod-prod` — which is what branch `prod` plus the `-prod` discriminator
+produces, and branches named `dev`, `preprod` and `prod` have existed since D19.
+
+### ✅ `preprod` closed 2026-08-15 — the blocker was cleared and the build proves it
+
+Oleg wrote the corrected values into OpenBao (userpass login, `admin` policy). Recorded end to end:
+
+```
+BEFORE  secret/fe/pre-prod/app   version 1
+  VITE_API_BASE_URL = PLACEHOLDER-preprod-backend-not-provisioned
+  VITE_WS_URL       = PLACEHOLDER-preprod-backend-not-provisioned
+AFTER                            version 2
+  VITE_API_BASE_URL = https://api.crm.preprod.crm-prionex.online
+  VITE_WS_URL       = wss://api.crm.preprod.crm-prionex.online
+```
+
+`kv put` replaces the whole key set, so the key count was checked too: 2, as expected.
+
+**Run 593, 106 s, green.** Tags `sha-f8f358f43ced-preprod` and `probe-3-3-preprod-preprod`, both on
+manifest blob `sha256:45687dc4…`. And the bundle, extracted from the registry's own blob store —
+115 JS files, 11 MB:
+
+```
+https://api.crm.preprod.crm-prionex.online
+wss://api.crm.preprod.crm-prionex.online
+PLACEHOLDER                       absent
+build-check-3-1.invalid           absent
+api.dev.crm-prionex               absent
+api.preprod.crm-prionex.online    absent      ← the NXDOMAIN name the plan carried until 15.08
+```
+
+**So AC1 now closes for all three environments**, and `preprod`'s tags are `keep_pattern`-permanent
+by shape, which is the intended behaviour for a release candidate.
+
+🔑 **The admin token was revoked, not just forgotten.** `bao token revoke -self`, the cached
+`/home/openbao/.vault-token` deleted, and the revocation **proven by a negative control** — the next
+read returns `403`. Story 1.12 found nine false positives caused by exactly that file being left
+behind with a working token in it.
+
+### 🔴 Two process failures in landing this, both mine, both worth more than the code
+
+**1. A probe branch cut at the same commit as the PR branch silently un-greened the PR.** Commit
+statuses key on **SHA, not on branch**. `probe/3-3-preprod` was cut at the PR head `f8f358f4`, so its
+own `push` run wrote `pending` over the PR's already-green `CI / Unit Tests (push)` context, and the
+merge returned `405 not mergeable` with seven greens and one pending. The run finished on its own
+and the merge unblocked — but nothing about the failure said "your probe branch did this". **Cut
+probe branches from a commit the PR does not share.**
+
+**2. I deleted the PR head branch before the merge had succeeded, and the PR died with it.** The
+first merge attempt returned 405 (the pending status above); the same command block then deleted the
+branch; the second attempt returned **404**, and PR #23 was gone with the work still not on `main`.
+Nothing was lost — the commits were reachable locally and the branch was recreated — but the correct
+order is **merge, verify `main` moved, then delete**. The delete ran in the same block as a merge I
+had not checked.
+
+### File List
+
+- `.forgejo/workflows/build.yml` — UPDATE: the `environment` input, the OpenBao read step, the
+  discriminator, the `latest` decision, the environment label, the tightened guard
+- `_bmad-output/implementation-artifacts/3-3-…md` — this record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the log finding, the three undeclared
+  variables, the FR7 deviation
+- `docs/migration-decisions.md` — D-record and changelog row
+
+No `src/`, no `package.json`, no `Dockerfile.prod` change. Probe branch `probe/3-3-env` created,
+exercised and deleted within the session.
 
 ### Debug Log References
 

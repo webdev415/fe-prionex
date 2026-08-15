@@ -25,6 +25,15 @@ on:
         description: 'Git ref to build (branch, tag, or SHA).'
         required: true
         type: string
+      environment:
+        description: 'Target environment. Its API and WebSocket URLs are read from OpenBao and baked into the bundle.'
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - preprod
+          - prod
 
 # Workflow-level concurrency, per Story 3.1 AC5. Story 1.3 proved queueing works
 # at workflow level and is silently ignored at job level
@@ -129,6 +138,177 @@ jobs:
           password: ${{ secrets.REGISTRY_TOKEN_RW }}
 
       # ─────────────────────────────────────────────────────────────────────
+      # Story 3.3 — the environment's URLs, read from OpenBao, baked in (FR8).
+      #
+      # 🔴 THIS IS NOT THE STEP STORY 1.12 PROVED, AND IT COULD NOT BE.
+      # 1.12 proved an OpenBao read on run 486 and recorded it verbatim so this
+      # story could copy it. Its install line is `apk add openbao` — Alpine.
+      # 1.12's Task 3 chose that route explicitly on the premise that the build
+      # job runs on the `docker-build` label; Story 3.1 then established the
+      # opposite and shipped it, because `docker-build` resolves to an image
+      # with no Node runtime under which no `uses:` step executes at all (D17).
+      # Measured on a job-equivalent `node:20-bookworm`: `bao` absent,
+      # `apt-cache policy openbao` EMPTY — no such package in Debian bookworm —
+      # while `curl http://openbao:8200/v1/sys/seal-status` returns 200.
+      # So D15's option (a) is dead here and option (b), the raw HTTP API that
+      # D15 rejected, is the route. Recorded as a deviation from D15.
+      #
+      # What survives the change of transport is not the syntax but the seven
+      # properties 1.12 paid for. Each is implemented below and labelled:
+      #   (P1) no credential in any argv — the body goes in on stdin
+      #   (P2) fetch the JSON once, extract structurally, never re-parse KEY=VALUE
+      #   (P3) allowlist AND denylist the key names (PATH matches the allowlist)
+      #   (P4) revoke the token in this block, before anything else runs
+      #   (P5) mask with percent-escaping, per line
+      #   (P6) assertions that can actually fail
+      #   (P7) two preflight failures, two distinct messages
+      #
+      # 🔴 The token is confidential; the URLs are NOT. D15: «Шесть значений
+      # `VITE_*` — публичные URL, вшитые в бандл, который любой посетитель
+      # читает в devtools.» That asymmetry is why the token never leaves this
+      # block while the URLs are allowed to cross into the build step through
+      # $GITHUB_OUTPUT. Any statement that these URLs are secret is a defect.
+      - name: Read the environment's URLs from OpenBao
+        id: bao
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OPENBAO_ADDR: ${{ secrets.OPENBAO_ADDR }}
+          OPENBAO_DEV_ROLE_ID: ${{ secrets.OPENBAO_DEV_ROLE_ID }}
+          OPENBAO_DEV_SECRET_ID: ${{ secrets.OPENBAO_DEV_SECRET_ID }}
+          OPENBAO_PREPROD_ROLE_ID: ${{ secrets.OPENBAO_PREPROD_ROLE_ID }}
+          OPENBAO_PREPROD_SECRET_ID: ${{ secrets.OPENBAO_PREPROD_SECRET_ID }}
+          OPENBAO_PROD_ROLE_ID: ${{ secrets.OPENBAO_PROD_ROLE_ID }}
+          OPENBAO_PROD_SECRET_ID: ${{ secrets.OPENBAO_PROD_SECRET_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+
+          # Environment -> secret pair -> KV path, from a LITERAL table.
+          # 🔴 Never concatenate the path from the secret name. Four spellings
+          # are live and only three are right in their own place: the Forgejo
+          # secret says PREPROD, the OpenBao role says fe-pre-prod, the KV path
+          # says pre-prod, and this story's tag suffix says -preprod.
+          # `secret/fe/preprod/app` — the one a naive concatenation produces —
+          # does not exist.
+          case "$ENVIRONMENT" in
+            dev)     ROLE_ID="$OPENBAO_DEV_ROLE_ID";     SECRET_ID="$OPENBAO_DEV_SECRET_ID";     KV_PATH="fe/dev/app" ;;
+            preprod) ROLE_ID="$OPENBAO_PREPROD_ROLE_ID"; SECRET_ID="$OPENBAO_PREPROD_SECRET_ID"; KV_PATH="fe/pre-prod/app" ;;
+            prod)    ROLE_ID="$OPENBAO_PROD_ROLE_ID";    SECRET_ID="$OPENBAO_PROD_SECRET_ID";    KV_PATH="fe/prod/app" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+          # 🔴 EXPORT is not optional. `jq -n '{... env.ROLE_ID ...}'` reads jq's
+          # own PROCESS ENVIRONMENT — that is the whole point of using the `env`
+          # builtin instead of `--arg`, which would put the secret in jq's argv.
+          # A plain shell assignment is not in the environment, so jq sees null
+          # and the login fails with a message that blames the credential.
+          # The first version of this step omitted the export and cost a run.
+          export ROLE_ID SECRET_ID
+          echo "environment=${ENVIRONMENT}  kv=secret/${KV_PATH}"
+
+          # (P7) Preflight, two failures, two messages.
+          command -v curl >/dev/null || { echo "FAIL: curl missing on this runner."; exit 1; }
+          command -v jq   >/dev/null || { echo "FAIL: jq missing — the install step above did not do its job."; exit 1; }
+          grep -q openbao /etc/hosts || {
+            echo "FAIL: no 'openbao' mapping in /etc/hosts. The runner config is not carrying" \
+                 "--add-host openbao:<ip>. Both /opt/forgejo-runner-fe-prionex/config.yml and" \
+                 "config-2.yml on s1 need it, and the IP is HARDCODED — if forgejo-openbao was" \
+                 "recreated, its IP changed and both files need the new one."; exit 1; }
+          curl -sf -o /dev/null "${OPENBAO_ADDR}/v1/sys/seal-status" || {
+            echo "FAIL: OpenBao unreachable at ${OPENBAO_ADDR}. See the --add-host note above —" \
+                 "this is the failure that looks like a network problem and is a config problem."; exit 1; }
+
+          # (P1) AppRole login. The body goes in on STDIN. `-d "$json"` would put
+          # the secret_id in curl's argv, which is world-readable in /proc.
+          # Fail-closed on an empty payload too: if the export above were ever
+          # lost again, jq would emit `{"role_id":null,...}` and the failure would
+          # read as a credential problem rather than a plumbing one.
+          [ -n "${ROLE_ID:-}" ] && [ -n "${SECRET_ID:-}" ] || {
+            echo "FAIL: no AppRole credential in the environment for '${ENVIRONMENT}'." \
+                 "This is a plumbing failure, not a credential failure — check that the" \
+                 "secrets are set on the repository and that they were exported."; exit 1; }
+          BAO_TOKEN="$(jq -n '{role_id: env.ROLE_ID, secret_id: env.SECRET_ID}' \
+            | curl -sf --data @- "${OPENBAO_ADDR}/v1/auth/approle/login" \
+            | jq -r '.auth.client_token')" || {
+              echo "FAIL: AppRole login failed for '${ENVIRONMENT}'. A wrong secret_id fails" \
+                   "identically to a missing one — Forgejo secret values are write-only, so it" \
+                   "can only be re-minted, not read back."; exit 1; }
+          [ -n "$BAO_TOKEN" ] && [ "$BAO_TOKEN" != "null" ] || { echo "FAIL: login returned no token."; exit 1; }
+          echo "::add-mask::$BAO_TOKEN"
+
+          # (P2) Fetch once. Everything downstream reads this one JSON.
+          KV_JSON="$(curl -sf -H "X-Vault-Token: ${BAO_TOKEN}" \
+            "${OPENBAO_ADDR}/v1/secret/data/${KV_PATH}")" || {
+              echo "FAIL: could not read secret/${KV_PATH}."; exit 1; }
+
+          # (P4) Revoke NOW. The token must not survive into `docker build`.
+          curl -sf -o /dev/null -X POST -H "X-Vault-Token: ${BAO_TOKEN}" \
+            "${OPENBAO_ADDR}/v1/auth/token/revoke-self" || echo "WARN: self-revoke returned non-zero."
+          unset BAO_TOKEN
+
+          # (P5) Mask every value, per line, percent-escaped. Multi-line values
+          # mask only their first line otherwise, and a literal % registers the
+          # wrong string because workflow commands are percent-decoded.
+          _escape_for_mask() {
+            local s=$1; s=${s//%/%25}; s=${s//$'\r'/%0D}; s=${s//$'\n'/%0A}; printf '%s' "$s"
+          }
+          while IFS= read -r _line || [ -n "$_line" ]; do
+            [ -n "$_line" ] && echo "::add-mask::$(_escape_for_mask "$_line")"
+          done < <(jq -r '.data.data | to_entries[] | .value' <<<"$KV_JSON")
+
+          # (P3) Allowlist AND denylist. `PATH` and `LD_PRELOAD` both satisfy the
+          # allowlist regex perfectly; on the hub repo this class of bug hijacked
+          # PATH to /tmp/pwned. Both checks stay.
+          while IFS= read -r k; do
+            printf '%s\n' "$k" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$' \
+              || { echo "FAIL: refusing unsafe OpenBao key name: $k"; exit 1; }
+            case "$k" in
+              PATH|LD_PRELOAD|LD_LIBRARY_PATH|IFS|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|HOME|TMPDIR|DOCKER_CONFIG|DOCKER_HOST|BAO_*|VAULT_*|GITHUB_*)
+                echo "FAIL: refusing reserved OpenBao key name: $k"; exit 1 ;;
+            esac
+          done < <(jq -r '.data.data | keys[]' <<<"$KV_JSON")
+
+          API_URL="$(jq -r '.data.data.VITE_API_BASE_URL // empty' <<<"$KV_JSON")"
+          WS_URL="$(jq -r '.data.data.VITE_WS_URL // empty' <<<"$KV_JSON")"
+          unset KV_JSON
+
+          # (P6) Assertions that can fail. AC2: an empty OR MISSING OR PLACEHOLDER
+          # value fails the build with the variable named.
+          #
+          # 🔴 The placeholder test is a SCHEME test, not a string match.
+          # `secret/fe/pre-prod/app` currently holds
+          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys, and a
+          # non-empty check passes it happily — which would bake the literal word
+          # PLACEHOLDER into a bundle and satisfy AC2 with exactly the failure
+          # AC2 exists to prevent. Requiring a scheme rejects it on a property
+          # rather than on its spelling, so the check still works for whatever
+          # the next placeholder happens to say.
+          for _pair in "VITE_API_BASE_URL:${API_URL}:https" "VITE_WS_URL:${WS_URL}:wss"; do
+            _name="${_pair%%:*}"; _rest="${_pair#*:}"; _val="${_rest%:*}"; _want="${_rest##*:}"
+            if [ -z "$_val" ]; then
+              echo "FAIL: ${_name} is empty or absent at secret/${KV_PATH}." \
+                   "No fallback exists and none will be added — a silent default to the" \
+                   "production API is the mine this story exists to defuse (NFR8, D6)."; exit 1
+            fi
+            case "$_val" in
+              "${_want}://"*) ;;
+              http://*|ws://*)
+                echo "NOTE: ${_name} uses an unencrypted scheme. Allowed, recorded." ;;
+              *)
+                echo "FAIL: ${_name} at secret/${KV_PATH} is not a URL — it has no scheme." \
+                     "This is what a PLACEHOLDER looks like. For 'preprod' that is expected" \
+                     "until someone with an OpenBao token writes the real value" \
+                     "(https://api.crm.preprod.crm-prionex.online — measured; the value the plan" \
+                     "carried before 2026-08-15 was NXDOMAIN). Owner: Oleg."; exit 1 ;;
+            esac
+          done
+
+          # The URLs cross out of this block; the token did not and no longer exists.
+          echo "api_url=${API_URL}"  >> "$GITHUB_OUTPUT"
+          echo "ws_url=${WS_URL}"    >> "$GITHUB_OUTPUT"
+          echo "OK: both variables present and scheme-checked for '${ENVIRONMENT}'."
+
+      # ─────────────────────────────────────────────────────────────────────
       # Story 3.2 — the tagging scheme (FR7).
       #
       # 🔴 EVERY VALUE IS READ FROM THE CHECKED-OUT TREE, NEVER FROM THE EVENT.
@@ -177,6 +357,12 @@ jobs:
         # after parsing, and cannot execute.
         env:
           REF_IN: ${{ inputs.ref }}
+          # Story 3.3's discriminator. Declared here as well as on the OpenBao
+          # step because `env:` is per-step — a value set on one step is not
+          # visible in the next, and `set -u` turns that into an unbound-variable
+          # abort rather than an empty tag. That is the right failure and it
+          # still cost a dispatch.
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
           FULL_SHA="$(git rev-parse HEAD)"
@@ -197,13 +383,32 @@ jobs:
 
           IMAGE=git.crm-prionex.com/crm/fe-prionex
 
-          # AC1: always. Bare, i.e. no environment discriminator — Story 3.3
-          # owns FR8 and will add one. This shape matches NO keep_pattern
-          # alternative and therefore expires at 14 days, which is a property of
-          # the rule, not an oversight: FR7, NFR4, Story 3.4 AC2 and Story 3.6
-          # AC1 all address images by it, while Story 3.6 AC2 explicitly permits
-          # it to be repointed provided the behaviour is documented. It is.
-          TAGS="${IMAGE}:sha-${SHORT_SHA}"
+          # Story 3.3 — the environment discriminator (FR8, AC3).
+          #
+          # 🔴 The SHAPE IS FIXED BY LIVE INFRASTRUCTURE, not by the plan. The
+          # retention rule protects `sha-[0-9a-f]{7,64}-(pre)?prod` and nothing
+          # adjacent, so `-prod` and `-preprod` are PERMANENT and `-dev` falls
+          # through and expires at 14 days. That asymmetry is correct policy —
+          # DEV images are disposable, release candidates and production images
+          # are not — but FR11 describes the rule as removing "`<branch>` tags",
+          # which understates it badly. Any other spelling of the discriminator
+          # (`_prod`, `-production`, `prod-sha-…`) falls out of protection
+          # SILENTLY and takes the Epic 6 rollback target with it.
+          #
+          # The short SHA stays at 12 (Story 3.2's decision): Stories 5.4 and 6.5
+          # compare `preprod-<sha>` byte for byte against what is emitted here.
+          ENV_SUFFIX="${ENVIRONMENT}"
+
+          # AC1 of Story 3.2, now discriminated. The bare `sha-<short>` is gone:
+          # FR8 requires a discriminator and Story 3.3 AC3 requires that a bare
+          # `sha-<short>` never be ambiguous between environments. Under Option C
+          # one commit yields up to three images, so the bare form cannot be
+          # unambiguous and cannot be kept — Story 3.2 kept it only because it
+          # built one image per commit and 3.6 AC2 permitted the repoint.
+          # 🔴 Consequence for FR7, NFR4, Story 3.4 AC2 and Story 3.6 AC1, all of
+          # which address images by the bare `sha-<short>`: they must now address
+          # them by `sha-<short>-<env>`. Recorded as an FR7 deviation.
+          TAGS="${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}"
 
           # AC2: the branch tag, sanitized above.
           #
@@ -231,24 +436,25 @@ jobs:
           # `fe-prionex/` prefix and its `sha256:` alternative (a digest can
           # never be a ref name). Keep it in step with the database — the rule
           # lives ONLY there and cannot be restored from this repository.
-          case "$SANITIZED" in
-            latest|buildcache|prod-current|preprod-current)
-              PROTECTED=yes ;;
-            [0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*)
-              PROTECTED=yes ;;
-            prod-*|preprod-*|sha-*-prod|sha-*-preprod)
-              PROTECTED=yes ;;
-            *)
-              PROTECTED=no ;;
-          esac
-          if [ "$PROTECTED" = "yes" ]; then
+          # Story 3.3 tightened this from globs to the rule's own regex. The glob
+          # form over-refused: `prod-prod` — which is what branch `prod` plus the
+          # `-prod` discriminator produces, and branches named `dev`, `preprod`
+          # and `prod` have existed since D19 — matched `prod-*` while the actual
+          # keep_pattern alternative is `(pre)?prod-[0-9a-f]{7,64}` and requires
+          # hex. Refusing is the safe direction, but refusing a legitimate build
+          # of the `prod` branch is still a defect. The pattern below is the live
+          # rule's keep_pattern minus its `fe-prionex/` prefix and its `sha256:`
+          # alternative (a digest can never be a ref name).
+          # 🔴 Keep it in step with the database — the rule lives ONLY there.
+          KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
+          if printf '%s' "$SANITIZED" | grep -Eqi "$KEEP_RE"; then
             echo "FAIL: ref '${REF_IN}' sanitizes to '${SANITIZED}', which matches the" \
                  "registry retention rule's keep_pattern. That tag would be PERMANENT and" \
                  "removable only by an authorised DELETE with a write:package token." \
                  "Refusing. If this is deliberate, it is a decision — record it first."; exit 1
           fi
 
-          TAGS="${TAGS},${IMAGE}:${SANITIZED}"
+          TAGS="${TAGS},${IMAGE}:${SANITIZED}-${ENV_SUFFIX}"
 
           # AC4: `latest` comes only from `main` — computed here, evaluated on
           # every run, and DELIBERATELY NOT PUSHED. Decision recorded in the
@@ -273,11 +479,33 @@ jobs:
             main|refs/heads/main) LATEST_ELIGIBLE=true ;;
             *)                    LATEST_ELIGIBLE=false ;;
           esac
-          PUSH_LATEST=false
-
-          if [ "$LATEST_ELIGIBLE" = "true" ] && [ "$PUSH_LATEST" = "true" ]; then
-            TAGS="${TAGS},${IMAGE}:latest"
-          fi
+          # 🔴 STORY 3.3 AC4 — DECIDED: `latest` IS DROPPED. Not deferred again.
+          #
+          # AC4 asks for the meaning of `latest` to be decided explicitly, "either
+          # bound to one environment or dropped entirely", once the discriminator
+          # exists. It cannot be bound: under Option C one commit produces up to
+          # three images, and a name that must point at exactly one of them has no
+          # non-arbitrary answer. Binding it to `prod` would make the most
+          # dangerous image the one reachable by the laziest reference.
+          #
+          # Dropping it costs nothing measurable. `docker-compose.server.yml:8`
+          # defaults to `ghcr.io/crm-prionex/fe-prionex:latest` — a **ghcr**
+          # reference, not ours, so nothing we publish is consumed through it, and
+          # Story 4.1 owns that line. FR19 and Story 4.3 already forbid falling
+          # back to `:latest` on pull. Nothing else in Epics 3–7 reads it.
+          #
+          # And it is the only irreversible option that stays open: `latest` is
+          # named literally in the retention rule's keep_pattern, so pushing it
+          # once makes it permanent, removable only by an authorised DELETE with a
+          # write:package token — which on this project has twice required the
+          # operator in person. Not pushing it is reversible; pushing it is not.
+          #
+          # The evaluation is kept, and its result still ships as an image label,
+          # because AC4's second clause — "builds from any other ref never produce
+          # `latest`" — is provable from a positive value in the database rather
+          # than from an absence, and an absence is equally consistent with the
+          # rule never having run at all.
+          PUSH_LATEST=false   # DECIDED, not pending. See above.
 
           # AC3 (semver from v*) is NOT implemented here. The trigger that would
           # produce it is Story 3.4's (FR6, Prohibition 1), no `v*` tag has ever
@@ -306,6 +534,27 @@ jobs:
       # explicit non-production literals with no `||` fallback (Dockerfile.prod
       # declares no defaults) — real values are Story 3.3's, from OpenBao.
       #
+      # 🔴 Story 3.3 replaced the `build-check-3-1.invalid` literals Story 3.1
+      # shipped with the real values, read from OpenBao above. `Dockerfile.prod`
+      # declares `ARG VITE_API_BASE_URL` and `ARG VITE_WS_URL` and no defaults —
+      # that contract is used UNCHANGED (AC5), and the absence of defaults is what
+      # makes AC2's guarantee possible at all.
+      #
+      # ⚠️ AC2's guarantee covers these TWO variables and no others, and that is a
+      # recorded gap rather than an oversight. `src/` reads five: these two plus
+      # `VITE_OPERATOR_PHONE_URL`, `VITE_EASYPAY_PORTAL_API_KEY` and
+      # `VITE_BUILD_TS`. Vite bakes `undefined` for an undeclared
+      # `import.meta.env.X`; each of the three has an in-source fallback, and the
+      # websocket one falls back to `localhost`. Closing that gap means extending
+      # `Dockerfile.prod`, which AC5 forbids without an amendment — so it is
+      # deferred with an owner rather than resolved by pretending the contract
+      # covers five. See deferred-work.md.
+      #
+      # `org.prionex.environment` is Story 3.3's, and it answers Story 3.6 AC3:
+      # "the environment it was built for is determinable from the image itself,
+      # not only from its tag string". Story 3.2 could not emit it because FR8
+      # was not its to own.
+      #
       # `labels:` is Story 3.2's, and it pre-pays Story 3.6 **AC1 only**: the
       # commit mapping is verifiable from image metadata without a run log.
       # 3.6 AC3 — "the environment it was built for is determinable from the
@@ -328,9 +577,10 @@ jobs:
             org.prionex.ref=${{ steps.tags.outputs.raw_ref }}
             org.prionex.ref-sanitized=${{ steps.tags.outputs.sanitized_ref }}
             org.prionex.latest-eligible=${{ steps.tags.outputs.latest_eligible }}
+            org.prionex.environment=${{ inputs.environment }}
           build-args: |
-            VITE_API_BASE_URL=https://build-check-3-1.invalid/api
-            VITE_WS_URL=wss://build-check-3-1.invalid/ws
+            VITE_API_BASE_URL=${{ steps.bao.outputs.api_url }}
+            VITE_WS_URL=${{ steps.bao.outputs.ws_url }}
 
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the

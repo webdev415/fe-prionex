@@ -1634,3 +1634,41 @@ is what is not.
   deliberately a copy — the alternative is a database round trip inside every build — but the
   duplication is real. **Owner: whoever edits `package_cleanup_rule` next; the guard is at the
   `case "$SANITIZED"` block and names the rule it mirrors.**
+
+## Opened by story 3.3 (2026-08-15)
+
+- 🔴 **Job logs DID persist, and every story since 2.1 has been designed around them not persisting.**
+  Story 2.1 established *"job logs are not retrievable on this instance"* — 404 on every API route,
+  `log_in_storage` never true, 0 of 4 logs reaching disk. That finding deferred 2.1's AC4, made
+  Story 2.4 encode a measurement into an artifact **name**, and made Story 3.2 put its evidence in an
+  image **label**. **Story 3.3 diagnosed all three of its failures by reading the job log.**
+  `action_task` 5815 has `log_in_storage = t` and `log_filename = CRM/fe-prionex/b7/5815.log.zst`;
+  the file is on disk under `/data/gitea/actions_log/`, zstd-compressed, one JSON object per line
+  with step output in `content`. It named the exact failing line where the database said only
+  "step 6 failed". ⚠️ **Whether the instance changed or whether persistence was always intermittent
+  and 2.1 sampled the wrong side of it is «не проверено».** What is established is that *"the log is
+  unreadable, do not try"* is too strong as a standing rule and has cost this project real work.
+  **Owner: whoever debugs the next failing job — check `log_in_storage` first. It is one query.**
+- ⚠️ **AC2's guarantee covers two variables; `src/` reads five.** `Dockerfile.prod` declares
+  `ARG VITE_API_BASE_URL` and `ARG VITE_WS_URL`. `src/` also reads `VITE_OPERATOR_PHONE_URL`,
+  `VITE_EASYPAY_PORTAL_API_KEY` and `VITE_BUILD_TS`. Vite bakes `undefined` for an undeclared
+  `import.meta.env.X`; each of the three has an in-source fallback and the websocket one falls back
+  to `localhost`. So three variables the application reads can never fail the build, in a story whose
+  whole point is that a missing variable must. Closing it means extending `Dockerfile.prod`, which
+  Story 3.3's AC5 forbids without an amendment. **Owner: Story 3.6** — it is the story about the
+  image being trustworthy, and this is the largest untrustworthy thing left in it.
+- 🔴 **The bare `sha-<short>` no longer exists, and four references still name it.** Story 3.3
+  replaced it with `sha-<short>-<env>` because FR8 requires a discriminator and its own AC3 requires
+  the bare form never be ambiguous — under Option C one commit yields three images, so it cannot be
+  both. **FR7, NFR4, Story 3.4 AC2 and Story 3.6 AC1 all address images by the bare form.**
+  **Owner: Story 3.4**, the next to touch this, which must either use the discriminated form or
+  amend FR7.
+- ⚠️ **`preprod` is accepted as an input and cannot be built.** `secret/fe/pre-prod/app` holds
+  `PLACEHOLDER-preprod-backend-not-provisioned`, and the corrected value —
+  `https://api.crm.preprod.crm-prionex.online`, measured — needs an OpenBao token this repository
+  cannot mint. The build fails closed with the variable, the path, the correct value and the owner
+  named in the message. **Owner: Oleg.** Until then Epic 5 can plan but not build.
+- ⚠️ **`OPENBAO_PROD_SECRET_ID` expires 2027-06-09.** `secret_id_ttl 7200h`, issued 2026-08-13,
+  nothing rotates it and nothing monitors it. Story 3.3 is the first thing to depend on it. When it
+  expires **every production build fails at once**, with an auth error that says nothing about
+  credential age. **Owner: Oleg.**
