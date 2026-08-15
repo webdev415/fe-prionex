@@ -4,9 +4,39 @@ baseline_commit: 42fb1472
 
 # Story 1.6: Secure the PRE-PROD Infrastructure Commitment
 
-Status: review
+Status: done
 
-> **Partial result, honestly recorded — this is the outcome Task 3.3 prescribes.** The requirement document exists and is send-ready; it has **not
+> 🔴 **REWRITTEN 2026-08-15 by this story's code review — the story was right about what it did and
+> wrong about what it achieved.**
+>
+> **The requirement worked.** It was never formally "sent", and the counterparty read it anyway,
+> delivered the `crm-kong-gateway` alias on 2026-08-14, and brought up the entire PRE-PROD contour:
+> `crm-preprod-network` with 69 containers, Kong running with the alias, and
+> `api.crm.preprod.crm-prionex.online` serving over TLS. **Epic 5 is no longer blocked**, and Story
+> 5.1's first two ACs are already satisfied by the other side. There was never an external team with
+> a queue — the 2026-08-13 change proposal recorded that the "platform team" is an agent in a
+> sibling repository on the same instance, and this story never absorbed it.
+>
+> 🔴 **And two of the values it asked for do not exist.** `preprod.crm-prionex.online` and
+> `api.preprod.crm-prionex.online` are **NXDOMAIN**; the real convention carries an extra `.crm.`
+> segment. Port `8081` is taken. Both bake into the bundle at build time under Option C, so the
+> build would have passed and the image would have failed in a browser — **the exact failure class
+> this story exists to prevent, reproduced one layer up.**
+>
+> **Why:** the story forbade itself from looking. Task 1.7 ordered a port census *"from the
+> artifacts, not by SSH"* and Prohibition 3 banned SSH to s1 — but both findings are **read-only**
+> facts, one session away. The budget conflated *do not provision* with *do not look*, and the
+> Story 1.13 lesson it cited is about **writes**.
+>
+> **The lesson this story recorded — *"a document in `docs/` is not a submitted requirement"* — is
+> not the lesson.** The real one, which the 13.08 proposal found by accident and nobody generalised:
+> **measure the counterparty's conventions before writing the ask.** It was done for the Kong
+> container name and caught a collision. It was not done for DNS.
+>
+> Amendments in `sprint-change-proposal-2026-08-15-preprod-reality.md`. The original closing state
+> follows, kept because it is evidence of how the error happened.
+>
+> ~~**Partial result, honestly recorded — this is the outcome Task 3.3 prescribes.**~~ The requirement document exists and is send-ready; it has **not
 > been sent**, so AC1, AC2 and AC4 are NOT satisfied — their trigger clause is *"when the
 > requirement is submitted"*, and a document in `docs/` is not a submitted requirement. Two of the
 > three questions in Task 3.2 are still unanswered: **which team/person/channel**, and **who
@@ -838,6 +868,66 @@ the claim gets tested, not here.
 - [Source: _bmad-output/implementation-artifacts/deferred-work.md] — the register's format; the dead `SLACK_CD_WEBHOOK_URL`
 - [Source: _bmad-output/implementation-artifacts/1-2-record-the-migration-decisions-and-the-option-c-technical-debt.md] — documentation-story conventions, derived-AC precedent, testing standards
 - [Source: _bmad-output/implementation-artifacts/sprint-status.yaml:58-59] — the YAML-comment precedent for recording a constraint (Task 7.1)
+
+## Review Findings (code review 2026-08-15)
+
+Two layers — adversarial and acceptance — both with read-only access to s1, which is what made the
+difference. This story was the last in Epic 1 never to have been reviewed, and it had been sitting in
+`review` since 2026-08-13 while eleven stories closed past it.
+
+**The headline is not a defect in the story. It is that the world moved and four artifacts did not.**
+
+- [x] [Review][Patch] ✅ **Epic 5 is not blocked.** The contour is running — 69 containers,
+      `crm-preprod-network`, Kong with the `crm-kong-gateway` alias delivered 2026-08-14, and
+      `api.crm.preprod.crm-prionex.online` on TLS. `epics.md`, `sprint-status.yaml`,
+      `forgejo-migration.md` and this file all said we were waiting. Corrected in all of them.
+- [x] [Review][Patch] 🔴 **`preprod.crm-prionex.online` and `api.preprod.crm-prionex.online` are
+      NXDOMAIN.** The real names carry an extra `.crm.` segment and appeared in **zero files** in
+      this repository. Verified by `dig`, not inferred. FR25, AC2, AC4 and Story 5.2 amended.
+- [x] [Review][Patch] 🔴 **Port `8081` — FR25's "permanent allocation" — is taken.** `docker-proxy`
+      binds `127.0.0.1:8081`. Moved to `8083`, measured free.
+- [x] [Review][Patch] **The story forbade itself the checks that would have caught both.** Task 1.7
+      ordered the port census *"from the artifacts, not by SSH"*; Prohibition 3 banned SSH. Both
+      facts are read-only. *Do not provision* was applied as *do not look.*
+- [x] [Review][Patch] **The requirement document claims both states at once** — header `Статус: не
+      направлено`, and twenty lines below a filled response block dated 14.08 with delivered work.
+      Also two `Статус` fields with different values, one outside the enum Task 2.8 defined.
+- [x] [Review][Patch] **The Completion Notes contradict themselves on Tasks 5–8** — "completed" in
+      one paragraph, "not done and not startable here" twenty-five lines later. They were done.
+- [x] [Review][Patch] **`Status: review` on line 7 against "status stays `ready-for-dev`" on line 24.**
+- [x] [Review][Patch] **55 unchecked boxes under six ✅ headings** — the same anti-pattern Story 3.1's
+      review named, masking at least six genuinely dropped Task 2 subtasks.
+- [x] [Review][Patch] **AC4's second clause was never written.** It requires the document to state
+      that these values become `VITE_API_BASE_URL_PREPROD` / `VITE_WS_URL_PREPROD` in Story 1.12 and
+      that Epic 3 cannot build a PRE-PROD image without them. `grep` for `VITE`, `1.12`, `Epic 3` in
+      the requirement returns nothing. The Completion Notes claim all four asks are carried.
+- [x] [Review][Patch] **The "unsent means unsatisfied" rule was applied selectively** — withheld from
+      AC1/AC2/AC4, granted to AC3's second clause, which shares the same trigger.
+- [x] [Review][Defer] ⚠️ **CORS on the PRE-PROD Kong allows `http://localhost:8320`.** Configured,
+      with the wrong origin — worse than unconfigured, because it looks done and fails only in a
+      browser. **Owner: Story 5.2**, once the frontend name serves.
+- [x] [Review][Defer] ⚠️ **The frontend name `crm.preprod.crm-prionex.online` has no vhost and no
+      certificate.** It resolves; s1 carries vhosts only for the two API names. This is the one piece
+      of PRE-PROD infrastructure that genuinely does not exist, and it is **ours**. **Owner: Story 5.2.**
+- [x] [Review][Defer] ⚠️ **s1's addressing is not what the record says.** `migration-decisions.md`
+      asserts `72.62.17.132` and `10.67.0.1` are the same machine; the host presents `185.185.49.127`
+      on `eno1`, while `dev.crm-prionex.online` resolves to `72.62.17.132`. Docker networks are
+      host-local, so if a stand is provisioned on the wrong one it cannot join `crm-preprod-network`
+      at all. **Owner: Story 5.2, before it provisions anything.**
+- [x] [Review][Defer] ⚠️ **The security question was decided the other way and only the neighbours
+      recorded it.** Their nginx config carries Oleg's 2026-08-14 decision that PRE-PROD is open to
+      anyone who knows the name, with app auth as the only protection. This repo does not know.
+      **Owner: Oleg** — it belongs in a decision record, not in someone else's comment.
+- [x] [Review][Defer] ⚠️ **The document would leak internal commentary if it were ever sent.** §6
+      contains our assessment of the counterparty's CI and a note about strengthening D2.
+      **Owner: whoever sends it — if anyone ever does.**
+
+**Disposition.** `review` was wrong, and `cancelled` would have been wronger: the story was
+implemented, its output reached the counterparty, and the counterparty acted on it — the most
+consequential thing it did. Closed as **`done` with AC2 and AC4 recorded as amended**, because
+closing them as originally written would have ratified two names that do not exist.
+
+---
 
 ## Dev Agent Record
 

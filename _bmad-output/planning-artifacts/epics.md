@@ -205,7 +205,7 @@ FR24: Rollback is performed by running `deploy-prod.yml` with a previous `image_
 **Infrastructure and coexistence (Phases 1, 2, 5, 6)**
 
 FR25: `docker-compose.server.yml` is parameterized — `COMPOSE_PROJECT_NAME`,
-`CONTAINER_NAME`, `FRONTEND_PORT` — so DEV (`8082`) and PRE-PROD (`8081`) coexist on s1
+`CONTAINER_NAME`, `FRONTEND_PORT` — so DEV (`8082`) and PRE-PROD (~~`8081`~~ **`8083`**) coexist on s1 🔴 **AMENDED 2026-08-15** (`sprint-change-proposal-2026-08-15-preprod-reality.md`): `8081` is **taken** on s1 — `docker-proxy` binds `127.0.0.1:8081` — and was called a permanent allocation on the strength of a port census the story deliberately ran *from the artifacts rather than by SSH*. `8083` is free, measured. The instruction not to look is what produced the wrong number.
 alongside the untouched legacy stand.
 
 FR26: Stand directories are separated: `~/crm-prionex/fe-prionex-dev/` and
@@ -676,8 +676,9 @@ backend, rendering PRE-PROD validation fictional.
 
 **Given** PRE-PROD needs to be reachable
 **When** the requirement is submitted
-**Then** it includes the DNS name `preprod.crm-prionex.online` and its TLS certificate
-**And** it includes the published port allocation `8081` on s1.
+**Then** it includes the DNS name ~~`preprod.crm-prionex.online`~~ **`crm.preprod.crm-prionex.online`** and its TLS certificate
+**And** it includes the published port allocation ~~`8081`~~ **`8083`** on s1.
+🔴 **AMENDED 2026-08-15 — both values named things that do not exist.** `preprod.crm-prionex.online` and `api.preprod.crm-prionex.online` are **NXDOMAIN**; what the platform side actually built is `crm.preprod.crm-prionex.online` (frontend, resolves — vhost and certificate still missing) and **`api.crm.preprod.crm-prionex.online`** (API, resolving with an nginx vhost and a Let's Encrypt certificate). The extra `.crm.` segment is the whole difference, and **the real name appeared in zero files in this repository** before this amendment. `8081` is bound. Under Option C these values are baked into the bundle at build time, so the build would have succeeded and the image would have failed in a browser — the exact failure class Story 1.6 exists to prevent, one layer up. The story measured the neighbours' compose file and caught the Kong collision; it did not measure their DNS.
 
 **Given** the requirement has been submitted
 **When** the platform team responds
@@ -1854,9 +1855,29 @@ in Story 1.6.
 > The alias is in their `docker-compose.server.yml`, their plan's mass-rename step now carries Kong
 > as an explicit exception, and they added a deploy-blocking runtime check (`AC1.alias`) that probes
 > the name **from inside the stand's network** and asserts Kong's own `no Route matched` signature.
-> **What still blocks this epic:** the PRE-PROD network, Kong and services themselves are on their
+> ~~**What still blocks this epic:** the PRE-PROD network, Kong and services themselves are on their
 > roadmap with no date given to us, and §2.4/§2.5 of the requirement — DNS, TLS, the external
-> `api.preprod` hostname and CORS — are unanswered. Artifact:
+> `api.preprod` hostname and CORS — are unanswered.~~
+>
+> ✅ **EPIC 5 IS NO LONGER BLOCKED — measured 2026-08-15 by Story 1.6's code review**
+> (`sprint-change-proposal-2026-08-15-preprod-reality.md`). None of that is on a roadmap; **it is
+> running.** `crm-preprod-network` carries **69 containers**, `crm-preprod-kong-gateway` is up with
+> the alias, and `api.crm.preprod.crm-prionex.online` serves over TLS with a Let's Encrypt
+> certificate. **Story 5.1's first two ACs are already satisfied by the other side** and become
+> verification rather than construction.
+>
+> 🔴 **What the plan got wrong while waiting:** the hostname above is not the one this plan asked
+> for. `api.preprod.crm-prionex.online` and `preprod.crm-prionex.online` are **NXDOMAIN**; the real
+> convention carries an extra `.crm.` segment, and it appeared in **zero files in this repository**
+> until 2026-08-15. Port `8081` — FR25's "permanent allocation" — is **taken**. Both values are
+> baked into the bundle at build time under Option C, so the build would have passed and the image
+> would have failed in a browser.
+>
+> **What genuinely remains:** an nginx vhost and a certificate for the **frontend** name
+> `crm.preprod.crm-prionex.online` (it resolves; s1 has vhosts only for the two API names) — that is
+> Story 5.2's and it is ours — plus the PRE-PROD Kong's CORS origin, currently
+> `http://localhost:8320`. ⚠️ *Configured wrong is worse than unconfigured: it looks done and fails
+> only in a browser.* Artifact:
 > [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
 > decisions: [`#d11`](../../docs/migration-decisions.md#d11) and the proposal above.
 >
@@ -1911,7 +1932,7 @@ So that a release candidate can be validated the way a user would experience it.
 **Given** the parameterized compose file from Story 4.1
 **When** the PRE-PROD stand is provisioned
 **Then** it lives in `~/crm-prionex/fe-prionex-preprod/`
-**And** its `.env` sets `FRONTEND_PORT=8081`, a distinct `CONTAINER_NAME`, a distinct
+**And** its `.env` sets `FRONTEND_PORT=`~~`8081`~~**`8083`** (amended 2026-08-15: `8081` is taken on s1, measured), a distinct `CONTAINER_NAME`, a distinct
 `COMPOSE_PROJECT_NAME`, and the agreed PRE-PROD network.
 
 **Given** three stands now share s1
@@ -1920,9 +1941,14 @@ So that a release candidate can be validated the way a user would experience it.
 **And** none appears in another's compose project.
 
 **Given** the DNS name and certificate from Story 1.6
-**When** `preprod.crm-prionex.online` is configured
+**When** ~~`preprod.crm-prionex.online`~~ **`crm.preprod.crm-prionex.online`** is configured
 **Then** it resolves to the PRE-PROD stand
 **And** it serves over TLS with a valid certificate.
+🔴 **AMENDED 2026-08-15.** The name resolves already (`185.185.49.127`); what is missing is **an
+nginx vhost and a certificate for it** — s1 has vhosts and Let's Encrypt certs only for the two
+**API** names (`api.crm.preprod…`, `api.crm.dev…`). So this AC is no longer "wait for someone to
+give us a name"; it is **the one piece of PRE-PROD infrastructure that genuinely does not exist**,
+and it is ours. The API side is done: `api.crm.preprod.crm-prionex.online` serves over TLS today.
 
 **Given** the stand is provisioned
 **When** registry access is configured
