@@ -97,7 +97,11 @@ development_status:
   # checks a fixed literal tag, and the concurrency group keys on `github.ref` instead of
   # `inputs.ref`. Both stop being harmless the moment tags mean something.
   3-1-build-and-publish-an-image-to-the-forgejo-registry: done
-  3-2-apply-the-image-tagging-scheme: backlog
+  # Contexted 2026-08-15. The story carries one BLOCKING open question for Oleg: whether to push
+  # `latest`. It is named in the retention rule's keep_pattern, so pushing it is permanent, and
+  # Story 3.3 is authorised to drop it — removal would then need an authorised DELETE plus a
+  # write:package token. Recommendation in the story: implement the rule, do not push the tag.
+  3-2-apply-the-image-tagging-scheme: ready-for-dev
   3-3-build-per-environment-images-with-explicit-variables: backlog
   3-4-trigger-builds-automatically-including-feature-branches: backlog
   3-5-move-the-build-cache-to-the-registry: backlog
