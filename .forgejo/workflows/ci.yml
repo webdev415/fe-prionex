@@ -40,8 +40,26 @@ name: CI
 on:
   workflow_dispatch:
   push:
+    # Long-lived branches are excluded because a commit landing on one of them
+    # is a MERGE RESULT — it was already gated by the `pull_request` run below,
+    # on the same head SHA. Running CI again on the merge commit pays twice for
+    # the same answer. Feature branches are not excluded: they are where the
+    # first answer comes from.
+    #
+    # `prod`, `preprod` and `dev` added 2026-08-15 with the four-branch model
+    # (sprint-change-proposal-2026-08-15-branch-topology.md). They were added
+    # HERE, and this change was merged, BEFORE the branches were created —
+    # creating them first would have fired a full CI run per branch, and a push
+    # to a brand-new `prod` before it was excluded.
+    #
+    # `staging` and `development` stay in this list. They are the previous
+    # model's long-lived branches, they are not being migrated, and they are not
+    # being deleted — so they must keep behaving as long-lived branches here.
     branches-ignore:
       - main
+      - prod
+      - preprod
+      - dev
       - staging
       - development
   # Added 2026-08-14, Story 2.2 AC2/AC3, once Oleg enabled the pull-request unit.
@@ -51,9 +69,29 @@ on:
   # Dev Agent Record. If the cost is judged too high, dropping the `push` trigger
   # for PR branches is the lever, not dropping this one: this is the half that
   # gates merges.
+  # Bases extended 2026-08-15 to the four-branch model. This is the gate: a PR
+  # into any long-lived branch runs CI against its head SHA, and the required
+  # status checks on that branch refuse the merge until it is green.
+  #
+  # 🚨 The required-context set is NOT the same for these branches as for `main`,
+  # and getting it wrong bricks the branch. `main` requires all EIGHT contexts
+  # (four jobs × `(push)` and `(pull_request)`) because its PRs come from feature
+  # branches: the head branch's own push produces the `(push)` half. In a
+  # promotion PR — `dev` → `preprod`, `preprod` → `prod` — the HEAD is itself a
+  # long-lived branch, which is in `branches-ignore` above, so no `push` run ever
+  # happens and the `(push)` contexts never appear. Requiring them would leave
+  # the merge permanently unsatisfiable. `prod`, `preprod` and `dev` therefore
+  # require the FOUR `(pull_request)` contexts only. See D19, and Story 2.6's
+  # record, which named this failure mode before it had a way to happen.
+  #
+  # `staging` and `development` are deliberately absent: the previous model's
+  # branches are not being migrated, so nothing here starts gating them.
   pull_request:
     branches:
       - main
+      - prod
+      - preprod
+      - dev
 
 jobs:
   lint:
