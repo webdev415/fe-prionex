@@ -2563,3 +2563,54 @@ Forgejo is confirmed working.
 **When** the closing record is written
 **Then** it lists what was rotated, what was revoked, and what remains as tracked technical
 debt.
+
+### Story 7.6: Give the Production OpenBao Credential an Expiry Owner
+
+As a release engineer,
+I want the credential that every production build depends on to have a rotation owner and an alarm
+before it expires,
+So that its expiry is a scheduled task rather than the day production stops building.
+
+🔴 **Added 2026-08-15 by Story 3.3.** `OPENBAO_PROD_SECRET_ID` was issued 2026-08-13 with
+`secret_id_ttl 7200h` and **expires 2027-06-09**. Nothing rotates it, nothing monitors it, and no
+story in Epics 1–7 mentions it. Story 3.3 is the first thing to depend on it — it reads
+`secret/fe/prod/app` through that AppRole to bake the production API URL into the production bundle,
+so from Epic 6 onward **every production build and every production deploy authenticates with it.**
+
+⚠️ **The failure mode is what makes this a story rather than a note.** When the `secret_id` expires,
+the AppRole login returns an authentication error that says nothing about credential age — and Story
+3.3 measured that a *wrong* `secret_id` fails **identically** to a missing one. So the first symptom
+is every production build failing at once, with a message that points at the credential rather than
+at its expiry, on a day nobody chose. Forgejo secret values are write-only, so the old one cannot be
+read back to compare; it can only be re-minted.
+
+**Acceptance Criteria:**
+
+**Given** `OPENBAO_PROD_SECRET_ID` expires on a known date
+**When** this story is done
+**Then** the expiry date, the AppRole it belongs to (`fe-prod`) and the Forgejo secret it is stored
+in are recorded in `docs/migration-decisions.md`
+**And** a named person owns the rotation.
+
+**Given** a credential that expires silently
+**When** the expiry approaches
+**Then** a warning reaches a human **before** the credential stops working
+**And** the warning names the credential, its AppRole and what breaks when it lapses.
+
+**Given** the rotation will have to be performed at least once
+**When** the procedure is written
+**Then** it is executable end to end from the record — mint, store, verify by a real login, and
+confirm the previous `secret_id` no longer authenticates
+**And** it states plainly that a wrong value fails identically to a missing one, so the verification
+step is not optional.
+
+**Given** `fe-dev` and `fe-pre-prod` use `secret_id_ttl 0` while `fe-prod` uses `7200h`
+**When** the asymmetry is reviewed
+**Then** it is either justified in writing or removed
+**And** the decision records which risk was chosen: a credential that never expires, or one that
+expires without an owner.
+
+⚠️ **Deliberately last in the plan and deliberately not urgent.** The expiry is nine months out. It
+is a story rather than a `deferred-work.md` line because deferred items in this project have
+repeatedly been read as "someone will notice" — and the whole point of this one is that **nobody
+will notice until production stops.**
