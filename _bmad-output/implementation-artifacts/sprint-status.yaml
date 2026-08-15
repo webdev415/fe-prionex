@@ -177,4 +177,9 @@ development_status:
   7-3-publish-the-updated-deployment-process-documentation: backlog
   7-4-revoke-github-deployment-credentials: cancelled
   7-5-rotate-the-ssh-keys-that-were-held-in-github-secrets: backlog
+  # Added 2026-08-15 by Story 3.3, the first thing to depend on that credential.
+  # OPENBAO_PROD_SECRET_ID expires 2027-06-09, secret_id_ttl 7200h, nothing rotates or monitors it.
+  # A story rather than a deferred line because a deferred line reads as "someone will notice", and
+  # the point of this one is that nobody will until production stops building.
+  7-6-give-the-production-openbao-credential-an-expiry-owner: backlog
   epic-7-retrospective: optional

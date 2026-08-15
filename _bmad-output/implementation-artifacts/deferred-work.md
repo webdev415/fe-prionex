@@ -1668,7 +1668,11 @@ is what is not.
   `https://api.crm.preprod.crm-prionex.online`, measured — needs an OpenBao token this repository
   cannot mint. The build fails closed with the variable, the path, the correct value and the owner
   named in the message. **Owner: Oleg.** Until then Epic 5 can plan but not build.
-- ⚠️ **`OPENBAO_PROD_SECRET_ID` expires 2027-06-09.** `secret_id_ttl 7200h`, issued 2026-08-13,
-  nothing rotates it and nothing monitors it. Story 3.3 is the first thing to depend on it. When it
-  expires **every production build fails at once**, with an auth error that says nothing about
-  credential age. **Owner: Oleg.**
+- ✅ **PROMOTED TO A STORY 2026-08-15 — `OPENBAO_PROD_SECRET_ID` expires 2027-06-09.**
+  `secret_id_ttl 7200h`, issued 2026-08-13, nothing rotates it and nothing monitors it; Story 3.3 is
+  the first thing to depend on it. When it expires **every production build fails at once**, with an
+  auth error that says nothing about credential age — and Story 3.3 measured that a *wrong*
+  `secret_id` fails **identically** to a missing one, so the first symptom points at the credential
+  rather than at its expiry. Now **Story 7.6**, last in the plan. *Promoted rather than left here on
+  purpose: a deferred line in this project has repeatedly been read as "someone will notice", and the
+  whole point of this one is that nobody will until production stops building.* **Owner: Story 7.6.**
