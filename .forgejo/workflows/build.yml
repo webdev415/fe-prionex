@@ -197,6 +197,13 @@ jobs:
             prod)    ROLE_ID="$OPENBAO_PROD_ROLE_ID";    SECRET_ID="$OPENBAO_PROD_SECRET_ID";    KV_PATH="fe/prod/app" ;;
             *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
           esac
+          # 🔴 EXPORT is not optional. `jq -n '{... env.ROLE_ID ...}'` reads jq's
+          # own PROCESS ENVIRONMENT — that is the whole point of using the `env`
+          # builtin instead of `--arg`, which would put the secret in jq's argv.
+          # A plain shell assignment is not in the environment, so jq sees null
+          # and the login fails with a message that blames the credential.
+          # The first version of this step omitted the export and cost a run.
+          export ROLE_ID SECRET_ID
           echo "environment=${ENVIRONMENT}  kv=secret/${KV_PATH}"
 
           # (P7) Preflight, two failures, two messages.
@@ -213,6 +220,13 @@ jobs:
 
           # (P1) AppRole login. The body goes in on STDIN. `-d "$json"` would put
           # the secret_id in curl's argv, which is world-readable in /proc.
+          # Fail-closed on an empty payload too: if the export above were ever
+          # lost again, jq would emit `{"role_id":null,...}` and the failure would
+          # read as a credential problem rather than a plumbing one.
+          [ -n "${ROLE_ID:-}" ] && [ -n "${SECRET_ID:-}" ] || {
+            echo "FAIL: no AppRole credential in the environment for '${ENVIRONMENT}'." \
+                 "This is a plumbing failure, not a credential failure — check that the" \
+                 "secrets are set on the repository and that they were exported."; exit 1; }
           BAO_TOKEN="$(jq -n '{role_id: env.ROLE_ID, secret_id: env.SECRET_ID}' \
             | curl -sf --data @- "${OPENBAO_ADDR}/v1/auth/approle/login" \
             | jq -r '.auth.client_token')" || {
