@@ -108,7 +108,15 @@ development_status:
   # tags (a consumer that does not will pull a tag that does not exist), and the discriminator
   # shape must be `sha-<7-64 hex>-(pre)?prod` or it falls out of keep_pattern.
   3-2-apply-the-image-tagging-scheme: done
-  3-3-build-per-environment-images-with-explicit-variables: backlog
+  # Contexted 2026-08-15. One BLOCKING open question: `secret/fe/pre-prod/app` holds
+  # PLACEHOLDER-preprod-backend-not-provisioned, and the value the plan meant to replace it with was
+  # NXDOMAIN. The corrected target is https://api.crm.preprod.crm-prionex.online, and writing it
+  # needs an OpenBao token this repository cannot mint — so `preprod` is not buildable and AC1
+  # closes for two environments of three. Owner: Oleg.
+  # Also found while contexting: the read step Story 1.12 proved uses `apk add openbao`, and the job
+  # it must run in is Debian `node-20` where `bao` cannot be installed at all — D15's option (a) is
+  # dead for this job and the story must choose a transport as a recorded deviation.
+  3-3-build-per-environment-images-with-explicit-variables: ready-for-dev
   3-4-trigger-builds-automatically-including-feature-branches: backlog
   3-5-move-the-build-cache-to-the-registry: backlog
   3-6-verify-commit-traceability-and-image-immutability: backlog
