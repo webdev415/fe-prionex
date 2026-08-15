@@ -705,6 +705,58 @@ its absences mean something.
 The glob form refused `prod-prod` — which is what branch `prod` plus the `-prod` discriminator
 produces, and branches named `dev`, `preprod` and `prod` have existed since D19.
 
+### ✅ `preprod` closed 2026-08-15 — the blocker was cleared and the build proves it
+
+Oleg wrote the corrected values into OpenBao (userpass login, `admin` policy). Recorded end to end:
+
+```
+BEFORE  secret/fe/pre-prod/app   version 1
+  VITE_API_BASE_URL = PLACEHOLDER-preprod-backend-not-provisioned
+  VITE_WS_URL       = PLACEHOLDER-preprod-backend-not-provisioned
+AFTER                            version 2
+  VITE_API_BASE_URL = https://api.crm.preprod.crm-prionex.online
+  VITE_WS_URL       = wss://api.crm.preprod.crm-prionex.online
+```
+
+`kv put` replaces the whole key set, so the key count was checked too: 2, as expected.
+
+**Run 593, 106 s, green.** Tags `sha-f8f358f43ced-preprod` and `probe-3-3-preprod-preprod`, both on
+manifest blob `sha256:45687dc4…`. And the bundle, extracted from the registry's own blob store —
+115 JS files, 11 MB:
+
+```
+https://api.crm.preprod.crm-prionex.online
+wss://api.crm.preprod.crm-prionex.online
+PLACEHOLDER                       absent
+build-check-3-1.invalid           absent
+api.dev.crm-prionex               absent
+api.preprod.crm-prionex.online    absent      ← the NXDOMAIN name the plan carried until 15.08
+```
+
+**So AC1 now closes for all three environments**, and `preprod`'s tags are `keep_pattern`-permanent
+by shape, which is the intended behaviour for a release candidate.
+
+🔑 **The admin token was revoked, not just forgotten.** `bao token revoke -self`, the cached
+`/home/openbao/.vault-token` deleted, and the revocation **proven by a negative control** — the next
+read returns `403`. Story 1.12 found nine false positives caused by exactly that file being left
+behind with a working token in it.
+
+### 🔴 Two process failures in landing this, both mine, both worth more than the code
+
+**1. A probe branch cut at the same commit as the PR branch silently un-greened the PR.** Commit
+statuses key on **SHA, not on branch**. `probe/3-3-preprod` was cut at the PR head `f8f358f4`, so its
+own `push` run wrote `pending` over the PR's already-green `CI / Unit Tests (push)` context, and the
+merge returned `405 not mergeable` with seven greens and one pending. The run finished on its own
+and the merge unblocked — but nothing about the failure said "your probe branch did this". **Cut
+probe branches from a commit the PR does not share.**
+
+**2. I deleted the PR head branch before the merge had succeeded, and the PR died with it.** The
+first merge attempt returned 405 (the pending status above); the same command block then deleted the
+branch; the second attempt returned **404**, and PR #23 was gone with the work still not on `main`.
+Nothing was lost — the commits were reachable locally and the branch was recreated — but the correct
+order is **merge, verify `main` moved, then delete**. The delete ran in the same block as a merge I
+had not checked.
+
 ### File List
 
 - `.forgejo/workflows/build.yml` — UPDATE: the `environment` input, the OpenBao read step, the
