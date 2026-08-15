@@ -97,7 +97,12 @@ development_status:
   # checks a fixed literal tag, and the concurrency group keys on `github.ref` instead of
   # `inputs.ref`. Both stop being harmless the moment tags mean something.
   3-1-build-and-publish-an-image-to-the-forgejo-registry: done
-  3-2-apply-the-image-tagging-scheme: backlog
+  # Implemented 2026-08-15. `latest` is computed and NOT pushed — Oleg's decision; the tag is
+  # permanent under the retention rule and Story 3.3 AC4 may drop it. AC3 (semver) is a recorded
+  # DEVIATION deferred to 3.4, not a closed AC. Two things 3.3 inherits: the registry lowercases
+  # tags (a consumer that does not will pull a tag that does not exist), and the discriminator
+  # shape must be `sha-<7-64 hex>-(pre)?prod` or it falls out of keep_pattern.
+  3-2-apply-the-image-tagging-scheme: review
   3-3-build-per-environment-images-with-explicit-variables: backlog
   3-4-trigger-builds-automatically-including-feature-branches: backlog
   3-5-move-the-build-cache-to-the-registry: backlog

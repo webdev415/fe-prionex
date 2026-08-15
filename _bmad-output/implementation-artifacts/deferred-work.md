@@ -1486,3 +1486,52 @@ constraint 3.1 created and nobody wrote down.
   floating major tag (`@v6`, `@v3`, `@v3`, `@v5`) in an epic whose Story 3.6 is about a tag
   identifying exactly one artifact. **Owner: whoever next opens `build.yml`; all four fit in one PR
   and one run.**
+
+## Opened by story 3.2 (2026-08-15)
+
+- 🔴 **The registry lowercases image tags, and a consumer that does not will ask for a tag that does
+  not exist.** Story 3.2's sanitizer emitted `probe-3-2-Tag-Scheme` — the image label
+  `org.prionex.ref` preserves that exact mixed case — and what landed in `package_version` is
+  **`probe-3-2-tag-scheme`**. The OCI grammar permits uppercase in a tag; this instance normalises
+  anyway. **Owner: Story 4.3**, which deploys DEV by `ref` and must derive the tag itself: the
+  derivation has to lowercase, or `docker pull` fails fast on a tag that looks correct. Story 3.3
+  inherits it too when it appends the environment discriminator. ✅ Checked for the hazard this
+  creates: across all 502 remote branches there are **502 distinct sanitized names case-sensitively
+  and 502 case-insensitively** — no collision today. It is a shape a future branch name could break,
+  which the case-sensitive reading could not.
+- 🔑 **`/root/.fj_token_3_1` is NOT on s1.** This file and Story 3.1's record both describe it as
+  live, scoped `write:repository,write:package`, with no deletion route, carried as an open security
+  item owned by Oleg. Story 3.2 went looking for it to dispatch with and found only
+  `/root/.fj_token` (50 bytes, mode 600, dated 2026-08-12). **Either it was removed and the removal
+  was never recorded, or the entry was wrong when written.** The open item is smaller than the record
+  says — but "smaller" is not "closed" until someone establishes which. **Owner: Oleg.** Story 3.2
+  dispatched with `/root/.fj_token` and minted nothing.
+- ℹ️ **`docker/build-push-action` DOES populate `outputs.digest` under the classic `docker` driver.**
+  Previously unknown — Story 3.1's review flagged it as unobserved and warned that an empty digest
+  would make a digest comparison vacuous. Story 3.2's assertion validates the digest's shape before
+  comparing, and the guard turned out not to be needed. It stays; the next driver change is exactly
+  when it would matter. Relevant to Story 3.5, which must change the driver to get a registry cache.
+- ⚠️ **Semver tagging is deferred to Story 3.4, and it has no consumer waiting for it.** Story 3.2's
+  AC3 asks for semver tags from `v*`; the trigger that produces them is FR6, i.e. **Story 3.4's**.
+  Three facts made implementing it early the wrong call and they will still be true when 3.4 arrives:
+  no `v*` tag has ever existed in this repository; no deploy story accepts a semver `image_tag`; and
+  **Story 6.5's promotion guard extracts a commit SHA from the tag**, which a semver string does not
+  carry, so a semver tag dispatched to production is rejected by construction. **Owner: Story 3.4 —
+  implement it, or take the decision to drop FR7's semver clause. Do not inherit it unexamined.**
+- ⚠️ **`concurrency` cannot be keyed on the built commit, and the residual race is real.** Story 3.2
+  re-keyed the group from `github.ref` (the dispatch ref) to `inputs.ref` (what determines content).
+  Keying it on the resolved commit is **impossible**: `concurrency` is evaluated before the job
+  starts, so nothing resolved after `actions/checkout` is available. **Two different refs pointing at
+  the same commit can still race for the same `sha-<short>` tag.** Serialised now: two dispatches of
+  the same ref, which is the case Story 3.1's AC5 named. **Owner: unassigned; it needs a
+  registry-side guard, not a workflow-side one, and nothing in Epics 3–6 currently provides one.**
+- ⚠️ **The `sha-<sha>-prod` asymmetry, recorded rather than "corrected".** The live retention rule
+  protects `sha-[0-9a-f]{7,64}-(pre)?prod` forever, and Story 6.6's amendment note says *"No story in
+  this plan produces that shape"* — **which is true**: Story 3.3 writes it only as *"for example"*,
+  no AC mandates it, and the one instance that ever existed (`sha-a1b2c3d-prod`) was Story 1.11's
+  seeded test material, deleted 2026-08-14 by a human, never by a workflow. So the plan protects a
+  shape nothing produces while leaving the bare `sha-<short>` — which FR7, NFR4, Story 3.4 AC2 and
+  Story 3.6 AC1 all address images by — unprotected and expiring at 14 days. **Owner: Story 3.3**,
+  which decides the discriminator and is the last chance to make the produced shape and the protected
+  shape the same string. *(An earlier draft of Story 3.2 instructed the dev to "correct" 6.6's
+  sentence. It was right and the instruction was wrong; caught by the story's own validation pass.)*
