@@ -4,7 +4,7 @@ baseline_commit: 4c88b0e1
 
 # Story 1.12: Wire the Frontend to OpenBao and Verify What the Platform Already Provides
 
-Status: review
+Status: done
 
 > **Closing state.** Seven of eight ACs are closed with evidence. **AC1 is closed except for one
 > value:** `SLACK_CD_WEBHOOK_URL` is present by name and holds Story 1.13's unrecoverable
@@ -679,6 +679,39 @@ Nothing in `src/`, `Dockerfile*`, or `docker-compose*.yml` changes in this story
   question, `robot-registry`'s coupling of s1's pull with CI's push.
 - `CRM/PRIONEX_HUB` `.github/workflows/{deploy-dev,deploy-preprod,promote-prod}.yml` on the instance
   — the reference implementation. Read-only; read via `git show` in the `forgejo` container.
+
+---
+
+## Close-out (2026-08-15)
+
+This story's code review ran on 2026-08-13 (`43e14341` — *"stale closures, a wrong date, and the
+proven step nearly lost"*) and its findings were applied. Nobody then moved the status, so it sat in
+`review` for two days while Epic 2 closed and Epic 3 got two stories past it — the same pattern as
+Stories 2.2, 2.3 and 1.6, and by now the most repeated process defect in this project.
+
+**The question the story left for review, answered.** Its closing banner asks whether the
+`SLACK_CD_WEBHOOK_URL` stub keeps AC1 open. **It does not.**
+
+- AC1 asks what the platform **already provides**. The secret is provided: it exists at `CRM` org
+  scope, by name, which is what the criterion verifies and what this story could observe.
+- The value is a non-resolving `example.invalid` stub written by Story 1.13, and Forgejo secret
+  values are write-only, so the original is **unrecoverable by anyone**. No work inside this story
+  could have supplied it.
+- ⚠️ **The consequence is real and belongs to Story 4.5**, which builds Slack notifications on it:
+  a webhook pointing at `example.invalid` fails **silently**. Notifications will look configured and
+  deliver nothing. Tracked in `deferred-work.md` with the owner named.
+
+Closing AC1 while leaving the value broken is only honest because the break is recorded in three
+places and has an owner. **AC1 closes on the name; the value is a recorded deviation, not a closure.**
+
+⚠️ **One thing this story owns that changed under it.** The KV path `secret/fe/pre-prod/app` is
+provisioned here, and its value has since been established as wrong by Story 1.6's code review: the
+PRE-PROD API hostname is **`api.crm.preprod.crm-prionex.online`**, not the
+`api.preprod.crm-prionex.online` the plan carried — that name is NXDOMAIN. The path is right;
+whoever writes the value must use the measured name. See
+`sprint-change-proposal-2026-08-15-preprod-reality.md`.
+
+**Status → `done`.**
 
 ---
 
