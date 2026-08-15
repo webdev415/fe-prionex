@@ -1535,3 +1535,38 @@ constraint 3.1 created and nobody wrote down.
   which decides the discriminator and is the last chance to make the produced shape and the protected
   shape the same string. *(An earlier draft of Story 3.2 instructed the dev to "correct" 6.6's
   sentence. It was right and the instruction was wrong; caught by the story's own validation pass.)*
+
+## Opened by the four-branch topology change (2026-08-15)
+
+- ✅ **CLOSED — `staging` and `development` had no CI gate.** Opened by Story 2.1's code review as the
+  sharpest finding in that review, and it needed a decision rather than a patch. The decision was
+  larger than the question: the long-lived branches are **`main`, `prod`, `preprod`, `dev`**, the
+  three new ones were created and gated, and `staging`/`development` are **not migrated, not renamed,
+  not deleted** by instruction. They therefore remain **ungated**, deliberately and on the record —
+  which is a different state from the one this entry opened, where they were ungated by accident and
+  nobody knew. See [D19](../../docs/migration-decisions.md#d19).
+- 🔴 **A promotion PR targeting `main` cannot ever merge, and nothing warns you.** `main` requires
+  **eight** status-check contexts (D16): four jobs × `(push)` and `(pull_request)`. That works for a
+  PR from a feature branch, because the head branch's own push produces the `(push)` half. It does
+  **not** work when the head is a long-lived branch — `prod` → `main`, or `dev` → `main` — because
+  every long-lived branch is in `ci.yml`'s `branches-ignore`, so no `push` run happens, the `(push)`
+  contexts never appear, and the required-check set is unsatisfiable. The merge button stays disabled
+  with four green checks and four that will never arrive. **The three new branches were configured
+  with the four `(pull_request)` contexts precisely to avoid this**; `main` was left at eight because
+  its protection was set four days earlier and changing it on a hypothetical is worse than recording
+  the hypothesis. **Owner: whoever opens the first promotion PR into `main` — the fix is to drop the
+  four `(push)` contexts from `main`'s required set, and it takes one API call.**
+- ⚠️ **`prod` and `preprod` point at `main` HEAD and this asserts nothing about what is deployed.**
+  Both were created at `cac85775` because D9 leaves no safe alternative — a branch cut from an older
+  commit has no `.forgejo/workflows/` and falls through to `.github/workflows/CD.yml`, whose deploy
+  job targets production. Production is running some other commit; **identifying which is Story 6.3,
+  and nobody has done it.** Anyone reading `prod` as a record of what is live will be wrong until the
+  cutover (Stories 6.3, 6.9) makes it one. **Owner: Story 6.3.**
+- ⚠️ **`staging` and `development` are now the only long-lived branches with no gate, and their
+  divergence is inherited rather than resolved.** `staging` is +2265 / −5 against `main` with one
+  commit in 60 days; `development` is +148 / −88 with 808. `staging` keeps a permissive protection row
+  (`enable_status_check: false`, `enable_push: true`) and `development` has no protection row at all.
+  Legacy `.github/workflows/CD.yml` still triggers on push to `[main, development]` — harmless on
+  Forgejo, which has no mirror to GitHub in either direction, but it is why `development` cannot
+  simply be deleted without checking who still pushes to the GitHub remote. **Owner: Oleg, whenever
+  the old model is retired. Not urgent; not forgotten.**
