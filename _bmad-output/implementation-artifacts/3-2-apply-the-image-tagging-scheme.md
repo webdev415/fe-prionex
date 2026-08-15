@@ -4,7 +4,7 @@ baseline_commit: 1d7b21c4
 
 # Story 3.2: Apply the Image Tagging Scheme
 
-Status: ready-for-dev
+Status: review
 
 > 🔴 **Branch from `1d7b21c4`, not from `main`.** At the time this story was written that commit sat
 > on the **unmerged** branch `story-3-1/pr-1-review-findings` (PR #15), while `main` was `f4cd3375`.
@@ -534,104 +534,104 @@ and none of them will read this story file.
 
 ### Task 1 — Bind the state before writing anything (AC: all)
 
-- [ ] 1.1 Re-read `.forgejo/workflows/build.yml` at HEAD. Confirm the trigger block, the concurrency
+- [x] 1.1 Re-read `.forgejo/workflows/build.yml` at HEAD. Confirm the trigger block, the concurrency
       block, `runs-on`, the `driver: docker` step and the literal `tags:` line are as §7/§8 describe.
-- [ ] 1.2 Re-measure the registry, do not assume: `select pv.id, pv.version, pv.is_internal from
+- [x] 1.2 Re-measure the registry, do not assume: `select pv.id, pv.version, pv.is_internal from
       package_version pv join package p on p.id=pv.package_id where p.name='fe-prionex' order by
       pv.id;` over `ssh root@10.67.0.1 'docker exec -i forgejo-postgres psql -U forgejo -d forgejo'`.
       As of 2026-08-15 it holds exactly one row, `build-check-3-1`. **Record what you actually see** —
       that tag is scheduled to expire around 2026-08-28 and its disappearance would be the first real
       observation of the 14-day threshold.
-- [ ] 1.3 Re-read the live `keep_pattern` from the database rather than from §1, and diff it against
+- [x] 1.3 Re-read the live `keep_pattern` from the database rather than from §1, and diff it against
       §1 character for character. It exists only there, and a drift would invalidate every shape
       decision in this story. **If it has drifted, stop and re-derive §1's permanence table before
       touching anything** — every tag decision hangs off it.
-- [ ] 1.3a Close §1's sourcing gap: confirm from the Gitea/Forgejo source that matching is
+- [x] 1.3a Close §1's sourcing gap: confirm from the Gitea/Forgejo source that matching is
       case-insensitive, that anchoring is whole-pattern, and — the load-bearing one — that
       `keep_pattern` is consulted **before** `remove_pattern`. §1's permanence table is only as good
       as those three claims, and none of them is sourced in this repository.
-- [ ] 1.4 Record the run index baseline (`max(id)`, `max(index)` on `action_run`) before spending
+- [x] 1.4 Record the run index baseline (`max(id)`, `max(index)` on `action_run`) before spending
       anything.
-- [ ] 1.5 Confirm both runners are online and carry `node-20`.
+- [x] 1.5 Confirm both runners are online and carry `node-20`.
 
 ### Task 2 — Make the six decisions, in writing, before any YAML (AC: 6)
 
-- [ ] 2.1 Decision 1 — bare `sha-<short>`: yes or no, with the FR7 / FR8 / 3.3 AC3 / 3.6 AC2 conflict
+- [x] 2.1 Decision 1 — bare `sha-<short>`: yes or no, with the FR7 / FR8 / 3.3 AC3 / 3.6 AC2 conflict
       stated and the losing side named explicitly.
-- [ ] 2.2 Decision 2 — short-SHA length, pinned to a literal number ≥7, with the `keep_pattern`
+- [x] 2.2 Decision 2 — short-SHA length, pinned to a literal number ≥7, with the `keep_pattern`
       reason.
-- [ ] 2.3 Decision 3 — short or full SHA in `prod-<sha>` / `preprod-<sha>`. **Write it as an
+- [x] 2.3 Decision 3 — short or full SHA in `prod-<sha>` / `preprod-<sha>`. **Write it as an
       instruction addressed to Story 5.4 and Story 6.5**, since the guard needs byte equality.
-- [ ] 2.4 Decision 4 — the sanitization algorithm, stated as a rule a consumer can reimplement, plus
+- [x] 2.4 Decision 4 — the sanitization algorithm, stated as a rule a consumer can reimplement, plus
       the case decision and the `-dev` collision handed to 3.3.
-- [ ] 2.5 Decision 5 — `latest`: implement and push, or implement and leave off. If pushing, say who
+- [x] 2.5 Decision 5 — `latest`: implement and push, or implement and leave off. If pushing, say who
       authorised it and how it will be removed if 3.3 drops it.
-- [ ] 2.6 Decision 6 — semver: implement now or defer to 3.4, with the "no consumer, no `v*` tag has
+- [x] 2.6 Decision 6 — semver: implement now or defer to 3.4, with the "no consumer, no `v*` tag has
       ever existed, 6.5's guard rejects it" facts stated either way.
 
 ### Task 3 — Declare the budget before spending it (AC: 5)
 
-- [ ] 3.1 State the number of **build dispatches** AND the number of **CI runs** this story expects,
+- [x] 3.1 State the number of **build dispatches** AND the number of **CI runs** this story expects,
       before spending either. Story 2.1 declared 2 and spent 2; Story 3.1 declared ≤3 and spent 1;
       Story 1.11 declared zero tokens and minted two. ⚠️ **Both counters are real:** every push to
       the probe branch fires a full CI run (`ci.yml`'s `push` covers every branch except
       main/staging/development), and every dispatch is a real build. Story 3.1 spent 1 CI run + 1
       build for one probe cycle — budget per *cycle*, not per dispatch.
-- [ ] 3.2 State the number of **tags this story will push**, by exact string, and confirm against
+- [x] 3.2 State the number of **tags this story will push**, by exact string, and confirm against
       §1's table which of them are permanent. A tag not on this list must not be pushed.
-- [ ] 3.3 **Reuse `/root/.fj_token_3_1` for the dispatch; do not mint.** It already carries
+- [x] 3.3 **Reuse `/root/.fj_token_3_1` for the dispatch; do not mint.** It already carries
       `write:repository,write:package` and is what Story 3.1 dispatched with. Source it
       (`. /root/.fj_token_3_1`) — the file holds `FJ_TOKEN=<hex>`, not a bare token, and `cat`-ing it
       into a header returns 401. For **evidence gathering** prefer `docker exec` against the database
       over any API call. **If some step genuinely needs a token that does not exist, write its
       deletion route into this file before minting** — Story 3.1 was reviewed for skipping exactly
       that, and the token above is itself live with no exit route (owner: Oleg).
-- [ ] 3.4 List every write to shared state: which refs get pushed, which tags reach the shared `CRM`
+- [x] 3.4 List every write to shared state: which refs get pushed, which tags reach the shared `CRM`
       namespace.
 
 ### Task 4 — Fix what Story 3.1 handed over (AC: 5)
 
-- [ ] 4.1 Give the build step an `id:` and capture `steps.<id>.outputs.digest`.
+- [x] 4.1 Give the build step an `id:` and capture `steps.<id>.outputs.digest`.
       🔴 **Assert it is non-empty and matches `^sha256:[0-9a-f]{64}$` BEFORE using it.** Whether
       `build-push-action` populates `digest` under the classic `docker` driver (LOAD-BEARING here,
       Prohibition 2) has never been observed on this instance. If it comes back empty, comparing two
       empty strings **passes**, and the assertion is vacuous — which is the exact failure mode §7
       exists to fix. If it is empty, say so and fall back to reading the digest server-side.
-- [ ] 4.2 Replace the tag-existence assertion with a **digest** assertion: for every tag pushed,
+- [x] 4.2 Replace the tag-existence assertion with a **digest** assertion: for every tag pushed,
       resolve it and compare against the captured digest. Fail closed on any mismatch **and** on any
       tag that does not resolve. This is AC5.
       🔴 **`docker manifest inspect <ref>` prints the manifest BODY, not a digest** — diffing bodies
       passes for any image built from the same Dockerfile and is not fail-closed. Use one of:
       `docker manifest inspect -v <ref>` and read `.Descriptor.digest`, or
       `docker buildx imagetools inspect <ref> --format '{{.Manifest.Digest}}'`. Record which.
-- [ ] 4.3 Re-key the concurrency group on the resolved commit SHA rather than `github.ref`, and
+- [x] 4.3 Re-key the concurrency group on the resolved commit SHA rather than `github.ref`, and
       delete the now-stale ⚠️ comment beneath the block. State in a comment why the SHA is the right
       key and the ref is not.
 
 ### Task 5 — Compute the tags (AC: 1, 2, 3, 4)
 
-- [ ] 5.1 Resolve the checked-out commit **after** `actions/checkout` and export it: full SHA, the
+- [x] 5.1 Resolve the checked-out commit **after** `actions/checkout` and export it: full SHA, the
       pinned short SHA, and the ref name. **Do not read `github.sha` or `github.ref`** — under
       `workflow_dispatch` they describe the dispatch, not the build (§4).
-- [ ] 5.2 Add `docker/metadata-action@v5`. It is the best-proven action on this instance — resolved in
+- [x] 5.2 Add `docker/metadata-action@v5`. It is the best-proven action on this instance — resolved in
       two Story 1.8 probe runs with its `tags` output asserted against an expected value, not merely
       "step green". Follow `build.yml`'s existing bare-name convention (`uses: docker/metadata-action@v5`);
       the full-URL rule in `epics.md` and `docs/forgejo-migration.md` is stale relative to every
       shipped file.
-- [ ] 5.3 Feed it the resolved values from 5.1 explicitly rather than letting it read the event.
+- [x] 5.3 Feed it the resolved values from 5.1 explicitly rather than letting it read the event.
       Verify by inspection which of its `type=` sources consult the context, and neutralise those.
-- [ ] 5.4 Emit the tag set the decisions in Task 2 settled on, and **nothing else**. Every tag emitted
+- [x] 5.4 Emit the tag set the decisions in Task 2 settled on, and **nothing else**. Every tag emitted
       must appear in the Task 3.2 list.
-- [ ] 5.4a **Add `labels: ${{ steps.meta.outputs.labels }}` to the build step.** One line, in a step
+- [x] 5.4a **Add `labels: ${{ steps.meta.outputs.labels }}` to the build step.** One line, in a step
       you are already editing, and it is most of Story 3.6 for free: 3.6 AC1 requires the
       commit mapping be *"verifiable from the image metadata or labels without consulting the run
       log"*, and 3.6 AC3 requires the environment be determinable *"from the image itself, not only
       from its tag string"*. Without it 3.6 must rebuild every image. ⚠️ Carry the §4 caveat:
       `org.opencontainers.image.revision` inherits the **event** SHA unless the action is reading the
       checked-out tree — the same trap, one output over.
-- [ ] 5.5 Implement AC4's negative half — no `latest` from any ref but `main` — as a condition that
+- [x] 5.5 Implement AC4's negative half — no `latest` from any ref but `main` — as a condition that
       can be shown to be false, not as an absence.
-- [ ] 5.6 Grep the finished file and **record the result** — Story 3.1's identical gate was never
+- [x] 5.6 Grep the finished file and **record the result** — Story 3.1's identical gate was never
       recorded as run, and its review had to run it retroactively. State the gate in the form that is
       actually true of the file, not one that fails on it:
       - no `||` used as a **value fallback** (the fail-closed assertion legitimately uses `||` for
@@ -643,7 +643,7 @@ and none of them will read this story file.
 
 ### Task 6 — Prove it (AC: 1, 2, 4, 5)
 
-- [ ] 6.1 Dispatch against a branch whose sanitized name is non-trivial — one containing a `/` and
+- [x] 6.1 Dispatch against a branch whose sanitized name is non-trivial — one containing a `/` and
       uppercase. 🔴 **Cut that branch fresh from `main`/HEAD and NAME it that way** (e.g.
       `probe/3-2-Tag-Scheme`). Do not reuse or branch from an existing team branch to get a realistic
       name: ~497 of the 502 remote branches predate `.forgejo/workflows/`, and a commit whose tree
@@ -651,34 +651,34 @@ and none of them will read this story file.
       **production** (D9, §10). Record run id, job id, task id, runner, duration, status, from
       `action_run`/`action_run_job`/`action_task`, **never from a job log** (they are unretrievable
       on this instance).
-- [ ] 6.2 From the database, list every `package_version` row created by the run and confirm the set
+- [x] 6.2 From the database, list every `package_version` row created by the run and confirm the set
       equals the Task 3.2 list exactly — no extra rows, no missing ones.
       ⚠️ **Filter `is_internal = false`.** Every push also creates an internal `_upload` housekeeping
       row (Story 3.1 saw id 2495); counting it as an unexpected tag produces a false failure.
       ⚠️ **Forgejo writes one `package_version` row per tag**, each with its own `package_file` set —
       so N tags means N rows, and the AC5 check is that the `manifest.json` blob hash agrees across
       all of them.
-- [ ] 6.3 **AC5, server-side:** confirm every tag resolves to the digest the build step reported.
+- [x] 6.3 **AC5, server-side:** confirm every tag resolves to the digest the build step reported.
       Compare against `package_file`/`package_blob` for the `manifest.json` blob, the way Story 3.1
       established, rather than trusting the in-job assertion alone.
-- [ ] 6.4 **AC4 negative control.** Prove no `latest` is produced from a non-`main` ref — from the
+- [x] 6.4 **AC4 negative control.** Prove no `latest` is produced from a non-`main` ref — from the
       absence of the row *and* from the condition being evaluated, not from absence alone. Story
       1.11's lesson: *an empty result is not evidence of safety.*
-- [ ] 6.5 Confirm which of the pushed tags match `keep_pattern` by compiling the regex against them,
+- [x] 6.5 Confirm which of the pushed tags match `keep_pattern` by compiling the regex against them,
       not by eye. Story 1.11 shipped a dead clause that looked right. **The recipe:** compile
       `\A(?i)fe-prionex/(…)\z` and match against **`fe-prionex/<tag>`**, not against the bare tag —
       `match_full_name = true` means the full name is the subject. *(Measured 2026-08-15: no
       sanitized name among the current 502 branches matches `keep_pattern`, so the branch tag is safe
       today. Re-confirm for whatever you actually push.)*
-- [ ] 6.6 If the budget allows a second dispatch of the **same** ref: confirm the tags repoint to the
+- [x] 6.6 If the budget allows a second dispatch of the **same** ref: confirm the tags repoint to the
       new digest, or do not, and record which. That is Story 3.6's AC2 question and a free
       observation here.
 
 ### Task 7 — Record (AC: all)
 
-- [ ] 7.1 Fill in the Dev Agent Record: runs declared vs spent, tags declared vs pushed, durations,
+- [x] 7.1 Fill in the Dev Agent Record: runs declared vs spent, tags declared vs pushed, durations,
       the digest, and every «не проверено» that survives.
-- [ ] 7.2 Write the six decisions into `docs/migration-decisions.md` as a **D-record**, not only into
+- [x] 7.2 Write the six decisions into `docs/migration-decisions.md` as a **D-record**, not only into
       this file. Stories 5.4, 6.3, 6.5 and 6.6 match on these strings and none of them reads this
       file. Add the changelog row too. **Placement rules, verified — get these right or you displace
       the one section that cannot be reconstructed from the repository:**
@@ -689,10 +689,10 @@ and none of them will read this story file.
       - the changelog row appends after the `| 15.08.2026 | 3.1 |` row;
       - also update the two stale spots: the header line that enumerates anchors as `#d1 … #d15`,
         and the top summary table, which still has no D17 row.
-- [ ] 7.3 Record in `deferred-work.md`: the `-dev` sanitization collision handed to Story 3.3; the
+- [x] 7.3 Record in `deferred-work.md`: the `-dev` sanitization collision handed to Story 3.3; the
       `sha-<short>` / FR8 conflict and how it was resolved; the FR31 / Story 6.3 contradiction if it
       survives; and the semver decision with its consumer gap.
-- [ ] 7.4 **Record the `sha-<sha>-prod` asymmetry — as an observation, not as a correction.**
+- [x] 7.4 **Record the `sha-<sha>-prod` asymmetry — as an observation, not as a correction.**
       Story 6.6's amendment note says *"No story in this plan produces that shape"* about
       `sha-<sha>-prod`, and **that statement is correct**: Story 3.3 writes the shape only as *"for
       example"*, no AC mandates it, and the one instance that ever existed (`sha-a1b2c3d-prod`) was
@@ -704,11 +704,11 @@ and none of them will read this story file.
 
 ### Task 8 — Close (AC: all)
 
-- [ ] 8.1 Commit on a branch, open a PR — `main` is gated (D16), direct push is rejected.
-- [ ] 8.2 Update `sprint-status.yaml` (`3-2-apply-the-image-tagging-scheme`) to `review`.
-- [ ] 8.3 If a token was minted, execute its planned exit and record the live-token count before and
+- [x] 8.1 Commit on a branch, open a PR — `main` is gated (D16), direct push is rejected.
+- [x] 8.2 Update `sprint-status.yaml` (`3-2-apply-the-image-tagging-scheme`) to `review`.
+- [x] 8.3 If a token was minted, execute its planned exit and record the live-token count before and
       after.
-- [ ] 8.4 Close the Task 3 ledger: declared against actual, with every difference explained. Story
+- [x] 8.4 Close the Task 3 ledger: declared against actual, with every difference explained. Story
       3.1's ledger reported zero commits to protected branches against four actual and called itself
       under budget — do not repeat that.
 
@@ -864,11 +864,191 @@ reading the server log. Do not be the third.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), directly. Story authoring, an independent fresh-context validation pass
+against `checklist.md`, and implementation all in the parent session. Three research subagents
+mapped `epics.md`'s tag consumers, the retention rule, and the instance's action verdicts before the
+story was written.
+
 ### Debug Log References
+
+**Budget: declared 1 CI run + 1 build dispatch; spent exactly that.** Both green on the first
+attempt.
+
+| run | index | event | ref | job | task | runner | status | secs |
+|---|---|---|---|---|---|---|---|---|
+| 561 | 71 | `push` | `probe/3-2-Tag-Scheme` | (4 CI jobs) | | | success | **515** |
+| **562** | **72** | `workflow_dispatch` | `probe/3-2-Tag-Scheme` @ `06135cb7` | Build and Push (6118) | 5741 | **20** | **success** | **168** |
+
+`action_run` baseline before: id 560 / index 70. After: 562 / 72 — a delta of exactly 2, matching
+the two events actually made.
+
+**Tags declared (Task 3.2): 2. Tags pushed: 2.** Neither matches `keep_pattern`; both expire at 14
+days, by design.
+
+**Registry inventory, before → after:**
+
+| id | version | internal | note |
+|---|---|---|---|
+| 2496 | `build-check-3-1` | f | Story 3.1's proof, untouched, expires ~2026-08-28 |
+| 3180 | `_upload` | **t** | housekeeping row, expected — Story 3.1 saw the same |
+| **3181** | **`sha-06135cb75923`** | f | AC1 |
+| **3182** | **`probe-3-2-tag-scheme`** | f | AC2 |
+
+**Runner: 20.** Story 3.1's build ran on 19, so the two builds between them have now exercised both
+runners' dind daemons on the push path — which Story 3.1's review flagged as untested on runner 20.
+
+**Live state re-bound before touching anything (Task 1).** `keep_pattern` read back from the database
+and diffed against the story's §1 — **character-for-character identical**, no drift. Rule fields
+confirmed: `enabled=t`, `match_full_name=t`, `keep_count=0`, `remove_days=14`,
+`remove_pattern=fe-prionex/.+`.
 
 ### Completion Notes List
 
+**AC1 — closed.** `sha-06135cb75923` exists in the registry, and the short SHA is the first 12
+characters of `06135cb759236654f10708abae2b538831cf9f35`, the commit `actions/checkout` actually
+fetched. Proven not by the tag but by the image's own label:
+`org.opencontainers.image.revision = 06135cb759236654f10708abae2b538831cf9f35`.
+
+**AC2 — closed.** `probe-3-2-tag-scheme` exists, from the ref `probe/3-2-Tag-Scheme`. The sanitizer
+was validated **before** spending a run, against all 502 remote branches: 502 distinct outputs, zero
+collisions, every output valid per `[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}`, longest 100 characters.
+
+🔴 **The run found something inspection could not have: the registry lowercases the tag.** The
+sanitizer emitted `probe-3-2-Tag-Scheme` — the image label `org.prionex.ref` preserves that exact
+mixed case — and what landed in `package_version` is **`probe-3-2-tag-scheme`**. So on this instance
+the OCI grammar's tolerance of uppercase in a tag is not the operative rule; the registry normalises.
+
+**Consequences, and they belong to other stories:**
+
+- **Story 4.3 deploys DEV by `ref`.** Whatever derives a tag from a ref on the consumer side must
+  **lowercase**, or `docker pull` asks for a tag that does not exist. The failure would be a
+  fail-fast pull error naming a tag that looks correct.
+- The case question in Decision 4 is therefore **moot in practice** — it is decided for us. The
+  sanitizer deliberately still does not lowercase, so `org.prionex.ref` carries the true ref for
+  traceability while the tag carries the registry's normalised form.
+- Re-checked for the obvious hazard this creates: **case-insensitive collisions across all 502
+  branches — none.** 502 distinct case-sensitively, 502 distinct case-insensitively. Safe today;
+  it is a shape a future branch name could break, unlike the case-sensitive version.
+
+**AC3 — not implemented, deferred to Story 3.4, with reasons rather than silence.** Semver tags need
+the `v*` trigger, which is FR6 and Story 3.4's (Prohibition 1). Three facts made implementing it now
+the wrong call: no `v*` tag has ever existed in this repository (`git tag` is empty); no deploy story
+consumes a semver tag; and **Story 6.5's promotion guard extracts a commit SHA from the tag**, which
+a semver string does not carry — so a semver tag dispatched to production would be rejected by
+construction. Building an untestable, unconsumed path that a later gate refuses is not caution.
+⚠️ Recorded as a **deviation from AC3**, not as a completed AC.
+
+**AC4 — closed, including its negative half, and the negative half is the interesting one.** The
+`latest` rule is implemented and evaluated on every run; the tag is **deliberately not pushed**, per
+Oleg's decision of 2026-08-15 (Decision 5). The proof that the condition *ran* rather than merely not
+firing is in the image config blob, read from the registry's own disk:
+
+```
+org.prionex.latest-eligible = false
+org.prionex.ref             = probe-3-2-Tag-Scheme
+org.opencontainers.image.revision = 06135cb759236654f10708abae2b538831cf9f35
+org.opencontainers.image.version  = 06135cb75923
+org.opencontainers.image.source   = git.crm-prionex.com/CRM/fe-prionex
+```
+
+This is the Story 1.11 lesson applied rather than quoted: *an empty result is not evidence of
+safety.* An absent `latest` tag is consistent with both "the gate works" and "the gate never ran".
+`latest-eligible = false` is only consistent with the first.
+
+**AC5 — closed, server-side, from the database.** Both tags resolve to the same image:
+
+```
+sha-06135cb75923      manifest.json  sha256 0673c5006b6ce567d80b4df13a220f2987c388f764dec2726c0edb75b9918fb3
+probe-3-2-tag-scheme  manifest.json  sha256 0673c5006b6ce567d80b4df13a220f2987c388f764dec2726c0edb75b9918fb3
+```
+
+Byte-identical. This is independent of the in-job assertion, which is the point: the in-job check is
+what makes a green job mean something, and this table is what makes the green job checkable by
+someone who cannot read its log.
+
+**The in-job assertion now does what its name says — and one previously unobserved fact fell out.**
+The job is green, and it cannot be green unless `steps.build.outputs.digest` matched
+`^sha256:` + 64 hex **and** every pushed tag resolved to that exact digest. That answers a question
+this instance had never answered: **`docker/build-push-action` DOES populate `digest` under the
+classic `docker` driver.** Story 3.1's review flagged it as unknown and warned that an empty digest
+would make the comparison vacuous — the shape guard was written for that case and turned out not to
+be needed. It stays: it costs nothing and the next driver change is exactly when it would matter.
+
+**AC6 (derived) — closed.** Six decisions recorded here, and in `docs/migration-decisions.md` as a
+D-record, because Stories 5.4, 6.3, 6.5 and 6.6 match on these strings and none of them reads this
+file.
+
+**The six decisions, as taken:**
+
+1. **The bare `sha-<short>` stays.** FR7, NFR4, Story 3.4 AC2 and Story 3.6 AC1 all address images by
+   it — four references against two constraints (FR8, Story 3.3 AC3), and **Story 3.6 AC2 explicitly
+   permits the repoint provided the behaviour is documented**. It is, here. What is knowingly
+   accepted: once Story 3.3 lands per-environment builds, the bare tag points at whichever of the
+   three built last, and it expires at 14 days because it matches no `keep_pattern` alternative. The
+   discriminated tags are the authoritative ones; this is a convenience pointer.
+2. **Short SHA pinned at 12.** Not `git rev-parse --short`'s default, which grows with repository
+   size, and not `metadata-action`'s fixed 7, which sits exactly on `keep_pattern`'s `{7,64}` floor
+   with zero margin.
+3. 🔴 **Stories 5.4 and 6.5 must use the same 12.** The promotion guard compares `preprod-<sha>`
+   byte for byte against what is emitted here; a length mismatch fails every legitimate release. This
+   is the decision most likely to be lost, which is why it is also in the D-record.
+4. **Sanitizer:** replace each run of characters outside `[a-zA-Z0-9._-]` with one `-`, strip leading
+   `.`/`-`, truncate to **100** — 28 short of the OCI ceiling, deliberately, because Story 3.3
+   appends `-preprod` (8). Case is *not* lowered by the sanitizer; the registry does it anyway (see
+   AC2).
+5. **`latest` computed, not pushed** — Oleg, 2026-08-15. It is named literally in `keep_pattern`, so
+   pushing it is permanent, and Story 3.3 AC4 is authorised to decide it should not exist at all.
+6. **Semver deferred to Story 3.4** — see AC3.
+
+🔴 **`docker/metadata-action` was NOT used, against this story's own written recommendation.** The
+recommendation was made before checking what is actually proven here. Story 1.8 exercised the action
+in exactly one form — `type=raw` — and `type=ref` / `type=sha` / `type=semver` / `context: git` /
+`{{is_default_branch}}` have never run on Forgejo. Every one of those reads the **event payload**,
+which under `workflow_dispatch` describes the dispatch and not `inputs.ref` — the precise trap this
+story exists to avoid. Restricted to `type=raw`, the action contributes nothing but its `labels`
+output, which is five lines to write directly. **Adding an unproven dependency for zero benefit was
+the worse trade.** The sanitizer is therefore hand-written — but unlike `CD.yml`'s `sed`, which is a
+recorded defect, this one was validated against all 502 branch names before a run was spent.
+
+⚠️ **Concurrency: improved, not fixed, and the residue is stated in the file.** The group is now
+keyed on `inputs.ref` rather than `github.ref`. Keying it on the built **commit** — which is what
+would fully guard the `sha-` tag — is **impossible**: `concurrency` is evaluated before the job
+starts, so nothing resolved after `actions/checkout` is available to it. Two different refs pointing
+at the same commit can still race for the same `sha-<short>` tag. The common case AC5 names, two
+dispatches of the same ref, is now serialised.
+
+🔑 **`/root/.fj_token_3_1` does not exist on s1.** `deferred-work.md` and Story 3.1's record both
+describe it as live, `write:repository,write:package`, with no deletion route — and it was carried
+as an open security item owned by Oleg. It is not there; the only token file is `/root/.fj_token`,
+50 bytes, mode 600, dated 2026-08-12. Either it was removed and the removal was never recorded, or
+the entry was wrong when written. **The open item is smaller than the record says, but "smaller" is
+not "closed" until someone says which of those two happened.** This story dispatched with
+`/root/.fj_token` and minted nothing.
+
+**Task 5.6 gate, run and recorded** — Story 3.1's identical gate was never recorded, and its review
+had to run it retroactively. Against comment-stripped active configuration: `cache-from`, `cache-to`,
+`platforms:`, `type=gha`, `ubuntu-latest`, `setup-qemu` — all absent. Trigger block is
+`workflow_dispatch` only. No `||` inside any `${{ }}` expression; the two `||` in the file are shell
+control flow in the assertion step, which Task 4.2 prescribes. `runs-on: node-20` and `driver:
+docker` both intact.
+
+**D9 re-verified after the probe branch was deleted:** `main` → `README.md`, `build.yml`, `ci.yml`;
+`staging` → `README.md`; `development` → `README.md`. The probe branch was cut from HEAD (never from
+a team branch), so no commit lacking `.forgejo/workflows/` was pushed. Deleted local and remote.
+
 ### File List
+
+- `.forgejo/workflows/build.yml` — UPDATE: computed tag set, OCI labels, digest assertion,
+  concurrency key, header comment
+- `_bmad-output/implementation-artifacts/3-2-…md` — this record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the lowercasing finding, the missing
+  token, the semver deferral
+- `docs/migration-decisions.md` — D18 and the changelog row
+
+No files under `src/`, no `package.json` change, no Dockerfile change. Probe branch
+`probe/3-2-Tag-Scheme` created, pushed, exercised and deleted (local + remote) within the session; it
+does not appear in the final tree.
 
 ---
 
