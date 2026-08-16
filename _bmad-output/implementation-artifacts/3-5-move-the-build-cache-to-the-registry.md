@@ -484,8 +484,28 @@ once.** Replaced with `docker buildx imagetools inspect`.
 same run had just pushed and which is in `package_version`. A fail-closed guard that misnames the
 cause of its own failure sends the next reader after the registry instead of the tool.
 
-**Budget.** Declared before Task 4 at 10–14 runs against baseline `action_run.id` 659 — the first
-time this project declared one up front. Closed by query, not memory.
+**Closing evidence, and it arrived unprompted.** The merge of PR #40 was itself the cross-runner
+case this change exists for:
+
+| run | | runner | secs |
+|---|---|---|---|
+| 665 | branch, commit `1d211968` | **19** | 128 |
+| 667 | `main`, the merge of that same tree | **20** | **27** |
+
+107 s → 27 s, in production, on the first merge after landing. The variance argument used to justify
+keeping a break-even change paid off immediately.
+
+**Budget — declared before Task 4 at 10–14 runs against baseline `action_run.id` 659, and closed by
+query rather than memory:**
+
+```
+SELECT count(*) … WHERE repo_id=16 AND id > 659
+-- 8 runs (660–667): 6 success, 2 failure, 0 cancelled
+```
+
+**Under budget, and this is the first story in the project to declare one up front.** The previous
+story reported its budget five times and was low five times, having reconstructed it afterwards each
+time. Declaring first and closing by query is the difference, and it is cheap.
 
 ### File List
 
