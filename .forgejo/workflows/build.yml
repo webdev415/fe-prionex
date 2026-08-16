@@ -532,6 +532,24 @@ jobs:
           # happened once already (D21: a `uses:` job's `if:` is copied down into
           # the callee and re-evaluated there).
           if [ -z "${REF_IN:-}" ]; then
+            # 🔴 Review finding 2026-08-16: this fallback was EVENT-BLIND, and that
+            # weakened a guarantee that existed before Story 3.4 touched this file.
+            # On the dispatch path an empty `ref` used to fail closed. With an
+            # unconditional fallback it would instead silently build whatever
+            # branch the dispatch was issued against — with the environment the
+            # OPERATOR chose, `prod` included, whose `sha-…-prod` tag is permanent
+            # and needs a human with a write:package token to remove.
+            #
+            # The callee's `GITHUB_EVENT_NAME` is reliably `workflow_call` (D21 —
+            # it is the one context value Forgejo synthesizes per job), so scoping
+            # the fallback to it restores the dispatch path's fail-closed
+            # behaviour exactly.
+            if [ "${GITHUB_EVENT_NAME:-}" != "workflow_call" ]; then
+              echo "FAIL: no ref was supplied and this is not a called run" \
+                   "(event '${GITHUB_EVENT_NAME:-}'). Deriving one here would build" \
+                   "whatever branch the dispatch was issued against, under the" \
+                   "environment you selected. Supply 'ref' explicitly."; exit 1
+            fi
             _gr="${GITHUB_REF:-}"
             case "$_gr" in
               refs/heads/*)
@@ -547,7 +565,40 @@ jobs:
           fi
 
           SANITIZED="$(printf '%s' "$REF_IN" \
-            | sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^[.-]+//' | cut -c1-100)"
+            | sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100)"
+
+          # 🔴 Review finding 2026-08-16, and it was a silent tag-capture bug.
+          #
+          # This sed used to end `s/^[.-]+//`, stripping any leading dots and
+          # dashes left behind by the substitution. That looked like tidying and
+          # was not: a ref whose FIRST characters are outside the tag grammar has
+          # them collapsed to a single `-`, which the strip then deletes — so the
+          # ref's remainder is promoted to a tag it does not own.
+          #
+          #   тест-main            ->  --main   ->  main            ->  main-dev
+          #   фича.main            ->  -.main   ->  main            ->  main-dev
+          #   проба-story-3-4-impl ->  ...      ->  story-3-4-impl  ->  (existing tag)
+          #   оплата-v2, платеж-v2 ->  -v2      ->  v2              ->  both, one tag
+          #
+          # Nothing downstream refuses these. `latest_eligible` tests the RAW ref;
+          # `main` is not in `keep_pattern`; the digest assertion compares the run
+          # against its own tags and passes. The build goes green and a feature
+          # branch has overwritten `main-dev` — which is precisely the tag Story
+          # 4.6 resets the DEV stand to. In a project whose entire written record
+          # is Russian, `фикс-main` is an ordinary branch name, not a contrived one.
+          #
+          # Refusing is exactly targeted: `git check-ref-format` already forbids a
+          # branch beginning with `.` or `-`, so after substitution a leading `.`
+          # or `-` can ONLY mean the ref began with characters outside the grammar.
+          # No legitimate ASCII branch name reaches this guard.
+          case "$SANITIZED" in
+            [.-]*)
+              _would="$(printf '%s' "$SANITIZED" | sed -E 's/^[.-]+//')"
+              echo "FAIL: ref '${REF_IN}' begins with characters that are not legal in a" \
+                   "Docker tag. Dropping them would produce the tag '${_would}-<env>', which" \
+                   "belongs to a DIFFERENT ref — pushing it would silently overwrite that" \
+                   "ref's image. Rename the branch to begin with [a-zA-Z0-9]."; exit 1 ;;
+          esac
 
           # No silent fallback. An empty result means the ref was composed
           # entirely of characters outside the tag grammar — every Cyrillic ref

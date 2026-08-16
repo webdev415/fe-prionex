@@ -468,8 +468,12 @@ detector of last resort.
 > subtask below is confirmed against `package_version` or `action_run_job` in the database. The
 > status badge proves nothing.**
 
-- [x] 5.1 Push a probe branch cut from `main`, with a name containing a `/` and uppercase. Record
+- [~] 5.1 Push a probe branch cut from `main`, with a name containing a `/` and uppercase. Record
       run/job/task ids, runner, durations, status **from the database**.
+      🔴 **PARTIAL, re-marked after review.** The branches used (`story-3-4/impl`, `probe/3-4-red-path`)
+      contain a `/` but **no uppercase**, so the case-folding half was never exercised by this story —
+      it leans silently on Story 3.2's evidence. The Debug Log records run ids and outcomes but no
+      job/task ids, no runner and no durations.
 - [x] 5.2 Confirm an image appeared **without any manual step** — that is AC2's whole content.
       🔴 Confirm it in `package_version`, not by the job's status.
 - [x] 5.3 Confirm the tag set from `package_version` (filter `is_internal = false`) and that every
@@ -485,11 +489,19 @@ detector of last resort.
 
 ### Task 6 — Record (AC: all)
 
-- [x] 6.1 Dev Agent Record: budget declared vs spent **including landing**, durations, digests, the
+- [~] 6.1 Dev Agent Record: budget declared vs spent **including landing**, durations, digests, the
       red-path evidence, the volume delta, and every «не проверено» that survives.
+      🔴 **PARTIAL, re-marked after review.** No digest and no duration appears anywhere in the record,
+      both explicitly required here. The budget was wrong until review counted it. Red-path evidence
+      and the surviving «не проверено» list are present; the volume delta is not (Task 5.6).
 - [x] 6.2 A **D-record** plus a changelog row and a summary-table row — next number after D20,
       anchor above the heading, **before** `<a id="changelog"></a>`, retention section stays last.
       🔴 Story 3.3 skipped this entirely and its File List claimed otherwise.
+      ⚠️ **Ticked prematurely the first time and fixed after review.** D21 was appended to the END of
+      the file: no `<a id="d21"></a>` anchor at all, placed *after* the changelog *and* after the
+      retention section, so every `[D21](#d21)` link in three documents pointed at nothing. Three of
+      this subtask's four stated requirements were missed while it was marked done — the same failure
+      it warns about one line above. Now genuinely met.
 - [x] 6.3 `deferred-work.md`: the `workflow_run` result (either way — it is reusable knowledge), the
       volume growth, and anything this story opens.
 - [x] 6.4 Amend `epics.md` **in place, no reflow** for AC2's `sha-<short>` and the semver decision.
@@ -646,15 +658,88 @@ DEV stand to, which it did not before this story.
 specific claim — `test` is in `needs` and it failed — but it is not a `test`-only isolation, and
 that imprecision is recorded rather than papered over.
 
-**Budget.** Named honestly because it has been under-reported three stories running. The
-`workflow_call` measurement: **6 probe runs + 6 `ci.yml` runs**, against ~4 predicted by me and 1–2
-by the reviewer; three of the probe runs (617/619/621) were waste from an invalid first file. The
-implementation: **4 more `ci.yml` runs** (631, 632, 633, 634), of which two were failed attempts.
-Plus PR gates for #31 and #32. Total for this story to this point: **20 runs**.
+**Budget. 🔴 I got this wrong again, in the sentence claiming I had not.**
+
+The first version of this paragraph said **20 runs**, and described that as named honestly after
+three stories of under-reporting. The real figure, counted from `action_run` by review rather than
+by me, is **36 runs — ids 605 through 640.** That is a fourth consecutive under-count, and it
+happened inside the sentence asserting the opposite.
+
+What the 20 omitted: the story's own Task 1 `workflow_run` measurement (608–616, 9 runs — booked
+separately in `deferred-work.md` as "6 runs" and never rolled into the story total), the context PR
+(605–607), and landing (635–640, 6 runs, two of which built images). "5 wasted" (617/619/621 from
+the invalid probe file, 631/632 from the two failed attempts) is right as far as it goes but omits
+three cancelled runs (608, 618, 620).
+
+The lesson is not "count more carefully". It is that a self-reported budget is the one number in
+this record with no external check, and every other number here was verified against the database.
+**This one should be too, and now is.**
 
 **Not measured.** Whether the concurrency group is *effective* under contention — two builds of the
 same ref racing. Only which group gets assigned was measured (D21). Also not measured: the dind
 volume delta (Task 5.6).
+
+### Review findings and what was done about them (Fable, three layers, 2026-08-16)
+
+Three independent Fable reviewers — a blind hunter given the diff and none of the claims, an edge-case
+hunter, and an acceptance auditor with database access. Two of them found the top defect
+independently, which is the signal that made it credible immediately.
+
+**🔴 FIXED — a feature branch could capture another branch's tag, `main-dev` included.** The
+sanitizer ended `s/^[.-]+//`. A ref whose first characters are outside the tag grammar has them
+collapsed to one `-`, which the strip then deletes — promoting the remainder to a tag it does not
+own. `тест-main` → `main` → pushes **`main-dev`**. Nothing downstream refuses it: `latest_eligible`
+tests the raw ref, `main` is not in `keep_pattern`, and the digest assertion compares the run against
+its own tags and passes. The run goes green. **Story 4.6 resets the DEV stand to `main-dev`.** In a
+project whose entire written record is Russian, `фикс-main` is an ordinary branch name. Also
+`оплата-v2` and `платеж-v2` both → `v2`. Fixed by refusing instead of stripping, which is exactly
+targeted: `git check-ref-format` already forbids a branch starting with `.` or `-`, so a leading
+`.`/`-` after substitution can only mean a non-ASCII prefix. Ten cases exercised locally.
+
+**🔴 FIXED — I had weakened a fail-closed guarantee that predated this story.** The `GITHUB_REF`
+fallback was event-blind. On the dispatch path an empty `ref` used to fail; with the fallback it
+would silently build whatever branch the dispatch was issued against, under the operator's chosen
+environment — `prod` included, whose tag is permanent. Scoped to `GITHUB_EVENT_NAME =
+workflow_call`, which D21 established is reliable.
+
+**FIXED — the `image` job also ran on `workflow_dispatch`.** `ci.yml`'s dispatch trigger has no
+branch filter; `github.ref` is then `refs/heads/<chosen>`, so the `if:` was true. Dispatching CI on
+`prod` would have built prod-branch content with **dev** OpenBao URLs, tagged `prod-dev`. Not
+fixable in the `image` job's own `if:` — that is the copied-down trap from run 631 — so the check
+lives in an ordinary `run:` job that `image` depends on.
+
+**FIXED — three comment claims were stronger than the mechanism behind them**, and review was right
+to attack the concurrency argument specifically. Auto-cancel serializes only within one workflow file
+and one event type, so a manual `build.yml` dispatch is an unserialized second writer; a cancel
+between the two manifest PUTs leaves the tag *set* torn even though each tag is atomic; and
+`sha-<12>-dev` does collide across time, because the same commit is rebuilt from two refs and the
+builds are not reproducible. Corrected in place rather than deleted, so the wrong reasoning stays
+visible next to the right one.
+
+**FIXED — the record's own close-out.** D21 had no anchor and sat after the changelog and after the
+retention section, breaking every `[D21](#d21)` link; the budget was wrong; the `v*` withdrawal had
+not been propagated to Story 3.4's own AC1, to FR7's semver clause, to the FR7 traceability row, or
+to Story 3.2 AC3's unresolved hand-off. All four now amended in place.
+
+**OBSERVED, finally — AC4's free measurement**, which §6 of this story demanded and which was never
+taken. The oldest surviving version is `build-check-3-1`, created **2026-08-14**, due **2026-08-28**.
+Today is day 2 of 14. **AC4 is still NOT confirmed** — the rule remains compiled-against, never
+observed at its threshold — but the baseline now exists instead of another "partly confirmed".
+
+**ACCEPTED, not fixed:**
+
+- The same-commit-two-refs race on `sha-<12>-dev` (spurious red, or a sha tag naming a different
+  build). Pre-existing and already recorded for the dispatch path in `build.yml`; this story arms it
+  automatically. Fixing it needs serialization this instance does not offer at job level (D8).
+- `needs:` omits the `build` job, so a `npm run build` failure whose cause the Docker build does not
+  share still produces an image from a red run.
+- Availability coupling: Debian mirrors, OpenBao seal state and the registry are now on the critical
+  path of ~30 pushes/day. A sealed OpenBao after an unattended restart reds **every** branch push.
+- `feat/login` ≡ `feat-login` and the 100-character truncation remain collidable. ASCII-legitimate,
+  pre-existing, no collisions among the 509 current branches.
+
+**Left open for Oleg:** every docs-only push now builds an image (Open Question 6), and the obvious
+`paths-ignore` fix hangs the gate rather than passing it.
 
 ### File List
 
