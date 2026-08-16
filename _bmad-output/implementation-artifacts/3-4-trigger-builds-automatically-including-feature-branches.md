@@ -119,6 +119,46 @@ permanence report, the digest assertion — either moves into `ci.yml` or is dup
 which in writing, and prefer moving: two copies of the `keep_pattern` guard is how it drifts from
 the database.
 
+#### ✅ SETTLED 2026-08-16 — neither. The logic stays in one file and `ci.yml` calls it
+
+The third option was `workflow_call`, and it was as unmeasured as `workflow_run` had been. It has
+now been measured property by property — four dispatches, full record in
+[D21](../../docs/migration-decisions.md#d21). **It works**, so `build.yml` is neither moved nor
+duplicated: it gains an `on: workflow_call:` half alongside its existing `workflow_dispatch`, and
+`ci.yml` gains a fifth job that is a `uses:` of it.
+
+What the measurement establishes, and what it costs:
+
+| | |
+|---|---|
+| Typed `inputs` across the boundary | ✅ — `ref` and `environment` arrive intact |
+| A single file with both `workflow_call` and `workflow_dispatch` | ✅ — and `type: choice` stays legal on the dispatch half |
+| `needs:` before and after a `uses:` job, and its outputs | ✅ — so `needs: [lint, typecheck, test]` gates the call |
+| Getting the nine secrets in | ⚠️ **only** `secrets: inherit` on the caller. Declaring them in the callee is rejected by the parser, and they are not ambient |
+
+🔴 **And one thing the extraction breaks if you do not act: `build.yml`'s own `concurrency` block
+stops applying the moment it is called.** A called workflow's run carries the **caller's**
+auto-generated group; the callee's `concurrency:` produces no group and no error. Measured directly
+— the same file gives `concurrency_type = 1` when dispatched and `concurrency_type = 0` when called.
+This is the same silent-drop behaviour already recorded for `jobs.<id>.concurrency` in
+[D8](../../docs/migration-decisions.md#d8).
+
+**So `concurrency` must be declared on the caller.** `ci.yml` has no `concurrency` block today, and
+its file header says so deliberately. Adding one is therefore a change to `ci.yml` beyond the new
+job — allowed under Prohibition 9's fallback clause, but state it in the completion record rather
+than letting it pass as incidental. Serialization of same-`ref` builds is Story 3.1 AC5; losing it
+is not a cosmetic regression.
+
+⚠️ **`secrets: inherit` is all-or-nothing.** It hands the callee every repository secret. For
+`build.yml` that is not a regression — it already sees all nine as a top-level workflow, and the
+per-environment `case` in the OpenBao step is what actually narrows them (D20). Note it for Story
+4.8, where a shared deploy workflow would receive the production OpenBao credentials even on a DEV
+deploy.
+
+⚠️ **Not measured:** whether the concurrency group is *effective* under contention — two builds of
+the same `ref` racing. Only which group gets assigned was measured. If Task 5 can produce the
+contention cheaply, do it; if not, say so rather than implying it was covered.
+
 *(Original instruction, kept because the method is the reusable part:)*
 **Task 1 was to settle it with a run, cheaply, before any real work:** put a trivial workflow with
 `on: workflow_run:` on a probe branch, cause the upstream workflow to complete, and observe whether
@@ -324,17 +364,35 @@ detector of last resort.
 
 ### Task 1 — Settle `workflow_run` before writing anything (AC: 1)
 
-- [ ] 1.1 Probe on a throwaway branch: a trivial workflow with `on: workflow_run:` and a step that
+- [x] 1.1 Probe on a throwaway branch: a trivial workflow with `on: workflow_run:` and a step that
       writes something observable **in the database** — job logs are readable now (see Dev Notes),
       but do not depend on that for the primary evidence.
-- [ ] 1.2 Cause the upstream workflow to complete and observe whether a run is created.
+- [x] 1.2 Cause the upstream workflow to complete and observe whether a run is created.
       🔴 **Distinguish "did not fire" from "fired and did nothing".** An unsupported trigger is
       silent. An absence is not evidence — Story 1.11's standing lesson.
-- [ ] 1.3 Record the result either way. **If unsupported, fall back to shape А and record the
+      *Done: positive control proved the downstream workflow was dispatchable (run 611); the
+      upstream then ran on `main` (run 614) and no downstream run appeared in 560 s. `workflow_run`
+      appears in none of 124 recorded run events.*
+- [x] 1.3 Record the result either way. **If unsupported, fall back to shape А and record the
       measurement as a finding**: Epics 4–6 will want "run X after Y succeeded" again.
-- [ ] 1.4 If supported, establish **which event fields Forgejo populates** —
+      *Done: unsupported. Recorded, PR #30.*
+- [x] 1.4 If supported, establish **which event fields Forgejo populates** —
       `github.event.workflow_run.head_branch`, `.head_sha`, `.conclusion` — by printing them, not by
-      assuming GitHub's schema.
+      assuming GitHub's schema. *N/A — not supported.*
+
+**Task 1b — the question shape А raised in its place: how the logic is shared (AC: 1)**
+
+- [x] 1b.1 Measure `workflow_call` property by property rather than as a yes/no. Story 1.3's Probe C
+      proved only the bare mechanism — no inputs, no secrets, no outputs, no `concurrency`, one
+      trigger — and Story 1.3's own table lists `secrets: inherit` under *expectations, not
+      findings*. *Done: four dispatches, runs 617/619/621, 624, 626, 627.*
+- [x] 1b.2 Establish how secrets get in. *Done: `on.workflow_call.secrets` is rejected by the
+      parser; secrets are not ambient; `secrets: inherit` on the caller is the only way and it
+      works.*
+- [x] 1b.3 🔴 Establish whether the callee's own `concurrency` still applies. *Done: **it does
+      not**, and it fails silently — `concurrency_type = 1` when dispatched, `0` when called. The
+      caller must declare it.*
+- [x] 1b.4 Record the result. *Done: [D21](../../docs/migration-decisions.md#d21).*
 
 ### Task 2 — Bind the state (AC: all)
 
