@@ -1,9 +1,12 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts two tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts five tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
- * (default), and the "Відпрацювання за ЦД" client processing report.
+ * (default), the "Відпрацювання за ЦД" client processing report, the
+ * "Верифікація 3-х осіб" third-party verification report, the
+ * "Мало верифікацій" client work list, and the "Серчер без відпрацювання"
+ * searcher follow-up work list.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -38,6 +41,9 @@ import {
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ClientProcessingTab } from '@/features/clientProcessing'
+import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
+import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
+import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -431,8 +437,21 @@ function DashboardTab() {
 // Main Component — tab host
 // ============================================================================
 
-const REPORT_TABS = ['dashboard', 'processing'] as const
+const REPORT_TABS = [
+  'dashboard',
+  'processing',
+  'verification',
+  'low-verification',
+  'searcher-followup',
+] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
+
+const DEFAULT_REPORTS_TAB: ReportsTab = 'dashboard'
+
+/** Unknown/absent `?tab=` values fall back to the default tab. */
+function resolveReportsTab(rawTab: string | null): ReportsTab {
+  return REPORT_TABS.includes(rawTab as ReportsTab) ? (rawTab as ReportsTab) : DEFAULT_REPORTS_TAB
+}
 
 export function ReportsDashboardPage() {
   const { t } = useTranslation('common')
@@ -441,8 +460,7 @@ export function ReportsDashboardPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
 
-  const rawTab = searchParams.get('tab')
-  const activeTab: ReportsTab = rawTab === 'processing' ? 'processing' : 'dashboard'
+  const activeTab: ReportsTab = resolveReportsTab(searchParams.get('tab'))
 
   // DEV-only token expiry check, at the host level so it covers every tab.
   // Kept in useEffect to avoid impure operations during render.
@@ -478,15 +496,18 @@ export function ReportsDashboardPage() {
   // Page-tab switches push a history entry (Back returns to the previous
   // tab); only filter updates inside the tabs use `replace`.
   //
-  // The processing tab's `?from/?to/?dept` params are deliberately KEPT when
-  // switching tabs: the filters must survive a round-trip through the
-  // dashboard (documented contract of ClientProcessingTab). A slightly
-  // "dirty" dashboard URL is accepted cosmetics.
+  // The report tabs' filter params (`?from/?to/?dept` for processing,
+  // `?sf/?st/?cf/?ct` for verification, `?pf/?pt/?mv/?pg/?ps` for the
+  // low-verification feed, `?if/?it/?spg/?sps` for the searcher feed) are
+  // deliberately KEPT when switching tabs: the
+  // filters must survive a round-trip through the dashboard (documented
+  // contract of the tabs, and the key sets don't collide). A slightly "dirty"
+  // dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
       // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
-      if (tab === 'dashboard') next.delete('tab')
+      if (tab === DEFAULT_REPORTS_TAB) next.delete('tab')
       else next.set('tab', tab)
       return next
     })
@@ -519,12 +540,22 @@ export function ReportsDashboardPage() {
         aria-labelledby={segmentedTabId('reports', activeTab)}
         // Deliberately NOT focusable: the ARIA APG rule that a tabpanel needs
         // `tabIndex={0}` applies only to panels with no focusable content.
-        // Both panels here are full of it (export button, period tabs, date
+        // Every panel here is full of it (export button, period tabs, date
         // pickers, department sub-tabs), so a tabIndex would only add a
         // useless extra stop on the way through the page.
         className="flex flex-1 flex-col self-stretch"
       >
-        {activeTab === 'dashboard' ? <DashboardTab /> : <ClientProcessingTab />}
+        {activeTab === 'processing' ? (
+          <ClientProcessingTab />
+        ) : activeTab === 'verification' ? (
+          <ThirdPartyVerificationTab />
+        ) : activeTab === 'low-verification' ? (
+          <LowVerificationFeedTab />
+        ) : activeTab === 'searcher-followup' ? (
+          <SearcherFollowupFeedTab />
+        ) : (
+          <DashboardTab />
+        )}
       </div>
     </div>
   )
