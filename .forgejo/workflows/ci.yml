@@ -381,10 +381,29 @@ jobs:
   # per-environment `case` in its OpenBao step is what actually narrows them
   # (D20) — but Story 4.8 should weigh it before extracting a deploy workflow.
   #
-  # `if: github.event_name == 'push'` keeps this off pull_request and off
-  # workflow_dispatch. Without it a PR would build an image tagged from a
-  # `refs/pull/N/head` ref name — junk in the registry for no benefit, since the
-  # push run on the same branch already built the same content.
+  # 🚨 The `if:` keeps this off `pull_request`, where the run's ref is
+  # `refs/pull/N/head` and the image would be tagged `N-head-dev` — junk in the
+  # registry for no benefit, since the push run on the same branch already built
+  # the same content.
+  #
+  # 🔴 It tests `github.ref`, NOT `github.event_name`, and that is the whole
+  # point. The first version of this job used `github.event_name == 'push'` and
+  # produced a GREEN RUN THAT BUILT NOTHING — run 631: `image` reported success
+  # while `image.build-and-push` was skipped, and the registry had no new tag.
+  #
+  # The cause: Forgejo copies a `uses:` job's `if:` DOWN into the expanded
+  # callee job — visibly, the same way it copies `needs:` — and re-evaluates it
+  # there, where `github.event_name` is `workflow_call`, never `push`. The
+  # condition was constant-false. Nothing errored.
+  #
+  # `github.ref` does not have this problem because it is a property of the RUN,
+  # not of the job: `action_run.ref` is a single column, and the expanded callee
+  # lives inside the same run. Only `event_name` is synthesized per job to
+  # describe the call.
+  #
+  # ⚠️ So a green `image` job is NOT evidence that an image was built. The only
+  # evidence is the tag in the registry. Story 3.4 Task 5 means the registry,
+  # not the tick.
   #
   # 🚨 On concurrency, deliberately NOT adding a block, and this was examined
   # rather than skipped. build.yml's own `concurrency` block does not apply when
@@ -402,7 +421,7 @@ jobs:
   image:
     name: Build and Push Image
     needs: [lint, typecheck, test]
-    if: github.event_name == 'push'
+    if: ${{ !startsWith(github.ref, 'refs/pull/') }}
     uses: ./.forgejo/workflows/build.yml
     with:
       ref: ${{ github.ref_name }}
