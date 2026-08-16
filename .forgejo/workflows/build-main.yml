@@ -1,0 +1,67 @@
+# Story 3.4, AC1: "it runs on `push` to any branch, on `push` to `main`".
+#
+# The first half is `ci.yml`'s `image` job — feature branches build after their
+# tests pass. This file is the second half, and it is a separate file for a
+# measured reason rather than a stylistic one.
+#
+# `ci.yml` deliberately excludes `main` from its `push` trigger, and its own
+# header argues the case with numbers: a commit landing on `main` is a MERGE
+# RESULT that was already gated by the `pull_request` run on the same head SHA,
+# and re-running four jobs (~540s of wall clock, ~918 job-seconds, on a host
+# shared with another tenant's production) pays twice for the same answer.
+# Putting `main` back into `branches-ignore` to get an image would overturn that
+# decision as a side effect of wanting something else. So the image is built
+# here, on its own, without the test jobs.
+#
+# There is therefore no `needs:` gate on this job, and that is not an oversight.
+# The gate already happened: `main` is protected, direct pushes are refused, so
+# every commit on it arrived through a PR that ran the full suite. The residual
+# gap is honest and small — the merge COMMIT is a different SHA than the PR head
+# that was tested — and it is the same gap `ci.yml` already accepts by excluding
+# `main`. This story does not widen it and does not close it.
+#
+# Why an image on `main` is needed at all: Story 4.6 resets the DEV stand to
+# "the current `main` image" on a schedule, and Story 4.3's deploy pulls
+# fail-fast with no `:latest` fallback. Without this file there is no `main`
+# image to reset to, and 4.6 has nothing to pull.
+#
+# 🔴 `environment: dev` is a LITERAL — AC5. `-preprod` and `-prod` tags are
+# permanent under the retention rule and removing one needs an authorised DELETE
+# plus a `write:package` token, which has twice required Oleg in person. No
+# automatic path may reach those environments, and "cannot" here is provable by
+# reading this line.
+#
+# `secrets: inherit` is the only mechanism that works, not a shortcut: a callee
+# cannot declare its own secrets (the parser rejects `on.workflow_call.secrets`)
+# and repository secrets are not ambient inside one. Both measured — D21.
+#
+# 🚨 No `concurrency` block, examined rather than skipped. build.yml's own block
+# does not apply when it is called (D21), so the policy here is Forgejo's
+# default for `push`: auto-cancel an earlier run on the same ref. For the one
+# mutable tag this produces (`main-dev`) that is the safer choice — auto-cancel
+# leaves exactly one writer, queueing would let two write in sequence. The
+# per-commit `sha-<12>-dev` tags cannot collide.
+#
+# ⚠️ `ref: main` rather than `${{ github.sha }}`, deliberately. build.yml derives
+# its branch tag from the ref it is given, so passing the SHA would produce a tag
+# named after the SHA instead of `main-dev` — and `main-dev` is the name Story
+# 4.6 has to be able to ask for. The cost is a small race: if `main` advances
+# between this run starting and its checkout, the image is of the newer commit.
+# The `sha-<12>-dev` tag still names exactly what was built, so nothing is
+# mislabelled — only slightly ahead.
+
+name: Build main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  image:
+    name: Build and Push Image
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      ref: main
+      environment: dev
+    secrets: inherit

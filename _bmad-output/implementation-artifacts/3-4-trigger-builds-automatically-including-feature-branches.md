@@ -279,6 +279,18 @@ one query. **Look, and record what you find; do not restate "partly confirmed".*
   here, no deploy story consumes one, and Story 6.5's guard extracts a commit SHA from the tag so it
   would reject a semver string by construction. AC1 names a `v*` push trigger. **Implement it, or
   take the decision to drop FR7's semver clause — do not inherit it unexamined a second time.**
+
+  ✅ **DECIDED 2026-08-16: dropped.** The three facts were re-checked rather than taken on trust —
+  the repository has **zero tags of any kind**, local and on the instance
+  (`/api/v1/repos/CRM/fe-prionex/tags` returns an empty list). A fourth, technical, decided it:
+  `ci.yml`'s header is marked 🚨 LOAD-BEARING precisely on the point that **the branch filter is
+  what keeps the workflow off tags**, not the absence of a `tags:` clause. So `v*` is not a line
+  added to an existing trigger — it is another workflow file plus its own measurement of how
+  `tags:` behaves beside `branches-ignore` on this instance. That is not worth spending on a tag
+  nobody creates, no story consumes, and Story 6.5's guard would reject by construction.
+  **The `v?\d+\.\d+\.\d+.*` clause in `keep_pattern` stays** — it costs nothing and still protects
+  a hand-pushed semver tag. The trigger was dropped, not the protection. Recorded in
+  [D18](../../docs/migration-decisions.md#d18).
 - **The `keep_pattern` guard and the permanence report** are both in `build.yml` and both matter more
   under an automatic trigger. Do not weaken either to make an automatic tag fit.
 - **The OpenBao read** runs on every build now. Its credentials are repository secrets and its token
@@ -323,6 +335,19 @@ Verbatim from `epics.md`, with this story's reading where the plan has been over
 rather than the push directly (Oleg, 2026-08-16). If `workflow_run` proves unsupported, shape А
 satisfies it differently and that is a recorded deviation, not a failure. The `v*` clause is the
 semver decision from §7.*
+
+**✅ How AC1 was actually satisfied, clause by clause:**
+
+| AC1 clause | How | Deviation? |
+|---|---|---|
+| push to any branch | `ci.yml`'s `image` job, `needs: [lint, typecheck, test]` | yes — it follows the tests rather than the push, which is Oleg's decision above |
+| push to `main` | `build-main.yml`, a separate file | yes — `ci.yml` excludes `main` by a decision its own header argues with measurements; overturning that as a side effect would have been wrong |
+| push of a `v*` tag | **not implemented — clause dropped** | yes, and deliberately: see §7 and [D18](../../docs/migration-decisions.md#d18) |
+| `workflow_dispatch` with a `ref` input retained | `build.yml` keeps its dispatch half unchanged, `choice` dropdown included | no |
+
+🔴 **The `v*` clause is the one to argue with if anyone is going to.** It was decided, not
+overlooked, and the reasoning is written down where it can be attacked. Zero tags exist in this
+repository — that was verified, not remembered.
 
 **AC2 — an image exists without asking.**
 
