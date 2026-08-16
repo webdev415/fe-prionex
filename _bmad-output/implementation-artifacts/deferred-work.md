@@ -1750,3 +1750,63 @@ chain it inside one workflow with `needs:`.**
 
 **Cost of the measurement:** 6 runs (609–614). Worth it — the alternative was designing Story 3.4
 around a guess, and then Epics 4–6 rediscovering it one at a time.
+
+---
+
+## `workflow_call` — the answer to "run the same logic from two places" (Story 3.4, 2026-08-16)
+
+`workflow_run` is unusable here (above), so the reuse question fell to `workflow_call`. Story 1.3's
+Probe C had already been read as answering it. **It had not.** That probe declared no inputs, no
+secrets, no outputs, no `concurrency` block and one trigger — it proved the bare mechanism and
+nothing the real extraction depends on. Story 1.3's own table listed `secrets: inherit` under
+*"expectations to test against, not findings."* This is the second time in this project that a
+capability was believed settled because a related fact was recorded; the first was job-log
+persistence.
+
+**Full record: [D21](../../docs/migration-decisions.md#d21).** The reusable parts:
+
+**Works.** Expansion into separate jobs; typed `inputs` across the boundary; one file carrying both
+`workflow_call` and `workflow_dispatch` with `type: choice` still legal on the dispatch half;
+`needs:` before *and* after a `uses:` job including reading its outputs; callee outputs reaching the
+caller byte-for-byte.
+
+**`secrets: inherit` is the only way in, and it is all-or-nothing.** `on.workflow_call.secrets` is
+rejected by the parser, and repository secrets are not ambient in a callee. Story 4.8's shared
+deploy workflow will therefore receive the production OpenBao credentials even on a DEV deploy —
+worth weighing there, and not a regression today only because `build.yml` already holds all nine as
+a top-level workflow.
+
+🔴 **A called workflow loses its own `concurrency` block, silently.** The run carries the caller's
+auto group. Same file: `concurrency_type = 1` dispatched, `0` called, no error either way. **Every
+caller owns its own serialization.** Anyone extracting a workflow must move the block, or lose it
+without being told.
+
+🔴 **A `uses:` job's `if:` is copied DOWN into the expanded callee and re-evaluated there**, where
+`github.event_name` is `workflow_call` and never the original event. `if: github.event_name ==
+'push'` is therefore constant-false. Use `github.ref`, which is a property of the run
+(`action_run.ref`, one column) rather than of the job. **Write the condition positively** —
+`startsWith(github.ref, 'refs/heads/')`, not `!startsWith(github.ref, 'refs/pull/')` — because the
+negative form is *true* when the context is empty and would run the job for the wrong reason while
+looking exactly like working.
+
+⚠️ **`${{ github.ref_name }}` in a caller's `with:` reaches the callee empty.** Derive the branch in
+bash from `GITHUB_REF` instead; bash has substring extraction and the GitHub expression language does
+not.
+
+🔴 **And the one that generalizes furthest: a green `uses:` job is not evidence that the called
+workflow did anything.** The wrapper reports **success** when every job it expanded was **skipped**.
+Run 631: `image` success, `image.build-and-push` skipped, registry unchanged. Run 634, red path:
+`image` failure, `image.build-and-push` skipped, registry unchanged. Identical inner outcome,
+opposite badge. **Check the registry, the database row, the artifact — never the tick.** Same family
+as *"an empty result is not evidence of safety"* (1.11) and *"a test that cannot fail proves
+nothing"* (1.12).
+
+**Where workflow schema errors live.** `action_run.pre_execution_error_details`, and nowhere else. An
+invalid file creates no task, so there is no job log at all, and both plausible job-log API routes
+(`/actions/jobs/{id}/logs`, `/actions/runs/{n}/jobs/{id}/logs`) 404 even for an admin token. It also
+explains a confusing symptom: an invalid workflow produces one **failed run per event Forgejo was
+evaluating** — `create`, `push`, `pull_request` — for a file declaring none of them. That is not
+`workflow_call` matching every event; the spurious runs vanish once the file is valid.
+
+**Cost of the measurement:** 6 probe runs plus 6 `ci.yml` runs, of which 3 probe runs were waste from
+an invalid first file. Predicted ~4 by the implementer and 1–2 by the reviewer; both were low.

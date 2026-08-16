@@ -4,7 +4,7 @@ baseline_commit: f31a2d72
 
 # Story 3.4: Trigger Builds Automatically Including Feature Branches
 
-Status: ready-for-dev
+Status: review
 
 > **What this story is.** `build.yml` has been dispatch-only since Story 3.1. This arms it, so an
 > image exists for a branch without anyone asking. FR6.
@@ -452,35 +452,52 @@ detector of last resort.
 
 ### Task 5 — Prove it (AC: 2, 3, 4, 5)
 
-- [ ] 5.1 Push a probe branch cut from `main`, with a name containing a `/` and uppercase. Record
+> 🔴 **Read this before ticking anything in Task 5. A green run is not evidence here, and this was
+> learned the expensive way — twice, in this story, on consecutive runs.**
+>
+> **Run 631** — job `image`: **success**. Job `image.build-and-push`: **skipped**. Registry: nothing.
+> Forgejo copies a `uses:` job's `if:` down into the expanded callee and re-evaluates it there,
+> where `github.event_name` is `workflow_call` and never `push`, so the condition was constant-false.
+> A wrapper job reports success when every job it expanded was skipped. Recorded in
+> [D21](../../docs/migration-decisions.md#d21).
+>
+> **Run 632** — the job ran and failed on build.yml's own tag guard: `ref '' sanitizes to an empty
+> string`. `${{ github.ref_name }}` in the caller's `with:` reaches the callee **empty**.
+>
+> The first of those two would have shipped as "working" on any check that reads the tick. **Every
+> subtask below is confirmed against `package_version` or `action_run_job` in the database. The
+> status badge proves nothing.**
+
+- [x] 5.1 Push a probe branch cut from `main`, with a name containing a `/` and uppercase. Record
       run/job/task ids, runner, durations, status **from the database**.
-- [ ] 5.2 Confirm an image appeared **without any manual step** — that is AC2's whole content.
-- [ ] 5.3 Confirm the tag set from `package_version` (filter `is_internal = false`) and that every
+- [x] 5.2 Confirm an image appeared **without any manual step** — that is AC2's whole content.
+      🔴 Confirm it in `package_version`, not by the job's status.
+- [x] 5.3 Confirm the tag set from `package_version` (filter `is_internal = false`) and that every
       tag resolves to the run's digest.
-- [ ] 5.4 🔴 **Prove the red path.** Push a commit that fails a test and confirm **no image is
+- [x] 5.4 🔴 **Prove the red path.** Push a commit that fails a test and confirm **no image is
       produced**. That is the entire reason shape В was chosen over Б, and an unexercised guarantee
       is not a guarantee — *"a test that cannot fail proves nothing"*, Story 1.12.
-- [ ] 5.5 Confirm the AC3 string: derive the tag from the ref by the documented rule and confirm the
+- [x] 5.5 Confirm the AC3 string: derive the tag from the ref by the documented rule and confirm the
       registry holds exactly that.
 - [ ] 5.6 Measure the dind volume delta across the builds this story creates and state whether prune
       is now urgent (§5).
-- [ ] 5.7 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
+- [x] 5.7 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
 
 ### Task 6 — Record (AC: all)
 
-- [ ] 6.1 Dev Agent Record: budget declared vs spent **including landing**, durations, digests, the
+- [x] 6.1 Dev Agent Record: budget declared vs spent **including landing**, durations, digests, the
       red-path evidence, the volume delta, and every «не проверено» that survives.
-- [ ] 6.2 A **D-record** plus a changelog row and a summary-table row — next number after D20,
+- [x] 6.2 A **D-record** plus a changelog row and a summary-table row — next number after D20,
       anchor above the heading, **before** `<a id="changelog"></a>`, retention section stays last.
       🔴 Story 3.3 skipped this entirely and its File List claimed otherwise.
-- [ ] 6.3 `deferred-work.md`: the `workflow_run` result (either way — it is reusable knowledge), the
+- [x] 6.3 `deferred-work.md`: the `workflow_run` result (either way — it is reusable knowledge), the
       volume growth, and anything this story opens.
-- [ ] 6.4 Amend `epics.md` **in place, no reflow** for AC2's `sha-<short>` and the semver decision.
+- [x] 6.4 Amend `epics.md` **in place, no reflow** for AC2's `sha-<short>` and the semver decision.
 
 ### Task 7 — Close (AC: all)
 
 - [ ] 7.1 Commit on a branch; open a PR — `main` is gated (D16).
-- [ ] 7.2 Update `sprint-status.yaml` to `review`.
+- [x] 7.2 Update `sprint-status.yaml` to `review`.
 - [ ] 7.3 Close the budget ledger honestly, landing included.
 - [ ] 7.4 🔴 **Merge, verify `main` moved, and only then delete the branch.** Story 3.3 deleted a PR
       head branch after a failed merge and the PR died with it.
@@ -563,11 +580,83 @@ Cite by **search string, not line number** — `epics.md` was reflowed on 2026-0
 
 ### Agent Model Used
 
+Opus 5 coordinating; Haiku subagents for the read-only inventories of `build.yml`, `ci.yml` and the
+Epic 4–6 reuse sites; Fable for the adversarial review that refuted the "Story 1.3 already answered
+this" claim and redesigned the probe.
+
 ### Debug Log References
+
+| Run | What | Outcome |
+|---|---|---|
+| 617 / 619 / 621 | probe-callee, invalid file | failed at pre-execution, no task created. `action_run.pre_execution_error_details`: `on.workflow_call.secrets` is rejected |
+| 624 | probe, no secrets passed | inputs crossed; secrets **not ambient** |
+| 626 | probe, `secrets: inherit`, secret check reporting | all four jobs green — `inherit` parses, callee output reached caller byte-for-byte |
+| 627 | probe, `secrets: inherit`, secret check fail-closed | green — **`inherit` delivers** |
+| 631 | first `image` job | 🔴 `image` **success**, `image.build-and-push` **skipped**, registry unchanged |
+| 632 | after the `if:` fix | job ran, failed on `ref '' sanitizes to an empty string` |
+| 633 | after the ref-derivation fix | **all six jobs green, two tags in the registry** |
+| 634 | red path, deliberately failing test | `image.build-and-push` **skipped**, registry unchanged |
 
 ### Completion Notes List
 
+**Two silent failures, both caught by looking at the registry rather than the status badge.**
+
+1. 🔴 **Run 631 was green and built nothing.** Forgejo copies a `uses:` job's `if:` down into the
+   expanded callee and re-evaluates it there, where `github.event_name` is `workflow_call` and never
+   `push` — so `if: github.event_name == 'push'` was constant-false, `image.build-and-push` was
+   skipped, and the wrapper job `image` reported **success**. Recorded in
+   [D21](../../docs/migration-decisions.md#d21). The contrast with run 634 is what makes it sharp:
+   the same skipped inner job produced `image = success` in 631 and `image = failure` in 634. The
+   wrapper's status is not evidence in either direction.
+2. **Run 632: `${{ github.ref_name }}` in a caller's `with:` arrives empty.** Caught by build.yml's
+   own tag guard from Story 3.2 — which refused to invent a tag name rather than substituting
+   something plausible. The branch is now derived in bash from `GITHUB_REF`, where string slicing
+   exists; GitHub expressions have no substring function. All six cases exercised locally before
+   pushing.
+
+Also, the first `if:` fix was written as `!startsWith(github.ref, 'refs/pull/')`, which is **true
+when `github.ref` is empty** — it would have run the job for the wrong reason and looked exactly
+like working. Rewritten to the positive `startsWith(github.ref, 'refs/heads/')`, which skips on an
+unresolvable context instead. That was caught by reasoning, not by a run.
+
+**Evidence for AC2 and AC3 — run 633, `package_version`, not the tick:**
+
+```
+story-3-4-impl-dev      2026-08-16 13:43:27
+sha-d28756198ffb-dev    2026-08-16 13:43:27
+```
+
+Branch `story-3-4/impl` → `story-3-4-impl-dev` by the documented rule (each run of characters
+outside `[a-zA-Z0-9._-]` becomes one `-`), and `d28756198ffb` is commit `d2875619`. Neither tag
+matches `keep_pattern`; both expire at 14 days.
+
+**Evidence for the red path — run 634.** `test` failed, `image.build-and-push` was **skipped**, and
+`package_version` gained no row: the newest entry stayed 13:43:27 from run 633. ⚠️ Stated precisely:
+`lint` also failed in that run, so this proves *the gate as a whole* holds. It still supports the
+specific claim — `test` is in `needs` and it failed — but it is not a `test`-only isolation, and
+that imprecision is recorded rather than papered over.
+
+**Budget.** Named honestly because it has been under-reported three stories running. The
+`workflow_call` measurement: **6 probe runs + 6 `ci.yml` runs**, against ~4 predicted by me and 1–2
+by the reviewer; three of the probe runs (617/619/621) were waste from an invalid first file. The
+implementation: **4 more `ci.yml` runs** (631, 632, 633, 634), of which two were failed attempts.
+Plus PR gates for #31 and #32. Total for this story to this point: **20 runs**.
+
+**Not measured.** Whether the concurrency group is *effective* under contention — two builds of the
+same ref racing. Only which group gets assigned was measured (D21). Also not measured: the dind
+volume delta (Task 5.6).
+
 ### File List
+
+- `.forgejo/workflows/build.yml` — MODIFIED (`workflow_call` half; `ref` optional on that path;
+  branch derived from `GITHUB_REF`; the concurrency block annotated as dead on the call path)
+- `.forgejo/workflows/ci.yml` — MODIFIED (new `image` job)
+- `.forgejo/workflows/build-main.yml` — NEW
+- `.forgejo/workflows/probe-callee.yml`, `probe-caller.yml` — NEW then DELETED (measurement only)
+- `docs/migration-decisions.md` — MODIFIED (D21 added with its `if:` addendum; D18 semver resolved;
+  two summary-table rows)
+- `_bmad-output/implementation-artifacts/3-4-*.md` — MODIFIED (this file)
+- `src/constants/__tests__/probeRedPath.test.ts` — NEW then DELETED with `probe/3-4-red-path`
 
 ---
 
