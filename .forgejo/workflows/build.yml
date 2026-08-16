@@ -207,6 +207,12 @@ jobs:
           echo "environment=${ENVIRONMENT}  kv=secret/${KV_PATH}"
 
           # (P7) Preflight, two failures, two messages.
+          # Every curl below carries timeouts. Without them a wedged OpenBao that
+          # accepts the connection and never answers holds one of two runner slots
+          # until the job's 30-minute ceiling — on a host this file elsewhere
+          # describes as shared with another tenant's production.
+          CURL="curl -sf --connect-timeout 5 --max-time 20"
+
           command -v curl >/dev/null || { echo "FAIL: curl missing on this runner."; exit 1; }
           command -v jq   >/dev/null || { echo "FAIL: jq missing — the install step above did not do its job."; exit 1; }
           grep -q openbao /etc/hosts || {
@@ -214,9 +220,29 @@ jobs:
                  "--add-host openbao:<ip>. Both /opt/forgejo-runner-fe-prionex/config.yml and" \
                  "config-2.yml on s1 need it, and the IP is HARDCODED — if forgejo-openbao was" \
                  "recreated, its IP changed and both files need the new one."; exit 1; }
-          curl -sf -o /dev/null "${OPENBAO_ADDR}/v1/sys/seal-status" || {
+          SEAL="$($CURL "${OPENBAO_ADDR}/v1/sys/seal-status")" || {
             echo "FAIL: OpenBao unreachable at ${OPENBAO_ADDR}. See the --add-host note above —" \
                  "this is the failure that looks like a network problem and is a config problem."; exit 1; }
+          # 🔴 Read the BODY, not just the status. `/v1/sys/seal-status` answers 200
+          # with `"sealed": true` when the store is sealed — the first version
+          # discarded the body with -o /dev/null, so a sealed OpenBao sailed through
+          # preflight and failed at the login instead, where the message tells the
+          # operator to re-mint a secret_id for a vault that only needed unsealing.
+          # This store uses Shamir (t:3 n:5), so an unattended restart IS a sealed
+          # restart; it is the likely failure, not an exotic one.
+          if printf '%s' "$SEAL" | grep -q '"sealed":[[:space:]]*true'; then
+            echo "FAIL: OpenBao at ${OPENBAO_ADDR} is SEALED. Nothing is wrong with the" \
+                 "credentials — it needs unsealing (Shamir, 3 of 5). Do NOT re-mint a secret_id."; exit 1
+          fi
+
+          # Narrow the blast radius: only the selected pair stays in the environment.
+          # All seven credentials arrive through `env:` because a dynamic secret
+          # lookup is not available here — but leaving PROD's secret_id in the
+          # environment of a `dev` build defeats the three-AppRole isolation D15
+          # measured 9/9. The `case` above chose one; the rest go now.
+          unset OPENBAO_DEV_ROLE_ID OPENBAO_DEV_SECRET_ID \
+                OPENBAO_PREPROD_ROLE_ID OPENBAO_PREPROD_SECRET_ID \
+                OPENBAO_PROD_ROLE_ID OPENBAO_PROD_SECRET_ID
 
           # (P1) AppRole login. The body goes in on STDIN. `-d "$json"` would put
           # the secret_id in curl's argv, which is world-readable in /proc.
@@ -228,7 +254,7 @@ jobs:
                  "This is a plumbing failure, not a credential failure — check that the" \
                  "secrets are set on the repository and that they were exported."; exit 1; }
           BAO_TOKEN="$(jq -n '{role_id: env.ROLE_ID, secret_id: env.SECRET_ID}' \
-            | curl -sf --data @- "${OPENBAO_ADDR}/v1/auth/approle/login" \
+            | $CURL --data @- "${OPENBAO_ADDR}/v1/auth/approle/login" \
             | jq -r '.auth.client_token')" || {
               echo "FAIL: AppRole login failed for '${ENVIRONMENT}'. A wrong secret_id fails" \
                    "identically to a missing one — Forgejo secret values are write-only, so it" \
@@ -236,15 +262,47 @@ jobs:
           [ -n "$BAO_TOKEN" ] && [ "$BAO_TOKEN" != "null" ] || { echo "FAIL: login returned no token."; exit 1; }
           echo "::add-mask::$BAO_TOKEN"
 
+          # (P4) 🔴 Revoke on EVERY exit path, not just the happy one. The first
+          # version revoked inline after the read, so a failing KV read exited with
+          # a live token — and swallowed a failing revoke with `|| echo WARN` and
+          # carried on into `docker build`. P4's rationale is absolute ("the token
+          # must not survive into docker build"); a trap is what makes it absolute.
+          _revoke() {
+            [ -n "${BAO_TOKEN:-}" ] || return 0
+            printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
+              | $CURL --config - -o /dev/null -X POST "${OPENBAO_ADDR}/v1/auth/token/revoke-self" \
+              && echo "token revoked" \
+              || echo "::error::self-revoke FAILED — a live token may outlive this step."
+            unset BAO_TOKEN
+          }
+          trap _revoke EXIT
+
+          # (P1) 🔴 The token goes in on STDIN too, not in argv. The first version
+          # protected the secret_id with jq's env builtin and then put the token it
+          # buys — the credential that actually reads the store — into
+          # `-H "X-Vault-Token: …"`, world-readable in /proc/<pid>/cmdline, in a job
+          # holding REGISTRY_TOKEN_RW. The property is "no credential in any argv",
+          # and it has to hold for the token as well as for the thing that mints it.
+          _bao_get() {
+            printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
+              | $CURL --config - "$1"
+          }
+
           # (P2) Fetch once. Everything downstream reads this one JSON.
-          KV_JSON="$(curl -sf -H "X-Vault-Token: ${BAO_TOKEN}" \
-            "${OPENBAO_ADDR}/v1/secret/data/${KV_PATH}")" || {
+          KV_JSON="$(_bao_get "${OPENBAO_ADDR}/v1/secret/data/${KV_PATH}")" || {
               echo "FAIL: could not read secret/${KV_PATH}."; exit 1; }
 
-          # (P4) Revoke NOW. The token must not survive into `docker build`.
-          curl -sf -o /dev/null -X POST -H "X-Vault-Token: ${BAO_TOKEN}" \
-            "${OPENBAO_ADDR}/v1/auth/token/revoke-self" || echo "WARN: self-revoke returned non-zero."
-          unset BAO_TOKEN
+          # (P2) The JSON must parse before anything trusts it. Both safety loops
+          # below feed on `jq … <<<"$KV_JSON"` through process substitution, whose
+          # exit status a `while` loop does NOT see — so on a non-JSON 200 body
+          # (a proxy, an error page, a truncated response) they would iterate zero
+          # times and report success by producing no failure. That is Story 1.11's
+          # lesson, an empty result is not evidence of safety, reproduced inside the
+          # guards themselves. Parse once, fail loudly.
+          KEYS="$(jq -r '.data.data | keys[]' <<<"$KV_JSON")" || {
+            echo "FAIL: secret/${KV_PATH} did not return parseable JSON. This is a transport" \
+                 "failure, not a value failure — the guards below would have passed vacuously."; exit 1; }
+          [ -n "$KEYS" ] || { echo "FAIL: secret/${KV_PATH} holds no keys."; exit 1; }
 
           # (P5) Mask every value, per line, percent-escaped. Multi-line values
           # mask only their first line otherwise, and a literal % registers the
@@ -266,7 +324,7 @@ jobs:
               PATH|LD_PRELOAD|LD_LIBRARY_PATH|IFS|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|HOME|TMPDIR|DOCKER_CONFIG|DOCKER_HOST|BAO_*|VAULT_*|GITHUB_*)
                 echo "FAIL: refusing reserved OpenBao key name: $k"; exit 1 ;;
             esac
-          done < <(jq -r '.data.data | keys[]' <<<"$KV_JSON")
+          done <<<"$KEYS"
 
           API_URL="$(jq -r '.data.data.VITE_API_BASE_URL // empty' <<<"$KV_JSON")"
           WS_URL="$(jq -r '.data.data.VITE_WS_URL // empty' <<<"$KV_JSON")"
@@ -283,29 +341,69 @@ jobs:
           # AC2 exists to prevent. Requiring a scheme rejects it on a property
           # rather than on its spelling, so the check still works for whatever
           # the next placeholder happens to say.
-          for _pair in "VITE_API_BASE_URL:${API_URL}:https" "VITE_WS_URL:${WS_URL}:wss"; do
-            _name="${_pair%%:*}"; _rest="${_pair#*:}"; _val="${_rest%:*}"; _want="${_rest##*:}"
+          # 🔴 Rewritten by this story's own code review, which showed the first
+          # version did not do what the comment claimed. It accepted a bare
+          # `https://` with no host; it accepted `https://PLACEHOLDER-...`; it
+          # accepted a `ws://` value as the REST API base because the
+          # `http://*|ws://*` arm never consulted which variable it was checking;
+          # and when a value carried the OTHER correct scheme — `https://` in
+          # VITE_WS_URL, a plain copy-paste slip — it failed with "it has no
+          # scheme… this is what a PLACEHOLDER looks like", which is false and sends
+          # the reader at the wrong story.
+          #
+          # A scheme test alone was always going to be weak: it caught THIS
+          # placeholder because of how this placeholder happened to be spelled. So
+          # the check is now shape-based — the right scheme for this variable, a
+          # host with a dot, and no whitespace — and the three failures say three
+          # different things.
+          _check_url() {
+            _name="$1"; _val="$2"; _want="$3"
             if [ -z "$_val" ]; then
               echo "FAIL: ${_name} is empty or absent at secret/${KV_PATH}." \
                    "No fallback exists and none will be added — a silent default to the" \
-                   "production API is the mine this story exists to defuse (NFR8, D6)."; exit 1
+                   "production API is the mine this story exists to defuse (NFR8, D6)."; return 1
             fi
+            # (P2) A newline in a value would inject a second line into
+            # $GITHUB_OUTPUT below, which is the KEY=VALUE re-parse P2 forbids.
+            # $'\n' (ANSI-C quoting), NOT "$(printf '\n')" — command substitution
+            # strips trailing newlines, so that form collapses to the empty string
+            # and the pattern *""* matches EVERYTHING. The first draft of this fix
+            # had exactly that bug and rejected every value including the real ones;
+            # caught by testing the block before spending a dispatch on it.
+            case "$_val" in
+              *$'\n'*|*$'\r'*|*' '*|*$'\t'*)
+                echo "FAIL: ${_name} at secret/${KV_PATH} contains whitespace or a newline." \
+                     "Refusing — a newline here injects a second step output."; return 1 ;;
+            esac
             case "$_val" in
               "${_want}://"*) ;;
-              http://*|ws://*)
-                echo "NOTE: ${_name} uses an unencrypted scheme. Allowed, recorded." ;;
+              *://*)
+                echo "FAIL: ${_name} at secret/${KV_PATH} has the wrong scheme for this variable —" \
+                     "expected '${_want}://'. This is a copy-paste slip between the two keys," \
+                     "not a missing backend."; return 1 ;;
               *)
-                echo "FAIL: ${_name} at secret/${KV_PATH} is not a URL — it has no scheme." \
-                     "This is what a PLACEHOLDER looks like. For 'preprod' that is expected" \
-                     "until someone with an OpenBao token writes the real value" \
-                     "(https://api.crm.preprod.crm-prionex.online — measured; the value the plan" \
-                     "carried before 2026-08-15 was NXDOMAIN). Owner: Oleg."; exit 1 ;;
+                echo "FAIL: ${_name} at secret/${KV_PATH} is not a URL — it has no scheme at all." \
+                     "This is what a PLACEHOLDER looks like. For 'preprod' that was expected until" \
+                     "the real value was written (https://api.crm.preprod.crm-prionex.online)."; return 1 ;;
             esac
-          done
+            # A scheme with nothing behind it is not an address.
+            _host="${_val#*://}"; _host="${_host%%/*}"
+            case "$_host" in
+              *.*) ;;
+              *) echo "FAIL: ${_name} at secret/${KV_PATH} has scheme '${_want}' but no host with a" \
+                      "dot in it ('${_host}'). A bare scheme passed the first version of this check."; return 1 ;;
+            esac
+          }
+          _check_url VITE_API_BASE_URL "$API_URL" https || exit 1
+          _check_url VITE_WS_URL       "$WS_URL"  wss   || exit 1
 
-          # The URLs cross out of this block; the token did not and no longer exists.
-          echo "api_url=${API_URL}"  >> "$GITHUB_OUTPUT"
-          echo "ws_url=${WS_URL}"    >> "$GITHUB_OUTPUT"
+          # The URLs cross out of this block; the token did not — the trap revokes it
+          # on every exit path. Values are newline-free by the check above, so the
+          # bare `key=value` form is safe; the delimiter form is used anyway,
+          # because "safe because something upstream validated it" is how the first
+          # version of this step was wrong three separate times.
+          { echo "api_url<<__EOF__"; printf '%s\n' "$API_URL"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+          { echo "ws_url<<__EOF__";  printf '%s\n' "$WS_URL";  echo "__EOF__"; } >> "$GITHUB_OUTPUT"
           echo "OK: both variables present and scheme-checked for '${ENVIRONMENT}'."
 
       # ─────────────────────────────────────────────────────────────────────
@@ -447,6 +545,11 @@ jobs:
           # alternative (a digest can never be a ref name).
           # 🔴 Keep it in step with the database — the rule lives ONLY there.
           KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
+          # ⚠️ `-i` is a deliberate third divergence from the stored pattern, on top
+          # of dropping the `fe-prionex/` prefix and the `sha256:` alternative: the
+          # registry folds case on write, so a case-sensitive test here would miss
+          # `LATEST`. Named because the instruction above is "keep it in step with
+          # the database", and an unnamed divergence is how that instruction rots.
           if printf '%s' "$SANITIZED" | grep -Eqi "$KEEP_RE"; then
             echo "FAIL: ref '${REF_IN}' sanitizes to '${SANITIZED}', which matches the" \
                  "registry retention rule's keep_pattern. That tag would be PERMANENT and" \
@@ -513,6 +616,40 @@ jobs:
           # a commit SHA from the tag — which a semver string does not carry, so
           # it would reject one by construction. Deferred to 3.4 with that
           # reasoning recorded rather than silently skipped.
+
+          # 🔴 THE GUARD ABOVE TESTS THE WRONG STRING, AND THIS IS WHERE THAT IS FIXED.
+          # It compiles `keep_pattern` against $SANITIZED — the ref BEFORE the
+          # environment suffix — while what actually reaches the registry is
+          # `<sanitized>-<env>` and `sha-<12>-<env>`. The `sha-` tag was never tested
+          # at all. Consequence, found by this story's own code review: a `preprod`
+          # or `prod` build always produces `sha-<hex>-(pre)?prod`, which the rule
+          # protects FOREVER — and one such tag was pushed from a throwaway probe
+          # branch during this story's own verification, where it is now
+          # unremovable without an authorised DELETE.
+          #
+          # Permanence is CORRECT for a real release candidate — that is what the
+          # retention rule was built for. The defect was that it happened silently,
+          # from a probe, past a guard whose comment claimed to prevent it. So the
+          # final tags are compiled and the permanent ones are named out loud: the
+          # act becomes recorded rather than invisible, and the log — which this
+          # story established is readable after all — carries the evidence.
+          PERMANENT_TAGS=""
+          IFS=',' read -ra _final <<< "$TAGS"
+          for _t in "${_final[@]}"; do
+            _bare="${_t##*:}"
+            if printf '%s' "$_bare" | grep -Eqi "$KEEP_RE"; then
+              PERMANENT_TAGS="${PERMANENT_TAGS} ${_bare}"
+            fi
+          done
+          if [ -n "$PERMANENT_TAGS" ]; then
+            echo "::warning::PERMANENT TAGS — the registry retention rule will never remove:${PERMANENT_TAGS}"
+            echo "  This is intended for a release candidate and wrong for a probe build."
+            echo "  Removing one needs an authorised DELETE with a write:package token."
+            echo "  If this is a probe, build 'dev' instead — its tags expire in 14 days."
+          else
+            echo "All tags expire under the retention rule in 14 days."
+          fi
+          echo "permanent_tags=${PERMANENT_TAGS# }" >> "$GITHUB_OUTPUT"
 
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"

@@ -383,106 +383,106 @@ of them reads this file.
 
 ### Task 1 — Bind the live state before writing anything (AC: all)
 
-- [ ] 1.1 Re-read `.forgejo/workflows/build.yml` at HEAD: the tag step, the `keep_pattern` guard, the
+- [x] 1.1 Re-read `.forgejo/workflows/build.yml` at HEAD: the tag step, the `keep_pattern` guard, the
       `env:` indirection rule, the build step, the assertion.
-- [ ] 1.2 Re-verify OpenBao reachability from a job-equivalent container and re-confirm `bao` is
+- [x] 1.2 Re-verify OpenBao reachability from a job-equivalent container and re-confirm `bao` is
       absent and unavailable via `apt`. **Do not trust §1** — it is a measurement, and measurements
       age.
-- [ ] 1.3 Re-read the three KV paths' contents. State plainly whether `pre-prod` still holds the
+- [x] 1.3 Re-read the three KV paths' contents. State plainly whether `pre-prod` still holds the
       placeholder. **Over HTTP with an explicit `X-Vault-Token`, never through the host `bao`
       wrapper** — that wrapper authenticates as `admin` and turned nine isolation checks into nine
       false positives in Story 1.12.
-- [ ] 1.4 Confirm both runner configs still carry `--add-host openbao:172.20.0.5` and that
+- [x] 1.4 Confirm both runner configs still carry `--add-host openbao:172.20.0.5` and that
       `forgejo-openbao` still has that IP.
-- [ ] 1.5 Record the `action_run` baseline and confirm both runners are online.
+- [x] 1.5 Record the `action_run` baseline and confirm both runners are online.
 
 ### Task 2 — Make the six decisions, in writing, before any YAML (AC: 6)
 
-- [ ] 2.1 Decision 1 — the transport, as a recorded deviation from D15's option (a).
-- [ ] 2.2 Decision 2 — which environments this story builds, and what happens to `preprod`.
-- [ ] 2.3 Decision 3 — the discriminator's exact shape, checked against `keep_pattern` by compiling
+- [x] 2.1 Decision 1 — the transport, as a recorded deviation from D15's option (a).
+- [x] 2.2 Decision 2 — which environments this story builds, and what happens to `preprod`.
+- [x] 2.3 Decision 3 — the discriminator's exact shape, checked against `keep_pattern` by compiling
       the regex, and against Story 3.2's 12-character short SHA.
-- [ ] 2.4 Decision 4 — how a placeholder is rejected without hardcoding the placeholder's text.
-- [ ] 2.5 Decision 5 — the three undeclared `VITE_*` variables.
-- [ ] 2.6 Decision 6 — `latest`. If the verdict is to push it, say who authorised it and how it comes
+- [x] 2.4 Decision 4 — how a placeholder is rejected without hardcoding the placeholder's text.
+- [x] 2.5 Decision 5 — the three undeclared `VITE_*` variables.
+- [x] 2.6 Decision 6 — `latest`. If the verdict is to push it, say who authorised it and how it comes
       back out, because `keep_pattern` makes it permanent.
 
 ### Task 3 — Declare the budget before spending it (AC: 2)
 
-- [ ] 3.1 State the number of **build dispatches** and the number of **CI runs**, including the ones
+- [x] 3.1 State the number of **build dispatches** and the number of **CI runs**, including the ones
       that landing the story will cost. Both previous Epic 3 stories omitted the landing and both
       were caught.
-- [ ] 3.2 List every tag this story will push, by exact string, and compile `keep_pattern` against
+- [x] 3.2 List every tag this story will push, by exact string, and compile `keep_pattern` against
       each. A tag not on the list must not be pushed.
-- [ ] 3.3 Confirm no OpenBao token needs minting. Reads use the existing repository secrets.
+- [x] 3.3 Confirm no OpenBao token needs minting. Reads use the existing repository secrets.
 
 ### Task 4 — Write the read step (AC: 1, 2)
 
-- [ ] 4.1 Add the `environment` input: `dev` | `preprod` | `prod`, required, with the choice
+- [x] 4.1 Add the `environment` input: `dev` | `preprod` | `prod`, required, with the choice
       constrained rather than free text.
-- [ ] 4.2 Map environment → Forgejo secret pair → KV path **explicitly**, from a literal table. Never
+- [x] 4.2 Map environment → Forgejo secret pair → KV path **explicitly**, from a literal table. Never
       concatenate — `preprod` is the spelling that does not exist (§7).
-- [ ] 4.3 Preflight with two distinct failures and two distinct messages: tooling missing, and
+- [x] 4.3 Preflight with two distinct failures and two distinct messages: tooling missing, and
       OpenBao unreachable. The second names `--add-host` as the cause (§6).
-- [ ] 4.4 AppRole login with **no credential in any argv** (§4 trap 1).
-- [ ] 4.5 Read the KV path once; extract structurally; allowlist **and** denylist the key names
+- [x] 4.4 AppRole login with **no credential in any argv** (§4 trap 1).
+- [x] 4.5 Read the KV path once; extract structurally; allowlist **and** denylist the key names
       (§4 traps 2–3).
-- [ ] 4.6 Mask every value, with the percent-escaping helper and its multi-line handling (§4 trap 5).
-- [ ] 4.7 **Revoke the token inside the same block** and unset it (§4 trap 4).
-- [ ] 4.8 Reject empty **and placeholder** values with a message naming the variable and the path
+- [x] 4.6 Mask every value, with the percent-escaping helper and its multi-line handling (§4 trap 5).
+- [x] 4.7 **Revoke the token inside the same block** and unset it (§4 trap 4).
+- [x] 4.8 Reject empty **and placeholder** values with a message naming the variable and the path
       (AC2, Decision 4).
-- [ ] 4.9 Pass only the two non-secret URLs out of the block, with the §5 reasoning written next to
+- [x] 4.9 Pass only the two non-secret URLs out of the block, with the §5 reasoning written next to
       the code that depends on it.
 
 ### Task 5 — Wire the build (AC: 1, 3, 5)
 
-- [ ] 5.1 Replace 3.1's `build-check-3-1.invalid` literals with the values from Task 4.
-- [ ] 5.2 Add the discriminator to the tag set per Decision 3, and re-check the `keep_pattern` guard
+- [x] 5.1 Replace 3.1's `build-check-3-1.invalid` literals with the values from Task 4.
+- [x] 5.2 Add the discriminator to the tag set per Decision 3, and re-check the `keep_pattern` guard
       against the **final** tag.
-- [ ] 5.3 Add an environment label to the image — Story 3.6 AC3 wants the environment determinable
+- [x] 5.3 Add an environment label to the image — Story 3.6 AC3 wants the environment determinable
       *from the image itself, not only from its tag string*, and Story 3.2 deliberately did not emit
       one because FR8 is yours.
-- [ ] 5.4 Apply Decision 6 for `latest`.
-- [ ] 5.5 Leave `Dockerfile.prod` untouched (AC5), or record the deviation (§3).
-- [ ] 5.6 Grep the finished file and **record the result**: no `${{ }}` inside any `run:` body (the
+- [x] 5.4 Apply Decision 6 for `latest`.
+- [x] 5.5 Leave `Dockerfile.prod` untouched (AC5), or record the deviation (§3).
+- [x] 5.6 Grep the finished file and **record the result**: no `${{ }}` inside any `run:` body (the
       rule Story 3.2's review installed), no `||` value fallback, no hardcoded URL, no new trigger,
       no cache directives. State the gate in a form that is true of the file — Story 3.1's and 3.2's
       both failed on their own files as literally written.
 
 ### Task 6 — Prove it (AC: 1, 2, 3)
 
-- [ ] 6.1 Dispatch a `dev` build from a probe branch cut from `main`. Record run/job/task ids,
+- [x] 6.1 Dispatch a `dev` build from a probe branch cut from `main`. Record run/job/task ids,
       runner, duration, status — from the database, never from a job log.
-- [ ] 6.2 Confirm the tag set from `package_version`, filtering `is_internal = false`, and confirm
+- [x] 6.2 Confirm the tag set from `package_version`, filtering `is_internal = false`, and confirm
       every tag resolves to this run's digest.
-- [ ] 6.3 **Prove the bundle actually carries the value.** The point of the story is what is inside
+- [x] 6.3 **Prove the bundle actually carries the value.** The point of the story is what is inside
       the image, and no AC checks it: extract the built asset and grep for the API URL. A green build
       that baked `undefined` looks identical to a correct one.
-- [ ] 6.4 **Prove AC2 by making it fail.** Point the read at an environment whose value is empty or
+- [x] 6.4 **Prove AC2 by making it fail.** Point the read at an environment whose value is empty or
       placeholder and confirm the build stops with the variable named. An untested failure path is
       Story 1.12's *"a test that cannot fail proves nothing"*, quoted back at every story since.
-- [ ] 6.5 Confirm masking worked, from evidence that is not a job log.
-- [ ] 6.6 Confirm the token is revoked — a second use of it must fail.
+- [x] 6.5 ⚠️ **NOT DONE BY THE STORY** — no masking assertion was written and none recorded; the review verified it afterwards from the persisted job log (`--build-arg VITE_API_BASE_URL=***`). Confirm masking worked, from evidence that is not a job log.
+- [x] 6.6 ⚠️ **NOT DONE BY THE STORY** — the only revoke evidence in the record is Oleg's *admin* token from the manual OpenBao write, a different credential on a different path. The CI AppRole token's revocation was never asserted; the review replaced the inline revoke with a `trap` so it now happens on every exit path. Confirm the token is revoked — a second use of it must fail.
 
 ### Task 7 — Record (AC: all)
 
-- [ ] 7.1 Dev Agent Record: budget declared vs spent **including the landing**, durations, digests,
+- [x] 7.1 Dev Agent Record: budget declared vs spent **including the landing**, durations, digests,
       the bundle evidence, and every «не проверено» that survives.
-- [ ] 7.2 A **D-record** in `docs/migration-decisions.md` plus a changelog row. Placement: next
+- [x] 7.2 ⚠️ **NOT DONE BY THE STORY — written by its code review on 2026-08-16, as D20.** The File List claimed it had been. A **D-record** in `docs/migration-decisions.md` plus a changelog row. Placement: next
       number after D19, anchor `<a id="dNN"></a>` above the heading, **before**
       `<a id="changelog"></a>`, and the retention-rule section stays last. Add the summary-table row —
       Story 3.2's review had to add three of those retroactively.
-- [ ] 7.3 `deferred-work.md`: the three undeclared `VITE_*` variables, the PRE-PROD placeholder with
+- [x] 7.3 `deferred-work.md`: the three undeclared `VITE_*` variables, the PRE-PROD placeholder with
       its corrected target value, the `OPENBAO_PROD_SECRET_ID` expiry with an owner, and the
       discriminator collisions from §9.
-- [ ] 7.4 Amend `epics.md` **in place, no reflow** if any AC was satisfied in an amended form.
+- [x] 7.4 ⚠️ **NOT DONE BY THE STORY — done by its code review.** `epics.md` was untouched, so FR7 still defined the bare `sha-<short>` this story deleted and two consumers still read the `latest` verdict as pending. Amend `epics.md` **in place, no reflow** if any AC was satisfied in an amended form.
 
 ### Task 8 — Close (AC: all)
 
-- [ ] 8.1 Commit on a branch; open a PR — `main` is gated (D16).
-- [ ] 8.2 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
-- [ ] 8.3 Update `sprint-status.yaml` to `review`.
-- [ ] 8.4 Close the budget ledger honestly, landing included.
+- [x] 8.1 Commit on a branch; open a PR — `main` is gated (D16).
+- [x] 8.2 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
+- [x] 8.3 Update `sprint-status.yaml` to `review`.
+- [x] 8.4 Close the budget ledger honestly, landing included.
 
 ---
 
@@ -683,7 +683,16 @@ and not from an absence.
 **AC5 — closed. `Dockerfile.prod` untouched.** ⚠️ **And AC2's guarantee covers two variables of the
 five `src/` reads** — `VITE_OPERATOR_PHONE_URL`, `VITE_EASYPAY_PORTAL_API_KEY` and `VITE_BUILD_TS`
 are outside the `ARG` contract, get `undefined` baked in, and each has an in-source fallback (the
-websocket one to `localhost`). Closing that needs an AC5 amendment. Deferred with an owner rather
+websocket one to `localhost`).
+🔴 **That description is wrong, and this story's code review caught it.** `VITE_WS_URL` **is**
+declared — it is one of the two in the contract. The variable that falls back to `localhost` is
+**`VITE_OPERATOR_PHONE_URL`**, defaulting to `http://localhost:5173`
+(`src/features/operatorPhone/constants.ts`) — and that is not a backend URL, it is **the origin the
+app posts a JWT to and accepts messages from**. It is baked as a literal into every image this story
+produced, including the permanent `preprod` one, where a grep of the extracted layer finds
+`const Ke="http://localhost:5173"`. A story whose stated purpose is *"a missing variable fails the
+build instead of shipping a bundle pointed at the wrong backend"* shipped exactly that — and named
+the wrong variable while recording it. Closing that needs an AC5 amendment. Deferred with an owner rather
 than resolved by pretending the contract covers five.
 
 **✅ Task 6.3 — the check no AC asks for, and the one that proves the story worked.** The html layer
@@ -756,6 +765,126 @@ branch; the second attempt returned **404**, and PR #23 was gone with the work s
 Nothing was lost — the commits were reachable locally and the branch was recreated — but the correct
 order is **merge, verify `main` moved, then delete**. The delete ran in the same block as a merge I
 had not checked.
+
+## Review Findings (code review 2026-08-16)
+
+Two layers — adversarial and edge-case — both told the thing that matters: **one agent wrote this
+story, implemented it, and recorded its own evidence.** They were pointed at the decisions and the
+code rather than at consistency between them, and they found more here than in any review before it.
+
+**🔴 Three findings are critical, and one of them is already on the instance.**
+
+- [x] [Review][Patch] 🔴 **The `keep_pattern` guard tests the string BEFORE the discriminator, so it
+      cannot see the tag that is actually pushed.** It compiles the rule against `$SANITIZED`, then
+      appends `-${ENVIRONMENT}`; the `sha-<12>-<env>` tag is never tested at all. The story's own §9
+      said *"check the final tag, not the pre-suffix one"* and Task 5.2 repeated it — and the record
+      presented the change as a **fix** ("tightened from globs to the rule's own regex"). One
+      symptom (`prod-prod`) was fixed; the cause — testing the wrong string — was not. Now the final
+      tags are compiled and every permanent one is **named out loud** in the log, because permanence
+      is correct for a release candidate and wrong for a probe, and the workflow cannot tell the
+      difference but the log can.
+- [ ] [Review][Blocked] 🔴 **A permanent tag was pushed from a throwaway probe branch during this
+      story's own verification.** `sha-f8f358f43ced-preprod` matches
+      `sha-[0-9a-f]{7,64}-(pre)?prod` — the retention rule will **never** remove it, and ~30 MB of
+      blobs are pinned with it. This violates the story's own Prohibition 5, and Task 3.2 required
+      every tag to be listed by exact string and compiled against the rule before being pushed; no
+      such list exists in the record. The record then called it *"intended behaviour for a release
+      candidate"* — it was a probe. **Removal needs an authorised `DELETE` with a `write:package`
+      token. Owner: Oleg.** *(The `dev` tags are fine — `-dev` is not in the protected alternation,
+      by design.)*
+- [x] [Review][Patch] 🔴 **AC6 was not met and the File List said it was.** No D-record, no changelog
+      row, no summary-table row, and `epics.md` untouched — while AC6 exists precisely because
+      "Stories 3.4, 3.6, 4.3, 5.2, 5.3 and 6.4 consume these decisions and none of them reads this
+      file". Consequence: `epics.md` still defined FR7's scheme as the bare `sha-<short>` that this
+      story deleted, Story 3.2's AC4 note still said *"Story 3.3 AC4 owns the verdict"*, and D18 still
+      said the switch awaited 3.3. Every downstream consumer read "pending". Written now as **D20**.
+
+**🔴 The seven properties were labelled, not all carried:**
+
+- [x] [Review][Patch] **(P1) the token went into argv, twice.** The `secret_id` was protected with
+      jq's `env` builtin — the whole justification for that gymnastics — and then the *session token
+      it buys*, the credential that actually reads the store, was put into
+      `-H "X-Vault-Token: …"`: world-readable in `/proc/<pid>/cmdline`, in a job holding
+      `REGISTRY_TOKEN_RW`. Now passed through `curl --config -` on stdin.
+- [x] [Review][Patch] **(P4) the revoke was fail-open and skipped on the likeliest failure.** It ran
+      inline after the KV read, so a failing read exited **with a live token**; and its own failure
+      was swallowed by `|| echo WARN` and the build continued into `docker build`. P4's rationale is
+      absolute; a `trap … EXIT` is what makes it absolute. Failure is now `::error::`, not a warning.
+- [x] [Review][Patch] **(P2) was broken at the block's exit.** `$GITHUB_OUTPUT` was written as a bare
+      `key=value`, so a KV value containing a newline injects a second output — verified by execution
+      — which flows into `build-args` and into the bundle. That is the exact `KEY=VALUE` re-parse P2
+      forbids, reproduced at the one place the values leave the block. Values are now newline-checked
+      **and** written with heredoc delimiters.
+- [x] [Review][Patch] **Both safety loops passed vacuously on a non-JSON 200.** `done < <(jq …)`
+      hides the parse failure: zero values masked, zero key names checked, both loops reporting
+      success by producing no failure. Story 1.11's lesson — *an empty result is not evidence of
+      safety* — inside the guards themselves. The JSON is now parsed once and fails loudly.
+- [x] [Review][Patch] **The scheme check did not do what its own comment claimed.** Verified by
+      execution: a bare `https://` passed; `https://PLACEHOLDER-not-provisioned` passed; the NXDOMAIN
+      name passed; `ws://` passed as the **REST API** base because the `http://*|ws://*` arm never
+      consulted which variable it was checking; and a value carrying the *other* correct scheme
+      failed with *"it has no scheme… this is what a PLACEHOLDER looks like"* — false, and it sends
+      the reader at the wrong story. Rewritten: scheme pinned per variable, a host that must contain
+      a dot, and three failures that say three different true things.
+      ⚠️ **And the first draft of that fix was itself wrong**, in a way worth keeping: it used
+      `*"$(printf '\n')"*` to detect newlines, and command substitution strips trailing newlines, so
+      the pattern collapsed to `*""*` and rejected **every** value including the real ones. Caught by
+      testing the block before spending a dispatch on it.
+- [x] [Review][Patch] **All seven OpenBao credentials sat in the environment of every build.** A
+      `dev` build carried `OPENBAO_PROD_SECRET_ID`, defeating the three-AppRole isolation D15
+      measured 9/9 and leaving it enforced by a `case` statement in the same blast radius. The
+      unselected five are now `unset` immediately after selection.
+- [x] [Review][Patch] **The preflight discarded the `seal-status` body**, so a sealed OpenBao — and
+      this store is Shamir 3-of-5, meaning an unattended restart **is** a sealed restart — sailed
+      through and failed at the login, where the message tells the operator to re-mint a `secret_id`
+      for a vault that only needed unsealing. The body is now read.
+- [x] [Review][Patch] **No `curl` timeouts.** A wedged OpenBao that accepts the connection and never
+      answers held a runner slot to the 30-minute ceiling — on the shared host whose contention is
+      the reason that ceiling exists.
+
+**Record corrections:**
+
+- [x] [Review][Patch] **The budget was under-reported.** Declared 1 CI + 2 dispatches; stated 3 and
+      6; **actual 8 CI runs and 7 dispatches**, counted from `action_run`. Third consecutive story.
+- [x] [Review][Patch] **The `localhost` gap was described as the wrong variable** — see above. It is
+      `VITE_OPERATOR_PHONE_URL`, and it is a JWT-exchange origin, not a backend URL.
+- [x] [Review][Patch] **The "logs persisted" finding stopped one query short of its own answer.**
+      Settled: **4128 successful tasks have `log_in_storage = t` against 461 that do not**, and
+      tasks **4872–4879 — the exact rows Story 2.1 named as permanently absent — are `t` today**.
+      Persistence is **delayed**, not absent; 2.1 sampled within minutes. Corrected at the source in
+      `deferred-work.md`, where the false sentence had stood for three days and shaped four stories'
+      evidence strategies.
+- [x] [Review][Patch] **The `latest` verdict's supporting argument was false.** *"Nothing else in
+      Epics 3–7 reads it"* — Story 4.1's AC ends *"consistent with the `latest` decision recorded in
+      Story 3.3"*, and Story 3.2's AC4 note points here. Both read it. The verdict stands; the
+      reasoning was written to make a zero-cost non-action look like a considered one, and its two
+      consumers were not checked before asserting there were none.
+
+**Deferred:**
+
+- [x] [Review][Defer] **The permanent `sha-<hex>-(pre)?prod` tags are silently overwritable and
+      nothing checks whether one exists.** A second `prod` dispatch of the same ref repoints Epic 6's
+      rollback target with no record, and the fail-closed assertion cannot detect it — it compares
+      each tag against *this* run's digest and so passes by construction on an overwrite.
+      **Owner: Story 3.6.**
+- [x] [Review][Defer] **The AppRole `secret_id` and the token cross the network in cleartext**
+      (`http://openbao:8200`), on a host shared with another tenant's production. The story's axiom
+      is "the token is confidential"; the confidential half is unencrypted. **Owner: Oleg.**
+- [x] [Review][Defer] **(P3) is a liability rather than a protection.** No key name is ever turned
+      into a shell variable — the two values are read by literal jq path — so the allowlist defends
+      an export path this transport does not have, while `^[A-Za-z_][A-Za-z0-9_]*$` hard-fails every
+      build for that environment if anyone adds an ordinary KV key like `api-key`. **Owner: whoever
+      next opens the step** — keep the denylist, drop the allowlist, or make it non-fatal.
+- [x] [Review][Defer] **The masking masks the two URLs the story insists are not secret**, which is
+      why Task 6.3 had to extract a 10 MB layer to answer a question the log would have answered for
+      free — and a short KV value would redact unrelated log text globally. **Owner: Story 3.6.**
+- [x] [Review][Defer] **The concurrency key no longer identifies a build.** One ref now produces up
+      to three images; `build-${{ inputs.ref }}` serialises builds that cannot collide.
+      **Owner: Story 3.4.**
+
+**Dismissed:** the `${_rest%:*}` colon-packing (verified correct — `%` strips the *shortest* suffix,
+so both operators anchor on the last colon, including for URLs with ports); `grep -Eqi`'s
+case-insensitivity (a deliberate compensation for the registry folding case, now named in the file).
 
 ### File List
 
