@@ -123,7 +123,17 @@ development_status:
   # (2) One permanent tag, sha-f8f358f43ced-preprod, was pushed from a probe branch and needs an
   #     authorised DELETE with a write:package token. Owner: Oleg.
   3-3-build-per-environment-images-with-explicit-variables: done
-  3-4-trigger-builds-automatically-including-feature-branches: backlog
+  # Contexted 2026-08-16. Shape decided by Oleg: the image builds AFTER ci.yml passes, via
+  # workflow_run — so red tests mean no image. 🔴 BLOCKING UNKNOWN: workflow_run has never been
+  # used, tried or mentioned in this project. The string is in the Forgejo binary 16 times against
+  # workflow_dispatch's 7, but Gitea 1.22 has workflow_run as a WEBHOOK event and those may belong
+  # entirely to that path. Task 1 settles it with a run; if unsupported, fall back to building the
+  # image as a job inside ci.yml with needs:[lint,typecheck,test].
+  # Two consequences of 3.3 that must be handled before anything is armed: `environment` is a
+  # required input and a push has none, and the tag step fails closed on an empty ref — so the first
+  # armed push fails until both are supplied from the event.
+  # Feature branches build `dev` only: -prod/-preprod tags are PERMANENT under the retention rule.
+  3-4-trigger-builds-automatically-including-feature-branches: ready-for-dev
   3-5-move-the-build-cache-to-the-registry: backlog
   3-6-verify-commit-traceability-and-image-immutability: backlog
   epic-3-retrospective: optional
