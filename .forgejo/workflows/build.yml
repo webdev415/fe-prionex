@@ -312,13 +312,46 @@ jobs:
           # a live token — and swallowed a failing revoke with `|| echo WARN` and
           # carried on into `docker build`. P4's rationale is absolute ("the token
           # must not survive into docker build"); a trap is what makes it absolute.
+          # 🔴 Opus review 2026-08-16: this used to end the failure branch with
+          # `|| echo "::error::…"`, which made the trap absolute about ATTEMPTING
+          # the revoke and silent about whether it worked. `::error::` is an
+          # annotation, not an exit code; the `||` swallowed curl's status and the
+          # step exited 0. So the most likely failure — a sealed OpenBao, which on
+          # Shamir 3-of-5 is what any unattended restart produces, answering
+          # `revoke-self` with 503 — left a live production credential running out
+          # its full TTL behind a GREEN build, with the only trace in a job log
+          # this instance does not serve.
+          #
+          # A failed revoke now fails the step. The image may already be pushed by
+          # then, and that is the right trade: a red run tells the operator to
+          # revoke by hand, whereas a green one tells them nothing. This is the
+          # project's own rule — prove it in the database or the filesystem, never
+          # in stdout — applied at the one place in this file where a leak is
+          # actually a credential.
+          # 🚨 `return` from an EXIT trap does NOT change the shell's exit status —
+          # only `exit` does. The first version of this fix used `return 1` and was
+          # a NO-OP: the step still went green. Verified locally before shipping
+          # (`trap` + `return 1` -> exit 0; `trap` + `exit 1` -> exit 1). This is
+          # the same class as every other finding in this story — a guard that
+          # cannot fire proves nothing.
           _revoke() {
-            [ -n "${BAO_TOKEN:-}" ] || return 0
-            printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
-              | $CURL --config - -o /dev/null -X POST "${OPENBAO_ADDR}/v1/auth/token/revoke-self" \
-              && echo "token revoked" \
-              || echo "::error::self-revoke FAILED — a live token may outlive this step."
+            _rc=$?
+            [ -n "${BAO_TOKEN:-}" ] || return
+            if printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
+                 | $CURL --config - -o /dev/null -X POST "${OPENBAO_ADDR}/v1/auth/token/revoke-self"
+            then
+              echo "token revoked"
+              unset BAO_TOKEN
+              return
+            fi
             unset BAO_TOKEN
+            echo "::error::self-revoke FAILED — a live token WILL outlive this step."
+            echo "FAIL: could not revoke the OpenBao token. It stays valid until its TTL"
+            echo "  expires. Revoke it by hand, and check whether OpenBao is sealed — an"
+            echo "  unattended restart is a sealed restart on Shamir 3-of-5."
+            # Preserve an existing failure's status; otherwise fail on this alone.
+            [ "$_rc" -ne 0 ] && exit "$_rc"
+            exit 1
           }
           trap _revoke EXIT
 
@@ -513,7 +546,10 @@ jobs:
           # 🔴 Story 3.4: derive the ref when the caller could not name it.
           #
           # A `workflow_call` caller has no reliable way to pass the branch. The
-          # first attempt used `ref: ${{ github.ref_name }}` in `ci.yml`'s
+          # first attempt passed github.ref_name (written with the expression
+          # syntax, which is deliberately NOT reproduced here — Forgejo substitutes
+          # it inside comments too, and this file's rule is that no such expression
+          # appears anywhere in a `run:` body) in `ci.yml`'s
           # `with:` and it arrived EMPTY — run 632 failed here, on the guard
           # below, with `ref '' sanitizes to an empty string`. The expression
           # context available where `with:` is evaluated does not carry
@@ -773,11 +809,58 @@ jobs:
               PERMANENT_TAGS="${PERMANENT_TAGS} ${_bare}"
             fi
           done
+          # 🔴 Opus review 2026-08-16: the loop above DETECTED unintended permanence
+          # and then only warned, so the detection changed nothing. The guard higher
+          # up tests `$SANITIZED` — the string BEFORE the environment suffix — which
+          # cannot refuse the two shapes it names in its own comment, because
+          # `sha-<hex>-prod` and `sha-<hex>-preprod` only come into existence when
+          # the suffix is appended.
+          #
+          #   dispatch ref='sha-d0759f23c03e', environment=prod
+          #     -> SANITIZED='sha-d0759f23c03e'   does NOT match KEEP_RE, guard passes
+          #     -> final tag 'sha-d0759f23c03e-prod'  DOES match, and is PERMANENT
+          #
+          # `sha-<12>` is this project's own naming convention, so a branch cut to
+          # investigate a bad image is the natural spelling. The resulting tag is
+          # byte-identical to what a legitimate prod build of that commit produces,
+          # so it silently pre-empts or overwrites it — and removal needs the
+          # authorised DELETE plus a write:package token, which has twice required
+          # Oleg in person. It already happened once: `sha-f8f358f43ced-preprod`,
+          # pushed from a probe in Story 3.3.
+          #
+          # Warning was never enough for this. `::warning::` lands in a job log that
+          # `ci.yml` documents as unreadable on this instance, and `permanent_tags`
+          # is written to $GITHUB_OUTPUT and consumed by nothing. So: exactly ONE
+          # permanent tag is legitimate — the intended `sha-<short>-<env>` of a
+          # preprod or prod build, which is what the retention rule exists for.
+          # Anything else permanent fails the build before the push.
+          case "$ENVIRONMENT" in
+            preprod|prod) EXPECTED_PERMANENT="sha-${SHORT_SHA}-${ENV_SUFFIX}" ;;
+            *)            EXPECTED_PERMANENT="" ;;
+          esac
+
+          UNEXPECTED_PERMANENT=""
+          for _p in $PERMANENT_TAGS; do
+            [ "$_p" = "$EXPECTED_PERMANENT" ] && continue
+            UNEXPECTED_PERMANENT="${UNEXPECTED_PERMANENT} ${_p}"
+          done
+
+          if [ -n "$UNEXPECTED_PERMANENT" ]; then
+            echo "FAIL: this build would push a PERMANENT tag that is not the one this" \
+                 "environment is entitled to:${UNEXPECTED_PERMANENT}"
+            echo "  Entitled: '${EXPECTED_PERMANENT:-none, because this is a dev build}'."
+            echo "  A tag matching the retention rule's keep_pattern is never removed by" \
+                 "the rule; removing it needs an authorised DELETE with a write:package" \
+                 "token, which on this project has twice required the operator in person."
+            echo "  The usual cause is a ref that is itself shaped like a tag the rule" \
+                 "protects — e.g. a branch named 'sha-<hex>' built for preprod or prod."
+            exit 1
+          fi
+
           if [ -n "$PERMANENT_TAGS" ]; then
-            echo "::warning::PERMANENT TAGS — the registry retention rule will never remove:${PERMANENT_TAGS}"
-            echo "  This is intended for a release candidate and wrong for a probe build."
-            echo "  Removing one needs an authorised DELETE with a write:package token."
-            echo "  If this is a probe, build 'dev' instead — its tags expire in 14 days."
+            echo "::warning::PERMANENT TAG — the retention rule will never remove:${PERMANENT_TAGS}"
+            echo "  Intended for this environment, and correct for a release candidate."
+            echo "  Removing it needs an authorised DELETE with a write:package token."
           else
             echo "All tags expire under the retention rule in 14 days."
           fi
@@ -928,9 +1011,43 @@ jobs:
             RAW="$(docker manifest inspect -v "${TAG}")" || {
               echo "FAIL: ${TAG} did not resolve in the registry."; exit 1; }
             RESOLVED="$(printf '%s' "${RAW}" \
-              | jq -r 'if type == "array" then .[0].Descriptor.digest else .Descriptor.digest end')" || {
+              | jq -r 'if type == "array" then "__INDEX__" else .Descriptor.digest end')" || {
               echo "FAIL: could not PARSE the manifest for ${TAG}. This is a parse failure," \
                    "not a registry failure — the tag resolved."; exit 1; }
+
+            # 🔴 Opus review 2026-08-16. The previous expression here was
+            # `if type == "array" then .[0].Descriptor.digest else …`, and the
+            # comment above it claimed that handled a manifest index. It does not.
+            #
+            # `docker manifest inspect -v` on an INDEX returns an array of per-child
+            # entries, each with its OWN `Descriptor`. There is no index descriptor
+            # anywhere in that output, so `.[0].Descriptor.digest` is the FIRST
+            # CHILD's digest — while `steps.build.outputs.digest` is the index
+            # digest. They can never be equal, so the assertion would have failed
+            # every correct build with a message accusing the registry.
+            #
+            # That is not reachable today: `driver: docker` (D17) produces a single
+            # manifest, never an index. It becomes reachable the moment Story 3.5
+            # drops that driver to export a registry cache — buildx then defaults to
+            # `provenance=mode=min`, which emits an index of two manifests even for
+            # one platform.
+            #
+            # Rather than guess at the right comparison for a shape this instance
+            # cannot yet produce, fail LOUDLY and point at the owner. A directed
+            # failure costs Story 3.5 one read; a wrong comparison costs it a
+            # debugging cycle against a workflow whose comments say the case is
+            # handled.
+            if [ "${RESOLVED}" = "__INDEX__" ]; then
+              echo "FAIL: ${TAG} resolves to a manifest INDEX, not a single manifest."
+              echo "  This assertion cannot verify an index with 'docker manifest inspect -v':"
+              echo "  that command returns the index's CHILDREN, none of which carries the"
+              echo "  index digest that the build step reports. Comparing them is guaranteed"
+              echo "  to fail on a correct build."
+              echo "  Expected today, because 'driver: docker' cannot produce an index."
+              echo "  If you are reading this, the driver changed — this is Story 3.5's to fix."
+              echo "  Use 'docker buildx imagetools inspect --format {{.Manifest.Digest}}'."
+              exit 1
+            fi
             case "${RESOLVED}" in
               sha256:[0-9a-f]*) ;;
               *) echo "FAIL: parsed '${RESOLVED}' for ${TAG}, which is not a digest." \
