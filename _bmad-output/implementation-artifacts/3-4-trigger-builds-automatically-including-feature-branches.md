@@ -54,7 +54,9 @@ so that I can deploy that branch to DEV, which pulls fail-fast and would otherwi
 
 ### 1. 🔴 The shape is decided, and the first task is to find out whether it is possible
 
-**Oleg's decision, 2026-08-16: option В — the image is built _after_ CI passes, via `workflow_run`.**
+**Oleg's decision, 2026-08-16: the image is built _after_ CI passes.** Option В — via `workflow_run`
+— was chosen first. 🔴 **It was then measured and it does not exist on this instance, so the shape
+is А.** The requirement Oleg set is unchanged and is met either way: *red tests → no image.*
 
 The alternatives that were rejected, and why they matter if В turns out to be impossible:
 
@@ -62,7 +64,8 @@ The alternatives that were rejected, and why they matter if В turns out to be i
 |---|---|---|
 | А | image build as a **job inside `ci.yml`** with `needs: [lint, typecheck, test]` | red tests → no image. But `build.yml`'s logic (OpenBao, tags, digest assertion) either moves or is duplicated |
 | Б | `build.yml` gets its own `push` trigger, independent | simplest, and **an image can be pushed from a commit whose tests are red** — a tagged artifact of code that failed its own checks |
-| **В** | `build.yml` triggered by `workflow_run` on `ci.yml` completion, filtered to success | **chosen.** Red tests → no image, and `build.yml` stays one file |
+| **А** | image build as a **job inside `ci.yml`** with `needs: [lint, typecheck, test]` | 🔴 **CHOSEN, by measurement.** Same guarantee, no trigger required |
+| ~~В~~ | ~~`build.yml` triggered by `workflow_run`~~ | ❌ **`workflow_run` is not usable as a trigger on Forgejo 15.0.5+gitea-1.22.0.** Measured 2026-08-16 — see below |
 
 🔴 **`workflow_run` has never been used, tried, or mentioned in this project.** A grep across
 `_bmad-output/`, `docs/` and `.forgejo/` returns one unrelated hit (a GitHub API call in Story 1.1).
@@ -81,7 +84,43 @@ shape as the `bao` wrapper Story 1.12 found, and grepping it returns nothing) co
 as a **webhook event type**, and those 16 occurrences may belong entirely to that path rather than to
 the workflow *trigger* parser. Presence of a string is not support for a trigger.
 
-**Task 1 is to settle it with a run, cheaply, before any real work:** put a trivial workflow with
+### ✅ SETTLED 2026-08-16 — and the answer is no
+
+| step | run | result |
+|---|---|---|
+| upstream dispatched from a **feature branch** | 609 | ✅ success |
+| a `workflow_run` run after it | — | never appeared |
+| **positive control:** downstream dispatched directly | 611 | ✅ **ran** — Forgejo parses and registers the file |
+| probes landed on `main`; upstream dispatched **from `main`** | 614 | ✅ success, `refs/heads/main` |
+| a `workflow_run` run after that | — | **none in 560 s** |
+
+The second half was not optional. On GitHub `workflow_run` fires only for workflows on the **default
+branch**, and Forgejo copies GitHub widely — so from a feature branch, "unsupported" and "supported
+but must live on `main`" are indistinguishable. Stopping there would have repeated Story 2.1's
+job-log mistake exactly.
+
+Corroboration: across **124 runs** on this repository the event types recorded are `push`,
+`workflow_dispatch`, `pull_request`, `pull_request_sync` and `create`. `workflow_run` has never
+appeared.
+
+⚠️ **Not excluded:** the probe used `types: [completed]` and `workflows: ["Probe Upstream"]`. If the
+trigger were supported under different filter syntax this test would not have caught it. Unlikely,
+and recorded as an assumption rather than hidden.
+
+⚠️ **And the binary probe that preceded it was worthless** — 16 occurrences against
+`workflow_dispatch`'s 7 meant nothing, because Gitea 1.22 carries `workflow_run` as a **webhook
+event type**. Presence of a string is not support for a trigger. Full record in `deferred-work.md`,
+including why the *first* binary probe returned zero for everything.
+
+**So this story builds shape А**: the image becomes a job in `ci.yml` gated by
+`needs: [lint, typecheck, test]`. 🔴 **The cost this shifts onto the story is real and was named up
+front: `build.yml`'s logic — the OpenBao read, the tag computation with its `keep_pattern` guard and
+permanence report, the digest assertion — either moves into `ci.yml` or is duplicated.** Decide
+which in writing, and prefer moving: two copies of the `keep_pattern` guard is how it drifts from
+the database.
+
+*(Original instruction, kept because the method is the reusable part:)*
+**Task 1 was to settle it with a run, cheaply, before any real work:** put a trivial workflow with
 `on: workflow_run:` on a probe branch, cause the upstream workflow to complete, and observe whether
 a run is created. ⚠️ **The likely failure is silent** — an unsupported trigger does not error, the
 workflow simply never fires. So the probe must distinguish *"did not fire"* from *"fired and did
@@ -453,9 +492,12 @@ Cite by **search string, not line number** — `epics.md` was reflowed on 2026-0
 
 ### Blocking
 
-1. **Is `workflow_run` supported at all?** Task 1. Unmeasured; the string is in the binary 16 times
-   against `workflow_dispatch`'s 7, but Gitea 1.22 has `workflow_run` as a webhook event and those
-   occurrences may belong entirely to that path. If unsupported → shape А.
+1. ✅ **ANSWERED 2026-08-16: `workflow_run` is not usable as a trigger here.** Measured with a
+   positive control and on the default branch; recorded in `deferred-work.md` because Epics 4–6 will
+   ask the same question. The story takes shape А. **What is now open instead: does the OpenBao read
+   and the tagging logic MOVE into `ci.yml`, or get duplicated?** Moving is strongly preferred — two
+   copies of the `keep_pattern` guard is how one drifts from the database — but it is a real
+   restructuring and it should be decided in writing before Task 4.
 
 ### Non-blocking
 
