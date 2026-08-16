@@ -4,7 +4,7 @@ baseline_commit: c0de23b0
 
 # Story 3.3: Build Per-Environment Images with Explicit Variables
 
-Status: review
+Status: done
 
 > **What this story is.** Story 3.2 gave images meaningful tags. This one gives them meaningful
 > *contents*: the API and WebSocket URLs for a chosen environment, read from OpenBao at build time
