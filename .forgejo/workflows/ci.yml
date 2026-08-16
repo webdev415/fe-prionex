@@ -446,36 +446,37 @@ jobs:
   # It is written down rather than fixed because fixing it needs a serialization
   # mechanism this instance does not offer at job level (D8), and Story 4.8 will
   # have to face the same question for deploys.
-  # 🔴 Review finding 2026-08-16: this workflow also has a `workflow_dispatch`
-  # trigger, and that trigger has NO branch filter — `branches-ignore` applies to
-  # `push` only. On a dispatch `github.ref` is `refs/heads/<whatever branch was
-  # chosen>`, so the `image` job's own `if:` is TRUE and it pushes to the
-  # registry. Dispatching CI on `prod` — its documented purpose is being "the
-  # manual fallback if a trigger turns out not to fire" — would build prod-branch
-  # content baked with DEV OpenBao URLs and tag it `prod-dev`. An undocumented
-  # registry-write path in a file whose contract is that every write path is
-  # argued in a comment.
+  # 🔴 Review finding 2026-08-16, ACCEPTED rather than fixed — and the attempted
+  # fix is why. This workflow also has a `workflow_dispatch` trigger with NO
+  # branch filter (`branches-ignore` applies to `push` only), so on a dispatch
+  # `github.ref` is `refs/heads/<chosen branch>` and the `image` job's `if:` is
+  # TRUE. Dispatching CI on `prod` would build prod-branch content baked with
+  # DEV OpenBao URLs and tag it `prod-dev`. Ephemeral, but undocumented and
+  # wrong.
   #
-  # It cannot be fixed in the `image` job's own `if:`, because a `uses:` job's
-  # `if:` is copied down into the callee and re-evaluated where
-  # `github.event_name` is `workflow_call` (D21) — which is the exact trap that
-  # produced a green run building nothing in run 631.
+  # It cannot be fixed in the `image` job's own `if:`: a `uses:` job's `if:` is
+  # copied down into the callee and re-evaluated where `github.event_name` is
+  # `workflow_call` (D21) — the trap that produced a green run building nothing.
   #
-  # So the check lives in an ordinary `run:` job instead, whose `if:` is NOT
-  # copied anywhere, and `image` depends on it. A skipped dependency skips the
-  # dependent.
-  gate:
-    name: Gate the image build to real pushes
-    if: github.event_name == 'push'
-    runs-on: node-20
-    timeout-minutes: 5
-    steps:
-      - name: Report why the image build is allowed
-        run: echo "event is push — the image build may proceed"
+  # 🚨 The obvious alternative was tried and REVERTED, because it broke something
+  # worse. An ordinary `run:` job carrying `if: github.event_name == 'push'`,
+  # with `image` depending on it, does skip correctly — run 642 confirmed the
+  # skip propagates. But a SKIPPED ordinary job leaves its commit status
+  # **`pending` forever** on this instance, so the pull-request gate never
+  # resolves: run 644 left `CI / Gate the image build to real pushes
+  # (pull_request)` pending and PR #35 could not merge. Note the asymmetry —
+  # a skipped `uses:` WRAPPER reports success (that is the run-631 trap), while a
+  # skipped ordinary job reports pending. Two skips, two opposite badges, neither
+  # meaning "this did work".
+  #
+  # That measurement also forecloses the `paths-ignore` option for the
+  # docs-only-build cost recorded in the story: not running is not the same as
+  # passing, and here it is provably worse — it hangs the gate rather than
+  # skipping it.
 
   image:
     name: Build and Push Image
-    needs: [lint, typecheck, test, gate]
+    needs: [lint, typecheck, test]
     if: ${{ startsWith(github.ref, 'refs/heads/') }}
     uses: ./.forgejo/workflows/build.yml
     with:

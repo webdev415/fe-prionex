@@ -702,22 +702,28 @@ would silently build whatever branch the dispatch was issued against, under the 
 environment — `prod` included, whose tag is permanent. Scoped to `GITHUB_EVENT_NAME =
 workflow_call`, which D21 established is reliable.
 
-**FIXED — the `image` job also ran on `workflow_dispatch`.** `ci.yml`'s dispatch trigger has no
-branch filter; `github.ref` is then `refs/heads/<chosen>`, so the `if:` was true. Dispatching CI on
-`prod` would have built prod-branch content with **dev** OpenBao URLs, tagged `prod-dev`. Not
-fixable in the `image` job's own `if:` — that is the copied-down trap from run 631 — so the check
-lives in an ordinary `run:` job that `image` depends on.
+**ACCEPTED, not fixed — the `image` job also runs on `workflow_dispatch`, and the fix was worse.**
+`ci.yml`'s dispatch trigger has no branch filter, so `github.ref` is `refs/heads/<chosen>` and the
+`if:` is true. Dispatching CI on `prod` builds prod-branch content with **dev** OpenBao URLs, tagged
+`prod-dev`. Not fixable in the `image` job's own `if:` — that is the copied-down trap from run 631.
 
-  **Verified by run, not by reasoning** — skip propagation from a skipped dependency was the one
-  assumption in this fix:
+The alternative was tried and reverted, and the reason is itself a finding worth more than the fix:
+an ordinary `run:` job with `if: github.event_name == 'push'` that `image` depends on **does** skip
+correctly (run 642 confirmed skip propagates) — but a **skipped ordinary job leaves its commit status
+`pending` forever**. Run 644 left `CI / Gate the image build to real pushes (pull_request)` pending
+and PR #35 could not merge. Caught before merging, by watching the gate rather than assuming it.
 
-  | | run 641 (push) | run 642 (pull_request) |
-  |---|---|---|
-  | `gate` | success | **skipped** |
-  | `image.build-and-push` | **success** | **skipped** |
+🔴 **Note the asymmetry, because both halves are traps and they point opposite ways:**
 
-  Registry after 641: `story-3-4-pr-3-review-findings-dev`, `sha-86b9bde62229-dev`. And note both
-  runs report the wrapper job `image` as **success** — the run-631 trap, holding for the third time.
+| skipped thing | commit status |
+|---|---|
+| a `uses:` **wrapper** whose expanded jobs were skipped | **success** (run 631) |
+| an ordinary **job** that was itself skipped | **pending, forever** (run 644) |
+
+Neither means "this did work". One looks like success, the other hangs the gate.
+
+That measurement also **forecloses the `paths-ignore` option** for the docs-only-build cost in Open
+Question 6: not running is not the same as passing, and here it is provably worse.
 
 **FIXED — three comment claims were stronger than the mechanism behind them**, and review was right
 to attack the concurrency argument specifically. Auto-cancel serializes only within one workflow file
