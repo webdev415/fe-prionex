@@ -708,6 +708,17 @@ branch filter; `github.ref` is then `refs/heads/<chosen>`, so the `if:` was true
 fixable in the `image` job's own `if:` — that is the copied-down trap from run 631 — so the check
 lives in an ordinary `run:` job that `image` depends on.
 
+  **Verified by run, not by reasoning** — skip propagation from a skipped dependency was the one
+  assumption in this fix:
+
+  | | run 641 (push) | run 642 (pull_request) |
+  |---|---|---|
+  | `gate` | success | **skipped** |
+  | `image.build-and-push` | **success** | **skipped** |
+
+  Registry after 641: `story-3-4-pr-3-review-findings-dev`, `sha-86b9bde62229-dev`. And note both
+  runs report the wrapper job `image` as **success** — the run-631 trap, holding for the third time.
+
 **FIXED — three comment claims were stronger than the mechanism behind them**, and review was right
 to attack the concurrency argument specifically. Auto-cancel serializes only within one workflow file
 and one event type, so a manual `build.yml` dispatch is an unserialized second writer; a cancel
