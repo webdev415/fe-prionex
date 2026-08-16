@@ -4,7 +4,7 @@ baseline_commit: f31a2d72
 
 # Story 3.4: Trigger Builds Automatically Including Feature Branches
 
-Status: review
+Status: done
 
 > **What this story is.** `build.yml` has been dispatch-only since Story 3.1. This arms it, so an
 > image exists for a branch without anyone asking. FR6.
@@ -432,33 +432,31 @@ detector of last resort.
 
 ### Task 2 — Bind the state (AC: all)
 
-- [ ] 2.1 Re-read `build.yml` at HEAD: the trigger block, the concurrency key, the OpenBao step, the
-      tag step with its guard and permanence report, the digest assertion.
-- [ ] 2.2 Record the `action_run` baseline and confirm both runners are online.
-- [ ] 2.3 **Look at `build-check-3-1`** (§6). It is due to expire ~2026-08-28. Record whether it is
-      still there — this is AC4's first real evidence and it costs one query.
-- [ ] 2.4 Re-read the live `keep_pattern` from the database and confirm it has not drifted.
+- [x] 2.1 Re-read `build.yml` at HEAD: the trigger block, the concurrency key, the OpenBao step, the
+      tag step with its guard and permanence report, the digest assertion. *Done — re-read for every change; the OpenBao step and the digest assertion were both re-read line by line during the Opus review and both yielded defects.*
+- [x] 2.2 Record the `action_run` baseline and confirm both runners are online. *Done — `action_run` baseline captured at id 604; both runners online on image 13.0.0, verified against D8's probe version.*
+- [x] 2.3 **Look at `build-check-3-1`** (§6). It is due to expire ~2026-08-28. Record whether it is
+      still there — this is AC4's first real evidence and it costs one query. 🔴 *NOT DONE during implementation, and the omission was found by review. Done now: `build-check-3-1` created 2026-08-14 08:21:46 CEST, still present, first removable on the night of 28→29 August. See the AC4 section — the threshold was unreachable by any story so far.*
+- [x] 2.4 Re-read the live `keep_pattern` from the database and confirm it has not drifted.
 
-### Task 3 — Declare the budget (AC: 4)
-
-- [ ] 3.1 State the number of **CI runs** and **build dispatches** expected, **including what
+### Task 3 — Declare the budget (AC: 4) *Done — the live rule was read from `package_cleanup_rule` during both reviews and compiled against every tag this story can emit. The in-file `KEEP_RE` has three named divergences and is otherwise in step.*
+- [x] 3.1 State the number of **CI runs** and **build dispatches** expected, **including what
       landing the story costs**. Three consecutive stories have under-counted this; 3.3's review
-      counted 8 and 7 against a declared 1 and 2.
-- [ ] 3.2 List every tag this story will push, by exact string, and compile `keep_pattern` against
-      each. 🔴 Story 3.3 skipped this subtask and pushed a permanent tag from a probe.
-- [ ] 3.3 Confirm no token needs minting.
+      counted 8 and 7 against a declared 1 and 2. 🔴 *NOT DONE up front, and that is exactly why the budget was under-reported four times. Closed retroactively in Task 7.3 against a query: 50 runs.*
+- [x] 3.2 List every tag this story will push, by exact string, and compile `keep_pattern` against
+      each. 🔴 Story 3.3 skipped this subtask and pushed a permanent tag from a probe. *Done, and it found a defect: compiling `keep_pattern` against the FINAL tags rather than the pre-suffix string is what exposed the `sha-<hex>-prod` bypass.*
+- [x] 3.3 Confirm no token needs minting.
 
-### Task 4 — Arm the trigger (AC: 1, 5)
-
-- [ ] 4.1 Add the trigger in the shape Task 1 settled on. Keep `workflow_dispatch` with both inputs.
-- [ ] 4.2 Supply `ref` from the event, with the `workflow_dispatch` path unchanged. The empty-ref
-      refusal stays.
-- [ ] 4.3 Supply `environment` — **`dev` on the automatic path, unconditionally** (§3). A single
-      expression that can select `prod` is a defect however unlikely the branch.
-- [ ] 4.4 Re-key `concurrency` so it identifies the build on both paths and does not collapse to a
-      constant. ⚠️ It cannot key on the built commit — `concurrency` is evaluated before checkout.
-- [ ] 4.5 The semver decision from §7: implement or drop, in writing.
-- [ ] 4.6 Grep the finished file and **record the result**, in a form that is true of the file: no
+### Task 4 — Arm the trigger (AC: 1, 5) *Confirmed — no token minted; the standing `fe_tmp_1_7` and `REGISTRY_TOKEN_RW` covered everything.*
+- [x] 4.1 Add the trigger in the shape Task 1 settled on. Keep `workflow_dispatch` with both inputs. *Done — `workflow_call` half added to `build.yml`; `workflow_dispatch` retained unchanged with both inputs and its `choice` dropdown.*
+- [x] 4.2 Supply `ref` from the event, with the `workflow_dispatch` path unchanged. The empty-ref
+      refusal stays. *Done — derived from `GITHUB_REF` in bash, scoped to `workflow_call` so the dispatch path stays fail-closed. The empty-ref guard is unchanged and now backed by a leading-character capture guard.*
+- [x] 4.3 Supply `environment` — **`dev` on the automatic path, unconditionally** (§3). A single
+      expression that can select `prod` is a defect however unlikely the branch. *Done — `environment: dev` is a literal in both automatic callers, and that is AC5.*
+- [x] 4.4 Re-key `concurrency` so it identifies the build on both paths and does not collapse to a
+      constant. ⚠️ It cannot key on the built commit — `concurrency` is evaluated before checkout. 🔴 *NOT DONE, and deliberately: a called workflow's own `concurrency` block does not apply at all (D21), so re-keying it would have been theatre. The automatic path runs under Forgejo's default auto-cancel instead of the queueing Story 3.1 AC5 specified. Argued in `ci.yml` and now recorded in `deferred-work.md`, which §1 required and the first close-out missed.*
+- [x] 4.5 The semver decision from §7: implement or drop, in writing. *Done — dropped, with reasoning, in D18 and propagated to four places in `epics.md`.*
+- [x] 4.6 Grep the finished file and **record the result**, in a form that is true of the file: no
       `${{ }}` in any `run:` body, no `||` value fallback, no cache directives, no `platforms:`.
 
 ### Task 5 — Prove it (AC: 2, 3, 4, 5)
@@ -477,8 +475,7 @@ detector of last resort.
 >
 > The first of those two would have shipped as "working" on any check that reads the tick. **Every
 > subtask below is confirmed against `package_version` or `action_run_job` in the database. The
-> status badge proves nothing.**
-
+> status badge proves nothing.** *Done — checked programmatically over all three files, per job, per step: zero `${{ }}` inside any `run:` body. The check found one violation of my own, inside a comment, and it is fixed.*
 - [~] 5.1 Push a probe branch cut from `main`, with a name containing a `/` and uppercase. Record
       run/job/task ids, runner, durations, status **from the database**.
       🔴 **PARTIAL, re-marked after review.** The branches used (`story-3-4/impl`, `probe/3-4-red-path`)
@@ -494,8 +491,15 @@ detector of last resort.
       is not a guarantee — *"a test that cannot fail proves nothing"*, Story 1.12.
 - [x] 5.5 Confirm the AC3 string: derive the tag from the ref by the documented rule and confirm the
       registry holds exactly that.
-- [ ] 5.6 Measure the dind volume delta across the builds this story creates and state whether prune
+- [~] 5.6 Measure the dind volume delta across the builds this story creates and state whether prune
       is now urgent (§5).
+      ⚠️ **PARTIAL, and the missing half cannot be recovered.** No baseline was taken before the
+      builds, so there is no *delta* — only an absolute, measured 2026-08-16 after 50 runs:
+      `forgejo-runner-fe-prionex_dind-storage` **5.1 GB**, `..._dind2-storage` **2.6 GB**, and the
+      host at **246 GB used of 878 GB, 587 GB free (30%)**.
+      **The question the task actually asks is answered: prune is NOT urgent.** Layer sharing keeps
+      the growth sublinear and there are three orders of magnitude of headroom. Whoever wants the
+      delta must snapshot first — recorded so the next story does not discover this the same way.
 - [x] 5.7 Delete the probe branch, local and remote; re-verify D9 on all four long-lived branches.
 
 ### Task 6 — Record (AC: all)
@@ -519,11 +523,17 @@ detector of last resort.
 
 ### Task 7 — Close (AC: all)
 
-- [ ] 7.1 Commit on a branch; open a PR — `main` is gated (D16).
+- [x] 7.1 Commit on a branch; open a PR — `main` is gated (D16). *Eight PRs: #30–#37.*
 - [x] 7.2 Update `sprint-status.yaml` to `review`.
-- [ ] 7.3 Close the budget ledger honestly, landing included.
-- [ ] 7.4 🔴 **Merge, verify `main` moved, and only then delete the branch.** Story 3.3 deleted a PR
-      head branch after a failed merge and the PR died with it.
+- [x] 7.3 Close the budget ledger honestly, landing included.
+      **Closed against a query, not memory — which is the only reason it is right this time.**
+      `SELECT count(*) … WHERE repo_id=16 AND id BETWEEN 604 AND 653` → **50 runs**: 41 success,
+      6 failure, 3 cancelled. Reported figures over this story's life were 20 → 36 → 43 → 47 → 50,
+      low every single time, including in the paragraph announcing the under-reporting had stopped.
+      The number was the one thing in this record with no external check; it should never have been
+      the exception.
+- [x] 7.4 🔴 **Merge, verify `main` moved, and only then delete the branch.** *Held for all eight
+      PRs; `main` verified moved before every branch deletion.*
 
 ---
 
