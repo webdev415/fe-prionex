@@ -134,7 +134,7 @@ development_status:
   # armed push fails until both are supplied from the event.
   # Feature branches build `dev` only: -prod/-preprod tags are PERMANENT under the retention rule.
   3-4-trigger-builds-automatically-including-feature-branches: done
-  3-5-move-the-build-cache-to-the-registry: backlog
+  3-5-move-the-build-cache-to-the-registry: ready-for-dev
   3-6-verify-commit-traceability-and-image-immutability: backlog
   epic-3-retrospective: optional
 
