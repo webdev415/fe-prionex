@@ -57,8 +57,12 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: 'Git ref to build (branch, tag, or SHA).'
-        required: true
+        description: >-
+          Git ref to build. OPTIONAL on this path: leave it unset and the branch
+          is derived from GITHUB_REF inside the tag step. See the note there —
+          `${{ github.ref_name }}` in a caller''s `with:` came back empty.
+        required: false
+        default: ''
         type: string
       environment:
         description: 'Target environment: dev, preprod or prod. Validated by the OpenBao step, not by this declaration.'
@@ -506,6 +510,42 @@ jobs:
           set -euo pipefail
           FULL_SHA="$(git rev-parse HEAD)"
           SHORT_SHA="$(printf '%s' "$FULL_SHA" | cut -c1-12)"
+          # 🔴 Story 3.4: derive the ref when the caller could not name it.
+          #
+          # A `workflow_call` caller has no reliable way to pass the branch. The
+          # first attempt used `ref: ${{ github.ref_name }}` in `ci.yml`'s
+          # `with:` and it arrived EMPTY — run 632 failed here, on the guard
+          # below, with `ref '' sanitizes to an empty string`. The expression
+          # context available where `with:` is evaluated does not carry
+          # `ref_name`, and guessing which expression does carry it costs a
+          # ~540s CI run per guess.
+          #
+          # So it is derived here instead, in bash, from `GITHUB_REF` — a plain
+          # runner environment variable that the legacy `.github/workflows/CD.yml`
+          # already depended on, and which bash can slice in ways GitHub
+          # expressions cannot (there is no substring function in that language).
+          #
+          # Fail-closed on everything that is not a branch, including a
+          # pull-request ref. That is defence in depth, not redundancy: `ci.yml`
+          # also keeps this job off pull requests with an `if:`, and this guard
+          # holds even if that `if:` stops working — which is exactly what
+          # happened once already (D21: a `uses:` job's `if:` is copied down into
+          # the callee and re-evaluated there).
+          if [ -z "${REF_IN:-}" ]; then
+            _gr="${GITHUB_REF:-}"
+            case "$_gr" in
+              refs/heads/*)
+                REF_IN="${_gr#refs/heads/}"
+                echo "ref: not supplied by the caller; derived '${REF_IN}' from GITHUB_REF." ;;
+              refs/pull/*)
+                echo "FAIL: this run is on a pull-request ref (${_gr}). Building an image" \
+                     "here would tag it after the PR number, not a branch." ; exit 1 ;;
+              *)
+                echo "FAIL: no ref was supplied and GITHUB_REF ('${_gr}') is not a branch" \
+                     "ref. Refusing to invent a tag name." ; exit 1 ;;
+            esac
+          fi
+
           SANITIZED="$(printf '%s' "$REF_IN" \
             | sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^[.-]+//' | cut -c1-100)"
 

@@ -401,9 +401,21 @@ jobs:
   # lives inside the same run. Only `event_name` is synthesized per job to
   # describe the call.
   #
-  # ⚠️ So a green `image` job is NOT evidence that an image was built. The only
-  # evidence is the tag in the registry. Story 3.4 Task 5 means the registry,
-  # not the tick.
+  # 🔴 The condition is written POSITIVELY — `startsWith(…, 'refs/heads/')` —
+  # and that is deliberate, because the negative form `!startsWith(…,
+  # 'refs/pull/')` is TRUE when `github.ref` is empty. It would run the job for
+  # the wrong reason and look identical to working. Written this way an
+  # unresolvable context skips the job, which is visible, instead of running it
+  # on a ref nobody supplied.
+  #
+  # No `ref:` is passed. `${{ github.ref_name }}` was tried here and arrived at
+  # the callee EMPTY — run 632 died on build.yml's own guard with `ref ''
+  # sanitizes to an empty string`. The branch is derived inside build.yml from
+  # `GITHUB_REF` instead, in bash, where string slicing actually exists.
+  #
+  # ⚠️ A green `image` job is NOT evidence that an image was built. The wrapper
+  # reports success when every expanded job was SKIPPED. The only evidence is
+  # the tag in the registry — Story 3.4 Task 5 means the registry, not the tick.
   #
   # 🚨 On concurrency, deliberately NOT adding a block, and this was examined
   # rather than skipped. build.yml's own `concurrency` block does not apply when
@@ -421,9 +433,8 @@ jobs:
   image:
     name: Build and Push Image
     needs: [lint, typecheck, test]
-    if: ${{ !startsWith(github.ref, 'refs/pull/') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
     uses: ./.forgejo/workflows/build.yml
     with:
-      ref: ${{ github.ref_name }}
       environment: dev
     secrets: inherit
