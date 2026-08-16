@@ -1905,3 +1905,43 @@ only inside a `ci.yml` comment or a story file nobody downstream reads.
    policy is Forgejo's default auto-cancel rather than the queueing AC5 specified. Argued in a
    `ci.yml` comment; recorded here because §1 of the story required it be stated in the record and
    it was not.
+
+---
+
+## `driver: docker` is gone, and the reason it was there was misdiagnosed (Story 3.5, 2026-08-16)
+
+**Full record: [D22](../../docs/migration-decisions.md#d22).** The part that outlives the story:
+
+🔴 **Four artifacts said the registry push fails under `docker-container` because a BuildKit
+container does not inherit the job container's `--add-host`.** That is true and it is not the
+mechanism. The dind container's own `/etc/hosts` holds only localhost entries. `git.crm-prionex.com`
+arrives by **DNS**: `nameserver 127.0.0.11`, Docker's embedded resolver, forwarding to the s1 host's
+resolver, which serves the mapping from the **host's** `/etc/hosts`.
+
+So the real failure was a BuildKit container on the default bridge losing the embedded resolver,
+falling back to public DNS and reaching the wrong address. **`driver-opts: network=host` restores it
+and fixes the NAME, not only the route** — which every document said was impossible.
+
+⚠️ `network=host` is load-bearing and not removable, and it reduces isolation: the BuildKit container
+shares the dind daemon's network namespace. Accepted deliberately.
+
+**The cache works cross-runner** — proved, not inferred: run 663 on runner 19 got every layer
+`CACHED` for a tree that runner 19 had never built, because runner 20 had exported it. 28 s against
+the 107 s such a build used to cost.
+
+🔴 **And it is break-even.** `docker-container` costs a steady **+25 s** on source-changed builds —
+run 664 confirmed it is not a one-time BuildKit pull. Over the ten-build window 645–659: 814 s → 795 s,
+**−1.9 s per build**, under a minute a day, against 280 MB for `buildcache`. Kept by Oleg's decision
+for **variance and resilience**, not for mean build time. Anyone revisiting this should weigh those
+two things, not the stopwatch.
+
+⚠️ **`docker manifest inspect` cannot read OCI media types at all** — not an index, not a single
+manifest. buildx under `docker-container` writes them. Use `docker buildx imagetools inspect
+--format '{{.Manifest.Digest}}'`. This cost two runs to establish because the guard in `build.yml`
+carried a confident comment blaming the manifest index, and that branch never executed once.
+
+🚨 **The guard also misattributed its own failure**, reporting "did not resolve in the registry" for a
+tag that had just been pushed successfully. **A fail-closed guard must distinguish "the tool could not
+read it" from "the registry does not have it"**, or it sends the next reader to the wrong place. That
+is now the third case in this project where a guard's stated reason and its actual behaviour diverged
+— see also D21's `if:` copy-down and the `pending` misread.
