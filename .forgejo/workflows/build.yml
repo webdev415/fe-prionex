@@ -35,6 +35,40 @@ on:
           - preprod
           - prod
 
+  # Story 3.4: this file is now also a CALLABLE workflow, so the automatic path
+  # (`ci.yml`, after lint/typecheck/test pass) and the manual path (the dispatch
+  # above) run the SAME ~150 lines rather than two copies of them. Two copies of
+  # the `keep_pattern` guard is how it drifts from the database.
+  #
+  # Measured property by property before being relied on — D21. Three things
+  # about this block are not stylistic:
+  #
+  # 1. `environment` is `string` here, not `choice`. `choice` is not a legal
+  #    `workflow_call` input type; declaring it makes Forgejo reject the whole
+  #    FILE at pre-execution, taking the dispatch half down with it. The
+  #    dropdown survives on the dispatch half above. Losing `choice`'s
+  #    constraint costs nothing: the `case` in the OpenBao step has always had a
+  #    fail-closed `*)` default.
+  # 2. There is no `secrets:` block, and there cannot be — the parser rejects
+  #    `on.workflow_call.secrets` outright. Callers pass `secrets: inherit`.
+  # 3. 🚨 The `concurrency:` block below DOES NOT APPLY when this workflow is
+  #    called. The run carries the CALLER's group instead, silently. Every
+  #    caller owns its own serialization; see the note on that block.
+  workflow_call:
+    inputs:
+      ref:
+        description: >-
+          Git ref to build. OPTIONAL on this path: leave it unset and the branch
+          is derived from GITHUB_REF inside the tag step. See the note there —
+          `${{ github.ref_name }}` in a caller''s `with:` came back empty.
+        required: false
+        default: ''
+        type: string
+      environment:
+        description: 'Target environment: dev, preprod or prod. Validated by the OpenBao step, not by this declaration.'
+        required: true
+        type: string
+
 # Workflow-level concurrency, per Story 3.1 AC5. Story 1.3 proved queueing works
 # at workflow level and is silently ignored at job level
 # (docs/migration-decisions.md#d8) — this block MUST stay outside `jobs:`.
@@ -52,6 +86,17 @@ on:
 # than hidden: two DIFFERENT refs pointing at the SAME commit still land in
 # different groups and can race for the same `sha-<short>` tag. Two dispatches
 # of the same ref — the common case, and the one AC5 names — are now serialised.
+#
+# 🚨 Story 3.4 / D21: THIS BLOCK IS DEAD ON THE CALL PATH. When this workflow is
+# invoked via `workflow_call`, its run carries the CALLER's concurrency group,
+# not this one — measured on the same file: `concurrency_type = 1` when
+# dispatched, `0` when called, with no error either way. It is the same silent
+# drop already recorded for `jobs.<id>.concurrency` in D8.
+#
+# So this block governs the DISPATCH path only. Each caller is responsible for
+# its own serialization, and each caller's file says which policy it chose and
+# why. Do not read the presence of this block as a guarantee for automatic
+# builds — it is not one.
 concurrency:
   group: build-${{ inputs.ref }}
   cancel-in-progress: false
@@ -465,6 +510,42 @@ jobs:
           set -euo pipefail
           FULL_SHA="$(git rev-parse HEAD)"
           SHORT_SHA="$(printf '%s' "$FULL_SHA" | cut -c1-12)"
+          # 🔴 Story 3.4: derive the ref when the caller could not name it.
+          #
+          # A `workflow_call` caller has no reliable way to pass the branch. The
+          # first attempt used `ref: ${{ github.ref_name }}` in `ci.yml`'s
+          # `with:` and it arrived EMPTY — run 632 failed here, on the guard
+          # below, with `ref '' sanitizes to an empty string`. The expression
+          # context available where `with:` is evaluated does not carry
+          # `ref_name`, and guessing which expression does carry it costs a
+          # ~540s CI run per guess.
+          #
+          # So it is derived here instead, in bash, from `GITHUB_REF` — a plain
+          # runner environment variable that the legacy `.github/workflows/CD.yml`
+          # already depended on, and which bash can slice in ways GitHub
+          # expressions cannot (there is no substring function in that language).
+          #
+          # Fail-closed on everything that is not a branch, including a
+          # pull-request ref. That is defence in depth, not redundancy: `ci.yml`
+          # also keeps this job off pull requests with an `if:`, and this guard
+          # holds even if that `if:` stops working — which is exactly what
+          # happened once already (D21: a `uses:` job's `if:` is copied down into
+          # the callee and re-evaluated there).
+          if [ -z "${REF_IN:-}" ]; then
+            _gr="${GITHUB_REF:-}"
+            case "$_gr" in
+              refs/heads/*)
+                REF_IN="${_gr#refs/heads/}"
+                echo "ref: not supplied by the caller; derived '${REF_IN}' from GITHUB_REF." ;;
+              refs/pull/*)
+                echo "FAIL: this run is on a pull-request ref (${_gr}). Building an image" \
+                     "here would tag it after the PR number, not a branch." ; exit 1 ;;
+              *)
+                echo "FAIL: no ref was supplied and GITHUB_REF ('${_gr}') is not a branch" \
+                     "ref. Refusing to invent a tag name." ; exit 1 ;;
+            esac
+          fi
+
           SANITIZED="$(printf '%s' "$REF_IN" \
             | sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^[.-]+//' | cut -c1-100)"
 

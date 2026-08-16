@@ -344,3 +344,97 @@ jobs:
   # place of the third-party upload this comment used to describe as future
   # work. See
   # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
+
+  # ── Story 3.4 ────────────────────────────────────────────────────────────────
+  #
+  # The container image, built only after lint, typecheck and tests pass. This
+  # is what makes an image exist for a feature branch without anyone asking
+  # (AC2), which is in turn what makes the DEV deploy in Story 4.3 possible: it
+  # pulls fail-fast with no `:latest` fallback, so the image has to already be
+  # there.
+  #
+  # `needs:` is the gate. A failing test does not produce a broken image — it
+  # produces NO image, because a job whose `needs` failed is skipped, not run.
+  # No trigger is involved and none was available: `workflow_run` was measured
+  # and is not usable on this instance (PR #30).
+  #
+  # `uses:` rather than a copy of build.yml's steps. That file holds ~150 lines
+  # of load-bearing logic — the OpenBao read with its trap-revoke, the tag
+  # computation with its `keep_pattern` guard and permanence report, the digest
+  # assertion — and a second copy of the `keep_pattern` guard is exactly how it
+  # drifts out of step with the retention rule in the database. `workflow_call`
+  # was measured property by property before this was written; see D21.
+  #
+  # 🔴 `environment: dev` is a LITERAL, and that is AC5. No expression, no
+  # input, no fallback — because `-preprod` and `-prod` tags are PERMANENT under
+  # the retention rule and removing one needs an authorised DELETE plus a
+  # write:package token, which has twice required Oleg in person. The automatic
+  # path must not be able to reach those environments even by accident, and
+  # "cannot" here is provable by reading this one line.
+  #
+  # `secrets: inherit` is not a shortcut — it is the only mechanism that works.
+  # A callee cannot declare the secrets it needs (`on.workflow_call.secrets` is
+  # rejected by the parser) and repository secrets are not ambient inside a
+  # callee. Both measured, D21. ⚠️ It is all-or-nothing: build.yml receives every
+  # repository secret including the production OpenBao credentials. That is not
+  # a regression — it already had them as a top-level workflow, and the
+  # per-environment `case` in its OpenBao step is what actually narrows them
+  # (D20) — but Story 4.8 should weigh it before extracting a deploy workflow.
+  #
+  # 🚨 The `if:` keeps this off `pull_request`, where the run's ref is
+  # `refs/pull/N/head` and the image would be tagged `N-head-dev` — junk in the
+  # registry for no benefit, since the push run on the same branch already built
+  # the same content.
+  #
+  # 🔴 It tests `github.ref`, NOT `github.event_name`, and that is the whole
+  # point. The first version of this job used `github.event_name == 'push'` and
+  # produced a GREEN RUN THAT BUILT NOTHING — run 631: `image` reported success
+  # while `image.build-and-push` was skipped, and the registry had no new tag.
+  #
+  # The cause: Forgejo copies a `uses:` job's `if:` DOWN into the expanded
+  # callee job — visibly, the same way it copies `needs:` — and re-evaluates it
+  # there, where `github.event_name` is `workflow_call`, never `push`. The
+  # condition was constant-false. Nothing errored.
+  #
+  # `github.ref` does not have this problem because it is a property of the RUN,
+  # not of the job: `action_run.ref` is a single column, and the expanded callee
+  # lives inside the same run. Only `event_name` is synthesized per job to
+  # describe the call.
+  #
+  # 🔴 The condition is written POSITIVELY — `startsWith(…, 'refs/heads/')` —
+  # and that is deliberate, because the negative form `!startsWith(…,
+  # 'refs/pull/')` is TRUE when `github.ref` is empty. It would run the job for
+  # the wrong reason and look identical to working. Written this way an
+  # unresolvable context skips the job, which is visible, instead of running it
+  # on a ref nobody supplied.
+  #
+  # No `ref:` is passed. `${{ github.ref_name }}` was tried here and arrived at
+  # the callee EMPTY — run 632 died on build.yml's own guard with `ref ''
+  # sanitizes to an empty string`. The branch is derived inside build.yml from
+  # `GITHUB_REF` instead, in bash, where string slicing actually exists.
+  #
+  # ⚠️ A green `image` job is NOT evidence that an image was built. The wrapper
+  # reports success when every expanded job was SKIPPED. The only evidence is
+  # the tag in the registry — Story 3.4 Task 5 means the registry, not the tick.
+  #
+  # 🚨 On concurrency, deliberately NOT adding a block, and this was examined
+  # rather than skipped. build.yml's own `concurrency` block does not apply when
+  # it is called (D21), so the policy here is Forgejo's default for `push`:
+  # auto-cancel an earlier run on the same ref. That is the SAFER option for the
+  # one mutable tag this produces. Two pushes to the same branch race for
+  # `<branch>-dev`; auto-cancel leaves exactly one writer, whereas queueing
+  # would let both write in sequence. The per-commit `sha-<12>-dev` tags cannot
+  # collide — different SHA, different tag. A cancel landing mid-`docker push`
+  # can leave orphaned blobs, which the 14-day rule collects, but cannot leave a
+  # tag pointing at the wrong image. Adding a block to change this would also
+  # re-make Story 1.12's mistake in reverse, and would turn every rapid push on
+  # a feature branch into a queued ~540s run on a host shared with another
+  # tenant's production.
+  image:
+    name: Build and Push Image
+    needs: [lint, typecheck, test]
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      environment: dev
+    secrets: inherit

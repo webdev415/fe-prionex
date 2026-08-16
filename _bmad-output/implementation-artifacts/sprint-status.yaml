@@ -133,7 +133,7 @@ development_status:
   # required input and a push has none, and the tag step fails closed on an empty ref — so the first
   # armed push fails until both are supplied from the event.
   # Feature branches build `dev` only: -prod/-preprod tags are PERMANENT under the retention rule.
-  3-4-trigger-builds-automatically-including-feature-branches: ready-for-dev
+  3-4-trigger-builds-automatically-including-feature-branches: review
   3-5-move-the-build-cache-to-the-registry: backlog
   3-6-verify-commit-traceability-and-image-immutability: backlog
   epic-3-retrospective: optional

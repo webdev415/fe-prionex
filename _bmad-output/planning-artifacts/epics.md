@@ -99,6 +99,7 @@ nothing.
 
 FR6: The build workflow triggers on push to any branch (including feature branches), push
 to `main`, and tag `v*`, plus `workflow_dispatch` with a `ref` input.
+🔴 **AMENDED 2026-08-16 (Story 3.4, [D21](../../docs/migration-decisions.md#d21), [D18](../../docs/migration-decisions.md#d18)).** Three of the four are delivered, the fourth is **withdrawn**. Feature branches: `ci.yml`'s `image` job, `needs: [lint, typecheck, test]` — the build follows the tests rather than the push, which is Oleg's decision of 2026-08-16, since `workflow_run` does not exist on this instance. Push to `main`: `build-main.yml`, a separate file, because `ci.yml` excludes `main` by a decision its own header argues with measurements. `workflow_dispatch`: unchanged in `build.yml`. **Tag `v*`: withdrawn** — the repository has zero tags of any kind, no deploy story consumes a semver tag, Story 6.5's guard extracts a commit SHA and would reject one by construction, and `ci.yml`'s ref filter is what keeps it off tags, so `v*` costs another workflow file plus its own measurement. The `keep_pattern` semver clause stays; only the trigger is withdrawn.
 
 FR7: Tagging scheme — `sha-<short>` on every build, `<branch>`, semver tags from `v*`, and
 `latest` only from `main`. 🔴 **AMENDED 2026-08-16 (Story 3.3, [D20](../../docs/migration-decisions.md#d20)).** The bare `sha-<short>` **no longer exists.** FR8 requires an environment discriminator and Story 3.3 AC3 requires the bare form never be ambiguous between environments — under Option C one commit yields up to three images, so it cannot be both. As built: **`sha-<12 hex>-<env>`** and **`<sanitized-branch>-<env>`**, env ∈ {`dev`, `preprod`, `prod`}. The 12 is pinned deliberately — Stories 5.4 and 6.5 compare those strings byte for byte. `latest` is **dropped** (Story 3.3 AC4, decided rather than deferred again). Semver from `v*` is **deferred to Story 3.4**, which owns the trigger that would produce it. ⚠️ **NFR4, Story 3.4 AC2 and Story 3.6 AC1 still address images by the bare form and must be read as `sha-<short>-<env>`.** ⚠️ Note the shape is not free: the retention rule protects `sha-<7-64 hex>-(pre)?prod` and nothing adjacent, so `-prod` and `-preprod` are permanent while `-dev` expires at 14 days.
@@ -371,7 +372,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR3 | Epic 2 | Coverage published as artifact, codecov removed |
 | FR4 | Epic 2 | `main` protected, required status checks enforced |
 | FR5 | Epic 3 | `build.yml` on the `docker-build` label pushes to the Forgejo registry |
-| FR6 | Epic 3 | Build triggers include feature branches, `main`, `v*`, dispatch |
+| FR6 | Epic 3 | Build triggers include feature branches, `main`, ~~`v*`~~ (withdrawn 16.08.2026, Story 3.4), dispatch |
 | FR7 | Epic 3 | Tag scheme `sha-<short>` / `<branch>` / semver / `latest` |
 | FR8 | Epic 3 | `[C]` Per-environment build-args and tag discriminator |
 | FR9 | Epic 3 | Registry-backed build cache replaces `type=gha` |
