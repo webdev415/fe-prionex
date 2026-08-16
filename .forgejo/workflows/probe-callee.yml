@@ -31,11 +31,17 @@ on:
         description: 'String here on purpose — `choice` is not a legal workflow_call input type.'
         required: true
         type: string
-    secrets:
-      REGISTRY_USER:
-        required: true
-      OPENBAO_ADDR:
-        required: true
+    # NO `secrets:` block here. Attempt 1 declared one and Forgejo rejected the
+    # whole file at pre-execution:
+    #
+    #   invalid value on key "workflow_call": workflow_call only supports keys
+    #   "inputs" and "outputs", but key "secrets" was found
+    #
+    # So a callee cannot declare the secrets it needs on this instance. The
+    # remaining question — the one this attempt measures — is whether repository
+    # secrets are simply ambient inside a same-repo callee. If they are, the
+    # extraction works and needs no plumbing at all. If they are not, the next
+    # thing to try is `secrets: inherit` on the caller side.
     outputs:
       echoed:
         description: 'Proves a callee output reaches the caller.'
@@ -92,15 +98,15 @@ jobs:
           # small leak and it answers nothing this probe is asking.
           fail=0
           if [ -n "${S_USER:-}" ]; then
-            echo "SECRET REGISTRY_USER: ARRIVED"
+            echo "SECRET REGISTRY_USER: ARRIVED — repository secrets are ambient in a same-repo callee"
           else
-            echo "SECRET REGISTRY_USER: EMPTY — secrets do NOT cross the call boundary this way"
+            echo "SECRET REGISTRY_USER: EMPTY — not ambient; try 'secrets: inherit' on the caller next"
             fail=1
           fi
           if [ -n "${S_ADDR:-}" ]; then
-            echo "SECRET OPENBAO_ADDR: ARRIVED"
+            echo "SECRET OPENBAO_ADDR: ARRIVED — repository secrets are ambient in a same-repo callee"
           else
-            echo "SECRET OPENBAO_ADDR: EMPTY — secrets do NOT cross the call boundary this way"
+            echo "SECRET OPENBAO_ADDR: EMPTY — not ambient; try 'secrets: inherit' on the caller next"
             fail=1
           fi
 

@@ -40,9 +40,11 @@ jobs:
     with:
       ref: probe-from-caller
       environment: dev
-    secrets:
-      REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
-      OPENBAO_ADDR: ${{ secrets.OPENBAO_ADDR }}
+    # No `secrets:` mapping on purpose. The callee cannot declare secrets at all
+    # on this instance (the parser rejects `on.workflow_call.secrets`), so the
+    # first thing worth knowing is whether repository secrets are ambient inside
+    # a same-repo callee. `secrets: inherit` is the fallback to try only if this
+    # comes back empty.
 
   after:
     name: After
