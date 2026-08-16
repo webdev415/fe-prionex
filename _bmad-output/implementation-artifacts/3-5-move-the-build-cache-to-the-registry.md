@@ -4,7 +4,7 @@ baseline_commit: 1b76effa
 
 # Story 3.5: Move the Build Cache to the Registry
 
-Status: ready-for-dev
+Status: review
 
 > **What this story is, as the plan wrote it.** `CD.yml` used `cache-from/to: type=gha`, which does
 > not exist off GitHub. FR9 says replace it with
@@ -289,50 +289,46 @@ still work **before** any cache measurement is trusted, and the evidence is a ta
 
 ### Task 1 — Settle whether a registry cache is reachable (AC: 1, 5)
 
-- [ ] 1.1 Re-read §1 and confirm the two instance facts still hold: dind has no
-      `/etc/docker/daemon.json`, and it resolves `git.crm-prionex.com` from its own `/etc/hosts`.
-- [ ] 1.2 On a **probe branch**, try route (a): `docker-container` with whatever supplies the NAME
+- [x] 1.1 Re-read §1 and confirm the two instance facts still hold: dind has no
+      `/etc/docker/daemon.json`, and it resolves `git.crm-prionex.com` from its own `/etc/hosts`. *Done — both confirmed, and the second one corrected the story's own text: the dind's `/etc/hosts` has only localhost entries, and the name arrives by DNS.*
+- [x] 1.2 On a **probe branch**, try route (a): `docker-container` with whatever supplies the NAME
       to the BuildKit container. 🔴 **Prove the push first** — a tag in `package_version` — before
-      looking at cache behaviour at all.
-- [ ] 1.3 If (a) fails, try (d) `type=inline`, which needs no driver change. Cheapest remaining
-      route; test AC3 against it specifically.
-- [ ] 1.4 Rule out (e) cheaply, and cost (b) and (c) in writing rather than attempting them.
-- [ ] 1.5 Record the result either way, in `deferred-work.md` as well as here. If no route works,
+      looking at cache behaviour at all. *Done — route (a) WORKS. Run 660: `docker-container` + `network=host`, both tags in `package_version`, full export in the log.*
+- [x] 1.3 If (a) fails, try (d) `type=inline`, which needs no driver change. Cheapest remaining
+      route; test AC3 against it specifically. *Not needed — (a) worked. `type=inline` untried and unnecessary.*
+- [x] 1.4 Rule out (e) cheaply, and cost (b) and (c) in writing rather than attempting them. *(e) ruled out by (a) succeeding; (b) and (c) not attempted and not needed.*
+- [x] 1.5 Record the result either way, in `deferred-work.md` as well as here. If no route works,
       **say so and stop** — the outcome is a recorded impossibility, not a forced workaround.
 
-### Task 2 — Re-derive the benefit and get a decision (AC: all)
-
-- [ ] 2.1 Reproduce §2's measurement on current data: mean duration per job, and the
-      same-runner/different-runner split for `image.build-and-push`.
-- [ ] 2.2 State the benefit in runner-minutes/day and in developer wall-clock (expected: ~20 and
-      **zero**).
-- [ ] 2.3 🔴 **Escalate the proceed/cancel judgement to Oleg with those two numbers.** Do not decide
+### Task 2 — Re-derive the benefit and get a decision (AC: all) *Recorded in [D22](../../docs/migration-decisions.md#d22) and `deferred-work.md`.*
+- [x] 2.1 Reproduce §2's measurement on current data: mean duration per job, and the
+      same-runner/different-runner split for `image.build-and-push`. *Done — see the measurement table below.*
+- [x] 2.2 State the benefit in runner-minutes/day and in developer wall-clock (expected: ~20 and
+      **zero**). *Done: **−1.9 s per build**, under a minute a day, and zero developer wall-clock.*
+- [x] 2.3 🔴 **Escalate the proceed/cancel judgement to Oleg with those two numbers.** Do not decide
       it silently in either direction.
 
-### Task 3 — Declare the budget (AC: all)
-
-- [ ] 3.1 State expected CI runs and dispatches **before** Task 4, including probe branches and
-      landing. Story 3.4 was low five times for want of this.
-- [ ] 3.2 List every tag this story could push — including `buildcache` — and compile the live
+### Task 3 — Declare the budget (AC: all) *Escalated with both numbers. **Oleg, 2026-08-16: keep it.***
+- [x] 3.1 State expected CI runs and dispatches **before** Task 4, including probe branches and
+      landing. Story 3.4 was low five times for want of this. *Declared before Task 4: 10–14 runs, baseline `action_run.id` 659.*
+- [x] 3.2 List every tag this story could push — including `buildcache` — and compile the live
       `keep_pattern` against each.
 
-### Task 4 — Implement the shape Task 1 proved (AC: 1, 3)
-
-- [ ] 4.1 Add `cache-from` / `cache-to` in the proven shape. No `type=gha`.
-- [ ] 4.2 Fix the digest assertion for the manifest shape the change produces — **or** set
-      `provenance: false` to avoid the shape. Decide in writing (§3).
-- [ ] 4.3 Confirm the house rule still holds: no `${{ }}` inside any `run:` body, checked
+### Task 4 — Implement the shape Task 1 proved (AC: 1, 3) *Done — `buildcache` is the only new tag and it is in `keep_pattern` by Story 1.11's decision; it does not pass through the tags step, so the permanence guard never sees it.*
+- [x] 4.1 Add `cache-from` / `cache-to` in the proven shape. No `type=gha`. *Done — `type=registry,…:buildcache,mode=max`. `mode=max` deliberately: AC3 needs the builder stage's dependency layer.*
+- [x] 4.2 Fix the digest assertion for the manifest shape the change produces — **or** set
+      `provenance: false` to avoid the shape. Decide in writing (§3). *Done — **and the decision changed under measurement.** `provenance: false` was chosen first and did NOT fix it; see below.*
+- [x] 4.3 Confirm the house rule still holds: no `${{ }}` inside any `run:` body, checked
       programmatically across all workflow files.
 
-### Task 5 — Prove it (AC: 2, 3, 5)
-
-- [ ] 5.1 🔴 **Cold measurement on one runner, warm measurement on the OTHER**, with
+### Task 5 — Prove it (AC: 2, 3, 5) *Checked programmatically across all workflow files: zero `${{ }}` inside any `run:` body.*
+- [x] 5.1 🔴 **Cold measurement on one runner, warm measurement on the OTHER**, with
       `action_task.runner_id` recorded for each. A same-runner warm build proves nothing
-      (Prohibition 5).
-- [ ] 5.2 Prove AC3 directly: change one source file only, and show the `npm ci` layer was reused —
-      from the build log's `CACHED` markers, not from the total duration.
-- [ ] 5.3 Confirm the image still lands: tags in `package_version`, and the digest assertion green.
-      🔴 A green job is not evidence — Story 3.4 had two green runs that built nothing.
+      (Prohibition 5). *Done, and cross-runner: run 662 exported on runner 20, run 663 imported on runner 19.*
+- [x] 5.2 Prove AC3 directly: change one source file only, and show the `npm ci` layer was reused —
+      from the build log's `CACHED` markers, not from the total duration. *Done from `CACHED` markers, not duration — run 663 shows `#12 RUN npm ci … CACHED`.*
+- [x] 5.3 Confirm the image still lands: tags in `package_version`, and the digest assertion green.
+      🔴 A green job is not evidence — Story 3.4 had two green runs that built nothing. *Done — tags in `package_version`, assertion green in run 662 onward.*
 - [ ] 5.4 Delete the probe branch; verify `main` moved before deleting anything.
 
 ### Task 6 — Record (AC: all)
@@ -412,3 +408,91 @@ as written, but do not chase the wrong lines.
    may not satisfy AC3.
 4. **AC4's "exempt" is pattern-read only**, and the rule has still never been observed deleting
    anything. First possible observation 2026-08-29.
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+Opus 5. Context gathered by three Haiku subagents, story validated by Fable, implementation and
+measurement by Opus.
+
+### Debug Log References
+
+| run | change under test | runner | secs | outcome |
+|---|---|---|---|---|
+| 660 | `docker-container` + `network=host`, **no cache** | 19 | 131 | 🔴 **push WORKS** — both tags in `package_version`. Job red on the digest assertion |
+| 661 | + `cache-to/from type=registry`, `provenance: false` | 19 | 148 | `buildcache` created. Still red on the assertion |
+| 662 | assertion on `imagetools` | 20 | 135 | ✅ green, all tags verified |
+| 663 | **empty commit — identical tree, other runner** | 19 | **28** | ✅ every layer `CACHED`, incl. `npm ci` and `npm run build` |
+| 664 | trivial source change, BuildKit already warm | 20 | 131 | ✅ green — the +25 s is steady-state, not a one-time pull |
+
+### Completion Notes List
+
+**Route (a) works, and the reason four stories gave for why it could not was wrong.**
+
+`build.yml`, `deferred-work.md` and D17 all state the push fails under `docker-container` because a
+BuildKit container does not inherit the job container's `--add-host`. True, and not the mechanism.
+Measured: the dind's own `/etc/hosts` holds only localhost; `git.crm-prionex.com` arrives by DNS —
+`127.0.0.11` (Docker's embedded resolver) → the s1 host's resolver → the **host's** `/etc/hosts`. A
+BuildKit container on the default bridge loses the embedded resolver, falls back to public DNS and
+dies with the bare `EOF`. `network=host` restores it and fixes the **name**, not only the route.
+
+**AC2 and AC3 proved cross-runner, not inferred.** Run 663 ran on runner 19 with the tree run 662
+had built on runner 20. The trees of runs 661 and 662 differ, so runner 19 had never built that
+tree — yet `COPY . .` and `RUN npm run build` came back `CACHED`. The layers can only have come from
+the registry.
+
+**🔴 The measured outcome is break-even, and it is recorded rather than dressed up.**
+
+| case | before | after |
+|---|---|---|
+| source changed (most builds) | 106 s | **131 s** |
+| identical tree, other runner | 107 s | **28 s** |
+| identical tree, same runner | 24 s | 28 s |
+
+Over the real ten-build window 645–659: **814 s before, 795 s after** — **−1.9 s per build**, under a
+minute a day, against 280 MB for `buildcache`. The `docker-container` overhead is steady-state, not a
+one-time BuildKit pull: run 664 ran on a runner already warm from 662 and cost the same 131 s.
+
+**Kept anyway, decided by Oleg 2026-08-16, and not for the stopwatch.** Cross-runner merge builds go
+107 s → 28 s, which is a **variance** result rather than a mean one — build time stops depending on
+which runner picks the job up. A pruned dind volume or an added third runner recovers from the
+registry instead of rebuilding. FR9 and AC1 close. And the project stops standing on a workaround for
+a misdiagnosed problem.
+
+**⚠️ `network=host` reduces isolation** — the BuildKit container shares the dind daemon's network
+namespace. Weighed and accepted; the alternative is no registry cache at all.
+
+**🔴 The digest assertion's stated reason and its actual behaviour diverged — for the third time in
+two days.** The file carried an `__INDEX__` branch added the previous day, on the theory that
+changing the driver would make buildx emit a manifest index. The shape prediction was right (run 660's
+log shows `exporting manifest` + `exporting attestation manifest` + `exporting manifest list`) and
+irrelevant: run 661 set `provenance: false`, produced a **single** manifest, and the command still
+failed —
+
+```
+unsupported manifest media type and no default available:
+application/vnd.oci.image.manifest.v1+json
+```
+
+`docker manifest inspect` cannot read OCI media types at all. **The `__INDEX__` branch never executed
+once.** Replaced with `docker buildx imagetools inspect`.
+
+🚨 And it failed with a **false attribution**: "did not resolve in the registry" for a tag that the
+same run had just pushed and which is in `package_version`. A fail-closed guard that misnames the
+cause of its own failure sends the next reader after the registry instead of the tool.
+
+**Budget.** Declared before Task 4 at 10–14 runs against baseline `action_run.id` 659 — the first
+time this project declared one up front. Closed by query, not memory.
+
+### File List
+
+- `.forgejo/workflows/build.yml` — MODIFIED (driver, cache, `provenance: false`, digest assertion)
+- `docs/migration-decisions.md` — MODIFIED (D22 with anchor above the heading and before the
+  changelog; summary-table row; changelog row)
+- `_bmad-output/planning-artifacts/epics.md` — MODIFIED (FR9's conflict resolved in place, 1 line)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED
+- `src/index.css` — touched on the probe branch only, **not landed**

@@ -170,10 +170,36 @@ jobs:
       # own resolution is what actually carries the push. Do not remove this
       # line to "simplify" the step — the story that proved it found no
       # working alternative except native `docker build`/`docker push`.
+      # 🚨 LOAD-BEARING, and for a DIFFERENT reason than four stories recorded.
+      #
+      # The comment above says the push fails under `docker-container` because a
+      # BuildKit container does not inherit the job container's `--add-host`.
+      # That is true and it is not the mechanism. Measured 2026-08-16, Story 3.5:
+      # the dind container's own `/etc/hosts` holds ONLY localhost entries.
+      # `git.crm-prionex.com` arrives by DNS — `nameserver 127.0.0.11`, Docker's
+      # embedded resolver, forwarding to the s1 host's resolver, which serves
+      # `10.70.0.1 git.crm-prionex.com` from the HOST's `/etc/hosts`.
+      #
+      # So the real failure was: a BuildKit container on the default bridge loses
+      # the embedded resolver, falls back to public DNS, reaches the wrong address
+      # and dies with the bare `EOF` Story 1.8 spent a story on. `network=host`
+      # puts it in the dind's namespace where 127.0.0.11 is reachable, and the
+      # name resolves.
+      #
+      # 🔴 `network=host` is therefore NOT cosmetic and NOT removable. Take it
+      # away and the push dies exactly as it did in Story 1.8. Note also that it
+      # reduces isolation — the BuildKit container shares the dind daemon's
+      # network namespace. That was weighed and accepted: the alternative is no
+      # registry cache at all.
+      #
+      # Proven by run 660: both tags in `package_version`, full export in the log.
+      # This is what unblocked FR9 after four stories of `driver: docker` making
+      # `cache-to` impossible.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker
+          driver: docker-container
+          driver-opts: network=host
 
       - name: Log in to git.crm-prionex.com
         uses: docker/login-action@v3
@@ -934,6 +960,53 @@ jobs:
             VITE_API_BASE_URL=${{ steps.bao.outputs.api_url }}
             VITE_WS_URL=${{ steps.bao.outputs.ws_url }}
 
+          # 🔴 Story 3.5, decided by measurement rather than by argument.
+          #
+          # `docker-container` makes buildx default to `provenance=mode=min`,
+          # which emits an OCI INDEX of two manifests (image + attestation) even
+          # for one platform. Run 660 confirmed the shape exactly — the log shows
+          # `exporting manifest`, `exporting attestation manifest`, then
+          # `exporting manifest list`.
+          #
+          # ⚠️ But the failure mode was NOT the one this file predicted. The
+          # digest assertion's `__INDEX__` branch never ran: `docker manifest
+          # inspect -v` refuses an OCI index outright —
+          #
+          #   unsupported manifest media type and no default available:
+          #   application/vnd.oci.image.manifest.v1+json
+          #
+          # — so it died before `jq` saw anything, and reported "did not resolve
+          # in the registry" for a tag that had just been pushed successfully.
+          #
+          # Two ways out. Switch the assertion to `docker buildx imagetools
+          # inspect`, which reads OCI. Or stop producing the index. This takes
+          # the second: it is one line, it leaves a guard that has already caught
+          # real defects completely untouched, and nothing in this plan consumes
+          # a provenance attestation. It also stops the registry accruing two
+          # extra `sha256:` version rows per build, which the index children
+          # created.
+          provenance: false
+
+          # Story 3.5 AC1. `type=gha` does not exist off GitHub; this is its
+          # replacement. Reachable only because `driver: docker-container` above
+          # is now proven to push — under `driver: docker` `cache-to` is not
+          # supported at all, which is what blocked this story for four stories.
+          #
+          # `mode=max` exports intermediate layers, not just the final one. That
+          # is what AC3 needs: `Dockerfile.prod` installs dependencies in the
+          # builder stage, and `mode=min` would not carry that layer.
+          #
+          # 🚨 `buildcache` is in the retention rule's `keep_pattern` and is
+          # never removed. That is deliberate (Story 1.11) — but note it is
+          # pattern-read, never observed, and the rule has still never been seen
+          # deleting anything (first possible observation 2026-08-29).
+          #
+          # This tag does NOT go through the tags step, so the permanence guard
+          # there never sees it. That is correct: the guard exists to stop an
+          # accidental permanent tag, and this one is intended.
+          cache-from: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache
+          cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max
+
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the
       # evidence — a client exit code alone was rejected as sufficient in
@@ -951,9 +1024,14 @@ jobs:
       # succeeds and would restore exactly the vacuous check being replaced —
       # and whether build-push-action populates `digest` under the classic
       # `docker` driver had never been observed on this instance before now.
-      # `docker manifest inspect -v` is used rather than the bare form because
-      # the bare form prints the manifest BODY, and diffing bodies passes for
-      # any image built from the same Dockerfile.
+      # ⚠️ Historical: this used `docker manifest inspect -v` rather than the
+      # bare form, because the bare form prints the manifest BODY and diffing
+      # bodies passes for any image built from the same Dockerfile. Story 3.5
+      # replaced the command entirely with `docker buildx imagetools inspect` —
+      # `docker manifest inspect` cannot read the OCI media types buildx writes
+      # under `docker-container`. See the note at the command itself; the
+      # reasoning below about `.[0].Descriptor.digest` is kept because the
+      # mistake it describes is real, but the fix it describes was superseded.
       #
       # Three things the first version got wrong, all found by Story 3.2's own
       # code review and all fixed here:
@@ -1008,46 +1086,38 @@ jobs:
 
           VERIFIED=0
           for TAG in "${TAGLIST[@]}"; do
-            RAW="$(docker manifest inspect -v "${TAG}")" || {
-              echo "FAIL: ${TAG} did not resolve in the registry."; exit 1; }
-            RESOLVED="$(printf '%s' "${RAW}" \
-              | jq -r 'if type == "array" then "__INDEX__" else .Descriptor.digest end')" || {
-              echo "FAIL: could not PARSE the manifest for ${TAG}. This is a parse failure," \
-                   "not a registry failure — the tag resolved."; exit 1; }
+            # 🔴 Story 3.5, run 661. This used `docker manifest inspect -v`
+            # piped through jq, and it was wrong about WHY it would break — twice,
+            # in comments written with confidence.
+            #
+            # The first version assumed a manifest index and read `.[0]`. The
+            # second replaced that with a directed `__INDEX__` failure, on the
+            # theory that dropping `driver: docker` would produce an index. The
+            # index part was right, and irrelevant. Run 661 set `provenance:
+            # false`, got a SINGLE manifest — the log shows one `exporting
+            # manifest` and no list — and the command still failed:
+            #
+            #   unsupported manifest media type and no default available:
+            #   application/vnd.oci.image.manifest.v1+json
+            #
+            # The real cause: buildx under `docker-container` writes **OCI**
+            # media types, and this Docker's `docker manifest inspect` only
+            # understands Docker v2 ones. Index or not, it cannot read them.
+            #
+            # 🚨 And note how it failed: it reported "did not resolve in the
+            # registry" for a tag that HAD just been pushed successfully. A
+            # fail-closed guard that misattributes its own failure sends the next
+            # reader after the registry instead of the tool. The message below
+            # now carries what the tool actually said.
+            #
+            # `docker buildx imagetools inspect` reads OCI natively.
+            RESOLVED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${TAG}" 2>&1)" || {
+              echo "FAIL: could not read the manifest for ${TAG}."
+              echo "  imagetools said: ${RESOLVED}"
+              echo "  This is a TOOL or REGISTRY failure — distinguish them by the message"
+              echo "  above before concluding the tag is missing."
+              exit 1; }
 
-            # 🔴 Opus review 2026-08-16. The previous expression here was
-            # `if type == "array" then .[0].Descriptor.digest else …`, and the
-            # comment above it claimed that handled a manifest index. It does not.
-            #
-            # `docker manifest inspect -v` on an INDEX returns an array of per-child
-            # entries, each with its OWN `Descriptor`. There is no index descriptor
-            # anywhere in that output, so `.[0].Descriptor.digest` is the FIRST
-            # CHILD's digest — while `steps.build.outputs.digest` is the index
-            # digest. They can never be equal, so the assertion would have failed
-            # every correct build with a message accusing the registry.
-            #
-            # That is not reachable today: `driver: docker` (D17) produces a single
-            # manifest, never an index. It becomes reachable the moment Story 3.5
-            # drops that driver to export a registry cache — buildx then defaults to
-            # `provenance=mode=min`, which emits an index of two manifests even for
-            # one platform.
-            #
-            # Rather than guess at the right comparison for a shape this instance
-            # cannot yet produce, fail LOUDLY and point at the owner. A directed
-            # failure costs Story 3.5 one read; a wrong comparison costs it a
-            # debugging cycle against a workflow whose comments say the case is
-            # handled.
-            if [ "${RESOLVED}" = "__INDEX__" ]; then
-              echo "FAIL: ${TAG} resolves to a manifest INDEX, not a single manifest."
-              echo "  This assertion cannot verify an index with 'docker manifest inspect -v':"
-              echo "  that command returns the index's CHILDREN, none of which carries the"
-              echo "  index digest that the build step reports. Comparing them is guaranteed"
-              echo "  to fail on a correct build."
-              echo "  Expected today, because 'driver: docker' cannot produce an index."
-              echo "  If you are reading this, the driver changed — this is Story 3.5's to fix."
-              echo "  Use 'docker buildx imagetools inspect --format {{.Manifest.Digest}}'."
-              exit 1
-            fi
             case "${RESOLVED}" in
               sha256:[0-9a-f]*) ;;
               *) echo "FAIL: parsed '${RESOLVED}' for ${TAG}, which is not a digest." \
