@@ -378,6 +378,17 @@ matches — established 2026-08-15 and the opposite of what Story 3.2 first reco
 
 *Reading: see §6 — this is observable for free right now, and has never actually been observed.*
 
+🔴 **CORRECTED 2026-08-16: the reading above is wrong, and it was wrong in three earlier stories
+too.** This is **not** observable for free right now, and it never has been. The repository was
+created **2026-08-07**; it is nine days old; nothing in it can be fourteen days old. The oldest
+surviving registry version is `build-check-3-1` (2026-08-14), due **2026-08-28**.
+
+**AC4 is therefore MET as far as this story can meet it, and OPEN on its final clause.** Confirmed
+by observation: the rule is armed (`package_cleanup_rule` id 1, `remove_days=14`, `enabled=t`), the
+nightly cron runs (Forgejo log, `2026/08/15 00:00:00`) and it does delete `package_version` rows
+(two, that night). Not confirmable before 2026-08-28: that the rule deletes an aged image. See the
+Dev Agent Record for the single query that settles it and the trap in reading the log instead.
+
 **AC5 — [DERIVED] the automatic path cannot mint a permanent tag.** Given the retention rule makes
 `-prod` and `-preprod` permanent and removal needs an authorised `DELETE`, when the trigger is armed,
 then no automatic path can select those environments, and the permanence report is retained as the
@@ -738,12 +749,41 @@ retention section, breaking every `[D21](#d21)` link; the budget was wrong; the 
 not been propagated to Story 3.4's own AC1, to FR7's semver clause, to the FR7 traceability row, or
 to Story 3.2 AC3's unresolved hand-off. All four now amended in place.
 
-**OBSERVED, finally — AC4's free measurement**, which §6 of this story demanded and which was never
-taken. The oldest surviving version is `build-check-3-1`, created **2026-08-14**, due **2026-08-28**.
-Today is day 2 of 14. **AC4 is still NOT confirmed** — the rule remains compiled-against, never
-observed at its threshold — but the baseline now exists instead of another "partly confirmed".
+**AC4 — CONFIRMED as far as it can be, and the limit is structural rather than sloppiness.**
 
-**ACCEPTED, not fixed:**
+What is confirmed, by observation:
+
+| | evidence |
+|---|---|
+| The rule exists and is armed | `package_cleanup_rule` id 1, `enabled=t`, `remove_days=14`, `keep_count=0`, `match_full_name=t`, created 2026-08-12 |
+| The nightly cleanup cron actually runs | Forgejo log, `2026/08/15 00:00:00` — a full cleanup pass |
+| It has authority over package versions, and uses it | same pass: *"Removing 2 entries from `package_version`"*, and 6 from `package_file` |
+| Nothing has yet reached the threshold | oldest surviving version is `build-check-3-1`, created **2026-08-14**, due **2026-08-28** |
+
+🔴 **And the finding that reframes four stories of "partly confirmed": AC4 has never been
+observable, by anyone, at any point.** The repository was created **2026-08-07**. It is nine days
+old. Nothing inside it *can* be fourteen days old. Stories 1.11, 3.2, 3.3 and this one each recorded
+the AC as unconfirmed and each read that as a gap in their own diligence — it was not one. The
+threshold was unreachable. The first moment any story can confirm it is **2026-08-28**.
+
+⚠️ **A trap for whoever does confirm it: the rule-execution path logs NOTHING unless it deletes.**
+Grepping the Forgejo log for cleanup-rule activity returns nothing today, and that silence is not
+evidence of failure — it is what a rule with nothing to do looks like. Judge it by rows in
+`package_version`, never by log lines. Same family as Story 1.11's standing lesson.
+
+**The observation to make on or after 2026-08-28** — one query, no dispatch, no write:
+
+```sql
+SELECT pv.version, to_timestamp(pv.created_unix)::date
+FROM package_version pv JOIN package p ON p.id = pv.package_id
+WHERE p.lower_name = 'fe-prionex' ORDER BY pv.created_unix LIMIT 5;
+```
+
+`build-check-3-1` gone ⇒ AC4 confirmed. `build-check-3-1` still present after 2026-08-29 ⇒ the rule
+does not do what its fields say, which is a far more serious finding and lands on whoever owns Epic
+5's permanent promotion tags.
+
+**ACCEPTED, not fixed:****ACCEPTED, not fixed:**
 
 - The same-commit-two-refs race on `sha-<12>-dev` (spurious red, or a sha tag naming a different
   build). Pre-existing and already recorded for the dispatch path in `build.yml`; this story arms it
@@ -755,8 +795,11 @@ observed at its threshold — but the baseline now exists instead of another "pa
 - `feat/login` ≡ `feat-login` and the 100-character truncation remain collidable. ASCII-legitimate,
   pre-existing, no collisions among the 509 current branches.
 
-**Left open for Oleg:** every docs-only push now builds an image (Open Question 6), and the obvious
-`paths-ignore` fix hangs the gate rather than passing it.
+**Reviewed with Oleg, 2026-08-16.** The docs-only build cost is **accepted** (Open Question 6), and
+the accepted-not-fixed set above was **acknowledged as-is** — none of it is carried as outstanding
+work. The two most likely to bite are the same-commit-two-refs race on `sha-<12>-dev`, and the
+availability coupling: a sealed OpenBao after an unattended restart now reds every branch push, not
+just a deliberate build.
 
 ### File List
 
@@ -803,7 +846,13 @@ observed at its threshold — but the baseline now exists instead of another "pa
    its own workflow with a `paths-ignore` and lose the `needs:` gate that is this story's whole
    point; or make the image job's `if:` consult a changed-file list computed by an earlier job —
    which reintroduces exactly the `if:`-is-copied-down problem this story just spent two runs
-   learning about. **Decision belongs to review, not to me.**
+   learning about.
+
+   ✅ **DECIDED by Oleg, 2026-08-16: accept it.** No path filter is added — the tags expire at 14
+   days and each alternative costs more than the waste does. Note the `paths-ignore` option is not
+   merely unattractive but **foreclosed by measurement**: a skipped ordinary job leaves its commit
+   status `pending` forever (run 644), so not running is strictly worse than running — it hangs the
+   merge gate rather than passing it.
 
 2. ✅ **Semver** (§7) — **dropped 2026-08-16**, see §7 and [D18](../../docs/migration-decisions.md#d18).
 3. **dind volume growth** (§5) — this story is what makes prune urgent, and prune was declined twice.

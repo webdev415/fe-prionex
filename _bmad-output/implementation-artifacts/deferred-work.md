@@ -1810,3 +1810,37 @@ evaluating** — `create`, `push`, `pull_request` — for a file declaring none 
 
 **Cost of the measurement:** 6 probe runs plus 6 `ci.yml` runs, of which 3 probe runs were waste from
 an invalid first file. Predicted ~4 by the implementer and 1–2 by the reviewer; both were low.
+
+---
+
+## 📅 DUE 2026-08-28 — the first moment AC4 can be observed (Story 3.4, raised 2026-08-16)
+
+**Four stories have recorded the 14-day retention rule as "partly confirmed" and read that as their
+own diligence gap. It was not one.** The repository was created **2026-08-07**. Nothing inside it
+can be fourteen days old, so the threshold has been unreachable for every story so far. Stories
+1.11, 3.2, 3.3 and 3.4 could not have confirmed it no matter how carefully they looked.
+
+The oldest surviving registry version is **`build-check-3-1`, created 2026-08-14, due 2026-08-28**.
+
+**What IS confirmed already**, so nobody re-does it: the rule is armed (`package_cleanup_rule` id 1,
+`enabled=t`, `remove_days=14`, `keep_count=0`, `match_full_name=t`); Forgejo's nightly cleanup cron
+runs at 00:00 (log line `2026/08/15 00:00:00`); and that pass demonstrably removed rows —
+*"Removing 2 entries from `package_version`"* and 6 from `package_file`. What is unconfirmed is
+only the last link: that the **retention rule** deletes an image that has aged past its threshold.
+
+**The observation, on or after 2026-08-28.** One query. No dispatch, no write:
+
+```sql
+SELECT pv.version, to_timestamp(pv.created_unix)::date
+FROM package_version pv JOIN package p ON p.id = pv.package_id
+WHERE p.lower_name = 'fe-prionex' ORDER BY pv.created_unix LIMIT 5;
+```
+
+- `build-check-3-1` **gone** ⇒ AC4 confirmed; close it in Story 3.4 and stop restating it elsewhere.
+- `build-check-3-1` **still present after 2026-08-29** ⇒ 🔴 the rule does not do what its fields say.
+  That is a much larger finding than AC4: Epic 5 and Epic 6 both rely on `keep_pattern` protecting
+  `prod-current`/`preprod-current` and on everything else expiring. Escalate rather than record.
+
+⚠️ **Do not judge this by the log.** The rule-execution path writes nothing unless it deletes, so an
+empty grep today means "nothing to do", not "did not run". Judge it by rows in `package_version`.
+The same shape as Story 1.11's standing rule that an empty result is not evidence of safety.
