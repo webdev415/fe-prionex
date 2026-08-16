@@ -1,0 +1,126 @@
+# PROBE — temporary. Delete once Story 3.4's reuse question is settled.
+#
+# Story 1.3 (Probe C, run 10) proved `workflow_call` resolves AND expands into
+# separate jobs. It proved nothing else: that probe had no inputs, no secrets,
+# no outputs, no concurrency block, and only one trigger.
+#
+# Every feature the `build.yml` extraction actually depends on is therefore
+# still unmeasured. This file is the callee half of the probe that measures
+# them. It deliberately mirrors `build.yml`'s shape:
+#
+#   - BOTH `workflow_call` and `workflow_dispatch` on one file
+#   - `environment` declared twice: `choice` for dispatch (legal there),
+#     `string` for call (`choice` is NOT a legal workflow_call input type)
+#   - a workflow-level `concurrency` group keyed on `inputs`
+#   - `runs-on: node-20`, the same label build.yml uses
+#   - repository secrets consumed inside the callee
+#
+# The house rule from build.yml holds here too: no `${{ }}` inside any `run:`
+# body. Everything crosses into the shell through `env:`.
+
+name: probe-callee
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Echoed back so we can see whether typed inputs cross the call boundary.'
+        required: true
+        type: string
+      environment:
+        description: 'String here on purpose — `choice` is not a legal workflow_call input type.'
+        required: true
+        type: string
+    # NO `secrets:` block here. Attempt 1 declared one and Forgejo rejected the
+    # whole file at pre-execution:
+    #
+    #   invalid value on key "workflow_call": workflow_call only supports keys
+    #   "inputs" and "outputs", but key "secrets" was found
+    #
+    # So a callee cannot declare the secrets it needs on this instance. The
+    # remaining question — the one this attempt measures — is whether repository
+    # secrets are simply ambient inside a same-repo callee. If they are, the
+    # extraction works and needs no plumbing at all. If they are not, the next
+    # thing to try is `secrets: inherit` on the caller side.
+    outputs:
+      echoed:
+        description: 'Proves a callee output reaches the caller.'
+        value: ${{ jobs.probe.outputs.echoed }}
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref, echoed back.'
+        required: true
+        type: string
+        default: main
+      environment:
+        description: 'choice on the dispatch half — proves a dual-trigger file keeps its dropdown.'
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - preprod
+          - prod
+
+# If this block is silently dropped when the workflow is CALLED rather than
+# dispatched, Story 3.1 AC5's serialization guard would vanish without an
+# error. This instance is already known to drop `jobs.<id>.concurrency`
+# silently (D8), so that failure mode is not hypothetical here.
+concurrency:
+  group: probe-callee-${{ inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe callee
+    runs-on: node-20
+    timeout-minutes: 5
+    outputs:
+      echoed: ${{ steps.report.outputs.echoed }}
+    steps:
+      - name: Report what actually crossed the boundary
+        id: report
+        env:
+          REF_IN: ${{ inputs.ref }}
+          ENV_IN: ${{ inputs.environment }}
+          S_USER: ${{ secrets.REGISTRY_USER }}
+          S_ADDR: ${{ secrets.OPENBAO_ADDR }}
+        run: |
+          set -euo pipefail
+
+          echo "EVENT=${GITHUB_EVENT_NAME:-unset}"
+          echo "REF_IN=[${REF_IN:-}]"
+          echo "ENV_IN=[${ENV_IN:-}]"
+
+          # Arrival only. Never the value, never the length — a length is a
+          # small leak and it answers nothing this probe is asking.
+          fail=0
+          if [ -n "${S_USER:-}" ]; then
+            echo "SECRET REGISTRY_USER: ARRIVED — repository secrets are ambient in a same-repo callee"
+          else
+            echo "SECRET REGISTRY_USER: EMPTY — not ambient; try 'secrets: inherit' on the caller next"
+            fail=1
+          fi
+          if [ -n "${S_ADDR:-}" ]; then
+            echo "SECRET OPENBAO_ADDR: ARRIVED — repository secrets are ambient in a same-repo callee"
+          else
+            echo "SECRET OPENBAO_ADDR: EMPTY — not ambient; try 'secrets: inherit' on the caller next"
+            fail=1
+          fi
+
+          # An empty input is as much a finding as an empty secret. A probe
+          # that passes when nothing arrived proves nothing.
+          if [ -z "${REF_IN:-}" ]; then
+            echo "INPUT ref: EMPTY — typed inputs do NOT cross"
+            fail=1
+          fi
+          if [ -z "${ENV_IN:-}" ]; then
+            echo "INPUT environment: EMPTY — typed inputs do NOT cross"
+            fail=1
+          fi
+
+          printf 'echoed=ref=%s;env=%s\n' "${REF_IN:-}" "${ENV_IN:-}" >> "$GITHUB_OUTPUT"
+
+          exit "$fail"
