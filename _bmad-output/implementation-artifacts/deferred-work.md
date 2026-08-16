@@ -1699,3 +1699,54 @@ is what is not.
   rather than at its expiry. Now **Story 7.6**, last in the plan. *Promoted rather than left here on
   purpose: a deferred line in this project has repeatedly been read as "someone will notice", and the
   whole point of this one is that nobody will until production stops building.* **Owner: Story 7.6.**
+
+## Measured 2026-08-16 — `workflow_run` is not usable as a trigger on this instance
+
+Story 3.4 needed "run X after Y succeeded" and nothing in this project knew whether Forgejo has it.
+**Epics 4–6 will want the same shape**, so the measurement is recorded here rather than only inside
+one story.
+
+**Instance:** Forgejo `15.0.5+gitea-1.22.0`.
+
+**Method — two throwaway workflows, and a positive control, because an absence proves nothing:**
+
+| step | run | result |
+|---|---|---|
+| `probe-upstream.yml` dispatched **from a feature branch** | 609 | ✅ success |
+| a `workflow_run` run after it | — | never appeared |
+| **positive control:** `probe-downstream.yml` dispatched directly | 611 | ✅ **ran** — so Forgejo parses and registers the file; its silence is not "the file was invisible" |
+| probes landed on `main`, `probe-upstream.yml` dispatched **from `main`** | 614 | ✅ success, `refs/heads/main` |
+| a `workflow_run` run after **that** | — | **none in 560 s** |
+
+**Why the second half was necessary.** On GitHub, `workflow_run` fires only for workflows on the
+**default branch**, and Forgejo copies GitHub's semantics widely. From a feature branch,
+"unsupported" and "supported but must live on main" produce the identical observation. Concluding
+from there would have repeated Story 2.1's job-log mistake exactly: a measurement taken in the wrong
+place, promoted to a property of the system, then designed around by four stories.
+
+**Corroboration:** across **124 runs** on this repository the recorded event types are `push` (49),
+`workflow_dispatch` (43), `pull_request` (29), `pull_request_sync` (2) and `create` (1).
+`workflow_run` has never appeared. *(Indicative, not proof — the column only shows what has been
+used.)*
+
+⚠️ **The one alternative not excluded.** The probe used `types: [completed]` and
+`workflows: ["Probe Upstream"]`. If the trigger were supported with different filter syntax, this
+test would not have distinguished that from unsupported. Considered unlikely given the event column
+above, but it is an assumption and it is recorded as one rather than hidden.
+
+⚠️ **Also note the earlier binary probe was worthless and is a reusable lesson.** `workflow_run`
+appears **16 times** in the Forgejo binary against `workflow_dispatch`'s 7 — which suggested support
+and meant nothing: Gitea 1.22 carries `workflow_run` as a **webhook event type**, and those
+occurrences belong to that path. **Presence of a string in a binary is not support for a trigger.**
+*(And the first attempt at that probe grepped `/usr/local/bin/gitea`, which is a **581-byte
+wrapper** — returning zero for every trigger including the ones that work. The real binary is
+`/app/gitea/gitea`, 113 MB. Same trap shape as the `bao` wrapper Story 1.12 found.)*
+
+**Consequence:** Story 3.4 takes **shape А** — the image is built as a job inside `ci.yml` with
+`needs: [lint, typecheck, test]`, which gives the same guarantee (red tests → no image) without the
+trigger. **Owner of the wider problem: whoever next needs "run X after Y" — Epic 4's deploy
+notifications and Epic 6's promotion chain are the likely first askers. The answer is: you cannot,
+chain it inside one workflow with `needs:`.**
+
+**Cost of the measurement:** 6 runs (609–614). Worth it — the alternative was designing Story 3.4
+around a guess, and then Epics 4–6 rediscovering it one at a time.
