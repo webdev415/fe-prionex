@@ -1813,20 +1813,39 @@ an invalid first file. Predicted ~4 by the implementer and 1–2 by the reviewer
 
 ---
 
-## 📅 DUE 2026-08-28 — the first moment AC4 can be observed (Story 3.4, raised 2026-08-16)
+## 📅 DUE 2026-08-29 — the first moment AC4 can be observed (Story 3.4, raised 2026-08-16)
 
 **Four stories have recorded the 14-day retention rule as "partly confirmed" and read that as their
 own diligence gap. It was not one.** The repository was created **2026-08-07**. Nothing inside it
 can be fourteen days old, so the threshold has been unreachable for every story so far. Stories
 1.11, 3.2, 3.3 and 3.4 could not have confirmed it no matter how carefully they looked.
 
-The oldest surviving registry version is **`build-check-3-1`, created 2026-08-14, due 2026-08-28**.
+The oldest surviving registry version is **`build-check-3-1`, created 2026-08-14 08:21:46 CEST**.
 
-**What IS confirmed already**, so nobody re-does it: the rule is armed (`package_cleanup_rule` id 1,
-`enabled=t`, `remove_days=14`, `keep_count=0`, `match_full_name=t`); Forgejo's nightly cleanup cron
-runs at 00:00 (log line `2026/08/15 00:00:00`); and that pass demonstrably removed rows —
-*"Removing 2 entries from `package_version`"* and 6 from `package_file`. What is unconfirmed is
-only the last link: that the **retention rule** deletes an image that has aged past its threshold.
+🔴 **The date is 2026-08-29, not the 28th, and getting it wrong causes a false escalation.** The
+container runs CEST and Forgejo compares `created_unix` against `now - 14 days` in **local** time.
+The 08-28 00:00 pass computes a cutoff of 08-14 00:00 CEST; the version's local time is 08-14
+**08:21:46** — later than the cutoff, so it is KEPT. The first pass that can remove it is the night
+of **28→29**.
+
+**What IS confirmed already**, so nobody re-does it:
+
+- The rule is armed — `package_cleanup_rule` id 1, `enabled=t`, `remove_days=14`, `keep_count=0`,
+  `match_full_name=t`.
+- **The rule keys on `package_version.created_unix`** — verified in the Forgejo v15.0.5 source
+  (`services/packages/cleanup/cleanup.go`, `GetCleanupTargets`), not on updated, last-download or a
+  `package_property`. This is the assumption everything else rests on and it holds.
+
+🔴 **What an earlier version of this note claimed and was WRONG about:** it cited a
+`2026/08/15 00:00:00` log line as evidence the nightly cron runs and deletes package versions. That
+line is `services/packages/container/cleanup_sha256.go` — the dangling-`sha256:*` sweeper, a
+different code path from the retention rule. It evidences nothing about the rule. And the log is
+lossy besides: across 120 hours only one night carries both the Start and Finish lines that pass
+emits unconditionally, and 2026-08-16 00:00 carries neither. **We do not actually have evidence the
+nightly cron runs.** That is now part of what 08-29 settles.
+
+What is unconfirmed: that the **retention rule** deletes an image aged past its threshold, and
+whether the cron carrying it runs at all.
 
 **The observation, on or after 2026-08-28.** One query. No dispatch, no write:
 
@@ -1837,10 +1856,52 @@ WHERE p.lower_name = 'fe-prionex' ORDER BY pv.created_unix LIMIT 5;
 ```
 
 - `build-check-3-1` **gone** ⇒ AC4 confirmed; close it in Story 3.4 and stop restating it elsewhere.
-- `build-check-3-1` **still present after 2026-08-29** ⇒ 🔴 the rule does not do what its fields say.
+- `build-check-3-1` **still present after 2026-08-30** ⇒ 🔴 the rule does not do what its fields say.
+  (On the 28th it is EXPECTED to still be there — do not escalate then.)
   That is a much larger finding than AC4: Epic 5 and Epic 6 both rely on `keep_pattern` protecting
   `prod-current`/`preprod-current` and on everything else expiring. Escalate rather than record.
 
-⚠️ **Do not judge this by the log.** The rule-execution path writes nothing unless it deletes, so an
-empty grep today means "nothing to do", not "did not run". Judge it by rows in `package_version`.
-The same shape as Story 1.11's standing rule that an empty result is not evidence of safety.
+⚠️ **Do not judge this by the log at all.** The rule-execution path writes **nothing in either
+case** — every outcome in `ExecuteCleanupRules`/`GetCleanupTargets` is `log.Debug`, and this instance
+runs `LEVEL = info`. An earlier version of this note said "nothing unless it deletes", which wrongly
+implies a deletion would show up. Judge it by rows in `package_version`. The same shape as Story
+1.11's standing rule that an empty result is not evidence of safety.
+
+
+---
+
+## Opened by Story 3.4 (2026-08-16) — live items with no other home
+
+Recorded here because `deferred-work.md` is where later stories look, and until now these existed
+only inside a `ci.yml` comment or a story file nobody downstream reads.
+
+1. **A CI dispatch could build an image, and now cannot — but the class remains.** `ci.yml`'s
+   `workflow_dispatch` has no branch filter, so a dispatch on `prod` would have built prod-branch
+   content with **dev** OpenBao URLs, tagged `prod-dev`. Closed by a `gate` job. ⚠️ The general
+   lesson outlives the fix: **a `uses:` job's `if:` cannot test `github.event_name`** — that value
+   is rewritten to `workflow_call` in the callee. Test `github.ref`, which survives, or gate with an
+   ordinary job. Epics 4–6 will write many `uses:` jobs.
+
+2. **Same commit, two refs, one `sha-<12>-dev` tag.** Builds are not reproducible (floating base
+   image, OpenBao URLs can change), so two runs of the same commit from different refs produce
+   different digests under one tag — a spurious red, or a `sha-` tag naming a build it did not
+   produce. Pre-existing for the dispatch path; Story 3.4 armed it automatically. Unfixable at job
+   level on this instance (D8 — `jobs.<id>.concurrency` is ignored).
+
+3. **`needs:` omits the `build` job.** A `npm run build` failure whose cause the Docker build does
+   not share still produces an image from an overall-red run.
+
+4. **Availability coupling.** Debian mirrors, OpenBao seal state and the registry are now on the
+   critical path of every push to every branch, ~30/day. A sealed OpenBao after an unattended
+   restart reds **every** branch push, not just a deliberate build. Shamir 3-of-5 means an
+   unattended restart IS a sealed restart.
+
+5. **Docs-only pushes build an image.** Accepted by Oleg 2026-08-16. `paths-ignore` was briefly
+   recorded as "foreclosed by measurement" on a claim that turned out false — **it is a live option
+   again** if the cost is ever judged too high.
+
+6. **Story 3.1 AC5's explicit serialization is not in force on the automatic path.** `build.yml`'s
+   own `concurrency` block is dead when it is called (D21) and neither caller declares one, so the
+   policy is Forgejo's default auto-cancel rather than the queueing AC5 specified. Argued in a
+   `ci.yml` comment; recorded here because §1 of the story required it be stated in the record and
+   it was not.

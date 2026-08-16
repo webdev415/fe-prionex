@@ -669,22 +669,22 @@ DEV stand to, which it did not before this story.
 specific claim — `test` is in `needs` and it failed — but it is not a `test`-only isolation, and
 that imprecision is recorded rather than papered over.
 
-**Budget. 🔴 I got this wrong again, in the sentence claiming I had not.**
+**Budget. 🔴 Wrong twice, and corrected by review both times.**
 
-The first version of this paragraph said **20 runs**, and described that as named honestly after
-three stories of under-reporting. The real figure, counted from `action_run` by review rather than
-by me, is **36 runs — ids 605 through 640.** That is a fourth consecutive under-count, and it
-happened inside the sentence asserting the opposite.
+First I wrote **20 runs** and called that honest after three stories of under-reporting. The Fable
+audit counted **36**. I then said 43 in conversation. The Opus audit counted properly: **47 runs,
+ids 604–650**, of which 3 cancelled and 6 failed.
 
-What the 20 omitted: the story's own Task 1 `workflow_run` measurement (608–616, 9 runs — booked
-separately in `deferred-work.md` as "6 runs" and never rolled into the story total), the context PR
-(605–607), and landing (635–640, 6 runs, two of which built images). "5 wasted" (617/619/621 from
-the invalid probe file, 631/632 from the two failed attempts) is right as far as it goes but omits
-three cancelled runs (608, 618, 620).
+I was low every single time, including in the paragraph announcing that I had stopped being low.
+What I kept missing: the story's own context push (604, not 605), the `workflow_run` measurement
+(608–616, booked separately in `deferred-work.md` and never rolled in), and everything after the
+review — runs 641–650, which include two PRs, a revert, and three `build-main.yml` merges that this
+very record narrates while still quoting the older total.
 
-The lesson is not "count more carefully". It is that a self-reported budget is the one number in
-this record with no external check, and every other number here was verified against the database.
-**This one should be too, and now is.**
+**The lesson is not "count more carefully", because I said that last time and was wrong again.** It
+is that a self-reported budget is the only number in this record with no external check, while every
+other number was verified against the database. It should never have been the exception. Task 7.3
+stays open until the ledger is closed against `SELECT count(*) FROM action_run`, not against memory.
 
 **Not measured.** Whether the concurrency group is *effective* under contention — two builds of the
 same ref racing. Only which group gets assigned was measured (D21). Also not measured: the dind
@@ -713,28 +713,31 @@ would silently build whatever branch the dispatch was issued against, under the 
 environment — `prod` included, whose tag is permanent. Scoped to `GITHUB_EVENT_NAME =
 workflow_call`, which D21 established is reliable.
 
-**ACCEPTED, not fixed — the `image` job also runs on `workflow_dispatch`, and the fix was worse.**
+**FIXED, after being wrongly reverted — the `image` job also ran on `workflow_dispatch`.**
 `ci.yml`'s dispatch trigger has no branch filter, so `github.ref` is `refs/heads/<chosen>` and the
 `if:` is true. Dispatching CI on `prod` builds prod-branch content with **dev** OpenBao URLs, tagged
-`prod-dev`. Not fixable in the `image` job's own `if:` — that is the copied-down trap from run 631.
+`prod-dev`. Not fixable via `github.event_name` in the `image` job's own `if:` — that value is
+rewritten to `workflow_call` in the callee (the run-631 trap) — so an ordinary `run:` job carries
+the check and `image` depends on it.
 
-The alternative was tried and reverted, and the reason is itself a finding worth more than the fix:
-an ordinary `run:` job with `if: github.event_name == 'push'` that `image` depends on **does** skip
-correctly (run 642 confirmed skip propagates) — but a **skipped ordinary job leaves its commit status
-`pending` forever**. Run 644 left `CI / Gate the image build to real pushes (pull_request)` pending
-and PR #35 could not merge. Caught before merging, by watching the gate rather than assuming it.
+🔴 **I reverted that fix on a measurement I got wrong, and the second review caught it.** I claimed
+a skipped ordinary job leaves its commit status `pending` forever and that this hung PR #35. The
+database refutes it, for that exact commit:
 
-🔴 **Note the asymmetry, because both halves are traps and they point opposite ways:**
+```
+CI / Gate the image build to real pushes (pull_request) | pending | idx 30 | 15:13:50
+CI / Gate the image build to real pushes (pull_request) | success | idx 31 | 15:13:50
+```
 
-| skipped thing | commit status |
-|---|---|
-| a `uses:` **wrapper** whose expanded jobs were skipped | **success** (run 631) |
-| an ordinary **job** that was itself skipped | **pending, forever** (run 644) |
+Same second. And across the whole repository: **434 `success`, 21 `failure`, zero `pending`.** I
+sampled an intermediate row and reported it as final — the same error Story 2.1 made with job logs,
+in a story that warns about that error twice and cites it as a standing lesson. The gate had been
+working the entire time.
 
-Neither means "this did work". One looks like success, the other hangs the gate.
-
-That measurement also **forecloses the `paths-ignore` option** for the docs-only-build cost in Open
-Question 6: not running is not the same as passing, and here it is provably worse.
+⚠️ **The damage was not confined to the story file.** The false claim was written into `ci.yml` as
+the reason for accepting the dispatch defect, *and* used to declare the `paths-ignore` option
+"foreclosed by measurement" — which was then attached to a decision Oleg made. Both are corrected;
+the gate is restored; `paths-ignore` is a live option again.
 
 **FIXED — three comment claims were stronger than the mechanism behind them**, and review was right
 to attack the concurrency argument specifically. Auto-cancel serializes only within one workflow file
@@ -756,8 +759,8 @@ What is confirmed, by observation:
 | | evidence |
 |---|---|
 | The rule exists and is armed | `package_cleanup_rule` id 1, `enabled=t`, `remove_days=14`, `keep_count=0`, `match_full_name=t`, created 2026-08-12 |
-| The nightly cleanup cron actually runs | Forgejo log, `2026/08/15 00:00:00` — a full cleanup pass |
-| It has authority over package versions, and uses it | same pass: *"Removing 2 entries from `package_version`"*, and 6 from `package_file` |
+| ~~The nightly cleanup cron actually runs~~ | 🔴 **WITHDRAWN** — see below |
+| ~~It has authority over package versions, and uses it~~ | 🔴 **WITHDRAWN** — wrong code path |
 | Nothing has yet reached the threshold | oldest surviving version is `build-check-3-1`, created **2026-08-14**, due **2026-08-28** |
 
 🔴 **And the finding that reframes four stories of "partly confirmed": AC4 has never been
@@ -766,12 +769,32 @@ old. Nothing inside it *can* be fourteen days old. Stories 1.11, 3.2, 3.3 and th
 the AC as unconfirmed and each read that as a gap in their own diligence — it was not one. The
 threshold was unreachable. The first moment any story can confirm it is **2026-08-28**.
 
-⚠️ **A trap for whoever does confirm it: the rule-execution path logs NOTHING unless it deletes.**
-Grepping the Forgejo log for cleanup-rule activity returns nothing today, and that silence is not
-evidence of failure — it is what a rule with nothing to do looks like. Judge it by rows in
-`package_version`, never by log lines. Same family as Story 1.11's standing lesson.
+⚠️ **A trap for whoever does confirm it, corrected after the Opus audit: the rule-execution path
+logs NOTHING AT ALL — not on a keep, not on a delete.** An earlier version of this note said "nothing
+unless it deletes", which implies a deletion would be visible. It would not. Every outcome in
+`ExecuteCleanupRules` / `GetCleanupTargets` is `log.Debug`, and this instance runs `LEVEL = info`.
+Judge it by rows in `package_version`, never by log lines. Same family as Story 1.11's standing
+lesson, and the log is not even a weak signal here.
 
-**The observation to make on or after 2026-08-28** — one query, no dispatch, no write:
+🔴 **Two rows of that table were withdrawn by the Opus audit, and the correction matters.** The
+cited log line is `services/packages/container/cleanup_sha256.go` — the dangling-`sha256:*` sweeper,
+which only touches versions whose name starts with `sha256:`. It is **not**
+`services/packages/cleanup/cleanup.go`, which is where the retention rule executes. So it does not
+evidence that the rule ran, and the record contradicted itself by naming `cleanupSHA256` as a
+distinct mechanism elsewhere. Worse, the log is lossy: over 120 hours only one night shows both the
+Start and Finish lines that pass emits unconditionally, and 2026-08-16 00:00 shows neither. **The log
+cannot establish that the nightly cron runs at all** — which is exactly the load the record had put
+on it. What survives: the rule exists and is armed, and the rule keys on `package_version.created_unix`
+(verified in the v15.0.5 source, `GetCleanupTargets`) — which is the assumption the whole AC4
+argument rests on, and it holds.
+
+⚠️ **And the date was off by one.** The container runs CEST (+0200) and the comparison is against
+local time, so the 2026-08-28 00:00 pass computes a cutoff of 2026-08-14 00:00 CEST while
+`build-check-3-1` is 2026-08-14 **08:21:46** CEST — it is KEPT. The first pass that can remove it is
+the night of **28→29**. A reader following the old instruction would have queried on the 28th, found
+the tag present, and escalated a non-existent failure by the record's own decision rule.
+
+**The observation to make on or after 2026-08-29** — one query, no dispatch, no write:
 
 ```sql
 SELECT pv.version, to_timestamp(pv.created_unix)::date
@@ -779,9 +802,10 @@ FROM package_version pv JOIN package p ON p.id = pv.package_id
 WHERE p.lower_name = 'fe-prionex' ORDER BY pv.created_unix LIMIT 5;
 ```
 
-`build-check-3-1` gone ⇒ AC4 confirmed. `build-check-3-1` still present after 2026-08-29 ⇒ the rule
-does not do what its fields say, which is a far more serious finding and lands on whoever owns Epic
-5's permanent promotion tags.
+`build-check-3-1` gone ⇒ AC4 confirmed. `build-check-3-1` still present after **2026-08-30** ⇒ the
+rule does not do what its fields say, which is a far more serious finding and lands on whoever owns
+Epic 5's permanent promotion tags. Do not escalate on the 28th; on that date it is expected to still
+be there.
 
 **ACCEPTED, not fixed:****ACCEPTED, not fixed:**
 
@@ -849,10 +873,14 @@ just a deliberate build.
    learning about.
 
    ✅ **DECIDED by Oleg, 2026-08-16: accept it.** No path filter is added — the tags expire at 14
-   days and each alternative costs more than the waste does. Note the `paths-ignore` option is not
-   merely unattractive but **foreclosed by measurement**: a skipped ordinary job leaves its commit
-   status `pending` forever (run 644), so not running is strictly worse than running — it hangs the
-   merge gate rather than passing it.
+   days and each alternative costs more than the waste does.
+
+   🔴 **The supporting argument attached to that decision was FALSE and is withdrawn.** It said the
+   `paths-ignore` option was "foreclosed by measurement" because a skipped ordinary job leaves its
+   commit status `pending` forever. It does not — see the Review findings section; the database
+   shows zero pending statuses in this repository. **`paths-ignore` is a live option again.** The
+   decision to accept still stands on its own merits (14-day expiry, and every alternative costs
+   something), but it should be re-taken on true grounds if anyone wants to revisit it.
 
 2. ✅ **Semver** (§7) — **dropped 2026-08-16**, see §7 and [D18](../../docs/migration-decisions.md#d18).
 3. **dind volume growth** (§5) — this story is what makes prune urgent, and prune was declined twice.

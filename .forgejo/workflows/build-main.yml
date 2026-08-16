@@ -25,9 +25,14 @@
 # fail-fast with no `:latest` fallback. Without this file there is no `main`
 # image to reset to, and 4.6 has nothing to pull.
 #
-# 🔴 `environment: dev` is a LITERAL — AC5. `-preprod` and `-prod` tags are
-# permanent under the retention rule and removing one needs an authorised DELETE
-# plus a `write:package` token, which has twice required Oleg in person. No
+# 🔴 `environment: dev` is a LITERAL — AC5. A preprod or prod build mints a
+# PERMANENT tag, and removing one needs an authorised DELETE plus a
+# `write:package` token, which has twice required Oleg in person.
+#
+# ⚠️ Specifically `sha-<12>-preprod` / `sha-<12>-prod`. An earlier version of
+# this comment said "`-preprod` and `-prod` tags", which is half false: the
+# branch tag `<branch>-prod` matches no `keep_pattern` alternative and expires
+# at 14 days. The literal is still correct; the stated reason was too wide. No
 # automatic path may reach those environments, and "cannot" here is provable by
 # reading this line.
 #
