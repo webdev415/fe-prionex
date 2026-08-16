@@ -630,6 +630,16 @@ Branch `story-3-4/impl` → `story-3-4-impl-dev` by the documented rule (each ru
 outside `[a-zA-Z0-9._-]` becomes one `-`), and `d28756198ffb` is commit `d2875619`. Neither tag
 matches `keep_pattern`; both expire at 14 days.
 
+**Evidence for AC1's `main` clause — run 637, `build-main.yml`, on the merge of PR #33:**
+
+```
+main-dev                2026-08-16 14:11:00
+sha-525b4bb3e5e2-dev    2026-08-16 14:11:00
+```
+
+`525b4bb3e5e2` is `main`'s merge commit exactly. Story 4.6 now has a `main-dev` image to reset the
+DEV stand to, which it did not before this story.
+
 **Evidence for the red path — run 634.** `test` failed, `image.build-and-push` was **skipped**, and
 `package_version` gained no row: the newest entry stayed 13:43:27 from run 633. ⚠️ Stated precisely:
 `lint` also failed in that run, so this proves *the gate as a whole* holds. It still supports the
@@ -673,7 +683,27 @@ volume delta (Task 5.6).
 
 ### Non-blocking
 
-2. **Semver** (§7) — implement or drop FR7's clause. Deferred once already.
+6. 🔴 **NEW, and introduced by this story: every docs-only push now builds and pushes a container
+   image.** There is no path filter anywhere in `ci.yml`. Commit `2c27a1c8` changed markdown only
+   and still produced `sha-2c27a1c8e370-dev` — one of **five** registry rows created on 2026-08-16,
+   several of them from commits that touched no source. That is ~150s of build plus registry writes
+   per documentation commit, on a host shared with another tenant's production, in a project whose
+   commits are heavily documentation.
+
+   ⚠️ **The obvious fix has a trap, which is why this is flagged rather than fixed.** Adding
+   `paths-ignore` to `ci.yml`'s triggers would stop the run entirely for docs-only pushes — and then
+   the required status contexts **never report**, which does not make the gate pass, it makes the
+   gate hang. `main` requires named contexts and a context that never arrives is indistinguishable
+   from one that is still pending. Job-level path filters do not exist, so the image job cannot be
+   filtered on its own.
+
+   Options worth weighing, none free: accept the cost (tags expire at 14 days); split the image into
+   its own workflow with a `paths-ignore` and lose the `needs:` gate that is this story's whole
+   point; or make the image job's `if:` consult a changed-file list computed by an earlier job —
+   which reintroduces exactly the `if:`-is-copied-down problem this story just spent two runs
+   learning about. **Decision belongs to review, not to me.**
+
+2. ✅ **Semver** (§7) — **dropped 2026-08-16**, see §7 and [D18](../../docs/migration-decisions.md#d18).
 3. **dind volume growth** (§5) — this story is what makes prune urgent, and prune was declined twice.
 4. **`build-check-3-1`'s expiry** (§6) is the first real observation of the 14-day threshold. Free.
 5. ✅ **The permanent tag `sha-f8f358f43ced-preprod` from Story 3.3 was deleted by Oleg on
