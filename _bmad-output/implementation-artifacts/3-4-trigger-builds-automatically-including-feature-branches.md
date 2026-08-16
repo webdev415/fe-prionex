@@ -135,7 +135,9 @@ The live rule protects `sha-[0-9a-f]{7,64}-(pre)?prod` **forever** and lets ever
 **An automatic trigger that could select `preprod` or `prod` would mint an unremovable tag on every
 push.** Removal needs an authorised `DELETE` with a `write:package` token, which on this project has
 required the operator in person three times now — including for the one tag Story 3.3 pushed by
-accident, `sha-f8f358f43ced-preprod`, which is still in the registry.
+accident, `sha-f8f358f43ced-preprod`. ✅ **That one was deleted on 2026-08-16, and the live rule was
+then compiled against every remaining version: eleven tags, none permanent.** The registry is clean
+right now, which is exactly the state an automatic trigger could undo on every push.
 
 **So: the automatic path selects `dev`, unconditionally, and `preprod`/`prod` stay on
 `workflow_dispatch`.** That keeps the legacy property — *production does not happen by itself* —
@@ -460,5 +462,8 @@ Cite by **search string, not line number** — `epics.md` was reflowed on 2026-0
 2. **Semver** (§7) — implement or drop FR7's clause. Deferred once already.
 3. **dind volume growth** (§5) — this story is what makes prune urgent, and prune was declined twice.
 4. **`build-check-3-1`'s expiry** (§6) is the first real observation of the 14-day threshold. Free.
-5. **The permanent tag `sha-f8f358f43ced-preprod`** from Story 3.3 is still in the registry and needs
-   an authorised `DELETE`. Not this story's, but it is the standing example of why AC5 exists.
+5. ✅ **The permanent tag `sha-f8f358f43ced-preprod` from Story 3.3 was deleted by Oleg on
+   2026-08-16**, and the live rule was then compiled against every remaining version: eleven, **none
+   permanent**. It stays cited here because it remains the standing example of why AC5 exists — an
+   automatic trigger that could reach `preprod` or `prod` would recreate that situation on every
+   push, and the next one might not be noticed by a review.

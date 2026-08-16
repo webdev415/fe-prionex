@@ -783,7 +783,7 @@ code rather than at consistency between them, and they found more here than in a
       tags are compiled and every permanent one is **named out loud** in the log, because permanence
       is correct for a release candidate and wrong for a probe, and the workflow cannot tell the
       difference but the log can.
-- [ ] [Review][Blocked] 🔴 **A permanent tag was pushed from a throwaway probe branch during this
+- [x] [Review][Closed] ✅ **CLOSED 2026-08-16 — Oleg deleted it.** Verified from the database: version id 3187 is gone, and the live `keep_pattern` was then compiled against **every** remaining version — eleven of them, **none permanent**. That last check is the one Task 3.2 required and this story skipped; running it over the whole registry rather than over one tag is what turns "the stray is gone" into "there is no other stray". 🔴 **A permanent tag was pushed from a throwaway probe branch during this
       story's own verification.** `sha-f8f358f43ced-preprod` matches
       `sha-[0-9a-f]{7,64}-(pre)?prod` — the retention rule will **never** remove it, and ~30 MB of
       blobs are pinned with it. This violates the story's own Prohibition 5, and Task 3.2 required
