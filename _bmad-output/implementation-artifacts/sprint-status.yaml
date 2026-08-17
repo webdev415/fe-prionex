@@ -135,7 +135,7 @@ development_status:
   # Feature branches build `dev` only: -prod/-preprod tags are PERMANENT under the retention rule.
   3-4-trigger-builds-automatically-including-feature-branches: done
   3-5-move-the-build-cache-to-the-registry: done
-  3-6-verify-commit-traceability-and-image-immutability: backlog
+  3-6-verify-commit-traceability-and-image-immutability: ready-for-dev
   epic-3-retrospective: optional
 
   # Epic 4: DEV Environment on Forgejo
