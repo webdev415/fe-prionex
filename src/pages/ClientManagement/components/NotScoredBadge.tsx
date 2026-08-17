@@ -12,18 +12,27 @@
  * is that rule.
  */
 
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-export function NotScoredBadge({ className }: { className?: string }) {
+export function NotScoredBadge({
+  className,
+  /** Rendered inside the pill, after the label — see {@link V3BucketBadge}. */
+  trailing,
+}: {
+  className?: string
+  trailing?: ReactNode
+}) {
   return (
     <span
       title="This client's debts are outside the scoring model's range, so they have no priority yet."
       className={cn(
-        'border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center rounded-[16px] border border-dashed px-3 py-1 text-xs font-medium',
+        'border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center gap-1 rounded-[16px] border border-dashed px-3 py-1 text-xs font-medium',
         className
       )}
     >
       Not scored
+      {trailing}
     </span>
   )
 }
