@@ -29,8 +29,17 @@ COPY . .
 # Build arguments for environment variables (Vite requires these at build time)
 ARG VITE_API_BASE_URL
 ARG VITE_WS_URL
+# Added 2026-08-17. It was OUTSIDE this contract, so every CI image had it
+# undefined and `src/features/operatorPhone/constants.ts` fell back to
+# `http://localhost:5173` — the origin the CRM posts its JWT to. Verified in the
+# shipped preprod layer, not inferred. Unlike the two above it is NOT a secret,
+# so it arrives from a Forgejo CI variable rather than from OpenBao, and it is
+# legitimately EMPTY where no phone service exists (dev, preprod today): the
+# panel then does not render at all.
+ARG VITE_OPERATOR_PHONE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
 
 # Build the application
 RUN npm run build

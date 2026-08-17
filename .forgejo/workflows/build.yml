@@ -587,6 +587,68 @@ jobs:
       # 12-character short SHA when they build `preprod-<sha>` / `prod-<sha>`:
       # the promotion guard compares those strings byte for byte against what is
       # emitted here, and a length mismatch fails every legitimate release.
+      # Story 3.6 follow-up, 2026-08-17. NOT a secret, so it comes from a Forgejo
+      # CI variable rather than OpenBao — Oleg's call, and correct: a public
+      # front-end origin is not a credential.
+      #
+      # 🔴 Why this step exists at all. `VITE_OPERATOR_PHONE_URL` was outside the
+      # Dockerfile's build-arg contract, so every image CI has ever produced had
+      # it undefined, and the app fell back to `http://localhost:5173` — the
+      # origin it posts its JWT to. That string was verified present in the
+      # shipped preprod layer. On an operator's machine that origin is their own
+      # machine, and 5173 is Vite's default port.
+      #
+      # ⚠️ EMPTY IS A VALID ANSWER for dev and preprod, because no phone service
+      # exists there — `phone.crm.preprod.crm-prionex.online` is NXDOMAIN, checked.
+      # Empty makes the panel not render, which is the correct behaviour and not
+      # a silent fallback: the alternative was pointing at localhost.
+      #
+      # 🔴 `prod` is the exception and fails closed. A production build without
+      # the phone URL is a functional regression, and the variable exists.
+      - name: Select the operator phone URL for this environment
+        id: phone
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          PHONE_DEV: ${{ vars.VITE_OPERATOR_PHONE_URL_DEV }}
+          PHONE_PREPROD: ${{ vars.VITE_OPERATOR_PHONE_URL_PREPROD }}
+          PHONE_PROD: ${{ vars.VITE_OPERATOR_PHONE_URL_PROD }}
+        run: |
+          set -euo pipefail
+
+          case "$ENVIRONMENT" in
+            dev)     PHONE_URL="${PHONE_DEV:-}" ;;
+            preprod) PHONE_URL="${PHONE_PREPROD:-}" ;;
+            prod)    PHONE_URL="${PHONE_PROD:-}" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+
+          if [ -n "$PHONE_URL" ]; then
+            # Scheme and host, tested as properties rather than by spelling —
+            # the same discipline the OpenBao step uses, and for the same reason.
+            case "$PHONE_URL" in
+              https://?*.?*) ;;
+              *) echo "FAIL: VITE_OPERATOR_PHONE_URL for '${ENVIRONMENT}' is" \
+                      "'${PHONE_URL}', which is not an https URL with a dotted host." \
+                      "This value becomes an iframe origin that receives a JWT."; exit 1 ;;
+            esac
+            # `if` rather than `&&`: under `set -e` a failing `grep` in an
+            # AND-list ends the script. That trap has already cost this file once.
+            if printf '%s' "$PHONE_URL" | grep -q '[[:space:]]'; then
+              echo "FAIL: VITE_OPERATOR_PHONE_URL contains whitespace."; exit 1
+            fi
+            echo "operator phone for '${ENVIRONMENT}': ${PHONE_URL}"
+          else
+            if [ "$ENVIRONMENT" = prod ]; then
+              echo "FAIL: a prod build must carry an operator phone URL, and" \
+                   "vars.VITE_OPERATOR_PHONE_URL_PROD is empty. Shipping prod with the" \
+                   "phone disabled is a regression; shipping it pointing at localhost is" \
+                   "the defect this check exists for."; exit 1
+            fi
+            echo "operator phone for '${ENVIRONMENT}': NOT CONFIGURED — the panel will not render."
+          fi
+
+          { echo "phone_url<<__EOF__"; printf '%s\n' "$PHONE_URL"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Compute tags from the checked-out commit
         id: tags
         # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
@@ -1004,6 +1066,7 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ steps.bao.outputs.api_url }}
             VITE_WS_URL=${{ steps.bao.outputs.ws_url }}
+            VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
 
           # 🔴 Story 3.5, decided by measurement rather than by argument.
           #
