@@ -2,7 +2,18 @@
 # Multi-stage build: build with Node.js, serve with nginx
 
 # Stage 1: Build
-FROM node:20-alpine AS builder
+#
+# 🔒 Pinned by digest, Story 3.6. `node:20-alpine` is a FLOATING tag: it moves
+# whenever upstream republishes, so rebuilding the same commit could produce a
+# different image through no change of ours. That is the mechanism behind the
+# `sha-<12>-<env>` tag silently repointing to a new digest, which Story 3.6 AC2
+# is about, and it is the half of that problem fixable without new logic.
+#
+# Resolved 2026-08-17 from the index digest, so platform selection is unchanged.
+# ⚠️ The trade is deliberate: base-image security updates now require an
+# explicit bump here instead of arriving silently. Reproducibility is what AC2
+# asks for; automatic updates are what it forbids.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
 
 WORKDIR /app
 
@@ -25,7 +36,9 @@ ENV VITE_WS_URL=$VITE_WS_URL
 RUN npm run build
 
 # Stage 2: Production server with nginx
-FROM nginx:alpine
+#
+# 🔒 Pinned by digest, Story 3.6 — same reasoning as the builder stage above.
+FROM nginx:alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
