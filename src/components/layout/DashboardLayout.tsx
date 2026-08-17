@@ -30,6 +30,7 @@ import { CallRecordingModal } from '@/pages/ClientManagement/components/CallReco
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
 import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
 import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
+import { MinimizedCallPill } from '@/features/calls/components/MinimizedCallPill'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -516,6 +517,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // One call window at a time. False until the answer is known — see the hook
   // for why the popup may not render before then.
   const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
+
+  // A new call always arrives expanded, never inheriting the last one's state.
+  const [callMinimized, setCallMinimized] = useState(false)
+  useEffect(() => {
+    setCallMinimized(false)
+  }, [incomingCall?.call_id])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -1181,6 +1188,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
             {/* Desktop: Project Selector, Language Switcher and User Profile */}
             <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
+              {incomingCall && callMinimized && (
+                <MinimizedCallPill
+                  phoneNumber={incomingCall.customer_phone}
+                  clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
+                  durationSeconds={
+                    answeredAt === null ? null : Math.floor((Date.now() - answeredAt) / 1000)
+                  }
+                  onRestore={() => setCallMinimized(false)}
+                />
+              )}
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1190,6 +1207,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
+              {incomingCall && callMinimized && (
+                <MinimizedCallPill
+                  phoneNumber={incomingCall.customer_phone}
+                  clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
+                  durationSeconds={
+                    answeredAt === null ? null : Math.floor((Date.now() - answeredAt) / 1000)
+                  }
+                  onRestore={() => setCallMinimized(false)}
+                />
+              )}
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1241,6 +1268,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             answeredAt={answeredAt}
             onAnswered={markAnswered}
             agentExtension={agentExtension}
+            minimized={callMinimized}
+            onMinimize={() => setCallMinimized(true)}
             onDismiss={dismissIncomingCall}
           />
         )}

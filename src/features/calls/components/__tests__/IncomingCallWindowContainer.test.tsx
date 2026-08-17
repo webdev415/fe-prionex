@@ -40,58 +40,56 @@ const incomingCall: IncomingCallData = {
   loans: [],
 }
 
-function renderContainer(over: { answeredAt?: number | null } = {}) {
+function renderContainer(over: { answeredAt?: number | null; minimized?: boolean } = {}) {
   const onDismiss = vi.fn()
-  render(
+  const onMinimize = vi.fn()
+  const ui = (minimized: boolean) => (
     <IncomingCallWindowContainer
       incomingCall={incomingCall}
       answeredAt={over.answeredAt ?? null}
       onAnswered={vi.fn()}
       agentExtension="2091"
+      minimized={minimized}
+      onMinimize={onMinimize}
       onDismiss={onDismiss}
     />
   )
-  return { onDismiss }
+  const result = render(ui(over.minimized ?? false))
+  return { onDismiss, onMinimize, setMinimized: (m: boolean) => result.rerender(ui(m)) }
 }
 
 // The i18n mock returns keys, so controls are found by their key fragments.
 const minimize = () => screen.getByRole('button', { name: /minimize/i })
-const restore = () => screen.getByRole('button', { name: /restore/i })
 
 describe('IncomingCallWindowContainer', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('reduces the call to a pill rather than losing it', () => {
-    renderContainer()
+  it('asks to be minimised rather than deciding for itself', () => {
+    const { onMinimize } = renderContainer()
 
     fireEvent.click(minimize())
 
-    // Without the pill a minimised call is unreachable: the operator is still
-    // on it and has nothing on screen to return to.
-    expect(screen.queryByRole('textbox')).toBeNull()
-    expect(restore()).toBeVisible()
+    // The header owns the minimised bar, so it has to hear about this.
+    expect(onMinimize).toHaveBeenCalled()
   })
 
-  it('brings the operator back to the same call', () => {
-    renderContainer({ answeredAt: Date.now() })
+  it('stands down while minimised', () => {
+    renderContainer({ minimized: true, answeredAt: Date.now() })
 
-    fireEvent.click(minimize())
-    fireEvent.click(restore())
-
-    expect(screen.getByRole('textbox')).toBeVisible()
+    expect(screen.queryByRole('textbox')).toBeNull()
   })
 
   it('keeps what was already typed across a minimise', () => {
-    renderContainer({ answeredAt: Date.now() })
+    const { setMinimized } = renderContainer({ answeredAt: Date.now() })
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'Promised to pay Friday' },
     })
 
-    fireEvent.click(minimize())
-    fireEvent.click(restore())
+    setMinimized(true)
+    setMinimized(false)
 
-    // Rebuilding the window on restore would take the half-written interaction
-    // with it, and the caller is still on the line.
+    // The form unmounts while minimised, so the draft has to live above it —
+    // a comment written with the caller on the line cannot be recovered.
     expect(screen.getByRole('textbox')).toHaveValue('Promised to pay Friday')
   })
 

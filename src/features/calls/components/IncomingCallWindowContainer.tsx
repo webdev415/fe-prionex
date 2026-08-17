@@ -13,7 +13,6 @@ import { useIncludedClients } from '../hooks/useIncludedClients'
 import { buildMatchedClients } from '../utils/callWindow'
 import type { IncomingCallData } from '../types'
 import { IncomingCallWindow } from './IncomingCallWindow'
-import { MinimizedCallPill } from './MinimizedCallPill'
 import type { CallInteractionDraft, CallInteractionDraftState } from './CallInteractionForm'
 import type { CallPhase } from './CallActions'
 
@@ -24,6 +23,9 @@ interface IncomingCallWindowContainerProps {
   /** Called when Accept succeeds: the answer is known here before any event. */
   onAnswered: () => void
   agentExtension: string | null
+  /** The header owns the minimised bar, so the window simply stands down. */
+  minimized: boolean
+  onMinimize: () => void
   /** Called once the call is over from this operator's point of view. */
   onDismiss: () => void
 }
@@ -43,13 +45,14 @@ export function IncomingCallWindowContainer({
   answeredAt,
   onAnswered,
   agentExtension,
+  minimized,
+  onMinimize,
   onDismiss,
 }: IncomingCallWindowContainerProps) {
   const { t } = useTranslation('common')
   const clients = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
   const { isIncluded, setIncluded, includedClientIds } = useIncludedClients(clients)
   const [interactionSaved, setInteractionSaved] = useState(false)
-  const [minimized, setMinimized] = useState(false)
   // Held here rather than inside the form: minimising unmounts the window, and
   // a comment written while the caller is on the line cannot be recovered.
   const [draft, setDraft] = useState<Partial<CallInteractionDraftState>>({})
@@ -95,16 +98,9 @@ export function IncomingCallWindowContainer({
     toast.success(t('pages.clients.modals.callDialog.interaction.saved', 'Interaction saved'))
   }
 
-  if (minimized) {
-    return (
-      <MinimizedCallPill
-        phoneNumber={incomingCall.customer_phone}
-        clientName={clients.length === 1 ? clients[0].clientName : null}
-        durationSeconds={durationSeconds}
-        onRestore={() => setMinimized(false)}
-      />
-    )
-  }
+  // Rendered by the header while minimised, but this stays mounted: the draft
+  // lives here, and unmounting would take a comment written mid-call with it.
+  if (minimized) return null
 
   return (
     <IncomingCallWindow
@@ -121,7 +117,7 @@ export function IncomingCallWindowContainer({
       interactionSaved={interactionSaved}
       interactionDraft={draft}
       onInteractionDraftChange={setDraft}
-      onMinimize={() => setMinimized(true)}
+      onMinimize={onMinimize}
       onAccept={() =>
         answer.mutate(incomingCall.call_id, {
           // Local knowledge is the earliest and most reliable signal that this

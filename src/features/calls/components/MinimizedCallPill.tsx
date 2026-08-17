@@ -12,13 +12,12 @@ interface MinimizedCallPillProps {
 }
 
 /**
- * The call reduced to a bar, so the operator can work the rest of the CRM
- * without losing it.
+ * The call reduced to a bar in the header, so the operator can work the rest of
+ * the CRM without losing it.
  *
- * Rendered by the call window itself rather than through the call store: a
- * round trip would rebuild the window on restore and take the half-written
- * interaction with it, which is not recoverable while the caller is on the
- * line.
+ * Rendered inline beside the other header controls rather than floating: as an
+ * overlay it covered the user menu, and a call that hides the thing behind it
+ * is not "out of the way".
  */
 export function MinimizedCallPill({
   phoneNumber,
@@ -29,24 +28,27 @@ export function MinimizedCallPill({
   const { t } = useTranslation('common')
 
   return (
-    <div className="border-border bg-card fixed top-3 right-4 z-50 flex items-center gap-3 rounded-full border py-1.5 pr-1.5 pl-3 shadow-lg">
-      <span className="bg-success-500 h-2 w-2 shrink-0 rounded-full" aria-hidden />
-      <span className="text-foreground max-w-48 truncate text-sm font-medium">
-        {clientName || phoneNumber}
-      </span>
-      {durationSeconds != null && (
-        <span className="text-muted-foreground text-sm tabular-nums">
-          {formatCallDuration(durationSeconds)}
-        </span>
-      )}
+    <div className="flex shrink-0 items-center gap-2">
       <button
         type="button"
         onClick={onRestore}
         aria-label={t('pages.clients.modals.callDialog.restore', 'Return to the call')}
-        className="bg-success-500 hover:bg-success-600 flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+        className="bg-success-500 hover:bg-success-600 flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
       >
-        <Icons.Phone size={16} className="text-white" aria-hidden />
+        <Icons.Phone size={18} className="text-white" aria-hidden />
       </button>
+
+      <span className="text-foreground max-w-40 truncate text-sm font-medium">
+        {clientName || phoneNumber}
+      </span>
+
+      {durationSeconds != null && (
+        <span className="bg-muted text-muted-foreground flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm">
+          <Icons.StopWatch size={14} aria-hidden />
+          <span className="tabular-nums">{formatCallDuration(durationSeconds)}</span>
+          <span className="bg-success-500 h-2 w-2 rounded-full" aria-hidden />
+        </span>
+      )}
     </div>
   )
 }
