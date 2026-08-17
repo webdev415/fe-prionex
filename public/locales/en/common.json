@@ -8276,7 +8276,8 @@
         "processing": "Client Processing",
         "verification": "Third-party verification",
         "low-verification": "Low verifications",
-        "searcher-followup": "Unworked searcher finds"
+        "searcher-followup": "Unworked searcher finds",
+        "communication-gap": "Communication gap"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8393,6 +8394,38 @@
         "empty": "No searcher finds in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "communicationGap": {
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Clear sale date to",
+        "gapMin": "Days of silence from",
+        "gapMinPlaceholder": "No minimum",
+        "clearGapMin": "Clear the days-of-silence minimum",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "lastPromise": "Last promise",
+          "gap": "Days of silence",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No data for the selected filters",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "invalidGapMin": "Days of silence must be a whole number of 0 or more",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"

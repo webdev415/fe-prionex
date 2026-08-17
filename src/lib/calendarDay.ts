@@ -1,18 +1,25 @@
 /**
- * Display formatting for the feed's plain calendar days.
+ * Display formatting for a backend DATE — a calendar day, not an instant.
  *
- * Every date column of this feed (`sell_date`, `assignment_date`,
- * `last_interaction_date`) is a backend DATE — a calendar day, not an instant.
  * Handing `"2026-07-29"` straight to `formatDate` would parse it as UTC
  * midnight and then re-render it in the BROWSER's timezone, which shows the
  * previous day everywhere west of Greenwich. Anchoring the string at LOCAL
  * midnight (`…T00:00:00`, which ECMAScript parses as local time) keeps the day
  * verbatim in every timezone.
  *
- * This is also why the tab never shifts `last_interaction_date`: the backend
- * cuts it in UTC by Card 148 parity, and a client-side conversion would move
- * it under the viewer's clock (see docs/low-verification-feed.md, "Frozen date
- * cuts").
+ * Started inside the low-verification feed and moved here once the
+ * communication-gap feed needed the identical rendering — the same reasoning
+ * (and the same pair of features) as `isRealCalendarDate` in
+ * `@/lib/calendarDate`: a pure util must not drag a feature's module graph
+ * into every consumer.
+ *
+ * This is also why neither feed shifts its day columns client-side: the
+ * backend cuts each of them in a deliberately chosen zone (the requested IANA
+ * timezone for `assignment_date` / `last_promise_date`, UTC for
+ * `last_interaction_date` by Metabase-card parity, none at all for the plain
+ * DATE `sell_date`), and a client-side conversion would move the value under
+ * the viewer's clock. See api docs/low-verification-feed.md and
+ * docs/communication-gap-feed.md ("Frozen date cuts" / "Timezone").
  */
 
 import { isRealCalendarDate } from '@/lib/calendarDate'

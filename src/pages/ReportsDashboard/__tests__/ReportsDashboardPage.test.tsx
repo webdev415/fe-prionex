@@ -53,6 +53,11 @@ vi.mock('@/features/searcherFollowup', () => ({
   SearcherFollowupFeedTab: () => <div data-testid="searcher-followup-feed-tab" />,
 }))
 
+// …and for the communication-gap feed (features/communicationGap).
+vi.mock('@/features/communicationGap', () => ({
+  CommunicationGapFeedTab: () => <div data-testid="communication-gap-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -122,6 +127,8 @@ const lowVerificationTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.low-verification' })
 const searcherFollowupTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.searcher-followup' })
+const communicationGapTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.communication-gap' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -146,6 +153,7 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -261,6 +269,35 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('it=2026-08-07')
     expect(search()).toContain('spg=2')
     expect(search()).toContain('sps=100')
+  })
+
+  it('renders the communication-gap feed panel for ?tab=communication-gap', () => {
+    renderPage(['/reports?tab=communication-gap'])
+
+    expect(screen.getByTestId('communication-gap-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(communicationGapTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-communication-gap')
+  })
+
+  it('keeps the communication-gap filters when switching tabs', async () => {
+    renderPage(['/reports?tab=communication-gap&gf=2026-07-01&gt=2026-07-31&gm=10&gpg=2&gps=100'])
+    expect(screen.getByTestId('communication-gap-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`gf/gt/gm/gpg/gps` vs `if/it/spg/sps` vs `pf/pt/mv/pg/ps` vs
+    // `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('gf=2026-07-01')
+    expect(search()).toContain('gt=2026-07-31')
+    expect(search()).toContain('gm=10')
+    expect(search()).toContain('gpg=2')
+    expect(search()).toContain('gps=100')
   })
 
   it('pushes a history entry so Back returns to the previous tab', async () => {

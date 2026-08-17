@@ -20,5 +20,7 @@ export type {
   LowVerificationFeedRow,
   LowVerificationFeedResponse,
 } from './types'
-export { formatCalendarDay } from './utils/calendarDay'
+// `formatCalendarDay` used to live here; it moved to `@/lib/calendarDay` when
+// the communication-gap feed needed the identical day rendering (same move as
+// `isRealCalendarDate` before it) — import it from the lib, not from a feature.
 export { parseMaxVerified, MAX_VERIFIED_CEILING, type MaxVerifiedParse } from './utils/maxVerified'
