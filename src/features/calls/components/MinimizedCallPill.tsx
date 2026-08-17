@@ -35,9 +35,9 @@ export function MinimizedCallPill({
         type="button"
         onClick={onRestore}
         aria-label={t('pages.clients.modals.callDialog.restore', 'Return to the call')}
-        className="bg-success-400 hover:bg-success-300 flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+        className="bg-primary-300 hover:bg-primary-400 flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
       >
-        <Icons.Call size={18} className="text-success-900" aria-hidden />
+        <Icons.Call size={20} className="text-dark-500" aria-hidden />
       </button>
 
       <span className="text-foreground max-w-40 truncate text-sm font-medium">
