@@ -29,7 +29,7 @@ import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogM
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
 import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
-import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
+import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -513,30 +513,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // One call window at a time. False until the answer is known — see the hook
   // for why the popup may not render before then.
   const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
-
-  // Which client the operator picked when the number is shared. Reset per call
-  // so a previous choice never leaks onto the next caller.
-  const [selectedIncomingClientId, setSelectedIncomingClientId] = useState<number | null>(null)
-  useEffect(() => {
-    setSelectedIncomingClientId(null)
-  }, [incomingCall?.call_id])
-
-  const primaryIncomingClient = useMemo(
-    () => resolvePrimaryClient(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
-  const incomingCallLoans = useMemo(
-    () => buildIncomingCallLoans(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
-
-  const handleSearchIncomingByPhone = useCallback(() => {
-    if (!incomingCall) return
-    // Mirrors the header search: the client list reads these off the store.
-    useSearchStore.getState().setSearchType('phone')
-    useSearchStore.getState().setSearchQuery(incomingCall.customer_phone)
-    navigate('/dashboard')
-  }, [incomingCall, navigate])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -1253,27 +1229,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Incoming Call Modal — suppressed while another call window is up */}
         {incomingCall && canShowIncomingPopup && (
-          <CallDialogModal
+          <IncomingCallWindowContainer
             // A queue can replace one ringing call with another without the
-            // popup ever unmounting, and the modal resets its timer and state
-            // on `open`, not on the call. Without a per-call identity the
-            // second call inherits the first's "Ringing MM:SS" and, if the
-            // first had already ended, its auto-close countdown.
+            // window ever unmounting; a per-call identity keeps the second
+            // call from inheriting the first one's timer and form state.
             key={incomingCall.call_id}
-            open={true}
-            onClose={dismissIncomingCall}
-            initialState="incoming"
-            clientId={incomingCall.client_id ?? null}
-            clientName={incomingCall.client_name || 'Unknown Caller'}
-            phoneNumber={incomingCall.customer_phone}
-            callId={incomingCall.call_id}
-            loans={incomingCallLoans}
-            incomingContext={primaryIncomingClient}
-            incomingClients={incomingCall.clients ?? []}
-            selectedIncomingClientId={selectedIncomingClientId}
-            onSelectIncomingClient={setSelectedIncomingClientId}
-            onSearchByPhone={handleSearchIncomingByPhone}
-            onReject={dismissIncomingCall}
+            incomingCall={incomingCall}
+            phase="ringing"
+            agentExtension={agentExtension}
+            onMinimize={dismissIncomingCall}
+            onDismiss={dismissIncomingCall}
           />
         )}
       </div>
