@@ -7,8 +7,7 @@ const DEFAULT_PHONE_URL = 'http://localhost:5173'
 // Treat an empty string as unset (an empty env var must not blank the URL and
 // then crash `new URL('')` below).
 const configured = import.meta.env.VITE_OPERATOR_PHONE_URL
-const resolved =
-  typeof configured === 'string' && configured.trim() !== '' ? configured : null
+const resolved = typeof configured === 'string' && configured.trim() !== '' ? configured : null
 
 // 🔴 The localhost default is a DEVELOPMENT convenience and must never reach a
 // production bundle.
@@ -46,4 +45,5 @@ function deriveOrigin(url: string): string {
 
 // Empty string when disabled: nothing is ever posted to it, because the panel
 // does not mount. Kept as a string so every consumer's type stays unchanged.
-export const OPERATOR_PHONE_ORIGIN = OPERATOR_PHONE_URL === null ? '' : deriveOrigin(OPERATOR_PHONE_URL)
+export const OPERATOR_PHONE_ORIGIN =
+  OPERATOR_PHONE_URL === null ? '' : deriveOrigin(OPERATOR_PHONE_URL)
