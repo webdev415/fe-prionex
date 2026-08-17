@@ -905,9 +905,11 @@ jobs:
           echo "Computed tags: ${TAGS}"
           echo "latest eligible: ${LATEST_ELIGIBLE}; pushed: ${PUSH_LATEST}"
 
-      # No cache-from/cache-to (Story 3.5 owns registry cache — and note that
-      # `driver: docker` above cannot export a registry cache at all, which is
-      # 3.5's first problem to solve, recorded against FR9). No platforms — s1
+      # ⚠️ SUPERSEDED by Story 3.5. This used to read "No cache-from/cache-to
+      # … `driver: docker` cannot export a registry cache at all". Both clauses
+      # are now false: the driver is `docker-container` and the cache keys are
+      # set below. Left visible rather than deleted because the FR9 conflict it
+      # describes is the reason this story existed. No platforms — s1
       # is native amd64 and cross-build under QEMU kills esbuild. Build-args are
       # explicit non-production literals with no `||` fallback (Dockerfile.prod
       # declares no defaults) — real values are Story 3.3's, from OpenBao.
@@ -1005,7 +1007,29 @@ jobs:
           # there never sees it. That is correct: the guard exists to stop an
           # accidental permanent tag, and this one is intended.
           cache-from: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache
-          cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max
+          # 🔴 `ignore-error=true` is BLOCKING-grade, added by review 2026-08-17.
+          #
+          # BuildKit runs exporters in order: the IMAGE exporter (the push) first,
+          # the CACHE exporter second. A `cache-to` failure is fatal and
+          # `ignore-error` defaults to false. So a transient registry error during
+          # the 280 MB cache export — which includes one 205 MB layer, and which
+          # the other runner can be writing to the same `buildcache` tag
+          # concurrently — fails the step AFTER the image is already pushed.
+          #
+          # On a `prod` dispatch that leaves `sha-<12>-prod` in the registry:
+          # PERMANENT under the retention rule, removable only by an authorised
+          # DELETE with a write:package token that has twice needed Oleg in
+          # person. And the digest assertion has no `if:`, so it never runs — the
+          # tag is permanent AND unverified, behind a red run that tells the
+          # operator nothing was published.
+          #
+          # Nobody has felt this because no preprod or prod build has run under
+          # this driver yet; on `dev` the tag expires in 14 days.
+          #
+          # A failed cache export is not a reason to fail a build. The cache is an
+          # optimisation worth roughly zero seconds (see D22); the image is the
+          # product.
+          cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max,ignore-error=true
 
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the
