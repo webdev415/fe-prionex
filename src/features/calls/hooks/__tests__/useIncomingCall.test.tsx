@@ -550,23 +550,31 @@ describe('useIncomingCall', () => {
     })
 
     describe('telling the consumer a call is over', () => {
-      it.each(['COMPLETED', 'FAILED', 'CANCELLED'] as const)(
-        'reports the call id on %s',
-        async (state) => {
-          const onCallSettled = vi.fn()
-          renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+      it.each([
+        ['COMPLETED', 'ended'],
+        ['FAILED', 'failed'],
+        // A caller who gives up mid-ring is not an error to put in front of
+        // the operator in red.
+        ['CANCELLED', 'ended'],
+      ] as const)('reports %s as %s', async (state, expected) => {
+        const onCallSettled = vi.fn()
+        renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
 
-          act(() => {
-            stateHandler()({
-              event_type: 'call.state_changed',
-              timestamp: '',
-              data: { call_id: 'shared-call', state },
-            })
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state, total_duration: 137 },
           })
+        })
 
-          expect(onCallSettled).toHaveBeenCalledWith('shared-call')
-        }
-      )
+        expect(onCallSettled).toHaveBeenCalledWith('shared-call', {
+          state: expected,
+          // This event is the last chance to learn the talk time: a window told
+          // the call is over stops polling for it.
+          totalDuration: 137,
+        })
+      })
 
       it('says nothing while the call is still going', async () => {
         const onCallSettled = vi.fn()

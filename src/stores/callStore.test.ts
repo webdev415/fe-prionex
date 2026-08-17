@@ -79,45 +79,96 @@ describe('callStore', () => {
     })
   })
 
-  describe('closeWindowForCall', () => {
+  describe('settleWindowForCall', () => {
     const CALL = '72462e71-4419-48d9-8f65-5a534500e856'
 
-    it('closes the window belonging to the call that ended', async () => {
+    it('settles the window belonging to the call that ended', async () => {
       const store = await loadStore(null)
-      store.getState().setOpenCallModal('call-dialog')
       store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'connected' }))
 
-      store.getState().closeWindowForCall(CALL)
+      store.getState().settleWindowForCall(CALL, { state: 'ended', totalDuration: 137 })
 
-      expect(store.getState().minimizedCall).toBeNull()
-      expect(store.getState().openCallModal).toBeNull()
-      expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+      // Settled, not deleted. Deleting it skips the whole end-of-call sequence
+      // the bubble owns — "Call ended", the final duration, the three-second
+      // grace before it disappears — on every call the socket reports before
+      // the two-second poll does, which is nearly all of them.
+      const settled = store.getState().minimizedCall
+      expect(settled?.callState).toBe('ended')
+      expect(settled?.elapsedTime).toBe(137)
+    })
+
+    it('records a failed call as failed rather than ended', async () => {
+      const store = await loadStore(null)
+      store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'dialing' }))
+
+      store.getState().settleWindowForCall(CALL, { state: 'failed' })
+
+      expect(store.getState().minimizedCall?.callState).toBe('failed')
+    })
+
+    it('keeps the running duration when the event carries none', async () => {
+      const store = await loadStore(null)
+      store
+        .getState()
+        .setMinimizedCall(stored({ callId: CALL, callState: 'connected', elapsedTime: 42 }))
+
+      store.getState().settleWindowForCall(CALL, { state: 'ended' })
+
+      expect(store.getState().minimizedCall?.elapsedTime).toBe(42)
+    })
+
+    it('stops standing in for a call in progress once settled', async () => {
+      const store = await loadStore(null)
+      store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'connected' }))
+
+      store.getState().settleWindowForCall(CALL, { state: 'ended' })
+
+      // The reason this exists at all: a window that outlives its call
+      // suppresses every inbound screen-pop until something clears it.
+      expect(store.getState().isCallWindowLive()).toBe(false)
+    })
+
+    it('leaves an already-settled window untouched', async () => {
+      const store = await loadStore(null)
+      store
+        .getState()
+        .setMinimizedCall(stored({ callId: CALL, callState: 'ended', elapsedTime: 137 }))
+      const before = store.getState().minimizedCall
+
+      store.getState().settleWindowForCall(CALL, { state: 'ended' })
+
+      // A repeat event must not rewrite the entry: the bubble's auto-dismiss is
+      // keyed on it, so a new object identity restarts the three-second timer
+      // and the bar can be held on screen indefinitely.
+      expect(store.getState().minimizedCall).toBe(before)
     })
 
     it('leaves a window for a different call alone', async () => {
       const store = await loadStore(null)
       store.getState().setMinimizedCall(stored({ callId: CALL, callState: 'connected' }))
 
-      // Two calls can be in flight for one operator. Closing on any terminal
-      // event would take away the window of a call still in progress.
-      store.getState().closeWindowForCall('ab2b3fce-bd6a-40a5-85a8-6d22b03b630b')
+      // Two calls can be in flight for one operator. Settling on any terminal
+      // event would end the window of a call still in progress.
+      store
+        .getState()
+        .settleWindowForCall('ab2b3fce-bd6a-40a5-85a8-6d22b03b630b', { state: 'ended' })
 
-      expect(store.getState().minimizedCall).not.toBeNull()
+      expect(store.getState().minimizedCall?.callState).toBe('connected')
     })
 
     it('leaves a window whose call was never identified alone', async () => {
       const store = await loadStore(null)
       store.getState().setMinimizedCall(stored({ callId: null, callState: 'dialing' }))
 
-      store.getState().closeWindowForCall(CALL)
+      store.getState().settleWindowForCall(CALL, { state: 'ended' })
 
-      expect(store.getState().minimizedCall).not.toBeNull()
+      expect(store.getState().minimizedCall?.callState).toBe('dialing')
     })
 
     it('does nothing when no window is open', async () => {
       const store = await loadStore(null)
 
-      expect(() => store.getState().closeWindowForCall(CALL)).not.toThrow()
+      expect(() => store.getState().settleWindowForCall(CALL, { state: 'ended' })).not.toThrow()
       expect(store.getState().minimizedCall).toBeNull()
     })
   })

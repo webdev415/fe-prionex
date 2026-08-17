@@ -55,16 +55,23 @@ function extensionOf(value: unknown): string | null {
     : null
 }
 
-interface UseIncomingCallOptions {
+export interface UseIncomingCallOptions {
   /**
    * A call this operator can see has reached a terminal state.
    *
    * The socket carries state for every call in the agent's room, which makes
    * this the one place that learns a call is over without waiting for a poll to
-   * notice. Consumers holding their own call window use it to take that window
-   * down; the callee is responsible for checking the id names *their* call.
+   * notice. Consumers holding their own call window use it to settle that
+   * window; the callee is responsible for checking the id names *their* call.
+   *
+   * `totalDuration` is passed on because it is the last chance to get it: a
+   * window told the call is over stops polling, so nothing else will ever
+   * supply the final talk time.
    */
-  onCallSettled?: (callId: string) => void
+  onCallSettled?: (
+    callId: string,
+    settled: { state: 'ended' | 'failed'; totalDuration?: number }
+  ) => void
 }
 
 export function useIncomingCall(
@@ -200,7 +207,15 @@ export function useIncomingCall(
         dismissIfSameCall(callId)
         // Deliberately not fired for a colleague answering: that settles the
         // call for the queue, not for whoever is now holding it.
-        if (callId) onCallSettledRef.current?.(callId)
+        if (callId) {
+          onCallSettledRef.current?.(callId, {
+            // Only FAILED is a failure. A caller who hangs up mid-ring arrives
+            // as COMPLETED, and so does 'CANCELLED' — neither is an error to
+            // put in front of the operator in red.
+            state: state === CallState.FAILED ? 'failed' : 'ended',
+            totalDuration: event.data?.total_duration,
+          })
+        }
         return
       }
 

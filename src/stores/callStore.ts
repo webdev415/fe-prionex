@@ -68,7 +68,19 @@ interface CallStore {
   clearMinimizedCall: () => void
   isCallActive: () => boolean
   isCallWindowLive: () => boolean
-  closeWindowForCall: (callId: string) => void
+  /**
+   * Mark the window for a call terminal — never remove it.
+   *
+   * The end of a call is a state the operator is shown, not an absence: the
+   * bar turns to "Call ended", freezes the final duration, and clears itself
+   * three seconds later. Deleting the window here skips all of that, and since
+   * the socket beats the two-second poll on nearly every call, deleting made
+   * that the normal outcome rather than the rare one.
+   */
+  settleWindowForCall: (
+    callId: string,
+    settled: { state: 'ended' | 'failed'; totalDuration?: number }
+  ) => void
 }
 
 const STORAGE_KEY = 'minimized-call-storage'
@@ -187,13 +199,22 @@ export const useCallStore = create<CallStore>((set, get) => ({
     // itself three seconds later, and until then it must not stand in for one.
     return !TERMINAL_CALL_STATES.has(minimized.callState)
   },
-  closeWindowForCall: (callId) => {
+  settleWindowForCall: (callId, { state, totalDuration }) => {
     const minimized = get().minimizedCall
     // Only the window this call owns. A terminal event names one call, and the
-    // operator may well be holding a different one — closing on any terminal
-    // event would take away a window that is still live.
+    // operator may well be holding a different one — settling on any terminal
+    // event would end a window that is still live.
     if (!minimized || !minimized.callId || minimized.callId !== callId) return
-    setStoredCallState(null)
-    set({ minimizedCall: null, openCallModal: null })
+    // A repeat event must not rewrite the entry: the bubble's auto-dismiss is
+    // keyed on its identity, so a fresh object restarts the grace period and
+    // the bar can be held on screen indefinitely.
+    if (TERMINAL_CALL_STATES.has(minimized.callState)) return
+    const settled: MinimizedCallInfo = {
+      ...minimized,
+      callState: state,
+      elapsedTime: totalDuration ?? minimized.elapsedTime,
+    }
+    setStoredCallState(settled)
+    set({ minimizedCall: settled })
   },
 }))

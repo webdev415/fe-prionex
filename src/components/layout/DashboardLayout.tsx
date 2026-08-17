@@ -27,7 +27,10 @@ import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
-import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import {
+  useIncomingCall,
+  type UseIncomingCallOptions,
+} from '@/features/calls/hooks/useIncomingCall'
 import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
 import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
 import { MinimizedCallPill } from '@/features/calls/components/MinimizedCallPill'
@@ -502,9 +505,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // a window whose call ended is cleared solely by the bubble's own polling —
   // which needs the bubble mounted and the lookup to succeed, and leaves the
   // window suppressing the incoming popup whenever either fails.
-  const handleCallSettled = useCallback((callId: string) => {
-    useCallStore.getState().closeWindowForCall(callId)
-  }, [])
+  const handleCallSettled = useCallback<NonNullable<UseIncomingCallOptions['onCallSettled']>>(
+    (callId, settled) => {
+      useCallStore.getState().settleWindowForCall(callId, settled)
+    },
+    []
+  )
 
   // Handle incoming calls
   const { incomingCall, answeredAt, markAnswered, dismissIncomingCall } = useIncomingCall(
