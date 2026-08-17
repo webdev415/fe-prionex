@@ -73,6 +73,9 @@ export function useIncomingCall(
 ) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
+  // When this operator took the call, as a timestamp so a consumer can run the
+  // conversation clock. Null while it is only ringing.
+  const [answeredAt, setAnsweredAt] = useState<number | null>(null)
   // Held in a ref so a caller passing an inline function does not tear down and
   // rebuild the socket on every render.
   const onCallSettledRef = useRef(onCallSettled)
@@ -92,6 +95,7 @@ export function useIncomingCall(
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
+    setAnsweredAt(null)
   }, [])
 
   useEffect(() => {
@@ -174,6 +178,8 @@ export function useIncomingCall(
       // now would strand it: the events that would have closed it have been and
       // gone.
       if (wasSettled(event.data?.call_id)) return
+      // A fresh offer starts unanswered, even if the last one was taken.
+      setAnsweredAt(null)
       setIncomingCall(event.data)
     }
 
@@ -226,6 +232,15 @@ export function useIncomingCall(
         if (someoneElseAnswered) {
           rememberSettled(callId)
           dismissIfSameCall(callId)
+        } else if (answeredBy !== null && mine !== null && answeredBy === mine) {
+          // Named as the answerer, so this operator is holding the call. Only
+          // an explicit match counts: a missing answered_by could equally mean
+          // a colleague took it, and showing this operator a connected window
+          // would invite them to file an interaction for a conversation
+          // somebody else is having.
+          if (callId && shownCallRef.current === callId) {
+            setAnsweredAt((current) => current ?? Date.now())
+          }
         } else if (
           answeredBy === null &&
           callId &&
@@ -272,6 +287,9 @@ export function useIncomingCall(
   return {
     incomingCall,
     hasIncomingCall: incomingCall !== null,
+    answeredAt,
+    /** For the operator who presses Accept: the answer is known locally first. */
+    markAnswered: () => setAnsweredAt((current) => current ?? Date.now()),
     dismissIncomingCall,
   }
 }

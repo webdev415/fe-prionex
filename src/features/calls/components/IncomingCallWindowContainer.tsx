@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 
@@ -18,8 +18,10 @@ import type { CallPhase } from './CallActions'
 
 interface IncomingCallWindowContainerProps {
   incomingCall: IncomingCallData
-  phase: CallPhase
-  durationSeconds?: number | null
+  /** When this operator took the call, or null while it is still ringing. */
+  answeredAt: number | null
+  /** Called when Accept succeeds: the answer is known here before any event. */
+  onAnswered: () => void
   agentExtension: string | null
   onMinimize: () => void
   /** Called once the call is over from this operator's point of view. */
@@ -38,8 +40,8 @@ const asOptions = (rows?: { id: number; name: string }[]) =>
  */
 export function IncomingCallWindowContainer({
   incomingCall,
-  phase,
-  durationSeconds,
+  answeredAt,
+  onAnswered,
   agentExtension,
   onMinimize,
   onDismiss,
@@ -48,6 +50,17 @@ export function IncomingCallWindowContainer({
   const clients = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
   const { isIncluded, setIncluded, includedClientIds } = useIncludedClients(clients)
   const [interactionSaved, setInteractionSaved] = useState(false)
+
+  const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'
+  // Ticks the conversation clock. Derived from the answer time rather than
+  // counted up, so a re-render or a minimise-and-restore cannot drift it.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (answeredAt === null) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [answeredAt])
+  const durationSeconds = answeredAt === null ? null : Math.floor((now - answeredAt) / 1000)
 
   const { data: types } = useInteractionTypes()
   const { data: contactTypes } = useInteractionContactTypes()
@@ -93,7 +106,14 @@ export function IncomingCallWindowContainer({
       onSaveInteraction={handleSave}
       interactionSaved={interactionSaved}
       onMinimize={onMinimize}
-      onAccept={() => answer.mutate(incomingCall.call_id)}
+      onAccept={() =>
+        answer.mutate(incomingCall.call_id, {
+          // Local knowledge is the earliest and most reliable signal that this
+          // operator holds the call; the state event may not name an answerer
+          // at all.
+          onSuccess: onAnswered,
+        })
+      }
       onHold={() => hold.mutate({ callId: incomingCall.call_id, hold: true })}
       onCancel={() => {
         reject.mutate(incomingCall.call_id)
