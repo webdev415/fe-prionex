@@ -2009,3 +2009,20 @@ Severity is much lower — a build carries no AppRole credentials, only the URLs
 but it is not zero, and `npm ci` runs lifecycle scripts from any branch's lockfile. Closing it fully
 is host-level firewalling on s1, which is outside any story currently planned. Recorded so it is a
 decision rather than an oversight.
+
+---
+
+## ✅ DECIDED 2026-08-17 — no operator phone in dev or preprod
+
+`VITE_OPERATOR_PHONE_URL` is supplied per environment from a Forgejo CI variable (not OpenBao — a
+public front-end origin is not a credential). **Oleg's decision: dev and preprod do not get an
+operator phone service.** Their variables stay unset, the panel does not render there, and this is a
+settled state rather than a gap.
+
+Consistent with the infrastructure as measured 2026-08-17: `phone.crm-prionex.online` resolves and
+answers HTTPS 200; `phone.crm.preprod.crm-prionex.online` is NXDOMAIN.
+
+`prod` fails closed if its variable is empty, because a production build without the phone is a
+regression. `VITE_OPERATOR_PHONE_URL_PROD` exists.
+
+**If that ever changes**, adding the environment is a variable and nothing else — no code change.

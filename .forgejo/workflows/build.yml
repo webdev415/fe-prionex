@@ -598,10 +598,14 @@ jobs:
       # shipped preprod layer. On an operator's machine that origin is their own
       # machine, and 5173 is Vite's default port.
       #
-      # ⚠️ EMPTY IS A VALID ANSWER for dev and preprod, because no phone service
-      # exists there — `phone.crm.preprod.crm-prionex.online` is NXDOMAIN, checked.
-      # Empty makes the panel not render, which is the correct behaviour and not
-      # a silent fallback: the alternative was pointing at localhost.
+      # ✅ EMPTY IS THE DECIDED ANSWER for dev and preprod — Oleg, 2026-08-17:
+      # those environments do not get an operator phone. It is not a gap waiting
+      # to be filled and should not be re-raised. Consistent with the
+      # infrastructure: `phone.crm-prionex.online` answers 200,
+      # `phone.crm.preprod.crm-prionex.online` is NXDOMAIN.
+      #
+      # Empty makes the panel not render, which is correct behaviour and not a
+      # silent fallback: the alternative was pointing at localhost.
       #
       # 🔴 `prod` is the exception and fails closed. A production build without
       # the phone URL is a functional regression, and the variable exists.
