@@ -1950,7 +1950,41 @@ is now the third case in this project where a guard's stated reason and its actu
 
 ## Opened by Story 3.5 (2026-08-17) — two things the review left live
 
-**1. 🔴 No `preprod` or `prod` build has EVER run under the current build configuration.** The driver,
+**1. ✅ CLOSED for `preprod` 2026-08-17 — run 680, and the outcome corrects a stale fact.**
+
+A `preprod` dispatch of `main` was expected to stop at the placeholder guard, because Story 3.3's
+record (2026-08-15) says `secret/fe/pre-prod/app` holds
+`PLACEHOLDER-preprod-backend-not-provisioned`. **It did not stop.** The build succeeded and pushed
+`main-preprod` and `sha-00ef3be4743d-preprod`.
+
+The reason is benign and the record was simply out of date: extracting the bundle layer from the
+pushed image shows the **real** endpoints baked in —
+
+```
+https://api.crm.preprod.crm-prionex.online
+wss://api.crm.preprod.crm-prionex.online
+```
+
+So the KV path was provisioned after 2026-08-15, the placeholder guard behaved correctly by passing a
+genuine URL, and `sha-00ef3be4743d-preprod` is a **legitimate** preprod image of `main` whose
+permanence is by design. No DELETE is needed.
+
+**What this closes:** the preprod path — OpenBao credential selection, the KV read, the URL guard, the
+tag computation with its permanence branch, the build, the push, the cache and the digest assertion —
+is now verified end to end under the driver, network and cache that Story 3.5 introduced.
+
+⚠️ **`prod` remains unexercised.** It differs from preprod only in the `case` arm that selects the
+AppRole and KV path, so the risk is narrow, but `secret/fe/prod/app` has never been read by anything
+and Story 7.6 exists because `OPENBAO_PROD_SECRET_ID` is unresolved.
+
+🔴 **The lesson is not about preprod.** The dispatch was made on the strength of a two-day-old
+document read as current state. It was the fifth instance in three days of the same failure: take the
+first plausible model, record it as established, act on it. Here it happened to be harmless. **A
+statement about live infrastructure has a timestamp; treat it as evidence of the past, not the
+present.**
+
+**(Original entry, kept because the reasoning still applies to `prod`:)**
+**🔴 No `prod` build has EVER run under the current build configuration.** The driver,
 the network, the cache and the digest assertion all changed, and every run that exercised them used
 `environment: dev`. A `prod` or `preprod` build mints `sha-<12>-<env>`, which the retention rule keeps
 **forever** — removing one needs an authorised DELETE with a `write:package` token that has twice
