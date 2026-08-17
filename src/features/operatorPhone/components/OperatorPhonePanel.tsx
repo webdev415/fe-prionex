@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { OPERATOR_PHONE_URL } from '../constants'
+import { OPERATOR_PHONE_ENABLED, OPERATOR_PHONE_URL } from '../constants'
 import { useOperatorPhone } from '../hooks/useOperatorPhone'
 import { OperatorPhoneStatus } from './OperatorPhoneStatus'
 
@@ -17,6 +17,11 @@ import { OperatorPhoneStatus } from './OperatorPhoneStatus'
 export function OperatorPhonePanel() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const { status, aor } = useOperatorPhone(iframeRef)
+
+  // No phone service configured for this environment. Rendering the iframe
+  // anyway is what put a JWT-receiving origin of `http://localhost:5173` into
+  // production bundles; not rendering is the whole fix.
+  if (!OPERATOR_PHONE_ENABLED || OPERATOR_PHONE_URL === null) return null
 
   return (
     <>
