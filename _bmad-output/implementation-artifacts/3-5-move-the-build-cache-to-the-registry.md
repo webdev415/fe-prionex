@@ -325,8 +325,15 @@ still work **before** any cache measurement is trusted, and the evidence is a ta
 - [x] 5.1 🔴 **Cold measurement on one runner, warm measurement on the OTHER**, with
       `action_task.runner_id` recorded for each. A same-runner warm build proves nothing
       (Prohibition 5). *Done, and cross-runner: run 662 exported on runner 20, run 663 imported on runner 19.*
-- [x] 5.2 Prove AC3 directly: change one source file only, and show the `npm ci` layer was reused —
-      from the build log's `CACHED` markers, not from the total duration. *Done from `CACHED` markers, not duration — run 663 shows `#12 RUN npm ci … CACHED`.*
+- [~] 5.2 Prove AC3 directly: change one source file only, and show the `npm ci` layer was reused —
+      from the build log's `CACHED` markers, not from the total duration.
+      🔴 **The evidence first cited was the WRONG RUN, and it was the exact kind this story's own
+      Prohibition 5 forbids.** Run 663 is the **empty commit** — nothing changed, so every step was
+      `CACHED`. It proves nothing about AC3.
+      The run that changed one source file is **664**, and there `#12 RUN npm ci` has **no `CACHED`
+      marker at all** — it downloads 205 MB and extracts: `#12 DONE 17.0s`.
+      **AC3's letter is met** (restored, not reinstalled) **and its value is negative** — see the
+      Completion Notes.
 - [x] 5.3 Confirm the image still lands: tags in `package_version`, and the digest assertion green.
       🔴 A green job is not evidence — Story 3.4 had two green runs that built nothing. *Done — tags in `package_version`, assertion green in run 662 onward.*
 - [ ] 5.4 Delete the probe branch; verify `main` moved before deleting anything.
@@ -358,9 +365,12 @@ still work **before** any cache measurement is trusted, and the evidence is a ta
   `node-20`. Two separate dind volumes — `dind-storage` ~4.9 GB, `dind2-storage` ~2.6 GB — and **no
   layer sharing between them.** That is the whole problem this story addresses.
 - Host disk: 246 GB used of 878 GB. Prune is not urgent.
-- `forgejo-runner-fe-prionex-dind` runs Docker **27.5.1**, has **no** `/etc/docker/daemon.json`
-  (containerd snapshotter off), and carries `git.crm-prionex.com → 10.70.0.1` in its own
-  `/etc/hosts`.
+- `forgejo-runner-fe-prionex-dind` runs Docker **27.5.1** and has **no** `/etc/docker/daemon.json`
+  (containerd snapshotter off). 🔴 **Its `/etc/hosts` does NOT carry the registry** — only localhost
+  and its own hostname. The name arrives by DNS: `127.0.0.11` → the s1 host's resolver → the
+  **host's** `/etc/hosts`. *(An earlier version of this line said the opposite. It is the single most
+  corrected fact in this story and it was still stated the old way here, in the block a future dev
+  reads first — caught by review, not by me.)*
 - `buildcache` is in the live `keep_pattern` (`package_cleanup_rule` id 1) and is never removed by
   the rule — pattern-read, never observed.
 
@@ -450,7 +460,7 @@ the registry.
 |---|---|---|
 | source changed (most builds) | 106 s | **131 s** |
 | identical tree, other runner | 107 s | **28 s** |
-| identical tree, same runner | 24 s | 28 s |
+| identical tree, same runner | 24 s | 28 s ⚠️ *inferred when written; confirmed later by run 670 at 27 s* |
 
 Over the real ten-build window 645–659: **814 s before, 795 s after** — **−1.9 s per build**, under a
 minute a day, against 280 MB for `buildcache`. The `docker-container` overhead is steady-state, not a
@@ -462,8 +472,27 @@ which runner picks the job up. A pruned dind volume or an added third runner rec
 registry instead of rebuilding. FR9 and AC1 close. And the project stops standing on a workaround for
 a misdiagnosed problem.
 
-**⚠️ `network=host` reduces isolation** — the BuildKit container shares the dind daemon's network
-namespace. Weighed and accepted; the alternative is no registry cache at all.
+🔴 **`network=host` — I understated the blast radius and asserted a false dichotomy.**
+
+I wrote "it reduces isolation … the alternative is no registry cache at all". Review measured it.
+The dind container is **privileged**, runs `dockerd -H tcp://0.0.0.0:2375 --tls=false`, and is
+dual-homed onto `forgejo_forgejo` — the same segment as `forgejo-postgres`, `forgejo-valkey`,
+`forgejo` itself and **`forgejo-openbao`**. The BuildKit image has no CNI, so with `network=host`
+**every `RUN` step** — `npm ci` and `npm run build`, executing lifecycle scripts from any branch's
+lockfile — lands in that namespace un-NAT'd, with `127.0.0.1:2375` reachable.
+
+⚠️ Fairly: the dind API was **already** reachable from job containers
+(`DOCKER_HOST=tcp://172.17.0.1:2375`). What is new is that it now applies to **build-time code from
+an arbitrary branch**, and the NAT boundary is gone.
+
+🔴 **And the dichotomy was false.** `buildx create --config` with a CNI configuration keeps host
+networking for the buildkit daemon while restoring a private netns for `RUN` steps. I did not
+consider it. **This is a security-posture decision and it belongs to Oleg, not to this story.**
+
+⚠️ **`network=host` was also never isolated as a variable.** Run 660 changed the driver *and* added
+the option in one commit; no run used `docker-container` without it. The mechanism is well supported
+by the DNS facts, but `build.yml` says "NOT cosmetic and NOT removable" as though measured, and it
+was reasoned. One run would settle it.
 
 **🔴 The digest assertion's stated reason and its actual behaviour diverged — for the third time in
 two days.** The file carried an `__INDEX__` branch added the previous day, on the theory that
@@ -484,6 +513,27 @@ once.** Replaced with `docker buildx imagetools inspect`.
 same run had just pushed and which is in `package_version`. A fail-closed guard that misnames the
 cause of its own failure sends the next reader after the registry instead of the tool.
 
+🔴 **The mechanism I recorded for the +25 s was wrong, and the truth is worse for the change.**
+
+I wrote it up as "`docker-container` overhead". Review measured what actually happens to the layer
+AC3 is about:
+
+| | `RUN npm ci` |
+|---|---|
+| run 656 — old `driver: docker`, source changed | **`CACHED`, 0 s** |
+| run 664 — new driver + registry cache, source changed | **`DONE 17.0 s`** (pull + extract 205 MB) |
+| run 660 — new driver, no cache at all | ~15 s (actually runs `npm ci`) |
+
+The registry cache restores the dependency layer **more slowly than rebuilding it**, and far more
+slowly than the old configuration gave it away for free. The cause is not driver overhead: with
+`driver: docker` the build used the dind daemon's **persistent** image store, while
+`docker-container` creates a **fresh BuildKit per job** — the logs show `buildx create` and a
+matching teardown in every run. **We traded a free persistent local cache for a paid remote one.**
+
+The totals in the table above already contain this, so the −1.9 s/build conclusion stands. The
+*explanation* did not, and AC3 is closed as a success in a story that never recorded that the
+mechanism it proves costs 17 seconds to buy something that used to be free.
+
 **Closing evidence, and it arrived unprompted.** The merge of PR #40 was itself the cross-runner
 case this change exists for:
 
@@ -495,17 +545,25 @@ case this change exists for:
 107 s → 27 s, in production, on the first merge after landing. The variance argument used to justify
 keeping a break-even change paid off immediately.
 
-**Budget — declared before Task 4 at 10–14 runs against baseline `action_run.id` 659, and closed by
-query rather than memory:**
+🔴 **Budget — and I closed the ledger before the commits that close it had run.**
+
+The record said **8 runs (660–667)**. Review recounted: that same query returns **11**, because runs
+668, 669 and 670 are the closing PR #41 that the record itself describes — its branch push, its
+gate, and the `build-main.yml` run its merge triggered. Counting the context PR #39 as well (runs
+657–659), the full attributable cost is **14 runs** — the top of the declared band, not the bottom.
 
 ```
-SELECT count(*) … WHERE repo_id=16 AND id > 659
--- 8 runs (660–667): 6 success, 2 failure, 0 cancelled
+SELECT count(*) … WHERE repo_id=16 AND id > 656   -- 14 runs
 ```
 
-**Under budget, and this is the first story in the project to declare one up front.** The previous
-story reported its budget five times and was low five times, having reconstructed it afterwards each
-time. Declaring first and closing by query is the difference, and it is cheap.
+⚠️ **And "8 runs" is now permanent in D22's changelog row**, which is the shape of error this
+project keeps repeating: a number written into the durable record while the thing it counts is still
+happening. Corrected there too.
+
+**Still within 10–14, which is the point worth keeping** — the estimate was sound and declaring it
+before the work is what made it checkable. What was not sound was closing it early and then using
+the number to say the process had improved. Close a ledger when the work stops, not when the writing
+does.
 
 ### File List
 

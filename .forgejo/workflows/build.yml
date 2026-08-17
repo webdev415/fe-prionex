@@ -195,11 +195,54 @@ jobs:
       # Proven by run 660: both tags in `package_version`, full export in the log.
       # This is what unblocked FR9 after four stories of `driver: docker` making
       # `cache-to` impossible.
+      # Story 3.5, review 2026-08-17. The BuildKit container needs a network on
+      # which `git.crm-prionex.com` resolves to the INTERNAL address. A
+      # user-defined bridge gives it Docker's embedded resolver; the default
+      # bridge does not, because the dind daemon's own resolver is a loopback
+      # address and Docker filters loopback nameservers out for bridge
+      # containers. Measured on the dind daemon:
+      #
+      #   default bridge      git.crm-prionex.com -> 185.185.49.127   (public)
+      #   user-defined bridge git.crm-prionex.com -> 10.70.0.1        (correct)
+      #
+      # That is the whole `EOF` failure Story 1.8 spent a story on: the push
+      # reached the public address.
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
-          driver-opts: network=host
+          # 🔴 NOT `network=host`, and the difference is a security boundary.
+          #
+          # The BuildKit image ships no CNI (`/opt/cni` does not exist), so with
+          # `network=host` every `RUN` step — `npm ci` and `npm run build`,
+          # executing lifecycle scripts from any branch's lockfile — inherits the
+          # dind daemon's namespace. Measured there: `127.0.0.1:2375` reachable,
+          # which is an unauthenticated API on a PRIVILEGED daemon and therefore
+          # root-equivalent on s1, plus a direct interface on the network that
+          # carries the Forgejo database and OpenBao.
+          #
+          # On a user-defined bridge, measured in the same way:
+          #   docker API 127.0.0.1:2375 ......... NOT reachable
+          #   interfaces on the control-plane net  0
+          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
+          #
+          # ⚠️ So this is a large improvement and NOT a complete fix. OpenBao stays
+          # routable because the dind daemon routes between its bridges. It is far
+          # less severe — a build carries no AppRole credentials, only the URLs —
+          # but it is not zero, and it is named here rather than left implied.
+          driver-opts: network=fe-prionex-build
 
       - name: Log in to git.crm-prionex.com
         uses: docker/login-action@v3
@@ -905,9 +948,11 @@ jobs:
           echo "Computed tags: ${TAGS}"
           echo "latest eligible: ${LATEST_ELIGIBLE}; pushed: ${PUSH_LATEST}"
 
-      # No cache-from/cache-to (Story 3.5 owns registry cache — and note that
-      # `driver: docker` above cannot export a registry cache at all, which is
-      # 3.5's first problem to solve, recorded against FR9). No platforms — s1
+      # ⚠️ SUPERSEDED by Story 3.5. This used to read "No cache-from/cache-to
+      # … `driver: docker` cannot export a registry cache at all". Both clauses
+      # are now false: the driver is `docker-container` and the cache keys are
+      # set below. Left visible rather than deleted because the FR9 conflict it
+      # describes is the reason this story existed. No platforms — s1
       # is native amd64 and cross-build under QEMU kills esbuild. Build-args are
       # explicit non-production literals with no `||` fallback (Dockerfile.prod
       # declares no defaults) — real values are Story 3.3's, from OpenBao.
@@ -1005,7 +1050,29 @@ jobs:
           # there never sees it. That is correct: the guard exists to stop an
           # accidental permanent tag, and this one is intended.
           cache-from: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache
-          cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max
+          # 🔴 `ignore-error=true` is BLOCKING-grade, added by review 2026-08-17.
+          #
+          # BuildKit runs exporters in order: the IMAGE exporter (the push) first,
+          # the CACHE exporter second. A `cache-to` failure is fatal and
+          # `ignore-error` defaults to false. So a transient registry error during
+          # the 280 MB cache export — which includes one 205 MB layer, and which
+          # the other runner can be writing to the same `buildcache` tag
+          # concurrently — fails the step AFTER the image is already pushed.
+          #
+          # On a `prod` dispatch that leaves `sha-<12>-prod` in the registry:
+          # PERMANENT under the retention rule, removable only by an authorised
+          # DELETE with a write:package token that has twice needed Oleg in
+          # person. And the digest assertion has no `if:`, so it never runs — the
+          # tag is permanent AND unverified, behind a red run that tells the
+          # operator nothing was published.
+          #
+          # Nobody has felt this because no preprod or prod build has run under
+          # this driver yet; on `dev` the tag expires in 14 days.
+          #
+          # A failed cache export is not a reason to fail a build. The cache is an
+          # optimisation worth roughly zero seconds (see D22); the image is the
+          # product.
+          cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max,ignore-error=true
 
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the
