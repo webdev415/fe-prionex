@@ -7324,8 +7324,8 @@
           "confirmMessage": "Are you sure you want to delete the template",
           "cannotDeleteSystemTemplate": "Cannot Delete System Template",
           "systemTemplateCannotBeDeleted": "System templates cannot be deleted. You can only disable them.",
-          "actionCannotBeUndone": "This action cannot be undone",
-          "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
+          "movedToTrashTitle": "The template will be moved to Trash",
+          "movedToTrashDescription": "It stops appearing in the template list, and a supervisor can restore it from Trash.",
           "deleting": "Deleting..."
         }
       }
@@ -8988,8 +8988,8 @@
       "delete": {
         "title": "Delete draft",
         "confirmMessage": "Are you sure you want to delete the draft \"{{name}}\"?",
-        "cannotUndo": "This action cannot be undone",
-        "permanentRemoval": "The draft will be permanently removed."
+        "movedToTrashTitle": "The draft will be moved to Trash",
+        "movedToTrashDescription": "It stops appearing in the draft list, and a supervisor can restore it from Trash."
       },
       "toasts": {
         "created": "Draft created successfully",

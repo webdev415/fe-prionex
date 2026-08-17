@@ -7341,8 +7341,8 @@
           "confirmMessage": "Ви впевнені, що хочете видалити шаблон",
           "cannotDeleteSystemTemplate": "Неможливо видалити системний шаблон",
           "systemTemplateCannotBeDeleted": "Системні шаблони не можна видалити. Ви можете тільки вимкнути їх.",
-          "actionCannotBeUndone": "Цю дію неможливо скасувати",
-          "templateWillBePermanentlyRemoved": "Шаблон буде назавжди видалено з системи.",
+          "movedToTrashTitle": "Шаблон буде переміщено до кошика",
+          "movedToTrashDescription": "Він зникне зі списку шаблонів, і супервізор зможе відновити його з кошика.",
           "deleting": "Видалення..."
         }
       }
@@ -9007,8 +9007,8 @@
       "delete": {
         "title": "Видалити чернетку",
         "confirmMessage": "Видалити чернетку «{{name}}»?",
-        "cannotUndo": "Цю дію не можна скасувати",
-        "permanentRemoval": "Чернетку буде видалено назавжди."
+        "movedToTrashTitle": "Чернетку буде переміщено до кошика",
+        "movedToTrashDescription": "Вона зникне зі списку чернеток, і супервізор зможе відновити її з кошика."
       },
       "toasts": {
         "created": "Чернетку створено",

@@ -89,9 +89,9 @@ export function DeleteTemplateModal({
           )}
           {!template.isSystem && (
             <Alert variant="warning">
-              <AlertTitle>{t('pages.smsTemplates.modals.delete.actionCannotBeUndone')}</AlertTitle>
+              <AlertTitle>{t('pages.smsTemplates.modals.delete.movedToTrashTitle')}</AlertTitle>
               <AlertDescription>
-                {t('pages.smsTemplates.modals.delete.templateWillBePermanentlyRemoved')}
+                {t('pages.smsTemplates.modals.delete.movedToTrashDescription')}
               </AlertDescription>
             </Alert>
           )}

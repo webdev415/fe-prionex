@@ -11,6 +11,7 @@ import type {
   MessagingDraft,
   MessagingDraftCreate,
   MessagingDraftPreviewResponse,
+  MessagingDraftTrashPage,
   MessagingDraftUpdate,
   MessagingIntegration,
   MessagingIntegrationCreate,
@@ -89,8 +90,22 @@ export const messagingApi = {
       .then((response) => response.data)
   },
 
+  // Soft delete: the draft moves to trash and stays restorable until the
+  // retention purge removes it.
   deleteDraft(draftId: number) {
     return api.delete(`${BASE_URL}/drafts/${draftId}`).then(() => undefined)
+  },
+
+  listDeletedDrafts(params?: { channel?: MessagingChannel; limit?: number; offset?: number }) {
+    return api
+      .get<MessagingDraftTrashPage>(`${BASE_URL}/drafts/trash`, { params })
+      .then((response) => response.data)
+  },
+
+  restoreDraft(draftId: number) {
+    return api
+      .post<MessagingDraft>(`${BASE_URL}/drafts/${draftId}/restore`)
+      .then((response) => response.data)
   },
 
   previewDraft(draftId: number, variables: Record<string, unknown>, strict = false) {

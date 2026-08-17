@@ -227,6 +227,7 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
+        'actions.delete': 'Delete',
         // Two-Factor Authentication
         'twoFactor.title': 'Two-Factor Authentication',
         'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',
@@ -299,6 +300,16 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        // Soft delete is a recovery promise, so these two say Trash, not
+        // "permanently removed" — the copy they replaced was untrue.
+        'pages.smsTemplates.modals.delete.movedToTrashTitle': 'The template will be moved to Trash',
+        'pages.smsTemplates.modals.delete.movedToTrashDescription':
+          'It stops appearing in the template list, and a supervisor can restore it from Trash.',
+        'pages.messagingDrafts.delete.confirmMessage':
+          'Are you sure you want to delete the draft "{{name}}"?',
+        'pages.messagingDrafts.delete.movedToTrashTitle': 'The draft will be moved to Trash',
+        'pages.messagingDrafts.delete.movedToTrashDescription':
+          'It stops appearing in the draft list, and a supervisor can restore it from Trash.',
         'pages.clients.modals.deleteClient.title': 'Delete Client',
         'pages.clients.modals.deleteClient.softDeleteWarning':
           'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',

@@ -70,6 +70,21 @@ export function useDeleteMessagingDraft() {
   })
 }
 
+export function useRestoreMessagingDraft() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draftId: number) => messagingApi.restoreDraft(draftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagingKeys.drafts() })
+      toast.success(
+        messagingToast('pages.messagingDrafts.toasts.restored', 'Draft restored successfully')
+      )
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
 export function usePreviewMessagingDraft() {
   return useMutation({
     mutationFn: ({
