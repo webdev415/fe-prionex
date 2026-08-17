@@ -195,11 +195,54 @@ jobs:
       # Proven by run 660: both tags in `package_version`, full export in the log.
       # This is what unblocked FR9 after four stories of `driver: docker` making
       # `cache-to` impossible.
+      # Story 3.5, review 2026-08-17. The BuildKit container needs a network on
+      # which `git.crm-prionex.com` resolves to the INTERNAL address. A
+      # user-defined bridge gives it Docker's embedded resolver; the default
+      # bridge does not, because the dind daemon's own resolver is a loopback
+      # address and Docker filters loopback nameservers out for bridge
+      # containers. Measured on the dind daemon:
+      #
+      #   default bridge      git.crm-prionex.com -> 185.185.49.127   (public)
+      #   user-defined bridge git.crm-prionex.com -> 10.70.0.1        (correct)
+      #
+      # That is the whole `EOF` failure Story 1.8 spent a story on: the push
+      # reached the public address.
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
-          driver-opts: network=host
+          # 🔴 NOT `network=host`, and the difference is a security boundary.
+          #
+          # The BuildKit image ships no CNI (`/opt/cni` does not exist), so with
+          # `network=host` every `RUN` step — `npm ci` and `npm run build`,
+          # executing lifecycle scripts from any branch's lockfile — inherits the
+          # dind daemon's namespace. Measured there: `127.0.0.1:2375` reachable,
+          # which is an unauthenticated API on a PRIVILEGED daemon and therefore
+          # root-equivalent on s1, plus a direct interface on the network that
+          # carries the Forgejo database and OpenBao.
+          #
+          # On a user-defined bridge, measured in the same way:
+          #   docker API 127.0.0.1:2375 ......... NOT reachable
+          #   interfaces on the control-plane net  0
+          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
+          #
+          # ⚠️ So this is a large improvement and NOT a complete fix. OpenBao stays
+          # routable because the dind daemon routes between its bridges. It is far
+          # less severe — a build carries no AppRole credentials, only the URLs —
+          # but it is not zero, and it is named here rather than left implied.
+          driver-opts: network=fe-prionex-build
 
       - name: Log in to git.crm-prionex.com
         uses: docker/login-action@v3
