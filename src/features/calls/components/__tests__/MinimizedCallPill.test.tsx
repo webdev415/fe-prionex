@@ -32,9 +32,26 @@ describe('MinimizedCallPill', () => {
   })
 
   it('runs the clock once connected', () => {
-    renderPill({ durationSeconds: 222 })
+    renderPill({ answeredAt: Date.now() - 222_000 })
 
     expect(screen.getByText('03:42')).toBeVisible()
+  })
+
+  it('keeps the clock running while the operator works elsewhere', async () => {
+    vi.useFakeTimers()
+    try {
+      renderPill({ answeredAt: Date.now() - 222_000 })
+
+      await vi.advanceTimersByTimeAsync(3000)
+
+      // The pill has to advance this itself. Nothing re-renders the header once
+      // a second, so a duration handed down by its parent freezes the moment
+      // the call is minimised and the operator watches a stopped clock for the
+      // whole conversation.
+      expect(screen.getByText('03:45')).toBeVisible()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('shows no clock while the call is only ringing', () => {

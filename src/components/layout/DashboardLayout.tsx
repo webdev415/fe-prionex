@@ -530,6 +530,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setCallMinimized(false)
   }, [incomingCall?.call_id])
 
+  // Last in the header, after the user menu, per the design. Defined once
+  // because the desktop and mobile header variants render the same pill.
+  const minimizedCallPill = incomingCall && callMinimized && (
+    <MinimizedCallPill
+      phoneNumber={incomingCall.customer_phone}
+      clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
+      answeredAt={answeredAt}
+      onRestore={() => setCallMinimized(false)}
+    />
+  )
+
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
   }, [])
@@ -1194,41 +1205,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
             {/* Desktop: Project Selector, Language Switcher and User Profile */}
             <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
-              {incomingCall && callMinimized && (
-                <MinimizedCallPill
-                  phoneNumber={incomingCall.customer_phone}
-                  clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
-                  durationSeconds={
-                    answeredAt === null ? null : Math.floor((Date.now() - answeredAt) / 1000)
-                  }
-                  onRestore={() => setCallMinimized(false)}
-                />
-              )}
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
               <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <UserProfile onLogoutClick={handleLogoutClick} />
+              {minimizedCallPill}
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
-              {incomingCall && callMinimized && (
-                <MinimizedCallPill
-                  phoneNumber={incomingCall.customer_phone}
-                  clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
-                  durationSeconds={
-                    answeredAt === null ? null : Math.floor((Date.now() - answeredAt) / 1000)
-                  }
-                  onRestore={() => setCallMinimized(false)}
-                />
-              )}
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
               <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+              {minimizedCallPill}
             </div>
           </header>
 
