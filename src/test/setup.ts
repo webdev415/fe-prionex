@@ -302,14 +302,16 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.download': 'Download .txt',
         // Soft delete is a recovery promise, so these two say Trash, not
         // "permanently removed" — the copy they replaced was untrue.
-        'pages.smsTemplates.modals.delete.movedToTrashTitle': 'The template will be moved to Trash',
-        'pages.smsTemplates.modals.delete.movedToTrashDescription':
-          'It stops appearing in the template list, and a supervisor can restore it from Trash.',
+        'pages.smsTemplates.modals.delete.recoverableTitle':
+          'The template will be removed from the active list',
+        'pages.smsTemplates.modals.delete.recoverableDescription':
+          'It is kept for a recovery period, so an administrator can restore it if this was a mistake.',
         'pages.messagingDrafts.delete.confirmMessage':
           'Are you sure you want to delete the draft "{{name}}"?',
-        'pages.messagingDrafts.delete.movedToTrashTitle': 'The draft will be moved to Trash',
-        'pages.messagingDrafts.delete.movedToTrashDescription':
-          'It stops appearing in the draft list, and a supervisor can restore it from Trash.',
+        'pages.messagingDrafts.delete.recoverableTitle':
+          'The draft will be removed from the active list',
+        'pages.messagingDrafts.delete.recoverableDescription':
+          'It is kept for a recovery period, so an administrator can restore it if this was a mistake.',
         'pages.clients.modals.deleteClient.title': 'Delete Client',
         'pages.clients.modals.deleteClient.softDeleteWarning':
           'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
@@ -407,6 +409,11 @@ vi.mock('i18next', () => ({
     // `<html lang>` in step with the active language.
     on: vi.fn(),
     language: 'en',
+    // Hooks that toast outside a component call i18n.t directly. Without this
+    // the call throws inside onSuccess, React Query turns the mutation into a
+    // failure, and any test asserting only on cache state passes while the
+    // success path it claims to cover never runs.
+    t: (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string) ?? key,
   },
 }))
 

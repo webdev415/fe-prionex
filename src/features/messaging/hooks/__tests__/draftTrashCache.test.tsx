@@ -16,8 +16,10 @@ const mockApi = vi.hoisted(() => ({
   delete: vi.fn(),
 }))
 
+const toastFns = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+
 vi.mock('@/lib/api', () => ({ api: mockApi, default: mockApi }))
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: toastFns }))
 
 const { messagingKeys } = await import('../useMessaging')
 const { useRestoreMessagingDraft, useDeleteMessagingDraft } =
@@ -69,6 +71,13 @@ describe('useRestoreMessagingDraft', () => {
       expect(client.getQueryState(listKey)?.isInvalidated).toBe(true)
       expect(client.getQueryState(trashKey)?.isInvalidated).toBe(true)
     })
+    // invalidateQueries runs first inside onSuccess, so the assertions above
+    // hold even when the rest of that handler throws. Assert the handler ran to
+    // completion, or this test goes green on a mutation that actually failed.
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.isError).toBe(false)
+    expect(toastFns.success).toHaveBeenCalledTimes(1)
+    expect(toastFns.error).not.toHaveBeenCalled()
   })
 
   it('leaves unrelated caches alone', async () => {
@@ -100,5 +109,8 @@ describe('useDeleteMessagingDraft', () => {
 
     await waitFor(() => expect(mockApi.delete).toHaveBeenCalled())
     await waitFor(() => expect(client.getQueryState(trashKey)?.isInvalidated).toBe(true))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(toastFns.success).toHaveBeenCalledTimes(1)
+    expect(toastFns.error).not.toHaveBeenCalled()
   })
 })

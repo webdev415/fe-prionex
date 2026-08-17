@@ -63,14 +63,14 @@ export function DeleteDraftModal({ draft, open, onClose }: DeleteDraftModalProps
           <Alert variant="warning">
             <AlertTitle>
               {t(
-                'pages.messagingDrafts.delete.movedToTrashTitle',
-                'The draft will be moved to Trash'
+                'pages.messagingDrafts.delete.recoverableTitle',
+                'The draft will be removed from the active list'
               )}
             </AlertTitle>
             <AlertDescription>
               {t(
-                'pages.messagingDrafts.delete.movedToTrashDescription',
-                'It stops appearing in the draft list, and a supervisor can restore it from Trash.'
+                'pages.messagingDrafts.delete.recoverableDescription',
+                'It is kept for a recovery period, so an administrator can restore it if this was a mistake.'
               )}
             </AlertDescription>
           </Alert>

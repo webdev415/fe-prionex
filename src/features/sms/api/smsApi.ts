@@ -88,6 +88,13 @@ export async function deleteTemplate(templateId: number): Promise<void> {
 
 /**
  * List soft-deleted templates (trash)
+ *
+ * Deliberately takes no project_id. The endpoint has no such parameter: it
+ * scopes to `current_user.project_id` off the token and the service filters
+ * `project_id == <that>`, so a caller cannot widen it. The project_id that
+ * getTemplates accepts is decorative for the same reason - the live-list
+ * endpoint clamps any foreign value back to the caller's own project. Adding
+ * one here would suggest cross-project trash is supported when it is not.
  */
 export async function getDeletedTemplates(params?: {
   category?: string

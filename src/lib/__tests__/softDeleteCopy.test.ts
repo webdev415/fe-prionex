@@ -23,8 +23,8 @@ const LOCALES: Array<[string, Json]> = [
 ]
 
 const BLOCKS = [
-  ['pages.smsTemplates.modals.delete', ['movedToTrashTitle', 'movedToTrashDescription']],
-  ['pages.messagingDrafts.delete', ['movedToTrashTitle', 'movedToTrashDescription']],
+  ['pages.smsTemplates.modals.delete', ['recoverableTitle', 'recoverableDescription']],
+  ['pages.messagingDrafts.delete', ['recoverableTitle', 'recoverableDescription']],
 ] as const
 
 // The exact keys whose text was untrue. Their absence is the fix.
@@ -33,10 +33,18 @@ const RETIRED = [
   'pages.smsTemplates.modals.delete.templateWillBePermanentlyRemoved',
   'pages.messagingDrafts.delete.cannotUndo',
   'pages.messagingDrafts.delete.permanentRemoval',
+  // Named a Trash screen the SPA does not have yet.
+  'pages.smsTemplates.modals.delete.movedToTrashTitle',
+  'pages.smsTemplates.modals.delete.movedToTrashDescription',
+  'pages.messagingDrafts.delete.movedToTrashTitle',
+  'pages.messagingDrafts.delete.movedToTrashDescription',
 ]
 
 // en and uk phrasings of the promise these blocks must never make again.
 const FALSE_PROMISES = [
+  // No naming a screen that does not exist: there is no Trash route in the SPA.
+  /\bTrash\b/,
+  /кошик/i,
   /permanently/i,
   /cannot be undone/i,
   /can'?t be undone/i,
@@ -83,17 +91,17 @@ describe('soft-delete modal copy', () => {
     }
   })
 
-  it('mentions recovery, so the user knows Trash exists', () => {
-    expect(
-      at(enCommon as Json, 'pages.smsTemplates.modals.delete.movedToTrashDescription')
-    ).toMatch(/restore/i)
-    expect(at(enCommon as Json, 'pages.messagingDrafts.delete.movedToTrashDescription')).toMatch(
+  it('mentions recovery, so the user knows the item is not gone', () => {
+    expect(at(enCommon as Json, 'pages.smsTemplates.modals.delete.recoverableDescription')).toMatch(
       /restore/i
     )
-    expect(
-      at(ukCommon as Json, 'pages.smsTemplates.modals.delete.movedToTrashDescription')
-    ).toMatch(/відновити/i)
-    expect(at(ukCommon as Json, 'pages.messagingDrafts.delete.movedToTrashDescription')).toMatch(
+    expect(at(enCommon as Json, 'pages.messagingDrafts.delete.recoverableDescription')).toMatch(
+      /restore/i
+    )
+    expect(at(ukCommon as Json, 'pages.smsTemplates.modals.delete.recoverableDescription')).toMatch(
+      /відновити/i
+    )
+    expect(at(ukCommon as Json, 'pages.messagingDrafts.delete.recoverableDescription')).toMatch(
       /відновити/i
     )
   })

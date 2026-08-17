@@ -11,6 +11,7 @@ import type {
   MessagingDraft,
   MessagingDraftCreate,
   MessagingDraftPreviewResponse,
+  MessagingDraftTrash,
   MessagingDraftTrashPage,
   MessagingDraftUpdate,
   MessagingIntegration,
@@ -96,10 +97,24 @@ export const messagingApi = {
     return api.delete(`${BASE_URL}/drafts/${draftId}`).then(() => undefined)
   },
 
+  // Envelope is DraftTrashPage in app/schemas/draft.py: {total, drafts}. Unlike
+  // listDrafts, which returns a bare array, this endpoint gained the envelope
+  // and limit/offset so it matches the SMS template trash shape. Backend and
+  // frontend deploy separately, so a rollout window can still serve the old
+  // bare array - normalise here and a drifted contract shows an empty trash
+  // instead of crashing the first consumer on `.map` of undefined.
   listDeletedDrafts(params?: { channel?: MessagingChannel; limit?: number; offset?: number }) {
     return api
-      .get<MessagingDraftTrashPage>(`${BASE_URL}/drafts/trash`, { params })
-      .then((response) => response.data)
+      .get<MessagingDraftTrashPage | MessagingDraftTrash[]>(`${BASE_URL}/drafts/trash`, {
+        params,
+      })
+      .then((response) => {
+        const data = response.data
+        if (Array.isArray(data)) {
+          return { total: data.length, drafts: data }
+        }
+        return { total: data?.total ?? 0, drafts: data?.drafts ?? [] }
+      })
   },
 
   restoreDraft(draftId: number) {

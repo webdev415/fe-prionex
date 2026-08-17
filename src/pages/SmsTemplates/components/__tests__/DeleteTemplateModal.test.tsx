@@ -56,10 +56,12 @@ describe('DeleteTemplateModal', () => {
     }
   })
 
-  it('tells the user the template goes to Trash', () => {
+  it('tells the user the template is recoverable', () => {
     renderModal()
-    expect(screen.getByText('The template will be moved to Trash')).toBeInTheDocument()
-    expect(screen.getByText(/can restore it from Trash/)).toBeInTheDocument()
+    expect(
+      screen.getByText('The template will be removed from the active list')
+    ).toBeInTheDocument()
+    expect(screen.getByText(/can restore it if this was a mistake/)).toBeInTheDocument()
   })
 
   it('never claims the deletion is permanent or irreversible', () => {

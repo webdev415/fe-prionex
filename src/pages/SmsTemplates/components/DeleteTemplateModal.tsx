@@ -89,9 +89,9 @@ export function DeleteTemplateModal({
           )}
           {!template.isSystem && (
             <Alert variant="warning">
-              <AlertTitle>{t('pages.smsTemplates.modals.delete.movedToTrashTitle')}</AlertTitle>
+              <AlertTitle>{t('pages.smsTemplates.modals.delete.recoverableTitle')}</AlertTitle>
               <AlertDescription>
-                {t('pages.smsTemplates.modals.delete.movedToTrashDescription')}
+                {t('pages.smsTemplates.modals.delete.recoverableDescription')}
               </AlertDescription>
             </Alert>
           )}

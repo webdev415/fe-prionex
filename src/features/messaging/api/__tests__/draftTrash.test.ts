@@ -40,6 +40,29 @@ describe('listDeletedDrafts', () => {
     })
   })
 
+  // Backend and frontend deploy separately. These two cover the rollout window
+  // where an older messaging-service still serves the pre-envelope shape: the
+  // trash must come back empty (or best-effort), never crash a consumer that
+  // calls .map on undefined.
+  it('survives a backend still returning the old bare array', async () => {
+    mockApi.get.mockResolvedValue({ data: [{ id: 5, name: 'gone' }] })
+
+    const page = await messagingApi.listDeletedDrafts()
+
+    expect(page.total).toBe(1)
+    expect(page.drafts).toHaveLength(1)
+    expect(Array.isArray(page.drafts)).toBe(true)
+  })
+
+  it('degrades to an empty page when the envelope is missing its field', async () => {
+    mockApi.get.mockResolvedValue({ data: { total: 3 } })
+
+    const page = await messagingApi.listDeletedDrafts()
+
+    expect(page.drafts).toEqual([])
+    expect(Array.isArray(page.drafts)).toBe(true)
+  })
+
   it('returns total alongside the page, so paging is possible', async () => {
     mockApi.get.mockResolvedValue({
       data: {
