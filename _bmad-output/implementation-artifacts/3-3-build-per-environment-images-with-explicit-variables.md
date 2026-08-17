@@ -108,6 +108,9 @@ Measured state of the three KV paths (Story 1.12, AC3):
 |---|---|---|
 | `secret/fe/dev/app` | `https://api.dev.crm-prionex.online` | `wss://api.dev.crm-prionex.online` |
 | `secret/fe/pre-prod/app` | **`PLACEHOLDER-preprod-backend-not-provisioned`** | same placeholder |
+
+> ✅ **SUPERSEDED 2026-08-17.** `secret/fe/pre-prod/app` no longer holds a placeholder. Run 680 built `main` for `preprod` and the bundle carries the real endpoints — `https://api.crm.preprod.crm-prionex.online` and `wss://…`. The table above is a record of 2026-08-15, not of the present. Anyone reasoning about the live KV must read it, not this.
+
 | `secret/fe/prod/app` | `https://api.crm-prionex.online` | `wss://api.crm-prionex.online` |
 
 Two separate problems, and the second is newer than the first:
