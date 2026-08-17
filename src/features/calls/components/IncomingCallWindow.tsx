@@ -7,6 +7,7 @@ import {
   CallInteractionForm,
   type InteractionOption,
   type CallInteractionDraft,
+  type CallInteractionDraftState,
 } from './CallInteractionForm'
 import { CallWindowHeader } from './CallWindowHeader'
 
@@ -23,6 +24,8 @@ interface IncomingCallWindowProps {
   channels: InteractionOption[]
   onSaveInteraction: (draft: CallInteractionDraft) => Promise<void> | void
   interactionSaved: boolean
+  interactionDraft?: Partial<CallInteractionDraftState>
+  onInteractionDraftChange?: (draft: CallInteractionDraftState) => void
   onMinimize: () => void
   onAccept: () => void
   onCancel: () => void
@@ -52,6 +55,8 @@ export function IncomingCallWindow({
   channels,
   onSaveInteraction,
   interactionSaved,
+  interactionDraft,
+  onInteractionDraftChange,
   onMinimize,
   onAccept,
   onCancel,
@@ -112,6 +117,8 @@ export function IncomingCallWindow({
               channels={channels}
               onSave={onSaveInteraction}
               saved={interactionSaved}
+              initialDraft={interactionDraft}
+              onDraftChange={onInteractionDraftChange}
             />
           )}
         </div>

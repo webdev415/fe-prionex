@@ -1241,7 +1241,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             answeredAt={answeredAt}
             onAnswered={markAnswered}
             agentExtension={agentExtension}
-            onMinimize={dismissIncomingCall}
             onDismiss={dismissIncomingCall}
           />
         )}

@@ -25,6 +25,15 @@ export interface CallInteractionDraft {
   comment: string
 }
 
+/**
+ * The same fields mid-edit, where the operator may not have chosen a result
+ * yet. Saving requires `CallInteractionDraft`; restoring a minimised window
+ * has to accept the half-filled shape.
+ */
+export type CallInteractionDraftState = Omit<CallInteractionDraft, 'resultId'> & {
+  resultId: number | null
+}
+
 interface CallInteractionFormProps {
   results: InteractionOption[]
   reasons: InteractionOption[]
@@ -33,6 +42,13 @@ interface CallInteractionFormProps {
   onSave: (draft: CallInteractionDraft) => Promise<void> | void
   /** Shown once saved, in place of the form. */
   saved?: boolean
+  /**
+   * What the operator had already entered. The window unmounts when minimised,
+   * so without this a half-written interaction is lost — and the caller is
+   * still on the line to have to repeat it.
+   */
+  initialDraft?: Partial<CallInteractionDraftState>
+  onDraftChange?: (draft: CallInteractionDraftState) => void
   disabled?: boolean
 }
 
@@ -50,13 +66,18 @@ export function CallInteractionForm({
   onSave,
   saved = false,
   disabled = false,
+  initialDraft,
+  onDraftChange,
 }: CallInteractionFormProps) {
   const { t } = useTranslation('common')
-  const [resultId, setResultId] = useState<number | null>(null)
-  const [reasonId, setReasonId] = useState<number | null>(null)
-  const [channel, setChannel] = useState<string>(channels[0]?.name ?? '')
-  const [comment, setComment] = useState('')
+  const [resultId, setResultId] = useState<number | null>(initialDraft?.resultId ?? null)
+  const [reasonId, setReasonId] = useState<number | null>(initialDraft?.reasonId ?? null)
+  const [channel, setChannel] = useState<string>(initialDraft?.channel ?? channels[0]?.name ?? '')
+  const [comment, setComment] = useState(initialDraft?.comment ?? '')
   const [saving, setSaving] = useState(false)
+
+  const report = (change: Partial<CallInteractionDraftState>) =>
+    onDraftChange?.({ resultId, reasonId, channel, comment, ...change })
 
   if (saved) {
     return (
@@ -107,7 +128,10 @@ export function CallInteractionForm({
         >
           <Select
             value={resultId === null ? undefined : String(resultId)}
-            onValueChange={(value) => setResultId(Number(value))}
+            onValueChange={(value) => {
+              setResultId(Number(value))
+              report({ resultId: Number(value) })
+            }}
             disabled={disabled}
           >
             <SelectTrigger
@@ -137,7 +161,10 @@ export function CallInteractionForm({
         >
           <Select
             value={reasonId === null ? undefined : String(reasonId)}
-            onValueChange={(value) => setReasonId(Number(value))}
+            onValueChange={(value) => {
+              setReasonId(Number(value))
+              report({ reasonId: Number(value) })
+            }}
             disabled={disabled}
           >
             <SelectTrigger id="call-interaction-reason" className="w-full">
@@ -162,7 +189,14 @@ export function CallInteractionForm({
           label={t('pages.clients.modals.callDialog.interaction.channel', 'Communication channel')}
           htmlFor="call-interaction-channel"
         >
-          <Select value={channel} onValueChange={setChannel} disabled={disabled}>
+          <Select
+            value={channel}
+            onValueChange={(value) => {
+              setChannel(value)
+              report({ channel: value })
+            }}
+            disabled={disabled}
+          >
             <SelectTrigger id="call-interaction-channel" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -179,7 +213,10 @@ export function CallInteractionForm({
 
       <Textarea
         value={comment}
-        onChange={(event) => setComment(event.target.value)}
+        onChange={(event) => {
+          setComment(event.target.value)
+          report({ comment: event.target.value })
+        }}
         disabled={disabled}
         rows={3}
         aria-label={t('pages.clients.modals.callDialog.interaction.comment', 'Comment')}
