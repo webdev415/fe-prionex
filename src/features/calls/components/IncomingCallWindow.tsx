@@ -79,6 +79,7 @@ export function IncomingCallWindow({
         <CallWindowHeader
           phoneNumber={phoneNumber}
           clientName={headerName}
+          unknown={clients.length === 0}
           durationSeconds={connected ? (durationSeconds ?? 0) : null}
           onMinimize={onMinimize}
         />

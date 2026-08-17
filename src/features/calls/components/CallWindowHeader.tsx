@@ -5,8 +5,10 @@ import { formatCallDuration } from '../utils/duration'
 
 interface CallWindowHeaderProps {
   phoneNumber: string
-  /** Absent when the number matched nobody. */
+  /** Absent when several clients matched, so no single one owns the number. */
   clientName?: string | null
+  /** True only when the number matched nobody at all. */
+  unknown?: boolean
   /** Shown only once connected; the ringing state has no duration to report. */
   durationSeconds?: number | null
   onMinimize: () => void
@@ -21,6 +23,7 @@ interface CallWindowHeaderProps {
 export function CallWindowHeader({
   phoneNumber,
   clientName,
+  unknown = false,
   durationSeconds,
   onMinimize,
 }: CallWindowHeaderProps) {
@@ -38,9 +41,14 @@ export function CallWindowHeader({
             {phoneNumber}
           </span>
         </div>
-        <div className="text-foreground truncate text-lg font-semibold sm:text-xl">
-          {clientName || t('pages.clients.modals.callDialog.unknownContact', 'Unknown contact')}
-        </div>
+        {/* Only an unmatched number is "unknown". Several matches means no
+            single client owns it — naming one, or calling the caller unknown,
+            both assert something the payload does not support. */}
+        {(clientName || unknown) && (
+          <div className="text-foreground truncate text-lg font-semibold sm:text-xl">
+            {clientName || t('pages.clients.modals.callDialog.unknownContact', 'Unknown contact')}
+          </div>
+        )}
       </div>
 
       {connected && (

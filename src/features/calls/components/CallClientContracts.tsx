@@ -98,13 +98,18 @@ function ContractCard({ contract }: { contract: CallContract }) {
   return (
     <div className="border-border bg-card flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-center gap-2">
+        {/* The backend records more dispositions than the design shows, and
+            they are raw lowercase codes. Reduced to the two states the operator
+            acts on rather than printed as-is. */}
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-xs font-medium',
             closed ? 'bg-success-50 text-success-700' : 'bg-error-50 text-error-500'
           )}
         >
-          {contract.status}
+          {closed
+            ? t('pages.clients.modals.callDialog.contracts.closed', 'Closed')
+            : t('pages.clients.modals.callDialog.contracts.open', 'Open')}
         </span>
         {contract.marker && (
           <span className="bg-primary-100 text-primary-700 rounded-full px-2 py-0.5 text-xs font-medium">

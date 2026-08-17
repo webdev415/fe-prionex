@@ -5173,7 +5173,9 @@
           "contracts": {
             "client": "Client by contracts",
             "thirdParty": "Third party by contracts",
-            "view": "View"
+            "view": "View",
+            "open": "Open",
+            "closed": "Closed"
           },
           "minimize": "Minimize",
           "cancel": "Cancel"

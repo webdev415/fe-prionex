@@ -37,11 +37,20 @@ describe('CallWindowHeader', () => {
   })
 
   it('names an unmatched caller instead of leaving the line blank', () => {
-    renderHeader({ clientName: null })
+    renderHeader({ clientName: null, unknown: true })
 
     expect(screen.getByText('+380971234567')).toBeInTheDocument()
     // Falls back to the unknown-contact label; the i18n mock returns the key.
     expect(screen.getByText(/unknownContact|Unknown contact/i)).toBeInTheDocument()
+  })
+
+  it('does not call a matched caller unknown just because no single client owns the number', () => {
+    renderHeader({ clientName: null, unknown: false })
+
+    // Several clients matched, so there is no one name to show — but the caller
+    // is emphatically not unknown, and saying so misleads the operator.
+    expect(screen.getByText('+380971234567')).toBeInTheDocument()
+    expect(screen.queryByText(/unknownContact|Unknown contact/i)).toBeNull()
   })
 
   it('offers minimise and nothing that closes the window', () => {

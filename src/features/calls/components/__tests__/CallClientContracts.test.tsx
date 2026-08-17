@@ -83,3 +83,24 @@ describe('CallClientContracts', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   })
 })
+
+describe('CallClientContracts — contract status', () => {
+  it.each(['closed', 'paid', 'repaid', 'CLOSED'])('shows %s as closed', (status) => {
+    renderClient({
+      client: client({ contracts: [{ ...client().contracts[0], status }] }),
+    })
+
+    // Green, and labelled — not the raw backend code.
+    expect(screen.queryByText(status)).toBeNull()
+  })
+
+  it('shows anything else as open rather than printing the raw code', () => {
+    renderClient({
+      client: client({ contracts: [{ ...client().contracts[0], status: 'active' }] }),
+    })
+
+    // The backend records more dispositions than the design enumerates, and
+    // "active" on a debt card reads as a system value rather than a state.
+    expect(screen.queryByText('active')).toBeNull()
+  })
+})
