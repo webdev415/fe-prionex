@@ -252,6 +252,9 @@ const formatDateAsISO = (d: Date): string => {
 // are disabled as out of date. Flip to false to hide the action again.
 const ENABLE_BULK_UBKI_SUBMISSION = true
 
+/** Ties the priority chip's ``aria-controls`` to the panel it discloses. */
+const V3_PANEL_ID = 'v3-priority-panel'
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -709,6 +712,20 @@ export function ClientDetailPage() {
     profile?.is_deceased ||
     profile?.is_fraudster ||
     profile?.lawsuit_filed
+  )
+  // The priority chip discloses the v3 panel below it. Collapsed by default:
+  // the panel is the detail behind the chip, and the chip already carries the
+  // one thing an operator needs at a glance.
+  const [isV3PanelOpen, setIsV3PanelOpen] = useState(false)
+  // aria-hidden because the button it sits in already announces its state via
+  // aria-expanded — without it a screen reader reads the arrow as content.
+  const v3PanelArrow = (
+    <Icons.ArrowDown
+      size={14}
+      strokeWidth={2}
+      aria-hidden="true"
+      className={cn('transition-transform', isV3PanelOpen && 'rotate-180')}
+    />
   )
 
   const { data: messagingOperators = [] } = useOperators(
@@ -2760,12 +2777,28 @@ export function ClientDetailPage() {
                   list it was opened from. Compliance is checked FIRST because it
                   needs no model: a deceased debtor is do-not-call whether or not
                   v3 covers them. */}
-              {v3UiEnabled && complianceBlocked ? (
-                <V3BucketBadge bucket="EXIT" />
-              ) : v3ClientBucket ? (
-                <V3BucketBadge bucket={v3ClientBucket} />
-              ) : v3UiEnabled ? (
-                <NotScoredBadge />
+              {/* With v3 on, the chip is also the control for the priority
+                  panel below it — the arrow sits inside the pill. The button
+                  wraps the badge rather than the badge becoming a button, so
+                  the four other places that render these chips are untouched
+                  and stay non-interactive. Without v3 there is no panel, so the
+                  legacy badge keeps its plain form. */}
+              {v3UiEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => setIsV3PanelOpen((open) => !open)}
+                  aria-expanded={isV3PanelOpen}
+                  aria-controls={V3_PANEL_ID}
+                  className="focus-visible:ring-primary-500 rounded-[16px] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
+                  {complianceBlocked ? (
+                    <V3BucketBadge bucket="EXIT" trailing={v3PanelArrow} />
+                  ) : v3ClientBucket ? (
+                    <V3BucketBadge bucket={v3ClientBucket} trailing={v3PanelArrow} />
+                  ) : (
+                    <NotScoredBadge trailing={v3PanelArrow} />
+                  )}
+                </button>
               ) : (
                 <PriorityBadge priority={client.priority as Priority} />
               )}
@@ -2848,10 +2881,13 @@ export function ClientDetailPage() {
           )} */}
           </div>
         </div>
-        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag */}
+        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag.
+            Disclosed by the priority chip in the header above. */}
         <V3ClientPriorityPanel
           projectId={activeProjectId ? Number(activeProjectId) : undefined}
           clientId={clientId}
+          open={isV3PanelOpen}
+          id={V3_PANEL_ID}
         />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
