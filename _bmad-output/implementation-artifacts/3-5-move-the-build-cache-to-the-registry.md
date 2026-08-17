@@ -4,7 +4,7 @@ baseline_commit: 1b76effa
 
 # Story 3.5: Move the Build Cache to the Registry
 
-Status: review
+Status: done
 
 > **What this story is, as the plan wrote it.** `CD.yml` used `cache-from/to: type=gha`, which does
 > not exist off GitHub. FR9 says replace it with
@@ -534,6 +534,12 @@ The totals in the table above already contain this, so the −1.9 s/build conclu
 *explanation* did not, and AC3 is closed as a success in a story that never recorded that the
 mechanism it proves costs 17 seconds to buy something that used to be free.
 
+**Post-review verification.** The review's fixes were exercised in production, not just locally:
+run 673 (branch) and run **676** (`build-main.yml` on `main`) both succeeded on the user-defined
+network — `main-dev` and `sha-dd97a3e2f881-dev` in `package_version`, `buildcache` refreshed, **28 s**.
+The push survives without `network=host`, which is what proves the network took effect: on the
+default bridge the registry resolves to the public address and the push dies.
+
 **Closing evidence, and it arrived unprompted.** The merge of PR #40 was itself the cross-runner
 case this change exists for:
 
@@ -545,25 +551,28 @@ case this change exists for:
 107 s → 27 s, in production, on the first merge after landing. The variance argument used to justify
 keeping a break-even change paid off immediately.
 
-🔴 **Budget — and I closed the ledger before the commits that close it had run.**
-
-The record said **8 runs (660–667)**. Review recounted: that same query returns **11**, because runs
-668, 669 and 670 are the closing PR #41 that the record itself describes — its branch push, its
-gate, and the `build-main.yml` run its merge triggered. Counting the context PR #39 as well (runs
-657–659), the full attributable cost is **14 runs** — the top of the declared band, not the bottom.
+🔴 **Budget — declared 10–14, spent 19, and the honest split matters more than the total.**
 
 ```
-SELECT count(*) … WHERE repo_id=16 AND id > 656   -- 14 runs
+SELECT count(*) … WHERE repo_id=16 AND id > 656   -- 19 runs (657–676): 17 success, 2 failure
 ```
 
-⚠️ **And "8 runs" is now permanent in D22's changelog row**, which is the shape of error this
-project keeps repeating: a number written into the durable record while the thing it counts is still
-happening. Corrected there too.
+| phase | runs | against |
+|---|---|---|
+| context + implementation (657–670) | **14** | 10–14 declared — **at the top of the band** |
+| review round and its fixes (671–676) | **5** | **not budgeted at all** |
 
-**Still within 10–14, which is the point worth keeping** — the estimate was sound and declaring it
-before the work is what made it checkable. What was not sound was closing it early and then using
-the number to say the process had improved. Close a ledger when the work stops, not when the writing
-does.
+Two separate failures, and only one of them is the estimate:
+
+1. **The estimate was sound.** 14 against 10–14 is what declaring before the work buys, and it is
+   the reason the overrun is visible instead of arguable.
+2. **I closed the ledger at 8 while the closing PR's own runs were still executing**, then used that
+   number to say the process had improved — and "8" reached D22's changelog row, which is durable.
+   Review caught it. Corrected there and here.
+3. 🔴 **I budgeted for implementation and not for review.** Every story in this project has had a
+   review round; every one of those rounds has found something; three of them found something
+   blocking. **A review round is not a contingency, it is a phase**, and the next story's Task 3.1
+   should budget it as one rather than discovering it as an overrun.
 
 ### File List
 

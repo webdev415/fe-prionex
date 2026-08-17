@@ -1945,3 +1945,33 @@ tag that had just been pushed successfully. **A fail-closed guard must distingui
 read it" from "the registry does not have it"**, or it sends the next reader to the wrong place. That
 is now the third case in this project where a guard's stated reason and its actual behaviour diverged
 — see also D21's `if:` copy-down and the `pending` misread.
+
+---
+
+## Opened by Story 3.5 (2026-08-17) — two things the review left live
+
+**1. 🔴 No `preprod` or `prod` build has EVER run under the current build configuration.** The driver,
+the network, the cache and the digest assertion all changed, and every run that exercised them used
+`environment: dev`. A `prod` or `preprod` build mints `sha-<12>-<env>`, which the retention rule keeps
+**forever** — removing one needs an authorised DELETE with a `write:package` token that has twice
+required the operator in person.
+
+Nothing found in review says the prod path is broken; the OpenBao `case`, the permanence guard and
+the digest assertion were all traced and are environment-agnostic. But "traced and looks fine" is the
+standard this project rejects everywhere else.
+
+**Cheapest close: one `preprod` dispatch before the first real production deploy.** Its tag is
+permanent too, so it is not free — but it is one intentional permanent tag against discovering a
+defect on the first prod release. Owner: whoever runs Epic 5 or 6 first, and it should happen before
+they need it to work.
+
+**2. ⚠️ OpenBao stays reachable from build `RUN` steps.** Story 3.5 moved the BuildKit container off
+`network=host` onto a user-defined bridge, which closed the two severe holes — measured:
+`127.0.0.1:2375` (an unauthenticated API on a **privileged** daemon, i.e. root-equivalent on s1) is no
+longer reachable, and there is no longer an interface on the network carrying the Forgejo database.
+`172.20.0.5:8200` **is** still reachable, because the dind daemon routes between its own bridges.
+
+Severity is much lower — a build carries no AppRole credentials, only the URLs baked as build args —
+but it is not zero, and `npm ci` runs lifecycle scripts from any branch's lockfile. Closing it fully
+is host-level firewalling on s1, which is outside any story currently planned. Recorded so it is a
+decision rather than an oversight.
