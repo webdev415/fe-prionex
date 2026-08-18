@@ -5646,7 +5646,8 @@
         "assignSearcher": "Призначити розшукувача",
         "minimizeModal": "Згорнути вікно",
         "saveDraftRRSuccess": "Чернетку збережено",
-        "connectRRError": "Не вдалося підключити реструктуризацію"
+        "connectRRError": "Не вдалося підключити реструктуризацію",
+        "closingCoefficientLabel": "Коефіцієнт закриття позики"
       },
       "modals": {
         "addNote": {

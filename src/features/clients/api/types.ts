@@ -61,6 +61,15 @@ export interface DebtDetail {
   principal_debt?: string | null
   total_paid_amount?: string | null
   total_to_return?: string | null
+  /** KAN-994 — closing-coefficient band for the Principal Debt tooltip, or
+   *  null/absent when no tooltip is due. Computed server-side. */
+  closing_coefficient?: {
+    min_coefficient: string
+    max_coefficient: string
+    min_amount: string
+    max_amount: string
+    debt_age_days: number
+  } | null
 
   // KAN-784 AC2: true when the loan is fully returned (total_to_return <= 0)
   // but verified payments-to-us fell short of the principal, so auto-close was

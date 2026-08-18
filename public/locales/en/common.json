@@ -6301,7 +6301,8 @@
           "bank_transfer": "Bank transfer",
           "online_gateway": "Online payment",
           "card": "Card"
-        }
+        },
+        "closingCoefficientLabel": "Loan closing coefficient"
       },
       "debtSummary": {
         "title": "Debt Summary",
