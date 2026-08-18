@@ -352,6 +352,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     }
   }
   const actionType = watch('action_type')
+  const targetTagCode = watch('target_tag_code')
+  const replaceTagCode = watch('replace_tag_code')
   const cronValue = watch('cron_expression')
 
   // Reset form when modal opens
@@ -433,6 +435,12 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         label: tag.name,
       })),
     [tags]
+  )
+  // Same source as the selects, so the effect line names tags exactly as the
+  // operator sees them in the dropdowns.
+  const tagLabelByCode = useMemo(
+    () => new Map(tagCodeOptions.map((o) => [o.value, o.label])),
+    [tagCodeOptions]
   )
 
   return (
@@ -848,9 +856,21 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 />
               </div>
 
-              {/* Target Tag Code */}
+              {/* Target Tag Code.
+                  For replace_tag this is the tag that gets ADDED, and the
+                  field below is the one that gets REMOVED. "Target Tag" read
+                  as "the tag being replaced", which is the opposite of what
+                  the engine does, so operators filled the pair backwards and
+                  the rule silently did nothing: it looked for a client holding
+                  the tag they wanted to end up with, found none, and skipped.
+                  Named by effect here, and only for replace, so add_tag and
+                  remove_tag keep the label they have always had. */}
               <div className="space-y-1.5">
-                <Label required>{t('pages.tags.rules.targetTag', 'Target Tag')}</Label>
+                <Label required>
+                  {actionType === 'replace_tag'
+                    ? t('pages.tags.rules.tagToAdd', 'Tag to add')
+                    : t('pages.tags.rules.targetTag', 'Target Tag')}
+                </Label>
                 <Controller
                   name="target_tag_code"
                   control={control}
@@ -881,7 +901,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Replace Tag Code (if replace_tag) */}
             {actionType === 'replace_tag' && (
               <div className="space-y-1.5">
-                <Label>{t('pages.tags.rules.replaceTag', 'Replace With Tag')}</Label>
+                <Label>{t('pages.tags.rules.tagToReplace', 'Tag to be replaced')}</Label>
                 <Controller
                   name="replace_tag_code"
                   control={control}
@@ -903,6 +923,24 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
+                {/* Spells out the effect, because the field names alone did not.
+                    replace_tag_code is the tag that comes OFF and target_tag_code
+                    the one that goes ON, the opposite of how the old "Target Tag"
+                    / "Replace With Tag" pair read. Rules were saved with the two
+                    swapped and then silently did nothing: the engine looked for a
+                    client holding the tag the operator wanted to end up with,
+                    found none, and skipped. Rendered from the current selections,
+                    so an existing rule can be checked by opening it. */}
+                {replaceTagCode && targetTagCode && (
+                  <p className="text-error-500 text-xs">
+                    {t('pages.tags.rules.replaceEffect', {
+                      defaultValue:
+                        'This rule replaces "{{remove}}" with "{{add}}" for clients that have "{{remove}}".',
+                      remove: tagLabelByCode.get(replaceTagCode) ?? replaceTagCode,
+                      add: tagLabelByCode.get(targetTagCode) ?? targetTagCode,
+                    })}
+                  </p>
+                )}
               </div>
             )}
 
