@@ -215,12 +215,32 @@ pinning, caching or guarding in `build.yml` can change that.
 is the *lesser* mechanism; it explains layer 10 and the config blob. `Date.now()` in the Vite config
 explains layer 9, which is the actual application.
 
-⚠️ **Consequence for Task 3, and it must be decided knowingly.** §3's guard has three branches, and
-the middle one — *"present, same digest → nothing to do; the artifact is already published"* — is now
-**unreachable on any rebuild**. Every rebuild of an existing `sha-<12>-<env>` produces a different
-digest, so the guard collapses to "any rebuild of a published commit fails". That may well be the
-right behaviour, and §3's argument supports it — but it is a stronger rule than §3 describes, and
-writing it without noticing would mean shipping a branch that can never be taken.
+🔴 **Consequence for Task 3, and it is worse than a dead branch.** §3's guard has three branches, and
+the middle one is *"present, same digest → nothing to do; the artifact is already published"*.
+
+*(A first draft of this paragraph said that branch was unreachable on any rebuild. That is wrong, and
+the error matters because Task 3's design rests on it. `Date.now()` is evaluated when the bundle is
+**built**; on a full cache hit BuildKit does not build it — it restores the cached layer and the
+cached config, timestamp and all. That is precisely why runs 697 and 698 matched.)*
+
+So which branch a rebuild takes is decided by **whether the cache hit**:
+
+| rebuild | bundle | outcome |
+|---|---|---|
+| full cache hit | restored, not rebuilt | same digest → guard's middle branch, build passes |
+| cache miss | rebuilt, new `Date.now()` | different digest → guard fires, build fails |
+
+**The guard's verdict therefore depends on `:buildcache` — a single shared mutable tag that any
+branch's build can overwrite.** §2b's own side effect 1 is the demonstration: a probe branch's push
+evicted `main`'s cache at 14:48:02. The same rebuild of the same commit would pass before that and
+fail after it, with nothing in the commit having changed.
+
+That is not a reason to abandon the guard, but Task 3 has to answer it. A guard whose outcome turns
+on a shared cache is non-deterministic in exactly the dimension AC2 is about — and «прошло вчера,
+падает сегодня» is the kind of behaviour this project has repeatedly traced back to an unexamined
+assumption. Options worth weighing in writing: accept it and document the cache dependency; scope the
+guard to the paths where a rebuild is not routine; or remove the non-determinism at its source (see
+below) so that both branches agree.
 
 **This also closes the `VITE_BUILD_TS` half of §4b, and not the way that section expects.** §4b asks
 whether the in-code fallback is safe. The question does not arise: `define` performs a textual

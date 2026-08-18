@@ -2071,9 +2071,12 @@ whose content (`nginx.conf`) is byte-identical.
 
 Two consequences worth carrying forward:
 
-- **The §3 guard's "same digest → nothing to do" branch is unreachable on a rebuild.** The guard
-  collapses to "any rebuild of a published commit fails". Possibly correct, but it is a stronger rule
-  than the story describes, and it should be written knowingly rather than discovered later.
+- **The §3 guard's verdict depends on the shared `:buildcache`.** `Date.now()` is evaluated when the
+  bundle is *built*; on a full cache hit BuildKit restores the cached layer and config instead, which
+  is why runs 697/698 matched. So a rebuild takes the "same digest → nothing to do" branch on a cache
+  hit and fires the guard on a cache miss — and `:buildcache` is one mutable tag any branch can
+  evict, as a probe branch did to `main` at 14:48:02. The same rebuild of the same commit can pass
+  today and fail tomorrow with no change to the commit. Story 3.6 Task 3 owns the answer.
 - **`VITE_BUILD_TS` is not a contract-coverage gap.** `define` substitutes textually, so the `?? '1'`
   fallback is dead code and supplying the build arg would be overridden. D20 §6 lists it alongside
   `VITE_EASYPAY_PORTAL_API_KEY`; only the latter is still the question that section thinks it is.
