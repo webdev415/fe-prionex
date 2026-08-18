@@ -1116,20 +1116,40 @@ jobs:
             # earlier and harder to notice because it would look like the
             # normal first-build case.
             #
-            # 🔴 Review 2026-08-18: narrowed from four patterns to one. The
-            # earlier `NAME_UNKNOWN`/bare-`404` alternatives are
-            # repository/transport-level, not "this exact manifest reference
-            # was never pushed" — a token that lost `read:package`, a deleted
-            # package, or a proxy error page whose body happens to contain the
-            # digits "404" would all match and be silently read as absent,
-            # which is the same silent-repoint failure mode one level up.
-            # `MANIFEST_UNKNOWN` — matched as the OCI/Distribution error code
-            # or the bare word — is the one Distribution-spec response that
-            # actually means "no manifest was ever pushed under this
-            # reference". ⚠️ Still not verified against a real 404 from this
-            # registry — see Dev Agent Record.
+            # 🔴 Review 2026-08-18: narrowed from four patterns to one — and
+            # that narrowing was ITSELF a defect, found by run 719 going red
+            # on an ordinary absent tag. The earlier `NAME_UNKNOWN`/bare-`404`
+            # alternatives are repository/transport-level, not "this exact
+            # manifest reference was never pushed" — a token that lost
+            # `read:package`, a deleted package, or a proxy error page whose
+            # body happens to contain the digits "404" would all match and be
+            # silently read as absent, which is the same silent-repoint
+            # failure mode one level up — that reasoning still holds. But the
+            # narrowed allowlist assumed the registry's `MANIFEST_UNKNOWN`
+            # error CODE reaches stderr, and it does not: containerd folds a
+            # 404 into `errdefs.NotFound` before buildx ever prints it, and
+            # the code is not carried through. ✅ VERIFIED, not assumed —
+            # local experiment against the same buildx v0.35.0:
+            #   $ docker buildx imagetools inspect \
+            #       alpine:this-tag-does-not-exist-3-6-probe
+            #   ERROR: docker.io/library/alpine:this-tag-does-not-exist-3-6-probe: not found
+            # — the body never contains `MANIFEST_UNKNOWN` in any form; it is
+            # always `<ref>: not found`. Confirmed on THIS registry too,
+            # empirically rather than by inference: run 716 (still on the old,
+            # wider allowlist that included `*"not found"*`) reached the
+            # attach step on an absent tag, so this Forgejo registry's 404
+            # also folds to "not found" the same way. Run 719 (this
+            # narrower allowlist) then went red on that same absent-tag case,
+            # landing in the "could not determine" branch below — the
+            # ambiguous-read fail-closed branch actually firing, live, which
+            # is itself the kind of proof §6 of this story asks for ("a guard
+            # that cannot fail proves nothing"). `": not found"` is added back
+            # — not the bare `NAME_UNKNOWN`/`404` this review round already
+            # rejected, but the exact suffix errdefs.NotFound produces, scoped
+            # with the leading colon so an unrelated "not found" substring
+            # elsewhere in a longer message does not match.
             case "$ERR" in
-              *'"code":"MANIFEST_UNKNOWN"'*|*MANIFEST_UNKNOWN*)
+              *MANIFEST_UNKNOWN*|*": not found"*)
                 echo "pre_digest=" >> "$GITHUB_OUTPUT"
                 echo "${SHA_TAG} does not exist yet — nothing to protect."
                 echo "  (imagetools said: ${ERR})" ;;

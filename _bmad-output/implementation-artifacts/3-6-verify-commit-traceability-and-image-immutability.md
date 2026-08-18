@@ -584,6 +584,15 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
       **Task 4 (AC1/AC3 record):** 0 additional runs — existing registry images already carry the
       evidence (Task 1.1, §1); confirming currency is a registry *read*, not a build, and does not
       consume the run budget even when the credential to perform it is available.*
+      *🔴 **Update — runs actually spent, coordinator-run with API access this agent session does not
+      have:** run **717** (`correct-course/prod-target-s10`'s own merge, PR #49 — not this story's
+      spend, but it is why D24 exists and belongs in the shared timeline); run **719** (`ci.yml` on
+      this branch's commit `563243f3`) — **failure**, `Build and Push`/`Build and Push Image` red,
+      Lint/Type Check/Unit Tests/Build/Gate green. Cause: the review's own allowlist-narrowing patch
+      regressed the "absent" path (see the `[Review][Patch]` note on that finding, and Dev Agent
+      Record). **Ledger is not closed by query yet** — this agent session still cannot run
+      `SELECT count(*) FROM action_run`; the run numbers above come from the coordinator, not from a
+      query this session executed.*
 - [x] 2.2 List every tag this story could push and compile the live `keep_pattern` against each. —
       *Read from `build.yml`'s own tag-computation step, not dispatched — this needs no run. This
       story's `build.yml` change (Task 3) introduces **no new tag shape**; it only changes which step
@@ -838,8 +847,23 @@ live — see Dev Agent Record for the new blocker this session hit.
       containing `404` is instead read as absent → attach → the silent repoint AC2 forbids, wearing the
       costume of a normal first build. The globs are unanchored substrings over a value that has stderr
       merged into it, so the previous finding compounds this. Narrow to `MANIFEST_UNKNOWN` / a tag-scoped
-      "not found", or match the structured `"code":"MANIFEST_UNKNOWN"`. — ✅ **FIXED.** Narrowed to
-      `MANIFEST_UNKNOWN` (structured code or bare word) only, matched against stderr alone.
+      "not found", or match the structured `"code":"MANIFEST_UNKNOWN"`. — ⚠️ **FIXED, then this fix
+      REGRESSED live (run 719) and was fixed again, 2026-08-18.** The first pass narrowed to
+      `MANIFEST_UNKNOWN` only and dropped `"not found"` entirely — but `MANIFEST_UNKNOWN` never reaches
+      stderr on this stack: containerd folds a registry 404 into `errdefs.NotFound` before buildx prints
+      anything, and the actual text is always `<ref>: not found`. Run 719 (this branch's own automatic
+      `dev` build) hit an ordinary absent-tag case and went red in the "could not determine" branch —
+      the over-narrowed allowlist refusing a normal first build. ✅ **Verified, not inferred**: local
+      experiment against the same buildx v0.35.0 (`docker buildx imagetools inspect
+      alpine:this-tag-does-not-exist-3-6-probe` → `ERROR: docker.io/library/alpine:…: not found`,
+      no `MANIFEST_UNKNOWN` anywhere in the body), cross-checked against this registry specifically via
+      run 716 (still on the old wide allowlist, which matched `"not found"` and reached the attach step
+      on an absent tag — proving this Forgejo registry folds 404 the same way) and run 719 (the narrow
+      allowlist, which did not match and refused). **Re-fixed**: allowlist is now
+      `*MANIFEST_UNKNOWN*|*": not found"*` — the colon-scoped suffix is the canonical `errdefs.NotFound`
+      shape, not a return to the rejected bare `404`/`NAME_UNKNOWN` (a proxy error page's stray digits
+      "404", or a transport-level `NAME_UNKNOWN`, still do not match). See Dev Agent Record for the full
+      716/719 chronicle.
 - [x] [Review][Patch] **A branch named `sha-<12 hex>` collapses `push_tags` into `sha_tag`, and
       `build-push-action` then pushes the protected tag directly, bypassing both new steps**
       [.forgejo/workflows/build.yml:1016-1017, :1160] — cutting branch `sha-ff416712653e` from commit
@@ -1132,6 +1156,49 @@ as a blocker to resolve at the human/coordinator level (either Oleg runs these c
 reports results back, or someone adjusts the Bash permission rule the denial message points at), not
 retried further in this session.
 
+### Session 2026-08-18 (continued) — the coordinator's live run found a second defect; fixed, not re-verified live by this session
+
+**The chronicle, in order, both causes established before a third run was spent.** Run **716**
+(commit `3775ec74`, Session 2's starting point): failed on the `imagetools create` index-wrapping bug
+— predicted by the review before the run, confirmed by the run. Run **719** (commit `563243f3`,
+Session 2's own fix commit): failed again, on a *different* defect — Session 2's own narrowing of the
+`predigest` "absent" allowlist to `MANIFEST_UNKNOWN` only. That pattern never matches on this stack:
+containerd folds a registry 404 to `errdefs.NotFound` before buildx prints anything, and the printed
+text is always `<ref>: not found`, never the Distribution-spec error code. So run 719's ordinary
+absent-tag case (a ref that had never been pushed under `sha-<12>-<env>`) fell into the "could not
+determine" branch and refused a normal first build. Both causes were established **before** a third
+run was attempted — run 716 by the review's own reproduction, run 719 by re-reading the allowlist
+against a local `docker buildx imagetools inspect` experiment on the same buildx version and
+cross-checking against run 716 itself (which, still on the *old* wide allowlist, had reached the
+attach step on an absent tag — proof this registry's 404 folds the same way as the local experiment,
+not an assumption).
+
+**Run 719 is, by its own irony, a positive result for §6.** This story's own verification discipline
+(§6) says "a guard that cannot fail proves nothing" and names three prior guards in this file that
+never fired. `predigest`'s ambiguous-read fail-closed branch (the `*) echo "FAIL: could not determine
+...` arm) had never been observed firing until run 719 — and it fired correctly, exactly as designed,
+on the input that should have hit it (an over-narrow allowlist misclassifying a real case as
+ambiguous). That the guard fired for the *wrong reason* (a bug in the allowlist, not a genuine
+ambiguous registry response) does not undercut this: the mechanism proved it is not inert, which is
+the property §6 asks for and three other guards in this file lacked.
+
+**`--prefer-index=false` (the run-716 fix) is still NOT independently proven live.** Run 719 died at
+`predigest`, before the build step, before the attach — so it exercised neither the index fix nor the
+read-back verification that would prove it. The fix stands on the review's `--dry-run` reproduction
+(Session 2) and on run 719's own evidence being unrelated to it (a different step failed, for a
+different, now-understood reason) — but "unrelated failure elsewhere" is not the same claim as
+"verified working", and this entry does not conflate the two. The next green (or differently-red) run
+is what proves or disproves it.
+
+**Budget:** run 719 is spent and belongs in the ledger (Task 2.1, updated above) — not this session's
+dispatch, but this story's cost regardless of who ran it.
+
+**This session's own access is unchanged.** The coordinator supplied runs 716/719's outcomes,
+the failing task IDs (6443, 6444), and the local buildx experiment's output verbatim; this session did
+not and could not independently query the Forgejo API to confirm any of it — the classifier block
+described above is unchanged. The fix in this entry is applied on the coordinator's evidence, cited
+and attributed as such, not re-derived or independently verified by this session.
+
 ---
 
 ## File List
@@ -1146,7 +1213,12 @@ retried further in this session.
   would collapse `push_tags`/`sha_tag`); an explicit `TAGS = sha_tag + push_tags` invariant check;
   the FAIL message now names the cache-hit/cache-miss asymmetry and `:buildcache`'s mutability; two
   comment corrections (the AC2 section's "no new tooling" justification, and the branch-tag-publish
-  clarification). The final fail-closed assertion step remains unchanged in both sessions.
+  clarification). Session 3 (live verification round, coordinator-run): run 719 went red — Session 2's
+  narrowed allowlist over-refused an ordinary absent-tag case, because `MANIFEST_UNKNOWN` never reaches
+  stderr on this stack (containerd folds a 404 to `errdefs.NotFound`, text `<ref>: not found`).
+  Re-widened to `*MANIFEST_UNKNOWN*|*": not found"*`, verified against a local buildx v0.35.0
+  experiment and cross-checked against runs 716/719 on this registry. The final fail-closed assertion
+  step remains unchanged across all three sessions.
 - `_bmad-output/implementation-artifacts/3-6-verify-commit-traceability-and-image-immutability.md` —
   this file. Session 1: Tasks 2, 3, 6, 7 checkboxes and notes; Open Question 2 answered; Dev Agent
   Record, File List and Change Log added. Session 2: written decisions added at §4c and §6b; the
