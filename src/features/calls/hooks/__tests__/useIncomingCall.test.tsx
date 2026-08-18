@@ -549,6 +549,74 @@ describe('useIncomingCall', () => {
       await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
     })
 
+    describe('telling the consumer a call is over', () => {
+      it.each(['COMPLETED', 'FAILED', 'CANCELLED'] as const)(
+        'reports the call id on %s',
+        async (state) => {
+          const onCallSettled = vi.fn()
+          renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+
+          act(() => {
+            stateHandler()({
+              event_type: 'call.state_changed',
+              timestamp: '',
+              data: { call_id: 'shared-call', state },
+            })
+          })
+
+          expect(onCallSettled).toHaveBeenCalledWith('shared-call')
+        }
+      )
+
+      it('says nothing while the call is still going', async () => {
+        const onCallSettled = vi.fn()
+        renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE' },
+          })
+        })
+
+        expect(onCallSettled).not.toHaveBeenCalled()
+      })
+
+      it('says nothing when a colleague answers', async () => {
+        const onCallSettled = vi.fn()
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+        await openPopup(result)
+
+        // A colleague taking the call settles it for the queue, not for
+        // whoever is now holding it — their window must survive.
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: '2094' },
+          })
+        })
+
+        expect(onCallSettled).not.toHaveBeenCalled()
+      })
+
+      it('says nothing when the event names no call', async () => {
+        const onCallSettled = vi.fn()
+        renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { state: 'COMPLETED' },
+          })
+        })
+
+        expect(onCallSettled).not.toHaveBeenCalled()
+      })
+    })
+
     // The contract is a bare extension. If the emitter ever sends a channel
     // instead, the operator holding the call must still be recognised as
     // themselves — anything else closes the window of the person on the call.

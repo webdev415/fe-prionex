@@ -38,6 +38,26 @@ vi.mock('@/features/clientProcessing', () => ({
   ClientProcessingTab: () => <div data-testid="client-processing-tab" />,
 }))
 
+// Likewise for the verification tab (features/thirdPartyVerification).
+vi.mock('@/features/thirdPartyVerification', () => ({
+  ThirdPartyVerificationTab: () => <div data-testid="third-party-verification-tab" />,
+}))
+
+// …and for the low-verification feed (features/lowVerificationFeed).
+vi.mock('@/features/lowVerificationFeed', () => ({
+  LowVerificationFeedTab: () => <div data-testid="low-verification-feed-tab" />,
+}))
+
+// …and for the searcher follow-up feed (features/searcherFollowup).
+vi.mock('@/features/searcherFollowup', () => ({
+  SearcherFollowupFeedTab: () => <div data-testid="searcher-followup-feed-tab" />,
+}))
+
+// …and for the communication-gap feed (features/communicationGap).
+vi.mock('@/features/communicationGap', () => ({
+  CommunicationGapFeedTab: () => <div data-testid="communication-gap-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -102,6 +122,13 @@ const search = () => screen.getByTestId('location-search').textContent ?? ''
 
 const dashboardTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.dashboard' })
 const processingTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.processing' })
+const verificationTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.verification' })
+const lowVerificationTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.low-verification' })
+const searcherFollowupTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.searcher-followup' })
+const communicationGapTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.communication-gap' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -116,13 +143,17 @@ describe('ReportsDashboardPage (tab host)', () => {
 
   it.each([
     ['no tab param', '/reports'],
-    ['an unknown tab value', '/reports?tab=totally-unknown'],
+    ['an unknown tab value', '/reports?tab=bogus'],
     ['an empty tab value', '/reports?tab='],
   ])('falls back to the dashboard for %s', (_case, entry) => {
     renderPage([entry])
 
     expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
     expect(screen.queryByTestId('client-processing-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -158,6 +189,115 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('from=2026-01-01')
     expect(search()).toContain('to=2026-01-31')
     expect(search()).toContain('dept=collection')
+  })
+
+  it('renders the verification report panel for ?tab=verification', () => {
+    renderPage(['/reports?tab=verification'])
+
+    expect(screen.getByTestId('third-party-verification-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('client-processing-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(verificationTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-verification')
+  })
+
+  it('keeps the verification filters when switching tabs', async () => {
+    renderPage(['/reports?tab=verification&sf=2026-01-01&st=2026-01-31&cf=2026-01-10'])
+    expect(screen.getByTestId('third-party-verification-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the processing tab: the filters survive a
+    // round-trip through the dashboard, and the two key sets don't collide.
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('sf=2026-01-01')
+    expect(search()).toContain('st=2026-01-31')
+    expect(search()).toContain('cf=2026-01-10')
+  })
+
+  it('renders the low-verification feed panel for ?tab=low-verification', () => {
+    renderPage(['/reports?tab=low-verification'])
+
+    expect(screen.getByTestId('low-verification-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(lowVerificationTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-low-verification')
+  })
+
+  it('keeps the low-verification filters when switching tabs', async () => {
+    renderPage(['/reports?tab=low-verification&pf=2026-06-01&pt=2026-06-30&mv=0&pg=3'])
+    expect(screen.getByTestId('low-verification-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`pf/pt/mv/pg` vs `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('pf=2026-06-01')
+    expect(search()).toContain('pt=2026-06-30')
+    expect(search()).toContain('mv=0')
+    expect(search()).toContain('pg=3')
+  })
+
+  it('renders the searcher follow-up feed panel for ?tab=searcher-followup', () => {
+    renderPage(['/reports?tab=searcher-followup'])
+
+    expect(screen.getByTestId('searcher-followup-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(searcherFollowupTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-searcher-followup')
+  })
+
+  it('keeps the searcher follow-up filters when switching tabs', async () => {
+    renderPage(['/reports?tab=searcher-followup&if=2026-08-01&it=2026-08-07&spg=2&sps=100'])
+    expect(screen.getByTestId('searcher-followup-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`if/it/spg/sps` vs `pf/pt/mv/pg/ps` vs `sf/st/cf/ct` vs
+    // `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('if=2026-08-01')
+    expect(search()).toContain('it=2026-08-07')
+    expect(search()).toContain('spg=2')
+    expect(search()).toContain('sps=100')
+  })
+
+  it('renders the communication-gap feed panel for ?tab=communication-gap', () => {
+    renderPage(['/reports?tab=communication-gap'])
+
+    expect(screen.getByTestId('communication-gap-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(communicationGapTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-communication-gap')
+  })
+
+  it('keeps the communication-gap filters when switching tabs', async () => {
+    renderPage(['/reports?tab=communication-gap&gf=2026-07-01&gt=2026-07-31&gm=10&gpg=2&gps=100'])
+    expect(screen.getByTestId('communication-gap-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`gf/gt/gm/gpg/gps` vs `if/it/spg/sps` vs `pf/pt/mv/pg/ps` vs
+    // `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('gf=2026-07-01')
+    expect(search()).toContain('gt=2026-07-31')
+    expect(search()).toContain('gm=10')
+    expect(search()).toContain('gpg=2')
+    expect(search()).toContain('gps=100')
   })
 
   it('pushes a history entry so Back returns to the previous tab', async () => {

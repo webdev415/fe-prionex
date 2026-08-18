@@ -4,33 +4,27 @@
  *
  * The three "%" columns get a continuous red → yellow → green background over
  * the fixed 0–100 scale (spec: «Красный - жёлтый - зелёный (0% - 100%)»),
- * mirroring the Techno-Finance reference implementation. Missing values stay
- * uncoloured and render "—".
+ * mirroring the Techno-Finance reference implementation; the ramp itself is the
+ * shared `@/lib/gradient` one. Missing values stay uncoloured and render "—".
  *
  * All guards accept `unknown`-ish inputs defensively: a null/undefined/NaN
  * value from the backend must degrade to "—", never crash the tab or render
  * a literal "NaN".
  */
 
+import { gradientRedToGreen } from '@/lib/gradient'
 import { formatNumber } from '@/lib/localeFormat'
+
+/**
+ * The ramp itself now lives in `@/lib/gradient` (other report tables use it
+ * over their own scales). Re-exported here so this module stays the single
+ * import site for the processing table and its public barrel.
+ */
+export { gradientRedToGreen }
 
 /** True when the value is a real, finite number (rejects null/undefined/NaN/Infinity). */
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value)
-}
-
-/**
- * Map a 0..100 percent value to a soft pastel HSL colour on a red → yellow →
- * green gradient (0 → red hue 0°, 50 → yellow 60°, 100 → green 120°).
- * The pastel saturation/lightness (70%/85%) keeps dark text readable on top.
- * Out-of-range values are clamped; NaN falls back to the midpoint yellow.
- */
-export function gradientRedToGreen(value: number, min = 0, max = 100): string {
-  const NEUTRAL = 'hsl(60, 70%, 85%)'
-  if (!isFiniteNumber(value) || max === min) return NEUTRAL
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min)))
-  const hue = normalized * 120
-  return `hsl(${hue}, 70%, 85%)`
 }
 
 /**
