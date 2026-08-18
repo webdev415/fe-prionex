@@ -17,6 +17,11 @@ function renderPill(over: Partial<Parameters<typeof MinimizedCallPill>[0]> = {})
   return { onRestore }
 }
 
+/** The element's background class, so colours can be compared without naming one. */
+function background(element: HTMLElement): string | undefined {
+  return element.className.split(/\s+/).find((name) => name.startsWith('bg-'))
+}
+
 describe('MinimizedCallPill', () => {
   it('is the same green as every other primary button', () => {
     renderPill()
@@ -33,6 +38,16 @@ describe('MinimizedCallPill', () => {
     // hand-rolling the colours back onto the pill fails here instead of
     // drifting quietly away from the design the next time the palette moves.
     expect(restore.className).toBe(reference.className)
+  })
+
+  it('marks the call live in the same green as the button', () => {
+    renderPill({ answeredAt: Date.now() })
+
+    // Two greens a shade apart read as a mistake rather than a palette, and
+    // nothing else on screen would reveal the drift.
+    expect(background(screen.getByTestId('call-pill-status'))).toBe(
+      background(screen.getByRole('button'))
+    )
   })
 
   it('names the client so the operator knows which call it is', () => {

@@ -31,7 +31,7 @@ export function MinimizedCallPill({
   const durationSeconds = useCallDuration(answeredAt)
 
   return (
-    <div className="flex shrink-0 items-center gap-2">
+    <div className="border-border bg-card flex shrink-0 items-center gap-2 rounded-md border px-2 py-1">
       {/* The shared primary button, not a hand-rolled copy of its colours: the
           design asks for the same green as Edit Client, and sharing the variant
           is what keeps that true when the palette moves. */}
@@ -51,10 +51,14 @@ export function MinimizedCallPill({
       </span>
 
       {durationSeconds !== null && (
-        <span className="bg-muted text-muted-foreground flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm">
+        <span className="bg-muted text-muted-foreground flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm">
           <Icons.StopWatch size={14} aria-hidden />
           <span className="tabular-nums">{formatCallDuration(durationSeconds)}</span>
-          <span className="bg-success-500 h-2 w-2 rounded-full" aria-hidden />
+          <span
+            data-testid="call-pill-status"
+            className="bg-primary-300 h-2 w-2 rounded-full"
+            aria-hidden
+          />
         </span>
       )}
     </div>
