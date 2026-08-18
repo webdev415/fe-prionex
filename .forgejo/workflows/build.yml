@@ -1001,6 +1001,24 @@ jobs:
           fi
           echo "permanent_tags=${PERMANENT_TAGS# }" >> "$GITHUB_OUTPUT"
 
+          # 🔴 Review 2026-08-18: a branch named `sha-<12 hex>` — this
+          # project's OWN convention for investigating a bad image, and it has
+          # already happened once (`sha-ff416712653e`, cut from commit
+          # `ff416712653e`) — sanitizes to exactly `sha-${SHORT_SHA}`, which
+          # makes `push_tags` and `sha_tag` below IDENTICAL. `build-push-action`
+          # would then push the "protected" tag directly as part of the
+          # ordinary build step, bypassing both Story 3.6 AC2 steps entirely —
+          # silently, because the permanence guard above tests `$SANITIZED`
+          # against `KEEP_RE`, not against `sha_tag`'s shape, and on `dev`
+          # nothing else in this file catches it at all.
+          if [ "$SANITIZED" = "sha-${SHORT_SHA}" ]; then
+            echo "FAIL: ref '${REF_IN}' sanitizes to 'sha-${SHORT_SHA}', which is" \
+                 "IDENTICAL to this commit's protected sha-<12>-<env> tag body." \
+                 "Building this branch would push that tag directly as the ordinary" \
+                 "branch tag, bypassing the Story 3.6 AC2 guard entirely. Rename the" \
+                 "branch."; exit 1
+          fi
+
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "full_sha=${FULL_SHA}" >> "$GITHUB_OUTPUT"
@@ -1015,6 +1033,23 @@ jobs:
           # touch at all. See the two new steps after this one.
           echo "push_tags=${IMAGE}:${SANITIZED}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sha_tag=${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
+          # 🔴 Review 2026-08-18: `push_tags`/`sha_tag` above are RE-DERIVED
+          # from the same pieces as `TAGS`, not SPLIT from it — so the
+          # "`TAGS` = `sha_tag` + `push_tags`" invariant the comment above
+          # promises was not actually enforced by the code. If `PUSH_LATEST`
+          # (Story 3.3 AC4's own switch, currently `false`) is ever flipped,
+          # `latest` enters `TAGS` while staying silently absent from both
+          # `push_tags` and `sha_tag` — never pushed, and the final
+          # fail-closed assertion fails pointing at the registry instead of
+          # at this drift. Assert the invariant instead of trusting it by
+          # construction.
+          EXPECTED_TAGS="${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX},${IMAGE}:${SANITIZED}-${ENV_SUFFIX}"
+          if [ "$TAGS" != "$EXPECTED_TAGS" ]; then
+            echo "FAIL: internal invariant broken — TAGS ('${TAGS}') is not exactly" \
+                 "sha_tag,push_tags ('${EXPECTED_TAGS}'). Something upstream changed" \
+                 "what gets tagged without updating the Story 3.6 split. Refusing" \
+                 "rather than silently pushing the wrong set."; exit 1
+          fi
           # The raw ref, unsanitized. `sanitized_ref` is NOT the ref: the
           # sanitizer is not invertible — `a/b` and `a-b` both produce `a-b` —
           # so a label built from it cannot answer "which ref made this image".
@@ -1028,10 +1063,14 @@ jobs:
       #
       # This has to run BEFORE the build step so it can never observe a digest
       # this run itself produced. `docker buildx imagetools inspect` is
-      # already used later in this file (Story 3.5's fail-closed assertion)
-      # and reads OCI correctly under `docker-container` — no new tooling, per
-      # §3 of the story. Buildx and the registry login are already set up by
-      # this point.
+      # already used later in this file (Story 3.5's fail-closed assertion) —
+      # no new tooling, per §3 of the story. ⚠️ Review 2026-08-18: `imagetools`
+      # talks to the registry client-side and does not depend on the builder
+      # driver at all — Story 3.5's own precedent cited here is about `docker
+      # manifest inspect` not understanding buildx's OCI media types, a
+      # different fact, not "reads OCI correctly under `docker-container`" as
+      # an earlier version of this comment claimed. Buildx and the registry
+      # login are already set up by this point regardless.
       - name: Query the pre-existing digest of sha-<12>-<env> (Story 3.6 AC2)
         id: predigest
         env:
@@ -1039,16 +1078,32 @@ jobs:
         run: |
           set -euo pipefail
           echo "Checking ${SHA_TAG} before this run touches the registry..."
-          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$SHA_TAG" 2>&1)"; then
-            case "$OUT" in
-              sha256:[0-9a-f]*) ;;
-              *) echo "FAIL: imagetools returned for ${SHA_TAG}, but '${OUT}' is not a" \
-                      "digest. A parse failure is not the same as absence — refusing to" \
-                      "guess which one this is."; exit 1 ;;
-            esac
+          # 🔴 Review 2026-08-18: stdout and stderr are captured SEPARATELY,
+          # not merged with `2>&1` as an earlier version did. A merged stream
+          # let arbitrary registry error text flow into `$OUT` on the success
+          # path too — `case` globs match across embedded newlines, so
+          # `sha256:<hex>` followed by an injected line could pass a loose
+          # shape check and corrupt `$GITHUB_OUTPUT` (two `key=value` lines
+          # where one was meant — the same re-parse defect already recorded
+          # against Story 3.3). Only stdout ever reaches `$OUT`; stderr is
+          # read from its own file, only in the failure branch.
+          ERR_FILE="$(mktemp)"
+          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$SHA_TAG" 2>"$ERR_FILE")"; then
+            rm -f "$ERR_FILE"
+            # 🔴 Review 2026-08-18: this used to accept any `sha256:[0-9a-f]*`
+            # — the SAME weak shape the file's final fail-closed assertion
+            # (below) rejects in favour of an exact length-71,
+            # `^[0-9a-f]\{64\}$` check. This step decides whether anything
+            # gets compared at all, so it cannot be the looser of the two.
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: imagetools resolved ${SHA_TAG}, but '${OUT}' is not sha256:" \
+                   "plus 64 hex. A parse failure is not the same as absence — refusing" \
+                   "to guess which one this is."; exit 1
+            fi
             echo "pre_digest=${OUT}" >> "$GITHUB_OUTPUT"
             echo "${SHA_TAG} already exists at ${OUT}."
           else
+            ERR="$(cat "$ERR_FILE")"; rm -f "$ERR_FILE"
             # 🔴 Fail-closed on ambiguity, with exactly one named exception: a
             # real "this manifest has never been pushed" answer from the
             # registry, which is the ONE case this guard is allowed to treat
@@ -1061,22 +1116,26 @@ jobs:
             # earlier and harder to notice because it would look like the
             # normal first-build case.
             #
-            # ⚠️ Not verified against a real 404 on this instance — this story
-            # could not dispatch a fresh commit's first build to observe the
-            # exact wording (see Dev Agent Record). The three patterns below
-            # are the registry error vocabulary used elsewhere in this
-            # project's own measurement work (§2b's route, and the Distribution
-            # / OCI spec's own error codes) and in this step's sibling
-            # assertion below, but this specific branch is unverified live and
-            # is flagged as such rather than presented as proven.
-            case "$OUT" in
-              *MANIFEST_UNKNOWN*|*NAME_UNKNOWN*|*"not found"*|*"404"*)
+            # 🔴 Review 2026-08-18: narrowed from four patterns to one. The
+            # earlier `NAME_UNKNOWN`/bare-`404` alternatives are
+            # repository/transport-level, not "this exact manifest reference
+            # was never pushed" — a token that lost `read:package`, a deleted
+            # package, or a proxy error page whose body happens to contain the
+            # digits "404" would all match and be silently read as absent,
+            # which is the same silent-repoint failure mode one level up.
+            # `MANIFEST_UNKNOWN` — matched as the OCI/Distribution error code
+            # or the bare word — is the one Distribution-spec response that
+            # actually means "no manifest was ever pushed under this
+            # reference". ⚠️ Still not verified against a real 404 from this
+            # registry — see Dev Agent Record.
+            case "$ERR" in
+              *'"code":"MANIFEST_UNKNOWN"'*|*MANIFEST_UNKNOWN*)
                 echo "pre_digest=" >> "$GITHUB_OUTPUT"
                 echo "${SHA_TAG} does not exist yet — nothing to protect."
-                echo "  (imagetools said: ${OUT})" ;;
+                echo "  (imagetools said: ${ERR})" ;;
               *)
                 echo "FAIL: could not determine whether ${SHA_TAG} already exists."
-                echo "  imagetools said: ${OUT}"
+                echo "  imagetools said: ${ERR}"
                 echo "  Refusing to proceed on an ambiguous read — see the comment" \
                      "above this step for why an unrecognised failure is not treated" \
                      "as absence."
@@ -1146,6 +1205,12 @@ jobs:
       #   2. this step pushes only the MUTABLE branch tag
       #      (`steps.tags.outputs.push_tags`, not `.tags`) — publishing under
       #      a name nobody has promised is stable is unconditionally safe.
+      #      ⚠️ Review 2026-08-18: this IS a real publish, not a no-op — on
+      #      `main` the tag is `main-dev`, the tag Story 4.6 resets the DEV
+      #      stand to. A refused `sha-<12>-<env>` still leaves a fresh,
+      #      consumable image live under the branch tag; only the protected
+      #      name is withheld. Correct per AC2's letter, worth saying so
+      #      "refused" is never read as "nothing was published".
       #   3. (step after) attach sha-<12>-<env> to this run's digest ONLY if
       #      step 1 found it absent or already equal — otherwise fail and
       #      leave it untouched. That is what makes this a refusal and not a
@@ -1297,11 +1362,55 @@ jobs:
                  "(2026-08-18, not fixed by this story) — this guard's only job is" \
                  "to refuse publishing the second result under the first result's" \
                  "name, not to make the two builds match."
+            echo "  Whether this fires is decided by whether THIS build's cache hit:" \
+                 "a full cache hit restores the cached bundle byte-for-byte and takes" \
+                 "the 'same digest' branch above instead; a cache miss rebuilds and" \
+                 "re-evaluates Date.now(), which is what just happened. And the cache" \
+                 "that decides it is ':buildcache' — one shared, mutable tag any" \
+                 "branch's build can evict (§2b's own side effect 1 did exactly this" \
+                 "to main's cache once already). The same rebuild of the same commit" \
+                 "can pass today and fail tomorrow with nothing in the commit having" \
+                 "changed — documented as known behaviour, not designed away (§2b)."
             exit 1
           fi
 
-          docker buildx imagetools create --tag "${SHA_TAG}" "git.crm-prionex.com/crm/fe-prionex@${NEW_DIGEST}"
-          echo "OK: ${SHA_TAG} -> ${NEW_DIGEST}"
+          # 🔴 BLOCKING, review 2026-08-18, confirmed live: run 716 (this
+          # commit's own push) went red at the fail-closed assertion below.
+          # `imagetools create`'s `--prefer-index` DEFAULTS TO TRUE (docker
+          # buildx v0.35.0): "when only a single source is specified, prefer
+          # outputting an image index ... instead of performing a carbon
+          # copy". So the tag this line attached was an OCI INDEX wrapping
+          # this run's manifest, never the manifest itself — but `predigest`
+          # and the final assertion both read `.Manifest.Digest`, and for an
+          # index tag that is the INDEX's digest, which can never equal
+          # `NEW_DIGEST` (a single manifest — `provenance: false`,
+          # Prohibition 6, confirmed at run 661 in the comment above). Every
+          # build failed the final assertion below; every rebuild's "already
+          # points at" branch above was unreachable, refused forever with a
+          # message blaming `vite.config.ts` — this guard misattributing its
+          # own failure, precisely what §6 of the story is about.
+          # `--prefer-index=false` makes `create` emit the source manifest
+          # verbatim, matching what every reader of this tag downstream
+          # (`predigest`, the assertion below, Task 4's label reads) already
+          # assumes. Weakens nothing (Prohibition 3) and does not touch
+          # `provenance: false` (Prohibition 6) — it makes `create` match the
+          # shape the rest of this file already reads.
+          IMAGE="${SHA_TAG%%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "${SHA_TAG}" "${IMAGE}@${NEW_DIGEST}"
+
+          # 🔴 Review 2026-08-18: the attach used to end with a bare
+          # `echo "OK"` — a claim, not a check, and per the finding above it
+          # was FALSE on every run. Read the tag back the same way
+          # `predigest` and the final assertion do; this alone would have
+          # caught the index defect without a live dispatch, which is exactly
+          # the gap Task 3.4 was blocked on.
+          ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${SHA_TAG}")"
+          if [ "$ATTACHED" != "${NEW_DIGEST}" ]; then
+            echo "FAIL: attached ${SHA_TAG} but reading it back gives '${ATTACHED}', not" \
+                 "this run's '${NEW_DIGEST}'. The attach did not do what it claimed —" \
+                 "refusing to report success."; exit 1
+          fi
+          echo "OK: ${SHA_TAG} -> ${NEW_DIGEST} (verified by read-back)"
 
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the
