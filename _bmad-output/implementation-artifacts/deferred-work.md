@@ -2026,3 +2026,65 @@ answers HTTPS 200; `phone.crm.preprod.crm-prionex.online` is NXDOMAIN.
 regression. `VITE_OPERATOR_PHONE_URL_PROD` exists.
 
 **If that ever changes**, adding the environment is a variable and nothing else — no code change.
+
+---
+
+## 🔴 MEASURED 2026-08-17 — the `sha-<12>-<env>` repoint is real, and this closes a claim that had been reasoned four times and measured never
+
+**Owner of the fix: Story 3.6, AC2.** This entry supersedes *"Opened by Story 3.4"*, item 2, which
+argued from first principles that the same commit rebuilt from two refs would not be reproducible.
+It was right, but it was an argument. This is the measurement.
+
+**Verdict.** Commit `ff416712` was built four times for `dev`. Runs 696/697/698 hit the registry
+cache (30s, 28s, 28s). Run 700 was dispatched from `probe/3-6-cold-cache` — a branch whose only
+change is removing `cache-from` from `build.yml` — with `inputs.ref: main`, so the workflow came from
+the probe and the content from `main`. It took **147s** and pushed a different image. The tag
+`sha-ff416712653e-dev` now resolves to
+`sha256:d1cc776c7fe3dcda4a65f056fd318ec8938f753b51b6e01ad15e7ffa583aa582`, whose config blob carries
+`created = 2026-08-17T12:40:34Z` — six minutes **after** runs 697 and 698 finished. A config blob
+cannot be stamped with a future time, so that image is not the one they published. **The tag was
+moved, and nothing announced it.**
+
+**Cause: the BuildKit config timestamp**, which changes on any cache-miss rebuild and which pinning
+the base images by digest — done the same day — cannot touch. The base-image pins removed one of the
+listed causes; this one was always the dominant one.
+
+⚠️ **Deliberately not claimed.** Only the image *config* was compared. Whether the **layers** also
+differ — npm, the OpenBao values, `VITE_OPERATOR_PHONE_URL` — is unanswerable from this run: the
+pre-700 manifest is gone from the registry and no untagged `sha256:` row survives for that window.
+The digest question is settled; the reproducibility question is not. Answering it needs a fresh pair
+of builds captured **with their logs**, and on this instance logs are not retrievable through the API
+at all (404 on every documented path).
+
+**Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
+refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
+rollback target. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
+that changed underneath it.
+
+**Side effect, live now:** the shared `:buildcache` tag was overwritten at 14:48:02 by `ci.yml` on the
+probe branch's own push (run 699), so it holds the probe branch's layers rather than `main`'s. It
+self-heals on the next `main` build. Noted because an unexplained slow build is how this kind of
+thing gets misdiagnosed — and because it is the same hazard class as AC2: a shared mutable tag
+rewritten by whoever pushed last.
+
+**Open:** `probe/3-6-cold-cache` is still on the remote, one commit ahead of `main`, carrying a
+deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it.
+
+---
+
+## Token minted 2026-08-17 — `fe_pkg_3_6`, and it needs an exit
+
+`fe_tmp_1_7` is scoped `write:repository,read:organization`, which **cannot read the container
+registry** — both `/api/v1/packages/{owner}` and the registry v2 API return 401
+`required scope(s): [read:package]`. Reading the digests above needed a second token.
+
+- **Name:** `fe_pkg_3_6`, scope `read:package`, on `platform-admin`, minted 2026-08-17 by Oleg.
+- **Owner:** Oleg. It is on his own account, so unlike the `fe_tmp` case he **can** revoke it from
+  the UI — see the standing note that an admin cannot revoke another account's token.
+- **Revocation trigger:** when Epic 3 closes, or when a longer-lived read route to the registry is
+  decided — whichever comes first.
+
+⚠️ Recorded here because the `fe_tmp` entry went stale for a full story once already, and the whole
+point of that lesson was to check this file before assuming anything about token state. There are now
+**two** standing tokens, not one; the open policy question (one token per epic vs. scoped
+short-lived token per story) is unchanged and still not urgent.
