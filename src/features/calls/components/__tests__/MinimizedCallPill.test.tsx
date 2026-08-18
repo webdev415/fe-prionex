@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
+import { Button } from '@/components/ui/Button'
 import { MinimizedCallPill } from '../MinimizedCallPill'
 
 function renderPill(over: Partial<Parameters<typeof MinimizedCallPill>[0]> = {}) {
@@ -17,6 +18,23 @@ function renderPill(over: Partial<Parameters<typeof MinimizedCallPill>[0]> = {})
 }
 
 describe('MinimizedCallPill', () => {
+  it('is the same green as every other primary button', () => {
+    renderPill()
+    const restore = screen.getByRole('button')
+
+    render(
+      <Button variant="primary" size="icon-md" className="h-9 w-9">
+        reference
+      </Button>
+    )
+    const reference = screen.getByRole('button', { name: 'reference' })
+
+    // Compared against the shared button rather than a hardcoded class, so
+    // hand-rolling the colours back onto the pill fails here instead of
+    // drifting quietly away from the design the next time the palette moves.
+    expect(restore.className).toBe(reference.className)
+  })
+
   it('names the client so the operator knows which call it is', () => {
     renderPill()
 

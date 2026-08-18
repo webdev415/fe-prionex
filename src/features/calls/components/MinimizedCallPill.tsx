@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { formatCallDuration } from '../utils/duration'
 
@@ -31,14 +32,19 @@ export function MinimizedCallPill({
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <button
+      {/* The shared primary button, not a hand-rolled copy of its colours: the
+          design asks for the same green as Edit Client, and sharing the variant
+          is what keeps that true when the palette moves. */}
+      <Button
         type="button"
+        variant="primary"
+        size="icon-md"
+        className="h-9 w-9"
         onClick={onRestore}
         aria-label={t('pages.clients.modals.callDialog.restore', 'Return to the call')}
-        className="bg-primary-300 hover:bg-primary-400 flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
       >
-        <Icons.Call size={20} className="text-dark-500" aria-hidden />
-      </button>
+        <Icons.Calling02 size={20} aria-hidden />
+      </Button>
 
       <span className="text-foreground max-w-40 truncate text-sm font-medium">
         {clientName || phoneNumber}
