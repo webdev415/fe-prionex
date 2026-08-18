@@ -1006,6 +1006,15 @@ jobs:
           echo "full_sha=${FULL_SHA}" >> "$GITHUB_OUTPUT"
           echo "sanitized_ref=${SANITIZED}" >> "$GITHUB_OUTPUT"
           echo "latest_eligible=${LATEST_ELIGIBLE}" >> "$GITHUB_OUTPUT"
+          # Story 3.6 AC2. `TAGS` above stays the full list — the final
+          # fail-closed assertion still walks it unchanged. These two outputs
+          # split it into its two members so the guard below (and the build
+          # step) can treat them differently: `push_tags` is the MUTABLE
+          # branch tag, safe to push unconditionally; `sha_tag` is the
+          # PROTECTED per-commit tag, which the guard decides whether to
+          # touch at all. See the two new steps after this one.
+          echo "push_tags=${IMAGE}:${SANITIZED}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
           # The raw ref, unsanitized. `sanitized_ref` is NOT the ref: the
           # sanitizer is not invertible — `a/b` and `a-b` both produce `a-b` —
           # so a label built from it cannot answer "which ref made this image".
@@ -1013,6 +1022,67 @@ jobs:
           echo "raw_ref=${REF_IN}" >> "$GITHUB_OUTPUT"
           echo "Computed tags: ${TAGS}"
           echo "latest eligible: ${LATEST_ELIGIBLE}; pushed: ${PUSH_LATEST}"
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Story 3.6 AC2, half 1 of 2 — read the "before" state.
+      #
+      # This has to run BEFORE the build step so it can never observe a digest
+      # this run itself produced. `docker buildx imagetools inspect` is
+      # already used later in this file (Story 3.5's fail-closed assertion)
+      # and reads OCI correctly under `docker-container` — no new tooling, per
+      # §3 of the story. Buildx and the registry login are already set up by
+      # this point.
+      - name: Query the pre-existing digest of sha-<12>-<env> (Story 3.6 AC2)
+        id: predigest
+        env:
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          echo "Checking ${SHA_TAG} before this run touches the registry..."
+          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$SHA_TAG" 2>&1)"; then
+            case "$OUT" in
+              sha256:[0-9a-f]*) ;;
+              *) echo "FAIL: imagetools returned for ${SHA_TAG}, but '${OUT}' is not a" \
+                      "digest. A parse failure is not the same as absence — refusing to" \
+                      "guess which one this is."; exit 1 ;;
+            esac
+            echo "pre_digest=${OUT}" >> "$GITHUB_OUTPUT"
+            echo "${SHA_TAG} already exists at ${OUT}."
+          else
+            # 🔴 Fail-closed on ambiguity, with exactly one named exception: a
+            # real "this manifest has never been pushed" answer from the
+            # registry, which is the ONE case this guard is allowed to treat
+            # as "nothing to compare against". Every other failure (auth,
+            # network, a wedged registry, an unexpected response shape) is
+            # refused rather than silently read as absence — treating a tool
+            # failure as "absent" would let a broken check attach the tag to
+            # a digest it never actually compared against anything, which is
+            # the exact silent repoint AC2 forbids, just moved one step
+            # earlier and harder to notice because it would look like the
+            # normal first-build case.
+            #
+            # ⚠️ Not verified against a real 404 on this instance — this story
+            # could not dispatch a fresh commit's first build to observe the
+            # exact wording (see Dev Agent Record). The three patterns below
+            # are the registry error vocabulary used elsewhere in this
+            # project's own measurement work (§2b's route, and the Distribution
+            # / OCI spec's own error codes) and in this step's sibling
+            # assertion below, but this specific branch is unverified live and
+            # is flagged as such rather than presented as proven.
+            case "$OUT" in
+              *MANIFEST_UNKNOWN*|*NAME_UNKNOWN*|*"not found"*|*"404"*)
+                echo "pre_digest=" >> "$GITHUB_OUTPUT"
+                echo "${SHA_TAG} does not exist yet — nothing to protect."
+                echo "  (imagetools said: ${OUT})" ;;
+              *)
+                echo "FAIL: could not determine whether ${SHA_TAG} already exists."
+                echo "  imagetools said: ${OUT}"
+                echo "  Refusing to proceed on an ambiguous read — see the comment" \
+                     "above this step for why an unrecognised failure is not treated" \
+                     "as absence."
+                exit 1 ;;
+            esac
+          fi
 
       # ⚠️ SUPERSEDED by Story 3.5. This used to read "No cache-from/cache-to
       # … `driver: docker` cannot export a registry cache at all". Both clauses
@@ -1051,6 +1121,35 @@ jobs:
       # FR8 belongs to Story 3.3 (Prohibition 6). Story 3.2's first version
       # claimed both ACs here; corrected by its own review, because a 3.6 dev
       # reading this file would have believed AC3 was already paid for.
+      #
+      # ─────────────────────────────────────────────────────────────────────
+      # Story 3.6 AC2 — refuse to silently repoint sha-<12>-<env>, don't just
+      # detect it after the fact.
+      #
+      # §2b of the story MEASURED the repoint (2026-08-17/18): the same
+      # commit, rebuilt off a cache-miss path, produces a different digest —
+      # root cause `vite.config.ts:8` baking a fresh `Date.now()` into the
+      # bundle via `define` on every build that is not a full cache hit. That
+      # is source-level non-reproducibility and this story does NOT fix it
+      # (decided 2026-08-18 — `vite.config.ts` is application source, out of
+      # scope for a CI story). What AC2 asks is narrower: whoever rebuilds the
+      # same commit must not silently overwrite what `sha-<12>-<env>` already
+      # named. "Refuse" was chosen over "document" — Story 3.2 already spent
+      # that escape hatch once, and Stories 5.4/6.5/6.6 trust this tag to name
+      # exactly one artifact (§5).
+      #
+      # A check that runs AFTER an all-tags push cannot refuse anything — the
+      # tag is already wrong by the time it runs. So this is two steps either
+      # side of the build, not one after it:
+      #   1. (next step) read what sha-<12>-<env> pointed to BEFORE this run
+      #      touches the registry.
+      #   2. this step pushes only the MUTABLE branch tag
+      #      (`steps.tags.outputs.push_tags`, not `.tags`) — publishing under
+      #      a name nobody has promised is stable is unconditionally safe.
+      #   3. (step after) attach sha-<12>-<env> to this run's digest ONLY if
+      #      step 1 found it absent or already equal — otherwise fail and
+      #      leave it untouched. That is what makes this a refusal and not a
+      #      report.
       - name: Build and push image
         id: build
         uses: docker/build-push-action@v5
@@ -1058,7 +1157,7 @@ jobs:
           context: .
           file: ./Dockerfile.prod
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.push_tags }}
           labels: |
             org.opencontainers.image.revision=${{ steps.tags.outputs.full_sha }}
             org.opencontainers.image.version=${{ steps.tags.outputs.short_sha }}
@@ -1140,6 +1239,69 @@ jobs:
           # optimisation worth roughly zero seconds (see D22); the image is the
           # product.
           cache-to: type=registry,ref=git.crm-prionex.com/crm/fe-prionex:buildcache,mode=max,ignore-error=true
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Story 3.6 AC2, half 2 of 2 — attach the protected tag, or refuse.
+      #
+      #   pre_digest empty          -> absent, nothing to protect       -> attach
+      #   pre_digest == NEW_DIGEST  -> already published, no-op         -> skip
+      #   pre_digest != NEW_DIGEST  -> the repoint AC2 forbids          -> FAIL,
+      #                                sha_tag left exactly as it was
+      #
+      # "attach" is `docker buildx imagetools create` — a registry-side retag,
+      # not a rebuild or re-upload. The image already exists in the registry
+      # under the branch tag the build step just pushed; this only points a
+      # second name at the same manifest. That is what makes the FAIL branch
+      # a real refusal rather than a report: it `exit 1`s before this command
+      # ever runs, so on the forbidden path sha_tag is untouched, not merely
+      # flagged as wrong after the damage.
+      #
+      # 🔴 Legitimate rebuild (Open Question 2, §3 of the story): NO override
+      # input is added, on purpose. `short_sha` comes from `git rev-parse
+      # HEAD` in the tags step — it cannot change without a new commit. A
+      # base-image security bump "for the same release" is mechanically a
+      # `Dockerfile.prod` commit, which is a DIFFERENT commit and therefore a
+      # DIFFERENT sha-<12>-<env> tag: there is no existing tag to refuse, so
+      # this guard does not fire for that case at all. The only rebuild this
+      # guard can ever block is one that keeps the SAME commit and produces
+      # different bytes — which, per §2b, is not a legitimate case; it is the
+      # `Date.now()` bug AC2 exists to catch. So no override is needed, and
+      # adding one would only give that bug a bypass.
+      - name: Enforce AC2 — attach or refuse sha-<12>-<env>
+        env:
+          PRE_DIGEST: ${{ steps.predigest.outputs.pre_digest }}
+          NEW_DIGEST: ${{ steps.build.outputs.digest }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          case "${NEW_DIGEST}" in
+            sha256:[0-9a-f]*) ;;
+            *) echo "FAIL: this run reported no usable digest ('${NEW_DIGEST}')." \
+                    "Refusing to attach or compare against one."; exit 1 ;;
+          esac
+
+          if [ -z "${PRE_DIGEST}" ]; then
+            echo "${SHA_TAG} did not exist before this run — attaching."
+          elif [ "${PRE_DIGEST}" = "${NEW_DIGEST}" ]; then
+            echo "${SHA_TAG} already points at ${NEW_DIGEST} — nothing to do."
+            exit 0
+          else
+            echo "FAIL: refusing to repoint ${SHA_TAG} (Story 3.6 AC2)."
+            echo "  existing digest (before this run): ${PRE_DIGEST}"
+            echo "  this run's digest:                 ${NEW_DIGEST}"
+            echo "  ${SHA_TAG} is UNCHANGED — this step exits before touching it."
+            echo "  This is the class of rebuild the story's §2b measured: on a" \
+                 "cache miss, vite.config.ts:8 bakes a fresh Date.now() into the" \
+                 "bundle on every build, so two builds of the same commit are not" \
+                 "byte-identical. That is a documented property of the source" \
+                 "(2026-08-18, not fixed by this story) — this guard's only job is" \
+                 "to refuse publishing the second result under the first result's" \
+                 "name, not to make the two builds match."
+            exit 1
+          fi
+
+          docker buildx imagetools create --tag "${SHA_TAG}" "git.crm-prionex.com/crm/fe-prionex@${NEW_DIGEST}"
+          echo "OK: ${SHA_TAG} -> ${NEW_DIGEST}"
 
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the

@@ -1680,6 +1680,12 @@ is what is not.
   whole point is that a missing variable must. Closing it means extending `Dockerfile.prod`, which
   Story 3.3's AC5 forbids without an amendment. **Owner: Story 3.6** — it is the story about the
   image being trustworthy, and this is the largest untrustworthy thing left in it.
+  ✅ **CLOSED for two of three, Story 3.6.** `VITE_OPERATOR_PHONE_URL` was fixed 2026-08-17 (outside
+  this story) — it is in the build-arg contract now, per-environment, from a Forgejo CI variable.
+  `VITE_BUILD_TS` was audited 2026-08-18 and is **not** a contract gap: `vite.config.ts:8` sets it via
+  `define`, a textual substitution that would override any build-arg, so the `?? '1'` fallback is dead
+  code — see [D23](../../docs/migration-decisions.md#d23) and D20 §6, which this update also closes.
+  🔴 **`VITE_EASYPAY_PORTAL_API_KEY` remains open, unaudited, no owner.**
 - 🔴 **The bare `sha-<short>` no longer exists, and four references still name it.** Story 3.3
   replaced it with `sha-<short>-<env>` because FR8 requires a discriminator and its own AC3 requires
   the bare form never be ambiguous — under Option C one commit yields three images, so it cannot be
@@ -2113,7 +2119,25 @@ thing gets misdiagnosed — and because it is the same hazard class as AC2: a sh
 rewritten by whoever pushed last.
 
 **Open:** `probe/3-6-cold-cache` is still on the remote, one commit ahead of `main`, carrying a
-deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it.
+deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it. **⚠️ Still open** — this session had
+no credential to delete a remote branch (see below), so it remains on the remote.
+
+**✅ UPDATED 2026-08-18 — the guard `Story 3.6 Task 3 owns the answer` pointed at is now implemented,
+and [D23](../../docs/migration-decisions.md#d23) records it.** `build.yml` reads the pre-existing
+digest of `sha-<12>-<env>` *before* the build, pushes only the mutable branch tag from the build step
+itself, and attaches (or refuses) the protected tag afterward by comparing digests — so the "same
+digest → nothing to do, different digest → fail" table above is now code, not a plan. No override for
+a "legitimate rebuild" was added; see D23 for why none is needed.
+
+🔴 **Not closed by this update: Task 3.4 (prove the guard fires) is unverified.** The agent session
+that wrote the guard had no Forgejo API token and no SSH to s1 — confirmed by an unauthenticated
+`GET /api/v1/repos/CRM/fe-prionex/actions/runs` returning `403`, not assumed. The "absent" path will
+be exercised automatically by the next push (every push builds `dev`, Story 3.4); the "differ" path —
+the guard actually refusing something — needs a deliberate `workflow_dispatch` rebuild of the same
+commit, the same technique Task 1 used above, and nobody has run it yet against this code. Tasks 4
+(re-read the labels live) and 5 (close AC4 by `package_version`/`action_run_job` query) are blocked
+for the identical reason. Whoever has the token next should close these before treating Story 3.6 as
+done — see the story's own Dev Agent Record for the exact commands.
 
 ---
 

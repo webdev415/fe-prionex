@@ -4,7 +4,7 @@ baseline_commit: 7911d63d
 
 # Story 3.6: Verify Commit Traceability and Image Immutability
 
-Status: ready-for-dev
+Status: in-progress
 
 > **This story is lighter than its title, and the reason is written down rather than assumed.**
 > Two of its four ACs are already satisfied by work Stories 3.2 and 3.3 did, and that was **verified
@@ -533,56 +533,180 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 
 ### Task 2 — Declare the budget (AC: all)
 
-- [ ] 2.1 State expected runs for **implementation and review separately**, before Task 3. Story 3.5
+- [x] 2.1 State expected runs for **implementation and review separately**, before Task 3. Story 3.5
       overran by exactly the review round it did not budget. *Baseline: `action_run.id` **700** is the
       last run before this story's implementation — the four runs Task 1 consumed (696–700) are
-      already spent and belong in the ledger, not outside it.*
-- [ ] 2.2 List every tag this story could push and compile the live `keep_pattern` against each.
+      already spent and belong in the ledger, not outside it.* — *🔴 **This session could not spend
+      any of this budget.** Dispatching `workflow_dispatch`, and reading `action_run`/registry state to
+      close the ledger by query, both need Forgejo API credentials (`fe_tmp_1_7` for dispatch,
+      `fe_pkg_3_6` or equivalent for the registry) that are host-local to s1 (`/root/.fj_token`) and
+      not available to this agent session — no SSH to s1, no token in the environment (see Dev Agent
+      Record). **Declared, not spent:**
+      **Implementation:** 2 runs — (a) the automatic `dev` build `ci.yml` triggers on this branch's
+      push, which exercises the guard's "absent" path (first build of a new commit — the ordinary
+      case, ~30×/day project-wide already, not a special cost) and doubles as Task 5's real-push
+      evidence; (b) one **deliberate** `workflow_dispatch` rebuild of that same commit, run
+      **sequentially** (build.yml's dispatch-path concurrency serializes same-`ref` dispatches — Task
+      1's own finding) and ideally on a cold cache (Task 1's probe-branch technique) to force the
+      "differ" path and prove the guard's FAIL branch actually fires (Task 3.4). This needs the API
+      token; it is the one this session is blocked on.
+      **Review:** budget 1 run at minimum, per Story 3.5's own lesson that "every story has had a
+      review round and it always finds something" — this session declines to assume zero.
+      **Task 4 (AC1/AC3 record):** 0 additional runs — existing registry images already carry the
+      evidence (Task 1.1, §1); confirming currency is a registry *read*, not a build, and does not
+      consume the run budget even when the credential to perform it is available.*
+- [x] 2.2 List every tag this story could push and compile the live `keep_pattern` against each. —
+      *Read from `build.yml`'s own tag-computation step, not dispatched — this needs no run. This
+      story's `build.yml` change (Task 3) introduces **no new tag shape**; it only changes which step
+      pushes the two tags that already existed. So the compiled list is unchanged from what Story 3.3
+      already established:*
+
+      | tag shape | example (`env=dev`) | matches `keep_pattern`? | consequence |
+      |---|---|---|---|
+      | `sha-<12>-dev` | `sha-abc123def456-dev` | no | expires in 14 days |
+      | `sha-<12>-preprod` \| `sha-<12>-prod` | `sha-abc123def456-prod` | **yes** — `(pre)?prod-[0-9a-f]{7,64}` | permanent; this is the tag Epic 6 depends on and AC2 protects |
+      | `<sanitized-branch>-dev` | `story-3-6-pr-4-close-…-dev` | no (unless the sanitized ref itself collides with a protected shape — guarded separately at the `KEEP_RE` check on `$SANITIZED`) | expires in 14 days |
+      | `<sanitized-branch>-preprod` \| `-prod` | | only if the branch name sanitizes to a hex string — guarded, fails closed | permanent if it slips through; not this story's concern to fix, already guarded pre-3.6 |
+      | `buildcache` | `buildcache` | **yes** — literal | permanent by design (Story 1.11), unconditional `cache-to`, never goes through the tags step or its guards |
+
+      *This story's own guard (Task 3) touches only the first two rows' `sha-` member — it decides
+      whether that tag gets attached, never invents a new one.*
 
 ### Task 3 — Decide and implement AC2 (AC: 2)
 
 - [x] 3.1 Decide in writing: refuse, or document. — *✅ **Refuse.** Decided by Oleg 2026-08-18; the
       reasoning, what was declined and why, and what the decision commits the implementation to are
       in §2b. `vite.config.ts` stays untouched — this is a CI story.*
-- [ ] 3.2 If refusing: the guard shape is in §3. Fail with BOTH digests named.
-- [ ] 3.3 Handle the legitimate rebuild case explicitly (§3).
+- [x] 3.2 If refusing: the guard shape is in §3. Fail with BOTH digests named. — *Implemented in
+      `.forgejo/workflows/build.yml`. Split into two steps either side of the build, because a check
+      that runs after an all-tags push cannot refuse anything (the tag would already be wrong):
+      "Query the pre-existing digest of sha-<12>-<env> (Story 3.6 AC2)" (`id: predigest`) reads what
+      the tag pointed to **before** this run touches the registry; "Build and push image" now pushes
+      only `steps.tags.outputs.push_tags` (the mutable branch tag), not the full `.tags` list;
+      "Enforce AC2 — attach or refuse sha-<12>-<env>" compares `pre_digest` against this run's
+      `steps.build.outputs.digest` and either attaches the tag with `docker buildx imagetools create`
+      (registry-side retag, no rebuild) when absent-or-equal, or `exit 1` naming both digests when
+      they differ — before the attach command ever runs, so the tag is left genuinely untouched on the
+      forbidden path, not just reported as wrong. The final fail-closed assertion step is unchanged and
+      still walks the full tag list; it now runs after the sha- tag has been attached (or the job has
+      already failed), so no change was needed there.*
+- [x] 3.3 Handle the legitimate rebuild case explicitly (§3). — *Decided: no override input. Recorded
+      at the "Enforce AC2" step and here: `short_sha` is `git rev-parse HEAD` from the tags step — it
+      cannot change without a new commit. A base-image security bump "for the same release" is
+      mechanically a `Dockerfile.prod` commit, i.e. a DIFFERENT commit, which gets its OWN
+      `sha-<12>-<env>` tag — there is no existing tag to refuse, so the guard never fires for that
+      case. The only rebuild this guard can ever block is the SAME commit producing different bytes,
+      which per §2b is not a legitimate case at all — it is the `Date.now()` bug AC2 exists to catch.
+      An override would only give that bug a bypass, so none is added. This also answers Open Question
+      2 (non-blocking).*
 - [ ] 3.4 🔴 **Prove the guard can fire.** A guard that cannot fail proves nothing — three in this
-      file could not, and each was found by a review rather than by its author.
+      file could not, and each was found by a review rather than by its author. — *⚠️ **NOT verified
+      live in this session — blocked, not skipped.** Proving the FAIL branch fires needs a deliberate
+      `workflow_dispatch` rebuild of the same commit (as Task 1 did for the underlying repoint), which
+      needs the Forgejo API token. This agent session has no SSH access to s1 and no token in its
+      environment (git push/pull over SSH works; the Forgejo REST API returns 403 unauthenticated —
+      confirmed by probing `GET /api/v1/repos/CRM/fe-prionex/actions/runs`). The code was reviewed by
+      hand against the file's own conventions (no `${{ }}` in any `run:` body — checked with a grep
+      over the new steps; YAML parses — checked with `python3 -c "import yaml…"`) and the logic was
+      traced against all three §3 outcomes, but "traced and looks fine" is exactly the standard §6 of
+      this story rejects. The one thing that WILL happen automatically: pushing this story's branch
+      triggers `ci.yml` → `build.yml` on a fresh commit, which exercises the guard's "absent" path for
+      real (first build of a new commit). That is not a substitute for the "differ" path — see the Dev
+      Agent Record for what is needed to close this.*
 
 ### Task 4 — Record AC1 and AC3 rather than rebuild them (AC: 1, 3)
 
-- [ ] 4.1 Read the labels off a current image, from the registry. Record the exact query.
+- [ ] 4.1 Read the labels off a current image, from the registry. Record the exact query. — *⚠️
+      **Blocked, not skipped** — same missing-credential reason as 3.4 (§2b's own route needs a
+      `read:package` token for the registry v2 API, which is not available to this session). Best
+      available evidence, not independently re-confirmed here: Task 1.1 (this story, 2026-08-17) read
+      `sha-ff416712653e-dev` and recorded `org.opencontainers.image.revision =
+      ff416712653ea2d204a3b6ea3c0ae722b094e5f6` (full commit SHA — AC1) via `docker buildx imagetools
+      inspect` against the pushed manifest. That is the exact query this task asks to record:
+      `docker buildx imagetools inspect --format '{{json .Image.Config}}'
+      git.crm-prionex.com/crm/fe-prionex:sha-<12>-<env>` (or the registry v2 API route in §2b) then
+      read `.Labels` off the config blob, the same route `predigest`/the new guard use for the digest
+      alone. **Not re-confirmed as "current" in this session** — the story's own §1 warns that reading
+      a two-day-old fact as present state is this project's most expensive recurring mistake, and that
+      warning applies here: the evidence above is from 2026-08-17, not from today.*
 - [ ] 4.2 Show AC3 with a comparison pair — a `dev` and a `preprod` image differing in
-      `org.prionex.environment`.
+      `org.prionex.environment`. — *⚠️ **Blocked**, same reason. Partial evidence only: the `dev` side
+      is Task 1.1's reading, `org.prionex.environment = dev`. The `preprod` side is NOT independently
+      read in this session — `deferred-work.md` ("Opened by Story 3.5", item 1, run 680) confirms
+      `sha-00ef3be4743d-preprod` is a real, legitimately-pushed preprod image of `main`, but only
+      verified the OpenBao-sourced URLs baked into its bundle, not this specific label's value.
+      `org.prionex.environment=${{ inputs.environment }}` in `build.yml`'s `labels:` block has been
+      unconditional since Story 3.3, so `preprod` is the label's value **by construction of the code
+      run 680 executed** — an inference from source, not a fresh read of that image. Closing this
+      properly needs the same registry credential as 4.1.*
 
 ### Task 5 — Close AC4 and the epic (AC: 4)
 
 - [ ] 5.1 One real push → image → tag → commit, evidenced from `package_version` and
-      `action_run_job`. **Not from a green job** — two green runs in Story 3.4 built nothing.
-- [ ] 5.2 Record Epic 3's closing evidence.
+      `action_run_job`. **Not from a green job** — two green runs in Story 3.4 built nothing. — *⚠️
+      **Blocked** on the same missing credential: `package_version`/`action_run_job` are Forgejo
+      database tables, reachable only from the app or an admin with DB/SSH access to s1, neither of
+      which this session has. The push itself is not blocked — pushing this story's branch to `origin`
+      triggers `ci.yml` → `build.yml` automatically (Story 3.4; confirmed by reading `ci.yml`'s own
+      `on: push` + `if: github.event_name == 'push'` gate, not by dispatching), which is a real
+      end-to-end push → image → tag → commit event. What is missing is the **query** that turns it into
+      evidence rather than a claim — exactly the distinction §6 of this story is about. Recorded as
+      attempted-not-performed-as-specified rather than checked off.*
+- [ ] 5.2 Record Epic 3's closing evidence. — *Cannot be written honestly until 5.1 is closed by query
+      — see Dev Agent Record for what a follow-up session needs (the token, or Oleg running the two
+      queries and pasting the result back).*
 
 ### Task 6 — Record (AC: all)
 
-- [ ] 6.1 Dev Agent Record: budget declared vs spent, closed **by query**; the Task 1 measurement
-      either way; every «не проверено» that survives.
-- [ ] 6.2 A D-record — next number after D22 — with `<a id="dNN"></a>` **above** the heading and
+- [x] 6.1 Dev Agent Record: budget declared vs spent, closed **by query**; the Task 1 measurement
+      either way; every «не проверено» that survives. — *Written below. Budget could not be closed by
+      query this session — no DB/API access; recorded as such rather than estimated from memory.*
+- [x] 6.2 A D-record — next number after D22 — with `<a id="dNN"></a>` **above** the heading and
       **before** `<a id="changelog"></a>`; retention section stays last. Plus a changelog row and a
-      summary-table row.
-- [ ] 6.3 `deferred-work.md`: the repoint verdict, and anything this story opens.
-- [ ] 6.4 Amend `epics.md` **in place, no reflow** — the `sha-<short>` readings in AC1/AC2.
+      summary-table row. — *[D23](../../../docs/migration-decisions.md#d23) added in
+      `docs/migration-decisions.md`, anchor above heading, before `<a id="changelog">`, retention
+      section (`## Восстановление правила очистки реестра`) untouched at the end. Summary-table row and
+      a changelog row (dated 18.08.2026) added. ⚠️ **Anchor collision, named not resolved:** the
+      unmerged `correct-course/prod-target-s10` branch also claims `D23` for an unrelated topic (PROD
+      → s10). Whichever PR merges second must renumber — flagged in both places rather than picked
+      arbitrarily.*
+- [x] 6.3 `deferred-work.md`: the repoint verdict, and anything this story opens. — *The existing
+      "MEASURED 2026-08-17" entry updated in place with a "guard is now implemented" note and what
+      Task 3.4/4/5 leave unverified; the `VITE_OPERATOR_PHONE_URL`/`VITE_BUILD_TS` closure (§4b) added
+      to the "Opened by story 3.3" bullet; `probe/3-6-cold-cache` cleanup marked still-open (blocked,
+      not done — no credential to delete a remote branch).*
+- [x] 6.4 Amend `epics.md` **in place, no reflow** — the `sha-<short>` readings in AC1/AC2. — *Inline
+      bold amendments added directly after AC1's and AC2's **Then** clauses, same pattern as the
+      existing D20 amendment at line 115. No other text moved or reflowed.*
 
 ### Task 7 — Close (AC: all)
 
-- [ ] 7.1 Commit on a branch; open a PR — `main` is gated (D16).
-- [ ] 7.2 Update `sprint-status.yaml`; consider whether `epic-3` moves to `done`.
-- [ ] 7.3 Close the budget ledger by query.
-- [ ] 7.4 🔴 Merge, verify `main` moved, and only then delete the branch.
+- [ ] 7.1 Commit on a branch; open a PR — `main` is gated (D16). — *Committed and pushed to
+      `story-3-6/pr-4-close-ac2-and-epic`. **Opening the PR is blocked** — no Forgejo API token (and
+      no `tea` CLI) in this session; git push over SSH works (confirmed), the REST API does not
+      (confirmed 403 unauthenticated). Left for Oleg to open via the web UI, or for a follow-up
+      session with a token.*
+- [x] 7.2 Update `sprint-status.yaml`; consider whether `epic-3` moves to `done`. — *Set to
+      `in-progress` (this session started work; several tasks remain blocked, see Dev Agent Record —
+      not set to `review`, per the workflow's own gate: not all tasks are complete).
+      `epic-3-retrospective` stays `optional`, untouched. **`epic-3` does NOT move to `done`** — AC4
+      (Task 5) and the live-fire proof (Task 3.4) are open, and this story's own epic-closing AC
+      explicitly requires evidence, not a green tick (§6).*
+- [ ] 7.3 Close the budget ledger by query. — *Blocked — no DB/API access this session; nothing was
+      spent to close (see Task 2.1).*
+- [ ] 7.4 🔴 Merge, verify `main` moved, and only then delete the branch. — *Blocked on 7.1 (no PR to
+      merge).*
 - [ ] 7.5 Delete `probe/3-6-cold-cache` from the remote — its evidence now lives in §2b, and the
       branch is one commit of deliberately broken `build.yml` sitting where someone could dispatch
-      it (§2b, side effect 2).
-- [ ] 7.6 Decide what to do about the polluted `:buildcache` (§2b, side effect 1). It self-heals on
+      it (§2b, side effect 2). — *Blocked — deleting a remote branch on this instance needs the same
+      credential this session doesn't have. Still on the remote; recorded as still-open in
+      `deferred-work.md`.*
+- [x] 7.6 Decide what to do about the polluted `:buildcache` (§2b, side effect 1). It self-heals on
       the next `main` build, so "nothing" is a legitimate answer — but say it, rather than leaving
-      the next slow build unexplained.
+      the next slow build unexplained. — *Decided: nothing, deliberately. `:buildcache` self-heals on
+      the next `main` build (already the conclusion recorded in `deferred-work.md`'s "Side effect,
+      live now" paragraph, restated here as the explicit decision Task 7.6 asks for) — no action taken
+      this session, and none is needed before the next `main` build resets it.*
 
 ---
 
@@ -623,9 +747,123 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 
 ### Non-blocking
 
-2. **The legitimate rebuild** (§3) — a base-image bump for the same commit changes the digest by
-   design. Override input, or is editing `Dockerfile.prod` itself the explicit act?
+2. ✅ **ANSWERED 2026-08-18 — no override, and editing `Dockerfile.prod` is not even "the explicit
+   act" because it never reaches the guard at all.** `short_sha` is `git rev-parse HEAD`; a base-image
+   bump is a new commit, hence a new `sha-<12>-<env>` tag with no prior value to compare against. The
+   guard can only ever fire on the SAME commit producing different bytes, which is the `Date.now()`
+   bug, not a legitimate case. See Task 3.3 and [D23](../../docs/migration-decisions.md#d23).
 3. **AC4 has no "phase-4 definition of done" to evaluate against** — it does not exist in
    `epics.md`. Proposed reading in the AC block above.
 4. **`prod` has still never been built end to end.** Out of scope here, tracked in `deferred-work.md`,
    but AC4 claims an epic-wide property and `prod` is a third of it.
+
+---
+
+## Dev Agent Record
+
+### Session 2026-08-18 — Tasks 2, 3, 6 done; Tasks 3.4, 4, 5, and most of 7 blocked
+
+**🔴 The real blocker, stated once so it isn't re-discovered per task.** This agent session had no
+Forgejo API token and no SSH access to `s1`. Confirmed, not assumed:
+`GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs` unauthenticated → `403`;
+`git ls-remote`/`git push` over the configured SSH remote → work fine (git access and API access are
+different credentials on this instance, and only the first is available here). Every task that needs
+`workflow_dispatch`, a registry read (`docker buildx imagetools inspect` / the v2 API), or a
+`SELECT` against `action_run`/`package_version` is blocked by this, not by anything about the task
+itself. Rather than guess at results or reuse stale ones and call them current — the exact mistake §6
+of this story spends four paragraphs on — those tasks are left unchecked with the evidence that does
+exist and a note on what closes them.
+
+**Budget: declared, not spent.** See Task 2.1. Zero runs consumed this session (no dispatch access);
+implementation is estimated at 2 runs, review at ≥1, once a token is available.
+
+**What was actually done, and how it was checked without a live run:**
+- The AC2 guard (Task 3.2/3.3) — read the full `build.yml` before editing; designed the two-steps-
+  around-the-build split specifically because a post-build check cannot refuse anything (traced
+  through docker/build-push-action's behaviour: `tags:` are pushed as part of one atomic call, so the
+  only way to keep a tag from being touched is to not include it in that call in the first place).
+  Checked after editing: YAML parses (`python3 -c "import yaml; yaml.safe_load(open(...))"` — 13 steps,
+  correct order: `tags` → `predigest` → `build` → the new enforce step → the existing fail-closed
+  assertion); no `${{ }}` inside any `run:` body in the new steps (grepped — the file's own hard rule,
+  violated once already in this project's history per Story 3.2's code review); the final assertion
+  step's logic re-traced by hand to confirm it still holds unmodified now that the sha- tag is
+  attached one step later than before.
+- Task 2.2 (tag list vs `keep_pattern`) — answered by reading the tag-computation code, no run needed;
+  this story's guard doesn't add a new tag shape, only changes which step pushes an existing one.
+- Task 6 (D23, `deferred-work.md`, `epics.md`) — written from what Tasks 1–3 of this story already
+  measured and decided; nothing here needed live infrastructure.
+
+**Every «не проверено» that survives this session:**
+- Task 3.4 — the guard's FAIL branch has never fired against a real registry. The "absent" branch will
+  fire automatically on the next push (any push builds `dev`, Story 3.4); the "differ" branch needs a
+  deliberate same-commit redispatch, Task 1's own technique, not run against this code.
+- Task 4.1/4.2 — AC1/AC3 evidence reused from Task 1.1 (2026-08-17) and inferred from code for the
+  `preprod` label value; neither independently re-read live this session. §1's own warning about
+  reading a two-day-old fact as current state applies literally here.
+- Task 5.1/5.2 — AC4's "real push" half is satisfiable by pushing this branch (confirmed by reading
+  `ci.yml`'s `on: push` + `if: github.event_name == 'push'` gate — not by triggering it and watching);
+  the database evidence half (`package_version`, `action_run_job`) needs DB/API access this session
+  doesn't have.
+- Task 7.1/7.3/7.4/7.5 — PR open/merge, ledger close-by-query, and remote branch deletion all need the
+  same missing credential.
+- The `predigest` step's "absent" detection (see the step's own comment in `build.yml`) pattern-
+  matches known Distribution/OCI error strings for "no such manifest" — this specific branch was never
+  exercised against a real 404 from this registry in this session, and is flagged as such at the code
+  itself, not just here.
+
+**To close what's left**, a follow-up session (or Oleg, directly) needs one of: (a) the Forgejo API
+token (`fe_tmp_1_7` for dispatch/repo, a `read:package`-scoped one for the registry — `fe_pkg_3_6`
+already exists per `deferred-work.md`) made available to the session, or (b) SSH access to `s1` to
+read `/root/.fj_token` and query the Forgejo Postgres database directly, or (c) Oleg running the
+specific commands recorded at each blocked task/step above and reporting the results back. Whichever
+happens, the sequence per Task 3.4/5.1 is: push this branch (or merge its PR) → observe `ci.yml` build
+`dev` automatically (Task 5, "absent" path) → deliberately `workflow_dispatch` the same ref again,
+sequentially → confirm the guard either publishes an identical digest (cache hit) or fails naming both
+digests (cache miss) → close Task 2's ledger with `SELECT count(*) FROM action_run WHERE id > 700` →
+close Task 4 with a fresh `imagetools inspect` against a current `dev` and a current `preprod` image →
+close Task 5 with the `package_version`/`action_run_job` queries the task names → open/merge the PR →
+delete the feature branch and `probe/3-6-cold-cache`.
+
+**Deviation from the workflow's own sequencing.** Task 3 (implementation) was done before Task 2
+(budget declaration) was written down, because understanding the guard's shape required reading the
+whole of `build.yml` first, and that reading made the budget estimate more accurate, not less. Task
+2.1 is written honestly about this — it declares a budget for work not yet spent, not a budget
+retrofitted to match what was spent, since nothing was spent.
+
+**Anchor collision, flagged not resolved.** `D23` is claimed by this story's change to
+`docs/migration-decisions.md` and, independently, by the unmerged `correct-course/prod-target-s10`
+branch (commit `6a186248`, PROD target moves to s10) — both branches are cut from `main` and neither
+has seen the other's `D23`. Whichever PR merges second needs to renumber; not resolved here because
+resolving it would mean guessing at merge order.
+
+---
+
+## File List
+
+- `.forgejo/workflows/build.yml` — added the AC2 guard (Task 3): `sha_tag`/`push_tags` outputs on the
+  tags step; new `predigest` step (pre-existing-digest read); the build step now pushes only
+  `push_tags`; new "Enforce AC2" step (attach-or-refuse); the final fail-closed assertion step is
+  unchanged.
+- `_bmad-output/implementation-artifacts/3-6-verify-commit-traceability-and-image-immutability.md` —
+  this file: Tasks 2, 3, 6, 7 checkboxes and notes; Open Question 2 answered; this Dev Agent Record,
+  File List and Change Log added; `Status` and frontmatter unchanged otherwise.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status `ready-for-dev` →
+  `in-progress`; `last_updated` deduplicated and set to 2026-08-18; `epic-3` left `in-progress`
+  (unchanged).
+- `_bmad-output/implementation-artifacts/deferred-work.md` — updated the "MEASURED 2026-08-17" entry
+  with the guard's implementation status and what remains unverified; closed two of three items in the
+  "AC2's guarantee covers two variables" bullet (§4b); marked `probe/3-6-cold-cache` cleanup as still
+  blocked rather than done.
+- `docs/migration-decisions.md` — added [D23](../../docs/migration-decisions.md#d23) (summary-table
+  row + full section, anchored above the heading and before the changelog anchor); added a changelog
+  row dated 18.08.2026; closed the `VITE_OPERATOR_PHONE_URL`/`VITE_BUILD_TS` part of D20 §6 in place.
+- `_bmad-output/planning-artifacts/epics.md` — Story 3.6's AC1 and AC2 amended in place (Task 6.4) with
+  the `sha-<12>-<env>` reading and the "refuse, not document" decision, no reflow.
+
+---
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-18 | Task 2 (budget) declared but not spent — no dispatch/DB access this session. Task 3.2/3.3 implemented: `build.yml`'s AC2 guard, split around the build step so a repoint can be refused rather than only detected; the "legitimate rebuild" question closed without an override. Task 3.4, 4, 5, and most of Task 7 left unchecked — blocked on a missing Forgejo API token / SSH access, recorded per-task rather than guessed at. Task 6 done: [D23](../../docs/migration-decisions.md#d23) added, `deferred-work.md` updated, `epics.md` AC1/AC2 amended in place. `sprint-status.yaml` moved to `in-progress`. |
