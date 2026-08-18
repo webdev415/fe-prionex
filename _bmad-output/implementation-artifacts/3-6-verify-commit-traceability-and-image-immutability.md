@@ -29,8 +29,8 @@ So that "deploy this tag" is an unambiguous instruction and an audit can reconst
 
 | # | Change | Why |
 |---|---|---|
-| 1 | **Measure whether `sha-<12>-<env>` actually gets repointed** — before deciding anything | §2. It has been asserted repeatedly and demonstrated **never**, and the ground moved under it last week |
-| 2 | Decide AC2: refuse the repoint, or document it. **Refusing is the default** | §2, §3 |
+| 1 | ✅ **DONE 2026-08-17 — measured, and the repoint is real.** Do not re-run it | §2, and the evidence is in *Measurement Record* below |
+| 2 | Decide AC2: refuse the repoint, or document it. **Refusing is the default**, and §2's measurement now removes the last argument for documenting | §2, §3 |
 | 3 | Record AC1 and AC3 as already met, with the evidence | §1 — do not re-implement them |
 | 4 | Close AC4 for the whole epic | §5 |
 
@@ -64,7 +64,7 @@ confirm the labels are still present on a current image before writing that down
 above is from 2026-08-17 and this story may run later. Reading a document as current state is the
 error that has cost this project the most (see §6).
 
-### 2. 🔴 AC2 is the whole story, and step one is to find out whether the problem still exists
+### 2. 🔴 AC2 is the whole story — and as of 2026-08-17 the problem is measured, not suspected (§2b)
 
 AC2 asks that an existing `sha-<short>` tag is not silently repointed to a different digest when the
 same commit is rebuilt.
@@ -92,12 +92,18 @@ FROM nginx:alpine@sha256:4a73073bd557…
 3. **The npm registry** and lifecycle scripts.
 4. **The OpenBao values**, which can change under a commit that did not.
 
-So the honest position at the start of this story is: **nobody knows whether rebuilding the same
-commit still produces a different digest, and the answer probably depends on whether the cache
-hits.**
+🔴 **That paragraph is now history. The experiment was run on 2026-08-17, before this story opened,
+and it answered the question: the repoint IS real, on the cold-cache path, and cause 1 is the one
+that did it.** The evidence is in *Measurement Record* below; the rest of §2 is kept because it
+explains why the experiment was designed the way it was, and because its warnings about reading a
+warm-cache result still apply to anyone tempted to re-run it.
 
-**Task 1 is to measure it — but an earlier draft of this file designed the experiment badly, and
-validation caught two faults worth knowing before you run it.**
+*(The paragraph this replaces read: "nobody knows whether rebuilding the same commit still produces a
+different digest, and the answer probably depends on whether the cache hits." It was true when
+written and is not true now — §6's own rule.)*
+
+**Task 1 was to measure it — an earlier draft of this file designed the experiment badly, and
+validation caught two faults. Both were corrected before the run, and both mattered:**
 
 🔴 **Fault one: the dispatches serialize.** `build.yml` carries
 `concurrency: group: build-${{ inputs.ref }}`, so two dispatches of the same `ref` queue rather than
@@ -125,7 +131,172 @@ Task 1.4.
 `dev` tags expire at 14 days, so the experiment costs nothing permanent. Do **not** run it on
 `preprod` or `prod` (Prohibition 4).
 
-### 3. If a guard is needed, refuse — do not reach for the escape hatch
+### 2b. ✅ Measurement Record — Task 1, executed 2026-08-17 before this story opened
+
+**Verdict: `sha-<12>-<env>` IS silently repointed when the same commit is rebuilt off the cache
+path. AC2's forbidden event is not hypothetical — it has happened, and the artifact is in the
+registry now.**
+
+Four runs touched commit `ff416712` and its tag `sha-ff416712653e-dev`:
+
+| `action_run` | workflow | trigger | ref built | secs | cache |
+|---|---|---|---|---|---|
+| 696 | `build-main.yml` | push of the merge | `main` @ `ff416712` | 30 | warm |
+| 697 | `build.yml` | `workflow_dispatch` `{dev, main}` | `main` @ `ff416712` | 28 | warm |
+| 698 | `build.yml` | `workflow_dispatch` `{dev, main}` | `main` @ `ff416712` | 28 | warm |
+| **700** | `build.yml` **from `probe/3-6-cold-cache`, `cache-from` removed** | `workflow_dispatch` `{dev, main}` | `main` @ `ff416712` | **147** | **cold** |
+
+The probe branch (`d2b91416`) exists precisely to defeat the confound named in §2: changing
+`build.yml` changes the build context, because `.dockerignore` does not exclude `.forgejo/`.
+Dispatching the **probe branch's workflow** with `inputs.ref: main` takes the workflow from the probe
+and the content from `main`, so the built tree is byte-identical to what 697/698 built and any digest
+difference is attributable to the cache path alone. 147s against 28s confirms the cold path was
+actually taken.
+
+**What is under the tag now:**
+
+```
+sha-ff416712653e-dev  →  sha256:d1cc776c7fe3dcda4a65f056fd318ec8938f753b51b6e01ad15e7ffa583aa582
+config sha256:7809c58106807881…  .created = 2026-08-17T12:40:34.805738608Z  (14:40:34 +02:00)
+```
+
+**The proof that this is a repoint, without needing the old digest** — which is gone, and no orphaned
+untagged manifest survives for that window:
+
+1. `config.created` is BuildKit's real build timestamp. Verified as a discriminator on four
+   independent images, each matching its publication moment to the second: `sha-d2b91416d0fa-dev` →
+   14:47:40 (run 699, 14:45:40–14:48:07); `sha-15ba38488819-dev` → 14:33:13; `sha-7911d63de371-dev` →
+   13:02:18; and the one above → 14:40:34, inside run 700's window of 14:38:35–14:41:02.
+2. Runs 697 and 698 finished at **14:34:47** and **14:35:48**. A config blob cannot carry a future
+   timestamp, so `d1cc776c…` did not exist when they published this tag.
+3. Therefore the tag resolved to a different digest then than it does now. **It was repointed, and
+   nothing announced it.**
+
+**Cause, per Task 1.4 — first answer, and it turned out to be the smaller half.** Suspect 1 of §2,
+the BuildKit config timestamp, is real and guarantees a different manifest digest on any cache-miss
+rebuild. But a second measurement the next day found a mechanism neither §2 nor the deferred record
+had listed, and it dominates: see the layer comparison below.
+
+#### 🔴 The layer question — answered 2026-08-18, and the answer is worse than the config timestamp
+
+*(An earlier version of this section said the layer question was "unanswerable from this run". That
+was true of run 700 alone. It stopped being true the moment a second image with the same source was
+built, and the answer arrived free, from this story's own PR.)*
+
+Run 701 built `story-3-6/pr-3-task-1-measured` — `main` plus two markdown files. Comparing it with
+run 700's image layer by layer:
+
+| # | 700 (`ff416712`) | 701 (`690ac376`) | |
+|---|---|---|---|
+| 1–8 | identical | identical | the two pinned base images |
+| 9 | `09c86ed94e68`, 4 002 940 B | `d9e99e53a205`, 4 003 600 B | **DIFFER** — `/usr/share/nginx/html`, the built bundle |
+| 10 | `026185e04788`, 1 225 B | `ed1b290bb524`, 1 221 B | **DIFFER** — `nginx.conf`, whose content is byte-identical |
+
+Layer 9 unpacked: **154 files on each side, and almost every one has both a different name and a
+different content hash.** Vite content-hashes its filenames, so this is a genuinely different
+bundle, not a re-tar of the same bytes. Layer 10 differing on identical content is the tar-metadata
+effect, and it is the *small* half of the problem.
+
+**Root cause — `vite.config.ts:8`:**
+
+```ts
+define: {
+  'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())),
+},
+```
+
+`Date.now()` is evaluated at build time and baked in as a literal. It reaches `src/lib/i18n.ts:9`,
+which nearly everything imports, so the content-hash cascade renames and rewrites almost every chunk.
+**Two builds of the same commit cannot produce the same bundle — not on a warm cache, not on a cold
+one, not ever.** The image is non-reproducible by construction of the source, and no amount of
+pinning, caching or guarding in `build.yml` can change that.
+
+🔴 **This supersedes the cause recorded for Task 1.4.** The BuildKit config timestamp is real but it
+is the *lesser* mechanism; it explains layer 10 and the config blob. `Date.now()` in the Vite config
+explains layer 9, which is the actual application.
+
+🔴 **Consequence for Task 3, and it is worse than a dead branch.** §3's guard has three branches, and
+the middle one is *"present, same digest → nothing to do; the artifact is already published"*.
+
+*(A first draft of this paragraph said that branch was unreachable on any rebuild. That is wrong, and
+the error matters because Task 3's design rests on it. `Date.now()` is evaluated when the bundle is
+**built**; on a full cache hit BuildKit does not build it — it restores the cached layer and the
+cached config, timestamp and all. That is precisely why runs 697 and 698 matched.)*
+
+So which branch a rebuild takes is decided by **whether the cache hit**:
+
+| rebuild | bundle | outcome |
+|---|---|---|
+| full cache hit | restored, not rebuilt | same digest → guard's middle branch, build passes |
+| cache miss | rebuilt, new `Date.now()` | different digest → guard fires, build fails |
+
+**The guard's verdict therefore depends on `:buildcache` — a single shared mutable tag that any
+branch's build can overwrite.** §2b's own side effect 1 is the demonstration: a probe branch's push
+evicted `main`'s cache at 14:48:02. The same rebuild of the same commit would pass before that and
+fail after it, with nothing in the commit having changed.
+
+That is not a reason to abandon the guard, but it had to be answered before Task 3 could be written.
+
+✅ **DECIDED 2026-08-18 by Oleg: the guard only. `vite.config.ts` is not touched.**
+
+The alternative on the table was replacing `Date.now()` with the commit SHA — a one-line change that
+would preserve the locale cache-busting intent and make the bundle reproducible. It was declined:
+Story 3.6 is a CI story, and `vite.config.ts` is application source. **AC2 is satisfied by refusing
+the repoint, which does not require reproducibility.**
+
+What this commits the implementation to:
+
+- The guard is written as §3 describes: absent → push; present and equal → nothing to do; present and
+  different → fail, naming both digests.
+- **The cache dependency is documented as known behaviour, not designed away.** A rebuild passes on a
+  cache hit and fails on a cache miss, and `:buildcache` is evictable by any branch. Write it down at
+  the guard, in the words above, so the next person to hit «прошло вчера, падает сегодня» finds the
+  explanation instead of re-deriving it.
+- ⚠️ **This is not AC2's escape hatch.** The repoint is refused, which is what AC2 asks. What is
+  documented rather than fixed is the *source-level non-reproducibility underneath it* — a different
+  and larger problem, which stays open below.
+
+**This also closes the `VITE_BUILD_TS` half of §4b, and not the way that section expects.** §4b asks
+whether the in-code fallback is safe. The question does not arise: `define` performs a textual
+substitution, so `import.meta.env.VITE_BUILD_TS ?? '1'` compiles to `"<millis>" ?? '1'`. The `?? '1'`
+fallback is **dead code**, and adding `VITE_BUILD_TS` to the build-arg contract would change nothing —
+`define` overrides it. Whatever §4b decides, it is not "add it to the contract".
+
+⚠️ **Still not established:** whether npm or the OpenBao values would *also* break reproducibility.
+They are now moot for the digest question — `Date.now()` guarantees the answer on its own — but they
+remain unmeasured, and if `vite.config.ts:8` is ever fixed they become live again.
+
+⚠️ **Why 697 and 698 matched each other.** On a full cache hit BuildKit restores the cached image
+config, timestamp included, so both inherited one `created` and produced one digest. That is exactly
+the narrow claim §2's table warns about — and it is now the measured explanation for it, not a
+hypothesis.
+
+**Route used, so it can be repeated:** Forgejo API `/api/v1/repos/CRM/fe-prionex/actions/runs`
+(fields `prettyref`, `commit_sha`, `event_payload.inputs`, `started`/`stopped`) for the runs;
+`/api/v1/packages/CRM?type=container` and the registry v2 API
+(`/v2/token?scope=repository:crm/fe-prionex:pull` → `GET /v2/crm/fe-prionex/manifests/<tag>`, then
+the config blob) for the digests. The packages and registry routes need a `read:package` token —
+`fe_tmp_1_7` does not have it. Run logs are **not** retrievable on this instance: every documented
+API path returns 404, and the DB and on-disk log routes were unavailable in-session.
+
+#### 🔴 Three things the measurement left behind — clean these up in Task 7
+
+1. **The shared `buildcache` is polluted.** The probe removed `cache-from` but left `cache-to`, so
+   run 700 exported its cold build, and then `ci.yml` on the probe branch's own push (run 699,
+   660s) overwrote `:buildcache` at 14:48:02 with the **probe branch's** layers. The shared cache
+   currently holds probe content, not `main` — the next `main` builds will partially miss. This is
+   also a live example of the same class of hazard AC2 is about: a shared mutable tag rewritten by
+   whoever pushed last.
+2. **`probe/3-6-cold-cache` is still on the remote**, one commit ahead of `main`, and its push
+   triggered a full `ci.yml`. Delete it once the record here is merged — the evidence lives in this
+   file, not in the branch.
+
+3. **A second standing token exists.** `fe_pkg_3_6` (`read:package`, on `platform-admin`) was minted
+   2026-08-17 to read the digests above, because `fe_tmp_1_7` is scoped
+   `write:repository,read:organization`. Owner and revocation trigger recorded in
+   `deferred-work.md`; the `fe_tmp` entry went stale for a full story once already.
+
+### 3. The guard IS needed (§2b settled that) — refuse, do not reach for the escape hatch
 
 AC2 permits documenting the behaviour instead of fixing it. **Story 3.2 already used that clause as
 an argument**, and this project's record with deferral is poor: semver was deferred twice before
@@ -182,8 +353,12 @@ from a Forgejo CI variable, and dev/preprod are deliberately empty (Oleg, 2026-0
 
 **Still open, and this story owns them:**
 
-- `VITE_EASYPAY_PORTAL_API_KEY` and `VITE_BUILD_TS` remain **outside** the contract, with in-code
-  fallbacks nobody has audited the way the phone URL was audited.
+- `VITE_EASYPAY_PORTAL_API_KEY` remains **outside** the contract, with an in-code fallback nobody has
+  audited the way the phone URL was audited.
+- ✅ **`VITE_BUILD_TS` is audited (2026-08-18) and the answer is not "add it to the contract".**
+  `vite.config.ts:8` bakes `Date.now()` in via `define`, so the `?? '1'` fallback at
+  `src/lib/i18n.ts:9` is dead code and a build arg would be overridden. It is also the dominant cause
+  of AC2's repoint — see §2b. Decide it as a reproducibility question, not a contract-coverage one.
 - **Neither D20 §6 nor `deferred-work.md` is marked closed for the part that IS fixed.** Closing a
   record is part of fixing a thing; this story should do it rather than leave a live-looking entry.
 
@@ -268,9 +443,10 @@ exercised ~30×/day whether this story asks for it or not.
 ### Prohibitions
 
 1. **Do not re-implement AC1 or AC3.** They are done; confirm and record.
-2. **Do not write the AC2 guard before Task 1 has measured whether the problem exists.** Guarding
-   against something that no longer happens is how this file accumulates guards that cannot fire —
-   there have been three.
+2. ✅ **Satisfied — Task 1 has measured it (§2b) and the problem exists.** The prohibition was
+   against writing the guard on an assumption; that condition is now met, so the guard may be
+   written. Prohibition 3 and Task 3.4 still stand: do not weaken the assertion, and prove the guard
+   can fire.
 3. **Do not weaken the digest assertion** to make a new case fit.
 4. **Do not use `preprod` or `prod` for the AC2 experiment.** Their tags are permanent. `dev`
    expires at 14 days and answers the same question.
@@ -302,9 +478,11 @@ registry 2026-08-17 (§1). Confirm it still holds, record the evidence, do not r
 **Then** the existing tag is not silently repointed to a different digest, or if it is, the
 behaviour is detected and documented as a known limitation.
 
-*Reading: 🔴 **the only real work in this story.** Whether the repoint happens at all is unmeasured,
-and one of its two causes was removed on 2026-08-17 by pinning the base images. Measure first (§2),
-then refuse rather than document (§3).*
+*Reading: 🔴 **the only real work in this story — and the measurement is now done.** The repoint was
+demonstrated on 2026-08-17 (§2b): the same commit rebuilt off the cache path produced a different
+digest and the tag moved silently. What remains is the decision and the guard (§3). The escape
+hatch — "or the behaviour is detected and documented" — is now the weakest it has ever been: the
+behaviour is detected, and §5 says three later stories rely on it not happening.*
 
 **AC3 — the environment is in the image, not just the tag.**
 
@@ -331,34 +509,41 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 
 ## Tasks / Subtasks
 
-### Task 1 — Measure whether the repoint still happens (AC: 2)
+### Task 1 — Measure whether the repoint still happens (AC: 2) — ✅ DONE 2026-08-17, see §2b
 
-- [ ] 1.1 Confirm the base-image pins are still in `Dockerfile.prod` and that the labels of §1 are
-      still on a current image. Both are 2026-08-17 facts.
-- [ ] 1.2 Dispatch `build.yml` twice for the same `ref`, `environment: dev`, **sequentially** —
-      `concurrency` is keyed on `inputs.ref`, so parallel dispatches queue rather than race. Record
-      both digests from `action_run_job` / `package_version`, the runner each landed on, **and
-      whether each build hit the cache** (`CACHED` markers in the log).
-- [ ] 1.3 🔴 Compare, and **state what the result does and does not prove** using the table in §2. An
-      identical pair under a warm cache is NOT "AC2 met by construction" — it is one narrow path
-      shown deterministic.
-- [ ] 1.4 If they differ, determine the cause before designing anything. Live suspects: **BuildKit
-      layer/config timestamps** (the most likely on a cache miss, and unfixable by pinning), the new
-      `VITE_OPERATOR_PHONE_URL` CI variable, npm, and the OpenBao values.
-- [ ] 1.5 ⚠️ Consider whether a cold-cache case can be produced at acceptable cost — that is the
-      scenario the record actually calls dangerous, and a warm-cache result does not reach it. If it
-      cannot, say so rather than letting the warm result stand in for it.
+- [x] 1.1 Confirm the base-image pins are still in `Dockerfile.prod` and that the labels of §1 are
+      still on a current image. — *Labels confirmed on `sha-ff416712653e-dev`:
+      `org.opencontainers.image.revision = ff416712653ea2d204a3b6ea3c0ae722b094e5f6` (full SHA, AC1),
+      `org.prionex.environment = dev` (AC3), plus `org.prionex.ref = main` and
+      `org.prionex.latest-eligible = true`. §1's evidence is still current.*
+- [x] 1.2 Dispatch `build.yml` twice for the same `ref`, `environment: dev`, **sequentially**. —
+      *Done as runs 697 and 698, plus the cold run 700; the table is in §2b. Cache state was read
+      from durations (28s warm vs 147s cold) and from `config.created`, **not** from `CACHED`
+      markers: run logs are not retrievable on this instance (404 on every documented API path).*
+- [x] 1.3 🔴 Compare, and **state what the result does and does not prove**. — *§2b does both. Result
+      is the table's **"differ"** row: the repoint is real. The warm pair 697/698 is explicitly NOT
+      read as "AC2 met by construction" — §2b explains why they matched each other.*
+- [x] 1.4 If they differ, determine the cause. — *Suspect 1, the BuildKit config timestamp. ⚠️ The
+      layer-level question stays open and is unanswerable from this run — §2b says so rather than
+      letting the config result stand in for it.*
+- [x] 1.5 ⚠️ Consider whether a cold-cache case can be produced at acceptable cost. — *It was
+      produced: `probe/3-6-cold-cache` removes `cache-from` and is dispatched with `inputs.ref:
+      main`, which defeats the build-context confound. This is the dangerous scenario the record
+      names, and it is the one that failed.*
 
 ### Task 2 — Declare the budget (AC: all)
 
 - [ ] 2.1 State expected runs for **implementation and review separately**, before Task 3. Story 3.5
-      overran by exactly the review round it did not budget.
+      overran by exactly the review round it did not budget. *Baseline: `action_run.id` **700** is the
+      last run before this story's implementation — the four runs Task 1 consumed (696–700) are
+      already spent and belong in the ledger, not outside it.*
 - [ ] 2.2 List every tag this story could push and compile the live `keep_pattern` against each.
 
 ### Task 3 — Decide and implement AC2 (AC: 2)
 
-- [ ] 3.1 Decide in writing: refuse, or document. **Refusing is the default** (§3); documenting
-      needs a reason that survives §3's argument.
+- [x] 3.1 Decide in writing: refuse, or document. — *✅ **Refuse.** Decided by Oleg 2026-08-18; the
+      reasoning, what was declined and why, and what the decision commits the implementation to are
+      in §2b. `vite.config.ts` stays untouched — this is a CI story.*
 - [ ] 3.2 If refusing: the guard shape is in §3. Fail with BOTH digests named.
 - [ ] 3.3 Handle the legitimate rebuild case explicitly (§3).
 - [ ] 3.4 🔴 **Prove the guard can fire.** A guard that cannot fail proves nothing — three in this
@@ -392,6 +577,12 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 - [ ] 7.2 Update `sprint-status.yaml`; consider whether `epic-3` moves to `done`.
 - [ ] 7.3 Close the budget ledger by query.
 - [ ] 7.4 🔴 Merge, verify `main` moved, and only then delete the branch.
+- [ ] 7.5 Delete `probe/3-6-cold-cache` from the remote — its evidence now lives in §2b, and the
+      branch is one commit of deliberately broken `build.yml` sitting where someone could dispatch
+      it (§2b, side effect 2).
+- [ ] 7.6 Decide what to do about the polluted `:buildcache` (§2b, side effect 1). It self-heals on
+      the next `main` build, so "nothing" is a legitimate answer — but say it, rather than leaving
+      the next slow build unexplained.
 
 ---
 
@@ -425,8 +616,10 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 
 ### Blocking
 
-1. 🔴 **Does the repoint still happen?** Unmeasured, and one of its two causes was removed on
-   2026-08-17. Task 1 answers it in two dispatches, and the answer decides the rest of the story.
+1. ✅ **ANSWERED 2026-08-17 — yes, it still happens.** Measured in §2b: the same commit rebuilt off
+   the cache path produced a different digest and `sha-ff416712653e-dev` moved silently. The cause is
+   the BuildKit config timestamp, which pinning cannot remove. This question is closed; what it
+   decided is that §3's guard is warranted.
 
 ### Non-blocking
 

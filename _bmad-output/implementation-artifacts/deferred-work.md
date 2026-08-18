@@ -2026,3 +2026,110 @@ answers HTTPS 200; `phone.crm.preprod.crm-prionex.online` is NXDOMAIN.
 regression. `VITE_OPERATOR_PHONE_URL_PROD` exists.
 
 **If that ever changes**, adding the environment is a variable and nothing else — no code change.
+
+---
+
+## 🔴 MEASURED 2026-08-17 — the `sha-<12>-<env>` repoint is real, and this closes a claim that had been reasoned four times and measured never
+
+**Owner of the fix: Story 3.6, AC2.** This entry supersedes *"Opened by Story 3.4"*, item 2, which
+argued from first principles that the same commit rebuilt from two refs would not be reproducible.
+It was right, but it was an argument. This is the measurement.
+
+**Verdict.** Commit `ff416712` was built four times for `dev`. Runs 696/697/698 hit the registry
+cache (30s, 28s, 28s). Run 700 was dispatched from `probe/3-6-cold-cache` — a branch whose only
+change is removing `cache-from` from `build.yml` — with `inputs.ref: main`, so the workflow came from
+the probe and the content from `main`. It took **147s** and pushed a different image. The tag
+`sha-ff416712653e-dev` now resolves to
+`sha256:d1cc776c7fe3dcda4a65f056fd318ec8938f753b51b6e01ad15e7ffa583aa582`, whose config blob carries
+`created = 2026-08-17T12:40:34Z` — six minutes **after** runs 697 and 698 finished. A config blob
+cannot be stamped with a future time, so that image is not the one they published. **The tag was
+moved, and nothing announced it.**
+
+**Cause: the BuildKit config timestamp**, which changes on any cache-miss rebuild and which pinning
+the base images by digest — done the same day — cannot touch. The base-image pins removed one of the
+listed causes; this one was always the dominant one.
+
+**🔴 UPDATED 2026-08-18 — the layers differ too, and the real cause is in our own source.** The
+first version of this entry said the layer question was unanswerable. It became answerable as soon as
+a second image was built from the same source: run 701, this story's own PR branch. Layers 1–8 (the
+two pinned base images) are identical; layer 9 — the built bundle — differs, and unpacking it shows
+**154 files on each side with almost every name and content hash different**. Vite content-hashes
+filenames, so that is a genuinely different bundle.
+
+**Root cause: `vite.config.ts:8`.**
+
+```ts
+define: { 'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())) },
+```
+
+`Date.now()` is baked in as a literal at build time, reaches `src/lib/i18n.ts:9`, and the
+content-hash cascade rewrites nearly every chunk. **Two builds of the same commit cannot produce the
+same bundle — warm cache, cold cache, or otherwise.** The artifact is non-reproducible by
+construction of the source, and nothing in `build.yml` can change that. The BuildKit config timestamp
+is still real, but it is the lesser mechanism: it accounts for the config blob and for layer 10,
+whose content (`nginx.conf`) is byte-identical.
+
+Two consequences worth carrying forward:
+
+- **The §3 guard's verdict depends on the shared `:buildcache`.** `Date.now()` is evaluated when the
+  bundle is *built*; on a full cache hit BuildKit restores the cached layer and config instead, which
+  is why runs 697/698 matched. So a rebuild takes the "same digest → nothing to do" branch on a cache
+  hit and fires the guard on a cache miss — and `:buildcache` is one mutable tag any branch can
+  evict, as a probe branch did to `main` at 14:48:02. The same rebuild of the same commit can pass
+  today and fail tomorrow with no change to the commit. Story 3.6 Task 3 owns the answer.
+- **`VITE_BUILD_TS` is not a contract-coverage gap.** `define` substitutes textually, so the `?? '1'`
+  fallback is dead code and supplying the build arg would be overridden. D20 §6 lists it alongside
+  `VITE_EASYPAY_PORTAL_API_KEY`; only the latter is still the question that section thinks it is.
+
+⚠️ Still unmeasured: whether npm or the OpenBao values would *also* break reproducibility. Moot for
+the digest question while `Date.now()` is there; live again the moment it is fixed.
+
+**🔴 OPEN, and it outlives Story 3.6 — the build is not reproducible at source level.**
+Decided 2026-08-18 (Oleg): Story 3.6 refuses the repoint with a guard and does **not** touch
+`vite.config.ts`. That satisfies AC2, which asks for immutability of the tag rather than
+reproducibility of the build. It leaves this open:
+
+- `vite.config.ts:8` bakes `Date.now()` into every build. **Replacing it with the commit SHA is a
+  one-line change** that keeps the locale cache-busting intent — a new commit yields a new string —
+  and makes the bundle deterministic. Declined for 3.6 on scope grounds (CI story, application
+  source), not on merit.
+- Even with that fixed, identical **digests** additionally need `SOURCE_DATE_EPOCH` so BuildKit stops
+  stamping build time into the config and layer metadata. Larger, and deliberately not attempted.
+- Consequence while it stays open: the AC2 guard passes on a cache hit and fails on a cache miss.
+  Story 3.6 documents this at the guard rather than designing it away.
+
+**Owner: unassigned.** Raise it when something actually needs a rebuild to reproduce — a supply-chain
+attestation, a security rebuild of a released commit, or a dispute about what a `prod` tag contained.
+
+**Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
+refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
+rollback target. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
+that changed underneath it.
+
+**Side effect, live now:** the shared `:buildcache` tag was overwritten at 14:48:02 by `ci.yml` on the
+probe branch's own push (run 699), so it holds the probe branch's layers rather than `main`'s. It
+self-heals on the next `main` build. Noted because an unexplained slow build is how this kind of
+thing gets misdiagnosed — and because it is the same hazard class as AC2: a shared mutable tag
+rewritten by whoever pushed last.
+
+**Open:** `probe/3-6-cold-cache` is still on the remote, one commit ahead of `main`, carrying a
+deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it.
+
+---
+
+## Token minted 2026-08-17 — `fe_pkg_3_6`, and it needs an exit
+
+`fe_tmp_1_7` is scoped `write:repository,read:organization`, which **cannot read the container
+registry** — both `/api/v1/packages/{owner}` and the registry v2 API return 401
+`required scope(s): [read:package]`. Reading the digests above needed a second token.
+
+- **Name:** `fe_pkg_3_6`, scope `read:package`, on `platform-admin`, minted 2026-08-17 by Oleg.
+- **Owner:** Oleg. It is on his own account, so unlike the `fe_tmp` case he **can** revoke it from
+  the UI — see the standing note that an admin cannot revoke another account's token.
+- **Revocation trigger:** when Epic 3 closes, or when a longer-lived read route to the registry is
+  decided — whichever comes first.
+
+⚠️ Recorded here because the `fe_tmp` entry went stale for a full story once already, and the whole
+point of that lesson was to check this file before assuming anything about token state. There are now
+**two** standing tokens, not one; the open policy question (one token per epic vs. scoped
+short-lived token per story) is unchanged and still not urgent.
