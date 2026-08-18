@@ -235,12 +235,26 @@ branch's build can overwrite.** §2b's own side effect 1 is the demonstration: a
 evicted `main`'s cache at 14:48:02. The same rebuild of the same commit would pass before that and
 fail after it, with nothing in the commit having changed.
 
-That is not a reason to abandon the guard, but Task 3 has to answer it. A guard whose outcome turns
-on a shared cache is non-deterministic in exactly the dimension AC2 is about — and «прошло вчера,
-падает сегодня» is the kind of behaviour this project has repeatedly traced back to an unexamined
-assumption. Options worth weighing in writing: accept it and document the cache dependency; scope the
-guard to the paths where a rebuild is not routine; or remove the non-determinism at its source (see
-below) so that both branches agree.
+That is not a reason to abandon the guard, but it had to be answered before Task 3 could be written.
+
+✅ **DECIDED 2026-08-18 by Oleg: the guard only. `vite.config.ts` is not touched.**
+
+The alternative on the table was replacing `Date.now()` with the commit SHA — a one-line change that
+would preserve the locale cache-busting intent and make the bundle reproducible. It was declined:
+Story 3.6 is a CI story, and `vite.config.ts` is application source. **AC2 is satisfied by refusing
+the repoint, which does not require reproducibility.**
+
+What this commits the implementation to:
+
+- The guard is written as §3 describes: absent → push; present and equal → nothing to do; present and
+  different → fail, naming both digests.
+- **The cache dependency is documented as known behaviour, not designed away.** A rebuild passes on a
+  cache hit and fails on a cache miss, and `:buildcache` is evictable by any branch. Write it down at
+  the guard, in the words above, so the next person to hit «прошло вчера, падает сегодня» finds the
+  explanation instead of re-deriving it.
+- ⚠️ **This is not AC2's escape hatch.** The repoint is refused, which is what AC2 asks. What is
+  documented rather than fixed is the *source-level non-reproducibility underneath it* — a different
+  and larger problem, which stays open below.
 
 **This also closes the `VITE_BUILD_TS` half of §4b, and not the way that section expects.** §4b asks
 whether the in-code fallback is safe. The question does not arise: `define` performs a textual
@@ -527,8 +541,9 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 
 ### Task 3 — Decide and implement AC2 (AC: 2)
 
-- [ ] 3.1 Decide in writing: refuse, or document. **Refusing is the default** (§3); documenting
-      needs a reason that survives §3's argument.
+- [x] 3.1 Decide in writing: refuse, or document. — *✅ **Refuse.** Decided by Oleg 2026-08-18; the
+      reasoning, what was declined and why, and what the decision commits the implementation to are
+      in §2b. `vite.config.ts` stays untouched — this is a CI story.*
 - [ ] 3.2 If refusing: the guard shape is in §3. Fail with BOTH digests named.
 - [ ] 3.3 Handle the legitimate rebuild case explicitly (§3).
 - [ ] 3.4 🔴 **Prove the guard can fire.** A guard that cannot fail proves nothing — three in this

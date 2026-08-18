@@ -2084,6 +2084,23 @@ Two consequences worth carrying forward:
 ⚠️ Still unmeasured: whether npm or the OpenBao values would *also* break reproducibility. Moot for
 the digest question while `Date.now()` is there; live again the moment it is fixed.
 
+**🔴 OPEN, and it outlives Story 3.6 — the build is not reproducible at source level.**
+Decided 2026-08-18 (Oleg): Story 3.6 refuses the repoint with a guard and does **not** touch
+`vite.config.ts`. That satisfies AC2, which asks for immutability of the tag rather than
+reproducibility of the build. It leaves this open:
+
+- `vite.config.ts:8` bakes `Date.now()` into every build. **Replacing it with the commit SHA is a
+  one-line change** that keeps the locale cache-busting intent — a new commit yields a new string —
+  and makes the bundle deterministic. Declined for 3.6 on scope grounds (CI story, application
+  source), not on merit.
+- Even with that fixed, identical **digests** additionally need `SOURCE_DATE_EPOCH` so BuildKit stops
+  stamping build time into the config and layer metadata. Larger, and deliberately not attempted.
+- Consequence while it stays open: the AC2 guard passes on a cache hit and fails on a cache miss.
+  Story 3.6 documents this at the guard rather than designing it away.
+
+**Owner: unassigned.** Raise it when something actually needs a rebuild to reproduce — a supply-chain
+attestation, a security rebuild of a released commit, or a dispute about what a `prod` tag contained.
+
 **Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
 refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
 rollback target. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
