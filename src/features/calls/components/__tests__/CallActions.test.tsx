@@ -19,6 +19,22 @@ function renderActions(over: Partial<Parameters<typeof CallActions>[0]> = {}) {
 const buttons = () => screen.getAllByRole('button')
 
 describe('CallActions', () => {
+  it('tells the operator to use their handset when the CRM cannot answer', () => {
+    render(<CallActions phase="ringing" onCancel={vi.fn()} />)
+
+    // Without onAccept there is no way to take the call from the window, and
+    // an operator staring at a ringing popup with no Accept button and no
+    // explanation waits for it instead of picking up.
+    expect(screen.queryByRole('button', { name: /accept/i })).toBeNull()
+    expect(screen.getByText(/answerOnSoftphone|softphone/i)).toBeVisible()
+  })
+
+  it('drops the handset hint once answering is available', () => {
+    render(<CallActions phase="ringing" onCancel={vi.fn()} onAccept={vi.fn()} />)
+
+    expect(screen.queryByText(/answerOnSoftphone|softphone/i)).toBeNull()
+  })
+
   it('offers hang-up and Accept while ringing, never Hold', () => {
     renderActions({ phase: 'ringing' })
 

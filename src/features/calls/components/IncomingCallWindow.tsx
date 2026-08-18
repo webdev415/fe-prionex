@@ -27,9 +27,11 @@ interface IncomingCallWindowProps {
   interactionDraft?: Partial<CallInteractionDraftState>
   onInteractionDraftChange?: (draft: CallInteractionDraftState) => void
   onMinimize: () => void
-  onAccept: () => void
+  /** Absent where the deployment cannot answer from the CRM; see the container. */
+  onAccept?: () => void
   onCancel: () => void
-  onHold: () => void
+  /** Absent for the same reason as `onAccept`. */
+  onHold?: () => void
   acceptPending?: boolean
   holdPending?: boolean
   cancelPending?: boolean

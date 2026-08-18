@@ -16,6 +16,17 @@ import { IncomingCallWindow } from './IncomingCallWindow'
 import type { CallInteractionDraft, CallInteractionDraftState } from './CallInteractionForm'
 import type { CallPhase } from './CallActions'
 
+/**
+ * Whether this deployment can answer a call from the CRM.
+ *
+ * Answering redirects the caller into an Asterisk dialplan context that not
+ * every deployment has, and the call-service refuses the request until its own
+ * flag is set. Mirrored here so the button is absent rather than present and
+ * failing — an operator shown a control that errors reports a broken feature,
+ * and meanwhile does not pick up the handset.
+ */
+const ANSWER_FROM_CRM_ENABLED = import.meta.env.VITE_CALL_ANSWER_ENABLED === 'true'
+
 interface IncomingCallWindowContainerProps {
   incomingCall: IncomingCallData
   /** When this operator took the call, or null while it is still ringing. */
@@ -118,15 +129,22 @@ export function IncomingCallWindowContainer({
       interactionDraft={draft}
       onInteractionDraftChange={setDraft}
       onMinimize={onMinimize}
-      onAccept={() =>
-        answer.mutate(incomingCall.call_id, {
-          // Local knowledge is the earliest and most reliable signal that this
-          // operator holds the call; the state event may not name an answerer
-          // at all.
-          onSuccess: onAnswered,
-        })
+      onAccept={
+        ANSWER_FROM_CRM_ENABLED
+          ? () =>
+              answer.mutate(incomingCall.call_id, {
+                // Local knowledge is the earliest and most reliable signal that
+                // this operator holds the call; the state event may not name an
+                // answerer at all.
+                onSuccess: onAnswered,
+              })
+          : undefined
       }
-      onHold={() => hold.mutate({ callId: incomingCall.call_id, hold: true })}
+      onHold={
+        ANSWER_FROM_CRM_ENABLED
+          ? () => hold.mutate({ callId: incomingCall.call_id, hold: true })
+          : undefined
+      }
       onCancel={() => {
         reject.mutate(incomingCall.call_id)
         onDismiss()

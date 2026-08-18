@@ -34,6 +34,10 @@ export function CallActions({
   cancelPending = false,
 }: CallActionsProps) {
   const { t } = useTranslation('common')
+  // Answering from the CRM needs an Asterisk dialplan that not every deployment
+  // has; without it the operator picks up on their handset as before. Hiding
+  // the button is the honest state — one that 503s reads as a broken feature.
+  const canAccept = phase === 'ringing' && Boolean(onAccept)
 
   return (
     <div className="flex shrink-0 flex-col gap-2 sm:gap-3">
@@ -51,7 +55,7 @@ export function CallActions({
           {t('pages.clients.modals.callDialog.cancel', 'Cancel')}
         </Button>
 
-        {phase === 'ringing' && onAccept && (
+        {canAccept && (
           <Button
             variant="success"
             size="sm"
@@ -77,6 +81,15 @@ export function CallActions({
           </Button>
         )}
       </div>
+
+      {phase === 'ringing' && !canAccept && (
+        <p className="text-muted-foreground text-center text-xs">
+          {t(
+            'pages.clients.modals.callDialog.answerOnSoftphone',
+            'Answer the call on your softphone'
+          )}
+        </p>
+      )}
     </div>
   )
 }
