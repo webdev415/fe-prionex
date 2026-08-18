@@ -37,6 +37,15 @@ interface TagSelectorModalProps {
   projectId: number
   open: boolean
   onClose: () => void
+  /**
+   * Called once, after the tag writes succeed, before the modal closes.
+   *
+   * A tag change can fire a "Tag change" chain trigger, which launches a chain
+   * asynchronously. The caller uses this to arm auto-open for THIS operator, the
+   * same way closing a debt does. Not called when nothing changed or the save
+   * failed, so an unchanged save never arms a pointless poll.
+   */
+  onTagsChanged?: () => void
 }
 
 export const TagSelectorModal = memo(function TagSelectorModal({
@@ -45,6 +54,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   projectId,
   open,
   onClose,
+  onTagsChanged,
 }: TagSelectorModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
@@ -168,6 +178,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
       ])
 
       toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
+      onTagsChanged?.()
       onClose()
     } catch {
       toast.error(t('pages.clients.modals.tagSelector.updateFailed'))
@@ -185,6 +196,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     removeMutation,
     clientName,
     onClose,
+    onTagsChanged,
     canAssignTags,
     roleName,
     t,
