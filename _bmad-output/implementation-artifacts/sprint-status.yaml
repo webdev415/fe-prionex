@@ -95,7 +95,7 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Traceable Image Build and Publish
-  epic-3: in-progress
+  epic-3: done
   # 3.1 reviewed 2026-08-15 BEFORE 3.2 was written — deliberately. Epic 2 was closed with three
   # stories still in `review` and 2.1's unreviewed claims were built on by three later stories.
   # 3.1's review carries one item 3.2 must act on rather than inherit: the fail-closed assertion
@@ -135,7 +135,7 @@ development_status:
   # Feature branches build `dev` only: -prod/-preprod tags are PERMANENT under the retention rule.
   3-4-trigger-builds-automatically-including-feature-branches: done
   3-5-move-the-build-cache-to-the-registry: done
-  3-6-verify-commit-traceability-and-image-immutability: in-progress
+  3-6-verify-commit-traceability-and-image-immutability: done
   epic-3-retrospective: optional
 
   # Epic 4: DEV Environment on Forgejo

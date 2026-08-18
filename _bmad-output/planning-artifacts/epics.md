@@ -1518,21 +1518,28 @@ behaviour is detected and documented as a known limitation. 🔴 **AMENDED 2026-
 read `sha-<short>` as `sha-<12 hex>-<env>` (D20, as above). **Refuse, not document** —
 [D24](../../docs/migration-decisions.md#d24): `build.yml` reads the tag's pre-existing digest before
 pushing and either attaches or fails the build, naming both digests, rather than letting the repoint
-happen and recording it afterward. ⚠️ **Caveat, added by review 2026-08-18 — do not read this as a
-proven-in-production fact:** the code has landed and a blocking defect found by review (`imagetools
-create` wrapping the manifest in an index) is fixed, but the guard's refusal path has not been
-exercised by a live dispatch — see D24 and the story's Dev Agent Record for exactly what remains
-unverified and why.
+happen and recording it afterward. ✅ **Live-verified 2026-08-18, superseding the review's own
+caveat**: all four guard outcomes were exercised against real dispatches — absent (run 720), equal
+(run 721, full cache hit), differ (runs 723+725, including a discriminating re-dispatch proving the
+refused run left the tag untouched rather than merely reporting it as wrong), and the defensive
+ambiguous/fail-closed branch (run 719). See D24 and the story's Dev Agent Record for the run table.
 
 **Given** an image built for a specific environment
 **When** its metadata is inspected
 **Then** the environment it was built for is determinable from the image itself, not only from
-its tag string.
+its tag string. ✅ **Verified 2026-08-18** on current images (not the two-day-old evidence this story
+used earlier): `sha-6703b6683de1-dev` carries `org.prionex.environment = dev`,
+`sha-00ef3be4743d-preprod` carries `org.prionex.environment = preprod` — the two differ in exactly
+this one label. See the story's Task 4.2.
 
 **Given** all Epic 3 stories are complete
 **When** the phase-4 definition of done is evaluated
 **Then** a push to any branch demonstrably produces an immutable image bound to its commit
-**And** the evidence is recorded.
+**And** the evidence is recorded. ✅ **Closed 2026-08-18** — Oleg's merge of Story 3.6's own PR #50
+(commit `6703b6683de1`) into `main` triggered `build-main.yml` run 730, which produced
+`package_version` id 3352 (`sha-6703b6683de1-dev`) alongside `main-dev`/`buildcache` from the same
+run — a real push, not a green tick, evidenced from the registry and the package table. Epic 3 marked
+`done` in `sprint-status.yaml`. See the story's Task 5.1/5.2.
 
 ---
 
