@@ -9,7 +9,6 @@ export interface SmsTemplate {
   category: string
   variables: string[]
   usageCount: number
-  isSystem: boolean
   isEnabled: boolean
 }
 

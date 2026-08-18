@@ -70,7 +70,7 @@ export function DeleteDraftModal({ draft, open, onClose }: DeleteDraftModalProps
             <AlertDescription>
               {t(
                 'pages.messagingDrafts.delete.recoverableDescription',
-                'It is kept for a recovery period, so an administrator can restore it if this was a mistake.'
+                'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.'
               )}
             </AlertDescription>
           </Alert>

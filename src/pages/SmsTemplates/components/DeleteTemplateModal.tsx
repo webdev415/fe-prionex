@@ -77,24 +77,12 @@ export function DeleteTemplateModal({
             {t('pages.smsTemplates.modals.delete.confirmMessage')}{' '}
             <strong>"{template.name}"</strong>?
           </p>
-          {template.isSystem && (
-            <Alert variant="error">
-              <AlertTitle>
-                {t('pages.smsTemplates.modals.delete.cannotDeleteSystemTemplate')}
-              </AlertTitle>
-              <AlertDescription>
-                {t('pages.smsTemplates.modals.delete.systemTemplateCannotBeDeleted')}
-              </AlertDescription>
-            </Alert>
-          )}
-          {!template.isSystem && (
-            <Alert variant="warning">
-              <AlertTitle>{t('pages.smsTemplates.modals.delete.recoverableTitle')}</AlertTitle>
-              <AlertDescription>
-                {t('pages.smsTemplates.modals.delete.recoverableDescription')}
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert variant="warning">
+            <AlertTitle>{t('pages.smsTemplates.modals.delete.recoverableTitle')}</AlertTitle>
+            <AlertDescription>
+              {t('pages.smsTemplates.modals.delete.recoverableDescription')}
+            </AlertDescription>
+          </Alert>
         </div>
       </ModalContent>
       <ModalFooter>
@@ -107,17 +95,15 @@ export function DeleteTemplateModal({
         >
           {t('actions.cancel')}
         </Button>
-        {!template.isSystem && (
-          <Button
-            type="button"
-            variant="danger"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
-          >
-            {isDeleting ? t('pages.smsTemplates.modals.delete.deleting') : t('actions.delete')}
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="danger"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {isDeleting ? t('pages.smsTemplates.modals.delete.deleting') : t('actions.delete')}
+        </Button>
       </ModalFooter>
     </Modal>
   )

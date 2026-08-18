@@ -42,7 +42,8 @@ const RETIRED = [
 
 // en and uk phrasings of the promise these blocks must never make again.
 const FALSE_PROMISES = [
-  // No naming a screen that does not exist: there is no Trash route in the SPA.
+  // No naming a screen that does not exist: deleted items live at the bottom
+  // of their own page, there is no separate Trash route.
   /\bTrash\b/,
   /кошик/i,
   /permanently/i,

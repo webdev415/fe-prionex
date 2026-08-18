@@ -7271,7 +7271,6 @@
       "variablesLabel": "Змінні",
       "used": "Використано",
       "times": "разів",
-      "systemTemplatesCannotBeDeleted": "Системні шаблони не можна видалити, тільки вимкнути",
       "tableHeaders": {
         "templateName": "Назва шаблону",
         "messageTextExcerpt": "Текст повідомлення (витяг)",
@@ -7306,8 +7305,6 @@
         "clickToInsert": "Натисніть, щоб вставити",
         "availableVariables": "Доступні змінні",
         "active": "Активний",
-        "systemTemplate": "Системний шаблон",
-        "systemTemplateDescription": "Це системний шаблон. Деякі поля можуть бути обмежені.",
         "fixErrorsBeforeSubmitting": "Будь ласка, виправте помилки вище перед відправкою.",
         "useVariableFormat": "Використовуйте формат {variable_name} для змінних (наприклад, {debt_amount}, {client_name})",
         "placeholders": {
@@ -7339,12 +7336,13 @@
         "delete": {
           "title": "Видалити шаблон",
           "confirmMessage": "Ви впевнені, що хочете видалити шаблон",
-          "cannotDeleteSystemTemplate": "Неможливо видалити системний шаблон",
-          "systemTemplateCannotBeDeleted": "Системні шаблони не можна видалити. Ви можете тільки вимкнути їх.",
           "recoverableTitle": "Шаблон буде прибрано з активного списку",
-          "recoverableDescription": "Він зберігається певний час, тому адміністратор може відновити його, якщо це сталося помилково.",
+          "recoverableDescription": "Він перейде до списку видалених унизу цієї сторінки, де супервізор зможе відновити його.",
           "deleting": "Видалення..."
         }
+      },
+      "deleted": {
+        "title": "Видалені шаблони"
       }
     },
     "sellers": {
@@ -9008,12 +9006,15 @@
         "title": "Видалити чернетку",
         "confirmMessage": "Видалити чернетку «{{name}}»?",
         "recoverableTitle": "Чернетку буде прибрано з активного списку",
-        "recoverableDescription": "Вона зберігається певний час, тому адміністратор може відновити її, якщо це сталося помилково."
+        "recoverableDescription": "Вона перейде до списку видалених унизу цієї сторінки, де супервізор зможе відновити її."
       },
       "toasts": {
         "created": "Чернетку створено",
         "updated": "Чернетку оновлено",
         "deleted": "Чернетку видалено"
+      },
+      "deleted": {
+        "title": "Видалені чернетки"
       }
     },
     "messagingIntegrations": {
@@ -10380,5 +10381,24 @@
     "Written off": "Списано",
     "Sold": "Продано",
     "Legal": "Судова стадія"
+  },
+  "softDelete": {
+    "sectionHint": "Ці елементи видалені, їх ще можна відновити до вказаної дати.",
+    "columns": {
+      "deletedAt": "Видалено",
+      "expires": "Буде видалено",
+      "actions": "Дії"
+    },
+    "expiry": {
+      "noDeadline": "Без терміну",
+      "today": "Видаляється сьогодні",
+      "inDays_one": "залишився {{count}} день",
+      "inDays_few": "залишилось {{count}} дні",
+      "inDays_many": "залишилось {{count}} днів",
+      "inDays_other": "залишилось {{count}} днів"
+    },
+    "actions": {
+      "restore": "Відновити"
+    }
   }
 }

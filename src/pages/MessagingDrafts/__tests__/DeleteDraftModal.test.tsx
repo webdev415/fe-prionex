@@ -51,7 +51,7 @@ describe('DeleteDraftModal', () => {
   it('tells the user the draft is recoverable', () => {
     renderModal()
     expect(screen.getByText('The draft will be removed from the active list')).toBeInTheDocument()
-    expect(screen.getByText(/can restore it if this was a mistake/)).toBeInTheDocument()
+    expect(screen.getByText(/restore it/)).toBeInTheDocument()
   })
 
   it('never claims the deletion is permanent or irreversible', () => {
