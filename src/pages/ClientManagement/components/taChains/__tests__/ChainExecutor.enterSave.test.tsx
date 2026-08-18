@@ -70,8 +70,12 @@ vi.mock('@/features/taInteractions/hooks/useTAInteractions', () => ({
   useClientPinnedChainIds: () => ({ data: [] }),
   useRewindChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
+// Controllable so the two outer render guards — the loading skeleton and the
+// "no chains" message — can be driven; Enter must not save behind either.
+const chainList = { items: [chain] as unknown[], isLoading: false }
+
 vi.mock('@/features/taChains/hooks/useTAChains', () => ({
-  useTAChains: () => ({ data: { items: [chain] }, isLoading: false }),
+  useTAChains: () => ({ data: { items: chainList.items }, isLoading: chainList.isLoading }),
   useTAChain: () => ({ data: chain }),
   usePinTAChain: () => ({ mutateAsync: vi.fn() }),
   useUnpinTAChain: () => ({ mutateAsync: vi.fn() }),
@@ -166,6 +170,8 @@ beforeEach(() => {
   createInteraction.mockClear()
   advanceInstance.mockClear()
   getClientRects.mockClear()
+  chainList.items = [chain]
+  chainList.isLoading = false
 })
 
 /** Wraps the executor the way the client card does: inside a role="dialog". */
@@ -228,6 +234,35 @@ describe('ChainExecutor — Enter to save (KAN-974)', () => {
     // ...and it still runs when the key actually matters.
     await user.keyboard('{Enter}')
     expect(getClientRects).toHaveBeenCalled()
+  })
+
+  it('does not save while the chain list is still loading', async () => {
+    // `activeChain` can resolve from the by-id query while the LIST is still
+    // loading, so the panel shows a skeleton with no Save button — but the
+    // wizard state alone would have said "yes, save".
+    chainList.isLoading = true
+    const user = userEvent.setup()
+    renderInDialog()
+
+    expect(screen.queryByRole('button', { name: /saveInteraction/i })).not.toBeInTheDocument()
+    screen.getByTestId('dialog').focus()
+    await user.keyboard('{Enter}')
+
+    expect(createInteraction).not.toHaveBeenCalled()
+  })
+
+  it('does not save when the operator has no manual chains', async () => {
+    // The panel renders a "no chains" message instead of the body; an
+    // auto-launched instance can still make the wizard state look savable.
+    chainList.items = []
+    const user = userEvent.setup()
+    renderInDialog()
+
+    expect(screen.queryByRole('button', { name: /saveInteraction/i })).not.toBeInTheDocument()
+    screen.getByTestId('dialog').focus()
+    await user.keyboard('{Enter}')
+
+    expect(createInteraction).not.toHaveBeenCalled()
   })
 
   it('does not save from a press outside the dialog', async () => {

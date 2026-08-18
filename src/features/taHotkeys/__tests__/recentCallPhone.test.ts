@@ -128,8 +128,11 @@ describe('resolveRecentCallPhone', () => {
   })
 
   it('survives malformed records', () => {
+    // `customer_number` is required by the type, so a null one can only arrive
+    // from an API that broke its own contract — the cast reproduces that
+    // without weakening the interface that now guards the call site.
     const calls = [
-      { customer_number: null, ended_at: minutesAgo(1) },
+      { customer_number: null as unknown as string, ended_at: minutesAgo(1) },
       { customer_number: '+380501234567', ended_at: 'not-a-date' },
       { customer_number: '', ended_at: minutesAgo(1) },
     ]

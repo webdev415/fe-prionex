@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { decideHotkeyLaunch } from './decideHotkeyLaunch'
 import { useTAHotkeyBindings } from './hooks/useTAHotkeys'
-import { resolveHotkeyTarget } from './hotkey'
+import { resolveHotkeyTarget, TA_EXECUTOR_DIALOG_SELECTOR } from './hotkey'
 
 export function useTAHotkeyLaunch(params: {
   /** False on pages/states where quick-launch must not apply (e.g. no client). */
@@ -42,7 +42,13 @@ export function useTAHotkeyLaunch(params: {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const current = latest.current
-      const templateId = resolveHotkeyTarget(event, current.bindings)
+      // The executor's own dialog is exempt from the "inside a dialog counts
+      // as typing" rule: otherwise the press is dropped here and the
+      // single-modal guard below never runs, leaving the operator with silence
+      // where the ticket asks for an explanation.
+      const templateId = resolveHotkeyTarget(event, current.bindings, {
+        exemptDialogSelector: TA_EXECUTOR_DIALOG_SELECTOR,
+      })
 
       // Unassigned, or the operator is typing: leave the keystroke completely
       // alone, including its default behaviour. Bare-key bindings mean most

@@ -103,6 +103,18 @@ export function parseHotkey(value: string): Hotkey | null {
   }
 }
 
+/**
+ * Marks the TA executor's own dialog.
+ *
+ * A class rather than a data attribute because the Modal primitive forwards
+ * ``className`` to the Radix dialog element and nothing else — and the marker
+ * has to sit on an ancestor of whatever holds focus, which is that element.
+ */
+export const TA_EXECUTOR_DIALOG_CLASS = 'ta-executor-dialog'
+
+/** Selector form of {@link TA_EXECUTOR_DIALOG_CLASS}. */
+export const TA_EXECUTOR_DIALOG_SELECTOR = `.${TA_EXECUTOR_DIALOG_CLASS}`
+
 /** Element names that own their keystrokes. */
 const TEXT_ENTRY_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
@@ -120,10 +132,21 @@ const TEXT_ENTRY_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
  * behind it.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
+  if (isTextEntryTarget(target)) return true
+  if (!target || !(target instanceof Element)) return false
+  return target.closest('[role="dialog"], [contenteditable="true"]') !== null
+}
+
+/**
+ * The narrower half of {@link isTypingTarget}: the element itself takes text.
+ *
+ * Split out so a dialog can be exempted from the "inside a dialog counts as
+ * typing" rule without also un-protecting the inputs within it.
+ */
+export function isTextEntryTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof Element)) return false
   if (TEXT_ENTRY_TAGS.has(target.tagName)) return true
-  if (target instanceof HTMLElement && target.isContentEditable) return true
-  return target.closest('[role="dialog"], [contenteditable="true"]') !== null
+  return target instanceof HTMLElement && target.isContentEditable
 }
 
 /**
@@ -142,9 +165,31 @@ export function resolveHotkeyTarget<T>(
     metaKey: boolean
     target?: EventTarget | null
   },
-  bindings: Record<string, T>
+  bindings: Record<string, T>,
+  options?: {
+    /**
+     * Dialogs this feature owns, which therefore should not silence a bound
+     * key. Selector matched against the target's ancestors.
+     *
+     * Needed because ``isTypingTarget`` treats everything inside a
+     * ``role="dialog"`` as typing, and the TA modal traps focus inside itself.
+     * With no exemption a hotkey pressed while that modal is open was
+     * swallowed here, so the "one modal at a time" toast the ticket asks for
+     * could never fire — the operator pressed their key and got silence, which
+     * is the exact outcome the guard exists to prevent.
+     */
+    exemptDialogSelector?: string
+  }
 ): T | null {
-  if (isTypingTarget(event.target ?? null)) return null
+  const exempt =
+    options?.exemptDialogSelector != null &&
+    event.target instanceof Element &&
+    event.target.closest(options.exemptDialogSelector) !== null
+
+  if (!exempt && isTypingTarget(event.target ?? null)) return null
+  // Even inside an exempt dialog, a key typed into a field belongs to the
+  // field. The exemption is about the dialog wrapper, not its inputs.
+  if (exempt && isTextEntryTarget(event.target ?? null)) return null
 
   const hotkey = hotkeyFromEvent(event)
   if (!hotkey) return null

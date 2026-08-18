@@ -106,6 +106,23 @@ interface Props {
    */
   prefilledPhone?: string | null
   /**
+   * Which contact source ``prefilledPhone`` belongs to, when it must NOT also
+   * narrow the chain list.
+   *
+   * The two were one prop, and that quietly broke hotkey launches: a phone
+   * resolved from a recent call always has a source, and setting
+   * ``contactSource`` filters the chain list — and with it the quick picks —
+   * to chains touching that source. A template bound to a chain that does not
+   * match simply vanished, so the modal opened and started nothing, which
+   * looks exactly like a broken shortcut.
+   *
+   * Entry points that mean "show me only this phone's chains" keep passing
+   * ``contactSource``. The hotkey path passes this instead: pre-select the
+   * phone, leave the template list alone. Falls back to ``contactSource`` so
+   * existing callers are unaffected.
+   */
+  prefilledPhoneSource?: 'client' | 'recommender' | null
+  /**
    * Quick-pick template to start immediately on open, instead of making the
    * operator find it in the picker (KAN-973 hotkey quick-launch).
    *
@@ -225,6 +242,7 @@ export function ChainExecutor({
   responsibleEmployeeId,
   debts = [],
   contactSource = null,
+  prefilledPhoneSource = null,
   prefilledPhone = null,
   initialTemplateId = null,
   onSave,
@@ -267,6 +285,10 @@ export function ChainExecutor({
   }, [chainsData, contactSource])
 
   // Full TA data (for dropdown values + flags)
+  // The source the prefilled phone belongs to. Distinct from `contactSource`,
+  // which additionally narrows the chain list — see the prop docs.
+  const prefillSource = prefilledPhoneSource ?? contactSource
+
   const { data: tasData } = useTargetActions({ include_hidden: false })
   const taById = useMemo(() => {
     const m = new Map<number, TargetAction>()
@@ -817,12 +839,12 @@ export function ChainExecutor({
     if (lastInstantSelectionRef.current === selectionKey) return
     lastInstantSelectionRef.current = selectionKey
 
-    if (prefilledPhone && contactSource && effectiveChain) {
+    if (prefilledPhone && prefillSource && effectiveChain) {
       const seed: Record<number, InstantStepValue> = {}
       for (const step of effectiveChain.steps ?? []) {
         const ta = taById.get(step.target_action_id)
         const stepSource = step.contact_source ?? 'client'
-        if (ta?.field_type === 'contact' && stepSource === contactSource) {
+        if (ta?.field_type === 'contact' && stepSource === prefillSource) {
           seed[step.id] = { ...EMPTY_INSTANT_VALUE, value: prefilledPhone }
         }
       }
@@ -833,7 +855,7 @@ export function ChainExecutor({
     setInstantNotes('')
     setInstantSubmitting(false)
     setNotifyResponsible(true)
-  }, [selectedChainId, activeInstance?.id, prefilledPhone, contactSource, effectiveChain, taById])
+  }, [selectedChainId, activeInstance?.id, prefilledPhone, prefillSource, effectiveChain, taById])
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
@@ -853,7 +875,7 @@ export function ChainExecutor({
     const isContactStep = currentTA?.field_type === 'contact'
     const stepSource = currentStep?.contact_source ?? 'client'
     const phonePrefill =
-      isContactStep && prefilledPhone && contactSource === stepSource ? prefilledPhone : ''
+      isContactStep && prefilledPhone && prefillSource === stepSource ? prefilledPhone : ''
     setStepValue(preset ?? phonePrefill)
     setPromiseDate('')
     setPromiseAmount('')
@@ -863,7 +885,7 @@ export function ChainExecutor({
     currentStep?.target_action_id,
     currentStep?.contact_source,
     currentTA?.field_type,
-    contactSource,
+    prefillSource,
     prefilledPhone,
   ])
 
@@ -1472,12 +1494,26 @@ export function ChainExecutor({
     hasActiveInstance: Boolean(activeInstance),
     isInstantMode,
   })
-  const canSaveOnEnter =
-    enterSaveMode === 'instant'
+  // The panel body itself is behind two guards — a loading skeleton and a
+  // "no chains" message — and neither is implied by the wizard state below.
+  // `activeChain` can resolve from `activeChainById` while the chain LIST is
+  // still loading, so without this Enter could finalise an interaction from a
+  // screen showing a spinner.
+  const isPanelBodyRendered = !isLoadingChains && manualChains.length > 0
+
+  const canSaveOnEnter = !isPanelBodyRendered
+    ? false
+    : enterSaveMode === 'instant'
       ? !instantSubmitting
       : enterSaveMode === 'wizard' &&
         Boolean(activeChain) &&
         isLastStep &&
+        // An inline edit on a completed step is uncommitted work held in the
+        // form, not in `editedStepsRef` — only handleSaveEditStep writes
+        // there. Saving now would finalise the interaction with the old
+        // value and discard the edit, with no undo in the UI. Enter inside
+        // that form is exactly what an operator would press to commit it.
+        editingStep === null &&
         !isFinalizing &&
         !isAutoAdvancing &&
         !isDelayBlocked &&
