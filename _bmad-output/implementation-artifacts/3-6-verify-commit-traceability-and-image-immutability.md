@@ -172,16 +172,65 @@ untagged manifest survives for that window:
 3. Therefore the tag resolved to a different digest then than it does now. **It was repointed, and
    nothing announced it.**
 
-**Cause, per Task 1.4: suspect 1 of §2 — the BuildKit config timestamp.** It is the one §2 calls
-"not fixable by pinning anything", and it alone guarantees a different manifest digest on any
-cache-miss rebuild, independently of npm, OpenBao or `VITE_OPERATOR_PHONE_URL`.
+**Cause, per Task 1.4 — first answer, and it turned out to be the smaller half.** Suspect 1 of §2,
+the BuildKit config timestamp, is real and guarantees a different manifest digest on any cache-miss
+rebuild. But a second measurement the next day found a mechanism neither §2 nor the deferred record
+had listed, and it dominates: see the layer comparison below.
 
-⚠️ **What this does NOT establish, stated rather than glossed.** Only the *config* was compared.
-Whether the **layers** also differ — npm, the OpenBao values, the new CI variable — cannot now be
-determined: the pre-700 manifest is no longer in the registry and no `sha256:` orphan row exists for
-14:33–14:41. So the digest question is settled and the *reproducibility* question is not. If a
-future task needs the layer answer, it needs a fresh pair of builds captured with their logs, not
-this one.
+#### 🔴 The layer question — answered 2026-08-18, and the answer is worse than the config timestamp
+
+*(An earlier version of this section said the layer question was "unanswerable from this run". That
+was true of run 700 alone. It stopped being true the moment a second image with the same source was
+built, and the answer arrived free, from this story's own PR.)*
+
+Run 701 built `story-3-6/pr-3-task-1-measured` — `main` plus two markdown files. Comparing it with
+run 700's image layer by layer:
+
+| # | 700 (`ff416712`) | 701 (`690ac376`) | |
+|---|---|---|---|
+| 1–8 | identical | identical | the two pinned base images |
+| 9 | `09c86ed94e68`, 4 002 940 B | `d9e99e53a205`, 4 003 600 B | **DIFFER** — `/usr/share/nginx/html`, the built bundle |
+| 10 | `026185e04788`, 1 225 B | `ed1b290bb524`, 1 221 B | **DIFFER** — `nginx.conf`, whose content is byte-identical |
+
+Layer 9 unpacked: **154 files on each side, and almost every one has both a different name and a
+different content hash.** Vite content-hashes its filenames, so this is a genuinely different
+bundle, not a re-tar of the same bytes. Layer 10 differing on identical content is the tar-metadata
+effect, and it is the *small* half of the problem.
+
+**Root cause — `vite.config.ts:8`:**
+
+```ts
+define: {
+  'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())),
+},
+```
+
+`Date.now()` is evaluated at build time and baked in as a literal. It reaches `src/lib/i18n.ts:9`,
+which nearly everything imports, so the content-hash cascade renames and rewrites almost every chunk.
+**Two builds of the same commit cannot produce the same bundle — not on a warm cache, not on a cold
+one, not ever.** The image is non-reproducible by construction of the source, and no amount of
+pinning, caching or guarding in `build.yml` can change that.
+
+🔴 **This supersedes the cause recorded for Task 1.4.** The BuildKit config timestamp is real but it
+is the *lesser* mechanism; it explains layer 10 and the config blob. `Date.now()` in the Vite config
+explains layer 9, which is the actual application.
+
+⚠️ **Consequence for Task 3, and it must be decided knowingly.** §3's guard has three branches, and
+the middle one — *"present, same digest → nothing to do; the artifact is already published"* — is now
+**unreachable on any rebuild**. Every rebuild of an existing `sha-<12>-<env>` produces a different
+digest, so the guard collapses to "any rebuild of a published commit fails". That may well be the
+right behaviour, and §3's argument supports it — but it is a stronger rule than §3 describes, and
+writing it without noticing would mean shipping a branch that can never be taken.
+
+**This also closes the `VITE_BUILD_TS` half of §4b, and not the way that section expects.** §4b asks
+whether the in-code fallback is safe. The question does not arise: `define` performs a textual
+substitution, so `import.meta.env.VITE_BUILD_TS ?? '1'` compiles to `"<millis>" ?? '1'`. The `?? '1'`
+fallback is **dead code**, and adding `VITE_BUILD_TS` to the build-arg contract would change nothing —
+`define` overrides it. Whatever §4b decides, it is not "add it to the contract".
+
+⚠️ **Still not established:** whether npm or the OpenBao values would *also* break reproducibility.
+They are now moot for the digest question — `Date.now()` guarantees the answer on its own — but they
+remain unmeasured, and if `vite.config.ts:8` is ever fixed they become live again.
 
 ⚠️ **Why 697 and 698 matched each other.** On a full cache hit BuildKit restores the cached image
 config, timestamp included, so both inherited one `created` and produced one digest. That is exactly
@@ -270,8 +319,12 @@ from a Forgejo CI variable, and dev/preprod are deliberately empty (Oleg, 2026-0
 
 **Still open, and this story owns them:**
 
-- `VITE_EASYPAY_PORTAL_API_KEY` and `VITE_BUILD_TS` remain **outside** the contract, with in-code
-  fallbacks nobody has audited the way the phone URL was audited.
+- `VITE_EASYPAY_PORTAL_API_KEY` remains **outside** the contract, with an in-code fallback nobody has
+  audited the way the phone URL was audited.
+- ✅ **`VITE_BUILD_TS` is audited (2026-08-18) and the answer is not "add it to the contract".**
+  `vite.config.ts:8` bakes `Date.now()` in via `define`, so the `?? '1'` fallback at
+  `src/lib/i18n.ts:9` is dead code and a build arg would be overridden. It is also the dominant cause
+  of AC2's repoint — see §2b. Decide it as a reproducibility question, not a contract-coverage one.
 - **Neither D20 §6 nor `deferred-work.md` is marked closed for the part that IS fixed.** Closing a
   record is part of fixing a thing; this story should do it rather than leave a live-looking entry.
 

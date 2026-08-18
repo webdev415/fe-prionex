@@ -2049,12 +2049,37 @@ moved, and nothing announced it.**
 the base images by digest — done the same day — cannot touch. The base-image pins removed one of the
 listed causes; this one was always the dominant one.
 
-⚠️ **Deliberately not claimed.** Only the image *config* was compared. Whether the **layers** also
-differ — npm, the OpenBao values, `VITE_OPERATOR_PHONE_URL` — is unanswerable from this run: the
-pre-700 manifest is gone from the registry and no untagged `sha256:` row survives for that window.
-The digest question is settled; the reproducibility question is not. Answering it needs a fresh pair
-of builds captured **with their logs**, and on this instance logs are not retrievable through the API
-at all (404 on every documented path).
+**🔴 UPDATED 2026-08-18 — the layers differ too, and the real cause is in our own source.** The
+first version of this entry said the layer question was unanswerable. It became answerable as soon as
+a second image was built from the same source: run 701, this story's own PR branch. Layers 1–8 (the
+two pinned base images) are identical; layer 9 — the built bundle — differs, and unpacking it shows
+**154 files on each side with almost every name and content hash different**. Vite content-hashes
+filenames, so that is a genuinely different bundle.
+
+**Root cause: `vite.config.ts:8`.**
+
+```ts
+define: { 'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())) },
+```
+
+`Date.now()` is baked in as a literal at build time, reaches `src/lib/i18n.ts:9`, and the
+content-hash cascade rewrites nearly every chunk. **Two builds of the same commit cannot produce the
+same bundle — warm cache, cold cache, or otherwise.** The artifact is non-reproducible by
+construction of the source, and nothing in `build.yml` can change that. The BuildKit config timestamp
+is still real, but it is the lesser mechanism: it accounts for the config blob and for layer 10,
+whose content (`nginx.conf`) is byte-identical.
+
+Two consequences worth carrying forward:
+
+- **The §3 guard's "same digest → nothing to do" branch is unreachable on a rebuild.** The guard
+  collapses to "any rebuild of a published commit fails". Possibly correct, but it is a stronger rule
+  than the story describes, and it should be written knowingly rather than discovered later.
+- **`VITE_BUILD_TS` is not a contract-coverage gap.** `define` substitutes textually, so the `?? '1'`
+  fallback is dead code and supplying the build arg would be overridden. D20 §6 lists it alongside
+  `VITE_EASYPAY_PORTAL_API_KEY`; only the latter is still the question that section thinks it is.
+
+⚠️ Still unmeasured: whether npm or the OpenBao values would *also* break reproducibility. Moot for
+the digest question while `Date.now()` is there; live again the moment it is fixed.
 
 **Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
 refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
