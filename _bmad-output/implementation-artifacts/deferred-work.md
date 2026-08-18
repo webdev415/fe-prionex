@@ -2137,6 +2137,13 @@ rewritten by whoever pushed last.
 deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it. **⚠️ Still open** — this session had
 no credential to delete a remote branch (see below), so it remains on the remote.
 
+**⚠️ A second probe branch joined it, 2026-08-18: `probe/3-6-differ` (commit `15c22b17`).** Created
+deliberately to close Task 3.4's differ-path test — its one commit adds a cache-divergence marker to
+`src/main.tsx` so its automatic `dev` build (run 722) overwrites the shared `:buildcache` with layers
+foreign to the story branch, forcing a cache miss on the next same-ref dispatch. That dispatch (runs
+723/725) proved the AC2 guard's refusal live. The branch's job is done; it should be deleted alongside
+`probe/3-6-cold-cache` once the story merges (Task 7.5, both now).
+
 **✅ UPDATED 2026-08-18 — the guard `Story 3.6 Task 3 owns the answer` pointed at is now implemented,
 and [D24](../../docs/migration-decisions.md#d24) records it.** `build.yml` reads the pre-existing
 digest of `sha-<12>-<env>` *before* the build, pushes only the mutable branch tag from the build step

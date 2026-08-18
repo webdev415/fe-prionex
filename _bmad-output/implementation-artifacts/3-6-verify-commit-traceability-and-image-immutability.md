@@ -584,15 +584,31 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
       **Task 4 (AC1/AC3 record):** 0 additional runs — existing registry images already carry the
       evidence (Task 1.1, §1); confirming currency is a registry *read*, not a build, and does not
       consume the run budget even when the credential to perform it is available.*
-      *🔴 **Update — runs actually spent, coordinator-run with API access this agent session does not
-      have:** run **717** (`correct-course/prod-target-s10`'s own merge, PR #49 — not this story's
-      spend, but it is why D24 exists and belongs in the shared timeline); run **719** (`ci.yml` on
-      this branch's commit `563243f3`) — **failure**, `Build and Push`/`Build and Push Image` red,
-      Lint/Type Check/Unit Tests/Build/Gate green. Cause: the review's own allowlist-narrowing patch
-      regressed the "absent" path (see the `[Review][Patch]` note on that finding, and Dev Agent
-      Record). **Ledger is not closed by query yet** — this agent session still cannot run
-      `SELECT count(*) FROM action_run`; the run numbers above come from the coordinator, not from a
-      query this session executed.*
+      *🔴 **Final ledger update — runs actually spent, all coordinator-run; this agent session's own
+      API access stayed blocked throughout (see Dev Agent Record) and none of these numbers come from
+      a query this session executed.**
+
+      | run | trigger | result | what it closed |
+      |---|---|---|---|
+      | 717 | `correct-course/prod-target-s10` merge, PR #49 | green | not this story's spend — recorded because it is why D24 exists (took the `D23` anchor) |
+      | 719 | `ci.yml`, auto-push of `563243f3` | **failure** | found the predigest allowlist regression (Session 2's own patch over-narrowed absence detection) |
+      | 720 | `ci.yml`, auto-push of `e4f0690a` | green | Task 3.4 "absent" branch; Task 5.1's push-half |
+      | 721 | `workflow_dispatch`, same ref `e4f0690a` | green | Task 3.4 "equal" branch |
+      | 722 | `ci.yml`, auto-push of `probe/3-6-differ` `15c22b17` | green | not a guard test itself — prepared the differ test by evicting `:buildcache` |
+      | 723 | `workflow_dispatch`, same ref `e4f0690a`, foreign cache | **failure** | Task 3.4 "differ" branch — the guard actually refusing |
+      | 725 | `workflow_dispatch`, same ref `e4f0690a`, immediately after 723 | **failure** | discriminating check — proved 723 left the tag untouched, not merely reported it as wrong |
+
+      **Declared 2 implementation runs; genuinely spent 6 (719, 720, 721, 722, 723, 725) plus this
+      round's own closing push, which auto-triggers a further `ci.yml` run** — an overrun, stated
+      plainly rather than reframed. Two causes, both legitimate rather than waste: (1) 719 was a review
+      finding's own regression, not a planned test — the "review will find something" line of the
+      original declaration, spent on itself; (2) 3.4's four-outcome table (absent/equal/differ/
+      ambiguous) needed more than the two dispatches originally planned once "prove equal doesn't
+      falsely pass" and "prove differ doesn't merely warn" turned out to be separate, both-necessary
+      checks — 721 and 725 were not in the original plan, and both were cheap (~2 min, ~45 s) and
+      decisive rather than exploratory. **Ledger is not closed by a query this session ran** — Task 7.3
+      still needs `SELECT count(*) FROM action_run` from whoever has DB/API access; the table above is
+      the coordinator's account, cited and attributed, not independently verified here.*
 - [x] 2.2 List every tag this story could push and compile the live `keep_pattern` against each. —
       *Read from `build.yml`'s own tag-computation step, not dispatched — this needs no run. This
       story's `build.yml` change (Task 3) introduces **no new tag shape**; it only changes which step
@@ -637,28 +653,33 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
       which per §2b is not a legitimate case at all — it is the `Date.now()` bug AC2 exists to catch.
       An override would only give that bug a bypass, so none is added. This also answers Open Question
       2 (non-blocking).*
-- [ ] 3.4 🔴 **Prove the guard can fire.** A guard that cannot fail proves nothing — three in this
-      file could not, and each was found by a review rather than by its author. — *⚠️ **NOT verified
-      live in this session — blocked, not skipped.** Proving the FAIL branch fires needs a deliberate
-      `workflow_dispatch` rebuild of the same commit (as Task 1 did for the underlying repoint), which
-      needs the Forgejo API token. This agent session has no SSH access to s1 and no token in its
-      environment (git push/pull over SSH works; the Forgejo REST API returns 403 unauthenticated —
-      confirmed by probing `GET /api/v1/repos/CRM/fe-prionex/actions/runs`). The code was reviewed by
-      hand against the file's own conventions (no `${{ }}` in any `run:` body — checked with a grep
-      over the new steps; YAML parses — checked with `python3 -c "import yaml…"`) and the logic was
-      traced against all three §3 outcomes, but "traced and looks fine" is exactly the standard §6 of
-      this story rejects. The one thing that WILL happen automatically: pushing this story's branch
-      triggers `ci.yml` → `build.yml` on a fresh commit, which exercises the guard's "absent" path for
-      real (first build of a new commit). That is not a substitute for the "differ" path — see the Dev
-      Agent Record for what is needed to close this.*
+- [x] 3.4 🔴 **Prove the guard can fire.** A guard that cannot fail proves nothing — three in this
+      file could not, and each was found by a review rather than by its author. — *✅ **PROVEN LIVE,
+      all four outcomes, coordinator-run (this session's own API access stayed blocked throughout —
+      see Dev Agent Record).*
+      | outcome | run | result | evidence |
+      |---|---|---|---|
+      | absent | **720** (`ci.yml`, auto-push of `e4f0690a`) | green | `predigest`'s `": not found"` match fired on a genuinely absent tag; attach with `--prefer-index=false`, read-back, and the final assertion all passed |
+      | equal | **721** (`workflow_dispatch`, same ref `e4f0690a`, env `dev`) | green, ~2 min | full cache hit off `:buildcache` (last written by 720); byte-identical rebuild; digests equal; guard's "already points at" branch took over, attach skipped as designed |
+      | differ | **723** (`workflow_dispatch`, same ref, after `probe/3-6-differ` (commit `15c22b17`) overwrote `:buildcache` with foreign layers via its own auto-build, run 722) | **failure**, ~3 min (build ran ~2.5 min before the refusal) | cache miss on the diversified COPY layer → `vite.config.ts`'s `Date.now()` re-evaluated → different bytes → `predigest` found the pre-existing digest (from 720/721) → "Enforce AC2" refused, naming both digests |
+      | refusal is a real refusal, not a report | **725** (`workflow_dispatch`, same ref, immediately after 723) | **failure**, ~45s | discriminating check: by 725, `:buildcache` held 723's own (refused) layers, so 725 cache-hit and reproduced 723's bytes exactly — and 725 *still* failed, comparing against the digest **720** originally attached. If 723 had repointed the tag despite refusing, 725 would have read 723's digest as `pre_digest` and gone green. It didn't: `sha-<12>-dev` was untouched by 723's refusal. This is the live closure of the review's "permanent AND unverified behind a red run" concern (`:1228-1233`), for the `dev`/differ path specifically. |
+      | ambiguous (fail-closed) | **719** (`ci.yml`, auto-push of `563243f3`, before the allowlist re-widening) | failure | the `predigest` "could not determine … Refusing to proceed on an ambiguous read" branch fired for real, on a since-fixed allowlist bug — see the Session-2/3 chronicle above and in Dev Agent Record |
+
+      Together these are the three branches §3's table names (absent → push; equal → nothing to do;
+      differ → fail with both digests) plus the fourth, defensive branch (ambiguous → fail-closed) —
+      all four now have a live run against them, closing the standard §6 of this story sets: "a guard
+      that cannot fail proves nothing".*
 
 ### Task 4 — Record AC1 and AC3 rather than rebuild them (AC: 1, 3)
 
 - [ ] 4.1 Read the labels off a current image, from the registry. Record the exact query. — *⚠️
-      **Blocked, not skipped** — same missing-credential reason as 3.4 (§2b's own route needs a
-      `read:package` token for the registry v2 API, which is not available to this session). Best
-      available evidence, not independently re-confirmed here: Task 1.1 (this story, 2026-08-17) read
-      `sha-ff416712653e-dev` and recorded `org.opencontainers.image.revision =
+      **Blocked, not skipped, and now confirmed rather than inferred.** The coordinator checked
+      directly (this agent session's own API access is still refused by the harness classifier —
+      unchanged): `GET /api/v1/packages/CRM` → `403`; `GET /api/v1/user` →
+      `"token does not have at least one of required scope(s): [read:user]"`. `fe_tmp_1_7` genuinely
+      lacks package scope — this needs `fe_pkg_3_6` (or equivalent) plus an account login, not just a
+      different command. Best available evidence, not independently re-confirmed here: Task 1.1 (this
+      story, 2026-08-17) read `sha-ff416712653e-dev` and recorded `org.opencontainers.image.revision =
       ff416712653ea2d204a3b6ea3c0ae722b094e5f6` (full commit SHA — AC1) via `docker buildx imagetools
       inspect` against the pushed manifest. That is the exact query this task asks to record:
       `docker buildx imagetools inspect --format '{{json .Image.Config}}'
@@ -666,30 +687,37 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
       read `.Labels` off the config blob, the same route `predigest`/the new guard use for the digest
       alone. **Not re-confirmed as "current" in this session** — the story's own §1 warns that reading
       a two-day-old fact as present state is this project's most expensive recurring mistake, and that
-      warning applies here: the evidence above is from 2026-08-17, not from today.*
+      warning applies here: the evidence above is from 2026-08-17, not from today. ✅ One thing IS newly
+      current, from Task 3.4's live proof: runs 720/721/723/725 all confirm the guard machinery itself
+      (which reads `.Manifest.Digest`, not `.Labels`) works against today's registry — a narrower claim
+      than 4.1 asks for, but not nothing.*
 - [ ] 4.2 Show AC3 with a comparison pair — a `dev` and a `preprod` image differing in
-      `org.prionex.environment`. — *⚠️ **Blocked**, same reason. Partial evidence only: the `dev` side
-      is Task 1.1's reading, `org.prionex.environment = dev`. The `preprod` side is NOT independently
-      read in this session — `deferred-work.md` ("Opened by Story 3.5", item 1, run 680) confirms
-      `sha-00ef3be4743d-preprod` is a real, legitimately-pushed preprod image of `main`, but only
-      verified the OpenBao-sourced URLs baked into its bundle, not this specific label's value.
+      `org.prionex.environment`. — *⚠️ **Blocked**, same confirmed reason as 4.1 — package scope, not
+      just a missing route. Partial evidence only: the `dev` side is Task 1.1's reading,
+      `org.prionex.environment = dev`. The `preprod` side is NOT independently read in this session —
+      `deferred-work.md` ("Opened by Story 3.5", item 1, run 680) confirms `sha-00ef3be4743d-preprod`
+      is a real, legitimately-pushed preprod image of `main`, but only verified the OpenBao-sourced
+      URLs baked into its bundle, not this specific label's value.
       `org.prionex.environment=${{ inputs.environment }}` in `build.yml`'s `labels:` block has been
       unconditional since Story 3.3, so `preprod` is the label's value **by construction of the code
       run 680 executed** — an inference from source, not a fresh read of that image. Closing this
-      properly needs the same registry credential as 4.1.*
+      properly needs `fe_pkg_3_6` plus an account login, same as 4.1.*
 
 ### Task 5 — Close AC4 and the epic (AC: 4)
 
 - [ ] 5.1 One real push → image → tag → commit, evidenced from `package_version` and
       `action_run_job`. **Not from a green job** — two green runs in Story 3.4 built nothing. — *⚠️
-      **Blocked** on the same missing credential: `package_version`/`action_run_job` are Forgejo
-      database tables, reachable only from the app or an admin with DB/SSH access to s1, neither of
-      which this session has. The push itself is not blocked — pushing this story's branch to `origin`
-      triggers `ci.yml` → `build.yml` automatically (Story 3.4; confirmed by reading `ci.yml`'s own
-      `on: push` + `if: github.event_name == 'push'` gate, not by dispatching), which is a real
-      end-to-end push → image → tag → commit event. What is missing is the **query** that turns it into
-      evidence rather than a claim — exactly the distinction §6 of this story is about. Recorded as
-      attempted-not-performed-as-specified rather than checked off.*
+      **HALF-CLOSED.** The event half is done, and this time from more than a green job: run **720**
+      (`ci.yml`, auto-triggered by this branch's ordinary push of `e4f0690a`) is a real push → image →
+      tag → commit chain, and Task 3.4's live proof shows it did not just report success — `predigest`,
+      the build, the attach, the read-back and the final assertion all did real, checkable work against
+      the registry (§6's own bar: "compare digests, and prove the comparison can fail" — 723/725 prove
+      exactly that a green run here means something). The **query** half — `package_version` and
+      `action_run_job` rows for this event — is still not done: those are Forgejo database tables, and
+      per Task 4.1's now-confirmed finding, `fe_tmp_1_7` cannot even read `packages/CRM` (403, missing
+      scope), let alone query the DB directly. Needs `fe_pkg_3_6` plus an account login, or direct DB/SSH
+      access to s1 — none available to this session. Recorded as half-closed rather than either checked
+      off or left fully blocked, because the two halves genuinely have different states.*
 - [ ] 5.2 Record Epic 3's closing evidence. — *Cannot be written honestly until 5.1 is closed by query
       — see Dev Agent Record for what a follow-up session needs (the token, or Oleg running the two
       queries and pasting the result back).*
@@ -721,25 +749,29 @@ the database rather than from a green tick, and record it as Epic 3's closing ev
 ### Task 7 — Close (AC: all)
 
 - [ ] 7.1 Commit on a branch; open a PR — `main` is gated (D16). — *Committed and pushed to
-      `story-3-6/pr-4-close-ac2-and-epic`. **Opening the PR is blocked** — no Forgejo API token (and
-      no `tea` CLI) in this session; git push over SSH works (confirmed), the REST API does not
-      (confirmed 403 unauthenticated). Left for Oleg to open via the web UI, or for a follow-up
-      session with a token.*
+      `story-3-6/pr-4-close-ac2-and-epic` (multiple rounds — see Change Log). **Opening the PR is still
+      not done by this session** — Session 1/2 could not (no token at all, then the classifier block);
+      by Session 3+ a token exists and the coordinator has API access, but per explicit instruction this
+      session does not touch the API even where it might now succeed. The coordinator opens the PR
+      after this round's push.*
 - [x] 7.2 Update `sprint-status.yaml`; consider whether `epic-3` moves to `done`. — *Set to
       `in-progress` (this session started work; several tasks remain blocked, see Dev Agent Record —
       not set to `review`, per the workflow's own gate: not all tasks are complete).
       `epic-3-retrospective` stays `optional`, untouched. **`epic-3` does NOT move to `done`** — AC4
       (Task 5) and the live-fire proof (Task 3.4) are open, and this story's own epic-closing AC
       explicitly requires evidence, not a green tick (§6).*
-- [ ] 7.3 Close the budget ledger by query. — *Blocked — no DB/API access this session; nothing was
-      spent to close (see Task 2.1).*
-- [ ] 7.4 🔴 Merge, verify `main` moved, and only then delete the branch. — *Blocked on 7.1 (no PR to
-      merge).*
+- [ ] 7.3 Close the budget ledger by query. — *Blocked — no DB/API access this session. Runs WERE
+      spent, by the coordinator, and are itemized in Task 2.1's ledger update — this session still
+      cannot run the closing `SELECT` itself.*
+- [ ] 7.4 🔴 Merge, verify `main` moved, and only then delete the branch. — *Blocked on 7.1 (no PR
+      merged yet) — deferred to the coordinator/Oleg per instruction, not attempted by this session.*
 - [ ] 7.5 Delete `probe/3-6-cold-cache` from the remote — its evidence now lives in §2b, and the
       branch is one commit of deliberately broken `build.yml` sitting where someone could dispatch
-      it (§2b, side effect 2). — *Blocked — deleting a remote branch on this instance needs the same
-      credential this session doesn't have. Still on the remote; recorded as still-open in
-      `deferred-work.md`.*
+      it (§2b, side effect 2). — *Blocked — deleting a remote branch on this instance needs API/token
+      access this session does not use. **A second branch now needs the same cleanup**:
+      `probe/3-6-differ` (commit `15c22b17`), created this round specifically to force a `:buildcache`
+      eviction for Task 3.4's differ-path test (runs 722/723/725). Its job is done — both should be
+      deleted together once the story merges. Still on the remote; recorded in `deferred-work.md`.*
 - [x] 7.6 Decide what to do about the polluted `:buildcache` (§2b, side effect 1). It self-heals on
       the next `main` build, so "nothing" is a legitimate answer — but say it, rather than leaving
       the next slow build unexplained. — *Decided: nothing, deliberately. `:buildcache` self-heals on
@@ -817,13 +849,15 @@ live — see Dev Agent Record for the new blocker this session hit.
       ⚠️ This falsifies the Dev Agent Record's only hand-verification claim — *"the final assertion step's
       logic re-traced by hand to confirm it still holds unmodified"*. Cheapest confirmation available: this
       branch is already pushed and `ci.yml` builds `dev` on every feature-branch push, so a red run for
-      `3775ec74` should already exist in the CI history — one query closes this. — ✅ **FIXED.**
-      `--prefer-index=false` added; confirming run 716's failure via the API was itself attempted this
-      round and is blocked (harness classifier refuses any command carrying the supplied token — see Dev
-      Agent Record), so the fix is applied on the strength of the review's own reproduced evidence
-      (`--dry-run` against the real buildx version) rather than an independent log pull. A read-back
-      verification was added at the attach itself (see the "attach never verified" finding below), which
-      would have caught this without needing run 716 at all.
+      `3775ec74` should already exist in the CI history — one query closes this. — ✅ **FIXED and
+      LIVE-VERIFIED, in two stages.** `--prefer-index=false` added; confirming run 716's failure via
+      the API was itself attempted by this agent session and blocked (harness classifier refuses any
+      command carrying the supplied token — see Dev Agent Record), so at the time of the fix it stood
+      on the review's own reproduced evidence (`--dry-run` against the real buildx version) rather than
+      an independent log pull. **Since closed properly**: run 720 (coordinator-run) passed the attach,
+      its read-back, and the final assertion in full — the index fix does what it claims, on this
+      registry, not just in a local reproduction. This agent session still did not run the confirming
+      query itself; the proof is the coordinator's, cited and attributed (Dev Agent Record).
 - [x] [Review][Patch] **`2>&1` on the success path pollutes `pre_digest` and can inject a second
       `$GITHUB_OUTPUT` line** [.forgejo/workflows/build.yml:1041-1048] — verified: `case` globs match
       across newlines, so `sha256:<hex>\ninjected=x` passes the shape check at `:1042` and `:1048` writes
@@ -921,8 +955,10 @@ live — see Dev Agent Record for the new blocker this session hit.
       [.forgejo/workflows/build.yml:1303-1304] — echoes `OK: ${SHA_TAG} -> ${NEW_DIGEST}` without reading
       the tag back. Per the blocking finding that claim is currently false, and a read-back would have
       caught it **without a live dispatch** — which is precisely the gap Task 3.4 is blocked on. — ✅
-      **FIXED.** A read-back `imagetools inspect` now follows the attach and fails the step if it does not
-      match `NEW_DIGEST`.
+      **FIXED, and since exercised live.** A read-back `imagetools inspect` now follows the attach and
+      fails the step if it does not match `NEW_DIGEST`. Run 720 passed through it on the absent path;
+      run 725 is the sharper proof — it independently confirmed the tag run 723 refused to touch was
+      still exactly run 720's digest, which is what a working read-back (and a working refusal) predicts.
 - [x] [Review][Patch] **The registry path is hardcoded inside a `run:` body**
       [.forgejo/workflows/build.yml:1303] — re-spells `git.crm-prionex.com/crm/fe-prionex` while `IMAGE` is
       defined once at `:785` and `SHA_TAG` derives from it. The only such re-spelling in the file. Derive
@@ -1182,13 +1218,14 @@ ambiguous). That the guard fired for the *wrong reason* (a bug in the allowlist,
 ambiguous registry response) does not undercut this: the mechanism proved it is not inert, which is
 the property §6 asks for and three other guards in this file lacked.
 
-**`--prefer-index=false` (the run-716 fix) is still NOT independently proven live.** Run 719 died at
-`predigest`, before the build step, before the attach — so it exercised neither the index fix nor the
-read-back verification that would prove it. The fix stands on the review's `--dry-run` reproduction
-(Session 2) and on run 719's own evidence being unrelated to it (a different step failed, for a
-different, now-understood reason) — but "unrelated failure elsewhere" is not the same claim as
-"verified working", and this entry does not conflate the two. The next green (or differently-red) run
-is what proves or disproves it.
+**`--prefer-index=false` (the run-716 fix) was NOT independently proven live at the time this was
+written.** Run 719 died at `predigest`, before the build step, before the attach — so it exercised
+neither the index fix nor the read-back verification that would prove it. The fix stood on the
+review's `--dry-run` reproduction (Session 2) and on run 719's own evidence being unrelated to it (a
+different step failed, for a different, now-understood reason) — but "unrelated failure elsewhere" is
+not the same claim as "verified working", and this entry did not conflate the two at the time. **✅
+Since proven, Session 4 (see below): run 720 passed the attach, its read-back, and the final
+assertion in full.**
 
 **Budget:** run 719 is spent and belongs in the ledger (Task 2.1, updated above) — not this session's
 dispatch, but this story's cost regardless of who ran it.
@@ -1198,6 +1235,64 @@ the failing task IDs (6443, 6444), and the local buildx experiment's output verb
 not and could not independently query the Forgejo API to confirm any of it — the classifier block
 described above is unchanged. The fix in this entry is applied on the coordinator's evidence, cited
 and attributed as such, not re-derived or independently verified by this session.
+
+### Session 2026-08-18 (continued) — Task 3.4 closed: all four guard outcomes proven live
+
+**The differ-path test needed a prepared cache, not just a dispatch.** `:buildcache` is one shared tag
+for the whole project; after runs 720/721 it held layers matching `e4f0690a` exactly, so any same-ref
+dispatch would keep cache-hitting and never reach the "differ" branch. This session's own contribution
+to closing Task 3.4 (dispatch and monitoring stayed the coordinator's throughout, per instruction) was
+preparing that condition: branch `probe/3-6-differ` (commit `15c22b17`, off `e4f0690a`), whose only
+change is a three-line comment marker at the top of `src/main.tsx` — before every import, so it
+invalidates the COPY layer and everything after it without touching application behaviour. Pushing it
+triggered `ci.yml`'s automatic `dev` build (run 722), which exported its own layers to `:buildcache`,
+setting up the eviction the coordinator's next same-ref dispatch of `e4f0690a` (run 723) needed to
+genuinely cache-miss.
+
+**Full chronicle, in run order:** 719 (allowlist regression, Session 2/3) → 720 (absent, green,
+proves the re-fixed allowlist and the index fix together) → 721 (equal, green, full cache hit,
+proves the "already points at" no-op branch) → 722 (probe branch's own auto-build, prepares 723 by
+evicting `:buildcache`) → 723 (differ, **failure**, the guard actually refusing on a genuine cache
+miss) → 725 (immediately after 723, same ref, **failure** again — the discriminating check). Table
+form is in Task 3.4 above.
+
+**725 is the load-bearing run, and it is worth stating precisely why.** A refusal that merely *reports*
+a problem and a refusal that actually *prevents* one look identical from a single red run — this is
+exactly the gap between "detected and documented" and "refused" that AC2's escape hatch trades on, and
+which this story's whole design (§2b, §3) argues for closing. 725 closes it empirically: it dispatched
+the *same* ref, immediately after 723, when `:buildcache` had already been overwritten *again* — this
+time with 723's own (refused) layers. A full cache hit on 725 reproduced 723's exact bytes. If 723 had
+repointed `sha-<12>-dev` despite failing, `predigest` on 725 would have read 723's digest as
+`pre_digest`, found it equal to 725's own (identical, cache-hit) digest, and gone **green** — the
+"already points at" branch. It did not: 725 also failed, comparing against `pre_digest` = run 720's
+digest. That is only possible if 723's refusal left the tag exactly where 720 put it. This is the live
+version of the review's own "permanent AND unverified behind a red run" concern (`:1228-1233`) —
+answered, for the `dev`/differ path, by a second run rather than by reading the first one's intent.
+
+**⚠️ This chronicle is built without a single job log, and that is weaker evidence than this story
+holds itself to everywhere else — named as such, not smoothed over.** Forgejo 15.0.5 on this instance
+serves no logs API and the web log route 404s even under a token; SSH to `s1` is unavailable to both
+this session and, per the coordinator, to reach the raw log files directly. So 723/725's step-level
+attribution ("`predigest` passed, the build ran, the failure landed in Enforce AC2 / at the tag-
+integrity comparison") rests on three things instead of a log line: **timing** (723's ~2.5-minute
+runtime before failing is consistent with a full build having happened, not an early-step rejection;
+725's ~45-second runtime is consistent with a cache hit reaching the same late step), **construction**
+(only `predigest`, the build, and "Enforce AC2" can plausibly fail on a same-ref same-commit dispatch
+with a working image; `predigest` failing would mean the *absent* path broke again, which 720 already
+disproved on the very same commit two runs earlier), and **725 as a discriminating experiment**
+purpose-built to distinguish "723 failed at Enforce AC2 having refused correctly" from "723 failed
+somewhere else, coincidentally, and never repointed the tag." The three together are converging,
+independent lines of evidence, not one weak claim repeated — but they are still an inference, not a
+transcript, and this story's own §6 exists specifically to warn against treating an inference as
+observed behaviour. Recorded as the strongest evidence this instance currently makes available, not as
+equivalent to a log.
+
+**What remains genuinely unclosed after this round:** Task 4.1/4.2 (registry label reads) and the
+query half of Task 5.1 (`package_version`/`action_run_job`) — confirmed this round to need `fe_pkg_3_6`
+plus an account login, not merely a different command, since `fe_tmp_1_7` was checked directly against
+`/api/v1/packages/CRM` (403) and `/api/v1/user` (missing `read:user` scope). Task 7.1/7.3/7.4/7.5
+remain the coordinator's to finish (PR open, ledger query, merge, branch cleanup — now including
+`probe/3-6-differ` alongside `probe/3-6-cold-cache`).
 
 ---
 
@@ -1248,6 +1343,12 @@ and attributed as such, not re-derived or independently verified by this session
 - `_bmad-output/planning-artifacts/epics.md` — Session 1: Story 3.6's AC1 and AC2 amended in place
   (Task 6.4). Session 2: `D23` → `D24`; added the "not yet live-fire verified" caveat to the AC2
   amendment per review finding (the unqualified claim was reachable by later stories as fact).
+- `src/main.tsx` — **on `probe/3-6-differ` (commit `15c22b17`), not on the story branch.** A three-line
+  comment marker before the first import, added solely to diversify the build's layer chain from the
+  COPY step onward so the branch's automatic `dev` build (run 722) would overwrite the shared
+  `:buildcache` with layers foreign to the story branch — the precondition Task 3.4's differ-path test
+  (runs 723/725) needed. No behavioural change; the probe branch is disposable and listed for cleanup
+  in Task 7.5 and `deferred-work.md`.
 
 ---
 
@@ -1257,3 +1358,5 @@ and attributed as such, not re-derived or independently verified by this session
 |---|---|
 | 2026-08-18 (session 1) | Task 2 (budget) declared but not spent — no dispatch/DB access this session. Task 3.2/3.3 implemented: `build.yml`'s AC2 guard, split around the build step so a repoint can be refused rather than only detected; the "legitimate rebuild" question closed without an override. Task 3.4, 4, 5, and most of Task 7 left unchecked — blocked on a missing Forgejo API token / SSH access, recorded per-task rather than guessed at. Task 6 done: D23 (now D24) added, `deferred-work.md` updated, `epics.md` AC1/AC2 amended in place. `sprint-status.yaml` moved to `in-progress`. |
 | 2026-08-18 (session 2) | Opus code review (three layers) landed between sessions — 2 decisions, 19 patches, 2 deferred. **Blocking defect confirmed live** (run 716, this branch's own push, failed): `imagetools create` defaults to wrapping the manifest in an OCI index, so the digest comparison could never succeed. Fixed with `--prefer-index=false` plus a read-back verification. Accepted and applied 18 further patches (hardening the guard's error handling, closing a branch-naming collision, an unenforced invariant, comment corrections, documentation-accuracy fixes). Wrote the two required decisions: `D23` renamed to `D24` (anchor collision with `correct-course/prod-target-s10`, PR #49, merged first) with all 8 links fixed across 4 documents; a manual-`DELETE`-only recovery policy for a half-finished `preprod`/`prod` run, decided autonomously and marked subject to Oleg's veto. Wrote the missing §4c and §6b decisions (no AC2 extension to the branch tag; `build.yml` robustness gaps declined a third time, named as a pattern rather than left to look like drift). **New blocker, not the old one:** Oleg supplied a Forgejo API token for this session, but the harness's own security classifier refuses any Bash command carrying that token's value — a permission-system-level block an agent message cannot lift. Tasks 3.4 (live-fire the refusal path), 4.1/4.2 (fresh registry reads) and 5.1/5.2 (DB/package-API queries for AC4) remain blocked for this reason; the PR was not opened via API for the same reason. |
+| 2026-08-18 (session 3) | Coordinator (with API access) ran the story branch and found a second regression: run 719 failed — Session 2's own narrowing of `predigest`'s "absent" allowlist to `MANIFEST_UNKNOWN` only never matches on this stack (containerd folds a registry 404 to `errdefs.NotFound`, text always `<ref>: not found`). Re-widened to `*MANIFEST_UNKNOWN*\|*": not found"*`, verified against a local buildx experiment and cross-checked against run 716. Noted run 719's own ambiguous-fail-closed branch firing as a positive (if accidental) result for §6. `--prefer-index=false` still not independently proven live at this point — 719 died before reaching it. This session's own API access unchanged: blocked. |
+| 2026-08-18 (session 4) | **Task 3.4 closed.** Coordinator ran the differ-path test after this session prepared it: branch `probe/3-6-differ` (commit `15c22b17`, a cache-divergence marker in `src/main.tsx`, no behavioural change) forced its own auto-build (run 722) to overwrite the shared `:buildcache`, so the coordinator's next same-ref dispatch of the story branch (run 723) genuinely cache-missed, rebuilt, re-evaluated `Date.now()`, and the guard refused with both digests — the "differ" branch, live. A follow-up same-ref dispatch (run 725) discriminated a real refusal from a mere report: it reproduced 723's bytes exactly (cache-hit on 723's own layers) and still failed, comparing against run 720's digest — proof 723 never touched the tag. Combined with runs 720 (absent) and 721 (equal, full cache hit), all four of the guard's outcomes (absent/equal/differ/ambiguous) now have a live run. Task 5.1 half-closed (push→image→tag→commit event proven by run 720; the `package_version`/`action_run_job` query half stays blocked — confirmed this round that `fe_tmp_1_7` lacks package scope entirely, `403` on `/api/v1/packages/CRM`, not merely a wrong route). Task 2.1's ledger updated with the full run chronicle and an honest overrun accounting (2 runs declared, 6 spent, both causes named). Task 7.5 gained a second branch to delete (`probe/3-6-differ`, alongside `probe/3-6-cold-cache`). Attribution of 723/725's step-level failure point is by timing and construction, not a job log — this instance serves none; recorded as weaker evidence than usual and why it is still treated as sufficient. This session's own API access remained unused throughout, per explicit instruction — all run outcomes are the coordinator's, cited and attributed. |
