@@ -10190,6 +10190,37 @@
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted"
+    },
+    "coefficientRanges": {
+      "title": "Coefficient ranges",
+      "description": "Loan closing coefficients by loan age. Ranges are inclusive on both ends and may not overlap.",
+      "add": "Add range",
+      "addTitle": "Add range",
+      "editTitle": "Edit range",
+      "empty": "No ranges configured. The coefficient tooltip stays hidden until one matches.",
+      "daysColumn": "Loan age (days)",
+      "coefficientColumn": "Coefficient",
+      "updatedByColumn": "Updated by",
+      "minDays": "Min days",
+      "maxDays": "Max days",
+      "minCoefficient": "Min coefficient",
+      "maxCoefficient": "Max coefficient",
+      "hint": "Both day boundaries are inclusive. Coefficients take one decimal place, 1.0 to 10.0.",
+      "readOnly": "You have view-only access to these ranges.",
+      "created": "Range added",
+      "updated": "Range updated",
+      "deleted": "Range deleted",
+      "deleteTitle": "Delete range",
+      "deleteConfirm": "Delete the range {{range}}?",
+      "saveError": "Could not save the range",
+      "deleteError": "Could not delete",
+      "errors": {
+        "days": "Days must be whole numbers of 0 or more",
+        "dayOrder": "Min days must not exceed max days",
+        "coefficientFormat": "Coefficients allow at most one decimal place (e.g. 1.5)",
+        "coefficientRange": "Coefficients must be 1.0–10.0",
+        "coefficientOrder": "Min coefficient must not exceed max coefficient"
+      }
     }
   },
   "contactTypes": {

@@ -304,7 +304,9 @@ describe('RepaymentConfigurationPage', () => {
       expect(sw).toBeDisabled()
     })
 
-    // Read-only notice banner must be visible
-    expect(screen.getByText(/view-only access/i)).toBeInTheDocument()
+    // Read-only notice banner must be visible. Matched on the full sentence,
+    // not /view-only access/: the Coefficient ranges section on this same page
+    // renders its own read-only banner, so the loose pattern matches two nodes.
+    expect(screen.getByText(/view-only access to this configuration/i)).toBeInTheDocument()
   })
 })
