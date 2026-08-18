@@ -285,11 +285,11 @@ export function ChainExecutor({
     return all.filter((c) => (c.steps ?? []).some((s) => s.contact_source === contactSource))
   }, [chainsData, contactSource])
 
-  // Full TA data (for dropdown values + flags)
   // The source the prefilled phone belongs to. Distinct from `contactSource`,
   // which additionally narrows the chain list — see the prop docs.
   const prefillSource = prefilledPhoneSource ?? contactSource
 
+  // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
   const taById = useMemo(() => {
     const m = new Map<number, TargetAction>()

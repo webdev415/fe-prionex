@@ -87,11 +87,23 @@ export function formatHotkey(hotkey: Hotkey): string {
 
 /** Inverse of {@link formatHotkey}. ``null`` when the string is not a combination. */
 export function parseHotkey(value: string): Hotkey | null {
-  const parts = value.split('+').filter(Boolean)
-  if (parts.length === 0) return null
+  if (!value) return null
 
-  const key = parts[parts.length - 1]
-  const modifiers = parts.slice(0, -1)
+  // Split on the LAST separator, not every one. Splitting on all of them and
+  // dropping empties made '+' unparseable — `formatHotkey` produces 'Ctrl++'
+  // for it, which collapsed to ['Ctrl'] and returned null, so a combination
+  // this module can write it could not read back.
+  const lastSeparator = value.lastIndexOf('+')
+  const key = lastSeparator === -1 ? value : value.slice(lastSeparator + 1) || '+'
+  const modifiers =
+    lastSeparator <= 0
+      ? []
+      : value
+          .slice(0, key === '+' ? lastSeparator - 1 : lastSeparator)
+          .split('+')
+          .filter(Boolean)
+
+  if (!key) return null
   if (MODIFIER_KEYS.has(key) || ['Ctrl', 'Alt', 'Shift'].includes(key)) return null
   if (!modifiers.every((m) => ['Ctrl', 'Alt', 'Shift'].includes(m))) return null
 
@@ -150,6 +162,25 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * Controls inside an exempt dialog that consume plain keys themselves.
+ *
+ * Text fields are the obvious case, but not the only one: a Radix dropdown
+ * trigger is a ``button[role="combobox"]`` and its list uses type-ahead, so a
+ * bare-key binding like ``P`` would be stolen from the widget — the operator
+ * types to jump to an option and gets a toast instead. Dropdowns are the main
+ * interaction in the TA modal, so the exemption has to stop at them.
+ */
+export function ownsItsKeystrokes(target: EventTarget | null): boolean {
+  if (isTextEntryTarget(target)) return true
+  if (!target || !(target instanceof Element)) return false
+  return (
+    target.closest(
+      '[role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [aria-haspopup]'
+    ) !== null
+  )
+}
+
+/**
  * The template bound to this event, or ``null``.
  *
  * ``bindings`` is keyed by {@link formatHotkey} output. An unassigned
@@ -187,9 +218,10 @@ export function resolveHotkeyTarget<T>(
     event.target.closest(options.exemptDialogSelector) !== null
 
   if (!exempt && isTypingTarget(event.target ?? null)) return null
-  // Even inside an exempt dialog, a key typed into a field belongs to the
-  // field. The exemption is about the dialog wrapper, not its inputs.
-  if (exempt && isTextEntryTarget(event.target ?? null)) return null
+  // Even inside an exempt dialog, a key aimed at a control that consumes keys
+  // still belongs to that control. The exemption is about the dialog wrapper,
+  // not the widgets inside it.
+  if (exempt && ownsItsKeystrokes(event.target ?? null)) return null
 
   const hotkey = hotkeyFromEvent(event)
   if (!hotkey) return null

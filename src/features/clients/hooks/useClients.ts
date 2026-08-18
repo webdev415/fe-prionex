@@ -528,10 +528,6 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
 }
 
 /**
- * Get client tasks. Calls GET /tasks/client/{id}
- */
-
-/**
  * The client's most recent calls, in the raw API shape (KAN-973 §4).
  *
  * Deliberately separate from `useClientCallSmsHistory`, for two reasons that
@@ -543,9 +539,9 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
  *    renamed to `phone` and unknown numbers replaced with "-", so the number
  *    the switchboard reported is no longer recoverable.
  *
- * This returns `CallRecord` untouched and stays enabled with the client card,
- * so the answer to "did a call to this client just end?" is ready before the
- * operator presses anything.
+ * This returns `CallRecord` untouched, and is enabled only for operators who
+ * actually have a shortcut bound — for everyone else it would be a request per
+ * client card in service of a feature they have not set up.
  *
  * The window is short on purpose: the question is only ever about the last few
  * minutes, and a stale answer would pre-select the wrong number.
@@ -565,6 +561,9 @@ export function useClientRecentCalls(clientId: number, enabled = true) {
   })
 }
 
+/**
+ * Get client tasks. Calls GET /tasks/client/{id}
+ */
 export function useClientTasks(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.tasks(clientId),

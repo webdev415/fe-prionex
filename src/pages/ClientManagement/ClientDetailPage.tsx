@@ -444,6 +444,7 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhoneSource, setChainExecutorPrefilledPhoneSource] = useState<
     'client' | 'recommender' | null
   >(null)
+  // KAN-973 — the quick-pick a hotkey asked the executor to start on open.
   const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
     number | null
   >(null)
@@ -1438,8 +1439,8 @@ export function ClientDetailPage() {
   // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
   // in the hook and its pure modules; this only says what "launch" means here.
   //
-  // Declared this far down because it reads `client` and `callSmsHistory`; a
-  // hook call placed above their `const`s throws on every render.
+  // Declared this far down because it reads `client` and `recentCalls`; a hook
+  // call placed above their `const`s throws on every render.
   useTAHotkeyLaunch({
     enabled: isValidClientId,
     isExecutorOpen: isChainExecutorOpen,

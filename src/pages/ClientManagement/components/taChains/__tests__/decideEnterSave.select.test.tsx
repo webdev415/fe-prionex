@@ -2,13 +2,15 @@
  * KAN-974 — the dropdown case, against the real Radix Select.
  *
  * The unit tests next door check the rule against a hand-built DOM. This one
- * renders the component operators actually use and drives it with the keyboard,
- * because the bug it guards against was invisible to reasoning: Radix's
- * SelectItem calls `handleSelect()` on Enter and preventDefaults only for
- * Space, so a handler that trusted `defaultPrevented` let "choose a value" also
- * submit the interaction.
+ * renders the component operators actually use and drives it with the keyboard.
  *
- * If a future Radix release changes that, this test is what notices.
+ * What actually stops a dropdown selection from also submitting is
+ * `isPressForPanel`: Radix portals the Select content to document.body, which
+ * is outside both the panel and its dialog, so the press is rejected before the
+ * rules are consulted. An earlier version credited a `defaultPrevented` check
+ * for this, which was wrong — the listener is a native one on `document`, and
+ * Radix's SelectItem preventDefaults only for Space. If a future Radix release
+ * stops portalling, this test is what notices.
  */
 import { useEffect, useRef, useState } from 'react'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
