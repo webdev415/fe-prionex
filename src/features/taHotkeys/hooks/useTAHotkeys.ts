@@ -1,16 +1,12 @@
 /**
- * The operator's hotkey bindings.
+ * The operator's hotkey bindings — read for the client card, written from the
+ * Keyboard Shortcuts tab in Profile Settings.
  *
- * Replaces the localStorage stand-in this feature shipped behind while the
- * storage question was open: bindings now live in the client service, keyed by
- * the operator, so they follow the operator between machines and browsers.
- *
- * Read-only for now. The write side (assign / clear) belongs to the Profile
- * Settings tab in KAN-975 and lands with it — adding the mutations here ahead
- * of a caller would ship three untested exports nobody runs.
+ * Bindings live in the client service, keyed by the operator, so they follow
+ * the operator between machines and browsers.
  */
-import { useQuery } from '@tanstack/react-query'
-import { getTAHotkeys } from '../api/taHotkeysApi'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { assignTAHotkey, clearTAHotkey, getTAHotkeys } from '../api/taHotkeysApi'
 import type { TAHotkeyBinding } from '../api/types'
 
 const KEY = ['ta-hotkeys'] as const
@@ -54,4 +50,31 @@ export function useTAHotkeyBindings(): Record<string, number> {
     staleTime: 5 * 60 * 1000,
   })
   return data ?? EMPTY
+}
+
+/**
+ * The bindings as a list, for the settings tab, which renders a row per
+ * template and needs to look them up by template rather than by combination.
+ */
+export function useTAHotkeyList() {
+  return useQuery({ queryKey: KEY, queryFn: getTAHotkeys })
+}
+
+export function useAssignTAHotkey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: assignTAHotkey,
+    // Refetch rather than patch the cache: a save can also strip the
+    // combination from a *different* template, and refetching is how both rows
+    // end up right without the UI replaying the server's reassignment itself.
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export function useClearTAHotkey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (quickPickId: number) => clearTAHotkey(quickPickId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
 }

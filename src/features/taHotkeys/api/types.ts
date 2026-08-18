@@ -9,6 +9,16 @@ export interface TAHotkeyBinding {
   quick_pick_id: number
 }
 
-// The assign response also carries `reassigned_from` — the template that lost
-// this combination. It is typed alongside the assign call in KAN-975, which is
-// where the first caller for it lives.
+export interface TAHotkeyAssignResult extends TAHotkeyBinding {
+  /**
+   * The template that previously owned this combination, or `null` if it was
+   * free.
+   *
+   * The settings UI warns before saving, but it builds that warning from a list
+   * it fetched earlier — another tab, or the same operator on another machine,
+   * may have moved the combination since. This is what actually happened, so
+   * the row that lost its shortcut is the one the server names, not the one the
+   * UI guessed.
+   */
+  reassigned_from: number | null
+}
