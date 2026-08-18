@@ -26,7 +26,12 @@ This document provides the complete epic and story breakdown for the migration o
 decomposing the requirements from `docs/forgejo-migration.md` (which serves as both PRD
 and Architecture for this infrastructure effort) into implementable stories.
 
-**Target topology:** s1 — DEV + PRE-PROD, s2 — PROD.
+**Target topology:** s1 — DEV + PRE-PROD; PROD — **s10** (VM `e1-rung3`, `192.168.122.11`,
+behind jump host `62.112.10.55`; admin access `ssh -J root@62.112.10.55 root@192.168.122.11`).
+~~s2 — PROD.~~ 🔴 **AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`):
+production moves to a dedicated VM; s2 (`175.110.122.17`) keeps serving the **legacy**
+production stand untouched until the external traffic switch (Story 6.9), and is never a
+Forgejo deploy target.
 **Hard constraint:** existing DEV and PROD stands must not be touched during migration;
 the new pipeline is built in parallel and switched over only at the final step.
 
@@ -44,7 +49,12 @@ Two consequences the plan depends on and cannot itself guarantee:
   writing.
 - **Two pipelines can reach production.** The legacy GitHub CD deploys to s2 on a merge to
   `main` and is not disabled (Story 6.1, cancelled). From the moment Forgejo can also deploy
-  to s2, concurrent deploys from two independent pipelines are possible.
+  to s2, concurrent deploys from two independent pipelines are possible. 🔴 **AMENDED
+  2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): the two pipelines no
+  longer share a host — legacy CD deploys to s2, Forgejo deploys to s10 — so *concurrent
+  deploys to the same stand* are impossible by construction. The residual risk is milder and
+  different: **two productions exist in parallel** until the traffic switch, and until that
+  switch s2 is the one users see.
 
 Both are accepted risk for the duration, not solved problems.
 
@@ -186,6 +196,13 @@ workflows run on a deploy runner located on the target host and follow the seque
 compose file in the stand directory → `docker compose down` → `docker pull` (fail-fast, **no**
 fallback to `:latest`) → `docker compose up -d` → health check. **No step connects to the host
 over SSH.** ~~All deploy workflows follow the sequence: scp compose file → …~~
+🔴 **TARGET AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): for
+production, "the target host" is **s10** (`e1-rung3`), not s2. The mechanism is unchanged and
+re-validated by the new topology: the VM is NAT-hidden behind a jump host, so workflow SSH
+would require two hops, while the runner's outbound polling is measured working. The runner
+currently on s10 (id 21, labels `s10`/`e1-rung3`) is **CI-shaped and cannot deploy** — its
+jobs execute in its own dind, not against the host daemon. Story 6.10 provisions the
+deploy-shaped counterpart.
 
 FR20: The health check polls `docker inspect -f '{{.State.Health.Status}}'` against a
 **parameterized** container name, with a fallback `curl` against the **parameterized**
@@ -210,7 +227,8 @@ FR25: `docker-compose.server.yml` is parameterized — `COMPOSE_PROJECT_NAME`,
 alongside the untouched legacy stand.
 
 FR26: Stand directories are separated: `~/crm-prionex/fe-prionex-dev/` and
-`~/crm-prionex/fe-prionex-preprod/`.
+`~/crm-prionex/fe-prionex-preprod/`. **AMENDED 2026-08-18:** the PROD stand directory lives on
+s10 as `~/crm-prionex/fe-prionex-prod/`, same convention, established by Story 6.10.
 
 FR27: PRE-PROD runs on its own Docker network — **named by agreement with `CRM/api-prionex`,
 whose stack convention is `crm-preprod-network`** — with its own Kong gateway, so
@@ -277,7 +295,10 @@ NFR4: Every image is immutable and traceable to the exact commit that produced i
 `sha-<short>` tag.
 
 NFR5: The existing DEV and PROD stands remain fully operational and untouched throughout
-phases 0–6; Forgejo deploys only to newly created stands.
+phases 0–6; Forgejo deploys only to newly created stands. **AMENDED 2026-08-18:** for PROD the
+guarantee is now absolute — Forgejo never deploys to s2 at all. The legacy PROD stand on s2
+remains untouched through the entire migration and keeps serving until the external traffic
+switch.
 
 NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only ~~`ci-bot`~~ `robot-registry` holds
 `write:package`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; `robot-registry`/`REGISTRY_TOKEN_RW` is the platform's existing write-capable pair, adopted as-is. ⚠️ **Область действия утверждения, уточнено code review:** «только `robot-registry`» верно **среди сервисных токенов**. На инстансе три администратора (`platform-admin`, `Ruslan`, `Marina`), а админ обходит package-скоупы — это вне модели угроз данного NFR, а не его нарушение. See `docs/migration-decisions.md#d14`.
@@ -287,7 +308,12 @@ no longer authenticates to s2 over SSH (FR19), so **no new deployment key is req
 existing key stays authorized on s2 as an **administrative access path only**; it is not a delivery
 credential, and its rotation is Story 7.5's concern rather than a prerequisite for any deploy.
 ~~s2 receives a **new** SSH key~~; the old key is not revoked until Phase 8 completes, to
-avoid losing access.
+avoid losing access. **AMENDED 2026-08-18:** the administrative access path to the new PROD
+contour is `ssh -J root@62.112.10.55 root@192.168.122.11` (key-based, proven 2026-08-18). The
+jump host is a pure relay: it holds no access into the VM itself — from its own shell the VM
+is unreachable (measured, "No route to host"), so only externally authorized keys reach s10.
+The old s2 key remains authorized on s2 as the admin path to the **legacy** stand only; its
+rotation stays Story 7.5's concern. No SSH credential of any kind enters Forgejo — unchanged.
 
 NFR8: No silent URL fallbacks — the `CD.yml:49,59` style defaults to the production API are
 removed, so a missing secret fails the build instead of shipping a wrong bundle.
@@ -2175,6 +2201,11 @@ So that the cutover can be rehearsed against the code already in production.
 > image rather than the artifact validated on PRE-PROD, so this introduces no new compromise —
 > it makes the story consistent with one the plan had already accepted (NFR11).
 
+> **Note added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): identification
+> of the running production commit still happens on **s2** — that is where the legacy production
+> serves from until the traffic switch. Only the *deploy destination* of the rebuilt image
+> changed (s10, per Story 6.4 as amended). The ACs stand as written.
+
 **Acceptance Criteria:**
 
 **Given** production currently runs an image from ghcr.io
@@ -2232,9 +2263,12 @@ PRE-PROD artifact.
 **Then** it pulls the existing tag without rebuilding
 **And** no build step runs on this path.
 
-**Given** the deploy targets s2
+**Given** the deploy targets s10 ~~s2~~ (amended 2026-08-18,
+`sprint-change-proposal-2026-08-18-prod-target.md`)
 **When** the workflow declares `runs-on`
-**Then** it targets the deploy runner located on s2 by its label
+**Then** it targets the deploy runner located on s10 by its label — the label Story 6.10
+registers, **not** `s10`/`e1-rung3`, which belong to the CI runner whose jobs execute in dind
+and can never reach the host's stand
 **And** no SSH credential is used, so production access cannot be lost by a key change.
 
 > Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"Then it
@@ -2243,6 +2277,11 @@ PRE-PROD artifact.
 > decision:** the s2 deploy runner holds that host's `docker.sock`, so a production deploy job
 > has root-equivalent control of the s2 daemon. This is the hub's documented pattern and the
 > only way this model reaches production.
+>
+> **Re-scoped 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): the accepted
+> `docker.sock` root-equivalence now applies to a dedicated single-purpose VM (s10) rather than
+> a shared production host — the risk stands, its blast radius shrinks to that VM. The decision
+> remains Oleg's and remains accepted.
 
 **Given** the deploy sequence
 **When** it executes
@@ -2391,6 +2430,18 @@ As a release engineer,
 I want the full production mechanism exercised without changing what production serves,
 So that cutover risk is separated from release risk.
 
+> 🔴 **MEANING AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`).
+> As written, this story assumed old and new production share a host, so "deploy without
+> changing what production serves" was one stand restarting on itself. Now: the no-op deploy
+> exercises the full mechanism **on the s10 stand while s2 continues to serve users**. The
+> comparison "content before and after is identical" is made between what s2 serves and what
+> s10 serves (behaviour, not digest — the Option C caveat already recorded here). **The actual
+> switch of public traffic from s2 to s10 is an external dependency** — hypervisor
+> port-forwarding, front nginx, or DNS, owned outside this repository — and this plan treats it
+> like the PRE-PROD vhost: named, owned, and verified from our side, not built by us. The
+> cutover is complete only when the traffic switch has happened and the smoke check passes
+> against the public name.
+
 **Acceptance Criteria:**
 
 **Given** the image imported in Story 6.3
@@ -2413,6 +2464,65 @@ So that cutover risk is separated from release risk.
 **Then** it states that production is now delivered by Forgejo
 **And** the Option C deviation from the promotion principle is restated in the release
 documentation so it is not forgotten.
+
+### Story 6.10: Provision the PROD Deploy Contour on s10
+
+> **Added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`). Listed after 6.9
+> to preserve numbering, **must complete before Story 6.4** — the precedent is Story 1.13,
+> which also ran out of numeric order for the same reason.
+
+As a release engineer,
+I want the new PROD host able to receive a Forgejo deploy before any deploy story runs,
+So that Epic 6 lands on a host that is measured ready rather than assumed ready.
+
+> **Everything below starts from the 2026-08-18 measurements**
+> (`sprint-change-proposal-2026-08-18-prod-target.md` §1): a CI-shaped runner (id 21) already
+> polls from s10 via `--add-host git.crm-prionex.com:10.70.0.1`; the host itself resolves the
+> public IP and gets an empty reply; no registry credential exists on the host; the host was in
+> a provisioning crash-loop the same morning. **Re-verify at execution time — this host is
+> moving.**
+
+**Acceptance Criteria:**
+
+**Given** the hub's deploy-runner pattern (`s1-deploy-dev-preprod`, `s2-prod-deploy`)
+**When** the deploy runner for s10 is provisioned — **by us, on s10 itself** (Oleg's decision
+2026-08-18: we hold root on the VM via the jump path; only the registration token comes from
+the Forgejo side)
+**Then** a runner registration exists on s10 whose jobs execute against the **host** Docker
+daemon (not dind), carrying a dedicated deploy label distinct from `s10`/`e1-rung3`
+**And** the registration scope (instance/org) is verified to make it reachable from
+`CRM/fe-prionex`, and runner id 21 is confirmed untouched.
+
+**Given** the contour talks to the hub over wg-private **by design** (Oleg, 2026-08-18), and
+the registry answers only there (measured: public → empty reply after TLS, `10.70.0.1` → 401)
+**When** the host is prepared
+**Then** `/etc/hosts` on s10 maps `git.crm-prionex.com` to `10.70.0.1`, mirroring s1's
+split-horizon — the designed network model, not a workaround
+**And** a host-level `docker pull` of a real, currently-existing image tag succeeds — this is
+the proof, not a `curl`.
+
+**Given** s2's credential pattern (`robot-deploy`, scope exactly `read:package`)
+**When** the pull credential is placed on s10
+**Then** it is read-only, its account and scope are recorded, and a push attempt is refused
+(`401`) — same proof shape as Story 1.10
+**And** no `write:package` credential exists anywhere on s10.
+
+**Given** FR25/FR26 conventions and the compose file from Story 4.1
+**When** the stand directory is created
+**Then** `~/crm-prionex/fe-prionex-prod/` exists on s10 with its server-side `.env`
+(`COMPOSE_PROJECT_NAME`, `CONTAINER_NAME`, `FRONTEND_PORT`)
+**And** the chosen `FRONTEND_PORT` is measured free on s10, not assumed — the FR25 lesson.
+
+**Given** public traffic must eventually reach this stand
+**When** the story closes
+**Then** the traffic path (hypervisor port-forward / front proxy / DNS) is named with its owner
+and current state, as an external dependency in the Story 6.9 sense
+**And** nothing about it is built or changed by this story.
+
+**Given** the plan's record-keeping
+**When** the story closes
+**Then** `docs/migration-decisions.md` D23 is updated with what was provisioned, by whom, and
+what remains external.
 
 ---
 
@@ -2486,7 +2596,10 @@ So that a new team member is not onboarded onto a pipeline that no longer exists
 **Given** the migration is complete
 **When** `docs/deployment.md` is written
 **Then** it describes the flow feature branch → DEV → pull request → `main` → PRE-PROD → PROD
-**And** it names s1 as DEV plus PRE-PROD and s2 as PROD with their ports.
+**And** it names s1 as DEV plus PRE-PROD, and s10 (VM `e1-rung3` behind jump `62.112.10.55`)
+as PROD with their ports — including the admin access path (`ssh -J`) and s2's status as the
+decommission-pending legacy host (amended 2026-08-18,
+`sprint-change-proposal-2026-08-18-prod-target.md`).
 
 **Given** the new pipeline
 **When** the documentation is written
@@ -2574,6 +2687,12 @@ Forgejo is confirmed working.
 **When** the closing record is written
 **Then** it lists what was rotated, what was revoked, and what remains as tracked technical
 debt.
+
+> **Note added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): s2 leaves the
+> delivery topology at cutover but the old s2 key removal clause stands unchanged — it guards
+> the *legacy* stand for as long as s2 serves or holds anything. The closing record gains one
+> line: the keys authorized on the jump host (`62.112.10.55`) and on s10 are the production
+> administrative path and must be inventoried in the same record.
 
 ### Story 7.6: Give the Production OpenBao Credential an Expiry Owner
 
