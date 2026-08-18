@@ -1507,12 +1507,22 @@ So that "deploy this tag" is an unambiguous instruction and an audit can reconst
 **When** the build completes
 **Then** the registry contains an image whose `sha-<short>` tag maps to that exact commit
 **And** the mapping is verifiable from the image metadata or labels without consulting the
-run log.
+run log. 🔴 **AMENDED 2026-08-18 (Story 3.6, [D20](../../docs/migration-decisions.md#d20)): read
+`sha-<short>` as `sha-<12 hex>-<env>` — the bare form was removed by D20.** Satisfied by
+`org.opencontainers.image.revision`, which `build.yml` has emitted since Story 3.2.
 
 **Given** an existing `sha-<short>` tag in the registry
 **When** the same commit is built a second time
 **Then** the existing tag is not silently repointed to a different digest, or if it is, the
-behaviour is detected and documented as a known limitation.
+behaviour is detected and documented as a known limitation. 🔴 **AMENDED 2026-08-18 (Story 3.6):**
+read `sha-<short>` as `sha-<12 hex>-<env>` (D20, as above). **Refuse, not document** —
+[D24](../../docs/migration-decisions.md#d24): `build.yml` reads the tag's pre-existing digest before
+pushing and either attaches or fails the build, naming both digests, rather than letting the repoint
+happen and recording it afterward. ⚠️ **Caveat, added by review 2026-08-18 — do not read this as a
+proven-in-production fact:** the code has landed and a blocking defect found by review (`imagetools
+create` wrapping the manifest in an index) is fixed, but the guard's refusal path has not been
+exercised by a live dispatch — see D24 and the story's Dev Agent Record for exactly what remains
+unverified and why.
 
 **Given** an image built for a specific environment
 **When** its metadata is inspected

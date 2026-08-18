@@ -1603,6 +1603,13 @@ is what is not.
   produce one tag. Neither has a clean workflow-side fix — both need a registry-side check that a
   tag is not being repointed to a different digest. **Owner: Story 3.6**, whose AC2 is exactly that
   question, and which now has two concrete cases to test rather than a hypothetical.
+  ✅ **DECIDED 2026-08-18, Story 3.6: AC2's guard does NOT extend here.** `push_tags` is contractually
+  mutable (Story 4.6 depends on `<branch>-dev` moving), so the guard's immutability logic would break
+  ordinary rebuilds rather than fix a defect. The real hazard is two different refs colliding on one
+  sanitized name — a uniqueness question, not an immutability one — and needs a different, smaller
+  guard (compare the incoming raw ref against `org.prionex.ref` on whatever currently holds the
+  sanitized name, refuse on mismatch). **Owner: unassigned, not this story.** Still armed-not-loaded:
+  0 collisions in 509 branches (Story 3.5), one branch already past the 100-char truncation at 109.
 - ⚠️ **The residual concurrency race has a sharper consequence than Story 3.2 recorded.** Two refs at
   one commit land in different groups and can race for the same `sha-` tag. Because `Dockerfile.prod`
   runs `npm ci` with no reproducibility guarantee, the two builds produce **different digests** — so
@@ -1637,6 +1644,12 @@ is what is not.
   a tag identifying exactly one artifact. Declining is recorded here so the next reader does not have
   to guess whether they were considered. **Owner: whoever next opens `build.yml` — and this time the
   item names what "declined" means, because Story 3.2 inherited it and neither did nor declined it.**
+  ✅ **DECLINED A THIRD TIME, 2026-08-18, Story 3.6 — named as a pattern, not left to look like drift.**
+  `build.yml` was open for the AC2 guard (a blocking defect plus 21 review findings), already over
+  this story's own declared budget; bundling three more infra changes in raises review surface for
+  risk orthogonal to AC2. **The "whoever next opens `build.yml`" ownership model has now produced
+  zero fixes in three tries.** If a fourth story opens this file and declines a fourth time, that is
+  the signal to stop deferring and open a named, scheduled ticket instead.
 - ⚠️ **The `keep_pattern` guard in `build.yml` is a copy of a rule that lives only in the database.**
   It will drift the moment anyone edits the retention rule, and nothing detects the drift. It is
   deliberately a copy — the alternative is a database round trip inside every build — but the
@@ -1680,6 +1693,14 @@ is what is not.
   whole point is that a missing variable must. Closing it means extending `Dockerfile.prod`, which
   Story 3.3's AC5 forbids without an amendment. **Owner: Story 3.6** — it is the story about the
   image being trustworthy, and this is the largest untrustworthy thing left in it.
+  ✅ **CLOSED for two of three, Story 3.6.** `VITE_OPERATOR_PHONE_URL` was fixed 2026-08-17 (outside
+  this story) — it is in the build-arg contract now, per-environment, from a Forgejo CI variable.
+  `VITE_BUILD_TS` was audited 2026-08-18 and is **not** a contract gap: `vite.config.ts:8` sets it via
+  `define`, a textual substitution that would override any build-arg, so the `?? '1'` fallback is dead
+  code — see [D24](../../docs/migration-decisions.md#d24) and D20 §6, which this update also closes.
+  🔴 **`VITE_EASYPAY_PORTAL_API_KEY` remains open and unaudited. Owner: Story 3.6** — unchanged from
+  the original line above; §4b names 3.6 as the owner of auditing it, and a review caught an earlier
+  draft of this update silently de-assigning it to "no owner" instead. Not audited this round.
 - 🔴 **The bare `sha-<short>` no longer exists, and four references still name it.** Story 3.3
   replaced it with `sha-<short>-<env>` because FR8 requires a discriminator and its own AC3 requires
   the bare form never be ambiguous — under Option C one commit yields three images, so it cannot be
@@ -2113,7 +2134,32 @@ thing gets misdiagnosed — and because it is the same hazard class as AC2: a sh
 rewritten by whoever pushed last.
 
 **Open:** `probe/3-6-cold-cache` is still on the remote, one commit ahead of `main`, carrying a
-deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it.
+deliberately broken `build.yml`. Story 3.6 Task 7.5 deletes it. **⚠️ Still open** — this session had
+no credential to delete a remote branch (see below), so it remains on the remote.
+
+**⚠️ A second probe branch joined it, 2026-08-18: `probe/3-6-differ` (commit `15c22b17`).** Created
+deliberately to close Task 3.4's differ-path test — its one commit adds a cache-divergence marker to
+`src/main.tsx` so its automatic `dev` build (run 722) overwrites the shared `:buildcache` with layers
+foreign to the story branch, forcing a cache miss on the next same-ref dispatch. That dispatch (runs
+723/725) proved the AC2 guard's refusal live. The branch's job is done; it should be deleted alongside
+`probe/3-6-cold-cache` once the story merges (Task 7.5, both now).
+
+**✅ UPDATED 2026-08-18 — the guard `Story 3.6 Task 3 owns the answer` pointed at is now implemented,
+and [D24](../../docs/migration-decisions.md#d24) records it.** `build.yml` reads the pre-existing
+digest of `sha-<12>-<env>` *before* the build, pushes only the mutable branch tag from the build step
+itself, and attaches (or refuses) the protected tag afterward by comparing digests — so the "same
+digest → nothing to do, different digest → fail" table above is now code, not a plan. No override for
+a "legitimate rebuild" was added; see [D24](../../docs/migration-decisions.md#d24) for why none is needed.
+
+🔴 **Not closed by this update: Task 3.4 (prove the guard fires) is unverified.** The agent session
+that wrote the guard had no Forgejo API token and no SSH to s1 — confirmed by an unauthenticated
+`GET /api/v1/repos/CRM/fe-prionex/actions/runs` returning `403`, not assumed. The "absent" path will
+be exercised automatically by the next push (every push builds `dev`, Story 3.4); the "differ" path —
+the guard actually refusing something — needs a deliberate `workflow_dispatch` rebuild of the same
+commit, the same technique Task 1 used above, and nobody has run it yet against this code. Tasks 4
+(re-read the labels live) and 5 (close AC4 by `package_version`/`action_run_job` query) are blocked
+for the identical reason. Whoever has the token next should close these before treating Story 3.6 as
+done — see the story's own Dev Agent Record for the exact commands.
 
 ---
 
@@ -2133,3 +2179,31 @@ registry** — both `/api/v1/packages/{owner}` and the registry v2 API return 40
 point of that lesson was to check this file before assuming anything about token state. There are now
 **two** standing tokens, not one; the open policy question (one token per epic vs. scoped
 short-lived token per story) is unchanged and still not urgent.
+
+---
+
+## Deferred from: code review of story-3.6 (2026-08-18)
+
+- **TOCTOU: Story 3.6's AC2 guard has a check-to-write window that spans the entire build, and
+  `concurrency` does not close it.** `predigest` (`build.yml:1035`) reads the pre-existing digest of
+  `sha-<12>-<env>`; the attach (`:1303`) happens after the build and the cache export. Two runs whose
+  refs differ but resolve to the same commit land in **different** concurrency groups — `build.yml:83-88`
+  already records this residual gap — and D21 (`:89-99`) establishes that the workflow-level
+  `concurrency:` block is **silently inert on the `workflow_call` path**, which is the automatic
+  ~30-builds/day path via `ci.yml`. Both runs read "absent", both build, both attach; the last writer
+  repoints `sha-<12>-<env>` with a green job. That is the outcome AC2 exists to forbid, now with a guard
+  reporting success. `imagetools create` offers no compare-and-swap, so closing this needs either a
+  commit-keyed lock (impossible in `concurrency:`, which is evaluated before `actions/checkout`) or a
+  post-attach read-back that fails if the tag does not carry this run's digest. **Deferred, pre-existing** —
+  the race predates the guard; what is new is that D24 now claims the repoint is refused «по конструкции»,
+  which is stronger than the code. The wording is filed as a patch against Story 3.6, the race is not.
+  **Owner needed.**
+- **AC2's guarantee lapses silently on `dev` at 14 days.** `sha-<12>-dev` matches no `keep_pattern`
+  alternative and the retention rule reaps it. Rebuild a commit older than the window and `predigest`
+  legitimately reports "absent", so the guard attaches a *different* digest under a name that previously
+  identified another image — the identity break AC2 forbids, with no refusal and no warning. The guard has
+  no notion of "this tag existed once and was reaped". **Deferred, pre-existing** — inherent to the
+  retention rule, and `-preprod`/`-prod` are permanent and therefore unaffected, which is where the
+  downstream stories actually live. Recorded because it is currently mentioned nowhere: not in the step,
+  not in the story, not in D24. **Owner needed** — cheapest honest fix is one sentence in D24 bounding the
+  guarantee to the retention window on `dev`.
