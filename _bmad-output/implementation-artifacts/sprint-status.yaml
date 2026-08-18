@@ -136,7 +136,9 @@ development_status:
   3-4-trigger-builds-automatically-including-feature-branches: done
   3-5-move-the-build-cache-to-the-registry: done
   3-6-verify-commit-traceability-and-image-immutability: done
-  epic-3-retrospective: optional
+  # Held 2026-08-18 — the project's first retro (epics 1 and 2 skipped theirs). Record:
+  # epic-3-retro-2026-08-18.md. Three action items are the CRITICAL PATH before story 4.1 starts.
+  epic-3-retrospective: done
 
   # Epic 4: DEV Environment on Forgejo
   epic-4: backlog
@@ -204,3 +206,27 @@ development_status:
   # the point of this one is that nobody will until production stops building.
   7-6-give-the-production-openbao-credential-an-expiry-owner: backlog
   epic-7-retrospective: optional
+
+# Appended by epic-3 retrospective 2026-08-18 (epic-3-retro-2026-08-18.md).
+# A1/B2/C3 are the critical path: they close BEFORE story 4.1 starts (Oleg's call at the retro).
+action_items:
+  - epic: 3
+    action: "A1: decide dind security posture — network=host vs buildx CNI config (private netns for RUN steps); write the D-record; if CNI, prove cache survives with one green build"
+    owner: "Oleg (decision), dev session (implementation)"
+    status: open
+  - epic: 3
+    action: "B2: extend the CI gate to staging/development, or record the explicit decision not to — before story 4.3 arms on-demand deploys"
+    owner: "Oleg (decision), dev session (implementation)"
+    status: open
+  - epic: 3
+    action: "C3: fix or accept the npm ci layer regression (registry cache restores deps slower than rebuilding, 17s vs 0s); amend D22 with the measured outcome"
+    owner: "dev session; Oleg if posture changes"
+    status: open
+  - epic: 3
+    action: "D4 (team agreement): run-budget ledgers close only against a query (actions/runs API or DB count); a self-report without a query means the ledger is open"
+    owner: "every dev session; create-story template carries the rule"
+    status: adopted
+  - epic: 3
+    action: "E5 (team agreement): every new guard ships with a live outcome matrix (one run per branch incl. a discriminating run); review a foundation story before writing the story that builds on it"
+    owner: "create-story + code-review sessions"
+    status: adopted
