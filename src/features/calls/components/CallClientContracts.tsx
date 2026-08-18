@@ -24,9 +24,13 @@ export interface CallMatchedClient {
   clientId: number
   clientName: string
   /**
-   * The caller reached this client's card as a third party rather than as the
-   * client themselves; the header names them instead of saying "Client".
+   * Whose number the caller rang in on. Kept separate from `thirdPartyName`
+   * because the two are independently absent: the payload can say the number
+   * belongs to a third party without the annotation naming who they are, and
+   * folding that into one nullable string renders such a caller as the client.
    */
+  contactCategory?: CallContactCategory | null
+  /** The third party's name, from the number's annotation, when there is one. */
   thirdPartyName?: string | null
   contracts: CallContract[]
 }
@@ -39,6 +43,28 @@ interface CallClientContractsProps {
 }
 
 const CLOSED_STATUSES = new Set(['closed', 'paid', 'repaid'])
+
+/** Whose number the caller rang in on, as the screen-pop reports it. */
+export type CallContactCategory = 'client' | 'guarantor' | 'third_party' | 'other'
+
+/**
+ * How the client's card is introduced.
+ *
+ * A guarantor and a third party are both somebody other than the debtor, and
+ * saying "Client" over either of them invites the operator to discuss the debt
+ * with a person not entitled to hear it.
+ */
+function labelFor(client: CallMatchedClient, t: (key: string, fallback: string) => string): string {
+  const category = client.contactCategory
+  if (category !== 'third_party' && category !== 'guarantor') {
+    return t('pages.clients.modals.callDialog.contracts.client', 'Client by contracts')
+  }
+  const heading =
+    category === 'guarantor'
+      ? t('pages.clients.modals.callDialog.contracts.guarantor', 'Guarantor by contracts')
+      : t('pages.clients.modals.callDialog.contracts.thirdParty', 'Third party by contracts')
+  return client.thirdPartyName ? `${heading}: ${client.thirdPartyName}` : heading
+}
 
 /**
  * One matched client: their header, and their contracts as read-only context.
@@ -54,14 +80,12 @@ export function CallClientContracts({
   onIncludedChange,
 }: CallClientContractsProps) {
   const { t } = useTranslation('common')
-  const label = client.thirdPartyName
-    ? `${t('pages.clients.modals.callDialog.contracts.thirdParty', 'Third party by contracts')}: ${client.thirdPartyName}`
-    : t('pages.clients.modals.callDialog.contracts.client', 'Client by contracts')
+  const label = labelFor(client, t)
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <ToggleSwitch checked={included} onChange={onIncludedChange} aria-label={label} />
+        <ToggleSwitch checked={included} onChange={onIncludedChange} ariaLabel={label} />
         <Icons.Info
           size={14}
           className="text-muted-foreground shrink-0"

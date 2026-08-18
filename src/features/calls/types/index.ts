@@ -189,6 +189,12 @@ export interface IncomingCallClient {
   contact_comment: string | null
   contact_source: string | null
   contact_type_name: string | null
+  /**
+   * Whose number this is, derived by the client-service from the contact
+   * type's stable code. `contact_source` cannot stand in for it: guarantors
+   * and third parties are both stored as 'recommender'.
+   */
+  contact_category: 'client' | 'guarantor' | 'third_party' | 'other' | null
   recent_interactions: IncomingCallInteraction[]
   loans: LoanInfo[]
 }

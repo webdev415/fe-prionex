@@ -21,6 +21,7 @@ const client = (id: number, over: Partial<IncomingCallClient> = {}): IncomingCal
   contact_comment: null,
   contact_source: null,
   contact_type_name: null,
+  contact_category: null,
   recent_interactions: [],
   loans: [loan(id * 10)],
   ...over,
@@ -37,6 +38,29 @@ const payload = (over: Partial<IncomingCallData> = {}): IncomingCallData => ({
 })
 
 describe('buildMatchedClients', () => {
+  it('carries whose number the caller rang in on', () => {
+    const [built] = buildMatchedClients(
+      payload({
+        clients: [client(1, { contact_category: 'third_party', contact_comment: '  Sister  ' })],
+      })
+    )
+
+    expect(built.contactCategory).toBe('third_party')
+    // Trimmed: the annotation is free text an operator typed mid-call.
+    expect(built.thirdPartyName).toBe('Sister')
+  })
+
+  it('keeps the category when the number is annotated with nothing', () => {
+    const [built] = buildMatchedClients(
+      payload({ clients: [client(1, { contact_category: 'third_party', contact_comment: '   ' })] })
+    )
+
+    // The fact and the name are independently absent. Losing the fact because
+    // the name is missing is what renders a third party as the debtor.
+    expect(built.contactCategory).toBe('third_party')
+    expect(built.thirdPartyName).toBeNull()
+  })
+
   it('returns every client the number resolved to', () => {
     const result = buildMatchedClients(payload({ clients: [client(1), client(2), client(3)] }))
 

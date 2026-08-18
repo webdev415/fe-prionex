@@ -23,11 +23,11 @@ function toMatchedClient(client: IncomingCallClient): CallMatchedClient {
   return {
     clientId: client.client_id,
     clientName: client.client_name,
-    // The design groups third parties separately, but the payload only names
-    // the contact type ("Mobile"), not its category — contact types 7-9 are the
-    // third-party phones. Until that reaches the wire, every match is shown as
-    // the client's own.
-    thirdPartyName: null,
+    contactCategory: client.contact_category ?? null,
+    // The annotation on the matched number, which is where an operator records
+    // whose phone it actually is. Absent on plenty of contacts, so it names the
+    // third party when it can and the category carries the fact when it cannot.
+    thirdPartyName: client.contact_comment?.trim() || null,
     contracts: (client.loans ?? []).map((loan) => ({ ...toContract(loan), lastContact })),
   }
 }
@@ -51,6 +51,8 @@ export function buildMatchedClients(incomingCall: IncomingCallData | null): Call
     {
       clientId: incomingCall.client_id,
       clientName: incomingCall.client_name || 'Unknown',
+      // The flat fallback shape predates per-client contact annotation.
+      contactCategory: null,
       thirdPartyName: null,
       contracts: (incomingCall.loans ?? []).map(toContract),
     },

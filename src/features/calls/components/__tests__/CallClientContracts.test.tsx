@@ -43,6 +43,49 @@ function renderClient(over: Partial<Parameters<typeof CallClientContracts>[0]> =
 }
 
 describe('CallClientContracts', () => {
+  describe('introducing whose card it is', () => {
+    it('names a third party rather than calling them the client', () => {
+      renderClient({
+        client: client({ contactCategory: 'third_party', thirdPartyName: 'Сестра' }),
+      })
+
+      expect(screen.getByText(/pages.clients.modals.callDialog.contracts.thirdParty/)).toBeVisible()
+      expect(screen.getByText(/Сестра/)).toBeVisible()
+    })
+
+    it('still says third party when the number names nobody', () => {
+      renderClient({ client: client({ contactCategory: 'third_party', thirdPartyName: null }) })
+
+      // The whole point of splitting the category from the name: an unnamed
+      // third party must not fall back to "Client", or the operator discusses
+      // the debt with a relative believing they are the debtor.
+      expect(screen.getByText(/pages.clients.modals.callDialog.contracts.thirdParty/)).toBeVisible()
+    })
+
+    it('distinguishes a guarantor, who is also not the debtor', () => {
+      renderClient({ client: client({ contactCategory: 'guarantor' }) })
+
+      expect(screen.getByText(/pages.clients.modals.callDialog.contracts.guarantor/)).toBeVisible()
+    })
+
+    it('calls the client the client', () => {
+      renderClient({ client: client({ contactCategory: 'client' }) })
+
+      expect(screen.getByText(/pages.clients.modals.callDialog.contracts.client/)).toBeVisible()
+    })
+
+    it('gives the include toggle an accessible name', () => {
+      renderClient({ client: client({ contactCategory: 'third_party' }) })
+
+      // ToggleSwitch takes `ariaLabel`; passing `aria-label` left the control
+      // nameless, and TypeScript cannot catch it — hyphenated JSX attributes
+      // are exempt from prop checking on components.
+      expect(
+        screen.getByRole('switch', { name: /pages.clients.modals.callDialog.contracts.thirdParty/ })
+      ).toBeInTheDocument()
+    })
+  })
+
   it('reports the toggle, which decides where the interaction is written', () => {
     const { onIncludedChange } = renderClient()
 
