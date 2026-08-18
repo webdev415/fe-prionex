@@ -43,10 +43,10 @@ export function useTAHotkeyBindings(): Record<string, number> {
     queryKey: KEY,
     queryFn: getTAHotkeys,
     select: toBindingMap,
-    // Bindings change only when this operator edits them, which no UI can do
-    // yet. Without this the client card refetches the map on every tab focus,
-    // which for a page operators leave and return to all day is a request per
-    // glance. KAN-975 invalidates ['ta-hotkeys'] when it adds the write side.
+    // Bindings change only when this operator edits them, in Profile Settings,
+    // and both mutations below invalidate this key when they do. Without the
+    // stale time the client card refetches the map on every tab focus, which
+    // for a page operators leave and return to all day is a request per glance.
     staleTime: 5 * 60 * 1000,
   })
   return data ?? EMPTY

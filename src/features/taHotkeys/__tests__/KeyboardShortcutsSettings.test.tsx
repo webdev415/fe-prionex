@@ -25,7 +25,7 @@ const QUICK_PICKS = [
     name: 'Messenger — Restructuring',
     department_ids: [2],
     sort_order: 1,
-    preset_values: { '1': 'Messenger', '3': 'Agreement' },
+    preset_values: { '1': 'Messenger', '3': 'Agreement', '6': 'Домовленість' },
   },
   {
     id: 11,
@@ -49,6 +49,13 @@ vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
       items: [
         { id: 1, name: 'Channel', field_type: 'dropdown', is_hidden: false, dropdown_values: [] },
         { id: 3, name: 'Result', field_type: 'dropdown', is_hidden: false, dropdown_values: [] },
+        {
+          id: 6,
+          name: 'Клієнт: Результат',
+          field_type: 'dropdown',
+          is_hidden: false,
+          dropdown_values: [],
+        },
       ],
     },
   }),
@@ -121,6 +128,52 @@ describe('KeyboardShortcutsSettings', () => {
     // Chips are the preset values labelled by their target action.
     expect(screen.getByText('Channel: Messenger')).toBeInTheDocument()
     expect(screen.getByText('Result: Agreement')).toBeInTheDocument()
+  })
+
+  it('separates the value with a dash when the action name already has a colon', () => {
+    // Several real action names are paths — "Клієнт: Результат" — and appending
+    // another colon produced "Клієнт: Результат: Домовленість".
+    render(<KeyboardShortcutsSettings />)
+    expect(screen.getByText('Клієнт: Результат — Домовленість')).toBeInTheDocument()
+    // Plain names keep the colon.
+    expect(screen.getByText('Channel: Messenger')).toBeInTheDocument()
+  })
+
+  it('filters the list by name, stage or chip', async () => {
+    const user = userEvent.setup()
+    render(<KeyboardShortcutsSettings />)
+
+    const search = screen.getByPlaceholderText('Search templates…')
+    await user.type(search, 'refusal')
+    expect(screen.getByText('Messenger — Refusal')).toBeInTheDocument()
+    expect(screen.queryByText('Messenger — Restructuring')).not.toBeInTheDocument()
+
+    // A chip value finds a row the operator remembers by what it does.
+    await user.clear(search)
+    await user.type(search, 'agreement')
+    expect(screen.getByText('Messenger — Restructuring')).toBeInTheDocument()
+    expect(screen.queryByText('Messenger — Refusal')).not.toBeInTheDocument()
+
+    await user.clear(search)
+    await user.type(search, 'zzzz')
+    expect(screen.getByText('No templates match your search.')).toBeInTheDocument()
+  })
+
+  it('still names a hidden template in the conflict warning', async () => {
+    // The warning is built from every template, not the filtered set, or a
+    // search would turn it into 'Already used by "#10"'.
+    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    const user = userEvent.setup()
+    render(<KeyboardShortcutsSettings />)
+
+    await user.type(screen.getByPlaceholderText('Search templates…'), 'refusal')
+    await user.click(within(row('Messenger — Refusal')).getByText('+ Assign shortcut'))
+    await user.click(screen.getByRole('button', { name: 'Shortcut recorder' }))
+    await user.keyboard('{Control>}1{/Control}')
+
+    expect(
+      screen.getByText('Already used by "Messenger — Restructuring". Saving will reassign it here.')
+    ).toBeInTheDocument()
   })
 
   it('records a combination and saves it in canonical form', async () => {

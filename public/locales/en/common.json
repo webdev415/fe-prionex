@@ -8246,6 +8246,33 @@
           "orange": "Orange",
           "amber": "Amber"
         }
+      },
+      "tabs": {
+        "account": "Account",
+        "shortcuts": "Keyboard Shortcuts"
+      },
+      "shortcuts": {
+        "intro": "Assign a keyboard shortcut to any quick template you use often. Trigger the shortcut while on a client's profile page to open that Target Action (TA) modal instantly, adjust amount or date if needed, and save it — all without the mouse.",
+        "enterTitle": "Enter saves the open modal",
+        "enterBody": "Once a template modal is open — however it was opened — pressing Enter submits it, same as clicking Save, and required fields are still validated. Enter inserts a line break instead of saving while your cursor is in a comment field.",
+        "search": "Search templates…",
+        "stage": "Stage",
+        "assign": "+ Assign shortcut",
+        "noTemplates": "No templates are available to you.",
+        "noMatches": "No templates match your search.",
+        "assignTitle": "Assign Shortcut",
+        "assignHint": "Pick a template, then click below and press the key combination you want.",
+        "template": "Template",
+        "selectTemplate": "Select a template…",
+        "shortcut": "Shortcut",
+        "recorderLabel": "Shortcut recorder",
+        "clickToRecord": "Click to record",
+        "pressKeys": "Press keys…",
+        "conflict": "Already used by \"{{name}}\". Saving will reassign it here.",
+        "save": "Save Shortcut",
+        "clear": "Clear Selection",
+        "saved": "Shortcut saved",
+        "reassigned": "Shortcut moved from \"{{name}}\""
       }
     },
     "reports": {

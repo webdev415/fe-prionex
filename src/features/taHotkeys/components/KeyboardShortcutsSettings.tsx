@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import {
   Select,
@@ -57,8 +58,9 @@ export function KeyboardShortcutsSettings() {
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [recorded, setRecorded] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
-  const templates = useMemo(() => quickPicks ?? [], [quickPicks])
+  const allTemplates = useMemo(() => quickPicks ?? [], [quickPicks])
   const bindingList = useMemo(() => bindings ?? [], [bindings])
 
   /** Combination per template, for the row badges. */
@@ -68,11 +70,14 @@ export function KeyboardShortcutsSettings() {
     return map
   }, [bindingList])
 
+  // Built from every template, not the filtered set: a conflict warning has to
+  // name the template that holds the combination even when the search has
+  // hidden it, or it reads "Already used by #37".
   const nameById = useMemo(() => {
     const map = new Map<number, string>()
-    for (const tpl of templates) map.set(tpl.id, templateLabel(tpl))
+    for (const tpl of allTemplates) map.set(tpl.id, templateLabel(tpl))
     return map
-  }, [templates])
+  }, [allTemplates])
 
   // Preset values are keyed by target-action id; the chips read "<action>:
   // <value>", so the names have to be looked up rather than shown as ids.
@@ -81,6 +86,32 @@ export function KeyboardShortcutsSettings() {
     for (const ta of targetActionsData?.items ?? []) map.set(ta.id, ta.name)
     return map
   }, [targetActionsData])
+
+  // Chips are wanted twice — to match against while searching, and to draw on
+  // the row — so they are built once here rather than recomputed in both
+  // places. The lowercased haystack rides along for the same reason.
+  const rows = useMemo(
+    () =>
+      allTemplates.map((tpl) => {
+        const chips = presetChips(tpl, targetActionNameById)
+        return {
+          tpl,
+          chips,
+          haystack: [templateLabel(tpl), tpl.chain_name ?? '', ...chips].join(' ').toLowerCase(),
+        }
+      }),
+    [allTemplates, targetActionNameById]
+  )
+
+  // A department can hold 50+ templates, which is more than anyone will scroll
+  // to find one. Matching the stage and the preset chips as well as the name
+  // means "messenger" or "refusal" finds a row even when the operator only
+  // remembers what the template does, not what it was called.
+  const visibleRows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((row) => row.haystack.includes(q))
+  }, [rows, search])
 
   const conflictId = recorded
     ? findConflict({ hotkey: recorded, editingQuickPickId: selectedId, bindings: bindingList })
@@ -159,86 +190,109 @@ export function KeyboardShortcutsSettings() {
 
       <div className="flex w-full flex-col items-start gap-5 self-stretch xl:flex-row">
         {/* Template list */}
-        <div className="flex w-full flex-1 flex-col gap-2">
-          {isLoadingPicks ? (
-            <span className="text-muted-foreground text-sm">{t('status.loading')}</span>
-          ) : templates.length === 0 ? (
-            <span className="text-muted-foreground text-sm">
-              {t('pages.profile.shortcuts.noTemplates', 'No templates are available to you.')}
-            </span>
-          ) : (
-            templates.map((tpl) => {
-              const hotkey = hotkeyByPick.get(tpl.id)
-              const isEditing = selectedId === tpl.id
-              return (
-                <div
-                  key={tpl.id}
-                  className={cn(
-                    'border-border bg-card flex flex-wrap items-center gap-3 rounded-lg border p-3',
-                    isEditing && 'border-primary-500'
-                  )}
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="text-foreground truncate text-sm font-medium">
-                      {templateLabel(tpl)}
-                    </span>
-                    {tpl.chain_name && (
-                      <span className="text-muted-foreground text-xs">
-                        {t('pages.profile.shortcuts.stage', 'Stage')}: {tpl.chain_name}
-                      </span>
-                    )}
-                    <div className="flex flex-wrap gap-1">
-                      {presetChips(tpl, targetActionNameById).map((chip) => (
-                        <span
-                          key={chip}
-                          className="border-border bg-muted text-muted-foreground rounded-full border px-2 py-0.5 text-[11px]"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-2">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('pages.profile.shortcuts.search', 'Search templates…')}
+            className="w-full"
+          />
+          {/* The list scrolls inside itself rather than stretching the page.
+              With 50+ templates the page grew tall enough that the assign panel
+              beside it scrolled out of view, and the operator had to scroll back
+              up to reach the box they had just clicked "+ Assign shortcut" for.
+              Capping the list keeps both halves on screen together.
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    {hotkey ? (
-                      <>
-                        <ShortcutBadge hotkey={hotkey} />
+              Sized in rows rather than a fraction of the viewport: a row is
+              about 88px, so this is roughly six of them, and it stays six on a
+              short laptop screen where 60vh was barely four. The lower bound
+              keeps it usable when the window is genuinely small. */}
+          <div className="flex max-h-[min(560px,60vh)] min-h-[240px] flex-col gap-2 overflow-y-auto pr-1">
+            {isLoadingPicks ? (
+              <span className="text-muted-foreground text-sm">{t('status.loading')}</span>
+            ) : visibleRows.length === 0 ? (
+              <span className="text-muted-foreground text-sm">
+                {search.trim()
+                  ? t('pages.profile.shortcuts.noMatches', 'No templates match your search.')
+                  : t('pages.profile.shortcuts.noTemplates', 'No templates are available to you.')}
+              </span>
+            ) : (
+              visibleRows.map(({ tpl, chips }) => {
+                const hotkey = hotkeyByPick.get(tpl.id)
+                const isEditing = selectedId === tpl.id
+                return (
+                  <div
+                    key={tpl.id}
+                    className={cn(
+                      'border-border bg-card flex flex-wrap items-center gap-3 rounded-lg border p-3',
+                      isEditing && 'border-primary-500'
+                    )}
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="text-foreground truncate text-sm font-medium">
+                        {templateLabel(tpl)}
+                      </span>
+                      {tpl.chain_name && (
+                        <span className="text-muted-foreground text-xs">
+                          {t('pages.profile.shortcuts.stage', 'Stage')}: {tpl.chain_name}
+                        </span>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {chips.map((chip) => (
+                          <span
+                            key={chip}
+                            className="border-border bg-muted text-muted-foreground rounded-full border px-2 py-0.5 text-[11px]"
+                          >
+                            {chip}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      {hotkey ? (
+                        <>
+                          <ShortcutBadge hotkey={hotkey} />
+                          <button
+                            type="button"
+                            onClick={() => startEditing(tpl.id)}
+                            aria-label={t('common.edit', 'Edit')}
+                            className="hover:bg-muted rounded-md p-1.5"
+                          >
+                            <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(tpl.id)}
+                            disabled={clearMut.isPending}
+                            aria-label={t('common.remove', 'Remove')}
+                            className="hover:bg-muted rounded-md p-1.5 disabled:opacity-50"
+                          >
+                            <Icons.Cancel01 size={16} strokeWidth={1.5} />
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => startEditing(tpl.id)}
-                          aria-label={t('common.edit', 'Edit')}
-                          className="hover:bg-muted rounded-md p-1.5"
+                          className="text-primary-600 hover:text-primary-700 text-xs font-medium"
                         >
-                          <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                          {t('pages.profile.shortcuts.assign', '+ Assign shortcut')}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(tpl.id)}
-                          disabled={clearMut.isPending}
-                          aria-label={t('common.remove', 'Remove')}
-                          className="hover:bg-muted rounded-md p-1.5 disabled:opacity-50"
-                        >
-                          <Icons.Cancel01 size={16} strokeWidth={1.5} />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => startEditing(tpl.id)}
-                        className="text-primary-600 hover:text-primary-700 text-xs font-medium"
-                      >
-                        {t('pages.profile.shortcuts.assign', '+ Assign shortcut')}
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })
-          )}
+                )
+              })
+            )}
+          </div>
         </div>
 
         {/* Assign panel */}
-        <div className="border-border bg-card flex w-full shrink-0 flex-col gap-4 rounded-lg border p-4 xl:w-[300px]">
+        {/* Sticky from xl up: the list runs to 50+ rows, and a panel that
+            scrolls away leaves the operator pressing "+ Assign shortcut" on a
+            row and then hunting back up the page for the box to record into. */}
+        <div className="border-border bg-card flex w-full shrink-0 flex-col gap-4 rounded-lg border p-4 xl:sticky xl:top-[88px] xl:w-[300px] xl:self-start">
           <div className="flex flex-col gap-1">
             <span className="text-foreground text-sm font-semibold">
               {t('pages.profile.shortcuts.assignTitle', 'Assign Shortcut')}
@@ -265,7 +319,7 @@ export function KeyboardShortcutsSettings() {
                 />
               </SelectTrigger>
               <SelectContent>
-                {templates.map((tpl) => (
+                {allTemplates.map((tpl) => (
                   <SelectItem key={tpl.id} value={String(tpl.id)}>
                     {templateLabel(tpl)}
                   </SelectItem>
@@ -334,7 +388,12 @@ function presetChips(tpl: QuickPick, nameById: Map<number, string>): string[] {
   return Object.entries(presets)
     .map(([actionId, value]) => {
       const name = nameById.get(Number(actionId))
-      return name ? `${name}: ${value}` : null
+      if (!name) return null
+      // Several action names already end in a colon — "Клієнт: Результат",
+      // "Підтип: Домовленість" — and appending another produced chips reading
+      // "Клієнт: Результат: Домовленість". An en dash separates the value from
+      // a name that is itself a path.
+      return name.includes(':') ? `${name} — ${value}` : `${name}: ${value}`
     })
     .filter((chip): chip is string => chip !== null)
 }
