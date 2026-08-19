@@ -513,12 +513,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   )
 
   // Handle incoming calls
-  const { incomingCall, answeredAt, markAnswered, dismissIncomingCall } = useIncomingCall(
-    agentExtension,
-    {
+  const { incomingCall, answeredAt, callEnded, markAnswered, dismissIncomingCall } =
+    useIncomingCall(agentExtension, {
       onCallSettled: handleCallSettled,
-    }
-  )
+    })
 
   // One call window at a time. False until the answer is known — see the hook
   // for why the popup may not render before then.
@@ -1263,6 +1261,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // window ever unmounting; a per-call identity keeps the second
             // call from inheriting the first one's timer and form state.
             key={incomingCall.call_id}
+            ended={callEnded}
             incomingCall={incomingCall}
             answeredAt={answeredAt}
             onAnswered={markAnswered}

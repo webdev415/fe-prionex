@@ -5181,6 +5181,7 @@
           },
           "minimize": "Minimize",
           "cancel": "Cancel",
+          "close": "Close",
           "restore": "Return to the call"
         },
         "callLogCard": {

@@ -83,6 +83,11 @@ export function useIncomingCall(
   // When this operator took the call, as a timestamp so a consumer can run the
   // conversation clock. Null while it is only ringing.
   const [answeredAt, setAnsweredAt] = useState<number | null>(null)
+  // The call is over but the window stays: see the terminal branch below.
+  const [callEnded, setCallEnded] = useState(false)
+  // The state handler is registered once per connection, so it cannot read
+  // `answeredAt` directly without closing over the first render's value.
+  const answeredRef = useRef(false)
   // Held in a ref so a caller passing an inline function does not tear down and
   // rebuild the socket on every render.
   const onCallSettledRef = useRef(onCallSettled)
@@ -97,12 +102,17 @@ export function useIncomingCall(
   }, [incomingCall])
 
   useEffect(() => {
+    answeredRef.current = answeredAt !== null
+  }, [answeredAt])
+
+  useEffect(() => {
     onCallSettledRef.current = onCallSettled
   })
 
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
     setAnsweredAt(null)
+    setCallEnded(false)
   }, [])
 
   useEffect(() => {
@@ -185,8 +195,10 @@ export function useIncomingCall(
       // now would strand it: the events that would have closed it have been and
       // gone.
       if (wasSettled(event.data?.call_id)) return
-      // A fresh offer starts unanswered, even if the last one was taken.
+      // A fresh offer starts unanswered and unfinished, even if the last one
+      // was taken and ended.
       setAnsweredAt(null)
+      setCallEnded(false)
       setIncomingCall(event.data)
     }
 
@@ -204,7 +216,15 @@ export function useIncomingCall(
         // client lookup, and the pop then opens a window for a call that is
         // already over with nothing left to close it.
         rememberSettled(callId)
-        dismissIfSameCall(callId)
+        // A call this operator was connected to leaves an interaction half
+        // written; the window has to survive the hangup or that work is gone,
+        // and there is no way back to it — the form only exists here. A call
+        // that merely rang has nothing to keep, so it still goes.
+        if (callId && shownCallRef.current === callId && answeredRef.current) {
+          setCallEnded(true)
+        } else {
+          dismissIfSameCall(callId)
+        }
         // Deliberately not fired for a colleague answering: that settles the
         // call for the queue, not for whoever is now holding it.
         if (callId) {
@@ -303,6 +323,8 @@ export function useIncomingCall(
     incomingCall,
     hasIncomingCall: incomingCall !== null,
     answeredAt,
+    /** The call is over, but the operator has not finished with the window. */
+    callEnded,
     /** For the operator who presses Accept: the answer is known locally first. */
     markAnswered: () => setAnsweredAt((current) => current ?? Date.now()),
     dismissIncomingCall,

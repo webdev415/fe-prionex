@@ -26,6 +26,8 @@ interface IncomingCallWindowProps {
   interactionSaved: boolean
   interactionDraft?: Partial<CallInteractionDraftState>
   onInteractionDraftChange?: (draft: CallInteractionDraftState) => void
+  /** The line is down; the window remains only so the interaction can be filed. */
+  ended?: boolean
   onMinimize: () => void
   /** Absent where the deployment cannot answer from the CRM; see the container. */
   onAccept?: () => void
@@ -59,6 +61,7 @@ export function IncomingCallWindow({
   interactionSaved,
   interactionDraft,
   onInteractionDraftChange,
+  ended = false,
   onMinimize,
   onAccept,
   onCancel,
@@ -88,6 +91,7 @@ export function IncomingCallWindow({
           clientName={headerName}
           unknown={clients.length === 0}
           durationSeconds={connected ? (durationSeconds ?? 0) : null}
+          ended={ended}
           onMinimize={onMinimize}
         />
 
@@ -127,6 +131,7 @@ export function IncomingCallWindow({
 
         <CallActions
           phase={phase}
+          ended={ended}
           onAccept={onAccept}
           onCancel={onCancel}
           onHold={onHold}

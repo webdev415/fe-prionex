@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import { formatCallDuration } from '../utils/duration'
 
 interface CallWindowHeaderProps {
@@ -11,6 +12,8 @@ interface CallWindowHeaderProps {
   unknown?: boolean
   /** Shown only once connected; the ringing state has no duration to report. */
   durationSeconds?: number | null
+  /** The line is down: the dot stops meaning "in progress". */
+  ended?: boolean
   onMinimize: () => void
 }
 
@@ -25,6 +28,7 @@ export function CallWindowHeader({
   clientName,
   unknown = false,
   durationSeconds,
+  ended = false,
   onMinimize,
 }: CallWindowHeaderProps) {
   const { t } = useTranslation('common')
@@ -36,7 +40,16 @@ export function CallWindowHeader({
         <div className="flex items-center gap-2">
           {/* Green from the moment the line is up, not from acceptance — the
               dot reports the line, and the timer reports the conversation. */}
-          <span className="bg-success-500 h-2 w-2 shrink-0 rounded-full" aria-hidden />
+          {/* Green means a live line. Once the call is over the window is only
+              still here so the interaction can be filed, and a green dot over a
+              dead line reads as a call the operator has failed to hang up. */}
+          <span
+            className={cn(
+              'h-2 w-2 shrink-0 rounded-full',
+              ended ? 'bg-muted-foreground' : 'bg-success-500'
+            )}
+            aria-hidden
+          />
           <span className="text-foreground truncate text-sm font-medium sm:text-base">
             {phoneNumber}
           </span>

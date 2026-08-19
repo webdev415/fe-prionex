@@ -8,8 +8,9 @@ import {
   useInteractionTypes,
   useCreateBulkInteraction,
 } from '@/features/clients/hooks/useNoteInteraction'
-import { useAnswerCall, useHoldCall, useRejectCall } from '../hooks/useCall'
+import { useAnswerCall, useHangupCall, useHoldCall, useRejectCall } from '../hooks/useCall'
 import { useIncludedClients } from '../hooks/useIncludedClients'
+import { useCallStore } from '@/stores/callStore'
 import { buildMatchedClients } from '../utils/callWindow'
 import type { IncomingCallData } from '../types'
 import { IncomingCallWindow } from './IncomingCallWindow'
@@ -37,6 +38,11 @@ interface IncomingCallWindowContainerProps {
   /** The header owns the minimised bar, so the window simply stands down. */
   minimized: boolean
   onMinimize: () => void
+  /**
+   * The line is down, but the window stays up so an interaction written during
+   * the call can still be filed. Nothing here may hang up any more.
+   */
+  ended?: boolean
   /** Called once the call is over from this operator's point of view. */
   onDismiss: () => void
 }
@@ -58,6 +64,7 @@ export function IncomingCallWindowContainer({
   agentExtension,
   minimized,
   onMinimize,
+  ended = false,
   onDismiss,
 }: IncomingCallWindowContainerProps) {
   const { t } = useTranslation('common')
@@ -68,15 +75,29 @@ export function IncomingCallWindowContainer({
   // a comment written while the caller is on the line cannot be recovered.
   const [draft, setDraft] = useState<Partial<CallInteractionDraftState>>({})
 
+  // Registered for as long as the window is up, so `isCallActive()` is true
+  // during an inbound call and the click-to-call guard on the client pages
+  // stops an operator dialling out mid-conversation. useCanShowIncomingPopup
+  // is written expecting this registration and decides during render, before
+  // this effect runs, so the popup still cannot suppress itself.
+  useEffect(() => {
+    useCallStore.getState().setOpenCallModal('call-dialog')
+    return () => {
+      // A minimised call window has taken over; that one is not ours to clear.
+      const store = useCallStore.getState()
+      if (!store.minimizedCall) store.setOpenCallModal(null)
+    }
+  }, [])
+
   const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'
   // Ticks the conversation clock. Derived from the answer time rather than
   // counted up, so a re-render or a minimise-and-restore cannot drift it.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    if (answeredAt === null) return
+    if (answeredAt === null || ended) return
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [answeredAt])
+  }, [answeredAt, ended])
   const durationSeconds = answeredAt === null ? null : Math.floor((now - answeredAt) / 1000)
 
   const { data: types } = useInteractionTypes()
@@ -87,6 +108,7 @@ export function IncomingCallWindowContainer({
   const answer = useAnswerCall(clients[0]?.clientId, agentExtension)
   const hold = useHoldCall(clients[0]?.clientId, agentExtension)
   const reject = useRejectCall(clients[0]?.clientId, agentExtension)
+  const hangup = useHangupCall(clients[0]?.clientId)
   const saveInteraction = useCreateBulkInteraction()
 
   const handleSave = async (draft: CallInteractionDraft) => {
@@ -145,13 +167,20 @@ export function IncomingCallWindowContainer({
           ? () => hold.mutate({ callId: incomingCall.call_id, hold: true })
           : undefined
       }
+      ended={ended}
       onCancel={() => {
-        reject.mutate(incomingCall.call_id)
-        onDismiss()
+        // Reject declines a call that is still ringing and records it as
+        // declined; once connected the call is hung up instead, or a finished
+        // conversation is filed as one the operator refused.
+        const ending = phase === 'connected' ? hangup : reject
+        // Dismissed only once the request lands. Closing first leaves the line
+        // up with no window to retry from, and makes `cancelPending` a state
+        // nothing can ever render.
+        ending.mutate(incomingCall.call_id, { onSuccess: onDismiss })
       }}
       acceptPending={answer.isPending}
       holdPending={hold.isPending}
-      cancelPending={reject.isPending}
+      cancelPending={reject.isPending || hangup.isPending}
     />
   )
 }

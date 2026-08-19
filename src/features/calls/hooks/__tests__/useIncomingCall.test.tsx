@@ -324,6 +324,54 @@ describe('useIncomingCall', () => {
       return mockSocket.on.mock.calls.find((c) => c[0] === 'call.state_changed')?.[1]
     }
 
+    describe('when the call ends', () => {
+      it('keeps a window the operator was connected to', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: mockAgentExtension },
+          })
+        })
+        await waitFor(() => expect(result.current.answeredAt).not.toBeNull())
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'COMPLETED' },
+          })
+        })
+
+        // The interaction form lives in that window and there is no way back to
+        // it, so unmounting on hangup loses whatever the operator had written
+        // — and a caller ringing off before Save is ordinary.
+        await waitFor(() => expect(result.current.callEnded).toBe(true))
+        expect(result.current.hasIncomingCall).toBe(true)
+      })
+
+      it('drops a window that only ever rang', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'COMPLETED' },
+          })
+        })
+
+        // Nothing was typed and nothing can be filed, so leaving it up would
+        // just be a dead window the operator has to dismiss.
+        await waitFor(() => expect(result.current.hasIncomingCall).toBe(false))
+        expect(result.current.callEnded).toBe(false)
+      })
+    })
+
     it('closes the window when a colleague answers', async () => {
       const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
       await openPopup(result)
