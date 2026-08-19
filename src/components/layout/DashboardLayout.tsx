@@ -28,6 +28,7 @@ import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
 import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
 import {
   DropdownMenu,
@@ -496,27 +497,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user: authUser } = useAuth()
   const agentExtension = authUser?.asterisk_extension || null
 
+  // The call-service is the only authority on a call being over. Without this,
+  // a window whose call ended is cleared solely by the bubble's own polling —
+  // which needs the bubble mounted and the lookup to succeed, and leaves the
+  // window suppressing the incoming popup whenever either fails.
+  const handleCallSettled = useCallback((callId: string) => {
+    useCallStore.getState().closeWindowForCall(callId)
+  }, [])
+
   // Handle incoming calls
-  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension, {
+    onCallSettled: handleCallSettled,
+  })
 
-  // One call window at a time: if a call modal is already open or minimized when
-  // the call arrives, the operator keeps only the bell. The decision is latched
-  // per call rather than subscribed, because the popup itself sets openCallModal
-  // on mount and a live read would make it suppress itself on the next render.
-  const [popupSuppressed, setPopupSuppressed] = useState(false)
-  const suppressionDecidedFor = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!incomingCall) {
-      suppressionDecidedFor.current = null
-      setPopupSuppressed(false)
-      return
-    }
-    if (suppressionDecidedFor.current === incomingCall.call_id) return
-    suppressionDecidedFor.current = incomingCall.call_id
-    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
-    setPopupSuppressed(openCallModal !== null || existing !== null)
-  }, [incomingCall])
+  // One call window at a time. False until the answer is known — see the hook
+  // for why the popup may not render before then.
+  const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
   // Which client the operator picked when the number is shared. Reset per call
   // so a previous choice never leaks onto the next caller.
@@ -1256,8 +1252,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
 
         {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && !popupSuppressed && (
+        {incomingCall && canShowIncomingPopup && (
           <CallDialogModal
+            // A queue can replace one ringing call with another without the
+            // popup ever unmounting, and the modal resets its timer and state
+            // on `open`, not on the call. Without a per-call identity the
+            // second call inherits the first's "Ringing MM:SS" and, if the
+            // first had already ended, its auto-close countdown.
+            key={incomingCall.call_id}
             open={true}
             onClose={dismissIncomingCall}
             initialState="incoming"

@@ -191,6 +191,24 @@ export interface MessagingDraft {
   updated_at: string | null
 }
 
+/**
+ * A soft-deleted draft, as returned by the trash listing.
+ */
+export interface MessagingDraftTrash extends MessagingDraft {
+  is_deleted: boolean
+  deleted_at: string | null
+  deleted_by: number | null
+}
+
+/**
+ * Paginated trash listing, mirroring the SMS template trash envelope so one
+ * component can render both.
+ */
+export interface MessagingDraftTrashPage {
+  total: number
+  drafts: MessagingDraftTrash[]
+}
+
 export interface MessagingDraftCreate {
   name: string
   channel: MessagingChannel

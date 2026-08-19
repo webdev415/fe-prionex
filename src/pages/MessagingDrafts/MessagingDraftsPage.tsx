@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/Select'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { PermissionGuard } from '@/components/auth'
+import { DeletedItemsSection, useExpiryLabel } from '@/components/softDelete'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -28,10 +29,12 @@ import {
   type MessagingTemplateFocusField,
   type MessagingViberImageAttachment,
   useCreateMessagingDraft,
+  useDeletedMessagingDrafts,
   useMessagingDrafts,
+  useRestoreMessagingDraft,
   useUpdateMessagingDraft,
 } from '@/features/messaging'
-import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import type { MessagingChannel, MessagingDraft, MessagingDraftTrash } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { DeleteDraftModal } from './DeleteDraftModal'
@@ -439,6 +442,53 @@ export function MessagingDraftsPage() {
     channelFilter === 'all' ? undefined : (channelFilter as MessagingChannel)
   )
 
+  // The channel filter applies to the deleted list too, so the two tables on
+  // the page are always describing the same slice.
+  const deletedDrafts = useDeletedMessagingDrafts(
+    channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel }
+  )
+  const restoreDraft = useRestoreMessagingDraft()
+  const expiryLabel = useExpiryLabel()
+
+  const deletedColumns = useMemo<Column<MessagingDraftTrash>[]>(
+    () => [
+      { key: 'name', header: t('pages.messagingDrafts.columns.name', 'Name') },
+      {
+        key: 'channel',
+        header: t('pages.messagingDrafts.columns.channel', 'Channel'),
+        render: (row) => row.channel?.toUpperCase() ?? '-',
+      },
+      {
+        key: 'deleted_at',
+        header: t('softDelete.columns.deletedAt', 'Deleted'),
+        render: (row) => (row.deleted_at ? formatDateTime(row.deleted_at) : '-'),
+      },
+      {
+        key: 'expires',
+        header: t('softDelete.columns.expires', 'Expires'),
+        render: (row) => expiryLabel(row.deleted_at),
+      },
+      {
+        key: 'actions',
+        header: t('softDelete.columns.actions', 'Actions'),
+        align: 'right',
+        render: (row) => (
+          <PermissionGuard permission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={restoreDraft.isPending}
+              onClick={() => restoreDraft.mutate(row.id)}
+            >
+              {t('softDelete.actions.restore', 'Restore')}
+            </Button>
+          </PermissionGuard>
+        ),
+      },
+    ],
+    [t, expiryLabel, restoreDraft]
+  )
+
   const filteredDrafts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     if (!query) return drafts
@@ -561,6 +611,13 @@ export function MessagingDraftsPage() {
           />
         )}
       </div>
+
+      <DeletedItemsSection
+        items={deletedDrafts.data?.drafts ?? []}
+        total={deletedDrafts.data?.total ?? 0}
+        columns={deletedColumns}
+        title={t('pages.messagingDrafts.deleted.title', 'Deleted drafts')}
+      />
 
       <DraftFormModal
         draft={null}

@@ -23,7 +23,10 @@ import {
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
-import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import {
+  legalDueDateToIso,
+  legalDueDateToPickerDate,
+} from '@/features/lawyerWorkplace/utils/legalDueDate'
 import { addSlaDays } from '@/features/lawyerWorkplace/utils/slaDeadline'
 import type { SlaDayType } from '@/pages/LawyerWorkplace/settings/types'
 import {
@@ -35,7 +38,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
-import { formatDueDate } from '../../utils/formatters'
+import { formatLegalDeadline } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
 import { SenderHistorySection } from './SenderHistorySection'
 
@@ -137,6 +140,7 @@ function applySuggestionResult(
   result: LegalMessageSuggestionsPatchResponse,
   receivedAt: string,
   slaDayType: SlaDayType,
+  timezone: string,
   setLawyerOverride: (value: string | null) => void,
   setDueDateOverride: (value: Date | null) => void,
   options?: {
@@ -151,7 +155,7 @@ function applySuggestionResult(
   if (options?.dueDateManuallyOverridden) {
     return
   }
-  const persistedDueDate = parseLegalDueDate(result.suggested_due_date)
+  const persistedDueDate = legalDueDateToPickerDate(result.suggested_due_date, timezone)
   if (persistedDueDate) {
     setDueDateOverride(persistedDueDate)
     options?.onDueDateAutoApplied?.()
@@ -265,6 +269,8 @@ function LetterParametersPanelContent({
 
   const [typeOverride, setTypeOverride] = useState<string | null>(null)
   const [clientOverride, setClientOverride] = useState<string | null>(null)
+  const [noClientLink, setNoClientLink] = useState(false)
+  const unlinkedClientIdRef = useRef<string | null>(null)
   const [clientProjectOverride, setClientProjectOverride] = useState<number | null>(null)
   const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
@@ -302,7 +308,7 @@ function LetterParametersPanelContent({
     [dueDateManuallyOverridden, letter.receivedAt, letterTypesData?.items]
   )
   const effectiveTypeId = typeOverride ?? defaultTypeId
-  const effectiveClientId = clientOverride ?? defaultClientId
+  const effectiveClientId = noClientLink ? '' : (clientOverride ?? defaultClientId)
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -311,6 +317,9 @@ function LetterParametersPanelContent({
   )
 
   const resolvedClientProjectId = useMemo(() => {
+    if (noClientLink) {
+      return null
+    }
     if (clientProjectOverride != null && clientProjectOverride > 0) {
       return clientProjectOverride
     }
@@ -323,7 +332,13 @@ function LetterParametersPanelContent({
     }
     const selectedClient = (clientsData?.items ?? []).find((item) => item.id === parsedClientId)
     return selectedClient?.project_id ?? null
-  }, [clientProjectOverride, p.clientProjectId, effectiveClientId, clientsData?.items])
+  }, [
+    noClientLink,
+    clientProjectOverride,
+    p.clientProjectId,
+    effectiveClientId,
+    clientsData?.items,
+  ])
 
   const { data: lawyersData } = useLegalLawyers(
     resolvedClientProjectId != null && resolvedClientProjectId > 0
@@ -351,9 +366,10 @@ function LetterParametersPanelContent({
   const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items])
   const storedContract = p.contractLabel?.trim() ?? ''
   // Auto-select when the client has exactly one contract; otherwise the lawyer picks.
-  const effectiveContract =
-    contractOverride ??
-    (storedContract || (contracts.length === 1 ? (contracts[0].contract_number ?? '') : ''))
+  const effectiveContract = noClientLink
+    ? ''
+    : (contractOverride ??
+      (storedContract || (contracts.length === 1 ? (contracts[0].contract_number ?? '') : '')))
 
   const contractRequired = contracts.length > 1
   const contractIsValid = !contractRequired || Boolean(effectiveContract.trim())
@@ -404,6 +420,7 @@ function LetterParametersPanelContent({
         result,
         letter.receivedAt,
         resolveSlaDayType(typeId),
+        timezone,
         setLawyerOverride,
         setDueDateOverride,
         {
@@ -419,6 +436,7 @@ function LetterParametersPanelContent({
       letter.receivedAt,
       patchSuggestionsMutation,
       resolveSlaDayType,
+      timezone,
     ]
   )
 
@@ -488,6 +506,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -523,6 +542,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -546,6 +566,54 @@ function LetterParametersPanelContent({
       .catch(() => {
         // Keep local selection visible even if persistence fails.
       })
+  }
+
+  const persistClientSuggestion = (clientId: number | null) => {
+    if (!effectiveTypeId || isReadOnly) return Promise.resolve()
+    return patchSuggestionsMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: { letter_type_id: effectiveTypeId, client_id: clientId },
+      })
+      .then(() => undefined)
+  }
+
+  // Picking a client writes through immediately, which is what makes the
+  // client's name appear on the letter and across the inbox list. Unlinking has
+  // to write through the same way, or those labels keep naming a client the
+  // operator just detached — every one of them reads the persisted
+  // `suggested_client_id`, including the sender title, which the mapper
+  // deliberately overrides with the client name (KAN-1008).
+  const handleNoClientLinkToggle = (next: boolean) => {
+    if (next) {
+      unlinkedClientIdRef.current = effectiveClientId || null
+      setNoClientLink(true)
+      setClientOverride(null)
+      setContractOverride(null)
+      setClientProjectOverride(null)
+      setSaveSenderEmail(false)
+      void persistClientSuggestion(null).catch(() => {
+        // Leaving the box ticked while the labels still name the client is the
+        // exact confusion this fixes, so fail visibly rather than silently.
+        setNoClientLink(false)
+        unlinkedClientIdRef.current = null
+        toast.error(
+          t('pages.lawyerWorkplace.parameters.noClientLinkFailed', 'Could not unlink the client')
+        )
+      })
+      return
+    }
+
+    setNoClientLink(false)
+    const restored = unlinkedClientIdRef.current
+    unlinkedClientIdRef.current = null
+    if (!restored) return
+    setClientOverride(restored)
+    const parsed = Number(restored)
+    if (!Number.isFinite(parsed) || parsed <= 0) return
+    void persistClientSuggestion(parsed).catch(() => {
+      // Keep local selection visible even if persistence fails.
+    })
   }
 
   const handleClientSelect = (clientId: string) => {
@@ -585,6 +653,7 @@ function LetterParametersPanelContent({
           result,
           letter.receivedAt,
           resolveSlaDayType(effectiveTypeId),
+          timezone,
           setLawyerOverride,
           setDueDateOverride,
           {
@@ -695,10 +764,11 @@ function LetterParametersPanelContent({
     !Number.isNaN(effectiveDueDate.getTime()) &&
     (!dueDateManuallyOverridden || !isBeforeStartOfDay(effectiveDueDate))
 
+  const hasClient = Number.isFinite(clientIdNumber) && clientIdNumber > 0
+
   const canConfirm =
     Boolean(effectiveTypeId) &&
-    Number.isFinite(clientIdNumber) &&
-    clientIdNumber > 0 &&
+    (noClientLink || hasClient) &&
     dueDateIsValid &&
     Number.isFinite(lawyerUserIdNumber) &&
     lawyerUserIdNumber > 0 &&
@@ -713,12 +783,13 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: {
           letter_type_id: effectiveTypeId,
-          client_id: clientIdNumber,
+          client_id: noClientLink ? null : clientIdNumber,
+          no_client_link: noClientLink,
           due_date: legalDueDateToIso(effectiveDueDate, timezone),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
           save_sender_email_to_client:
-            letter.direction === 'incoming' ? saveSenderEmail : undefined,
+            letter.direction === 'incoming' && !noClientLink ? saveSenderEmail : undefined,
         },
       },
       {
@@ -777,7 +848,9 @@ function LetterParametersPanelContent({
 
           {p.dueDate && (
             <ReadonlyField label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}>
-              <span className="text-foreground">{formatDueDate(p.dueDate, i18n.language)}</span>
+              <span className="text-foreground">
+                {formatLegalDeadline(p.dueDate, i18n.language, timezone)}
+              </span>
               {p.dueDateHint && (
                 <span className="text-error-500 ml-2 text-[11px]">{p.dueDateHint}</span>
               )}
@@ -876,12 +949,25 @@ function LetterParametersPanelContent({
               onValueChange={handleClientSelect}
               onSearchChange={setClientSearch}
               isLoading={clientsLoading}
+              disabled={noClientLink}
               emptySearchHint={t(
                 'pages.lawyerWorkplace.parameters.clientSearchHint',
                 'Type 2+ characters to search…'
               )}
               placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
             />
+          )}
+          {!p.clientLockedByEmail && (
+            <label className="flex w-full cursor-pointer items-center gap-2 self-stretch py-1">
+              <Checkbox
+                checked={noClientLink}
+                onCheckedChange={(value) => handleNoClientLinkToggle(value === true)}
+                disabled={confirmMutation.isPending}
+              />
+              <span className="text-muted-foreground text-[12px] font-normal">
+                {t('pages.lawyerWorkplace.parameters.noClientLink', 'No client link')}
+              </span>
+            </label>
           )}
         </div>
 
@@ -980,7 +1066,7 @@ function LetterParametersPanelContent({
             })}
           </span>
         </div>
-        {letter.direction === 'incoming' && (
+        {letter.direction === 'incoming' && !noClientLink && (
           <label className="flex w-full cursor-pointer items-center gap-2 self-stretch py-1">
             <Checkbox
               checked={saveSenderEmail}

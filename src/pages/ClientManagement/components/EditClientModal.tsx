@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Icons } from '@/lib/icons'
 import {
   Select,
@@ -135,6 +136,45 @@ function EditForm({ profile, clientId }: EditFormProps) {
     profile.middle_name?.trim() || legacyNames?.middle || ''
   )
   const [email, setEmail] = useState(profile.email || '')
+  // Moved here from the client panel, but kept as its own single-field write
+  // rather than folded into the personal payload. Two reasons: the personal
+  // save aborts client-side when the name is blank or the tax id is not ten
+  // digits, which would leave a consent flag unsettable for those records; and
+  // riding along in every save would write this mount-time value back over a
+  // change someone else made while the form was open.
+  const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
+  const { mutate: updateUbkiOptOut, isPending: isSavingUbkiOptOut } = useUpdateClient()
+
+  const handleToggleUbkiOptOut = (checked: boolean) => {
+    const previous = doNotSendToUbki
+    setDoNotSendToUbki(checked)
+    updateUbkiOptOut(
+      { id: clientId, data: { do_not_send_to_ubki: checked } },
+      {
+        onSuccess: () => {
+          invalidateClientCaches()
+          // Direction-specific keys: the optOut/optIn pair above them is
+          // bulk-phrased ("{{count}} client(s) …"), and passing a ternary as
+          // i18next's defaultValue does nothing once the key resolves — every
+          // toggle reported "opted out", including re-enabling.
+          toast.success(
+            checked
+              ? t('pages.clients.detail.ubki.toasts.optOutSingle', 'Client opted out of UBKI')
+              : t('pages.clients.detail.ubki.toasts.optInSingle', 'Client re-enabled for UBKI')
+          )
+        },
+        onError: (error) => {
+          setDoNotSendToUbki(previous)
+          toast.error(
+            extractErrorMessage(
+              error,
+              t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
+            )
+          )
+        },
+      }
+    )
+  }
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth || '')
   const [maritalStatus, setMaritalStatus] = useState(profile.marital_status || '')
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
@@ -189,6 +229,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [workError, setWorkError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
 
+  const emailTrimmed = email.trim()
+  const emailChanged = emailTrimmed !== (profile.email ?? '').trim()
+
   const invalidateClientCaches = () => {
     queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId), exact: true })
     queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
@@ -216,7 +259,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
       first_name: fn,
       last_name: ln,
       middle_name: middleName.trim() ? middleName.trim() : undefined,
-      email: email.trim() ? email.trim() : undefined,
+      // Send the address only when the operator changed it: imports left
+      // invalid addresses in the data and ClientUpdate validates with
+      // EmailStr, so resubmitting an untouched one rejects the whole save
+      // and blocks edits to unrelated fields. Clearing sends null rather
+      // than undefined — the backend applies dict(exclude_unset=True), so
+      // undefined would silently leave the old address in place.
+      email: emailChanged ? emailTrimmed || null : undefined,
       date_of_birth: dateOfBirth || undefined,
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
@@ -324,7 +373,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
       first_name: fn,
       last_name: ln,
       middle_name: middleName.trim() ? middleName.trim() : undefined,
-      email: email.trim() ? email.trim() : undefined,
+      // Send the address only when the operator changed it: imports left
+      // invalid addresses in the data and ClientUpdate validates with
+      // EmailStr, so resubmitting an untouched one rejects the whole save
+      // and blocks edits to unrelated fields. Clearing sends null rather
+      // than undefined — the backend applies dict(exclude_unset=True), so
+      // undefined would silently leave the old address in place.
+      email: emailChanged ? emailTrimmed || null : undefined,
       date_of_birth: dateOfBirth || undefined,
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
@@ -554,12 +609,35 @@ function EditForm({ profile, clientId }: EditFormProps) {
             </div>
           </div>
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
+            <div className="flex flex-1 items-center justify-between gap-3">
+              <label
+                className="text-foreground text-xs font-medium sm:text-sm"
+                title={t(
+                  'pages.clients.detail.ubki.doNotSendHint',
+                  'When enabled, this client is excluded from all UBKI submissions.'
+                )}
+              >
+                {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+              </label>
+              <ToggleSwitch
+                checked={doNotSendToUbki}
+                onChange={handleToggleUbkiOptOut}
+                disabled={!canEditAll || isSavingUbkiOptOut}
+                ariaLabel={t(
+                  'pages.clients.detail.ubki.doNotSendLabel',
+                  'Do not send data to UBKI'
+                )}
+              />
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.dateOfBirth')}
               </label>
               <DateSelect
                 value={ymdToDate(dateOfBirth)}
+                autoComplete="new-password"
                 onChange={({ value }) => setDateOfBirth(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
@@ -715,6 +793,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <DateSelect
                 value={ymdToDate(issuedDate)}
+                autoComplete="new-password"
                 onChange={({ value }) => setIssuedDate(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}
@@ -730,6 +809,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
               </label>
               <DateSelect
                 value={ymdToDate(expiresDate)}
+                autoComplete="new-password"
                 onChange={({ value }) => setExpiresDate(dateToYmd(value))}
                 disabled={!canEditAll}
                 placeholder={t('pages.clients.modals.addNote.selectDate')}

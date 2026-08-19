@@ -118,6 +118,26 @@ export interface TemplatesListResponse {
 }
 
 /**
+ * A soft-deleted template, as returned by the trash listing.
+ *
+ * The normal list never carries these three columns - the public response
+ * model omits them - so they exist only on this shape.
+ */
+export interface TemplateTrashResponse extends TemplateResponse {
+  is_deleted: boolean
+  deleted_at: string | null
+  deleted_by: number | null
+}
+
+/**
+ * Paginated trash listing (same envelope as TemplatesListResponse).
+ */
+export interface TemplatesTrashListResponse {
+  total: number
+  templates: TemplateTrashResponse[]
+}
+
+/**
  * SMS History Item
  */
 export interface SMSHistoryItem {

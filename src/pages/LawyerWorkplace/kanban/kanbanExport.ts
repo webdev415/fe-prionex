@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { legalDueCalendarDay } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   findKanbanLetterType,
   TYPE_I18N_KEYS,
@@ -15,11 +16,9 @@ function escapeCsvCell(value: string): string {
   return value
 }
 
-function formatIsoDate(iso: string | null): string {
+function formatIsoDate(iso: string | null, timezone?: string | null): string {
   if (!iso) return ''
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toISOString().slice(0, 10)
+  return legalDueCalendarDay(iso, timezone) || iso
 }
 
 function taskTypeLabel(task: KanbanTask, t: TFunction, letterTypes: KanbanLetterTypeRef[]): string {
@@ -33,7 +32,8 @@ export function exportKanbanTasksToCsv(
   columns: KanbanColumnDef[],
   t: TFunction,
   filename?: string,
-  letterTypes: KanbanLetterTypeRef[] = []
+  letterTypes: KanbanLetterTypeRef[] = [],
+  timezone?: string | null
 ): number {
   const rows = columns.flatMap((column) =>
     column.tasks.map((task) => ({
@@ -43,8 +43,8 @@ export function exportKanbanTasksToCsv(
       title: task.title,
       client_code: task.clientCode ?? '',
       client_name: task.clientName ?? '',
-      deadline: formatIsoDate(task.deadline),
-      closed_at: formatIsoDate(task.closedAt),
+      deadline: formatIsoDate(task.deadline, timezone),
+      closed_at: formatIsoDate(task.closedAt, timezone),
       priority: task.priority,
       assignee: task.assigneeName,
       assignee_initials: task.assigneeInitials,
