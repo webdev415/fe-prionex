@@ -141,8 +141,73 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: DEV Environment on Forgejo
-  epic-4: backlog
-  4-1-parameterize-the-compose-file-for-coexisting-stands: backlog
+  # Opened 2026-08-19 with story 4.1 — the retro's critical path (A1/B2/C3) closed first, as Oleg
+  # required. 4.1 is the epic's foundation: 4.2, 4.3, 4.8 and Epics 5-6 all consume the compose file
+  # it produces, so per retro action E5 it is code-reviewed BEFORE 4.2 is written.
+  epic-4: in-progress
+  # Contexted 2026-08-19. 🔴 One BLOCKING open question: the legacy GitHub `CD.yml` copies
+  # `docker-compose.server.yml` from the repo onto the legacy stand on every deploy (`:154-162`) and
+  # force-removes the container by literal name (`:201`) — so a fail-closed parameterization landing
+  # there takes the legacy stand down and keeps it down (NFR5). This working copy's only remote is
+  # Forgejo, which is a reason to suspect that path is dead but is not proof. Until it is settled,
+  # the story leaves `docker-compose.server.yml` alone and lands the stand definition beside it.
+  # Owner of the answer: Oleg (the GitHub-side transfer is his, outside this plan — D7).
+  # Also decided while contexting: AC3 takes its second branch — the image default is REMOVED, not
+  # repointed, because `latest` was cancelled outright (D20 §4) and `build.yml` sets PUSH_LATEST=false.
+  #
+  # Implemented 2026-08-19. The blocking question above was NOT settled — Task 1.3 tried and could
+  # not: `/push_mirrors` and the repo endpoint both return HTTP 403 unauthenticated, no Forgejo token
+  # exists on the dev machine, and `~/.ssh/config` has no alias for s1 where the tokens live. The
+  # mirror config was never read as absent; the request failed on auth. So verdict (b) stands and was
+  # acted on: `docker-compose.server.yml` is untouched, and the parameterization landed as a NEW file
+  # `docker-compose.stand.yml` + `.env.stand.example`. 🔴 Recorded deviation from FR25, D27.
+  # Retro E5 satisfied: all seven guard-matrix rows executed live at zero CI cost, including the
+  # discriminating row — which surfaced that `docker compose config` is blind to network existence
+  # (renders exit 0 against a network that does not exist; only `up` refuses). AC5 proven with two
+  # stands observed from Docker on all five axes; AC4's "which backend" recorded from inside both
+  # containers with a fake Kong on one network only (alpha resolves, beta NXDOMAIN while `healthy`
+  # and serving 200 — the silent-failure mode demonstrated, not asserted).
+  # ✅ Run ledger CLOSED BY QUERY 2026-08-19 (was OPEN; Oleg granted s1 access after the story was
+  # otherwise complete). Baseline run id 775; spent 4 runs (776 cf0d0c71, 780 e0395fda CANCELLED by
+  # concurrency, 781 de303a96, 783 c4afcc07) against 5 declared — under budget, because the review
+  # round ran BEFORE the first push and its fixes cost zero extra runs.
+  # 🔴 Counted, not reasoned: the image job's `uses:` expansion contributes ZERO action_run rows.
+  # 4 pushes -> 4 rows, all ci.yml. Per-push cost here is 1 run, not 2.
+  # ✅ s1 compose measured: v5.1.3, NOT the v5.3.0 used locally. All seven matrix rows re-run on s1
+  # against the real file — identical behaviour, byte-identical messages. Story 4.2 handoff item 1
+  # is closed before 4.2 starts. crm-dev-network EXISTS and crm-dev-kong-gateway carries the
+  # crm-kong-gateway alias, so Story 4.2's blocking external dependency is satisfied.
+  # 🔴 MEASURED AND IT CONTRADICTS THE PLAN: the legacy DEV stand is NOT on s1. s1 is 185.185.49.127;
+  # legacy DEV is 72.62.17.132. No fe-prionex frontend container, no ~/crm-prionex, nothing on 8080.
+  # epics.md FR25:228 and Story 4.2's AC1:1604 amended (Task 8.3's condition met literally).
+  # Consequences: NFR5 exposure on s1 is zero; 4.1's verdict (b) unaffected and strengthened (the
+  # endangered stand is on a host this plan cannot reach or roll back); 🔴 Story 4.9's cutover is a
+  # cross-host DNS/TLS switch, NOT a file swap, and needs re-scoping before it is written.
+  #
+  # Code review round 1 (Opus, adversarial) done 2026-08-19 BEFORE the first implementation push, so
+  # its fixes cost zero extra CI runs. CHANGES REQUIRED, ten findings, all applied. It reproduced all
+  # seven matrix rows verbatim and found nothing wrong in docker-compose.stand.yml itself — the
+  # defects were in the template and in claims the record made that the artifacts contradicted.
+  # 🔴 The blocking one: `CONTAINER_NAME=CHANGE_ME` was a VALID Docker container name, so the
+  # "no working values" claim was false — an unedited template would have started a stand literally
+  # named CHANGE_ME, and Story 4.3's FR20 health check reads CONTAINER_NAME from the same .env and
+  # would have passed it. Fixed to <CHANGE_ME>. Also caught: four more stale `8081`s including
+  # preprod-infrastructure-requirement.md (the document Story 5.2 reads) in bold, and a compose
+  # bypass no guard can close — the process environment beats --env-file, handed to 4.3.
+  #
+  # ✅ ANSWERED 2026-08-19 — Oleg: "GitHub не трогаем". D7 becomes a standing directive rather than
+  # an inferred constraint, and verdict (b) is now PERMANENT, not provisional: the escape hatch
+  # ("if no mirror exists, collapse back to an in-place edit") is closed, because using it would
+  # require knowing the mirror does not exist and the directive removes the means of finding out.
+  # 🔴 Story 4.9 inherits the hazard unchanged: the cutover IS the act of renaming/replacing
+  # docker-compose.server.yml, the file CD.yml:154-162 copies to the legacy stand, and it will be
+  # just as unverifiable then. 4.9 must plan the cutover assuming the path is live — converge the
+  # two files only after the legacy stand is decommissioned or provably no longer deployed to,
+  # never as a file rename in the repo.
+  #
+  # 🔴 Per retro action E5, Story 4.2 is NOT written until this story is code-reviewed. That review
+  # has now happened; 4.2 is unblocked once this PR merges.
+  4-1-parameterize-the-compose-file-for-coexisting-stands: review
   4-2-provision-the-new-dev-stand-on-s1: backlog
   4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog

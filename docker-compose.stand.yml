@@ -1,0 +1,64 @@
+# Frontend - Parameterized Stand Deployment
+#
+# This is the parameterized stand definition (Story 4.1). It replaces the
+# hardcoded identity in docker-compose.server.yml with required variables so
+# that any number of stands (legacy, DEV, PRE-PROD, PROD) can coexist on the
+# same host without colliding on project name, container name, published
+# port, image or network.
+#
+# docker-compose.server.yml remains the LEGACY stand's file, unchanged, until
+# Story 4.9's cutover (Task 1.4 verdict (b): whether the GitHub CD.yml copy
+# path to the legacy stand is still live could not be settled with the
+# access available this session, so it is treated as live and the legacy
+# file is left untouched).
+#
+# Usage: docker compose -f docker-compose.stand.yml --env-file .env up -d
+#
+# Required variables (NO defaults — every one fails closed if missing):
+#   COMPOSE_PROJECT_NAME  - compose project name for this stand
+#   CONTAINER_NAME        - container name for this stand (must not be
+#                            "fe-prionex" - CD.yml:201 force-removes that
+#                            literal name on every legacy deploy)
+#   FRONTEND_PORT         - host-side published port (container side stays 80)
+#   DOCKER_IMAGE          - full image ref incl. tag, e.g.
+#                            git.crm-prionex.com/crm/fe-prionex:sha-<12hex>-<env>
+#   FRONTEND_NETWORK      - name of the pre-existing external network this
+#                            stand attaches to (e.g. crm-dev-network,
+#                            crm-preprod-network, crm-prod-network, or the
+#                            legacy crm-network)
+#
+# See .env.stand.example for a template with no working values.
+
+name: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)}
+
+services:
+  frontend:
+    image: ${DOCKER_IMAGE:?DOCKER_IMAGE is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)}
+    container_name: ${CONTAINER_NAME:?CONTAINER_NAME is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)}
+    ports:
+      - "${FRONTEND_PORT:?FRONTEND_PORT is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)}:80"
+    networks:
+      - stand-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  stand-network:
+    external: true
+    name: ${FRONTEND_NETWORK:?FRONTEND_NETWORK is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)}

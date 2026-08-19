@@ -223,7 +223,8 @@ Feature branch → DEV → Pull Request / Review → main → PRE-PROD → PROD
 
 ### Фаза 6 — PRE-PROD на s1 (новая среда)
 
-1. Инфра: каталог `~/crm-prionex/fe-prionex-preprod/`, порт `8081`, сеть и Kong из п.1.2, домен + TLS.
+1. Инфра: каталог `~/crm-prionex/fe-prionex-preprod/`, порт ~~`8081`~~ **`8083`** (амендмент
+   15.08.2026 — `8081` занят `docker-proxy` под `vm-cadvisor`), сеть и Kong из п.1.2, домен + TLS.
 2. `deploy-preprod.yml`: **только** `workflow_dispatch` с обязательным input `image_tag` (конкретный `sha-` или `v*`). Никаких автотриггеров.
 3. **Фиксация релиз-кандидата — ретегом в registry, не файлом на сервере.** После успешного деплоя workflow создаёт тег `preprod-current` (`docker buildx imagetools create -t .../fe-prionex:preprod-current .../fe-prionex:<image_tag>`) и `preprod-<sha>`. Реестр становится единственным источником истины: история тегов = история релизов, состояние не размазано по серверам, и это же даёт основу для промоушена в фазе 7.
    *(Первоначальный вариант — файл `RELEASE` на preprod-сервере — отброшен: он хранит один слот, из-за чего guard в фазе 7 блокировал бы откат на предыдущую версию.)*
@@ -350,7 +351,7 @@ Fallback-значения URL-ов из `CD.yml:47,57` при переносе *
   ci.yml              # PR + feature push: lint, typecheck, test, build (метка node-20)
   build.yml           # push в любую ветку / tag v*: сборка и пуш образа (метка node-20 + docker CLI шагом run:, НЕ docker-build — см. #d12)
   deploy-dev.yml      # dispatch: любая ветка → s1:8082
-  deploy-preprod.yml  # dispatch: image_tag → s1:8081 + ретег preprod-current
+  deploy-preprod.yml  # dispatch: image_tag → s1:8083 + ретег preprod-current
   deploy-prod.yml     # dispatch: image_tag [+ rollback] → s2:8080, guard по preprod-* в registry
   dev-reset.yml       # schedule: еженедельный сброс DEV к main
 docker-compose.server.yml   # параметризовать имя проекта/контейнера/порт

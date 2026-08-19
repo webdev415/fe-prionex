@@ -224,7 +224,13 @@ FR24: Rollback is performed by running `deploy-prod.yml` with a previous `image_
 
 FR25: `docker-compose.server.yml` is parameterized — `COMPOSE_PROJECT_NAME`,
 `CONTAINER_NAME`, `FRONTEND_PORT` — so DEV (`8082`) and PRE-PROD (~~`8081`~~ **`8083`**) coexist on s1 🔴 **AMENDED 2026-08-15** (`sprint-change-proposal-2026-08-15-preprod-reality.md`): `8081` is **taken** on s1 — `docker-proxy` binds `127.0.0.1:8081` — and was called a permanent allocation on the strength of a port census the story deliberately ran *from the artifacts rather than by SSH*. `8083` is free, measured. The instruction not to look is what produced the wrong number.
-alongside the untouched legacy stand.
+~~alongside the untouched legacy stand.~~ 🔴 **AMENDED 2026-08-19 (Story 4.1, measured on s1 by SSH):
+the legacy stand is NOT on s1.** s1 is `185.185.49.127`; the legacy DEV stand is `72.62.17.132`
+(`README.md:136`, and `CD.yml:157` deploys to `secrets.DEV_SSH_HOST`). On s1 there is no
+`fe-prionex` frontend container running or stopped, no `~/crm-prionex` directory, and nothing
+listening on `8080`. The two stands that coexist on s1 are the **new DEV** and **PRE-PROD**; the
+legacy stand cannot collide with either because it is on a different machine. Same lesson as this
+FR's own 2026-08-15 amendment: the premise had never been measured.
 
 FR26: Stand directories are separated: `~/crm-prionex/fe-prionex-dev/` and
 `~/crm-prionex/fe-prionex-preprod/`. **AMENDED 2026-08-18:** the PROD stand directory lives on
@@ -1601,10 +1607,15 @@ So that the migration can be exercised without risking the environment the team 
 
 **Acceptance Criteria:**
 
-**Given** s1 already hosts the legacy DEV stand
+**Given** ~~s1 already hosts the legacy DEV stand~~ **s1 hosts no frontend stand at all** 🔴 **AMENDED
+2026-08-19 (Story 4.1, measured on s1)** — the legacy DEV stand is on `72.62.17.132`, a different
+machine; s1 (`185.185.49.127`) is the runner host and carries the `crm-dev` / `crm-preprod` stacks
 **When** the new stand is provisioned
-**Then** it lives in `~/crm-prionex/fe-prionex-dev/`
-**And** the legacy stand's directory, container and port are not modified.
+**Then** it lives in `~/crm-prionex/fe-prionex-dev/` — **which does not exist yet and is created by
+this story**, not placed beside an existing sibling
+**And** the legacy stand's directory, container and port are not modified — **trivially satisfied on
+s1, because they are not there.** NFR5's real exposure for the legacy stand is not host contention on
+s1; it is `CD.yml` deploying to `DEV_SSH_HOST`, which Story 4.1's verdict (b) already fenced off.
 
 **Given** the new stand directory
 **When** its `.env` is created
