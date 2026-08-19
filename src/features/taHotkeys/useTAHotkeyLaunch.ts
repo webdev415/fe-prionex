@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { decideHotkeyLaunch } from './decideHotkeyLaunch'
 import { useTAHotkeyBindings } from './hooks/useTAHotkeys'
-import { resolveHotkeyTarget } from './hotkey'
+import { resolveHotkeyTarget, TA_EXECUTOR_DIALOG_SELECTOR } from './hotkey'
 
 export function useTAHotkeyLaunch(params: {
   /** False on pages/states where quick-launch must not apply (e.g. no client). */
@@ -41,8 +41,19 @@ export function useTAHotkeyLaunch(params: {
     if (!enabled) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // A held key repeats. The first press opens the modal; every repeat after
+      // it would either stack up "finish or close the open target action first"
+      // toasts or, before the state settles, attempt a second launch.
+      if (event.repeat) return
+
       const current = latest.current
-      const templateId = resolveHotkeyTarget(event, current.bindings)
+      // The executor's own dialog is exempt from the "inside a dialog counts as
+      // typing" rule: otherwise the press is dropped here, the single-modal
+      // guard below never runs, and the operator gets silence where the ticket
+      // asks for an explanation.
+      const templateId = resolveHotkeyTarget(event, current.bindings, {
+        exemptDialogSelector: TA_EXECUTOR_DIALOG_SELECTOR,
+      })
 
       // Unassigned, or the operator is typing: leave the keystroke completely
       // alone, including its default behaviour. Bare-key bindings mean most

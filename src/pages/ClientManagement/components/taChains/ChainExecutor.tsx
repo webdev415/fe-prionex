@@ -100,6 +100,23 @@ interface Props {
    */
   prefilledPhone?: string | null
   /**
+   * Which contact source ``prefilledPhone`` belongs to, when it must NOT also
+   * narrow the chain list.
+   *
+   * The two were one prop, and that quietly broke hotkey launches: a phone
+   * resolved from a recent call always has a source, and setting
+   * ``contactSource`` filters the chain list — and with it the quick picks — to
+   * chains touching that source. A template bound to a chain that does not
+   * match simply vanished, so the modal opened and started nothing, which looks
+   * exactly like a broken shortcut.
+   *
+   * Entry points that mean "show me only this phone's chains" keep passing
+   * ``contactSource``. The hotkey path passes this instead: pre-select the
+   * phone, leave the template list alone. Falls back to ``contactSource`` so
+   * existing callers are unaffected.
+   */
+  prefilledPhoneSource?: 'client' | 'recommender' | null
+  /**
    * Quick-pick template to start immediately on open, instead of making the
    * operator find it in the picker (KAN-973 hotkey quick-launch).
    *
@@ -219,6 +236,7 @@ export function ChainExecutor({
   responsibleEmployeeId,
   debts = [],
   contactSource = null,
+  prefilledPhoneSource = null,
   prefilledPhone = null,
   initialTemplateId = null,
   onSave,
@@ -261,6 +279,10 @@ export function ChainExecutor({
   }, [chainsData, contactSource])
 
   // Full TA data (for dropdown values + flags)
+  // The source the prefilled phone belongs to. Distinct from `contactSource`,
+  // which additionally narrows the chain list — see the prop docs.
+  const prefillSource = prefilledPhoneSource ?? contactSource
+
   const { data: tasData } = useTargetActions({ include_hidden: false })
   const taById = useMemo(() => {
     const m = new Map<number, TargetAction>()
@@ -672,20 +694,45 @@ export function ChainExecutor({
   // KAN-973 — hotkey quick-launch. The gating rule (and the loading-vs-empty
   // trap behind it) lives in decideHotkeyAutoStart, where it is unit-tested;
   // the ref latches so a started chain is never started twice.
-  const autoStartedRef = useRef(false)
+  // Latched on the first SETTLED decision, not only on a successful start.
+  //
+  // Latching only when it started left a deferred decision alive: press the
+  // hotkey while the client has an active instance and the launch is correctly
+  // skipped, but `initialTemplateId` stays set and the modal stays open. The
+  // operator then cancels that instance — which does not close the modal —
+  // `activeInstance` flips to null, this effect re-runs, and the hotkey's chain
+  // starts by itself, with a success toast, from an action nobody took.
+  //
+  // "Settled" means the instances query has answered. Before that, skipping is
+  // provisional and the effect must be allowed to run again.
+  const autoStartDecidedRef = useRef(false)
   useEffect(() => {
-    if (autoStartedRef.current) return
+    if (autoStartDecidedRef.current) return
 
+    const instancesLoaded = instances !== undefined
     const { start } = decideHotkeyAutoStart({
       initialTemplateId,
-      instancesLoaded: instances !== undefined,
+      instancesLoaded,
       hasActiveInstance: activeInstance !== null,
       templates: quickPicks,
     })
-    if (!start) return
 
-    autoStartedRef.current = true
-    void startTemplate(start)
+    if (start) {
+      autoStartDecidedRef.current = true
+      void startTemplate(start)
+      return
+    }
+
+    // No start, and the data it depends on has arrived — the answer is "no",
+    // for this opening of the modal. Anything that changes later is the
+    // operator's doing, not the hotkey's.
+    //
+    // `templates` is excluded from "settled": an empty quick-pick list is
+    // indistinguishable from one still loading, and latching on it would drop
+    // a launch whose template simply had not arrived yet.
+    if (instancesLoaded && initialTemplateId !== null && quickPicks.length > 0) {
+      autoStartDecidedRef.current = true
+    }
   }, [initialTemplateId, instances, activeInstance, quickPicks, startTemplate])
 
   // Reset on chain change
@@ -811,12 +858,12 @@ export function ChainExecutor({
     if (lastInstantSelectionRef.current === selectionKey) return
     lastInstantSelectionRef.current = selectionKey
 
-    if (prefilledPhone && contactSource && effectiveChain) {
+    if (prefilledPhone && prefillSource && effectiveChain) {
       const seed: Record<number, InstantStepValue> = {}
       for (const step of effectiveChain.steps ?? []) {
         const ta = taById.get(step.target_action_id)
         const stepSource = step.contact_source ?? 'client'
-        if (ta?.field_type === 'contact' && stepSource === contactSource) {
+        if (ta?.field_type === 'contact' && stepSource === prefillSource) {
           seed[step.id] = { ...EMPTY_INSTANT_VALUE, value: prefilledPhone }
         }
       }
@@ -827,7 +874,7 @@ export function ChainExecutor({
     setInstantNotes('')
     setInstantSubmitting(false)
     setNotifyResponsible(true)
-  }, [selectedChainId, activeInstance?.id, prefilledPhone, contactSource, effectiveChain, taById])
+  }, [selectedChainId, activeInstance?.id, prefilledPhone, prefillSource, effectiveChain, taById])
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
@@ -847,7 +894,7 @@ export function ChainExecutor({
     const isContactStep = currentTA?.field_type === 'contact'
     const stepSource = currentStep?.contact_source ?? 'client'
     const phonePrefill =
-      isContactStep && prefilledPhone && contactSource === stepSource ? prefilledPhone : ''
+      isContactStep && prefilledPhone && prefillSource === stepSource ? prefilledPhone : ''
     setStepValue(preset ?? phonePrefill)
     setPromiseDate('')
     setPromiseAmount('')
@@ -857,7 +904,7 @@ export function ChainExecutor({
     currentStep?.target_action_id,
     currentStep?.contact_source,
     currentTA?.field_type,
-    contactSource,
+    prefillSource,
     prefilledPhone,
   ])
 

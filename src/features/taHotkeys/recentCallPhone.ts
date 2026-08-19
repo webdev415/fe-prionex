@@ -35,9 +35,19 @@ export function normalizePhoneKey(value: string): string {
   return digits.length > 9 ? digits.slice(-9) : digits
 }
 
-/** The fields this needs from a call record. */
+/**
+ * The fields this needs from a call record.
+ *
+ * ``customer_number`` is REQUIRED on purpose, and it is the switchboard's name
+ * for the field, not the client card's. The first version made it optional and
+ * was handed the card's *display* mapping — which renames the field to
+ * ``phone`` — so every record failed the guard below and the pre-selection
+ * silently never fired. TypeScript accepted it because a fully-optional
+ * interface matches almost anything. Requiring the field makes the wrong shape
+ * a compile error rather than a feature that quietly does nothing.
+ */
 export interface RecentCallLike {
-  customer_number?: string | null
+  customer_number: string
   ended_at?: string | null
 }
 

@@ -73,3 +73,36 @@ describe('decideHotkeyAutoStart', () => {
     }
   })
 })
+
+describe('why the caller has to latch', () => {
+  // This covers the RULE only. The rule is stateless by design, so on its own
+  // it will happily say "start" the moment an active instance disappears —
+  // which is exactly why ChainExecutor must remember its earlier settled
+  // answer. That behaviour is asserted in ChainExecutor.autoStart.test.tsx;
+  // this documents the half that makes the latch necessary.
+  it('defers while an instance is active, and that answer is provisional', () => {
+    const templates = [{ id: 12 }]
+    // Modal opened by a hotkey on a client who already has a chain running.
+    expect(
+      decideHotkeyAutoStart({
+        initialTemplateId: 12,
+        instancesLoaded: true,
+        hasActiveInstance: true,
+        templates,
+      }).start
+    ).toBeNull()
+
+    // Operator cancels that instance. The rule alone now says "start" — which
+    // is why the caller must have latched the earlier settled decision rather
+    // than waiting for a successful start. Without that latch the chain would
+    // begin on its own, from an action nobody took.
+    expect(
+      decideHotkeyAutoStart({
+        initialTemplateId: 12,
+        instancesLoaded: true,
+        hasActiveInstance: false,
+        templates,
+      }).start
+    ).toEqual({ id: 12 })
+  })
+})

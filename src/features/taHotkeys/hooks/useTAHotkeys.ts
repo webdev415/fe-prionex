@@ -48,9 +48,11 @@ export function useTAHotkeyBindings(): Record<string, number> {
     queryFn: getTAHotkeys,
     select: toBindingMap,
     // Bindings change only when this operator edits them, which no UI can do
-    // yet. Without this the client card refetches the map on every tab focus,
-    // which for a page operators leave and return to all day is a request per
-    // glance. KAN-975 invalidates ['ta-hotkeys'] when it adds the write side.
+    // yet — KAN-975 adds that screen and will invalidate this key from it. A
+    // longer window than the app default therefore costs nothing and saves a
+    // request each time the client card remounts, which is every client an
+    // operator opens. (Focus refetching is already off globally in main.tsx,
+    // so that is not what this is for.)
     staleTime: 5 * 60 * 1000,
   })
   return data ?? EMPTY
