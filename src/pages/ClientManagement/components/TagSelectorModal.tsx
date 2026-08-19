@@ -345,7 +345,17 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           clientName={clientName}
           tagId={pendingPayloadTag.id}
           tagName={pendingPayloadTag.name}
-          onAssigned={onTagsChanged}
+          onAssigned={() => {
+            // Close this modal too, not just the payload dialog. onAssigned arms
+            // auto-open, and 1.5-3s later the chain executor stacks over whatever
+            // is on screen; leaving the selector open drops it behind the executor
+            // while the operator may still be editing tags. The debt-close path
+            // avoids this by closing its confirm modal before arming, and payload
+            // tags (promise_to_pay) are the likeliest route into the executor.
+            setPendingPayloadTag(null)
+            onTagsChanged?.()
+            onClose()
+          }}
           onClose={() => setPendingPayloadTag(null)}
         />
       )}

@@ -55,12 +55,13 @@ vi.mock('@/features/tags/hooks/useTags', () => ({
   useRemoveClientTag: () => ({ mutateAsync: removeSpy, isPending: false }),
 }))
 
-// Every user in these tests may remove protected tags unless a case says
-// otherwise; the protected path has its own case below.
+// The component reads state.user?.active_role_name. Mocking role_name instead
+// left roleName undefined in every test, which silently disabled the protected
+// checkbox and made a case below pass for the wrong reason.
 const roleRef = vi.hoisted(() => ({ current: 'Admin' }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector?: (s: unknown) => unknown) => {
-    const state = { user: { role_name: roleRef.current }, activeRoleName: roleRef.current }
+    const state = { user: { active_role_name: roleRef.current } }
     return selector ? selector(state) : state
   },
 }))
@@ -164,19 +165,14 @@ describe('TagSelectorModal onTagsChanged contract', () => {
     expect(onTagsChanged).not.toHaveBeenCalled()
   })
 
-  it('does not fire when the only change was blocked as protected', async () => {
-    // allowedToRemove comes back empty, the error toast fires, and nothing is
-    // written -- so there is nothing for a chain trigger to react to.
-    const onTagsChanged = vi.fn()
-    roleRef.current = 'Operator'
-    catalogRef.current = [tag(1, 'Alpha First', { is_protected: true })]
-    clientTagsRef.current = [tag(1, 'Alpha First', { is_protected: true })]
-    renderModal(onTagsChanged)
-
-    await userEvent.click(screen.getByText('Alpha First'))
-    await save()
-
-    await waitFor(() => expect(removeSpy).not.toHaveBeenCalled())
-    expect(onTagsChanged).not.toHaveBeenCalled()
-  })
+  // No case for "the only change was blocked as protected". Both the toggle and
+  // handleSave read the same catalog entry -- isTagRemovalLocked at render, and
+  // tagById.get(tagId) at save -- so a tag that is removable at render is
+  // removable at save. A locked tag never leaves selectedTagIds either, because
+  // handleToggleTag bails on it, and a tag missing from the catalog is treated
+  // as allowed. So toRemove non-empty with allowedToRemove shorter is not
+  // reachable through the UI; the guard covers it defensively. A test here
+  // previously claimed to cover it while actually re-running the unchanged-save
+  // path, which also made the mutation evidence for the guard look stronger
+  // than it was.
 })
