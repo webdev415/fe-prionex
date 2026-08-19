@@ -218,7 +218,19 @@ development_status:
   # + 1 merge run. Every ledger in this project could undercount by two. A ledger closed at PR-open
   # is not closed. Template change recorded in deferred-work.md.
   4-1-parameterize-the-compose-file-for-coexisting-stands: done
-  4-2-provision-the-new-dev-stand-on-s1: backlog
+  # Contexted 2026-08-19. Two findings the story carries that the plan did not: s1 has NO registry
+  # credential (`/root/.docker/config.json` = `{"auths":{}}`, anonymous pull → unauthorized), which
+  # contradicts D14:1265-1267 and deferred-work.md:306-307; and D10:663-666 still asserts
+  # `72.62.17.132` IS s1, the origin of the premise Story 4.1 falsified. Both corrected by this story.
+  # The `crm-kong-gateway` alias IS live on `crm-dev-network` (measured) — very probably not a STOP.
+  # 🔴 Implemented 2026-08-19. The stand is up and healthy on 8082, but the finding that matters is
+  # for 4.3: the deploy runner mounts only docker.sock, /opt/crm-dev, /opt/crm-preprod into job
+  # containers and its valid_volumes filters everything else, so ~/crm-prionex/fe-prionex-dev/ —
+  # the path AC1 names — is unreachable from a deploy job. Three options recorded in D28 §4; none
+  # chosen here. AC2's permissions clause deferred to 4.3, AC5 substituted (legacy stand is on
+  # another host). D10 and D14 amended: s1 had no registry credential at all, and 72.62.17.132 is
+  # not s1. Run ledger declared 7 against baseline 802 — OPEN until re-queried after the merge.
+  4-2-provision-the-new-dev-stand-on-s1: review
   4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog

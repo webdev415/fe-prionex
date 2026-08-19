@@ -145,6 +145,12 @@
   `s1-build-crm`, `s1-deploy-dev-preprod` **and now `s1-fe-prionex-1`** run containers on the same
   box, alongside `techno-finance` and the observability stack. Story 4.2 still owns the formal
   resource-budget confirmation before the DEV (`:8082`) and PRE-PROD (`:8083`) stands land there too.
+  ✅ **Closed 2026-08-19 by Story 4.2, with numbers.** s1: 125 GiB RAM (44 used, **80 available**, 12
+  free — the column is named on purpose: Story 2.4 recorded "~7.2 GiB free", and the gap is page
+  cache, not a change in the host), 879 GB disk (305 used, 529 free, 37%), 104 cores, load
+  20.97/8.98/7.25, 170 running containers. The stand's own ceiling is
+  `deploy.resources.limits.memory: 256M`. The DEV stand is now up on `8082` and the budget was never
+  the risk on this host — the risk was the one below, which nobody had measured.
   *(PRE-PROD corrected `8081` → `8083` by Story 4.1, Task 8.2. `8081` is taken on s1 — `docker-proxy`
   binds `127.0.0.1:8081` for `vm-cadvisor` — and FR25 was amended 2026-08-15 by
   `sprint-change-proposal-2026-08-15-preprod-reality.md`; this line contradicted `epics.md:225-226`,
@@ -165,6 +171,11 @@
   labels diverge here (expected — the env var only applies at first-run auto-registration, which
   this runner apparently didn't use either). No baseline correction needed; noted for anyone
   reading that container's compose file and assuming the env var is authoritative.
+  🔴 **Corrected 2026-08-19 by Story 4.2, read from the runner's own `.runner` file on s1:** all
+  **four** labels are registered — `deploy-dev-preprod`, `dev`, `preprod`, `deploy`, each
+  `docker://deploy-base-dev-preprod:2026-08-07`, under runner name `s1-deploy-dev-preprod`. The API
+  view that showed one was not the ground truth; `.runner` is (the same lesson D10 already recorded
+  for the CI runner). Story 4.3 picks its `runs-on` from these four, not from one.
 - **New drift, found via the same API re-verification, not in any prior story's baseline:**
   org runner `s2-prod-deploy`, id 17, label `[s2-prod-deploy]`, running on **s2** (PROD). Appeared
   after Story 1.13's last inventory; no story has acknowledged it. No collision with `node-20`/
@@ -305,6 +316,30 @@
   deleting an *image* — that is the lesson, and it is what AC6 got wrong.
 - 🔑 **`fe_reg_1_10_ro` (id 99, `robot-registry`, `read:package`) is s1's live pull credential** —
   a deliverable, not scaffolding. Do not revoke it without replacing s1's `docker login`.
+  🔴 **Falsified 2026-08-19 by Story 4.2, measured before any action.** s1's `docker login` was
+  **gone**: `/root/.docker/config.json` = `{"auths":{}}`, 16 bytes, mtime **13 Aug 12:34** — *after*
+  Story 1.10 closed on 12 Aug — and an anonymous pull returned `unauthorized`. `docs/migration-
+  decisions.md` (D14, «Task 6 — очистка») carried the same claim and is amended in the same pass.
+  **Who or what removed it is unknown, and is recorded as unknown rather than guessed** — the one
+  hypothesis available ("1.10 logged out at the end") is ruled out by D14's own wording, which says
+  the login was deliberately left. `fe_reg_1_10_ro`'s plaintext was not stored on the host and a
+  Forgejo token's value is shown only at mint time, so it could not be reused. Whether id 99 is
+  still live in the instance is **not** established by this story — only that s1 no longer holds it.
+- 🔑 **`fe_reg_4_2_ro` (`robot-registry`, `read:package` only) minted 2026-08-19 by Story 4.2** and
+  is now s1's pull credential. Minted with
+  `docker exec -u git forgejo gitea admin user generate-access-token -u robot-registry -t fe_reg_4_2_ro --scopes read:package`
+  (no account password needed). Value written to `/root/.fj_reg_4_2.token` on s1, mode `600`,
+  root-owned, **never printed into any transcript**; `docker login` done from it, so
+  `/root/.docker/config.json` now holds `git.crm-prionex.com`. **Scope proven by refusal, not by
+  declaration:** a `docker push` of the same image under a probe tag returned `401 Unauthorized` on
+  `PUT /v2/crm/fe-prionex/manifests/s1-scope-probe-4-2`, and the probe tag does not exist in the
+  registry (`404`).
+  ⚠️ **Standing by construction, recorded at mint time as the rule requires.** It is a token *of*
+  `robot-registry`, so per the entry below an admin cannot revoke it through any UI or API path
+  without that account's password — the routes are a DB row or the password.
+  **Owner: Oleg. Revocation trigger:** revoke when s1 no longer pulls from the registry, or
+  immediately if it is replaced — and replace s1's `docker login` in the same action, which is
+  exactly the step whose omission produced the falsified entry above.
   ✅ **`fe_reg_1_10_rw` (id 100, `robot-registry`, `write:package`) revoked 2026-08-12** by
   deleting its `access_token` row, on Oleg's decision — the instance went 94 → 93 live tokens.
   ⚠️ **Every scripted revocation route is closed on this version, and this is the fact that will
@@ -2475,3 +2510,63 @@ correction above — it is about pushes, and was measured across all five.
 **Also worth keeping:** run 780 (`e0395fda`) was **cancelled**, superseded by the next push under
 concurrency. A self-reported ledger would have counted it as a spend or missed it entirely — the
 obvious guess here was 5. This is the concrete case for why D4 requires a query.
+
+---
+
+## Story 4.2 findings (2026-08-19) — the DEV stand is up, and the thing that provisions it next cannot reach it
+
+🔴 **Story 4.3 is blocked as currently specified, and the block is measured, not suspected.**
+`s1-deploy-dev-preprod` mounts into **every** job container exactly what its `config.yml`
+`container.options` lists:
+
+```
+-v /var/run/docker.sock:/var/run/docker.sock
+-v /opt/crm-preprod:/opt/crm-preprod
+-v /opt/crm-dev:/opt/crm-dev
+--add-host=git.crm-prionex.com:10.70.0.1
+```
+
+and `valid_volumes` — which that file documents as an allowlist filtering **all** bind mounts,
+including the operator's own `options`, proven empirically in Story 1.6 (`[/var/run/docker.sock] is
+not a valid volume, will be ignored`) — contains the same three paths and nothing else.
+
+`~/crm-prionex/fe-prionex-dev/` (`/root/crm-prionex/fe-prionex-dev`) is in neither list, and `/root`
+is `drwx------`, so it is unreachable twice over: `sudo -u forgejo-runner-deploy ls …` →
+`Permission denied`. The runner container itself runs as `1501:988`.
+
+**The stand was left where AC1 names it** — four later stories cite that path, and
+`docker-compose.stand.yml`'s own `:?` error messages spell it out. Inventing a mount was explicitly
+out of this story's scope. The three options, none chosen here:
+
+1. add the path to **both** `options` and `valid_volumes` on a shared, multi-tenant runner owned by
+   the platform;
+2. move the stand into the already-mounted `/opt/crm-dev` — which is the `api-prionex` stack's own
+   directory, so this couples the two teams' trees;
+3. a separate `/opt/crm-fe-dev`, plus the same runner-config change.
+
+**Owner: Story 4.3 (mechanism), Oleg / platform owner (the runner-config change).** Whatever is
+chosen also settles the next item, and it changes Story 4.9's cutover shape.
+
+⚠️ **AC2's second clause is deferred, not passed.** "The file is readable only by the deploy user"
+cannot be discharged until the reader is known (above). The stand took the recorded default —
+`root:root`, `0700` on the directory, `0600` on `.env` — under which uid 1501 cannot read it.
+**Owner: Story 4.3.**
+
+📍 **s1 access, previously written down nowhere.** From a dev machine the working address is
+`root@10.67.0.1` (equivalently `root@s1.private.crm-prionex.com`). The external `185.185.49.127:22`
+**times out** — `ufw` admits 22 from two admin addresses only. `docs/migration-decisions.md` D10 is
+amended in the same pass: its `72.62.17.132` = s1 claim is false and was the origin of a premise four
+stories carried.
+
+✅ **retro-E5 discharged on the real host, not simulated.** The `crm-kong-gateway` check succeeds
+from inside the stand (`172.22.0.53`, identical to `crm-dev-kong-gateway`'s address on
+`crm-dev-network`, with Kong itself answering `no Route matched` and `X-Kong-Response-Latency`) and
+**fails** from a throwaway container on the built-in `bridge` network (empty, `exit 2`). Both
+branches, one command, same host.
+
+⚠️ **AC5 substituted, and the substitution is the deliverable.** "Both stands healthy on this host"
+is unobservable from s1 — the legacy stand is on `72.62.17.132`, unreachable and fenced off by Story
+4.1's verdict (b). Recorded instead: new container healthy on `8082`; no container named exactly
+`fe-prionex` on s1 (checked with an **anchored** match — `docker ps --filter name=` is a substring
+match and would have returned the four `forgejo-runner-fe-prionex*` containers plus this story's own
+stand, i.e. it cannot fail); no competing compose project; legacy host not contacted.
