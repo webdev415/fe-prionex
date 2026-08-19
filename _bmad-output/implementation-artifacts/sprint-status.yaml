@@ -168,7 +168,19 @@ development_status:
   # containers with a fake Kong on one network only (alpha resolves, beta NXDOMAIN while `healthy`
   # and serving 200 — the silent-failure mode demonstrated, not asserted).
   # 🔴 Run ledger closed OPEN, in those words (D4) — declared in advance, no credential reachable.
-  # 🔴 Per retro action E5, Story 4.2 is NOT written until this story is code-reviewed.
+  #
+  # Code review round 1 (Opus, adversarial) done 2026-08-19 BEFORE the first implementation push, so
+  # its fixes cost zero extra CI runs. CHANGES REQUIRED, ten findings, all applied. It reproduced all
+  # seven matrix rows verbatim and found nothing wrong in docker-compose.stand.yml itself — the
+  # defects were in the template and in claims the record made that the artifacts contradicted.
+  # 🔴 The blocking one: `CONTAINER_NAME=CHANGE_ME` was a VALID Docker container name, so the
+  # "no working values" claim was false — an unedited template would have started a stand literally
+  # named CHANGE_ME, and Story 4.3's FR20 health check reads CONTAINER_NAME from the same .env and
+  # would have passed it. Fixed to <CHANGE_ME>. Also caught: four more stale `8081`s including
+  # preprod-infrastructure-requirement.md (the document Story 5.2 reads) in bold, and a compose
+  # bypass no guard can close — the process environment beats --env-file, handed to 4.3.
+  # 🔴 Per retro action E5, Story 4.2 is NOT written until this story is code-reviewed. That review
+  # has now happened; 4.2 is unblocked once this PR merges.
   4-1-parameterize-the-compose-file-for-coexisting-stands: review
   4-2-provision-the-new-dev-stand-on-s1: backlog
   4-3-deploy-a-feature-branch-to-dev-on-demand: backlog

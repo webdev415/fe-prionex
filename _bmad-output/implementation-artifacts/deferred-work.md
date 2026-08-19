@@ -147,9 +147,17 @@
   resource-budget confirmation before the DEV (`:8082`) and PRE-PROD (`:8083`) stands land there too.
   *(PRE-PROD corrected `8081` → `8083` by Story 4.1, Task 8.2. `8081` is taken on s1 — `docker-proxy`
   binds `127.0.0.1:8081` for `vm-cadvisor` — and FR25 was amended 2026-08-15 by
-  `sprint-change-proposal-2026-08-15-preprod-reality.md`. This line was the last place in the
-  artifacts still carrying the pre-amendment number, and it contradicted `epics.md:225-226`, `:707`
-  and `:1979`.)*
+  `sprint-change-proposal-2026-08-15-preprod-reality.md`; this line contradicted `epics.md:225-226`,
+  `:707` and `:1979`.*
+  *🔴 **It was not the only stale one**, and the review round caught the claim that it was. Three more
+  were carrying the pre-amendment number and are corrected in the same pass — all with an explicit
+  amendment marker rather than a silent rewrite: `docs/preprod-infrastructure-requirement.md:114`
+  (a table cell reading **8081** in bold), `:120-121` (a paragraph headed "порт 8081 — постоянная
+  аллокация", which is the claim that was measured false) and `:237`; plus
+  `docs/forgejo-migration.md:226` and `:353`. **`preprod-infrastructure-requirement.md` is the
+  document written for Story 5.2**, so it was the worst place for the stale number to survive.
+  `docs/migration-decisions.md:193` (D4's body) also says `8081` and is **deliberately left alone** —
+  D-records are not rewritten retroactively; the amendment lives in the record that supersedes it.)*
 - **Resolved 2026-08-11, once `FJ_TOKEN` arrived:** `s1-deploy-dev-preprod`'s `GITEA_RUNNER_LABELS`
   env carries four values (`deploy-dev-preprod,dev,preprod,deploy`), but `GET
   /orgs/CRM/actions/runners` confirms only **one** is actually registered server-side —

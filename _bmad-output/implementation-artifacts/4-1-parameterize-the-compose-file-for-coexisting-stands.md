@@ -107,8 +107,8 @@ accurate — verify that before trusting them anyway.
 There are **no named volumes** in this file, so there is no volume axis to parameterize. Do not
 invent one.
 
-**Container-side port 80 is fixed in three places and is NOT part of this story:** `nginx.conf:1`
-(`listen 80`), `Dockerfile.prod:59` (`EXPOSE 80`), and the healthcheck at line 16. Only the host side
+**Container-side port 80 is fixed in three places and is NOT part of this story:** `nginx.conf:2`
+(`listen 80`; the story originally cited `:1`, which is `server {`), `Dockerfile.prod:59` (`EXPOSE 80`), and the healthcheck at line 16. Only the host side
 of the mapping is variable. Changing the container side would require rebuilding the image and would
 break the byte-identical-image property Epic 6's promotion model depends on.
 
@@ -579,7 +579,8 @@ must be distinct and each must be **observed** distinct (`docker ps`, `docker co
       amend or retire. *Conservative default: leave them, add a one-line pointer to the new template.
       They describe the legacy stands, which are still live and still untouched (NFR5).*
 - [ ] 7.4 Note the `README.md:136` defect (the DEV stand is labelled "Pre-production") as **optional**
-      — it is a pre-existing documentation error tracked in `deferred-work.md:808`, not this story's
+      — it is a pre-existing documentation error tracked in `deferred-work.md:813` (`:808` at the
+      story's baseline; this story's own Task 8.2 edit shifted it by +5), not this story's
       to fix, and fixing it costs a run.
 
 ### Task 8 — Record (AC: all)
@@ -668,6 +669,10 @@ declared. All three have burned this project before, at the exact points named a
   matrix; review the foundation before building on it); critical path A1/B2/C3 all closed 2026-08-19
 - `deferred-work.md:147` (stale `8081`), `:808` (README label defect), `:830-871` (the Kong naming
   collision in full), `:822-825` (the alias delivered by `api-prionex` `517e6975`)
+  — ⚠️ **these line numbers are bound to the baseline `3ace40de`.** This story's own Task 8.2 edit
+  inserted lines at `:148`, shifting everything below by **+5**: `:808`→`:813`, `:822-825`→`:827-830`,
+  `:830-871`→`:835-876`. Caught by the review round, which is the same class of drift §4 warns about
+  for `Dockerfile.prod:34`.
 - `sprint-change-proposal-2026-08-13-kong-naming.md` §4.2 (this AC's amendment), §4.3 (Story 4.2)
 - `sprint-change-proposal-2026-08-15-preprod-reality.md` lines 31 and 70 — `8081` measured taken on
   s1 (`docker-proxy` for `vm-cadvisor`), FR25 amended `8081` → `8083`
@@ -707,15 +712,31 @@ declared. All three have burned this project before, at the exact points named a
    stands and ship `FRONTEND_PORT=8080` and `ghcr` images. Conservative default taken: keep them,
    add a pointer. They are accurate for the stands that still exist.
 
-5. **New — does Prohibition 2's "`8081` must not appear anywhere" bind the template's warning text?**
-   §5 says the digits must not appear *as a value* anywhere in this story's output; Prohibition 2
-   states it more absolutely. `.env.stand.example` therefore has to warn operators off that port
-   **without naming it**, and currently reads *"do not use the port one below 8083 — it is
-   permanently taken on s1 by docker-proxy for vm-cadvisor."* That is compliant and the reasoning is
-   spelled out, but it is measurably harder to read than the number would be, and a misread here
-   costs a port collision with an unrelated system service. **Autonomous choice: obey the prohibition
-   literally.** If Oleg reads it as binding only *values*, writing the digits inside that comment is
-   a one-line change and strictly clearer.
+5. **Resolved in review round 1 — Prohibition 2's "`8081` must not appear anywhere" is read as
+   binding *values*, not warnings.** The first implementation obeyed it literally: the template
+   warned operators off the port **without naming it** — *"do not use the port one below 8083."*
+   Review killed that on two grounds, and both are right.
+
+   **It was not even self-consistent.** The same story wrote the digits into two documents it
+   authored — `deferred-work.md:148-149` and D27's changelog row — because you cannot record
+   *"corrected `8081` → `8083`"* without naming the thing corrected. So the strict reading was
+   already impossible to hold, and the obfuscation bought nothing while costing clarity.
+
+   **And the cost was real:** an operator who mis-subtracts or skims *"the port one below 8083"*
+   picks `8081` and collides with `vm-cadvisor`'s `docker-proxy` — an unrelated system service, and
+   exactly the collision the warning exists to prevent.
+
+   **Decision: `8081` and `8080` are both now named plainly in `.env.stand.example`, as ports to
+   avoid.** Neither is a value the file assigns — every variable is `<CHANGE_ME>`. §5's actual
+   wording is *"must not appear **as a value**"*, and that is honoured. **Subject to Oleg's veto:**
+   if Prohibition 2 was meant absolutely, reverting is a two-line change, but then D27 and
+   `deferred-work.md` need the same treatment and the correction becomes unrecordable.
+
+7. **New — `docker compose` reads the process environment before `--env-file`, and no guard can
+   close that.** An exported `FRONTEND_PORT=8080` overrides the stand's `.env` silently; the `:?`
+   guard never fires. It is compose behaviour, not a defect in the file, and it is handed to Story
+   4.3 as handoff item 5. Flagged here because it is the one way a *correct* `.env` still produces a
+   wrong stand, and because §8 convention 1 pushes 4.3 straight at it.
 
 6. **New — `FRONTEND_NETWORK` as the variable name (Task 3.5).** Chosen for consistency with
    `FRONTEND_PORT`; `api-prionex` uses `STACK` for the same concept. Now consumed by
@@ -803,12 +824,87 @@ said 43 → query-closed at **47**; 3.6 declared 2, spent 6+ — and the defect 
 it was that a self-reported number was the only number without an external check. Supplying one here
 would repeat exactly that defect.
 
+### Probes (Tasks 4.1, 4.2) — commands and outputs, not conclusions
+
+> **Added in review round 1.** The first version of this record shipped only the *conclusions* of
+> these probes. §8 convention 3 and E5 both demand the outputs, and this is the story whose entire
+> premise is that three Epic 3 guards were declared working and were not. The review also caught the
+> methodological half: **neither probe is discriminating when run against `docker-compose.stand.yml`
+> itself.** In that file `name:` already *is* `${COMPOSE_PROJECT_NAME:?…}`, so both candidate
+> mechanisms produce identical output and no run against it can tell you which one won. Each probe
+> below therefore uses a **purpose-built file**. Conclusions unchanged; now they are evidenced.
+
+**Probe 1 — does `COMPOSE_PROJECT_NAME` from `--env-file` beat a literal top-level `name:`?**
+Discriminating file: `name:` is a *literal*, so the two mechanisms disagree if precedence differs.
+
+```
+# probe-a.yml → name: name-from-file    |    probe-a.env → COMPOSE_PROJECT_NAME=name-from-envfile
+$ docker compose -f probe-a.yml --env-file probe-a.env config | head -1
+name: name-from-envfile
+```
+
+→ `COMPOSE_PROJECT_NAME` from `--env-file` **wins**. Full observed precedence on v5.3.0:
+`-p` flag > `COMPOSE_PROJECT_NAME` > top-level `name:` > directory name — the documented order, no
+deviation.
+
+**Probe 2 — is top-level `name:` interpolated at all?** Discriminating file: `name:` references a
+variable that is *not* `COMPOSE_PROJECT_NAME`, so a rendered value can only come from interpolation.
+
+```
+# probe-b.yml → name: ${SOME_OTHER_VAR:?…}    |    probe-b.env → SOME_OTHER_VAR=interpolated-name
+$ docker compose -f probe-b.yml --env-file probe-b.env config | head -1
+name: interpolated-name
+```
+
+→ Top-level `name:` **is** interpolated on v5.3.0. **No deviation to record**, so the conservative
+form `name: ${COMPOSE_PROJECT_NAME:?…}` was used as written and the §6 fallback (drop `name:`) was
+not needed. Fail-closed confirmed by matrix row 2.
+
+**Probe 3 — one missing variable, or all of them?** Not numbered in §6; run because the matrix design
+depends on the answer.
+
+```
+$ docker compose -f docker-compose.stand.yml --env-file two-unset.env config
+error while interpolating services.frontend.container_name: required variable CONTAINER_NAME is missing a value: …
+```
+
+→ Only the **first** missing variable is reported, deterministically across repeated runs. This is
+**why matrix rows 2-6 leave exactly one variable unset each**: with two unset, five rows would prove
+one guard.
+
+### 🔴 A bypass no guard in this file can close (found in review round 1)
+
+**Compose resolves interpolation from the process environment *before* `--env-file`.** A `${VAR:?}`
+guard cannot fire against a variable that is exported. Reproduced:
+
+```
+$ grep -v '^FRONTEND_PORT=' row1.env > leak.env          # port removed from the env-file
+$ FRONTEND_PORT=8080 docker compose -f docker-compose.stand.yml --env-file leak.env config | grep -A3 ports:
+    ports:
+      - mode: ingress
+        target: 80
+        published: "8080"
+```
+
+The guard is **silent**, and the value is the legacy stand's port. Same for `COMPOSE_PROJECT_NAME`
+(`name: leaked-from-shell`).
+
+**This is a property of compose, not a defect in the file** — no `:?` form can close it, and none was
+added to pretend otherwise. But it matters because §8 convention 1 requires Story 4.3 to pass values
+into `run:` bodies through step-level `env:`, and Task 8.4's handoff item 2 tells it to read
+`CONTAINER_NAME` and `FRONTEND_PORT` for the health check. **A deploy job that binds either name in
+`env:` silently overrides the stand's `.env`**, and the failure surfaces as a bare "port already
+allocated" with no hint that the `.env` was ignored. Added as handoff item 5.
+
+Note this sharpens Task 4.5's limits statement: the uncovered case is not only "a wrong value in the
+`.env`" but "a correct `.env`, overridden from outside."
+
 ### Guard Outcome Matrix (retro E5 — all seven rows required)
 
 All seven rows run against **`docker-compose.stand.yml`** (the new file — under verdict (b) the legacy
 `docker-compose.server.yml` was never touched and is not under test). Compose **v5.3.0**. Rows 1-6 are
 `docker compose -f docker-compose.stand.yml --env-file <row>.env config`; every row leaves **exactly
-one** variable unset, because probe 3 established that compose reports only the **first** missing
+one** variable unset, because the third probe (below) established that compose reports only the **first** missing
 variable — with two unset you learn nothing about which guard fired. Zero CI runs.
 
 | # | Input | Command | Verbatim outcome |
@@ -924,25 +1020,47 @@ contradicting `epics.md`. Corrected under Task 8.2.
   `docker-compose.server.yml` remains the legacy stand's file until Story 4.9.
 - `grep -n 8081 docker-compose.stand.yml` → no match. `grep -n 8080` → no match.
 
-`.env.stand.example` (new, Task 7.1/7.2). Every variable is `CHANGE_ME` — **no working values**, so
-a copied-unedited template fails loudly rather than starting something wrong. It deliberately does
-**not** repeat the `.env.dev.example` / `.env.production.example` pattern of shipping
-`FRONTEND_PORT=8080` and a `ghcr` image. It carries the constraints that are expensive to rediscover:
-`CONTAINER_NAME` must never be `fe-prionex` (`CD.yml:201`), the tag shape and that `:latest` is
-cancelled, and that a wrong `FRONTEND_NETWORK` fails **silently** with the api-prionex network names
-listed.
+`.env.stand.example` (new, Task 7.1/7.2). Every placeholder is `<CHANGE_ME>` — deliberately
+**invalid**, not merely wrong. It deliberately does **not** repeat the `.env.dev.example` /
+`.env.production.example` pattern of shipping `FRONTEND_PORT=8080` and a `ghcr` image. It carries the
+constraints that are expensive to rediscover: `CONTAINER_NAME` must never be `fe-prionex`
+(`CD.yml:201`), the tag shape and that `:latest` is cancelled, and that a wrong `FRONTEND_NETWORK`
+fails **silently** with the api-prionex network names listed.
 
-> ⚠️ **One consequence of Prohibition 2 worth flagging.** §5 forbids the literal `8081` appearing
-> **anywhere** in this story's output. The template therefore has to warn operators off that port
-> **without naming it** — it currently reads *"do not use the port one below 8083 — it is
-> permanently taken on s1 by docker-proxy for vm-cadvisor."* That is compliant and the reasoning is
-> given, but it is genuinely harder to read than the digits would be. Raised as non-blocking Open
-> Question 5 rather than resolved unilaterally, since the prohibition is the story's own.
+> 🔴 **Review round 1 found a real defect here, and it is the one worth reading.** The first version
+> used a bare `CHANGE_ME`, and this record claimed *"no working values, so a copied-unedited template
+> fails loudly."* **That was false for exactly one variable.** `CHANGE_ME` matches Docker's container
+> name grammar `[a-zA-Z0-9][a-zA-Z0-9_.-]*`, so the stand **started**:
+>
+> ```
+> $ docker compose … --env-file cm.env up -d      # CONTAINER_NAME=CHANGE_ME
+>  Container CHANGE_ME  Started
+> $ curl -o /dev/null -w '%{http_code}' http://localhost:19555   →   200
+> ```
+>
+> The other four refused — but **by accident of unrelated grammars** (project names and image refs
+> must be lowercase; a host port must be numeric), which nobody had written down and nothing
+> guaranteed. And `CONTAINER_NAME` is precisely the variable a copy-run-fix loop never reaches: its
+> block was the shortest, it carries no allocation table, and it produces no error. Story 4.2 would
+> have provisioned s1 with a container named `CHANGE_ME`, and Story 4.3's FR20 health check — which
+> reads `CONTAINER_NAME` from the same `.env` — would have found it and **passed**.
+>
+> **Fixed by making invalidity the mechanism instead of a coincidence:** every placeholder is now
+> `<CHANGE_ME>`, and `<`/`>` are illegal in all four grammars. Verified — the unedited template now
+> refuses on the first variable it reaches, and `CONTAINER_NAME=<CHANGE_ME>` refuses at `up` with
+> `Invalid container name (<CHANGE_ME>), only [a-zA-Z0-9][a-zA-Z0-9_.-] are allowed`. The per-variable
+> failure mode is now documented **in the template itself** rather than resting on a blanket claim.
+> *(Deliberately not "fixed" by lowercasing to `change_me` — that is a valid project name **and** a
+> valid container name, which would have widened the defect from one variable to two.)*
 
-**Task 7.3 — conservative default taken.** `.env.dev.example` and `.env.production.example` are
-**kept**, not retired. They accurately describe the legacy stands, which are still live and still
-untouched (NFR5). **Task 7.4 — declined as the story permits:** the `README.md:136` label defect is
-pre-existing, tracked at `deferred-work.md:808`, and fixing it costs a run.
+**Task 7.3 — conservative default taken, and the pointer actually shipped this time.**
+`.env.dev.example` and `.env.production.example` are **kept**, not retired: they accurately describe
+the legacy stands, which are still live and still untouched (NFR5). Review round 1 caught that the
+one-line pointer this task chose *over* retirement had **not been added**, while three places in this
+record asserted it had — so an operator reaching for the file that looks like the DEV template would
+still have got `8080` and a `ghcr` tag with nothing indicating a stand template exists. Both files now
+carry it. **Task 7.4 — declined as the story permits:** the `README.md:136` label defect is
+pre-existing, tracked at `deferred-work.md:813`, and fixing it costs a run.
 
 #### Task 5 — Coexistence observed, not inferred (AC5)
 
@@ -1089,6 +1207,13 @@ Story 4.2 by name in Task 8.4.
    crosses compose projects.
 4. **A CI gate built on `docker compose config` is not sufficient.** Matrix row 7a/7b proved `config`
    renders happily against a network that does not exist; only `up` catches it.
+5. 🔴 **The deploy step must not export any of the five variables into the environment of the
+   `docker compose` invocation.** Compose reads the process environment **before** `--env-file`, so an
+   exported `FRONTEND_PORT` or `CONTAINER_NAME` silently overrides the stand's `.env` and **no `:?`
+   guard fires** — demonstrated above. This collides directly with §8 convention 1 (values arrive
+   through `env:`) and with handoff item 2 (the health check needs both names). **Read them back from
+   the rendered `docker compose config` or from `docker inspect`, not from a parallel `env:`
+   binding.**
 
 **🔴 To Story 4.2 (the DEV stand on s1), by name:**
 
@@ -1156,6 +1281,17 @@ Guard matrix: **all seven rows present, including the discriminating row 7.** Re
   — this file
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-1-…` → `review` (Task 9.3)
 
+**Modified in review round 1**
+
+- `.env.stand.example` — `CHANGE_ME` → `<CHANGE_ME>` (the blocking finding); per-variable failure
+  modes documented; `8080`/`8081` named plainly
+- `.env.dev.example`, `.env.production.example` — the Task 7.3 pointer that was recorded but never
+  shipped
+- `docs/preprod-infrastructure-requirement.md` — `:114`, `:120-121`, `:237`: stale `8081` → `8083`
+  with an amendment marker. **This is the document Story 5.2 reads**, and it carried the wrong number
+  in bold under the heading *"порт 8081 — постоянная аллокация"* — the exact claim measured false.
+- `docs/forgejo-migration.md` — `:226`, `:353`: same correction
+
 **Deliberately NOT modified**
 
 - 🔴 `docker-compose.server.yml` — **Task 1.4 verdict (b).** Not one byte. This is the story's central
@@ -1164,11 +1300,12 @@ Guard matrix: **all seven rows present, including the discriminating row 7.** Re
 - `nginx.conf`, `Dockerfile.prod`, `.forgejo/workflows/*` — Prohibition 4
 - `.env.dev.example`, `.env.production.example` — Task 7.3, conservative default
 - `epics.md` — Task 8.3; no measurement contradicted it, so it was not amended to match a decision
-- `README.md:136` — Task 7.4, pre-existing, tracked at `deferred-work.md:808`, costs a run
+- `README.md:136` — Task 7.4, pre-existing, tracked at `deferred-work.md:813`, costs a run
 
 ## Change Log
 
 | Date | Change | By |
 |---|---|---|
 | 2026-08-19 | Story contexted against baseline `3ace40de`. Live state of `docker-compose.server.yml` bound verbatim; legacy `CD.yml` copy path identified as the story's blast radius; retro actions D4 and E5 carried into Tasks 2, 4 and 9. | create-story |
+| 2026-08-19 | **Code review round 1 (Opus, adversarial) — CHANGES REQUIRED, ten findings, all applied.** It reproduced all seven matrix rows verbatim and confirmed every Prohibition holds in the compose file, so nothing in `docker-compose.stand.yml` changed. The defects were in the **template** and in **claims this record made that the artifacts contradicted**: (1) 🔴 blocking — `CONTAINER_NAME=CHANGE_ME` was a *valid* Docker container name, so the "no working values" claim was false and an unedited template would have started a stand named `CHANGE_ME` that Story 4.3's health check would have passed; fixed with `<CHANGE_ME>` so invalidity is the mechanism, not a grammar coincidence. (2) Task 7.3's pointer was recorded in three places and never shipped. (3) Prohibition 2's `8081` obfuscation was self-inconsistent — the story wrote the digits in two documents it authored — and is now resolved as binding *values*, not warnings. (4) "the last stale `8081`" was false; four more remained, including `preprod-infrastructure-requirement.md`, the document **Story 5.2 reads**, in bold. (5) Tasks 4.1/4.2 shipped conclusions where §8 demands outputs — transcripts added, and the probes rebuilt as discriminating files since neither is discriminating against `docker-compose.stand.yml` itself. (6) A bypass no guard can close: compose reads the process environment **before** `--env-file`, so an exported variable silently overrides the `.env` — handed to 4.3 as handoff item 5. (7) `8080` now named in the template. (8) This story's own Task 8.2 edit shifted `deferred-work.md` by +5 and invalidated four of its own citations. (9) D27's index row was out of numeric order. (10) `nginx.conf:1` → `:2`. | code-review |
 | 2026-08-19 | Implemented. **Task 1.4 verdict (b)** — the GitHub push-mirror question could not be settled (Forgejo API 403 unauthenticated, no local token, no s1 alias), so `docker-compose.server.yml` is left untouched and the parameterization lands as the new `docker-compose.stand.yml`. Seven-row guard matrix executed live (E5), two stands observed coexisting, backend resolution recorded from inside both containers. D27 written. Ledger declared in advance and closed **OPEN** — no Forgejo credential reachable, per D4's second branch. | dev-story |
