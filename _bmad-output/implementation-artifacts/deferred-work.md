@@ -2244,6 +2244,22 @@ workflow becomes a safety net rather than the only thing standing between this t
 
 ## Opened by review round 2/3 on PR 54, Epic 3 retro action item A1 (2026-08-19) — `build.yml`'s builder-image reference is not yet digest-pinned
 
+✅ **RESOLVED 2026-08-19 — inside this PR, not by a post-merge follow-up.** The sequence this entry
+originally described (merge first, then dispatch, then pin) turned out to be unnecessary and, worse,
+undispatchable as written: `build.yml` already referenced the tag before the tag existed, so this
+branch's own CI was red, which meant it could never merge under required checks (Story 2.6) to reach the
+"merge first" step this entry's own sequence started with — a real deadlock, found by runs 755/756, not
+reasoned about in the abstract. Closed by a **bootstrap exception** in
+`build-buildkit-cni-image.yml`'s branch guard instead (first creation of an absent tag is not the
+repoint the guard protects against; see [D26](../../docs/migration-decisions.md#d26) for the full
+mechanism) — dispatched from THIS branch (run 759, success), which built `v1.0.0-buildkit-cni` from
+this branch's own hardened `Dockerfile.buildkit-cni`, ran the full staging→verify→promote matrix, and
+published the tag. The coordinator then read the digest from the registry (`read:package`, v2 API) and
+supplied it; `build.yml`'s `driver-opts: image=` is now pinned to
+`@sha256:d37900f2ebea1d806f87ead450f2ca097205df757d8b6711a90b416eec836317` — the same commit that
+resolves this entry. Original entry follows, unedited, as the historical record of the problem this
+closed (its own numbered sequence is superseded by the bootstrap path above, not followed).
+
 **Owner: coordinator (the dispatcher), then whoever pushes the follow-up commit — not DB-only, unlike
 the entry above.** Review round 2 on PR 54 required `build.yml`'s `driver-opts: image=` reference to be
 a digest pin (`image=...@sha256:...`), not a bare tag — every build here carries a
@@ -2271,3 +2287,21 @@ opens first):
 This is a same-day, mechanical follow-up, not a design question — recorded as a deferred-work entry
 rather than left only as a comment because it is a real, currently-open item with a required action, not
 just context for a reader.
+
+## Opened by review round 2 on PR 54, coordinator's registry read (2026-08-19) — the promote step in `build-buildkit-cni-image.yml` writes an index digest, not a manifest digest
+
+**Owner: whoever performs the next real `v1.0.0-buildkit-cni` version bump.** The digest the coordinator
+read for `v1.0.0-buildkit-cni` resolves to media type `application/vnd.oci.image.index.v1+json` (an OCI
+image index), not a single platform manifest — `build-buildkit-cni-image.yml`'s promote step runs
+`docker buildx imagetools create` without `--prefer-index=false`, the same shape Story 3.6 (D24) already
+found and named for a different tag. Decided deliberately, not overlooked: `driver-opts: image=` in
+`build.yml` resolves the index to this runner's own platform manifest at pull time either way, so the
+current digest pin (`@sha256:d37900f2ebea1d806f87ead450f2ca097205df757d8b6711a90b416eec836317`) works
+correctly as an index pin. Left as-is rather than spending an extra dispatch and tag rewrite to match
+Story 3.6's single-manifest convention, because that rewrite can only happen through the guard's
+main-only branch (the bootstrap exception is now closed — the tag exists) and therefore only after this
+PR merges. **The next real version bump** (new `CNI_PLUGINS_VERSION` and/or base-image digest — already
+required to produce its own live outcome matrix, D26) should also add `--prefer-index=false` to the
+promote step for consistency with the rest of the project's convention, and record the new manifest
+digest that results. This is a free byproduct of a bump that has to happen anyway, not a reason to force
+an extra dispatch now.
