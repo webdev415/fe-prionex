@@ -141,8 +141,20 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: DEV Environment on Forgejo
-  epic-4: backlog
-  4-1-parameterize-the-compose-file-for-coexisting-stands: backlog
+  # Opened 2026-08-19 with story 4.1 — the retro's critical path (A1/B2/C3) closed first, as Oleg
+  # required. 4.1 is the epic's foundation: 4.2, 4.3, 4.8 and Epics 5-6 all consume the compose file
+  # it produces, so per retro action E5 it is code-reviewed BEFORE 4.2 is written.
+  epic-4: in-progress
+  # Contexted 2026-08-19. 🔴 One BLOCKING open question: the legacy GitHub `CD.yml` copies
+  # `docker-compose.server.yml` from the repo onto the legacy stand on every deploy (`:154-162`) and
+  # force-removes the container by literal name (`:201`) — so a fail-closed parameterization landing
+  # there takes the legacy stand down and keeps it down (NFR5). This working copy's only remote is
+  # Forgejo, which is a reason to suspect that path is dead but is not proof. Until it is settled,
+  # the story leaves `docker-compose.server.yml` alone and lands the stand definition beside it.
+  # Owner of the answer: Oleg (the GitHub-side transfer is his, outside this plan — D7).
+  # Also decided while contexting: AC3 takes its second branch — the image default is REMOVED, not
+  # repointed, because `latest` was cancelled outright (D20 §4) and `build.yml` sets PUSH_LATEST=false.
+  4-1-parameterize-the-compose-file-for-coexisting-stands: ready-for-dev
   4-2-provision-the-new-dev-stand-on-s1: backlog
   4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
