@@ -209,13 +209,12 @@ development_status:
 
 # Appended by epic-3 retrospective 2026-08-18 (epic-3-retro-2026-08-18.md).
 # A1/B2/C3 are the critical path: they close BEFORE story 4.1 starts (Oleg's call at the retro).
-# ⚠️ This block is also being edited on two other unmerged branches
-# (`retro/epic-3` created it, PR 52; `docs/retro-b2-c3-decisions`, PR 53, predates it and doesn't touch
-# it at all). CONFIRMED merge conflict on this file against PR 52 — pre-plan (review round 1, PR 54):
-# whichever of this branch / PR 52 merges second should reconcile B2/C3's status against
-# `docs/retro-b2-c3-decisions`'s (PR 53) own record (D25, docs/migration-decisions.md) rather than
-# trust this copy for those two rows — only A1 is authoritative here, and A1's own status/comment in
-# this file is not expected to conflict with either other branch (neither touches the A1 row).
+# ✅ Resolved 2026-08-19 by the merge of `main` (which had absorbed PR 52 `retro/epic-3`, this block's
+# own origin, and PR 53 `docs/retro-b2-c3-decisions`, D25 + the D22 amendment) into
+# `feat/a1-cni-run-isolation` (PR 54) — the confirmed conflict this comment used to warn about. PR 53
+# itself left this file untouched (B2/C3 stayed `open` here, uncommented, on `main`) even though its own
+# `docs/migration-decisions.md` record (D25; D22's amendment) already closes both — this merge closes
+# them here too, now, rather than leave a known-stale `open` sitting next to its own answer.
 action_items:
   - epic: 3
     action: "A1: decide dind security posture — network=host vs buildx CNI config (private netns for RUN steps); write the D-record; if CNI, prove cache survives with one green build"
@@ -231,18 +230,19 @@ action_items:
   - epic: 3
     action: "B2: extend the CI gate to staging/development, or record the explicit decision not to — before story 4.3 arms on-demand deploys"
     owner: "Oleg (decision), dev session (implementation)"
-    status: open
-    # Closed on branch docs/retro-b2-c3-decisions (D25) — not yet merged as of this branch. Decided:
-    # not extended, staging/development stay untouched until their own epic. Status left "open" here
-    # deliberately rather than guessed at; update from that branch's own record at merge time.
+    status: done
+    # Closed by D25 (docs/migration-decisions.md, from merged PR 53/docs/retro-b2-c3-decisions):
+    # not extended, staging/development stay untouched until their own epic. This row itself was
+    # never updated on that branch (verified against main's own copy of this file at merge time) —
+    # closed here, in the merge that brings D25 into this branch, rather than left stale.
   - epic: 3
     action: "C3: fix or accept the npm ci layer regression (registry cache restores deps slower than rebuilding, 17s vs 0s); amend D22 with the measured outcome"
     owner: "dev session; Oleg if posture changes"
-    status: open
-    # Closed on branch docs/retro-b2-c3-decisions (D22 amendment) — not yet merged as of this branch.
-    # Decided: accepted as-is, ~2s regression (17s restore vs ~15s rebuild-from-scratch; the retro's
-    # own "17s vs 0s" compared against a retired driver, not a fair baseline). Status left "open" here
-    # deliberately; update from that branch's own record at merge time.
+    status: done
+    # Closed by the D22 amendment (docs/migration-decisions.md, from merged PR 53/docs/retro-b2-c3-decisions):
+    # accepted as-is, ~2s regression (17s restore vs ~15s rebuild-from-scratch; the retro's own
+    # "17s vs 0s" compared against a retired driver, not a fair baseline). Same as B2 above — this row
+    # was never updated on that branch; closed here at merge time instead of left stale.
   - epic: 3
     action: "D4 (team agreement): run-budget ledgers close only against a query (actions/runs API or DB count); a self-report without a query means the ledger is open"
     owner: "every dev session; create-story template carries the rule"
