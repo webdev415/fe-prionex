@@ -219,37 +219,149 @@ jobs:
             echo "network ${BUILD_NETWORK} created"
           fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-          # 🔴 NOT `network=host`, and the difference is a security boundary.
-          #
-          # The BuildKit image ships no CNI (`/opt/cni` does not exist), so with
-          # `network=host` every `RUN` step — `npm ci` and `npm run build`,
-          # executing lifecycle scripts from any branch's lockfile — inherits the
-          # dind daemon's namespace. Measured there: `127.0.0.1:2375` reachable,
-          # which is an unauthenticated API on a PRIVILEGED daemon and therefore
-          # root-equivalent on s1, plus a direct interface on the network that
-          # carries the Forgejo database and OpenBao.
-          #
-          # On a user-defined bridge, measured in the same way:
-          #   docker API 127.0.0.1:2375 ......... NOT reachable
-          #   interfaces on the control-plane net  0
-          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
-          #
-          # ⚠️ So this is a large improvement and NOT a complete fix. OpenBao stays
-          # routable because the dind daemon routes between its bridges. It is far
-          # less severe — a build carries no AppRole credentials, only the URLs —
-          # but it is not zero, and it is named here rather than left implied.
-          driver-opts: network=fe-prionex-build
-
+      # 🔴 Moved ahead of "Set up Docker Buildx" — Epic 3 retro action A1,
+      # run 739. `driver-opts: image=` below now points buildx at a
+      # PRIVATE image in our own registry, and creating that builder PULLS
+      # it — reproduced directly: an unauthenticated `docker buildx create
+      # --driver-opt image=<private>` fails the whole builder-creation step
+      # with "authorization failed: no basic auth credentials" before any
+      # build step ever runs. Login has to exist before that pull is
+      # attempted. This is the exact ordering bug that sank run 739's cache
+      # check (a *different* job than this file, but the identical class of
+      # mistake — "order of steps = hidden dependency"), caught and fixed
+      # there before it ever reached this file. See D26.
       - name: Log in to git.crm-prionex.com
         uses: docker/login-action@v3
         with:
           registry: git.crm-prionex.com
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          # 🔴 NOT `network=host`, and the difference is a security boundary.
+          #
+          # The stock BuildKit image ships no CNI (`/opt/cni` does not exist),
+          # so with `network=host` every `RUN` step — `npm ci` and
+          # `npm run build`, executing lifecycle scripts from any branch's
+          # lockfile — would inherit the dind daemon's namespace. Measured
+          # there: `127.0.0.1:2375` reachable, which is an unauthenticated API
+          # on a PRIVILEGED daemon and therefore root-equivalent on s1, plus a
+          # direct interface on the network that carries the Forgejo database
+          # and OpenBao.
+          #
+          # On a user-defined bridge alone (measured the same way, and this
+          # file's own state from Story 3.5 until Epic 3's retro):
+          #   docker API 127.0.0.1:2375 ......... NOT reachable
+          #   interfaces on the control-plane net  0
+          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
+          #   dind gateway 172.17.0.1:2375 ...... still reachable ⚠️
+          #   wg-private 10.70.0.0/24 ........... still reachable ⚠️
+          #
+          # ✅ NARROWED to one /16 by CNI netns isolation, Epic 3 retro action
+          # A1, [D26](../../docs/migration-decisions.md#d26) — "closed" was
+          # this comment's own earlier, imprecise word for it; D26 lists
+          # what the default-deny firewall now covers (all of RFC1918 plus
+          # link-local) and what it honestly still does not (IPv6 entirely
+          # unfiltered; INPUT to the builder itself only latent; MTU
+          # unpinned; `host-local` IPAM's ~254-address pool is never
+          # pruned) — read it before repeating either word here.
+          # `image=` below points at the image `Dockerfile.buildkit-cni`
+          # builds — the stock image plus CNI plugin binaries plus a
+          # default-deny `iptables FORWARD` ruleset (sandbox subnet ->
+          # every RFC1918/link-local range, four DROP rules, not one keyed
+          # to a single volatile container IP), giving each RUN step its
+          # OWN network namespace instead of sharing the builder
+          # container's. `buildkitd-config-inline` — the inline TOML key
+          # `networkMode = "cni"` under `[worker.oci]`, NEVER the CLI flag
+          # `--oci-worker-net=cni` (measured broken on this buildkitd
+          # build, v0.32.2: flags split into argv correctly but
+          # `--oci-cni-config-path` is read as an empty string regardless
+          # of what is passed — if you are reading this while trying to
+          # reproduce this setup on a command line with that flag, stop,
+          # that is the exact broken path) — is what turns CNI on.
+          #
+          # 🚨 Digest-pinned, not tag-pinned — every build here carries a
+          # `write:package`-scoped credential, so a floating tag is an
+          # unnecessary supply-chain surface. See Dockerfile.buildkit-cni's
+          # own header for the full rationale and
+          # .forgejo/workflows/build-buildkit-cni-image.yml for the workflow
+          # that publishes this digest (single source of truth for the
+          # image NAME stays there — `env.IMAGE_REPO`/`PERMANENT_TAG`; this
+          # is the one place in THIS file the digest itself is written, on
+          # purpose, so a bump touches exactly one line here).
+          #
+          # 🔴 Bootstrap resolved inside this PR, not by a post-merge
+          # follow-up commit — a real deadlock (runs 755/756, D26) forced
+          # this: build.yml already referenced the tag before the tag
+          # existed, and the ordinary main-only guard on
+          # `build-buildkit-cni-image.yml` couldn't run until merge, which
+          # couldn't happen while this branch's own CI was red on that same
+          # missing tag. Fixed by a bootstrap exception in that workflow's
+          # guard (first creation of an absent tag is not the repoint the
+          # guard protects against) — dispatched from THIS branch (run 759,
+          # success), which built `v1.0.0-buildkit-cni` from this branch's
+          # own hardened `Dockerfile.buildkit-cni` and ran the full
+          # staging→verify→promote matrix before writing the tag. Digest
+          # read from the registry (coordinator, `read:package`, v2 API,
+          # all three manifest media types accepted) and pinned below.
+          #
+          # ⚠️ The digest below is an OCI IMAGE INDEX
+          # (`application/vnd.oci.image.index.v1+json`), not a single
+          # platform manifest — the promote step in
+          # `build-buildkit-cni-image.yml` runs `docker buildx imagetools
+          # create` without `--prefer-index=false`, the same shape Story
+          # 3.6 (D24) already found and named. Decided deliberately, not
+          # overlooked (D26): `driver-opts: image=` pulls by resolving the
+          # index to this runner's own platform manifest either way, so
+          # this works correctly as pinned. Left as an index on purpose
+          # rather than spending an extra dispatch + tag rewrite to match
+          # 3.6's single-manifest convention — that rewrite can only happen
+          # through the main-only branch of the guard (the bootstrap
+          # exception is now closed, the tag exists), i.e. only after
+          # merge, and D26 records it as the documented next version bump
+          # (which also gives the main-only guard branch, and the E5
+          # matrix, their own live proof — see D26).
+          driver-opts: |
+            network=fe-prionex-build
+            image=git.crm-prionex.com/crm/fe-prionex@sha256:d37900f2ebea1d806f87ead450f2ca097205df757d8b6711a90b416eec836317
+          buildkitd-config-inline: |
+            [worker.oci]
+              networkMode = "cni"
+              cniConfigPath = "/etc/buildkit/cni.conflist"
+              cniBinaryDir = "/opt/cni/bin"
+
+      # 🚨 Cheap, fail-closed runtime isolation assertion — runs on EVERY
+      # real build, not just proven once historically (review round 1 item
+      # 3; rule E5: a guard that can fail, exercised continuously, not a
+      # one-time proof left to go stale). Uses the same promoted diagnostic
+      # image (Dockerfile.netns-isolation-check, formerly
+      # Dockerfile.network-probe on the throwaway probe branch) the
+      # verify-cni-netns-isolation.yml harness and build-buildkit-cni-
+      # image.yml's own verify gate both use, against the SAME two targets
+      # review round 2 established as the actually-meaningful ones —
+      # NEVER `127.0.0.1:2375`, which measured from inside the sandboxed
+      # netns is the sandbox's own loopback and cannot fail under any
+      # configuration.
+      - name: "Assert RUN-step netns isolation: dind gateway and OpenBao must be unreachable"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=build-runtime-assert-dind-gateway \
+            .
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=build-runtime-assert-openbao \
+            .
 
       # ─────────────────────────────────────────────────────────────────────
       # Story 3.3 — the environment's URLs, read from OpenBao, baked in (FR8).

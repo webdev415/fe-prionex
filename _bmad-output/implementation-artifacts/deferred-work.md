@@ -2208,3 +2208,101 @@ short-lived token per story) is unchanged and still not urgent.
   downstream stories actually live. Recorded because it is currently mentioned nowhere: not in the step,
   not in the story, not in D24. **Owner needed** — cheapest honest fix is one sentence in D24 bounding the
   guarantee to the retention window on `dev`.
+
+## Opened by Epic 3 retro action item A1 (2026-08-18) — `buildkit-cni-v1` is a production dependency the retention rule doesn't know is one
+
+✅ **RESOLVED 2026-08-19 — moot by design, not by the DB edit this entry asked for.** Review round 1 on
+PR 54 retagged the image to a permanent semver tag, `v1.0.0-buildkit-cni`, which matches the live
+`keep_pattern`'s own semver alternative (`v?\d+\.\d+\.\d+.*`) directly — verified against the same
+compiled regex in `build.yml`'s tags step this entry originally checked against. No database change
+needed, and the weekly-refresh mechanism this entry described is gone too: `build-buildkit-cni-image.yml`
+is `workflow_dispatch`-only now, for deliberate version bumps only. See
+[D26](../../docs/migration-decisions.md#d26) for the full account, including the caveat this resolution
+does NOT remove: `build.yml`'s own reference to the image is a digest pin, not the tag itself, and as of
+this commit that digest pin is still a temporary, clearly-marked placeholder — a *separate*, currently-open
+handoff, tracked in `build.yml`'s own comment at the `driver-opts:` step and in D26, not in this entry.
+Original entry follows, unedited, as the historical record of the problem this closed.
+
+`build.yml` now hard-depends on `git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1`
+(`Dockerfile.buildkit-cni`, [D26](../../docs/migration-decisions.md#d26)) for every build, dev
+included. That tag does not match any alternative in the live `keep_pattern` — verified against the
+compiled regex in `build.yml`'s own tags step, not assumed — so by the letter of the retention rule it
+expires in 14 days like any other untracked tag.
+
+**Mitigated, not solved:** `build-buildkit-cni-image.yml` refreshes the tag on a weekly schedule
+(`cron: 0 3 * * 1`), comfortably inside the 14-day window. This assumes a re-push under the same tag
+resets `package_version.created_unix` for that tag — taken from Story 3.4's own measurement that the
+rule keys on that column, not independently re-verified for this specific tag by re-push-and-requery.
+If the assumption is wrong, `build.yml`'s pull of this image is a hard dependency with no silent
+fallback to the old bridge-only config — a failure here fails the build closed, with a pull error
+naming the missing tag, not a quiet security regression.
+
+**Owner: Oleg.** The clean fix is adding this tag's exact shape to the live `keep_pattern` in the
+Forgejo database — the same class of change every other `keep_pattern` entry in this project has
+needed an operator for (the rule lives ONLY in the DB, not restorable from this repository). No
+session that has worked on this story had DB access to do it directly. Once done, the weekly-refresh
+workflow becomes a safety net rather than the only thing standing between this tag and expiry.
+
+## Opened by review round 2/3 on PR 54, Epic 3 retro action item A1 (2026-08-19) — `build.yml`'s builder-image reference is not yet digest-pinned
+
+✅ **RESOLVED 2026-08-19 — inside this PR, not by a post-merge follow-up.** The sequence this entry
+originally described (merge first, then dispatch, then pin) turned out to be unnecessary and, worse,
+undispatchable as written: `build.yml` already referenced the tag before the tag existed, so this
+branch's own CI was red, which meant it could never merge under required checks (Story 2.6) to reach the
+"merge first" step this entry's own sequence started with — a real deadlock, found by runs 755/756, not
+reasoned about in the abstract. Closed by a **bootstrap exception** in
+`build-buildkit-cni-image.yml`'s branch guard instead (first creation of an absent tag is not the
+repoint the guard protects against; see [D26](../../docs/migration-decisions.md#d26) for the full
+mechanism) — dispatched from THIS branch (run 759, success), which built `v1.0.0-buildkit-cni` from
+this branch's own hardened `Dockerfile.buildkit-cni`, ran the full staging→verify→promote matrix, and
+published the tag. The coordinator then read the digest from the registry (`read:package`, v2 API) and
+supplied it; `build.yml`'s `driver-opts: image=` is now pinned to
+`@sha256:d37900f2ebea1d806f87ead450f2ca097205df757d8b6711a90b416eec836317` — the same commit that
+resolves this entry. Original entry follows, unedited, as the historical record of the problem this
+closed (its own numbered sequence is superseded by the bootstrap path above, not followed).
+
+**Owner: coordinator (the dispatcher), then whoever pushes the follow-up commit — not DB-only, unlike
+the entry above.** Review round 2 on PR 54 required `build.yml`'s `driver-opts: image=` reference to be
+a digest pin (`image=...@sha256:...`), not a bare tag — every build here carries a
+`write:package`-scoped credential, and a floating tag is an unnecessary supply-chain surface. As of the
+commit that opened this entry, `build.yml` still references the bare tag
+`git.crm-prionex.com/crm/fe-prionex:v1.0.0-buildkit-cni` — not a fabricated or guessed digest, on
+purpose: this session has no registry credentials with which to learn the digest of an image that
+`.forgejo/workflows/build-buildkit-cni-image.yml` had not yet built under its new tag and new
+default-deny `Dockerfile.buildkit-cni` at the time this was written. See
+[D26](../../docs/migration-decisions.md#d26) for the full account.
+
+**Required sequence to close this** (documented here, in `build.yml`'s own comment at the
+`driver-opts:` step, and in D26 — three places, on purpose, so it survives whichever one a future reader
+opens first):
+1. Merge this PR.
+2. Dispatch `build-buildkit-cni-image.yml` against `main`. Its own "Promote the verified staging digest
+   to the permanent tag" step prints the resulting digest after the isolation matrix passes.
+3. Replace the tag reference in `build.yml`'s `driver-opts: image=` line with `@<that digest>`, in a
+   small, reviewable follow-up commit.
+4. Only then dispatch `build.yml` (or `ci.yml`) as the integration test that exercises this round's
+   default-deny ruleset specifically — dispatching against the bare tag from step 0 is a valid smoke
+   test of the pipeline wiring, but it is NOT evidence the new ruleset is what actually ran, since the
+   tag could in principle move between dispatch and pull.
+
+This is a same-day, mechanical follow-up, not a design question — recorded as a deferred-work entry
+rather than left only as a comment because it is a real, currently-open item with a required action, not
+just context for a reader.
+
+## Opened by review round 2 on PR 54, coordinator's registry read (2026-08-19) — the promote step in `build-buildkit-cni-image.yml` writes an index digest, not a manifest digest
+
+**Owner: whoever performs the next real `v1.0.0-buildkit-cni` version bump.** The digest the coordinator
+read for `v1.0.0-buildkit-cni` resolves to media type `application/vnd.oci.image.index.v1+json` (an OCI
+image index), not a single platform manifest — `build-buildkit-cni-image.yml`'s promote step runs
+`docker buildx imagetools create` without `--prefer-index=false`, the same shape Story 3.6 (D24) already
+found and named for a different tag. Decided deliberately, not overlooked: `driver-opts: image=` in
+`build.yml` resolves the index to this runner's own platform manifest at pull time either way, so the
+current digest pin (`@sha256:d37900f2ebea1d806f87ead450f2ca097205df757d8b6711a90b416eec836317`) works
+correctly as an index pin. Left as-is rather than spending an extra dispatch and tag rewrite to match
+Story 3.6's single-manifest convention, because that rewrite can only happen through the guard's
+main-only branch (the bootstrap exception is now closed — the tag exists) and therefore only after this
+PR merges. **The next real version bump** (new `CNI_PLUGINS_VERSION` and/or base-image digest — already
+required to produce its own live outcome matrix, D26) should also add `--prefer-index=false` to the
+promote step for consistency with the rest of the project's convention, and record the new manifest
+digest that results. This is a free byproduct of a bump that has to happen anyway, not a reason to force
+an extra dispatch now.

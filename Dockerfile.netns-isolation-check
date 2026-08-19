@@ -1,0 +1,78 @@
+# Epic 3 retro action item A1 (2026-08-18/19) — PERMANENT regression-test
+# diagnostic Dockerfile, promoted into main per review round 1 item 6
+# (originally `Dockerfile.network-probe` on the throwaway probe branch
+# `probe/a1-cni-netns-isolation`; kept, renamed, not deleted, because the
+# thing it proves — that a RUN step's own netns has the reachability this
+# project has decided it should and does NOT have the reachability it
+# shouldn't — is exactly as true tomorrow, after any future change to the
+# builder image, the CNI conflist, or the firewall entrypoint, as it was the
+# day this was first proven). Not an application image; this is used ONLY by
+# `.forgejo/workflows/build-buildkit-cni-image.yml`'s own verify gate and by
+# the standing regression-test workflow, never by `build.yml`'s real builds.
+#
+# Its only job is to prove, from INSIDE a RUN step's own process (not the
+# outer builder container), whether a given host:port is reachable — the
+# thing that actually differs between "no CNI" and "CNI-sandboxed RUN
+# steps".
+#
+# 🔴 Encodes the check's own expectation into its exit code, on purpose —
+# this instance serves no job logs (documented repeatedly across this
+# project, e.g. docs/migration-decisions.md D8/D21, build.yml's own
+# comments), so a job/step's PASS/FAIL status has to be the entire signal.
+# EXPECT_REACHABLE=yes means "this step should be green only if the target
+# WAS reachable"; EXPECT_REACHABLE=no means the opposite. The calling
+# workflow names each step so the expectation is legible from the job list
+# alone, without needing this file's contents.
+#
+# Targets probed by the callers of this file, each via its own build
+# invocation with different --build-arg values, so a red step maps to
+# exactly one question, unambiguously:
+#   - 172.17.0.1:2375 — the dind engine's own default-bridge gateway, i.e.
+#     the root-equivalent Docker API a container on that bridge can reach
+#     locally (docs/runners/config.yml; D22; D26). THIS is the control that
+#     can actually fail, not 127.0.0.1:2375 — a loopback check measured
+#     from inside the sandboxed netns is the sandbox's OWN loopback, which
+#     is structurally reachable under every possible firewall configuration
+#     and therefore proves nothing (review round 2 finding; the old
+#     127.0.0.1-based control from the throwaway probe was retired for
+#     exactly this reason and must not be reintroduced). Expected REACHABLE
+#     with no CNI (baseline) and UNREACHABLE under the CNI default-deny
+#     ruleset — a guard that can genuinely fail in both directions.
+#   - 172.20.0.5:8200 — OpenBao. D22's own named, accepted residual risk
+#     under bridge-only isolation: reachable under `network=fe-prionex-build`
+#     alone, and the question A1 exists to answer is whether CNI-sandboxed
+#     RUN steps are UNREACHABLE from it instead.
+#   - a public registry host (registry.npmjs.org:443 by default) — must
+#     stay reachable in EVERY configuration this checks, CNI included.
+#     `npm ci` needs outbound internet from the builder stage; a check that
+#     proves isolation while silently breaking this would be proving the
+#     wrong thing. Not exercised by Dockerfile.prod's own build here — this
+#     checks raw TCP reachability only, which is what the isolation
+#     question is actually about; it does not substitute for building the
+#     real application under the new config before adopting it.
+FROM alpine:3.20
+
+ARG PROBE_HOST
+ARG PROBE_PORT
+ARG EXPECT_REACHABLE
+# Free-text, carried into the failure message only — names which of the
+# three questions above this particular build answers, so a red step's
+# job name plus this label is enough to diagnose without logs.
+ARG PROBE_LABEL=unlabeled
+
+RUN set -eu; \
+    : "${PROBE_HOST:?PROBE_HOST build-arg is required}"; \
+    : "${PROBE_PORT:?PROBE_PORT build-arg is required}"; \
+    : "${EXPECT_REACHABLE:?EXPECT_REACHABLE build-arg is required (yes|no)}"; \
+    case "$EXPECT_REACHABLE" in yes|no) ;; *) \
+      echo "FAIL: EXPECT_REACHABLE must be 'yes' or 'no', got '${EXPECT_REACHABLE}'"; exit 1 ;; \
+    esac; \
+    if nc -z -w3 "$PROBE_HOST" "$PROBE_PORT" 2>/dev/null; then REACHED=yes; else REACHED=no; fi; \
+    echo "probe[${PROBE_LABEL}]: ${PROBE_HOST}:${PROBE_PORT} reached=${REACHED} expected_reachable=${EXPECT_REACHABLE}"; \
+    if [ "$REACHED" = "$EXPECT_REACHABLE" ]; then \
+      echo "OK[${PROBE_LABEL}]: matches expectation."; \
+      exit 0; \
+    else \
+      echo "FAIL[${PROBE_LABEL}]: reachability did not match expectation — see the build-args this step was invoked with."; \
+      exit 1; \
+    fi

@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -209,19 +209,40 @@ development_status:
 
 # Appended by epic-3 retrospective 2026-08-18 (epic-3-retro-2026-08-18.md).
 # A1/B2/C3 are the critical path: they close BEFORE story 4.1 starts (Oleg's call at the retro).
+# ✅ Resolved 2026-08-19 by the merge of `main` (which had absorbed PR 52 `retro/epic-3`, this block's
+# own origin, and PR 53 `docs/retro-b2-c3-decisions`, D25 + the D22 amendment) into
+# `feat/a1-cni-run-isolation` (PR 54) — the confirmed conflict this comment used to warn about. PR 53
+# itself left this file untouched (B2/C3 stayed `open` here, uncommented, on `main`) even though its own
+# `docs/migration-decisions.md` record (D25; D22's amendment) already closes both — this merge closes
+# them here too, now, rather than leave a known-stale `open` sitting next to its own answer.
 action_items:
   - epic: 3
     action: "A1: decide dind security posture — network=host vs buildx CNI config (private netns for RUN steps); write the D-record; if CNI, prove cache survives with one green build"
     owner: "Oleg (decision), dev session (implementation)"
-    status: open
+    status: done
+    # Decided (Oleg, at the retro): probe green -> adopt. Probe branch probe/a1-cni-netns-isolation,
+    # runs 739 (isolation matrix green first dispatch; cache job failed on an unrelated step-order
+    # bug) and 741 (full matrix green, cache included). Shipped in build.yml via
+    # Dockerfile.buildkit-cni + build-buildkit-cni-image.yml. Hardened by three further review rounds
+    # on PR 54 (2026-08-19): default-deny of all RFC1918/link-local ranges (not one rule keyed to
+    # OpenBao's own container IP), digest-pinned/checksum-verified image build, permanent tag matching
+    # `keep_pattern` directly (no DB edit needed, no cron). See D26 for the full account.
   - epic: 3
     action: "B2: extend the CI gate to staging/development, or record the explicit decision not to — before story 4.3 arms on-demand deploys"
     owner: "Oleg (decision), dev session (implementation)"
-    status: open
+    status: done
+    # Closed by D25 (docs/migration-decisions.md, from merged PR 53/docs/retro-b2-c3-decisions):
+    # not extended, staging/development stay untouched until their own epic. This row itself was
+    # never updated on that branch (verified against main's own copy of this file at merge time) —
+    # closed here, in the merge that brings D25 into this branch, rather than left stale.
   - epic: 3
     action: "C3: fix or accept the npm ci layer regression (registry cache restores deps slower than rebuilding, 17s vs 0s); amend D22 with the measured outcome"
     owner: "dev session; Oleg if posture changes"
-    status: open
+    status: done
+    # Closed by the D22 amendment (docs/migration-decisions.md, from merged PR 53/docs/retro-b2-c3-decisions):
+    # accepted as-is, ~2s regression (17s restore vs ~15s rebuild-from-scratch; the retro's own
+    # "17s vs 0s" compared against a retired driver, not a fair baseline). Same as B2 above — this row
+    # was never updated on that branch; closed here at merge time instead of left stale.
   - epic: 3
     action: "D4 (team agreement): run-budget ledgers close only against a query (actions/runs API or DB count); a self-report without a query means the ledger is open"
     owner: "every dev session; create-story template carries the rule"
