@@ -18,11 +18,24 @@ import {
 export function V3ClientPriorityPanel({
   projectId,
   clientId,
+  open = true,
+  id,
 }: {
   projectId?: number
   clientId?: number
+  /**
+   * Whether the panel body is shown. Defaults to open so the two call sites
+   * that render it inline are unchanged; the client card passes the state of
+   * the priority chip that discloses it.
+   */
+  open?: boolean
+  /** Ties the panel to the chip's ``aria-controls``. */
+  id?: string
 }) {
   const v3UiEnabled = useV3UiEnabled()
+  // The query stays enabled while collapsed: the chip above is driven by the
+  // same scores, so the data is wanted either way, and fetching only on expand
+  // would put a spinner behind a click that reads as instant.
   const enabled = v3UiEnabled && !!projectId && !!clientId
   const { data } = useV3Scores(
     projectId,
@@ -31,6 +44,7 @@ export function V3ClientPriorityPanel({
   )
 
   if (!v3UiEnabled) return null
+  if (!open) return null
   const rows = data?.results ?? []
 
   // No v3 rows means the model does not cover this client — their debts sit
@@ -38,7 +52,7 @@ export function V3ClientPriorityPanel({
   // panel had failed to load; saying so is short and removes the doubt.
   if (rows.length === 0) {
     return (
-      <div className="border-border bg-card rounded-xl border border-dashed p-4">
+      <div id={id} className="border-border bg-card rounded-xl border border-dashed p-4">
         <h3 className="text-foreground mb-1 text-sm font-semibold">v3 Priority</h3>
         <p className="text-muted-foreground text-xs">
           Not scored — this client&apos;s debts are outside the scoring model&apos;s range, so v3
@@ -49,7 +63,7 @@ export function V3ClientPriorityPanel({
   }
 
   return (
-    <div className="border-border bg-card rounded-xl border p-4">
+    <div id={id} className="border-border bg-card rounded-xl border p-4">
       <h3 className="text-foreground mb-3 text-sm font-semibold">v3 Priority</h3>
       <div className="flex flex-col gap-2">
         {rows.map((r) => (

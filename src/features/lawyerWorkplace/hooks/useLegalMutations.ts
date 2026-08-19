@@ -292,6 +292,7 @@ export function useUpdateLegalKanbanTask() {
     }: {
       taskId: number
       payload: Record<string, unknown>
+      suppressErrorToast?: boolean
     }) => {
       await taskApi.updateTask(taskId, payload)
       const status = typeof payload.status === 'string' ? payload.status : undefined
@@ -306,7 +307,10 @@ export function useUpdateLegalKanbanTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       invalidateLegalWorkload(queryClient)
     },
-    onError: (error) => toast.error(getErrorMessage(error)),
+    onError: (error, variables) => {
+      if (variables.suppressErrorToast) return
+      toast.error(getErrorMessage(error))
+    },
   })
 }
 
@@ -325,6 +329,7 @@ export function usePatchLegalKanbanTaskMetadata() {
         assigned_to_user_id?: number | null
         due_date?: string | null
       }
+      suppressErrorToast?: boolean
     }) => legalApi.patchKanbanTask(taskId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
@@ -334,7 +339,10 @@ export function usePatchLegalKanbanTaskMetadata() {
         invalidateLegalWorkload(queryClient)
       }
     },
-    onError: (error) => toast.error(getErrorMessage(error)),
+    onError: (error, variables) => {
+      if (variables.suppressErrorToast) return
+      toast.error(getErrorMessage(error))
+    },
   })
 }
 

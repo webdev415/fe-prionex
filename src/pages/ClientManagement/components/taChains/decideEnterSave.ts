@@ -71,12 +71,6 @@ export interface EnterSaveEvent {
  *   quietly become a save.
  * * a press already handled by something else. Radix's Select *trigger* and its
  *   menu items do call `preventDefault` on Enter, so the flag catches those.
- * * a press inside an open dropdown list. This is NOT covered by the flag:
- *   Radix's SelectItem runs `handleSelect()` on Enter and preventDefaults only
- *   for Space (verified in @radix-ui/react-select), so choosing a value would
- *   otherwise submit the interaction at the same time. Portalled content still
- *   reaches this handler, because React bubbles portal events through the React
- *   tree rather than the DOM tree.
  * * a press inside the notes field. The ticket is explicit that Enter inserts
  *   a line break there; the operator saves by tabbing out first, or clicking.
  * * anything at all when the save is unavailable — wrong step, a mutation
@@ -89,7 +83,6 @@ export function decideEnterSave(params: { event: EnterSaveEvent; canSave: boolea
   if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return false
   if (event.defaultPrevented) return false
   if (!canSave) return false
-  if (isInsideOpenPopup(event.target)) return false
   if (isSelfActivating(event.target)) return false
 
   return !isNotesField(event.target)
@@ -146,37 +139,6 @@ export function isPressForPanel(target: EventTarget | null, panel: HTMLElement |
 export function isSelfActivating(target: EventTarget | null): boolean {
   if (!target || !(target instanceof Element)) return false
   return target.closest('button, a[href], summary, [type="submit"], [type="button"]') !== null
-}
-
-/**
- * Roles that mean "a popup is open and this key belongs to it".
- *
- * Matched by ARIA role rather than by component, because the popup is the
- * thing we can recognise from the event alone — it may be portalled out of the
- * panel's DOM subtree while still bubbling here through the React tree, and it
- * may be any of several widgets (a value dropdown, the template menu).
- *
- * Includes roles whose libraries currently *do* preventDefault, deliberately.
- * The one case that reached production behaviour unguarded — SelectItem — did
- * so because a third party's internal choice about preventDefault is not a
- * contract, and reading the flag alone made this handler depend on it.
- */
-const POPUP_ROLES = [
-  'listbox',
-  'option',
-  'combobox',
-  'menu',
-  'menuitem',
-  'menuitemcheckbox',
-  'menuitemradio',
-]
-
-const POPUP_SELECTOR = POPUP_ROLES.map((role) => `[role="${role}"]`).join(', ')
-
-/** Whether the press came from inside (or from the trigger of) an open popup. */
-export function isInsideOpenPopup(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof Element)) return false
-  return target.closest(POPUP_SELECTOR) !== null
 }
 
 /**

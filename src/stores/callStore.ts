@@ -13,6 +13,8 @@ export type CallModalType = 'call-dialog' | 'call-recording'
 /** Loan card shape the call modal renders; mirrored here so it survives minimize. */
 export interface IncomingModalLoan {
   id: string
+  /** The loan's own owner, which is not always the client the popup is anchored to. */
+  clientId?: number | null
   clientName: string
   loanNumber: string
   counterparty: string
@@ -65,9 +67,39 @@ interface CallStore {
   restoreCall: () => void
   clearMinimizedCall: () => void
   isCallActive: () => boolean
+  isCallWindowLive: () => boolean
+  closeWindowForCall: (callId: string) => void
 }
 
 const STORAGE_KEY = 'minimized-call-storage'
+
+/**
+ * A restored window may only survive long enough to cover a page reload during
+ * a call. It used to be 24 h, which let a leftover bubble suppress every
+ * inbound screen-pop for the rest of the day — the operator sees no popup and
+ * no reason for its absence.
+ */
+const MAX_RESTORE_AGE_MS = 30 * 60 * 1000
+
+const TERMINAL_CALL_STATES = new Set<MinimizedCallInfo['callState']>(['ended', 'failed'])
+
+/**
+ * Whether a stored window could still be updated by anything.
+ *
+ * `MinimizedCallBubble` only polls call details while the state is
+ * dialing/connected/incoming *and* a `callId` is known, and only clears itself
+ * once polling reports a terminal state. An entry outside that set — most
+ * reachably `initial`, from a call dialog minimised before dialling — therefore
+ * never polls, never turns terminal, and never auto-dismisses. Restoring one
+ * resurrects a window nothing will ever take away.
+ */
+function canStillSettle(call: MinimizedCallInfo): boolean {
+  if (call.type !== 'call-dialog') return true
+  if (!call.callId) return false
+  return (
+    call.callState === 'dialing' || call.callState === 'connected' || call.callState === 'incoming'
+  )
+}
 
 // Helper functions for localStorage
 const getStoredCallState = (): MinimizedCallInfo | null => {
@@ -84,9 +116,14 @@ const getStoredCallState = (): MinimizedCallInfo | null => {
       localStorage.removeItem(STORAGE_KEY)
       return null
     }
-    // Check if stored data is too old (e.g., more than 24 hours)
-    const maxAge = 24 * 60 * 60 * 1000 // 24 hours
-    if (Date.now() - parsed.timestamp > maxAge) {
+    if (Date.now() - parsed.timestamp > MAX_RESTORE_AGE_MS) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+    // A window that has already ended, or that nothing will ever update, must
+    // not come back: it cannot be cleared by the bubble's own polling, and
+    // while it sits in the store it suppresses the incoming-call popup.
+    if (TERMINAL_CALL_STATES.has(parsed.callState) || !canStillSettle(parsed)) {
       localStorage.removeItem(STORAGE_KEY)
       return null
     }
@@ -138,5 +175,25 @@ export const useCallStore = create<CallStore>((set, get) => ({
       return true
     }
     return false
+  },
+  isCallWindowLive: () => {
+    const state = get()
+    // An open modal is on screen in this session — it is not persisted, so it
+    // cannot be a leftover from an earlier one.
+    if (state.openCallModal) return true
+    const minimized = state.minimizedCall
+    if (!minimized) return false
+    // A bubble showing an ended call is not a call in progress. It clears
+    // itself three seconds later, and until then it must not stand in for one.
+    return !TERMINAL_CALL_STATES.has(minimized.callState)
+  },
+  closeWindowForCall: (callId) => {
+    const minimized = get().minimizedCall
+    // Only the window this call owns. A terminal event names one call, and the
+    // operator may well be holding a different one — closing on any terminal
+    // event would take away a window that is still live.
+    if (!minimized || !minimized.callId || minimized.callId !== callId) return
+    setStoredCallState(null)
+    set({ minimizedCall: null, openCallModal: null })
   },
 }))

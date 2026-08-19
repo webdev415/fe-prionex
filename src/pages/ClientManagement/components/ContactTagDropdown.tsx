@@ -245,12 +245,12 @@ export function ContactTagDropdown({
                         {category.category_name}
                       </span>
                       {category.is_system && (
-                        <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                        <span className="bg-information-300 text-information-800 shrink-0 rounded px-1.5 py-0.5 text-xs">
                           {t('pages.contactTags.readOnly', 'Read only')}
                         </span>
                       )}
                       {category.is_protected && !hasProtectedPermission && (
-                        <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className="bg-warning-300 text-warning-900 shrink-0 rounded px-1.5 py-0.5 text-xs">
                           {t('pages.contactTags.protected', 'Protected')}
                         </span>
                       )}

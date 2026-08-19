@@ -1,13 +1,12 @@
 /**
  * KAN-973 — the listener that turns a keypress into an open TA modal.
  *
- * Every rule it consults is unit-tested next door (`hotkey.ts`,
- * `decideHotkeyLaunch.ts`). What was never covered is the wiring: that the
- * listener is attached at all, that it reads *current* state rather than the
- * values captured when it mounted, and that it detaches on unmount.
- *
- * That gap is worth closing on its own evidence — the same shape of bug (rules
- * right, wiring wrong) cost four rounds in KAN-974.
+ * The rules it consults are unit-tested next door. What was never covered is
+ * the wiring, and that gap hid a real defect: with the executor modal open,
+ * Radix traps focus inside it, `isTypingTarget` treats anything inside a
+ * `role="dialog"` as typing, and the press was dropped before the single-modal
+ * guard ran — so the toast the ticket asks for could never appear. A passing
+ * unit test for that branch meant nothing, because the branch was unreachable.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
@@ -29,14 +28,12 @@ vi.mock('react-i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-i18next')>()
   return {
     ...actual,
-    useTranslation: () => ({
-      t: (k: string, d?: string) => d ?? k,
-      i18n: { language: 'en' },
-    }),
+    useTranslation: () => ({ t: (k: string, d?: string) => d ?? k, i18n: { language: 'en' } }),
   }
 })
 
 import { useTAHotkeyLaunch } from '../useTAHotkeyLaunch'
+import { TA_EXECUTOR_DIALOG_CLASS } from '../hotkey'
 
 function Harness({
   enabled = true,
@@ -51,8 +48,13 @@ function Harness({
   return (
     <div>
       <input aria-label="notes" />
+      {/* Some other dialog — still fully off-limits. */}
       <div role="dialog">
-        <input aria-label="inside modal" />
+        <input aria-label="inside other modal" />
+      </div>
+      {/* The executor's own dialog, exempt from the typing rule. */}
+      <div role="dialog" className={TA_EXECUTOR_DIALOG_CLASS} tabIndex={-1} data-testid="ta-dialog">
+        <input aria-label="inside ta modal" />
       </div>
     </div>
   )
@@ -75,8 +77,6 @@ describe('useTAHotkeyLaunch', () => {
   })
 
   it('does nothing for a combination nobody assigned', async () => {
-    // Bare-key bindings mean most presses reaching this listener are not ours,
-    // so silence — no toast, no modal — is the required behaviour.
     const onLaunch = vi.fn()
     const user = userEvent.setup()
     render(<Harness onLaunch={onLaunch} />)
@@ -96,35 +96,53 @@ describe('useTAHotkeyLaunch', () => {
     expect(onLaunch).not.toHaveBeenCalled()
   })
 
-  it('ignores the combination inside an open dialog', async () => {
-    // A hotkey pressed while a modal is up must not reach the page behind it.
+  it('ignores the combination inside somebody else’s dialog', async () => {
     const onLaunch = vi.fn()
     const user = userEvent.setup()
     const { getByLabelText } = render(<Harness onLaunch={onLaunch} />)
 
-    await user.click(getByLabelText('inside modal'))
+    await user.click(getByLabelText('inside other modal'))
     await user.keyboard('{Control>}1{/Control}')
     expect(onLaunch).not.toHaveBeenCalled()
   })
 
-  it('refuses to open a second modal, and says why', async () => {
+  it('explains itself when focus is inside the executor dialog', async () => {
+    // The realistic case, and the one that was broken: the modal is open, so
+    // focus is trapped inside it. The operator presses their hotkey and must
+    // be told why nothing opened.
     const onLaunch = vi.fn()
     const user = userEvent.setup()
-    render(<Harness isExecutorOpen onLaunch={onLaunch} />)
+    const { getByTestId } = render(<Harness isExecutorOpen onLaunch={onLaunch} />)
 
+    getByTestId('ta-dialog').focus()
     await user.keyboard('{Control>}1{/Control}')
+
     expect(onLaunch).not.toHaveBeenCalled()
     expect(toastInfo).toHaveBeenCalledWith('Finish or close the open target action first')
   })
 
-  it('refuses while a session is minimized, with its own message', async () => {
+  it('leaves fields inside the executor dialog alone', async () => {
+    // The exemption covers the dialog wrapper, not its inputs: a bare-key
+    // binding must not fire while an amount is being typed into the modal.
+    bindings = { A: 12 }
+    const onLaunch = vi.fn()
+    const user = userEvent.setup()
+    const { getByLabelText } = render(<Harness isExecutorOpen onLaunch={onLaunch} />)
+
+    await user.click(getByLabelText('inside ta modal'))
+    await user.keyboard('a')
+
+    expect(onLaunch).not.toHaveBeenCalled()
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  it('explains itself when a session is minimized', async () => {
     hasMinimized = true
     const onLaunch = vi.fn()
     const user = userEvent.setup()
     render(<Harness onLaunch={onLaunch} />)
 
     await user.keyboard('{Control>}1{/Control}')
-    expect(onLaunch).not.toHaveBeenCalled()
     expect(toastInfo).toHaveBeenCalledWith('Restore or finish the minimized target action first')
   })
 
@@ -138,9 +156,6 @@ describe('useTAHotkeyLaunch', () => {
   })
 
   it('sees state that changed after it was attached', async () => {
-    // The listener is attached once and reads through a ref. If it closed over
-    // its first render instead, reassigning a shortcut in settings would not
-    // take effect until the page was reloaded.
     const onLaunch = vi.fn()
     const user = userEvent.setup()
     const { rerender } = render(<Harness onLaunch={onLaunch} />)

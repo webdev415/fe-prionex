@@ -94,6 +94,17 @@ describe('formatHotkey / parseHotkey', () => {
     }
   })
 
+  it('round-trips keys that are themselves the separator', () => {
+    // formatHotkey writes '+' as 'Ctrl++'. Splitting on every separator and
+    // dropping the empties made that unreadable, so the module could produce a
+    // combination it was unable to parse back.
+    for (const s of ['+', 'Ctrl++', 'Shift++', 'Ctrl+Alt++']) {
+      expect(formatHotkey(parseHotkey(s)!)).toBe(s)
+    }
+    expect(parseHotkey('+')).toEqual({ ctrl: false, alt: false, shift: false, key: '+' })
+    expect(parseHotkey('Ctrl++')).toEqual({ ctrl: true, alt: false, shift: false, key: '+' })
+  })
+
   it('rejects a string with no final key', () => {
     expect(parseHotkey('Ctrl')).toBeNull()
     expect(parseHotkey('Ctrl+Shift')).toBeNull()
