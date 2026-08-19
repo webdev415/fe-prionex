@@ -26,24 +26,14 @@ import {
   useUpdateCoefficientRange,
 } from '@/features/loanCoefficientRanges/hooks/useLoanCoefficientRanges'
 import type { LoanCoefficientRange } from '@/features/loanCoefficientRanges/api/loanCoefficientRangesApi'
+import { validateRange, type RangeFormState } from './coefficientRangeValidation'
 
-interface FormState {
-  min_days: string
-  max_days: string
-  min_coefficient: string
-  max_coefficient: string
-}
-
-const EMPTY_FORM: FormState = {
+const EMPTY_FORM: RangeFormState = {
   min_days: '',
   max_days: '',
   min_coefficient: '',
   max_coefficient: '',
 }
-
-/** One decimal place, 1.0–10.0. Mirrors the server rule so the user is told
- *  before a round trip; the server remains the authority. */
-const COEFFICIENT_PATTERN = /^\d+(\.\d)?$/
 
 /** Same rendering as RepaymentConfigurationPage's formatDate. Kept local
  *  rather than exported from that page component — a sibling section should
@@ -52,50 +42,18 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString()
 }
 
-function validate(form: FormState, t: (k: string, d: string) => string): string | null {
-  const minDays = Number(form.min_days)
-  const maxDays = Number(form.max_days)
-
-  if (!Number.isInteger(minDays) || !Number.isInteger(maxDays) || minDays < 0 || maxDays < 0) {
-    return t('pages.coefficientRanges.errors.days', 'Days must be whole numbers of 0 or more')
-  }
-  if (minDays > maxDays) {
-    return t('pages.coefficientRanges.errors.dayOrder', 'Min days must not exceed max days')
-  }
-  for (const key of ['min_coefficient', 'max_coefficient'] as const) {
-    const raw = form[key]
-    if (!COEFFICIENT_PATTERN.test(raw)) {
-      return t(
-        'pages.coefficientRanges.errors.coefficientFormat',
-        'Coefficients allow at most one decimal place (e.g. 1.5)'
-      )
-    }
-    const value = Number(raw)
-    if (value < 1 || value > 10) {
-      return t('pages.coefficientRanges.errors.coefficientRange', 'Coefficients must be 1.0–10.0')
-    }
-  }
-  if (Number(form.min_coefficient) > Number(form.max_coefficient)) {
-    return t(
-      'pages.coefficientRanges.errors.coefficientOrder',
-      'Min coefficient must not exceed max coefficient'
-    )
-  }
-  return null
-}
-
 export function CoefficientRangesSection() {
   const { t } = useTranslation()
   const canEdit = useHasPermission(PERMISSIONS.SYSTEM.MANAGE_SETTINGS)
 
-  const { data: ranges = [], isLoading } = useLoanCoefficientRanges()
+  const { data: ranges = [], isLoading, isError } = useLoanCoefficientRanges()
   const createMutation = useCreateCoefficientRange()
   const updateMutation = useUpdateCoefficientRange()
   const deleteMutation = useDeleteCoefficientRange()
 
   const [editing, setEditing] = useState<LoanCoefficientRange | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [form, setForm] = useState<RangeFormState>(EMPTY_FORM)
   const [pendingDelete, setPendingDelete] = useState<LoanCoefficientRange | null>(null)
 
   const isSaving = createMutation.isPending || updateMutation.isPending
@@ -118,7 +76,7 @@ export function CoefficientRangesSection() {
   }
 
   const handleSubmit = () => {
-    const error = validate(form, t)
+    const error = validateRange(form, t)
     if (error) {
       toast.error(error)
       return
@@ -176,7 +134,7 @@ export function CoefficientRangesSection() {
     })
   }
 
-  const setField = (key: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (key: keyof RangeFormState) => (event: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: event.target.value }))
 
   return (
@@ -206,6 +164,13 @@ export function CoefficientRangesSection() {
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm">{t('common.loading', 'Loading...')}</p>
+      ) : isError ? (
+        // Distinct from the empty state: a failed load rendering "No ranges
+        // configured" tells the admin something false, and they would go on to
+        // add a range that may already exist.
+        <p className="text-error-600 text-sm">
+          {t('pages.coefficientRanges.loadError', 'Could not load the coefficient ranges.')}
+        </p>
       ) : ranges.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           {t(
@@ -272,13 +237,21 @@ export function CoefficientRangesSection() {
         </div>
       )}
 
+      {/* Names the permission rather than saying "view-only": this section is
+          gated on manage_settings while the rest of the page is gated on
+          edit_repayment_config, so a user can legitimately edit the repayment
+          rules above and not these ranges. A generic banner reads as a
+          contradiction on that screen. */}
       {!canEdit && (
         <div className="border-warning-200 bg-warning-100/40 text-warning-700 mt-4 flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm">
           <div className="bg-warning-100 text-warning-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
             <Icons.Warning size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 self-center">
-            {t('pages.coefficientRanges.readOnly', 'You have view-only access to these ranges.')}
+            {t(
+              'pages.coefficientRanges.readOnly',
+              'Editing coefficient ranges requires the Manage settings permission. The rest of this page follows its own permission.'
+            )}
           </div>
         </div>
       )}

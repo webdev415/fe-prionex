@@ -10308,7 +10308,7 @@
       "minCoefficient": "Min coefficient",
       "maxCoefficient": "Max coefficient",
       "hint": "Both day boundaries are inclusive. Coefficients take one decimal place, 1.0 to 10.0.",
-      "readOnly": "You have view-only access to these ranges.",
+      "readOnly": "Editing coefficient ranges requires the Manage settings permission. The rest of this page follows its own permission.",
       "created": "Range added",
       "updated": "Range updated",
       "deleted": "Range deleted",
@@ -10322,7 +10322,8 @@
         "coefficientFormat": "Coefficients allow at most one decimal place (e.g. 1.5)",
         "coefficientRange": "Coefficients must be 1.0–10.0",
         "coefficientOrder": "Min coefficient must not exceed max coefficient"
-      }
+      },
+      "loadError": "Could not load the coefficient ranges."
     }
   },
   "contactTypes": {
