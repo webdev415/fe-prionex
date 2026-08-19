@@ -104,6 +104,13 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.reports.lowVerification.floorHint') {
         return `${key}:${String(vars?.count)}`
       }
+      // Same shape, same reason: the operator-promises totals block states WHEN
+      // the numbers were computed (the report is re-served from a 15-minute
+      // server-side cache), so the stamp itself has to be assertable and not
+      // just the key it rides on.
+      if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
+        return `${key}:${String(vars?.value)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',

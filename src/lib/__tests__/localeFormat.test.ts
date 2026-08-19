@@ -121,6 +121,24 @@ describe('localeFormat', () => {
     it('invalid input → em dash', () => {
       expect(formatDateTime('nope', 'en')).toBe('—')
     })
+
+    it('renders the instant in the requested IANA zone, not the browser one', () => {
+      // A backend-stamped instant belongs in the profile zone: 13:20 UTC is
+      // 16:20 in Kyiv and 09:20 in New York, and the reader's machine clock has
+      // no say in which one the report shows.
+      const instant = '2026-08-18T13:20:31.400543Z'
+
+      expect(formatDateTime(instant, 'en', 'Europe/Kyiv')).toContain('16:20')
+      expect(formatDateTime(instant, 'en', 'America/New_York')).toContain('09:20')
+    })
+
+    it('degrades to the browser zone for an unusable zone rather than throwing', () => {
+      // Intl throws RangeError on an unknown zone; a stamp in the wrong zone is
+      // a lesser failure than a blank block (same policy as dateUtils).
+      expect(formatDateTime(SAMPLE, 'en', 'Not/AZone')).toBe(
+        new Intl.DateTimeFormat('en-US', DATETIME_OPTS).format(SAMPLE)
+      )
+    })
   })
 
   describe('dateTimeInputPattern', () => {
