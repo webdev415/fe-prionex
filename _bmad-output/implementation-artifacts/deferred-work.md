@@ -2447,14 +2447,30 @@ SSH access the plan had told itself not to use.
 **The structural problem recorded above is resolved:** Oleg granted s1 access, so `action_run` can be
 queried from a session that also does the work. Story 4.1's ledger closed **by query**, not OPEN.
 
-**Declared 5 pushes, spent 4** — under budget because the review round ran *before* the first
-implementation push, so its ten fixes shipped in the same push and cost zero extra runs.
+🔴 **CORRECTED after the merge: declared 5, spent 7 — over by two, not under by one.** The first
+close was published as "spent 4, under budget" and was taken **before the story had finished
+spending**. That is the D4 failure mode itself, committed while closing a D4 ledger.
 
-🔴 **And it answers by counting the question every story so far had reasoned about:** *"do not assume
+🔴 **The generalisable finding, worth more than this story's number: this project's declaration form
+counts PUSHES, but a story costs `pushes + 1 PR-open run + 1 merge run`.** Opening the PR fires
+`ci.yml` again on the same commit (D19 armed four `(pull_request)` contexts on the long-lived
+branches); merging fires `build-main.yml`, a different workflow (`ci.yml` correctly ignores `main` —
+D25 holds). Neither has a line in §7's declaration format, so **every ledger in this project has been
+structurally capable of undercounting by two**, including ones closed by query — if the query ran
+before the merge landed.
+
+**Action for the story template:** the declaration gains two lines (PR-open, merge), and **a ledger
+closed at PR-open is not closed** — it must be re-queried against the merge commit.
+
+**What was right:** the review round *was* free — it ran before the first implementation push, so its
+ten fixes shipped in the same push and cost zero extra runs. The overrun is entirely PR-open and
+merge.
+
+✅ **And it answers by counting the question every story so far had reasoned about:** *"do not assume
 the `image` job's `uses:` expansion contributes exactly one `action_run` row."* **It contributes
-zero.** Four pushes produced exactly four rows, all `ci.yml`; the reusable `build.yml` invoked via
-`uses:` creates no row of its own. **Per-push cost in this repository is 1 `action_run`, not 2** —
-which retroactively makes every earlier story's per-push arithmetic one-per-push too.
+zero.** Five pushes produced exactly five `ci.yml` rows; the reusable `build.yml` invoked via `uses:`
+creates no row of its own. **Per-push cost is 1 `action_run`, not 2.** This part survived the
+correction above — it is about pushes, and was measured across all five.
 
 **Also worth keeping:** run 780 (`e0395fda`) was **cancelled**, superseded by the next push under
 concurrency. A self-reported ledger would have counted it as a spend or missed it entirely — the
