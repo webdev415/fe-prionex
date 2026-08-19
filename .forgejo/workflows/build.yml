@@ -257,30 +257,91 @@ jobs:
           #   docker API 127.0.0.1:2375 ......... NOT reachable
           #   interfaces on the control-plane net  0
           #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
+          #   dind gateway 172.17.0.1:2375 ...... still reachable ⚠️
+          #   wg-private 10.70.0.0/24 ........... still reachable ⚠️
           #
-          # ✅ CLOSED, Epic 3 retro action A1, [D26](../../docs/migration-decisions.md#d26).
-          # `image=` below points at `buildkit-cni-v1`
-          # (Dockerfile.buildkit-cni) — the stock image plus CNI plugin
-          # binaries plus one narrow `iptables FORWARD` DROP rule, giving
-          # each RUN step its OWN network namespace instead of sharing the
-          # builder container's. `buildkitd-config-inline` (NOT
-          # `buildkitd-flags` — measured broken on this buildkitd build,
-          # v0.32.2: flags split into argv correctly but
-          # `--oci-cni-config-path` is read as an empty string regardless of
-          # what is passed; a TOML config does not have this problem) is
-          # what turns this on. Verified live, run 741, full matrix green:
-          # OpenBao now UNREACHABLE from a RUN step, public internet (`npm
-          # ci`) still reachable, registry cache (below) still exportable
-          # and importable through this builder. The residual gap this
-          # comment named since Story 3.5 is closed, not merely narrowed.
+          # ✅ NARROWED to one /16 by CNI netns isolation, Epic 3 retro action
+          # A1, [D26](../../docs/migration-decisions.md#d26) — "closed" was
+          # this comment's own earlier, imprecise word for it; D26 lists
+          # what the default-deny firewall now covers (all of RFC1918 plus
+          # link-local) and what it honestly still does not (IPv6 entirely
+          # unfiltered; INPUT to the builder itself only latent; MTU
+          # unpinned; `host-local` IPAM's ~254-address pool is never
+          # pruned) — read it before repeating either word here.
+          # `image=` below points at the image `Dockerfile.buildkit-cni`
+          # builds — the stock image plus CNI plugin binaries plus a
+          # default-deny `iptables FORWARD` ruleset (sandbox subnet ->
+          # every RFC1918/link-local range, four DROP rules, not one keyed
+          # to a single volatile container IP), giving each RUN step its
+          # OWN network namespace instead of sharing the builder
+          # container's. `buildkitd-config-inline` — the inline TOML key
+          # `networkMode = "cni"` under `[worker.oci]`, NEVER the CLI flag
+          # `--oci-worker-net=cni` (measured broken on this buildkitd
+          # build, v0.32.2: flags split into argv correctly but
+          # `--oci-cni-config-path` is read as an empty string regardless
+          # of what is passed — if you are reading this while trying to
+          # reproduce this setup on a command line with that flag, stop,
+          # that is the exact broken path) — is what turns CNI on.
+          #
+          # 🚨 Digest-pinned, not tag-pinned, is the intended steady state
+          # (every build here carries a `write:package`-scoped credential,
+          # so a floating tag is an unnecessary supply-chain surface) —
+          # see Dockerfile.buildkit-cni's own header for the full
+          # rationale and .forgejo/workflows/build-buildkit-cni-image.yml
+          # for the workflow that publishes it. 🔴 THIS COMMIT is a
+          # deliberate, temporary exception, recorded rather than hidden:
+          # this session has no registry credentials with which to learn
+          # the digest of an image `build-buildkit-cni-image.yml` has not
+          # yet built under its new tag and new default-deny Dockerfile —
+          # that dispatch has to happen first (documented in that
+          # workflow's own header, and in D26). Required follow-up, in
+          # order: (1) merge this branch, (2) dispatch
+          # `build-buildkit-cni-image.yml` against main — its own
+          # "Promote" step prints the resulting digest, (3) replace the
+          # tag reference below with `@<that digest>` in a small follow-up
+          # commit, (4) only then dispatch this workflow as the
+          # integration test. Dispatching against the bare tag below
+          # before that replacement is a valid smoke test of the pipeline
+          # wiring; it is NOT evidence the default-deny ruleset this round
+          # shipped is what actually ran.
           driver-opts: |
             network=fe-prionex-build
-            image=git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1
+            image=git.crm-prionex.com/crm/fe-prionex:v1.0.0-buildkit-cni
           buildkitd-config-inline: |
             [worker.oci]
               networkMode = "cni"
               cniConfigPath = "/etc/buildkit/cni.conflist"
               cniBinaryDir = "/opt/cni/bin"
+
+      # 🚨 Cheap, fail-closed runtime isolation assertion — runs on EVERY
+      # real build, not just proven once historically (review round 1 item
+      # 3; rule E5: a guard that can fail, exercised continuously, not a
+      # one-time proof left to go stale). Uses the same promoted diagnostic
+      # image (Dockerfile.netns-isolation-check, formerly
+      # Dockerfile.network-probe on the throwaway probe branch) the
+      # verify-cni-netns-isolation.yml harness and build-buildkit-cni-
+      # image.yml's own verify gate both use, against the SAME two targets
+      # review round 2 established as the actually-meaningful ones —
+      # NEVER `127.0.0.1:2375`, which measured from inside the sandboxed
+      # netns is the sandbox's own loopback and cannot fail under any
+      # configuration.
+      - name: "Assert RUN-step netns isolation: dind gateway and OpenBao must be unreachable"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=build-runtime-assert-dind-gateway \
+            .
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=build-runtime-assert-openbao \
+            .
 
       # ─────────────────────────────────────────────────────────────────────
       # Story 3.3 — the environment's URLs, read from OpenBao, baked in (FR8).

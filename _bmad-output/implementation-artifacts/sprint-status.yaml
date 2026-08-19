@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -210,10 +210,12 @@ development_status:
 # Appended by epic-3 retrospective 2026-08-18 (epic-3-retro-2026-08-18.md).
 # A1/B2/C3 are the critical path: they close BEFORE story 4.1 starts (Oleg's call at the retro).
 # ⚠️ This block is also being edited on two other unmerged branches
-# (`retro/epic-3` created it; `docs/retro-b2-c3-decisions` predates it and doesn't touch it at all).
-# Whoever merges second should reconcile B2/C3's status against `docs/retro-b2-c3-decisions`'s own
-# record (D25, docs/migration-decisions.md) rather than trust this copy for those two rows — only A1
-# is authoritative here.
+# (`retro/epic-3` created it, PR 52; `docs/retro-b2-c3-decisions`, PR 53, predates it and doesn't touch
+# it at all). CONFIRMED merge conflict on this file against PR 52 — pre-plan (review round 1, PR 54):
+# whichever of this branch / PR 52 merges second should reconcile B2/C3's status against
+# `docs/retro-b2-c3-decisions`'s (PR 53) own record (D25, docs/migration-decisions.md) rather than
+# trust this copy for those two rows — only A1 is authoritative here, and A1's own status/comment in
+# this file is not expected to conflict with either other branch (neither touches the A1 row).
 action_items:
   - epic: 3
     action: "A1: decide dind security posture — network=host vs buildx CNI config (private netns for RUN steps); write the D-record; if CNI, prove cache survives with one green build"
@@ -222,7 +224,10 @@ action_items:
     # Decided (Oleg, at the retro): probe green -> adopt. Probe branch probe/a1-cni-netns-isolation,
     # runs 739 (isolation matrix green first dispatch; cache job failed on an unrelated step-order
     # bug) and 741 (full matrix green, cache included). Shipped in build.yml via
-    # Dockerfile.buildkit-cni + build-buildkit-cni-image.yml. See D26.
+    # Dockerfile.buildkit-cni + build-buildkit-cni-image.yml. Hardened by three further review rounds
+    # on PR 54 (2026-08-19): default-deny of all RFC1918/link-local ranges (not one rule keyed to
+    # OpenBao's own container IP), digest-pinned/checksum-verified image build, permanent tag matching
+    # `keep_pattern` directly (no DB edit needed, no cron). See D26 for the full account.
   - epic: 3
     action: "B2: extend the CI gate to staging/development, or record the explicit decision not to — before story 4.3 arms on-demand deploys"
     owner: "Oleg (decision), dev session (implementation)"

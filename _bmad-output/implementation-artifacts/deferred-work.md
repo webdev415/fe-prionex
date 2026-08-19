@@ -2210,6 +2210,18 @@ short-lived token per story) is unchanged and still not urgent.
 
 ## Opened by Epic 3 retro action item A1 (2026-08-18) — `buildkit-cni-v1` is a production dependency the retention rule doesn't know is one
 
+✅ **RESOLVED 2026-08-19 — moot by design, not by the DB edit this entry asked for.** Review round 1 on
+PR 54 retagged the image to a permanent semver tag, `v1.0.0-buildkit-cni`, which matches the live
+`keep_pattern`'s own semver alternative (`v?\d+\.\d+\.\d+.*`) directly — verified against the same
+compiled regex in `build.yml`'s tags step this entry originally checked against. No database change
+needed, and the weekly-refresh mechanism this entry described is gone too: `build-buildkit-cni-image.yml`
+is `workflow_dispatch`-only now, for deliberate version bumps only. See
+[D26](../../docs/migration-decisions.md#d26) for the full account, including the caveat this resolution
+does NOT remove: `build.yml`'s own reference to the image is a digest pin, not the tag itself, and as of
+this commit that digest pin is still a temporary, clearly-marked placeholder — a *separate*, currently-open
+handoff, tracked in `build.yml`'s own comment at the `driver-opts:` step and in D26, not in this entry.
+Original entry follows, unedited, as the historical record of the problem this closed.
+
 `build.yml` now hard-depends on `git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1`
 (`Dockerfile.buildkit-cni`, [D26](../../docs/migration-decisions.md#d26)) for every build, dev
 included. That tag does not match any alternative in the live `keep_pattern` — verified against the
@@ -2229,3 +2241,33 @@ Forgejo database — the same class of change every other `keep_pattern` entry i
 needed an operator for (the rule lives ONLY in the DB, not restorable from this repository). No
 session that has worked on this story had DB access to do it directly. Once done, the weekly-refresh
 workflow becomes a safety net rather than the only thing standing between this tag and expiry.
+
+## Opened by review round 2/3 on PR 54, Epic 3 retro action item A1 (2026-08-19) — `build.yml`'s builder-image reference is not yet digest-pinned
+
+**Owner: coordinator (the dispatcher), then whoever pushes the follow-up commit — not DB-only, unlike
+the entry above.** Review round 2 on PR 54 required `build.yml`'s `driver-opts: image=` reference to be
+a digest pin (`image=...@sha256:...`), not a bare tag — every build here carries a
+`write:package`-scoped credential, and a floating tag is an unnecessary supply-chain surface. As of the
+commit that opened this entry, `build.yml` still references the bare tag
+`git.crm-prionex.com/crm/fe-prionex:v1.0.0-buildkit-cni` — not a fabricated or guessed digest, on
+purpose: this session has no registry credentials with which to learn the digest of an image that
+`.forgejo/workflows/build-buildkit-cni-image.yml` had not yet built under its new tag and new
+default-deny `Dockerfile.buildkit-cni` at the time this was written. See
+[D26](../../docs/migration-decisions.md#d26) for the full account.
+
+**Required sequence to close this** (documented here, in `build.yml`'s own comment at the
+`driver-opts:` step, and in D26 — three places, on purpose, so it survives whichever one a future reader
+opens first):
+1. Merge this PR.
+2. Dispatch `build-buildkit-cni-image.yml` against `main`. Its own "Promote the verified staging digest
+   to the permanent tag" step prints the resulting digest after the isolation matrix passes.
+3. Replace the tag reference in `build.yml`'s `driver-opts: image=` line with `@<that digest>`, in a
+   small, reviewable follow-up commit.
+4. Only then dispatch `build.yml` (or `ci.yml`) as the integration test that exercises this round's
+   default-deny ruleset specifically — dispatching against the bare tag from step 0 is a valid smoke
+   test of the pipeline wiring, but it is NOT evidence the new ruleset is what actually ran, since the
+   tag could in principle move between dispatch and pull.
+
+This is a same-day, mechanical follow-up, not a design question — recorded as a deferred-work entry
+rather than left only as a comment because it is a real, currently-open item with a required action, not
+just context for a reader.
