@@ -227,6 +227,7 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
+        'actions.delete': 'Delete',
         // Two-Factor Authentication
         'twoFactor.title': 'Two-Factor Authentication',
         'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',
@@ -299,6 +300,29 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        // Shared soft-delete section labels.
+        'softDelete.columns.deletedAt': 'Deleted',
+        'softDelete.columns.expires': 'Expires',
+        'softDelete.columns.actions': 'Actions',
+        'softDelete.actions.restore': 'Restore',
+        'softDelete.expiry.noDeadline': 'No deadline',
+        'softDelete.expiry.today': 'Removed today',
+        'softDelete.sectionHint':
+          'These were deleted and can still be restored until the date shown.',
+        'pages.smsTemplates.deleted.title': 'Deleted templates',
+        'pages.messagingDrafts.deleted.title': 'Deleted drafts',
+        // Soft delete is a recovery promise, so these two say Trash, not
+        // "permanently removed" — the copy they replaced was untrue.
+        'pages.smsTemplates.modals.delete.recoverableTitle':
+          'The template will be removed from the active list',
+        'pages.smsTemplates.modals.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
+        'pages.messagingDrafts.delete.confirmMessage':
+          'Are you sure you want to delete the draft "{{name}}"?',
+        'pages.messagingDrafts.delete.recoverableTitle':
+          'The draft will be removed from the active list',
+        'pages.messagingDrafts.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
         'pages.clients.modals.deleteClient.title': 'Delete Client',
         'pages.clients.modals.deleteClient.softDeleteWarning':
           'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
@@ -396,6 +420,11 @@ vi.mock('i18next', () => ({
     // `<html lang>` in step with the active language.
     on: vi.fn(),
     language: 'en',
+    // Hooks that toast outside a component call i18n.t directly. Without this
+    // the call throws inside onSuccess, React Query turns the mutation into a
+    // failure, and any test asserting only on cache state passes while the
+    // success path it claims to cover never runs.
+    t: (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string) ?? key,
   },
 }))
 

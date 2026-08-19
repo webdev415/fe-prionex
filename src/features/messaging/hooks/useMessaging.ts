@@ -7,6 +7,10 @@ export const messagingKeys = {
   drafts: () => [...messagingKeys.all, 'drafts'] as const,
   draftList: (channel?: MessagingChannel) => [...messagingKeys.drafts(), { channel }] as const,
   draft: (draftId: number) => [...messagingKeys.drafts(), draftId] as const,
+  // Nested under drafts() on purpose: deleting or restoring already invalidates
+  // that prefix, so the trash view and the live list can never disagree.
+  draftTrash: (params?: { channel?: MessagingChannel; limit?: number; offset?: number }) =>
+    [...messagingKeys.drafts(), 'trash', params ?? {}] as const,
   integrations: () => [...messagingKeys.all, 'integrations'] as const,
   integration: (service: string) => [...messagingKeys.integrations(), service] as const,
   campaigns: () => [...messagingKeys.all, 'campaigns'] as const,
@@ -38,6 +42,18 @@ export function useMessagingDrafts(channel?: MessagingChannel) {
   return useQuery({
     queryKey: messagingKeys.draftList(channel),
     queryFn: () => messagingApi.listDrafts(channel ? { channel } : undefined),
+    staleTime: 30000,
+  })
+}
+
+export function useDeletedMessagingDrafts(
+  params?: { channel?: MessagingChannel; limit?: number; offset?: number },
+  enabled = true
+) {
+  return useQuery({
+    queryKey: messagingKeys.draftTrash(params),
+    queryFn: () => messagingApi.listDeletedDrafts(params),
+    enabled,
     staleTime: 30000,
   })
 }

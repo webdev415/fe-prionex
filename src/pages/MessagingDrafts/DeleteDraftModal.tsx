@@ -62,12 +62,15 @@ export function DeleteDraftModal({ draft, open, onClose }: DeleteDraftModalProps
           </p>
           <Alert variant="warning">
             <AlertTitle>
-              {t('pages.messagingDrafts.delete.cannotUndo', 'This action cannot be undone')}
+              {t(
+                'pages.messagingDrafts.delete.recoverableTitle',
+                'The draft will be removed from the active list'
+              )}
             </AlertTitle>
             <AlertDescription>
               {t(
-                'pages.messagingDrafts.delete.permanentRemoval',
-                'The draft will be permanently removed.'
+                'pages.messagingDrafts.delete.recoverableDescription',
+                'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.'
               )}
             </AlertDescription>
           </Alert>
