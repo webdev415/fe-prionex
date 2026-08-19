@@ -219,37 +219,68 @@ jobs:
             echo "network ${BUILD_NETWORK} created"
           fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-          # 🔴 NOT `network=host`, and the difference is a security boundary.
-          #
-          # The BuildKit image ships no CNI (`/opt/cni` does not exist), so with
-          # `network=host` every `RUN` step — `npm ci` and `npm run build`,
-          # executing lifecycle scripts from any branch's lockfile — inherits the
-          # dind daemon's namespace. Measured there: `127.0.0.1:2375` reachable,
-          # which is an unauthenticated API on a PRIVILEGED daemon and therefore
-          # root-equivalent on s1, plus a direct interface on the network that
-          # carries the Forgejo database and OpenBao.
-          #
-          # On a user-defined bridge, measured in the same way:
-          #   docker API 127.0.0.1:2375 ......... NOT reachable
-          #   interfaces on the control-plane net  0
-          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
-          #
-          # ⚠️ So this is a large improvement and NOT a complete fix. OpenBao stays
-          # routable because the dind daemon routes between its bridges. It is far
-          # less severe — a build carries no AppRole credentials, only the URLs —
-          # but it is not zero, and it is named here rather than left implied.
-          driver-opts: network=fe-prionex-build
-
+      # 🔴 Moved ahead of "Set up Docker Buildx" — Epic 3 retro action A1,
+      # run 739. `driver-opts: image=` below now points buildx at a
+      # PRIVATE image in our own registry, and creating that builder PULLS
+      # it — reproduced directly: an unauthenticated `docker buildx create
+      # --driver-opt image=<private>` fails the whole builder-creation step
+      # with "authorization failed: no basic auth credentials" before any
+      # build step ever runs. Login has to exist before that pull is
+      # attempted. This is the exact ordering bug that sank run 739's cache
+      # check (a *different* job than this file, but the identical class of
+      # mistake — "order of steps = hidden dependency"), caught and fixed
+      # there before it ever reached this file. See D26.
       - name: Log in to git.crm-prionex.com
         uses: docker/login-action@v3
         with:
           registry: git.crm-prionex.com
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          # 🔴 NOT `network=host`, and the difference is a security boundary.
+          #
+          # The stock BuildKit image ships no CNI (`/opt/cni` does not exist),
+          # so with `network=host` every `RUN` step — `npm ci` and
+          # `npm run build`, executing lifecycle scripts from any branch's
+          # lockfile — would inherit the dind daemon's namespace. Measured
+          # there: `127.0.0.1:2375` reachable, which is an unauthenticated API
+          # on a PRIVILEGED daemon and therefore root-equivalent on s1, plus a
+          # direct interface on the network that carries the Forgejo database
+          # and OpenBao.
+          #
+          # On a user-defined bridge alone (measured the same way, and this
+          # file's own state from Story 3.5 until Epic 3's retro):
+          #   docker API 127.0.0.1:2375 ......... NOT reachable
+          #   interfaces on the control-plane net  0
+          #   OpenBao 172.20.0.5:8200 ........... still reachable ⚠️
+          #
+          # ✅ CLOSED, Epic 3 retro action A1, [D26](../../docs/migration-decisions.md#d26).
+          # `image=` below points at `buildkit-cni-v1`
+          # (Dockerfile.buildkit-cni) — the stock image plus CNI plugin
+          # binaries plus one narrow `iptables FORWARD` DROP rule, giving
+          # each RUN step its OWN network namespace instead of sharing the
+          # builder container's. `buildkitd-config-inline` (NOT
+          # `buildkitd-flags` — measured broken on this buildkitd build,
+          # v0.32.2: flags split into argv correctly but
+          # `--oci-cni-config-path` is read as an empty string regardless of
+          # what is passed; a TOML config does not have this problem) is
+          # what turns this on. Verified live, run 741, full matrix green:
+          # OpenBao now UNREACHABLE from a RUN step, public internet (`npm
+          # ci`) still reachable, registry cache (below) still exportable
+          # and importable through this builder. The residual gap this
+          # comment named since Story 3.5 is closed, not merely narrowed.
+          driver-opts: |
+            network=fe-prionex-build
+            image=git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1
+          buildkitd-config-inline: |
+            [worker.oci]
+              networkMode = "cni"
+              cniConfigPath = "/etc/buildkit/cni.conflist"
+              cniBinaryDir = "/opt/cni/bin"
 
       # ─────────────────────────────────────────────────────────────────────
       # Story 3.3 — the environment's URLs, read from OpenBao, baked in (FR8).

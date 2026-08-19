@@ -1,0 +1,152 @@
+name: Build the CNI-enabled buildkit image
+
+# Epic 3 retro action item A1 (2026-08-18). Maintenance workflow for
+# `git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1` — the custom builder
+# image `build.yml` now depends on for every build (see Dockerfile.buildkit-
+# cni and D26 in docs/migration-decisions.md for the full history: probe
+# branch `probe/a1-cni-netns-isolation`, local validation, runs 739/741).
+#
+# ── Why this is a SEPARATE workflow, and why it runs on a schedule ───────
+# `build.yml` PULLS this image; it does not build it — building it inline
+# on every application build would mean every `dev`/`preprod`/`prod` push
+# rebuilds a builder image that changes only when CNI_PLUGINS_VERSION or
+# the base `moby/buildkit:buildx-stable-1` tag is bumped, which is rare.
+# Decided here, in writing, rather than by not thinking about it: a rare,
+# separate, dispatchable workflow — not a manual "build it on a laptop and
+# push" step, which this project has already criticized elsewhere as an
+# untrustworthy, unrepeatable path for exactly this class of artifact.
+#
+# 🔴 THE RETENTION-RULE RISK, named rather than assumed away. This tag,
+# `buildkit-cni-v1`, is a literal string that does NOT match the live
+# retention rule's `keep_pattern` (build.yml's own tags step carries the
+# compiled regex — this tag matches none of its alternatives: not
+# `sha-…`, not `latest`/`buildcache`, not `(pre)?prod-<hex>`, not a semver
+# shape). The rule lives ONLY in the Forgejo database and cannot be
+# restored or edited from this repository (docs/migration-decisions.md,
+# multiple D-records). So on the letter of the rule, this tag expires in
+# 14 days like any other untracked tag — and unlike a throwaway probe
+# artifact, EVERY production build depends on it existing.
+#
+# Two responses, both taken rather than picking one and hoping:
+#   1. This workflow refreshes the tag on a 7-day schedule — comfortably
+#      inside the 14-day window, so a re-publish under the same tag keeps
+#      it perpetually within its own retention rule's grace period without
+#      needing the rule itself changed. (Assumption, not yet independently
+#      re-verified this way: the retention rule keys on
+#      `package_version.created_unix`, per this project's own D-records on
+#      Story 3.4's measurement, and a fresh push creates a fresh version
+#      row/timestamp for the same tag. If that assumption is wrong, the
+#      failure mode is loud, not silent — see point 2.)
+#   2. `build.yml`'s own pull of this image is a HARD dependency with no
+#      silent fallback to the old, less-isolated bridge-only config (see
+#      that file's own comment at the `driver-opts:` step). If this tag
+#      ever does expire, every build fails closed with a clear pull error,
+#      not a silent security regression — consistent with this project's
+#      standing preference for fail-closed over fail-open.
+#   Recorded as an open follow-up in deferred-work.md: Oleg adding this
+#   tag's exact shape to the live `keep_pattern` in the database would
+#   remove the dependency on the schedule entirely; this agent cannot make
+#   that change itself (DB-only, no API access from any session that has
+#   worked on this).
+#
+# Dispatch this manually whenever CNI_PLUGINS_VERSION needs bumping or the
+# base image tag is intentionally moved; the schedule below is the safety
+# net for "nothing changed, but the clock still needs resetting."
+
+on:
+  workflow_dispatch:
+    inputs:
+      cni_plugins_version:
+        description: 'containernetworking/plugins release tag to bake in (see Dockerfile.buildkit-cni)'
+        required: false
+        type: string
+        default: 'v1.5.1'
+  schedule:
+    # Every Monday 03:00 UTC — comfortably inside the 14-day retention
+    # window even accounting for a missed run or two. Not tied to any
+    # application deploy cadence; this is purely about keeping the tag's
+    # own clock from running out.
+    - cron: '0 3 * * 1'
+
+concurrency:
+  group: build-buildkit-cni-image
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build and push buildkit-cni-v1
+    runs-on: node-20
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      # Same bridge every build.yml build uses — this job's OWN push goes
+      # through the ordinary, already-proven path; nothing about building
+      # THIS image needs CNI itself.
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=fe-prionex-build
+
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      # 🔴 Permanent tag by intent (this workflow's whole job is to keep it
+      # alive) but NOT permanent by the retention rule's own keep_pattern —
+      # see the header comment. `workflow_dispatch`'s input lets a manual
+      # run bump the CNI plugins version deliberately; the scheduled run
+      # always uses the input's default, i.e. whatever is checked into this
+      # file, so a version bump is a reviewable commit, not a one-off
+      # dispatch parameter nobody wrote down.
+      - name: Build and push buildkit-cni-v1
+        env:
+          CNI_PLUGINS_VERSION: ${{ inputs.cni_plugins_version }}
+        run: |
+          set -euo pipefail
+          VERSION="${CNI_PLUGINS_VERSION:-v1.5.1}"
+          IMAGE="git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1"
+          docker buildx build \
+            --file Dockerfile.buildkit-cni \
+            --build-arg "CNI_PLUGINS_VERSION=${VERSION}" \
+            --tag "$IMAGE" \
+            --push \
+            .
+          echo "Pushed: ${IMAGE} (CNI_PLUGINS_VERSION=${VERSION})"
+
+      # Fail-closed, not a log line to maybe notice later — this project's
+      # own standing rule (Story 3.6 §6 and others): a green job status has
+      # to be the evidence on an instance with no log access, so the
+      # verification has to be a step that can itself fail, not an echo.
+      - name: Verify the CNI config and plugin binaries landed in the pushed image
+        run: |
+          set -euo pipefail
+          IMAGE="git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1"
+          docker buildx imagetools inspect "$IMAGE" >/dev/null
+          docker pull "$IMAGE" >/dev/null
+          docker run --rm --entrypoint sh "$IMAGE" -c \
+            'test -x /opt/cni/bin/bridge && test -x /opt/cni/bin/loopback && test -x /opt/cni/bin/host-local && test -f /etc/buildkit/cni.conflist && test -x /usr/local/bin/entrypoint-with-firewall.sh' \
+            && echo "OK: CNI binaries, conflist, and entrypoint wrapper all present." \
+            || { echo "FAIL: the pushed image is missing something this workflow expects. Do not leave a half-built image as the production dependency — investigate before the next build.yml run pulls this."; exit 1; }

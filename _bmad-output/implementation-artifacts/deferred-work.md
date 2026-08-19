@@ -2207,3 +2207,25 @@ short-lived token per story) is unchanged and still not urgent.
   downstream stories actually live. Recorded because it is currently mentioned nowhere: not in the step,
   not in the story, not in D24. **Owner needed** — cheapest honest fix is one sentence in D24 bounding the
   guarantee to the retention window on `dev`.
+
+## Opened by Epic 3 retro action item A1 (2026-08-18) — `buildkit-cni-v1` is a production dependency the retention rule doesn't know is one
+
+`build.yml` now hard-depends on `git.crm-prionex.com/crm/fe-prionex:buildkit-cni-v1`
+(`Dockerfile.buildkit-cni`, [D26](../../docs/migration-decisions.md#d26)) for every build, dev
+included. That tag does not match any alternative in the live `keep_pattern` — verified against the
+compiled regex in `build.yml`'s own tags step, not assumed — so by the letter of the retention rule it
+expires in 14 days like any other untracked tag.
+
+**Mitigated, not solved:** `build-buildkit-cni-image.yml` refreshes the tag on a weekly schedule
+(`cron: 0 3 * * 1`), comfortably inside the 14-day window. This assumes a re-push under the same tag
+resets `package_version.created_unix` for that tag — taken from Story 3.4's own measurement that the
+rule keys on that column, not independently re-verified for this specific tag by re-push-and-requery.
+If the assumption is wrong, `build.yml`'s pull of this image is a hard dependency with no silent
+fallback to the old bridge-only config — a failure here fails the build closed, with a pull error
+naming the missing tag, not a quiet security regression.
+
+**Owner: Oleg.** The clean fix is adding this tag's exact shape to the live `keep_pattern` in the
+Forgejo database — the same class of change every other `keep_pattern` entry in this project has
+needed an operator for (the rule lives ONLY in the DB, not restorable from this repository). No
+session that has worked on this story had DB access to do it directly. Once done, the weekly-refresh
+workflow becomes a safety net rather than the only thing standing between this tag and expiry.
