@@ -46,16 +46,19 @@ legacy stand down with no rollback path in this repository.
 **This is a recorded deviation from FR25** (D27), raised as a blocking Open Question rather than
 decided away.
 
-## ❓ The one question only you can answer
+## ✅ Answered — «GitHub не трогаем» (Oleg, 2026-08-19)
 
-**Does the GitHub copy of `CRM/fe-prionex` still receive commits — push mirror, scheduled sync, or by
-hand?** The GitHub-side transfer is yours and lives outside this plan (D7).
+D7 becomes a **standing directive** rather than an inferred constraint, and **verdict (b) is
+permanent**. The escape hatch — "if no mirror exists, collapse back to an in-place edit" — is closed,
+because using it would require *knowing* the mirror does not exist, and the directive removes the
+means of finding out.
 
-- **"No mirror"** → this collapses back to an in-place edit whenever you like, and Story 4.9 gets
-  cheaper.
-- **"Yes"** → the decision was right and the legacy stand was never at risk.
-
-Either way the story is not blocked; only Story 4.9's cutover shape depends on it.
+🔴 **Story 4.9 inherits the hazard unchanged.** The cutover *is* the act of renaming, replacing or
+deleting `docker-compose.server.yml` — the exact file `CD.yml:154-162` copies onto the legacy stand,
+with `:201` still force-removing the container by literal name beforehand. Same NFR5 exposure, and by
+then it will be just as unverifiable. **4.9 must plan the cutover assuming the path is live:**
+converge the two files only after the legacy stand is decommissioned or provably no longer deployed
+to — never as a file rename in the repository.
 
 ## AC3 — the image default is removed, not repointed
 

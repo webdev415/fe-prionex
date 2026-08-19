@@ -2343,8 +2343,21 @@ landing there with an incomplete `.env` leaves the legacy stand down with no rol
 repository — an NFR5 violation. The asymmetry is why the default was taken rather than the risk
 reasoned away.
 
-**To close it:** Oleg answers whether a push mirror to GitHub exists. If it does not, this collapses
-back to an in-place edit at any time, and Story 4.9 gets cheaper.
+✅ **ANSWERED 2026-08-19 — Oleg: «GitHub не трогаем».** This closes the *action* and reaffirms D7 as
+a standing directive: no GitHub interaction, ever. **Verdict (b) is permanent**, and the "collapse it
+back to an in-place edit" escape is closed — using it would require knowing the mirror does not
+exist, and the directive removes the means of finding out.
+
+🔴 **But it does not close the fact, and Story 4.9 is the one that pays for that.** The cutover is,
+by definition, the act of renaming/replacing/deleting `docker-compose.server.yml` — the exact file
+`CD.yml:154-162` copies onto the legacy stand, with `:201` still force-removing the container by
+literal name before `up`. Same NFR5 exposure as this story faced, and by then it will be **just as
+unverifiable**.
+
+**Standing instruction for Story 4.9:** plan the cutover assuming the path is live. Converge the two
+files only after the legacy stand is decommissioned or provably no longer deployed to — **never as a
+file rename in the repository**. "We think the mirror is probably dead" is not a cutover plan, and
+this project's own record is that an empty result is not evidence of safety.
 
 ## Opened by story 4.1 (2026-08-19) — `docker compose config` is blind to network existence, and a gate built on it would pass a stand that cannot start
 

@@ -179,6 +179,17 @@ development_status:
   # would have passed it. Fixed to <CHANGE_ME>. Also caught: four more stale `8081`s including
   # preprod-infrastructure-requirement.md (the document Story 5.2 reads) in bold, and a compose
   # bypass no guard can close — the process environment beats --env-file, handed to 4.3.
+  #
+  # ✅ ANSWERED 2026-08-19 — Oleg: "GitHub не трогаем". D7 becomes a standing directive rather than
+  # an inferred constraint, and verdict (b) is now PERMANENT, not provisional: the escape hatch
+  # ("if no mirror exists, collapse back to an in-place edit") is closed, because using it would
+  # require knowing the mirror does not exist and the directive removes the means of finding out.
+  # 🔴 Story 4.9 inherits the hazard unchanged: the cutover IS the act of renaming/replacing
+  # docker-compose.server.yml, the file CD.yml:154-162 copies to the legacy stand, and it will be
+  # just as unverifiable then. 4.9 must plan the cutover assuming the path is live — converge the
+  # two files only after the legacy stand is decommissioned or provably no longer deployed to,
+  # never as a file rename in the repo.
+  #
   # 🔴 Per retro action E5, Story 4.2 is NOT written until this story is code-reviewed. That review
   # has now happened; 4.2 is unblocked once this PR merges.
   4-1-parameterize-the-compose-file-for-coexisting-stands: review

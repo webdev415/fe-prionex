@@ -681,23 +681,41 @@ declared. All three have burned this project before, at the exact points named a
 
 ## Open Questions for Oleg
 
-### Blocking
+### Answered
 
-1. 🔴 **Does the GitHub copy of `CRM/fe-prionex` still receive commits from Forgejo?** **STILL OPEN —
-   Task 1.3 tried and could not settle it.** The Forgejo API returns HTTP 403 unauthenticated
+1. ✅ **RESOLVED BY OLEG, 2026-08-19: «GitHub не трогаем».**
+
+   **What this settles: the action.** No GitHub interaction, in this story or after it — a
+   reaffirmation of [D7](../../docs/migration-decisions.md#d7), now standing rather than inferred.
+   **Verdict (b) is locked**, not provisional: `docker-compose.server.yml` stays untouched and
+   `docker-compose.stand.yml` is the stand definition. The FR25 deviation is permanent for Story 4.1
+   and no longer awaits an answer.
+
+   ⚠️ **What it does NOT settle: the fact.** Whether a push mirror exists remains unknown, and it
+   stays unknown by construction — the directive removes the only route by which this project would
+   ever check. That is the correct trade (the risk of touching GitHub exceeds the value of the
+   answer), but it has a consequence worth naming now rather than rediscovering in Epic 4's last
+   story:
+
+   🔴 **Story 4.9's cutover inherits the hazard unchanged.** The moment the cutover renames, replaces
+   or deletes `docker-compose.server.yml`, it is modifying the exact file `CD.yml:154-162` copies to
+   the legacy stand — with `:201` still force-removing the container by literal name beforehand. The
+   same NFR5 exposure, and by then this directive means it *still* cannot be checked. **Story 4.9
+   must therefore plan the cutover on the assumption that the path is live**, i.e. converge the two
+   files only after the legacy stand is decommissioned or provably no longer deployed to, never as a
+   file rename in the repository. Recorded in `deferred-work.md`.
+
+   *Original question, kept for the record:* **Does the GitHub copy of `CRM/fe-prionex` still receive
+   commits from Forgejo?** **Task 1.3 tried and could not settle it.** The Forgejo API returns HTTP 403 unauthenticated
    (`"Only signed in user is allowed to call APIs."`) on both `/push_mirrors` and the repo endpoint;
    no token exists on this machine; `~/.ssh/config` defines no alias for s1, where the tokens live.
    The mirror configuration was **never read as absent** — the request simply failed on auth, and
    this project's standing finding is that an empty result is not evidence of safety.
 
-   **Only Oleg can answer it**, because the GitHub-side transfer is his and lives outside this plan
-   ([D7](../../docs/migration-decisions.md#d7)).
-
    **The default was taken, not deferred:** `docker-compose.server.yml` is untouched and the
-   parameterization landed as `docker-compose.stand.yml`. **If the answer is "no mirror exists,"**
-   this can be collapsed back to an in-place edit at any time — the cost is one file and a rename in
-   Story 4.9. **If the answer is "yes,"** the decision was correct and the legacy stand was never at
-   risk. Either way the story is not blocked; only Story 4.9's cutover shape depends on it.
+   parameterization landed as `docker-compose.stand.yml`. Oleg's answer above makes that permanent —
+   the "collapse it back to an in-place edit" path is closed, because closing it would require
+   knowing the mirror does not exist, and the directive removes the means of finding out.
 
 ### Non-blocking
 
