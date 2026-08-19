@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { IncomingCallWindowContainer } from '../IncomingCallWindowContainer'
 import type { IncomingCallData } from '../../types'
@@ -20,16 +20,21 @@ const mutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: fals
 // Shared instances so a test can see which endpoint the window used.
 const rejectCall = mutation()
 const hangupCall = mutation()
+const holdCall = mutation()
+
+const saveInteraction = mutation()
 
 vi.mock('@/features/clients/hooks/useNoteInteraction', () => ({
   useInteractionTypes: () => ({ data: [{ id: 1, code: 'incoming', name: 'Incoming' }] }),
   useInteractionContactTypes: () => ({ data: [] }),
+  // Channels are subtypes, not types: Call / Messenger, never Incoming.
+  useInteractionSubtypes: () => ({ data: [{ id: 9, name: 'Call' }] }),
   useInteractionResults: () => ({ data: [{ id: 4, name: 'Refusal' }] }),
-  useCreateBulkInteraction: () => mutation(),
+  useCreateBulkInteraction: () => saveInteraction,
 }))
 vi.mock('../../hooks/useCall', () => ({
   useAnswerCall: () => mutation(),
-  useHoldCall: () => mutation(),
+  useHoldCall: () => holdCall,
   useRejectCall: () => rejectCall,
   useHangupCall: () => hangupCall,
 }))
@@ -105,6 +110,65 @@ describe('IncomingCallWindowContainer', () => {
     // The form unmounts while minimised, so the draft has to live above it —
     // a comment written with the caller on the line cannot be recovered.
     expect(screen.getByRole('textbox')).toHaveValue('Promised to pay Friday')
+  })
+
+  it('offers communication channels, not call directions', () => {
+    renderContainer({ answeredAt: Date.now() })
+
+    // The channel select used to be fed from interaction types, so the
+    // operator picked "Incoming" as a communication channel.
+    expect(screen.queryByText('Incoming')).toBeNull()
+  })
+
+  it('files the channel the operator chose', async () => {
+    renderContainer({ answeredAt: Date.now() })
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'noted' } })
+    // Result is the one field that gates saving.
+    const [resultTrigger] = screen.getAllByRole('combobox')
+    fireEvent.click(resultTrigger)
+    fireEvent.click(await screen.findByText('Refusal'))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(saveInteraction.mutateAsync).toHaveBeenCalled())
+    // subtype_id is what the backend derives the channel from. Omitted, every
+    // interaction filed from this window landed with no channel at all.
+    expect(saveInteraction.mutateAsync.mock.calls[0][0].subtypeId).toBe(9)
+  })
+
+  it('will not file an interaction against nobody when clients matched', async () => {
+    renderContainer({ answeredAt: Date.now() })
+
+    // Result first: it is the field that gates saving, so without choosing one
+    // this asserts nothing about the client selection at all.
+    const [resultTrigger] = screen.getAllByRole('combobox')
+    fireEvent.click(resultTrigger)
+    fireEvent.click(await screen.findByText('Refusal'))
+    expect(screen.getByRole('button', { name: /save/i })).toBeEnabled()
+
+    // Every matched client toggled off is not the unknown-caller case. Filing
+    // it would write the interaction to no card at all, and the operator would
+    // still be told it was saved.
+    screen.getAllByRole('switch').forEach((toggle) => fireEvent.click(toggle))
+
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
+  })
+
+  it('brings a parked caller back rather than parking them twice', () => {
+    vi.stubEnv('VITE_CALL_ANSWER_ENABLED', 'true')
+    renderContainer({ answeredAt: Date.now() })
+    const holdButton = () => screen.getByRole('button', { name: /hold|resume/i })
+
+    fireEvent.click(holdButton())
+    expect(holdCall.mutate.mock.calls[0][0].hold).toBe(true)
+
+    // The mutation only reports success back; the button flips on that.
+    const [, options] = holdCall.mutate.mock.calls[0]
+    act(() => options.onSuccess())
+
+    fireEvent.click(holdButton())
+    expect(holdCall.mutate.mock.calls[1][0].hold).toBe(false)
+    vi.unstubAllEnvs()
   })
 
   it('counts as a call in progress while it is on screen', () => {

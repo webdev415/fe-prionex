@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import {
   useInteractionContactTypes,
   useInteractionResults,
+  useInteractionSubtypes,
   useInteractionTypes,
   useCreateBulkInteraction,
 } from '@/features/clients/hooks/useNoteInteraction'
@@ -26,7 +27,9 @@ import type { CallPhase } from './CallActions'
  * failing — an operator shown a control that errors reports a broken feature,
  * and meanwhile does not pick up the handset.
  */
-const ANSWER_FROM_CRM_ENABLED = import.meta.env.VITE_CALL_ANSWER_ENABLED === 'true'
+function answerFromCrmEnabled(): boolean {
+  return import.meta.env.VITE_CALL_ANSWER_ENABLED === 'true'
+}
 
 interface IncomingCallWindowContainerProps {
   incomingCall: IncomingCallData
@@ -71,6 +74,14 @@ export function IncomingCallWindowContainer({
   const clients = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
   const { isIncluded, setIncluded, includedClientIds } = useIncludedClients(clients)
   const [interactionSaved, setInteractionSaved] = useState(false)
+  // The caller is parked. Tracked here because nothing on the wire reports it
+  // back: without it Hold could only ever be pressed again, re-parking a caller
+  // the operator was trying to retrieve.
+  const [held, setHeld] = useState(false)
+  // Read per render rather than once at module load: the value is still
+  // substituted at build time, but a constant frozen on import cannot be
+  // exercised by a test.
+  const answerEnabled = answerFromCrmEnabled()
   // Held here rather than inside the form: minimising unmounts the window, and
   // a comment written while the caller is on the line cannot be recovered.
   const [draft, setDraft] = useState<Partial<CallInteractionDraftState>>({})
@@ -102,14 +113,30 @@ export function IncomingCallWindowContainer({
 
   const { data: types } = useInteractionTypes()
   const { data: contactTypes } = useInteractionContactTypes()
+  // Communication channel: Call / Messenger / Mail / Chat. These are subtypes,
+  // not interaction types — the types list is Incoming / Outgoing / Searching,
+  // which is the call's direction and not a channel at all.
+  const { data: channels } = useInteractionSubtypes()
   const inboundType = types?.find((type) => type.code?.toLowerCase() === 'incoming') ?? types?.[0]
-  const { data: results } = useInteractionResults({ typeId: inboundType?.id })
+  // Filtered the same way AddNoteModal filters them, so the operator is not
+  // offered results that do not apply to the channel and reason they picked.
+  const { data: results } = useInteractionResults({
+    typeId: inboundType?.id,
+    channelId: draft.channelId ?? undefined,
+    contactTypeId: draft.reasonId ?? undefined,
+  })
 
   const answer = useAnswerCall(clients[0]?.clientId, agentExtension)
   const hold = useHoldCall(clients[0]?.clientId, agentExtension)
   const reject = useRejectCall(clients[0]?.clientId, agentExtension)
   const hangup = useHangupCall(clients[0]?.clientId)
   const saveInteraction = useCreateBulkInteraction()
+
+  // Nothing can be filed without the interaction type, and an operator who
+  // presses Save while the lookups are unavailable used to get silence — no
+  // toast, no error, no saved state. Disabling says so instead.
+  const canSaveInteraction =
+    Boolean(inboundType) && (clients.length === 0 || includedClientIds.length > 0)
 
   const handleSave = async (draft: CallInteractionDraft) => {
     if (!inboundType) return
@@ -118,6 +145,7 @@ export function IncomingCallWindowContainer({
       // nobody's card, so the request carries no clients.
       clientIds: includedClientIds,
       typeId: inboundType.id,
+      subtypeId: draft.channelId ?? undefined,
       resultId: draft.resultId,
       contactTypeId: draft.reasonId ?? undefined,
       phoneUsed: incomingCall.customer_phone,
@@ -145,14 +173,15 @@ export function IncomingCallWindowContainer({
       onIncludedChange={setIncluded}
       results={asOptions(results)}
       reasons={asOptions(contactTypes)}
-      channels={asOptions(types)}
+      channels={asOptions(channels)}
       onSaveInteraction={handleSave}
+      saveDisabled={!canSaveInteraction}
       interactionSaved={interactionSaved}
       interactionDraft={draft}
       onInteractionDraftChange={setDraft}
       onMinimize={onMinimize}
       onAccept={
-        ANSWER_FROM_CRM_ENABLED
+        answerEnabled
           ? () =>
               answer.mutate(incomingCall.call_id, {
                 // Local knowledge is the earliest and most reliable signal that
@@ -162,9 +191,17 @@ export function IncomingCallWindowContainer({
               })
           : undefined
       }
+      held={held}
       onHold={
-        ANSWER_FROM_CRM_ENABLED
-          ? () => hold.mutate({ callId: incomingCall.call_id, hold: true })
+        answerEnabled
+          ? () =>
+              hold.mutate(
+                { callId: incomingCall.call_id, hold: !held },
+                // Flipped only once Asterisk agrees, or a failed retrieve
+                // leaves the button saying the caller is back when they are
+                // still listening to music.
+                { onSuccess: () => setHeld((current) => !current) }
+              )
           : undefined
       }
       ended={ended}

@@ -21,7 +21,12 @@ export interface InteractionOption {
 export interface CallInteractionDraft {
   resultId: number
   reasonId: number | null
-  channel: string
+  /**
+   * The interaction subtype — Call, Messenger, Mail — by id rather than by
+   * name. The name is a label; only the id can be filed, and carrying the
+   * label is how this field came to be collected and then dropped.
+   */
+  channelId: number | null
   comment: string
 }
 
@@ -49,6 +54,12 @@ interface CallInteractionFormProps {
    */
   initialDraft?: Partial<CallInteractionDraftState>
   onDraftChange?: (draft: CallInteractionDraftState) => void
+  /**
+   * Filing is not possible yet — no client is selected, or the lookups the
+   * interaction needs have not loaded. Distinct from `disabled`: the operator
+   * can still type while the caller talks, they just cannot save it.
+   */
+  saveDisabled?: boolean
   disabled?: boolean
 }
 
@@ -66,18 +77,21 @@ export function CallInteractionForm({
   onSave,
   saved = false,
   disabled = false,
+  saveDisabled = false,
   initialDraft,
   onDraftChange,
 }: CallInteractionFormProps) {
   const { t } = useTranslation('common')
   const [resultId, setResultId] = useState<number | null>(initialDraft?.resultId ?? null)
   const [reasonId, setReasonId] = useState<number | null>(initialDraft?.reasonId ?? null)
-  const [channel, setChannel] = useState<string>(initialDraft?.channel ?? channels[0]?.name ?? '')
+  const [channelId, setChannelId] = useState<number | null>(
+    initialDraft?.channelId ?? channels[0]?.id ?? null
+  )
   const [comment, setComment] = useState(initialDraft?.comment ?? '')
   const [saving, setSaving] = useState(false)
 
   const report = (change: Partial<CallInteractionDraftState>) =>
-    onDraftChange?.({ resultId, reasonId, channel, comment, ...change })
+    onDraftChange?.({ resultId, reasonId, channelId, comment, ...change })
 
   if (saved) {
     return (
@@ -94,13 +108,13 @@ export function CallInteractionForm({
   }
 
   // The one field that gates saving; everything else is optional by design.
-  const canSave = resultId !== null && !saving && !disabled
+  const canSave = resultId !== null && !saving && !disabled && !saveDisabled
 
   const handleSave = async () => {
     if (resultId === null) return
     setSaving(true)
     try {
-      await onSave({ resultId, reasonId, channel, comment: comment.trim() })
+      await onSave({ resultId, reasonId, channelId, comment: comment.trim() })
     } catch {
       // Swallowed on purpose: the caller owns the failure message, and the form
       // stays up with what the operator typed. Rethrowing here would surface as
@@ -190,10 +204,10 @@ export function CallInteractionForm({
           htmlFor="call-interaction-channel"
         >
           <Select
-            value={channel}
+            value={channelId === null ? undefined : String(channelId)}
             onValueChange={(value) => {
-              setChannel(value)
-              report({ channel: value })
+              setChannelId(Number(value))
+              report({ channelId: Number(value) })
             }}
             disabled={disabled}
           >
@@ -202,7 +216,7 @@ export function CallInteractionForm({
             </SelectTrigger>
             <SelectContent>
               {channels.map((option) => (
-                <SelectItem key={option.id} value={option.name}>
+                <SelectItem key={option.id} value={String(option.id)}>
                   {option.name}
                 </SelectItem>
               ))}

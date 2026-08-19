@@ -77,7 +77,7 @@ describe('CallInteractionForm', () => {
       expect(onSave).toHaveBeenCalledWith({
         resultId: 2,
         reasonId: null,
-        channel: 'Phone',
+        channelId: 100,
         comment: 'Promised to pay Friday',
       })
     )
@@ -89,8 +89,10 @@ describe('CallInteractionForm', () => {
     await chooseResult('Refusal')
     fireEvent.click(saveButton())
 
+    // The id, not the label: only the id can be filed, and reporting the name
+    // is how this field came to be collected and then silently dropped.
     await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ channel: 'Phone' }))
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ channelId: 100 }))
     )
   })
 

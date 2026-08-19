@@ -23,6 +23,8 @@ interface IncomingCallWindowProps {
   reasons: InteractionOption[]
   channels: InteractionOption[]
   onSaveInteraction: (draft: CallInteractionDraft) => Promise<void> | void
+  /** Nothing can be filed yet — the lookups are missing, or no client is selected. */
+  saveDisabled?: boolean
   interactionSaved: boolean
   interactionDraft?: Partial<CallInteractionDraftState>
   onInteractionDraftChange?: (draft: CallInteractionDraftState) => void
@@ -34,6 +36,8 @@ interface IncomingCallWindowProps {
   onCancel: () => void
   /** Absent for the same reason as `onAccept`. */
   onHold?: () => void
+  /** The caller is parked; Hold becomes the control that brings them back. */
+  held?: boolean
   acceptPending?: boolean
   holdPending?: boolean
   cancelPending?: boolean
@@ -58,6 +62,7 @@ export function IncomingCallWindow({
   reasons,
   channels,
   onSaveInteraction,
+  saveDisabled = false,
   interactionSaved,
   interactionDraft,
   onInteractionDraftChange,
@@ -66,6 +71,7 @@ export function IncomingCallWindow({
   onAccept,
   onCancel,
   onHold,
+  held = false,
   acceptPending,
   holdPending,
   cancelPending,
@@ -123,6 +129,7 @@ export function IncomingCallWindow({
               channels={channels}
               onSave={onSaveInteraction}
               saved={interactionSaved}
+              saveDisabled={saveDisabled}
               initialDraft={interactionDraft}
               onDraftChange={onInteractionDraftChange}
             />
@@ -135,6 +142,7 @@ export function IncomingCallWindow({
           onAccept={onAccept}
           onCancel={onCancel}
           onHold={onHold}
+          held={held}
           acceptPending={acceptPending}
           holdPending={holdPending}
           cancelPending={cancelPending}

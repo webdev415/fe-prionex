@@ -13,8 +13,9 @@ interface CallActionsProps {
   onAccept?: () => void
   /** Hang up, from either phase. */
   onCancel: () => void
-  /** Park the caller. Connected only. */
+  /** Park the caller, or bring them back. Connected only. */
   onHold?: () => void
+  held?: boolean
   acceptPending?: boolean
   holdPending?: boolean
   cancelPending?: boolean
@@ -32,6 +33,7 @@ export function CallActions({
   onAccept,
   onCancel,
   onHold,
+  held = false,
   acceptPending = false,
   holdPending = false,
   cancelPending = false,
@@ -85,7 +87,9 @@ export function CallActions({
             className="bg-foreground text-background hover:bg-foreground/90 w-full rounded-md"
           >
             <Icons.Pause size={18} className="mr-2 sm:size-5" aria-hidden />
-            {t('pages.clients.modals.callDialog.hold', 'Hold')}
+            {held
+              ? t('pages.clients.modals.callDialog.resume', 'Resume')
+              : t('pages.clients.modals.callDialog.hold', 'Hold')}
           </Button>
         )}
       </div>

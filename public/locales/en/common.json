@@ -5139,6 +5139,7 @@
           "seconds": "seconds",
           "mute": "Mute",
           "hold": "Hold",
+          "resume": "Resume",
           "hangUp": "Hang Up",
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
