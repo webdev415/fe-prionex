@@ -56,6 +56,14 @@ export type CallContactCategory = 'client' | 'guarantor' | 'third_party' | 'othe
  */
 function labelFor(client: CallMatchedClient, t: (key: string, fallback: string) => string): string {
   const category = client.contactCategory
+  if (category === null || category === undefined) {
+    // Not "Client": the category is absent for a contact type nobody has
+    // classified, and claiming the caller is the debtor on that basis is the
+    // same mistake as mislabelling a third party. Neutral rather than named,
+    // because naming here would also assert which client the caller is when
+    // several matched the number.
+    return t('pages.clients.modals.callDialog.contracts.unknown', 'Contracts')
+  }
   if (category !== 'third_party' && category !== 'guarantor') {
     return t('pages.clients.modals.callDialog.contracts.client', 'Client by contracts')
   }

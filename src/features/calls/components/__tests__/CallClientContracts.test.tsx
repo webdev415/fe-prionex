@@ -68,6 +68,16 @@ describe('CallClientContracts', () => {
       expect(screen.getByText(/pages.clients.modals.callDialog.contracts.guarantor/)).toBeVisible()
     })
 
+    it('claims no relationship when the category is unknown', () => {
+      renderClient({ client: client({ contactCategory: null }) })
+
+      // A contact type nobody has classified is not evidence that the caller
+      // is the debtor. Saying "Client by contracts" here is the same
+      // compliance mistake as mislabelling a third party.
+      expect(screen.queryByText(/contracts\.client/)).toBeNull()
+      expect(screen.getByText(/contracts\.unknown/)).toBeVisible()
+    })
+
     it('calls the client the client', () => {
       renderClient({ client: client({ contactCategory: 'client' }) })
 

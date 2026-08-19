@@ -5174,6 +5174,7 @@
             "client": "Client by contracts",
             "thirdParty": "Third party by contracts",
             "guarantor": "Guarantor by contracts",
+            "unknown": "Contracts",
             "view": "View",
             "open": "Open",
             "closed": "Closed"
