@@ -826,20 +826,52 @@ substitute a self-reported number — D4 admits no third option.
 
 *Closed (Task 9.1) — by query, or explicitly OPEN:*
 
-🔴 **THE LEDGER IS OPEN.**
+✅ **CLOSED BY QUERY, 2026-08-19.** Oleg granted s1 access after the story was otherwise complete;
+the credential wall that had forced this ledger OPEN is gone. **This section previously read "THE
+LEDGER IS OPEN"** — that is kept in the record below, because the sequence matters to D4: the story
+declared in advance, closed OPEN rather than guessing, and closed by query only once a query existed.
 
-Written in those words, as D4 requires. It is not closed by a query because no query could be run:
-no Forgejo API credential is reachable from this session (evidence above, gathered in Task 1.3 and
-declared in advance in Task 2.4, not discovered at close).
+**The query** (run on s1, token `/root/.fj_token`, never printed):
 
-**Who can close it:** Oleg, or any session with s1 access — the tokens are at `/root/.fj_token` on
-s1 (`fe_tmp_1_7` for the repo). The query to run is a count of `action_run` rows for branch
-`story-4-1/pr-1-context`, compared against the 5 pushes declared above.
+```
+GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=100
+```
 
-**A self-reported number is deliberately not offered here.** The recorded lesson from Epic 3 is that
-every story that kept a ledger under-reported — 3.1 said 0, actual 4; 3.4 declared 20 → audited 36 →
-said 43 → query-closed at **47**; 3.6 declared 2, spent 6+ — and the defect was never carelessness,
-it was that a self-reported number was the only number without an external check. Supplying one here
+**Result — 4 runs, all `ci.yml`, all `push`:**
+
+| run id | `index_in_repo` | commit | outcome | duration |
+|---|---|---|---|---|
+| 776 | 263 | `cf0d0c71` (context) | success | 651 s |
+| 780 | 264 | `e0395fda` (implementation + review round 1) | **cancelled** — superseded by the next push under concurrency | 308 s |
+| 781 | 265 | `de303a96` (PR description) | success | 678 s |
+| 783 | 266 | `c4afcc07` (GitHub directive) | success | 687 s |
+
+**Baseline (Task 2.1, which could not be read at declaration time):** highest run id before this
+story's first push = **775** (`index_in_repo` 262). Repo total is now 266.
+
+**Declared 5 pushes, spent 4 — under budget by one.** Not by luck: the review round was run
+**before** the first implementation push, so its ten fixes landed in the same push as the
+implementation and cost **zero** extra runs. The declaration budgeted 2 pushes for review precisely
+because "a review round is a phase, not a contingency"; treating it as a phase is also what made it
+free.
+
+🔴 **And it answers, by counting, the question §7 said must not be reasoned about.** *"Do not assume
+the `image` job's `uses:` expansion contributes exactly one `action_run` row; count it."* **Counted:
+it contributes zero.** Four pushes produced exactly four rows, every one of them `ci.yml`; the
+reusable `build.yml` invoked via `uses:` creates no row of its own. Per-push cost in this repository
+is therefore **1 `action_run`**, not 2 — which makes every prior story's ledger arithmetic in this
+project one-per-push as well.
+
+> **Kept verbatim — what this section said before the credential existed:**
+>
+> *🔴 THE LEDGER IS OPEN. Written in those words, as D4 requires. It is not closed by a query because
+> no query could be run: no Forgejo API credential is reachable from this session (declared in advance
+> in Task 2.4, not discovered at close). A self-reported number is deliberately not offered here.* The
+> recorded lesson from Epic 3 is that every story that kept a ledger under-reported — 3.1 said 0,
+> actual 4; 3.4 declared 20 → audited 36 → said 43 → query-closed at **47**; 3.6 declared 2, spent
+> 6+ — and the defect was never carelessness, it was that a self-reported number was the only number
+> without an external check. **Had a number been guessed here, it would have been wrong: the obvious
+> guess was 5, and the cancelled run 780 is not something a self-report would have caught.** Supplying one here
 would repeat exactly that defect.
 
 ### Probes (Tasks 4.1, 4.2) — commands and outputs, not conclusions
@@ -943,10 +975,41 @@ right: **`docker compose config` is blind to network existence.** It validates i
 syntax, not runtime state. A CI gate built on `config` alone would pass a stand that cannot start —
 worth knowing for Stories 4.3 and 4.8, and the reason 7b had to be a real `up`.
 
+### ✅ The matrix re-run on s1 — the limit below is now closed
+
+**Added 2026-08-19 after Oleg granted s1 access.** The section below was written when s1 was
+unreachable and handed the version question to Story 4.2. It has now been answered directly, and the
+answer was **not** the assumed one:
+
+🔴 **s1 runs Docker Compose v5.1.3, not v5.3.0** (Docker 29.4.0, vs 29.6.1 locally). The local
+result was therefore genuinely not proof for s1 — flagging it as a limit was correct, not pedantry.
+
+**All seven rows re-executed against `docker-compose.stand.yml` on s1 itself.** Result: **identical
+behaviour, byte-identical messages**, on every row.
+
+| Row | s1 v5.1.3 outcome |
+|---|---|
+| 1 — all set | renders; `name: s1chk-proj`, `container_name: s1chk-cont`, `published: "19771"`, `image: nginx:alpine`, network `crm-dev-network` — each the supplied value |
+| 2 | exit 1 — `error while interpolating name: required variable COMPOSE_PROJECT_NAME is missing a value: …` |
+| 3 | exit 1 — `… services.frontend.container_name: required variable CONTAINER_NAME …` |
+| 4 | exit 1 — `… services.frontend.ports.[]: required variable FRONTEND_PORT …` |
+| 5 | exit 1 — `… services.frontend.image: required variable DOCKER_IMAGE …` |
+| 6 | exit 1 — `… networks.stand-network.name: required variable FRONTEND_NETWORK …` |
+| 7 — discriminating | `config` **exit 0** (blind, as locally); `up` **exit 1** — `network s1chk-absent-net declared as external, but could not be found` |
+
+The **shell-override bypass also reproduces on v5.1.3**: an exported `FRONTEND_PORT=8080` with the
+variable absent from `--env-file` renders `published: "8080"` with no guard firing. It is a compose
+property across both versions, which strengthens handoff item 5 rather than weakening it.
+
+Nothing was left behind on s1 — the check ran in a `mktemp -d` under `/tmp`, created no container and
+no network (row 7 fails before creating anything), and residue was verified zero.
+
+**Consequence: Story 4.2's handoff item 1 is closed before 4.2 starts**, and `docker-compose.stand.yml`
+is proven on the version that will actually run it.
+
 **Task 4.5 — what this matrix does NOT prove.**
 
-- **Not s1.** Every row ran against the **local** compose v5.3.0. s1's compose version was not read
-  this session. 🔴 **Story 4.2 confirms it on the host before this file is trusted there.**
+- ~~**Not s1.**~~ ✅ **Closed above** — re-run on s1's own v5.1.3, all seven rows identical.
 - Nothing about `docker-compose.server.yml`, which still carries the old hardcoded values and
   defaults untouched (verdict (b)).
 - Only **presence/absence** was exercised — that is the `:?` guard's actual mechanism. A
@@ -1282,6 +1345,51 @@ docker compose -f docker-compose.stand.yml --env-file .env down
 | AC5 — two stands coexist | ✅ | Task 5.3 — five axes observed distinct from `docker compose ls` / `docker ps` / `docker inspect`, not inferred from the `.env`. |
 
 Guard matrix: **all seven rows present, including the discriminating row 7.** Retro E5 satisfied.
+
+#### 🔴 Measured on s1 2026-08-19 — the legacy stand is not on s1, and three documents said it was
+
+**This is the only place this story amended `epics.md`, and Task 8.3's condition is met literally: a
+measurement contradicts the plan.**
+
+| Claim | Where | Measured |
+|---|---|---|
+| "DEV and PRE-PROD coexist on s1 **alongside the untouched legacy stand**" | `epics.md` FR25 `:228` | **False.** The legacy stand is not on s1. |
+| "**Given** s1 already hosts the legacy DEV stand" | `epics.md`, Story 4.2 AC1 `:1604` | **False.** Story 4.2's opening premise. |
+| "three fronтend stands on s1: legacy `8080`, DEV `8082`, PRE-PROD" | `preprod-infrastructure-requirement.md:120-121` | **False** — two, not three. |
+
+**The evidence:**
+
+- s1's addresses are `185.185.49.127` plus private ranges. **`72.62.17.132` is not among them** —
+  and `72.62.17.132` is the legacy DEV stand (`README.md:136`; `CD.yml:157` deploys to
+  `secrets.DEV_SSH_HOST`).
+- On s1: **no `fe-prionex` frontend container**, running or stopped — the only `fe-prionex`-named
+  containers are the four Forgejo runner/dind containers. **No `~/crm-prionex` directory.**
+- **Nothing listens on `8080`.** The single listener in `8080-8085` is `127.0.0.1:8081`, which is
+  `vm-cadvisor` publishing its own container port 8080 — the exact `docker-proxy` binding the
+  2026-08-15 amendment measured, now confirmed independently.
+- s1 carries 170 containers: the runners, the `crm-dev` and `crm-preprod` stacks, `techno-finance`,
+  and observability.
+
+**What this changes, and what it does not.**
+
+- ✅ **NFR5's exposure on s1 is zero.** Nothing Story 4.2 does on s1 can touch the legacy stand,
+  because it is on another machine. The "three stands coexist" risk framing was never real.
+- ✅ **Story 4.2's AC1 is trivially satisfied**, and its directory is **created**, not placed beside
+  an existing sibling.
+- 🔴 **Story 4.1's verdict (b) is unaffected and remains correct.** The blast radius was never about
+  host contention — it is `CD.yml` copying `docker-compose.server.yml` to `DEV_SSH_HOST` and
+  force-removing the container there. That host is `72.62.17.132`, it is still live, and it is still
+  unreachable from this plan. **If anything this sharpens the case for (b):** the endangered stand is
+  on a machine this project has no access to and cannot roll back.
+- 🔴 **Story 4.9's cutover is a cross-host traffic switch, not a file swap on one box.** "Cut DEV
+  over to the new stand" moves `dev.crm-prionex.online` from `72.62.17.132` to s1. That is DNS and
+  TLS work, and it is not what the story's current shape implies.
+
+**Why nobody caught it earlier is the recurring lesson, not a new one.** FR25 already carries a
+2026-08-15 amendment whose recorded conclusion is *"the instruction not to look is what produced the
+wrong number."* This is the same defect one layer up: the coexistence premise was inherited through
+four stories and never measured, because measuring it required the SSH access the plan had told
+itself not to use. It cost one command to check.
 
 #### Tasks 9.4 / 9.5 — the PR is NOT opened, and the reason is the same credential wall
 

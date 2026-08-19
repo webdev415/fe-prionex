@@ -2408,3 +2408,54 @@ as long as no session that does the work can also run the query, **every remaini
 will close its ledger OPEN by construction.** That is a process defect, not a per-story oversight,
 and it is worth deciding once: either a read-only `action_run` query path reachable from a dev
 machine, or an explicit acceptance that ledgers close asynchronously by whoever holds s1.
+
+## 🔴 Measured on s1 2026-08-19 (Story 4.1) — the legacy DEV stand is not on s1, and the plan assumed it was for four stories
+
+**Owner: Story 4.2 (premise), Story 4.9 (cutover shape).** Oleg granted SSH access to s1 after Story
+4.1 was otherwise complete. One command settled a premise four stories had inherited without
+measuring.
+
+**s1 is `185.185.49.127`. The legacy DEV stand is `72.62.17.132`** (`README.md:136`; `CD.yml:157`
+deploys to `secrets.DEV_SSH_HOST`). On s1 there is **no `fe-prionex` frontend container** running or
+stopped, **no `~/crm-prionex` directory**, and **nothing listening on `8080`** — the only listener in
+`8080-8085` is `127.0.0.1:8081`, `vm-cadvisor` publishing its own container port 8080. s1 runs 170
+containers: the Forgejo runners, the `crm-dev` and `crm-preprod` stacks, `techno-finance` and
+observability. No frontend stand among them.
+
+**Amended, with markers:** `epics.md` FR25 `:228` and Story 4.2's AC1 `:1604`. Both stated s1 hosts
+the legacy stand.
+
+**What it changes:**
+
+- **NFR5's exposure on s1 is zero.** Nothing Epic 4 does on s1 can reach the legacy stand. The
+  "three stands coexist on s1" risk framing was never real — there will be two.
+- **Story 4.1's verdict (b) is unaffected and arguably strengthened.** The blast radius was never
+  host contention; it is `CD.yml` copying `docker-compose.server.yml` to `DEV_SSH_HOST` and running
+  `docker rm -f fe-prionex` there. That host is live, and this plan has no access to it and no
+  rollback path on it.
+- 🔴 **Story 4.9's cutover is a cross-host traffic switch, not a file swap.** "Cut DEV over to the new
+  stand" means moving `dev.crm-prionex.online` from `72.62.17.132` to s1 — DNS and TLS work. The
+  story's current shape implies a same-host swap and needs re-scoping before it is written.
+
+**The lesson is not new, which is the point.** FR25 already carries a 2026-08-15 amendment whose
+recorded conclusion is *"the instruction not to look is what produced the wrong number."* This is the
+same defect one layer up: the premise survived four stories because checking it required exactly the
+SSH access the plan had told itself not to use.
+
+## Closed 2026-08-19 (Story 4.1) — the ledger credential gap, and what the count actually showed
+
+**The structural problem recorded above is resolved:** Oleg granted s1 access, so `action_run` can be
+queried from a session that also does the work. Story 4.1's ledger closed **by query**, not OPEN.
+
+**Declared 5 pushes, spent 4** — under budget because the review round ran *before* the first
+implementation push, so its ten fixes shipped in the same push and cost zero extra runs.
+
+🔴 **And it answers by counting the question every story so far had reasoned about:** *"do not assume
+the `image` job's `uses:` expansion contributes exactly one `action_run` row."* **It contributes
+zero.** Four pushes produced exactly four rows, all `ci.yml`; the reusable `build.yml` invoked via
+`uses:` creates no row of its own. **Per-push cost in this repository is 1 `action_run`, not 2** —
+which retroactively makes every earlier story's per-push arithmetic one-per-push too.
+
+**Also worth keeping:** run 780 (`e0395fda`) was **cancelled**, superseded by the next push under
+concurrency. A self-reported ledger would have counted it as a spend or missed it entirely — the
+obvious guess here was 5. This is the concrete case for why D4 requires a query.
