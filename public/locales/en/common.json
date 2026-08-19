@@ -5942,7 +5942,6 @@
         "openLoans": "Open loans",
         "includingPayments": "Including payments: {{amount}}",
         "remainingDebtTooltip": "Remaining debt including payments: {{total}} ({{remaining}} − {{payments}})",
-        "principalDebtTooltip": "Principal amount less principal repaid and principal written off. For loans carried over from the old CRM, the amount issued is shown instead.",
         "remainingDebtPlain": "Remaining debt: {{amount}}",
         "closedInline": "Closed: {{date}}",
         "primaryCreditor": "Primary creditor",
@@ -10323,7 +10322,8 @@
         "coefficientRange": "Coefficients must be 1.0–10.0",
         "coefficientOrder": "Min coefficient must not exceed max coefficient"
       },
-      "loadError": "Could not load the coefficient ranges."
+      "loadError": "Could not load the coefficient ranges.",
+      "refreshError": "Could not refresh — showing the last loaded ranges."
     }
   },
   "contactTypes": {

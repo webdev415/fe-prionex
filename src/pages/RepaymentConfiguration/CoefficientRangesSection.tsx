@@ -162,9 +162,22 @@ export function CoefficientRangesSection() {
         )}
       </div>
 
+      {/* A failed REFETCH must not blank rows already on screen — the admin is
+          mid-read, and the stale list is more useful than nothing. So the error
+          line only replaces the table when there is nothing to show; otherwise
+          it sits above the existing rows as a warning. */}
+      {isError && ranges.length > 0 && (
+        <p className="text-error-600 mb-3 text-sm">
+          {t(
+            'pages.coefficientRanges.refreshError',
+            'Could not refresh — showing the last loaded ranges.'
+          )}
+        </p>
+      )}
+
       {isLoading ? (
         <p className="text-muted-foreground text-sm">{t('common.loading', 'Loading...')}</p>
-      ) : isError ? (
+      ) : isError && ranges.length === 0 ? (
         // Distinct from the empty state: a failed load rendering "No ranges
         // configured" tells the admin something false, and they would go on to
         // add a range that may already exist.
