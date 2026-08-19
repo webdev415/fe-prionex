@@ -27,6 +27,18 @@ interface PromiseAssignDialogProps {
   tagId: number
   tagName: string
   onClose: () => void
+  /**
+   * Called once, after the tag is assigned, before the dialog closes.
+   *
+   * Payload tags never reach TagSelectorModal's handleSave -- selecting one
+   * routes here instead -- so without this the parent could not arm auto-open
+   * of the chain executor for them. promise_to_pay is a requires_payload tag
+   * and the one most likely to have a chain attached, so the feature was
+   * missing its most probable case.
+   *
+   * Not called when the assign fails.
+   */
+  onAssigned?: () => void
 }
 
 export function PromiseAssignDialog({
@@ -36,6 +48,7 @@ export function PromiseAssignDialog({
   tagId,
   tagName,
   onClose,
+  onAssigned,
 }: PromiseAssignDialogProps) {
   const queryClient = useQueryClient()
   const [promiseDate, setPromiseDate] = useState<Date | null>(() => {
@@ -68,6 +81,11 @@ export function PromiseAssignDialog({
       })
       toast.success(`${tagName} назначен клиенту ${clientName}`)
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
+      // Inside the try, so a failed assign never arms auto-open. Reached only
+      // after assignTagExtended resolved, and this dialog writes exactly one
+      // tag, so there is no "nothing changed" case to guard the way
+      // TagSelectorModal's multi-tag save needs.
+      onAssigned?.()
       onClose()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Не удалось назначить тег')

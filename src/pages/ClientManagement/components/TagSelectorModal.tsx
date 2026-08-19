@@ -178,7 +178,17 @@ export const TagSelectorModal = memo(function TagSelectorModal({
       ])
 
       toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
-      onTagsChanged?.()
+      // Only when something was actually written. Promise.all([]) resolves, so
+      // saving an unchanged selection reached here and armed 15s of 1.5s polling
+      // for nothing. The same applied when the only intended change was removing
+      // a protected tag the operator may not remove: allowedToRemove comes back
+      // empty, the error toast above fires, and this armed anyway. Beyond the
+      // wasted requests, every armed window is one in which a chain launched by
+      // someone else -- a colleague, a scheduled trigger -- is attributed to this
+      // operator and pops the executor modal over their work.
+      if (toAdd.length > 0 || allowedToRemove.length > 0) {
+        onTagsChanged?.()
+      }
       onClose()
     } catch {
       toast.error(t('pages.clients.modals.tagSelector.updateFailed'))
@@ -335,6 +345,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           clientName={clientName}
           tagId={pendingPayloadTag.id}
           tagName={pendingPayloadTag.name}
+          onAssigned={onTagsChanged}
           onClose={() => setPendingPayloadTag(null)}
         />
       )}
