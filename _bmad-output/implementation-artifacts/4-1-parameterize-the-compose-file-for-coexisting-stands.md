@@ -1265,6 +1265,24 @@ docker compose -f docker-compose.stand.yml --env-file .env down
 
 Guard matrix: **all seven rows present, including the discriminating row 7.** Retro E5 satisfied.
 
+#### Tasks 9.4 / 9.5 — the PR is NOT opened, and the reason is the same credential wall
+
+🔴 **Task 9.4 is not done, and is not claimed as done.** The branch is pushed
+(`story-4-1/pr-1-context` at `e0395fda`), but the PR could not be opened from this session:
+
+- The Forgejo API returns **HTTP 403** unauthenticated — the same wall Task 1.3 and Task 9.1 hit.
+- `gh` **is** authenticated on this machine, but **only to `github.com`**. Using it would perform an
+  action on GitHub, which [D7](../../docs/migration-decisions.md#d7) forbids outright. Not attempted.
+- No `tea` (Forgejo CLI) is installed and no Forgejo credential exists locally.
+
+**Ready for Oleg, nothing else needed:** the full PR description is written to
+`_bmad-output/implementation-artifacts/4-1-PR-description.md`, including the Task 9.5 statement that
+per retro action **E5** this story is code-reviewed before Story 4.2 is written. Open at
+`https://git.crm-prionex.com/CRM/fe-prionex/compare/main...story-4-1/pr-1-context` and paste.
+
+**Do not merge to `main` directly** — protected, eight required contexts,
+`apply_to_admins: true` ([D16](../../docs/migration-decisions.md#d16)).
+
 ## File List
 
 **Added**
