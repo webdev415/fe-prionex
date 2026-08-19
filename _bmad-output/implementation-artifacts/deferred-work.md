@@ -1369,17 +1369,18 @@ story built on shipped, and was reviewed three stories later than it should have
 findings were patched into the story file, `docs/migration-decisions.md` and the entries above.
 Six are deferred here.
 
-- 🔴 **`staging` and `development` have no CI gate at all, and after Story 2.6 that is a regression
-  against the thing being replaced. This needs a decision, not a patch.** State at HEAD: `ci.yml`
-  exists only on `main`; `ci.yml:42-46` puts all three long-lived branches in `branches-ignore`;
-  `ci.yml:54-56` scopes `pull_request` to base `main`. So a PR into `staging` or `development`
-  fires **no run** and is gated by **nothing** — and it fails silently, which is worse than failing
-  red. The legacy `.github/workflows/CI.yml:4-7` covered all three branches, so Epic 2 has narrowed
-  the gate while its own goal is "CI as the quality gate". Flagged by Story 2.1, RESTATED by Story
-  2.2 (which declined propagation deliberately and for good reasons — two more pushes to protected,
-  CD-triggering branches), and untouched since. **Epic 4 meets this first (story 4.2 deploys DEV),
-  and Epic 6 inherits it. Owner: Oleg — the call is whether the two branches get the gate, get
-  retired, or stay explicitly ungated on the record.**
+- ✅ **CLOSED twice over — first by D19 (2026-08-15, see the entry below this section), then
+  re-confirmed explicitly at the Epic 3 retrospective (2026-08-18, action item B2,
+  [D25](../../docs/migration-decisions.md#d25)).** This entry originally read: *"`staging` and
+  `development` have no CI gate at all, and after Story 2.6 that is a regression against the thing
+  being replaced. This needs a decision, not a patch... Owner: Oleg — the call is whether the two
+  branches get the gate, get retired, or stay explicitly ungated on the record."* That framing went
+  stale the same day: D19 already answered it (below), and this entry was never updated to say so —
+  the exact class of drift this project keeps finding in its own summary rows. Oleg's word at the
+  retro, verbatim: *"staging & development ветки не тригеримся, их просто не трогаем."* Verified
+  against `ci.yml` itself, not memory: both branches are excluded from `on.push.branches-ignore`
+  AND absent from `on.pull_request.branches` — ungated by both routes, deliberately, until whichever
+  epic actually migrates or retires them opens the question again.
 - ⚠️ **No `timeout-minutes` on any job, and no `concurrency` block covering `workflow_dispatch` or
   `pull_request`.** The only ceiling is the runner's own `timeout: 2h`. `Unit Tests` is ~99% of the
   critical path, and a hang there — the flaky-timer class of failure, now fixed, was exactly this
