@@ -849,18 +849,40 @@ GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=1
 **Baseline (Task 2.1, which could not be read at declaration time):** highest run id before this
 story's first push = **775** (`index_in_repo` 262). Repo total is now 266.
 
-**Declared 5 pushes, spent 4 — under budget by one.** Not by luck: the review round was run
-**before** the first implementation push, so its ten fixes landed in the same push as the
-implementation and cost **zero** extra runs. The declaration budgeted 2 pushes for review precisely
-because "a review round is a phase, not a contingency"; treating it as a phase is also what made it
-free.
+🔴 **CORRECTED AFTER MERGE — declared 5, spent 7. Over budget by two, not under by one.**
 
-🔴 **And it answers, by counting, the question §7 said must not be reasoned about.** *"Do not assume
+The table above was written while the PR was still unopened, and it was published claiming *"spent 4,
+under budget."* **That was wrong**, and it was wrong in the exact way D4 exists to prevent: the count
+was taken **before the story had finished spending**. Two more runs followed, and neither is an
+accident — both are structural:
+
+| run id | idx | workflow | commit / ref | event | why the declaration missed it |
+|---|---|---|---|---|---|
+| 789 | 267 | `ci.yml` | `82dada50` | push | the s1-findings push — a real push, correctly modelled, just later than the count |
+| 790 | 268 | `ci.yml` | PR **#55** | **pull_request** | **opening the PR fires `ci.yml` again.** D19 armed four `(pull_request)` contexts on the long-lived branches; a PR into `main` therefore costs a full second run on the *same* commit |
+| 792 | 269 | **`build-main.yml`** | `97fedda2` | push | **merging fires a different workflow entirely.** `ci.yml` ignores `main` (D25 holds — this is not it); `build-main.yml` builds the main-branch image |
+
+**Full ledger: 7 runs** — 776, 780 (cancelled), 781, 783, 789, 790, 792. Baseline 775.
+
+🔴 **The generalisable finding, and it is worth more than this story's number.** This project's cost
+model counts **pushes**. A story actually costs **pushes + 1 PR-open run + 1 merge run.** The
+declaration form in §7 has no line for either, so **every ledger in this project has been structurally
+capable of undercounting by two** regardless of how carefully pushes were counted — including the ones
+closed by query, if the query ran before the merge.
+
+**A ledger closed at PR-open is not closed.** It must be re-queried after the merge commit lands.
+Recorded in `deferred-work.md` as a change to the declaration format, not as this story's slip.
+
+**What was right:** the review round *was* free — it ran before the first implementation push, so its
+ten fixes shipped in the same push and cost zero extra runs. The overrun is entirely PR-open and
+merge, neither of which the declaration modelled.
+
+✅ **And it answers, by counting, the question §7 said must not be reasoned about.** *"Do not assume
 the `image` job's `uses:` expansion contributes exactly one `action_run` row; count it."* **Counted:
-it contributes zero.** Four pushes produced exactly four rows, every one of them `ci.yml`; the
-reusable `build.yml` invoked via `uses:` creates no row of its own. Per-push cost in this repository
-is therefore **1 `action_run`**, not 2 — which makes every prior story's ledger arithmetic in this
-project one-per-push as well.
+it contributes zero.** Five pushes produced exactly five `ci.yml` rows; the reusable `build.yml`
+invoked via `uses:` creates no row of its own. **Per-push cost is 1 `action_run`, not 2** — this part
+of the finding survived the correction above unchanged, because it is about pushes and was measured
+across all five of them.
 
 > **Kept verbatim — what this section said before the credential existed:**
 >
