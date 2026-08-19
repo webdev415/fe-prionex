@@ -144,7 +144,12 @@
   (not the API — `docker ps`/`docker inspect` on s1 itself) confirms all of `ci-hub`,
   `s1-build-crm`, `s1-deploy-dev-preprod` **and now `s1-fe-prionex-1`** run containers on the same
   box, alongside `techno-finance` and the observability stack. Story 4.2 still owns the formal
-  resource-budget confirmation before the DEV (`:8082`) and PRE-PROD (`:8081`) stands land there too.
+  resource-budget confirmation before the DEV (`:8082`) and PRE-PROD (`:8083`) stands land there too.
+  *(PRE-PROD corrected `8081` → `8083` by Story 4.1, Task 8.2. `8081` is taken on s1 — `docker-proxy`
+  binds `127.0.0.1:8081` for `vm-cadvisor` — and FR25 was amended 2026-08-15 by
+  `sprint-change-proposal-2026-08-15-preprod-reality.md`. This line was the last place in the
+  artifacts still carrying the pre-amendment number, and it contradicted `epics.md:225-226`, `:707`
+  and `:1979`.)*
 - **Resolved 2026-08-11, once `FJ_TOKEN` arrived:** `s1-deploy-dev-preprod`'s `GITEA_RUNNER_LABELS`
   env carries four values (`deploy-dev-preprod,dev,preprod,deploy`), but `GET
   /orgs/CRM/actions/runners` confirms only **one** is actually registered server-side —
@@ -2306,3 +2311,79 @@ required to produce its own live outcome matrix, D26) should also add `--prefer-
 promote step for consistency with the rest of the project's convention, and record the new manifest
 digest that results. This is a free byproduct of a bump that has to happen anyway, not a reason to force
 an extra dispatch now.
+
+## Opened by story 4.1 (2026-08-19) — two compose files now describe the same application, and the reason is unproven
+
+**Owner: Story 4.9 (the cutover), and Oleg for the question underneath it.** Story 4.1's Task 1.4
+returned verdict **(b)**: it could not be settled whether the GitHub copy of this repository still
+receives commits, so `.github/workflows/CD.yml`'s copy path to the legacy stand is treated as live.
+The parameterization therefore landed in a **new** `docker-compose.stand.yml`, and
+`docker-compose.server.yml` was left untouched. **This is a recorded deviation from FR25**, which
+says the existing file is parameterized in place.
+
+**What could not be checked, precisely** — because "we looked and found nothing" is not what
+happened: `/api/v1/repos/CRM/fe-prionex/push_mirrors` and the repo endpoint both return **HTTP 403**
+(`"Only signed in user is allowed to call APIs."`). No Forgejo token exists on the dev machine, and
+`~/.ssh/config` defines no alias for s1, where the tokens are host-local at `/root/.fj_token`. **The
+mirror configuration was never read as absent — the request failed on authentication.** Under this
+project's standing finding that an empty result is not evidence of safety, that resolves to "live."
+
+**Cost of carrying it:** two files describing one application until Story 4.9 converges them, and
+every story in between must know which one it is editing. **Cost of having got it wrong the other
+way:** `CD.yml:201` force-removes `fe-prionex` by literal name before `up`, and a fail-closed file
+landing there with an incomplete `.env` leaves the legacy stand down with no rollback path in this
+repository — an NFR5 violation. The asymmetry is why the default was taken rather than the risk
+reasoned away.
+
+**To close it:** Oleg answers whether a push mirror to GitHub exists. If it does not, this collapses
+back to an in-place edit at any time, and Story 4.9 gets cheaper.
+
+## Opened by story 4.1 (2026-08-19) — `docker compose config` is blind to network existence, and a gate built on it would pass a stand that cannot start
+
+**Owner: Stories 4.3 and 4.8.** Found by matrix row 7, the discriminating run required by retro
+action E5 — and it was not the thing row 7 was written to find. With all five variables set and
+valid but `FRONTEND_NETWORK` naming a network that does not exist:
+
+- `docker compose -f docker-compose.stand.yml --env-file … config` → **exit 0**, renders the whole
+  file, `external: true` and all;
+- `docker compose … up -d` → **exit 1**, `network <name> declared as external, but could not be found`.
+
+`config` validates interpolation and syntax, not runtime state. **Any CI or pre-deploy gate that
+proves a stand "valid" by running `config` alone will pass a stand that cannot start.** Only an
+actual `up` catches this class. Relevant to Story 4.3 (deploy) and Story 4.8 (shared mechanics)
+directly; noted here because the cheap-looking check is the one that will be reached for.
+
+## Opened by story 4.1 (2026-08-19) — the guards cannot catch a wrong-but-valid value, and on the network axis that failure is silent
+
+**Owner: nobody yet — this is a structural limit, recorded so it is not rediscovered.** The five
+`${VAR:?…}` guards in `docker-compose.stand.yml` test **presence**, which is their entire mechanism.
+A syntactically valid but *wrong* value — another stand's port, another backend's network — passes
+every guard.
+
+On the network axis that failure is **silent**, and Story 4.1 demonstrated it rather than asserting
+it: a stand attached to a network with no Kong was simultaneously `Up (healthy)`, serving `200` on
+its own port, and unable to resolve `crm-kong-gateway` at all (`getent hosts` → empty, exit 2). The
+cause is structural: `nginx.conf:38-39` and `:49-50` use a variable upstream with a resolver, so
+nginx serves static assets whether or not the gateway resolves, and the compose healthcheck probes
+`127.0.0.1:80` — itself. `nginx.conf` is baked in at `Dockerfile.prod:56` and the image is
+byte-identical across stands by design, so no compose-level change can fix it.
+
+**What actually catches it is the check AC4 demands:** resolve `crm-kong-gateway` from **inside** the
+running container and record what it resolves to. Story 4.2 owes this on s1 against the real
+`crm-dev-network`. 🔴 **Absence of the alias there is a STOP, not a fallback to `crm-network`** —
+falling back reproduces exactly the collision D4 and AC4's 2026-08-13 amendment exist to prevent.
+
+## Opened by story 4.1 (2026-08-19) — the run ledger is OPEN, and the credential gap is now the second story to hit it
+
+**Owner: Oleg, or any session with s1 access.** Story 4.1's ledger closed **OPEN**, in those words,
+per retro action D4's second branch. Declared in advance (Task 2.4), not discovered at close: no
+Forgejo API credential is reachable from a developer machine — the API returns 403 unauthenticated
+and the tokens (`fe_tmp_1_7`, `fe_pkg_3_6`) are host-local to s1 at `/root/.fj_token`. The baseline
+`action_run.id` could not be read for the same reason.
+
+**This is the second story to hit it** (3.6 minted `fe_pkg_3_6` and hit the same wall from the other
+side). D4 requires the ledger to close against a query and admits no self-reported substitute — so
+as long as no session that does the work can also run the query, **every remaining story in Epics 4-6
+will close its ledger OPEN by construction.** That is a process defect, not a per-story oversight,
+and it is worth deciding once: either a read-only `action_run` query path reachable from a dev
+machine, or an explicit acceptance that ledgers close asynchronously by whoever holds s1.

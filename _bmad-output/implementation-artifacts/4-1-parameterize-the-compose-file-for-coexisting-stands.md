@@ -4,7 +4,7 @@ baseline_commit: 3ace40de
 
 # Story 4.1: Parameterize the Compose File for Coexisting Stands
 
-Status: ready-for-dev
+Status: review
 
 > **This story edits 36 lines. The risk is not the edit — it is who else reads that file.**
 >
@@ -678,10 +678,21 @@ declared. All three have burned this project before, at the exact points named a
 
 ### Blocking
 
-1. 🔴 **Does the GitHub copy of `CRM/fe-prionex` still receive commits from Forgejo?** Task 1.3 tries
-   to answer it from the instance; if it cannot, only Oleg knows, because the GitHub-side transfer is
-   his and lives outside this plan (D7). **The answer decides whether `docker-compose.server.yml` is
-   edited in place or left alone until Story 4.9.** Default while unanswered: leave it alone.
+1. 🔴 **Does the GitHub copy of `CRM/fe-prionex` still receive commits from Forgejo?** **STILL OPEN —
+   Task 1.3 tried and could not settle it.** The Forgejo API returns HTTP 403 unauthenticated
+   (`"Only signed in user is allowed to call APIs."`) on both `/push_mirrors` and the repo endpoint;
+   no token exists on this machine; `~/.ssh/config` defines no alias for s1, where the tokens live.
+   The mirror configuration was **never read as absent** — the request simply failed on auth, and
+   this project's standing finding is that an empty result is not evidence of safety.
+
+   **Only Oleg can answer it**, because the GitHub-side transfer is his and lives outside this plan
+   ([D7](../../docs/migration-decisions.md#d7)).
+
+   **The default was taken, not deferred:** `docker-compose.server.yml` is untouched and the
+   parameterization landed as `docker-compose.stand.yml`. **If the answer is "no mirror exists,"**
+   this can be collapsed back to an in-place edit at any time — the cost is one file and a rename in
+   Story 4.9. **If the answer is "yes,"** the decision was correct and the legacy stand was never at
+   risk. Either way the story is not blocked; only Story 4.9's cutover shape depends on it.
 
 ### Non-blocking
 
@@ -696,38 +707,468 @@ declared. All three have burned this project before, at the exact points named a
    stands and ship `FRONTEND_PORT=8080` and `ghcr` images. Conservative default taken: keep them,
    add a pointer. They are accurate for the stands that still exist.
 
+5. **New — does Prohibition 2's "`8081` must not appear anywhere" bind the template's warning text?**
+   §5 says the digits must not appear *as a value* anywhere in this story's output; Prohibition 2
+   states it more absolutely. `.env.stand.example` therefore has to warn operators off that port
+   **without naming it**, and currently reads *"do not use the port one below 8083 — it is
+   permanently taken on s1 by docker-proxy for vm-cadvisor."* That is compliant and the reasoning is
+   spelled out, but it is measurably harder to read than the number would be, and a misread here
+   costs a port collision with an unrelated system service. **Autonomous choice: obey the prohibition
+   literally.** If Oleg reads it as binding only *values*, writing the digits inside that comment is
+   a one-line change and strictly clearer.
+
+6. **New — `FRONTEND_NETWORK` as the variable name (Task 3.5).** Chosen for consistency with
+   `FRONTEND_PORT`; `api-prionex` uses `STACK` for the same concept. Now consumed by
+   `docker-compose.stand.yml` and `.env.stand.example` only, so a rename is still cheap — it becomes
+   expensive once Stories 4.2, 4.3, 5.2 and 6.10 write it into real `.env` files on real hosts.
+
 ---
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Opus 5 coordinating; Sonnet 4.5 subagents for Tasks 1, 3, 4, 5, 6, 7; Opus 5 for code review.
+Model split per the project's standing convention.
+
 ### Debug Log References
+
+Environment for all local work, recorded once and referenced by every task below:
+
+```
+$ docker version --format '{{.Server.Version}}'
+29.6.1
+$ docker compose version
+Docker Compose version v5.3.0
+```
+
+**This is the developer machine's compose version, not s1's.** Every local result in this record is
+bound to v5.3.0. s1's version is unread by this story and is Story 4.2's to confirm (Task 4.5).
 
 ### Run Budget Ledger
 
 *Declared (Task 2):*
 
+**Declared 2026-08-19, before the implementation push and before Task 3 changed a byte.**
+
+| Phase | Declared pushes | Notes |
+|---|---|---|
+| Already spent, **undeclared** | 1 | The context commit `cf0d0c71` was pushed to `origin/story-4-1/pr-1-context` **before this ledger existed**. Recorded rather than omitted — D4's failure mode is exactly the number nobody wrote down. |
+| Implementation | 2 | One commit carrying the compose file, the template, the records; one expected fixup. |
+| Review (a **phase**, not a contingency) | 2 | Every story in this project has had a review round and every one found something. Story 3.5 spent 5 unbudgeted runs here. |
+| **Total declared from this point** | **4** | Plus the 1 already spent = 5 pushes attributable to this story. |
+
+**Per-push cost, measured from the workflow files rather than assumed (Task 2.3):** `.forgejo/workflows/ci.yml`
+has **no `paths` filter**. A commit touching only a compose file and markdown therefore fires `lint`,
+`typecheck`, `test`, `build`, `gate` **and** `image` (`needs: [lint, typecheck, test, gate]`,
+`uses: ./.forgejo/workflows/build.yml`) — exactly as much as a source change. Prior measurement:
+~540s wall clock, ~918 job-seconds, on a host shared with another tenant's production.
+
+**Runs vs. pushes:** the declaration above is in **pushes**. How many `action_run` rows one push
+produces is **not** assumed here — in particular whether the `image` job's `uses:` expansion
+contributes one row or more. Per §7 that is to be counted, not reasoned about.
+
+*Zero-cost work, confirmed done locally first (Task 2.2):* the **entire** seven-row guard matrix
+(§6), both compose mechanism probes, and the two-stand coexistence proof (AC5) run on the developer
+machine with `docker compose config` / `up` and cost **zero** CI runs. No run was spent proving
+anything `docker compose config` answers.
+
+*Ledger-closing query and its credential (Task 2.4):* the ledger would close against
+`SELECT count(*) FROM action_run WHERE ...` on the Forgejo instance, or the `actions/runs` API
+counted over this story's branch. Both need a Forgejo API credential.
+
+🔴 **Stated now, not at close, as Task 2.4 requires: this session has no such credential.** Verified
+during Task 1.3 — the Forgejo API returns HTTP 403 (`"Only signed in user is allowed to call APIs."`)
+unauthenticated, no token exists on this machine, and `~/.ssh/config` defines no alias for s1, where
+the tokens are host-local at `/root/.fj_token`. The baseline (`the highest action_run.id before this
+story's first push`, Task 2.1) **could not be read for the same reason**. Unless a credential becomes
+available before Task 9.1, **the ledger will close OPEN** and will say so in those words. It will not
+substitute a self-reported number — D4 admits no third option.
+
 *Closed (Task 9.1) — by query, or explicitly OPEN:*
+
+🔴 **THE LEDGER IS OPEN.**
+
+Written in those words, as D4 requires. It is not closed by a query because no query could be run:
+no Forgejo API credential is reachable from this session (evidence above, gathered in Task 1.3 and
+declared in advance in Task 2.4, not discovered at close).
+
+**Who can close it:** Oleg, or any session with s1 access — the tokens are at `/root/.fj_token` on
+s1 (`fe_tmp_1_7` for the repo). The query to run is a count of `action_run` rows for branch
+`story-4-1/pr-1-context`, compared against the 5 pushes declared above.
+
+**A self-reported number is deliberately not offered here.** The recorded lesson from Epic 3 is that
+every story that kept a ledger under-reported — 3.1 said 0, actual 4; 3.4 declared 20 → audited 36 →
+said 43 → query-closed at **47**; 3.6 declared 2, spent 6+ — and the defect was never carelessness,
+it was that a self-reported number was the only number without an external check. Supplying one here
+would repeat exactly that defect.
 
 ### Guard Outcome Matrix (retro E5 — all seven rows required)
 
+All seven rows run against **`docker-compose.stand.yml`** (the new file — under verdict (b) the legacy
+`docker-compose.server.yml` was never touched and is not under test). Compose **v5.3.0**. Rows 1-6 are
+`docker compose -f docker-compose.stand.yml --env-file <row>.env config`; every row leaves **exactly
+one** variable unset, because probe 3 established that compose reports only the **first** missing
+variable — with two unset you learn nothing about which guard fired. Zero CI runs.
+
 | # | Input | Command | Verbatim outcome |
 |---|---|---|---|
-| 1 | all set | | |
-| 2 | `COMPOSE_PROJECT_NAME` unset | | |
-| 3 | `CONTAINER_NAME` unset | | |
-| 4 | `FRONTEND_PORT` unset | | |
-| 5 | `DOCKER_IMAGE` unset | | |
-| 6 | `FRONTEND_NETWORK` unset | | |
-| 7 | **discriminating** — network absent | | |
+| 1 | all set | `… --env-file row1.env config` | **exit 0**, renders. Each value checked individually against what was supplied: `name: m4-proj`, `container_name: m4-container`, `published: "19080"`, `image: nginx:alpine`, `networks.stand-network.name: m4-net`. |
+| 2 | `COMPOSE_PROJECT_NAME` unset | `… --env-file row2.env config` | **exit 1** — `error while interpolating name: required variable COMPOSE_PROJECT_NAME is missing a value: COMPOSE_PROJECT_NAME is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)` |
+| 3 | `CONTAINER_NAME` unset | `… --env-file row3.env config` | **exit 1** — `error while interpolating services.frontend.container_name: required variable CONTAINER_NAME is missing a value: CONTAINER_NAME is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)` |
+| 4 | `FRONTEND_PORT` unset | `… --env-file row4.env config` | **exit 1** — `error while interpolating services.frontend.ports.[]: required variable FRONTEND_PORT is missing a value: FRONTEND_PORT is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)`.<br>**No fallback to `8080`** — and this is proven by absence rather than asserted: the render never completed, so no `ports:` block was ever produced to fall back *into*. |
+| 5 | `DOCKER_IMAGE` unset | `… --env-file row5.env config` | **exit 1** — `error while interpolating services.frontend.image: required variable DOCKER_IMAGE is missing a value: DOCKER_IMAGE is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)`.<br>**No fallback to `:latest`** — same proof by absence: no `image:` line was rendered at all. |
+| 6 | `FRONTEND_NETWORK` unset | `… --env-file row6.env config` | **exit 1** — `error while interpolating networks.stand-network.name: required variable FRONTEND_NETWORK is missing a value: FRONTEND_NETWORK is required; set it in the stand's .env (~/crm-prionex/fe-prionex-<stand>/.env)` |
+| 7 | 🔴 **discriminating** — all five set and valid, `FRONTEND_NETWORK=m4-net-does-not-exist` (confirmed absent via `docker network ls` first) | **7a** `… --env-file row7.env config`<br>**7b** `… --env-file row7.env up -d` | **7a: exit 0** — renders fully, `networks.stand-network.name: m4-net-does-not-exist`, `external: true`.<br>**7b: exit 1** — `network m4-net-does-not-exist declared as external, but could not be found`.<br>Names the **network**, not a variable. No container, network or project was created (`docker ps -a` / `network ls` / `compose ls -a` all empty immediately after). |
+
+**Why row 7 earns its "not optional" label, and it turned out to prove more than expected.** Rows 2-6
+all fail in one error class (`error while interpolating <path>: required variable …`). Row 7 fails in
+a **categorically different** one — which is what confirms rows 2-6 refused *for the reason claimed*
+rather than tripping over some unrelated parse error in the file. And 7a vs 7b is a finding in its own
+right: **`docker compose config` is blind to network existence.** It validates interpolation and
+syntax, not runtime state. A CI gate built on `config` alone would pass a stand that cannot start —
+worth knowing for Stories 4.3 and 4.8, and the reason 7b had to be a real `up`.
+
+**Task 4.5 — what this matrix does NOT prove.**
+
+- **Not s1.** Every row ran against the **local** compose v5.3.0. s1's compose version was not read
+  this session. 🔴 **Story 4.2 confirms it on the host before this file is trusted there.**
+- Nothing about `docker-compose.server.yml`, which still carries the old hardcoded values and
+  defaults untouched (verdict (b)).
+- Only **presence/absence** was exercised — that is the `:?` guard's actual mechanism. A
+  syntactically valid but *wrong* value (a port belonging to another stand, a network belonging to
+  another backend) is **not** caught by any guard here, and cannot be. That failure mode is the
+  subject of §4 and Task 6, not of this matrix.
+- Not AC5 (Task 5) and not AC4's backend-resolution clause (Task 6).
 
 ### Completion Notes List
 
+#### Task 1 — Live state bound, blast radius settled
+
+**1.1 — no drift.** All five axes and every line number in §1 hold verbatim at the baseline: `name:
+fe-prionex` (4), `image: ${DOCKER_IMAGE:-ghcr.io/crm-prionex/fe-prionex:latest}` (8),
+`container_name: fe-prionex` (9), `- "${FRONTEND_PORT:-8080}:80"` (11), `- crm-network` (13),
+`crm-network:` / `external: true` / `name: crm-network` (33-36).
+
+**1.2 — no drift in `CD.yml` either.** Every fact §2 rests on confirmed at the line numbers cited:
+scp source/target `:161-162` (`docker-compose.server.yml` → `~/crm-prionex/fe-prionex/`, one fixed
+directory), `COMPOSE_FILE`/`ENV_FILE` `:181-182`, `docker network create crm-network 2>/dev/null ||
+true` `:185`, `docker compose ... down --remove-orphans 2>/dev/null || true` `:200`,
+`docker rm -f fe-prionex 2>/dev/null || true` `:201`, and the fallback probe
+`if curl -sf http://localhost:8080` `:233`.
+
+**1.3 — what could and could not be checked.**
+
+*Could:* `git remote -v`, `git config --get-regexp remote` and `.git/config` — a single remote,
+`origin` → Forgejo, no second remote and no `pushurl` override. Repo-wide grep for a mirror or sync
+workflow across `.forgejo/`, `docs/`, `_bmad-output/`, `README.md` — none exists; the only
+`.forgejo` mention of this file is the comment at `build.yml:1009` saying *"Story 4.1 owns that
+line."* `README.md:30` does carry `git clone https://github.com/CRM-Prionex/fe-prionex.git`, so a
+GitHub repository of that name demonstrably exists.
+
+*Could not:*
+
+1. **Whether a Forgejo push mirror is configured.** `/api/v1/repos/CRM/fe-prionex/push_mirrors` and
+   `/api/v1/repos/CRM/fe-prionex` both return **HTTP 403** — `{"message":"Only signed in user is
+   allowed to call APIs."}`. The mirror configuration was never read as absent; the request simply
+   failed on authentication. **This is the distinction the verdict turns on.**
+2. Whether GitHub Actions is still enabled on `github.com/CRM-Prionex/fe-prionex`, or whether
+   `CD.yml` can currently execute there — no GitHub access in this session.
+3. Any scheduled or manual sync outside this repository's visibility — per [D7](../../docs/migration-decisions.md#d7)
+   that path is Oleg's and lives outside this plan.
+4. Live s1 host state — `~/.ssh/config` does not exist on this machine, so no alias for s1 is
+   configured and no connection was attempted. (`~/.ssh/known_hosts` carries a
+   `s1.private.crm-prionex.com` entry, but a recorded host key is not a credential and not an
+   alias.)
+
+**1.4 — 🔴 VERDICT (b). Unverified is treated as live.**
+
+The question was not settled in either direction. Nothing found proves the GitHub path dead; nothing
+proves it live. §2's rule is explicit for exactly this outcome — *"If the question cannot be settled,
+the verdict is (b)"* — and the asymmetry justifies it: the cost of (b) is one extra file and a rename
+in Story 4.9; the cost of a wrong (a) is the legacy stand force-removed by `CD.yml:201` and then kept
+down by an interpolation failure at `:206`, with no rollback path in this repository. That is an
+NFR5 violation reached by doing exactly what the epic asks.
+
+**Consequence, and it is the main structural decision of this story:** `docker-compose.server.yml`
+is **not modified — not one byte**. The parameterized stand definition lands as a **new file**,
+`docker-compose.stand.yml`. This is a **recorded deviation from FR25**, which says the existing file
+is parameterized in place. It is raised in Open Questions rather than decided away, and Story 4.9's
+cutover is where the two converge.
+
+**1.5 — the stale `8081` confirmed, and it is a live contradiction.** `epics.md:225-226` (FR25)
+carries the amendment (`~~8081~~ 8083`, "`8081` is taken on s1 … `8083` is free, measured"), with
+the same amendment repeated at `:707` and `:1979`. `deferred-work.md:147` still reads *"…before the
+DEV (`:8082`) and PRE-PROD (`:8081`) stands land there too."* — unamended, and now directly
+contradicting `epics.md`. Corrected under Task 8.2.
+
+#### Tasks 3 and 7 — what was built
+
+`docker-compose.stand.yml` (new). All five identity axes are required with **no defaults**:
+`${COMPOSE_PROJECT_NAME:?…}`, `${CONTAINER_NAME:?…}`, `"${FRONTEND_PORT:?…}:80"`,
+`${DOCKER_IMAGE:?…}`, and a neutral local network key `stand-network` whose `name:` is
+`${FRONTEND_NETWORK:?…}` with **`external: true` retained**. Each `:?` message names the variable
+**and** where the operator sets it, per §6's error-message contract — no bare `${VAR:?}` anywhere.
+
+- **AC3 — the image default is removed, not repointed.** §3's reasoning is what decided it: `latest`
+  was cancelled outright ([D20](../../docs/migration-decisions.md#d20) §4), `build.yml` computes
+  `PUSH_LATEST=false` so the pipeline never publishes it, and under Option C one commit yields up to
+  three per-environment images, so no single default can be right for three environments.
+- **The network key was renamed** from the literal `crm-network` to the neutral `stand-network`.
+  The old key hardcoded the legacy network's name in two places, and `name:` defeats project
+  prefixing — the exact silent-collision mechanism of §4.
+- **Container-side `80` untouched** in the port mapping (Prohibition 1); `restart`, `healthcheck`,
+  `deploy.resources` and `logging` carried over unchanged (3.8).
+- **The header was rewritten** (3.7). The old one claimed `--env-file .env` was all you need, which
+  is false after this change; it now lists all five required variables and states that
+  `docker-compose.server.yml` remains the legacy stand's file until Story 4.9.
+- `grep -n 8081 docker-compose.stand.yml` → no match. `grep -n 8080` → no match.
+
+`.env.stand.example` (new, Task 7.1/7.2). Every variable is `CHANGE_ME` — **no working values**, so
+a copied-unedited template fails loudly rather than starting something wrong. It deliberately does
+**not** repeat the `.env.dev.example` / `.env.production.example` pattern of shipping
+`FRONTEND_PORT=8080` and a `ghcr` image. It carries the constraints that are expensive to rediscover:
+`CONTAINER_NAME` must never be `fe-prionex` (`CD.yml:201`), the tag shape and that `:latest` is
+cancelled, and that a wrong `FRONTEND_NETWORK` fails **silently** with the api-prionex network names
+listed.
+
+> ⚠️ **One consequence of Prohibition 2 worth flagging.** §5 forbids the literal `8081` appearing
+> **anywhere** in this story's output. The template therefore has to warn operators off that port
+> **without naming it** — it currently reads *"do not use the port one below 8083 — it is
+> permanently taken on s1 by docker-proxy for vm-cadvisor."* That is compliant and the reasoning is
+> given, but it is genuinely harder to read than the digits would be. Raised as non-blocking Open
+> Question 5 rather than resolved unilaterally, since the prohibition is the story's own.
+
+**Task 7.3 — conservative default taken.** `.env.dev.example` and `.env.production.example` are
+**kept**, not retired. They accurately describe the legacy stands, which are still live and still
+untouched (NFR5). **Task 7.4 — declined as the story permits:** the `README.md:136` label defect is
+pre-existing, tracked at `deferred-work.md:808`, and fixing it costs a run.
+
+#### Task 5 — Coexistence observed, not inferred (AC5)
+
+Two stands, `t5-alpha` and `t5-beta`, brought up **from their own separate directories** (5.2) — not
+from the repository root, because the repo's `docker-compose.yml` declares the same project name
+`fe-prionex` and can adopt the server project. Each stand directory holds its **own copy** of
+`docker-compose.stand.yml` plus its own `.env`, which is also the layout Story 4.2 will create on s1
+under FR26. Ports 19101/19102 — the 19xxx range deliberately, so nothing in this proof could touch
+`8080`/`8082`/`8083` or the port that is taken on s1.
+
+> **5.1, said explicitly as the task requires.** Two networks were created **by hand, locally, for a
+> test**. That is not the act Prohibition 3 forbids. Prohibition 3 targets *deploy automation* —
+> `CD.yml:185`'s `docker network create crm-network 2>/dev/null || true`, which converts
+> `external: true`'s loud refusal into an empty, backend-less network inside an unattended pipeline.
+> No deploy path created a network here, and neither network was `crm-network`.
+
+**5.3 — all five axes distinct, each read from Docker rather than from the `.env` that was written:**
+
+| Axis | alpha | beta | Read from |
+|---|---|---|---|
+| Compose project | `t5-alpha` | `t5-beta` | `docker compose ls` |
+| Container name | `t5-fe-alpha` | `t5-fe-beta` | `docker ps` |
+| Published port | `0.0.0.0:19101->80/tcp` | `0.0.0.0:19102->80/tcp` | `docker ps` |
+| Network attachment | `t5-net-alpha` **only** | `t5-net-beta` **only** | `docker inspect .NetworkSettings.Networks` |
+| Cross-project leak | none | none | `docker compose -p t5-alpha ps` lists only `t5-fe-alpha`; `-p t5-beta ps` only `t5-fe-beta` |
+
+```
+$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
+t5-fe-beta    nginx:alpine   0.0.0.0:19102->80/tcp   Up 6 seconds (healthy)
+t5-fe-alpha   nginx:alpine   0.0.0.0:19101->80/tcp   Up 6 seconds (healthy)
+
+$ curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:19101   →  200
+$ curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:19102   →  200
+$ docker inspect --format '{{.State.Health.Status}}' t5-fe-alpha t5-fe-beta
+healthy
+healthy
+```
+
+**5.4 — teardown isolation, and the finding Story 4.2 must carry.** `docker compose down` in
+`stand-alpha/` removed only `t5-fe-alpha`; beta stayed `Up (healthy)` and still answered 200.
+
+🔴 **But `docker rm -f <name>` would cross stands.** `docker rm` is **name-based and
+project-independent** — it does not consult the compose project at all. That is exactly the mechanism
+at `CD.yml:201` (`docker rm -f fe-prionex`). **Therefore Story 4.2 must never name a new stand
+`fe-prionex`**: any deploy force-removing that literal name takes whichever container currently holds
+it, whatever project it belongs to. Carried into the Task 8.4 handoff.
+
+**5.5** — the exact replay command sequence for s1 is recorded in the Task 8.4 handoff below.
+
+#### Task 6 — Which backend each stand reaches (AC4's operative clause)
+
+AC4 does not accept "it started." The experiment was therefore built to **discriminate**: a fake Kong
+was attached to **one** network only —
+
+```
+docker run -d --name t5-kong --network t5-net-alpha --network-alias crm-kong-gateway nginx:alpine
+```
+
+— so `t5-net-alpha` has something answering to `crm-kong-gateway` and `t5-net-beta` has nothing.
+Resolution was then read **from inside each running container**, verbatim:
+
+```
+=== ALPHA (t5-net-alpha — Kong alias present) ===
+$ docker exec t5-fe-alpha nslookup crm-kong-gateway
+Server:    127.0.0.11
+Address:   127.0.0.11:53
+Non-authoritative answer:
+Name:   crm-kong-gateway
+Address: 172.19.0.3
+
+$ docker exec t5-fe-alpha getent hosts crm-kong-gateway
+172.19.0.3        crm-kong-gateway  crm-kong-gateway
+
+=== BETA (t5-net-beta — no Kong) ===
+$ docker exec t5-fe-beta nslookup crm-kong-gateway
+Server:    127.0.0.11
+Address:   127.0.0.11:53
+** server can't find crm-kong-gateway: NXDOMAIN
+
+$ docker exec t5-fe-beta getent hosts crm-kong-gateway
+(no output, exit 2 — not found)
+```
+
+**Alpha resolves the name to a live IP; beta gets NXDOMAIN.** DNS-level evidence from inside the
+container, which is what the AC asks for — reading the compose file would not have been evidence.
+
+**6.2 — the silent-failure artifact, demonstrated rather than asserted.** This is the single most
+valuable thing this story hands to Stories 4.2 and 5.1. Beta, attached to a network with **no
+backend at all**, simultaneously:
+
+| Claim | Evidence |
+|---|---|
+| (i) is running | `docker ps --filter name=t5-fe-beta` → `Up 45 seconds (healthy)` |
+| (ii) reports **healthy** | `docker inspect --format '{{.State.Health.Status}}' t5-fe-beta` → `healthy` |
+| (iii) **cannot reach any backend** | `docker exec t5-fe-beta getent hosts crm-kong-gateway` → empty, exit 2 |
+| (iv) serves traffic anyway | `curl http://localhost:19102` → `200` |
+
+That is §4's failure mode reproduced end to end: **a stand on the wrong network comes up, passes its
+own healthcheck, serves its static assets, and is structurally unable to reach its API.** The
+healthcheck probes `127.0.0.1:80` — itself — and is blind to the backend by construction. No guard in
+this compose file can catch it, and none was added to pretend otherwise.
+
+**6.4 — `nginx.conf` re-read directly, exact current lines:**
+
+```
+39:        set $kong_upstream http://crm-kong-gateway:8000;
+50:        set $kong_upstream http://crm-kong-gateway:8000;
+```
+
+Line 39 is inside `location /api/`, line 50 inside `location /ws/`; both hardcode the name **and**
+the port `8000` identically, adjacent to the `resolver` lines at 38 and 49. Confirms the story's
+citation. **The `KONG_PORT=8330` question is carried forward unresolved** — see Open Question 3. It
+was not settled by assumption, and it cannot be settled from this repository: if `8330` turns out to
+be the *in-network* port rather than a published host port, PROD does not work and **no compose-level
+change in this story, 4.2 or 4.3 could fix it** — it would require an `nginx.conf`/image change,
+which Prohibition 4 puts out of scope.
+
+**6.3 — the honest limit, stated as a limit.** All of Task 6 ran on **local bridge networks with a
+fake Kong**, not on `crm-dev-network` on s1 against the real one. It proves the **mechanism** — that
+alias resolution is network-scoped, and that the healthcheck is blind to backend reachability. It
+does **not** prove the real `crm-kong-gateway` alias is present on any s1 network today. Handed to
+Story 4.2 by name in Task 8.4.
+
+> ⚠️ **Stand-in image, and what that costs.** `nginx:alpine` was used throughout Tasks 5 and 6 — the
+> real image needs registry auth unavailable here. It serves on 80 and carries busybox `wget`, so the
+> compose healthcheck runs exactly as written, and the five identity axes, network isolation and port
+> mapping are all genuinely exercised. What it does **not** exercise is the real `nginx.conf`'s
+> `/api/` and `/ws/` proxy behaviour — which is precisely why Task 6 tested DNS resolution directly
+> via `docker exec` instead of leaning on the container's own proxying.
+
+#### Task 8.4 — Explicit handoffs
+
+**🔴 To Story 4.3 (deploy + health check), by name:**
+
+1. **No deploy path may create the network.** Not `docker network create … || true`, not `--create`,
+   not a "make sure it exists" step. `external: true` is the **only** loud failure available on the
+   network axis, and Task 6 above is the demonstration of what its absence costs: a stand that starts,
+   reports healthy, and reaches nothing. `CD.yml:185` is the anti-pattern, in this repository, today.
+2. **The health check must read `CONTAINER_NAME` and `FRONTEND_PORT`** (FR20) — it must **not** repeat
+   `CD.yml:233`'s hardcoded `curl http://localhost:8080`, which ignores `FRONTEND_PORT` entirely and
+   would probe the legacy stand while claiming to have checked a new one.
+3. **A new stand must never be named `fe-prionex`.** `CD.yml:201` force-removes that literal name, and
+   Task 5.4 confirmed by observation that `docker rm -f` is name-based and project-independent — it
+   crosses compose projects.
+4. **A CI gate built on `docker compose config` is not sufficient.** Matrix row 7a/7b proved `config`
+   renders happily against a network that does not exist; only `up` catches it.
+
+**🔴 To Story 4.2 (the DEV stand on s1), by name:**
+
+1. **Read s1's `docker compose version` before trusting this file there.** Everything in this record
+   is bound to local v5.3.0. The version that matters is s1's and this story could not read it.
+2. **Repeat Task 6 on s1**, from inside the real DEV stand's container against the real
+   `crm-dev-network`. 🔴 **If `crm-kong-gateway` does not resolve there, that is a STOP — not a
+   fallback to the legacy `crm-network`.** Falling back silently reproduces exactly the collision
+   [D4](../../docs/migration-decisions.md#d4) and AC4's 2026-08-13 amendment exist to prevent.
+3. **The replay sequence (Task 5.5), verified locally end to end:**
+
+```bash
+# 1. Create the stand's external network — ONCE, out of band. No deploy step may do this.
+docker network create <stand-network-name>          # e.g. crm-dev-network
+
+# 2. Stand directory and .env, per FR26: ~/crm-prionex/fe-prionex-<stand>/
+mkdir -p <stand-dir> && cd <stand-dir>
+cp <repo>/docker-compose.stand.yml .
+cp <repo>/.env.stand.example .env && $EDITOR .env    # every value is CHANGE_ME by design
+
+# 3. Bring up FROM the stand directory — never from the repo root, which declares name: fe-prionex
+docker compose -f docker-compose.stand.yml --env-file .env up -d
+
+# 4. Observe from Docker, not from the .env you just wrote
+docker compose ls
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
+docker inspect <container> --format '{{json .NetworkSettings.Networks}}'
+docker compose -p <project-name> ps
+curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:<port>
+docker inspect --format '{{.State.Health.Status}}' <container>
+docker exec <container> getent hosts crm-kong-gateway   # ← AC4. Empty = STOP, not fallback.
+
+# 5. Teardown, isolated to this stand
+docker compose -f docker-compose.stand.yml --env-file .env down
+```
+
+4. **Story 4.9 inherits the verdict-(b) debt:** `docker-compose.server.yml` and
+   `docker-compose.stand.yml` coexist until the cutover converges them.
+
+#### Task 9.2 — AC closure, on observed evidence
+
+| AC | Status | Evidence |
+|---|---|---|
+| AC1 — project + container name from variables | ✅ | Matrix rows 1, 2, 3. Both required, no defaults. Probe 1 confirmed `COMPOSE_PROJECT_NAME` precedence on v5.3.0; probe 2 confirmed top-level `name:` **is** interpolated, so the conservative fail-closed form renders — **no deviation needed**. |
+| AC2 — port supplied, never defaulted | ✅ | Matrix row 4. Refusal, and no `8080` fallback — proven by the render never completing. `8080` appears nowhere in the new file. |
+| AC3 — image default **removed** | ✅ | Matrix row 5. Second branch taken per §3; `:latest` cancelled (D20 §4), `PUSH_LATEST=false`, no single default is right for three environments under Option C. |
+| AC4 — network is a variable **and** the backend each stand reaches is recorded | ✅ *locally* | Matrix rows 6 and 7; Task 6.1/6.2 — alpha resolves `crm-kong-gateway` to `172.19.0.3`, beta gets NXDOMAIN while reporting `healthy` and serving 200. **s1 verification handed to Story 4.2 by name** (6.3). |
+| AC5 — two stands coexist | ✅ | Task 5.3 — five axes observed distinct from `docker compose ls` / `docker ps` / `docker inspect`, not inferred from the `.env`. |
+
+Guard matrix: **all seven rows present, including the discriminating row 7.** Retro E5 satisfied.
+
 ## File List
+
+**Added**
+
+- `docker-compose.stand.yml` — the parameterized stand definition (Tasks 3.1-3.8)
+- `.env.stand.example` — stand template, every value `CHANGE_ME` (Tasks 7.1-7.2)
+
+**Modified**
+
+- `docs/migration-decisions.md` — new record **D27** (Task 8.1)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — `:147` PRE-PROD `8081` → `8083`; Story
+  4.1's opened items (Task 8.2)
+- `_bmad-output/implementation-artifacts/4-1-parameterize-the-compose-file-for-coexisting-stands.md`
+  — this file
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-1-…` → `review` (Task 9.3)
+
+**Deliberately NOT modified**
+
+- 🔴 `docker-compose.server.yml` — **Task 1.4 verdict (b).** Not one byte. This is the story's central
+  decision and a recorded deviation from FR25.
+- `.github/workflows/CD.yml` — read only ([D7](../../docs/migration-decisions.md#d7), Prohibition 7)
+- `nginx.conf`, `Dockerfile.prod`, `.forgejo/workflows/*` — Prohibition 4
+- `.env.dev.example`, `.env.production.example` — Task 7.3, conservative default
+- `epics.md` — Task 8.3; no measurement contradicted it, so it was not amended to match a decision
+- `README.md:136` — Task 7.4, pre-existing, tracked at `deferred-work.md:808`, costs a run
 
 ## Change Log
 
 | Date | Change | By |
 |---|---|---|
 | 2026-08-19 | Story contexted against baseline `3ace40de`. Live state of `docker-compose.server.yml` bound verbatim; legacy `CD.yml` copy path identified as the story's blast radius; retro actions D4 and E5 carried into Tasks 2, 4 and 9. | create-story |
+| 2026-08-19 | Implemented. **Task 1.4 verdict (b)** — the GitHub push-mirror question could not be settled (Forgejo API 403 unauthenticated, no local token, no s1 alias), so `docker-compose.server.yml` is left untouched and the parameterization lands as the new `docker-compose.stand.yml`. Seven-row guard matrix executed live (E5), two stands observed coexisting, backend resolution recorded from inside both containers. D27 written. Ledger declared in advance and closed **OPEN** — no Forgejo credential reachable, per D4's second branch. | dev-story |
