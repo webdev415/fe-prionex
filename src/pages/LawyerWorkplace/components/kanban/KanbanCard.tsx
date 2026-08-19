@@ -286,9 +286,7 @@ export function KanbanCard({
             </>
           )
         ) : (
-          <span className="text-muted-foreground text-[11px] italic">
-            {t('pages.lawyerWorkplace.letterItem.unidentified', 'unidentified')}
-          </span>
+          <span className="text-muted-foreground text-[11px]">—</span>
         )}
       </div>
 

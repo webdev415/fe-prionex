@@ -1,10 +1,13 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts three tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts six tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
- * (default), the "Відпрацювання за ЦД" client processing report, and the
- * "Верифікація 3-х осіб" third-party verification report.
+ * (default), the "Відпрацювання за ЦД" client processing report, the
+ * "Верифікація 3-х осіб" third-party verification report, the
+ * "Мало верифікацій" client work list, the "Серчер без відпрацювання"
+ * searcher follow-up work list, and the "Великий розрив" communication-gap
+ * work list.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -40,6 +43,9 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ClientProcessingTab } from '@/features/clientProcessing'
 import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
+import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
+import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
+import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -433,7 +439,14 @@ function DashboardTab() {
 // Main Component — tab host
 // ============================================================================
 
-const REPORT_TABS = ['dashboard', 'processing', 'verification'] as const
+const REPORT_TABS = [
+  'dashboard',
+  'processing',
+  'verification',
+  'low-verification',
+  'searcher-followup',
+  'communication-gap',
+] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
 const DEFAULT_REPORTS_TAB: ReportsTab = 'dashboard'
@@ -487,10 +500,13 @@ export function ReportsDashboardPage() {
   // tab); only filter updates inside the tabs use `replace`.
   //
   // The report tabs' filter params (`?from/?to/?dept` for processing,
-  // `?sf/?st/?cf/?ct` for verification) are deliberately KEPT when switching
-  // tabs: the filters must survive a round-trip through the dashboard
-  // (documented contract of both tabs, and the key sets don't collide). A
-  // slightly "dirty" dashboard URL is accepted cosmetics.
+  // `?sf/?st/?cf/?ct` for verification, `?pf/?pt/?mv/?pg/?ps` for the
+  // low-verification feed, `?if/?it/?spg/?sps` for the searcher feed,
+  // `?gf/?gt/?gm/?gpg/?gps` for the communication-gap feed) are
+  // deliberately KEPT when switching tabs: the
+  // filters must survive a round-trip through the dashboard (documented
+  // contract of the tabs, and the key sets don't collide). A slightly "dirty"
+  // dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
@@ -537,6 +553,12 @@ export function ReportsDashboardPage() {
           <ClientProcessingTab />
         ) : activeTab === 'verification' ? (
           <ThirdPartyVerificationTab />
+        ) : activeTab === 'low-verification' ? (
+          <LowVerificationFeedTab />
+        ) : activeTab === 'searcher-followup' ? (
+          <SearcherFollowupFeedTab />
+        ) : activeTab === 'communication-gap' ? (
+          <CommunicationGapFeedTab />
         ) : (
           <DashboardTab />
         )}

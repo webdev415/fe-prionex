@@ -28,9 +28,23 @@ import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clien
 import { useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
 import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/types'
 
+/**
+ * RR statuses a `payment_by_rr` payment may be recorded against.
+ *
+ * Violated belongs here as much as Connected (KAN-1013): the whole point of a
+ * catch-up payment is to bring a violated plan back, and KAN-431 lists
+ * Violated -> Connected as an allowed transition. Offering the type only on
+ * Connected left a violated plan with no way back — it just aged into
+ * Cancelled.
+ *
+ * Cancelled and the terminal Completed statuses stay out. Cancelled has its own
+ * reconnect mechanism (KAN-1011) and the terminal ones are settled.
+ */
 const RR_STATUS_CONNECTED = 1
-function isRrConnected(ra: RestructuringAgreementSummary): boolean {
-  return ra.status_id === RR_STATUS_CONNECTED
+const RR_STATUS_VIOLATED = 2
+const RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT = new Set([RR_STATUS_CONNECTED, RR_STATUS_VIOLATED])
+function isRrEligibleForRrPayment(ra: RestructuringAgreementSummary): boolean {
+  return ra.status_id != null && RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT.has(ra.status_id)
 }
 
 /** Credit dropdown: {Credit Number} • {Counterparty Name} • {Total Debt} */
@@ -160,41 +174,43 @@ export function RecordPaymentModal({
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
-  const connectedRr = useMemo(() => {
+  const eligibleRr = useMemo(() => {
     if (selectedDebtId == null) return null
-    return (
-      (restructuringAgreements ?? []).find(
-        (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
-      ) ?? null
+    const candidates = (restructuringAgreements ?? []).filter(
+      (ra) => ra.debt_id === selectedDebtId && isRrEligibleForRrPayment(ra)
     )
+    // A debt should carry one live plan, but the schema permits more. If it
+    // ever does, the Connected one is the live plan and takes the payment —
+    // matching client-service, which resolves the active RR the same way.
+    return candidates.find((ra) => ra.status_id === RR_STATUS_CONNECTED) ?? candidates[0] ?? null
   }, [restructuringAgreements, selectedDebtId])
-  const hasConnectedRrForDebt = connectedRr != null
+  const hasEligibleRrForDebt = eligibleRr != null
 
   // Dirty guard prevents this auto-prefill from clobbering an explicit
   // operator pick when the picked debt changes.
   useEffect(() => {
     if (paymentTypeDirty) return
     if (paymentType !== '') return
-    if (!hasConnectedRrForDebt) return
+    if (!hasEligibleRrForDebt) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPaymentType('payment_by_rr')
-  }, [hasConnectedRrForDebt, paymentTypeDirty, paymentType])
+  }, [hasEligibleRrForDebt, paymentTypeDirty, paymentType])
 
   useEffect(() => {
-    if (paymentType === 'payment_by_rr' && !hasConnectedRrForDebt) {
+    if (paymentType === 'payment_by_rr' && !hasEligibleRrForDebt) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPaymentType('')
       setPaymentTypeDirty(false)
       setPaymentTypeError(null)
     }
-  }, [paymentType, hasConnectedRrForDebt])
+  }, [paymentType, hasEligibleRrForDebt])
 
   const availablePaymentTypes = useMemo<readonly PaymentType[]>(
     () =>
-      hasConnectedRrForDebt
+      hasEligibleRrForDebt
         ? PAYMENT_TYPE_VALUES
         : PAYMENT_TYPE_VALUES.filter((v) => v !== 'payment_by_rr'),
-    [hasConnectedRrForDebt]
+    [hasEligibleRrForDebt]
   )
 
   const amountValue = parseFloat(paymentAmount) || 0
@@ -310,7 +326,7 @@ export function RecordPaymentModal({
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
       paymentType,
-      restructuringAgreementId: paymentType === 'payment_by_rr' ? connectedRr?.id : undefined,
+      restructuringAgreementId: paymentType === 'payment_by_rr' ? eligibleRr?.id : undefined,
     })
 
     // Reset form

@@ -27,12 +27,13 @@ const ROWS = [
 function setup({
   enabled = true,
   results = ROWS,
-}: { enabled?: boolean; results?: unknown[] } = {}) {
+  open,
+}: { enabled?: boolean; results?: unknown[]; open?: boolean } = {}) {
   vi.mocked(useV3ScoresModule.useV3UiEnabled).mockReturnValue(enabled)
   vi.mocked(useV3ScoresModule.useV3Scores).mockReturnValue({
     data: { results },
   } as ReturnType<typeof useV3ScoresModule.useV3Scores>)
-  return render(<V3ClientPriorityPanel projectId={1} clientId={100} />)
+  return render(<V3ClientPriorityPanel projectId={1} clientId={100} open={open} />)
 }
 
 describe('V3ClientPriorityPanel', () => {
@@ -55,6 +56,20 @@ describe('V3ClientPriorityPanel', () => {
   it('shows the pay chance as a percentage', () => {
     setup()
     expect(screen.getByText('42.1% pay chance')).toBeInTheDocument()
+  })
+
+  it('renders nothing while collapsed', () => {
+    // The chip above discloses it; collapsed, the panel is absent rather than
+    // hidden, so nothing in it is reachable by keyboard or screen reader.
+    setup({ open: false })
+    expect(screen.queryByText('Call first')).not.toBeInTheDocument()
+    expect(screen.queryByText('v3 Priority')).not.toBeInTheDocument()
+  })
+
+  it('stays open for the call sites that pass no open prop', () => {
+    // Two other places render the panel inline with no chip to control it.
+    setup()
+    expect(screen.getByText('v3 Priority')).toBeInTheDocument()
   })
 
   it('renders nothing before the brand is cut over', () => {

@@ -951,7 +951,9 @@
           "closed": "Closed"
         },
         "clientSearchHint": "Type 2+ characters to search…",
-        "kanbanAccessDenied": "You do not have access to the kanban board"
+        "kanbanAccessDenied": "You do not have access to the kanban board",
+        "noClientLink": "No client link",
+        "noClientLinkFailed": "Could not unlink the client"
       },
       "kanban": {
         "title": "Legal tasks kanban",
@@ -6222,6 +6224,8 @@
             "submitError": "Submission to UBKI failed",
             "optOutSuccess": "{{count}} client(s) opted out of UBKI",
             "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
+            "optOutSingle": "Client opted out of UBKI",
+            "optInSingle": "Client re-enabled for UBKI",
             "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
           },
           "sentRef": "Sent · ref {{ref}}",
@@ -6302,6 +6306,8 @@
           "online_gateway": "Online payment",
           "card": "Card"
         },
+        "email": "E-mail",
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)",
         "closingCoefficientLabel": "Loan closing coefficient"
       },
       "debtSummary": {
@@ -8269,7 +8275,10 @@
       "tabs": {
         "dashboard": "Dashboard",
         "processing": "Client Processing",
-        "verification": "Third-party verification"
+        "verification": "Third-party verification",
+        "low-verification": "Low verifications",
+        "searcher-followup": "Unworked searcher finds",
+        "communication-gap": "Communication gap"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8328,6 +8337,98 @@
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "lowVerification": {
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Clear sale date to",
+        "maxVerified": "Verifications at most",
+        "maxVerifiedPlaceholder": "No cap",
+        "clearMaxVerified": "Clear the verifications cap",
+        "floorHint_one": "The list holds clients whose last purchase is no older than {{count}} month; an empty list means there were no purchases in that window.",
+        "floorHint_other": "The list holds clients whose last purchase is no older than {{count}} months; an empty list means there were no purchases in that window.",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "verifiedCount": "Verified",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No data for the selected filters",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "searcherFollowup": {
+        "dateFrom": "Find date from",
+        "dateTo": "Find date to",
+        "invalidDate": "The find date is not a valid calendar date — pick a date to replace it",
+        "invalidRange": "Find date from is later than find date to",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "foundAt": "Find date",
+          "searcher": "Searcher",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastCall": "Last call",
+          "lastCallOutcome": "Call outcome"
+        },
+        "outcome": {
+          "unknown": "Unknown"
+        },
+        "empty": "No searcher finds in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "communicationGap": {
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Clear sale date to",
+        "gapMin": "Days of silence from",
+        "gapMinPlaceholder": "No minimum",
+        "clearGapMin": "Clear the days-of-silence minimum",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "lastPromise": "Last promise",
+          "gap": "Days of silence",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No data for the selected filters",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "invalidGapMin": "Days of silence must be a whole number of 0 or more",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
           "retry": "Retry"
         }
       },
