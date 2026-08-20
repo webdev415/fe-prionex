@@ -218,6 +218,35 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['trigger_tag_code'],
             })
           }
+          // The backend already rejects both of these (schemas/rule.py and
+          // rule_validation.py), so without a branch here the operator only
+          // learns after submitting, from a 422 phrased for API consumers.
+          if (data.action_type === 'replace_tag' && !data.replace_tag_code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagRequired',
+                'Tag to be replaced is required for replace rules'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
+          // Removing and adding the same tag is a guaranteed no-op: the engine
+          // unassigns it, then assigns it straight back.
+          if (
+            data.action_type === 'replace_tag' &&
+            data.replace_tag_code &&
+            data.replace_tag_code === data.target_tag_code
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagSameAsTarget',
+                'Tag to be replaced must differ from the tag to add'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
         }),
     [t]
   )
@@ -901,7 +930,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Replace Tag Code (if replace_tag) */}
             {actionType === 'replace_tag' && (
               <div className="space-y-1.5">
-                <Label>{t('pages.tags.rules.tagToReplace', 'Tag to be replaced')}</Label>
+                <Label required>{t('pages.tags.rules.tagToReplace', 'Tag to be replaced')}</Label>
                 <Controller
                   name="replace_tag_code"
                   control={control}
@@ -932,7 +961,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     found none, and skipped. Rendered from the current selections,
                     so an existing rule can be checked by opening it. */}
                 {replaceTagCode && targetTagCode && (
-                  <p className="text-error-500 text-xs">
+                  <p className="text-xs text-gray-500">
                     {t('pages.tags.rules.replaceEffect', {
                       defaultValue:
                         'This rule replaces "{{remove}}" with "{{add}}" for clients that have "{{remove}}".',
@@ -940,6 +969,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       add: tagLabelByCode.get(targetTagCode) ?? targetTagCode,
                     })}
                   </p>
+                )}
+                {errors.replace_tag_code && (
+                  <p className="text-error-500 text-xs">{errors.replace_tag_code.message}</p>
                 )}
               </div>
             )}
