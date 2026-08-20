@@ -277,7 +277,7 @@ development_status:
   # credential for a missing image). DN2 follows: Task 8.2's AC4 row did not execute the code it
   # certifies. DN3: H1's closure is primary-path only; the preserved DR path still pins the tag that
   # expires ~2026-09-02. Ledger still open by D4 — coordinator closes it by query after the merge.
-  4-3-deploy-a-feature-branch-to-dev-on-demand: review
+  4-3-deploy-a-feature-branch-to-dev-on-demand: done
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog

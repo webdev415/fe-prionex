@@ -4,7 +4,7 @@ baseline_commit: 162f1722d614034037807dcd7af95752b67edf2b
 
 # Story 4.3: Deploy a Feature Branch to DEV on Demand
 
-Status: review
+Status: done
 
 <!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested**. 5 high, 12 medium,
      12 low, 4 deferred, 8 dismissed, plus 3 decision-needed for Oleg — see `### Review Findings`.
@@ -158,7 +158,7 @@ mechanism actually produces — or recorded as moot, with the reason.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
+- [x] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
   - [x] 1.0 Flip `sprint-status.yaml` `4-3-deploy-a-feature-branch-to-dev-on-demand` → `in-progress`
         before starting implementation, so the tracker never disagrees with reality mid-story.
         **Done.**
@@ -185,7 +185,7 @@ mechanism actually produces — or recorded as moot, with the reason.
         **Veto points not exercised (coordinator, 2026-08-20):** Oleg did not veto the mechanism
         (D28 §4 option 5, Dev Notes §2) or the self-applying `FRONTEND_PORT=127.0.0.1:8082` (M7,
         Task 4.4) — both stand exactly as this story already recorded them.
-  - [ ] 1.1 Query the pre-work baseline: highest `action_run` id before this story's first
+  - [x] 1.1 Query the pre-work baseline: highest `action_run` id before this story's first
         *implementation* push, via
         `GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=100`.
         🔴 **The token this project has used for that query is `fe_review_1_7` at `/root/.fj_token`
@@ -195,9 +195,9 @@ mechanism actually produces — or recorded as moot, with the reason.
         Completion Note 9 is the record of what happens when a `401` body echoes the presented
         string back.
         **Done, differently: this session does not touch the Forgejo API at all** (coordinator's
-        standing instruction this cycle). The query above is requested from the coordinator instead
-        — same D4 principle (query, not self-report), different hands on the keyboard. Baseline not
-        yet known; requested alongside the Task 2 probe dispatch.
+        standing instruction this cycle). The query was requested from the coordinator instead —
+        same D4 principle (query, not self-report), different hands on the keyboard. **Baseline
+        confirmed: 892** (recorded in the Run Budget Ledger below).
   - [x] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
         arithmetic in Dev Notes §9. Do not restate "5 pushes" style flat counts — Story 4.1 declared
         5 and spent 7; Story 4.2 modelled the multiplier in advance and landed exactly on 7.
@@ -213,9 +213,11 @@ mechanism actually produces — or recorded as moot, with the reason.
   - [x] 1.5 The merge to `main` fires **`build-main.yml`**, a different workflow from `ci.yml` (which
         ignores `main`): **+1**. The closeout PR is a second branch/PR/merge cycle: **+3**.
         **Modelled.**
-  - [ ] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
+  - [x] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
         closed at PR-open is not closed. If the query cannot be run, close it with the literal word
         **OPEN** — never a self-reported number. Final closure is the coordinator's.
+        ✅ **Closed, by the coordinator's query, after the merge landed (PR #59, merge commit
+        `a304234b5382`)** — see the Run Budget Ledger's own closure line: runs 915-950 + 954-956.
 
 - [x] **Task 1b — The workflow's own shape (AC1, AC2)** — Implemented in
       `.forgejo/workflows/deploy-dev.yml` (this push). Written, not yet live-verified — that is
@@ -242,7 +244,7 @@ mechanism actually produces — or recorded as moot, with the reason.
         s1; there is nothing to connect to. (`ufw` would refuse anyway — port 22 admits two admin
         addresses only.)
 
-- [ ] **Task 2 — Probe the deploy runner before writing a line of the workflow (probe-first)**
+- [x] **Task 2 — Probe the deploy runner before writing a line of the workflow (probe-first)**
   > Everything in this task is *unrecorded anywhere in this project*. Do not infer it. A wrong
   > assumption here does not fail loudly — see 2.2.
   - [x] 2.1 Write a throwaway probe workflow (`workflow_dispatch` only, no inputs) with
@@ -622,11 +624,12 @@ mechanism actually produces — or recorded as moot, with the reason.
         the directory, kept the load-bearing safety warning (why the directory must never be left
         empty while `.github/workflows/` still exists) intact and unchanged in substance.
 
-- [ ] **Task 10 — Land it**
-  - [ ] 10.1 Branch `story-4-3/pr-<n>-<purpose>`; PR into `main`. `main` is protected — D16, eight
+- [x] **Task 10 — Land it**
+  - [x] 10.1 Branch `story-4-3/pr-<n>-<purpose>`; PR into `main`. `main` is protected — D16, eight
         required contexts, `apply_to_admins: true`.
-        On branch `story-4-3/pr-1-context` throughout — coordinator opens/merges the PR, not this
-        session (standing convention this whole story).
+        ✅ **Landed.** `story-4-3/pr-1-context` → PR #59 → merged by Oleg, merge commit
+        `a304234b5382`; `build-main.yml` ran (956) and passed on the post-merge build. This closeout
+        is `story-4-3/pr-2-ledger-closeout`, from fresh `main`, per the 4.1/4.2 precedent.
   - [x] 10.2 Do not touch: `docker-compose.server.yml`, `.github/workflows/CD.yml`, `nginx.conf`,
         `Dockerfile.prod`, `.env.dev.example`. **NFR5 / D7:** the legacy stand and the GitHub side are
         untouched; the GitHub copy is alive and Oleg ports commits manually.
@@ -644,7 +647,9 @@ mechanism actually produces — or recorded as moot, with the reason.
         ✅ Done for real this time — runs 948/949/950 confirmed the fix-pass live (Task 8, above),
         so `Status`/`sprint-status.yaml` move to `review` now on genuine post-confirmation grounds,
         not preemptively the way the earlier (corrected) attempt did.
-  - [ ] 10.5 Re-query the run ledger **after the merge lands** and close it (Task 1.6).
+  - [x] 10.5 Re-query the run ledger **after the merge lands** and close it (Task 1.6).
+        ✅ **Closed** — see Task 1.6 and the Run Budget Ledger's own closure line: runs 915-950
+        (as recorded) + 954/955 (CI of the final push) + 956 (`build-main.yml` of the merge).
 
 ## Dev Notes
 
@@ -1046,11 +1051,35 @@ the coordinator dispatches and reports run ids).
 | 948 | `workflow_dispatch` | `deploy-dev.yml`, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd` | Task 8.2 v2's row, post-DN1/H1-fix. `deploy` **FAILURE** — reached its own AC4/404 classifier for real this time (`digest-resolve-test` no longer gates it) |
 | 949 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main`, `simulate_bad_credential=true` | Task 8.3 v2's row, post-M11-fix. `deploy` **FAILURE** at the 401 classifier, confirmed carrying the new simulation marker |
 | 950 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main` (control) | **SUCCESS** — the fix-pass's own control run ("did fixing everything else break anything"). Confirmed host-side: healthy, digest unchanged, `stand-checkout-950` workspace path live-confirms the `$GITHUB_RUN_ID` suffix fix (M4) |
+| 954/955 | `push` (`ci.yml`) | CI of the final push, `95f6e319` (fix-pass confirmed live, Status → review) | **success**, both — coordinator's query |
+| 956 | `push` (`build-main.yml`) | Merge to `main`, PR #59, merge commit `a304234b5382` | **SUCCESS** — coordinator's query. The deploy guard's own build path holds on the post-merge build too, not only on the feature branch |
 
-**PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
-PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
-corrected experience (4.1 declared 5, spent 7; 4.2 modelled the multiplier in advance and landed
-exactly on 7). Final closure remains the coordinator's, by query, after the merge (Task 1.6).
+✅ **CLOSED by the coordinator's query (Task 1.6, retro-D4) — runs 915-950 (as recorded above) +
+954/955 + 956.** Baseline 892 (Task 1.1). Declared floor (Task 1, Dev Notes §9): the largest
+single line was always going to be Task 8's live outcome matrix, and it landed exactly as warned —
+not a flat count, corrected upward the way 4.1 (5→7) and 4.2 (modelled 7, landed 7) both taught
+this story to expect. Final total: **the full 915-950 + 954-956 range**, split across two PRs
+(`#59` implementation, this closeout).
+
+🔴 **Structural note for Story 4.4 and beyond, named explicitly per the coordinator's own
+instruction, not left implicit in the numbers above:** this story's discriminating rows cost **five
+red dispatches before the first PASS** (917, 919, 922, 925, 927 — the probe's ambiguous single-job
+result, then four consecutive `deploy-dev.yml` failures, each a genuinely different root cause,
+before run 929 finally succeeded). **That count is not this story's own inefficiency — it is the
+direct, structural price of one standing fact about this Forgejo instance: job/step logs are not
+retrievable, for any runner, CI or deploy.** Every one of those five failures had to be diagnosed
+by a channel OTHER than reading what the job itself printed — SSH reproduction on s1, host-side
+`docker inspect`/`compose ls` state while a container was still up, or a full local `bash -x`
+simulation in a container matching the job's own shape — because the one channel that would
+normally settle a question fastest (the job's own log) does not exist here. A project where logs
+were retrievable would likely have spent one or two dispatches confirming a hypothesis read
+directly off a log line, not five discovering the cause the hard way, one guess-and-reproduce cycle
+at a time. **Story 4.4, and every story after it that dispatches against this runner, should
+declare its own run budget with this cost priced in up front** — not as a vague "expect overruns"
+caveat, but as a named, specific line: discriminating-row diagnosis on this instance costs
+dispatches roughly in proportion to how many DISTINCT failure causes a construction can have, not
+one dispatch per row, because there is no cheaper way to tell two causes apart than trying one,
+watching the job list (not a log), and reasoning from host-side state.
 
 ### Completion Notes List
 
@@ -1398,6 +1427,19 @@ clean. **One live confirmation beyond what was asked for**: `docker compose ls`'
 workspace path (M4's fix) is genuinely active in production, not just written and locally
 simulated. Task 8's top-level checkbox, 8.2, and 8.3 all re-closed on this evidence. `Status` and
 `sprint-status.yaml` moved to `review` — this time on confirmed grounds, not preemptively.
+
+**15. Closeout, per the 4.1/4.2 precedent.** PR #59 (`story-4-3/pr-1-context`) merged by Oleg,
+merge commit `a304234b5382`; `build-main.yml` ran (956) and passed on the post-merge build,
+confirming the deploy guard's own build path holds there too. Run budget ledger **closed by the
+coordinator's query**: runs 915-950 (as recorded) + 954/955 (CI of the final push, `95f6e319`,
+both success) + 956 (the merge build). All Task 1-10 checkboxes verified against the recorded
+evidence and closed — none left open on assertion alone. **Structural note named explicitly, per
+the coordinator's own instruction**: this story's discriminating rows cost five red dispatches
+before the first PASS (917, 919, 922, 925, 927) — not this story's inefficiency, but the direct
+structural price of this Forgejo instance's own standing limitation (job/step logs are not
+retrievable, for any runner) — recorded in the Run Budget Ledger's own closure section as guidance
+for Story 4.4's own budget declaration, not left implicit in a number. `Status` → `done`,
+`sprint-status.yaml` → `done`.
 
 ### Review Findings
 
@@ -2003,3 +2045,4 @@ site, for a reader who wants to verify rather than trust:
 | 2026-08-20 | Code review (Opus, three parallel layers: adversarial, edge-case, acceptance): **changes requested**. 5 high, 12 medium, 12 low, 4 deferred, 8 dismissed, 3 decision-needed — see `### Review Findings`. Verified clean by inspection: NFR5, no `${{ }}` in any `run:` body (all 23 parsed), no credential secret-half in argv, AC3's reordering, AC6's fixed inspect form, the anchored `docker ps` filter, AC8's decision record, and `simulate_bad_credential`'s no-privilege-escalation claim. Every high finding is in the **verification layer**, not the mechanism. **H1**: seven more guards abort before their own explanatory message can print under `set -euo pipefail` (verified by execution) — including the missing-`Docker-Content-Digest` guard, which is dead code, and AC5's fallback-HTTP message, unreachable for the very failure that cost runs 925/927. **H2/DN1**: `digest-resolve-test` gates `deploy` while issuing the same request with the same credential, so AC4's 404 and AC7's 401 classifiers never run on a real failure and the message that does fire blames the credential for a missing image — which also makes `deferred-work.md`'s H4 closure true only in the simulated case. **H3/DN2**: consequently Task 8.2's AC4 row did not execute the code it certifies (run 935's `deploy` was SKIPPED), and Task 8.6 credits runs 919/922 to a guard that did not exist at the time. **H3(AC5)**: the container name and port are hardcoded in every verification step rather than read from the `.env.deploy` the job writes. **H4**: nothing verifies the pulled image was built from the ref checked out, though `build.yml` already stamps `org.opencontainers.image.revision`. **DN3**: H1's closure holds for the primary path only — the DR path this decision preserves still pins the tag that expires ~2026-09-02. Downgraded on evidence: one layer's CRITICAL "argument injection is RCE" — the http transport ignores `--upload-pack` (tested), kept as M10 |
 | 2026-08-20 | **Code review fix-pass: DN1-DN3 (Oleg's decisions) implemented, all 5 High and all 24 Medium/Low findings addressed.** `deploy` now `needs: [preflight, clone-test]` only, `digest-resolve-test` ungated (DN1/H2); Task 8.2 reopened (run 935's `deploy` was skipped, never earned its own AC4 message), Task 8.6 reworded (919/922 are mechanism evidence, not a live guard row) per DN2; DR path rewritten (`deploy-dev.yml ref=main` as primary, a local never-pushed `dr-backup-dev` docker tag on s1 as emergency fallback) per DN3. H1's seven dead-guard sites fixed — caught and fixed a genuine bug while doing it: curl's own `-w '%{http_code}'` already writes `000` on total failure, so `|| echo '000'` doubled it into `000000`; fixed to `|| true`, with the analogous `docker inspect`-writes-a-newline case fixed via explicit if/then. H3 (AC5 hardcoded) parameterized from `.env.deploy` in all six verification steps. H4 (no revision check) added. H5 (overclaimed rollback) reframed to name its real window, in both the workflow header and D29 §5. All 12 Medium and 12 Low findings fixed — ref normalization, sanitizer parity, run-id-suffixed workspace paths, bounded fetch/pull, health-poll crash-loop detection, pre-down label guard, registry resolution hardening, ref-shape validation, simulated-credential message marker, and more. Local simulation, including forced-failure testing of every H1 site, confirmed clean before this push |
 | 2026-08-20 | **Fix-pass confirmed live, runs 948/949/950, exactly per DN2's plan — Task 8 re-closed for real, Status/sprint-status.yaml → review.** Run 948 (same historical SHA as 935): `deploy` genuinely reached its own AC4/404 classifier this time, confirming DN1's fix live. Run 949 (`simulate_bad_credential=true`): 401 classifier confirmed carrying M11's new simulation marker. Run 950 (control `ref=main`): SUCCESS, confirming the fix-pass broke nothing — host-side verification clean (healthy, digest unchanged, network stable), and `docker compose ls`'s config path (`stand-checkout-950`) directly confirms M4's `$GITHUB_RUN_ID` workspace-path fix is live in production, not only locally simulated |
+| 2026-08-20 | **Closeout, per the 4.1/4.2 precedent.** PR #59 merged by Oleg (merge commit `a304234b5382`); `build-main.yml` (956) passed on the post-merge build. Run budget ledger closed by the coordinator's query: runs 915-950 + 954/955 (final push CI) + 956 (merge build). All Task 1-10 checkboxes verified against recorded evidence and closed. Structural note recorded explicitly: five red dispatches before the first PASS (917/919/922/925/927) is the direct, named price of this Forgejo instance's own standing limitation — job/step logs are not retrievable for any runner — recorded as guidance for Story 4.4's own budget declaration. `Status`/`sprint-status.yaml` → `done` |
