@@ -56,7 +56,9 @@ export const authApi = {
     const body = new FormData()
     body.append('file', file)
     return api
-      .post<CurrentUserResponse>('/api/v1/users/me/avatar', body)
+      .post<CurrentUserResponse>('/api/v1/users/me/avatar', body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
       .then((response) => response.data)
   },
 
