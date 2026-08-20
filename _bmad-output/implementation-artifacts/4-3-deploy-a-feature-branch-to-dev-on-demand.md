@@ -453,7 +453,15 @@ mechanism actually produces — or recorded as moot, with the reason.
   > *"Every new guard ships a live outcome matrix including a discriminating run"* —
   > `epic-3-retro-2026-08-18.md:78`. Each row below is a **real dispatch on the real runner**, not a
   > local simulation. Record run id, trigger, exit code and the message the guard printed.
-  - [ ] 8.1 **PASS** — an existing branch with a built image. Stand comes up healthy, digest matches.
+  - [x] 8.1 **PASS** — an existing branch with a built image. Stand comes up healthy, digest matches.
+        **Run 929, `ref=main`, all four jobs (`preflight`/`clone-test`/`digest-resolve-test`/
+        `deploy`) SUCCESS — the first successful Forgejo-native DEV deploy.** Confirmed host-side
+        on s1, live: `fe-prionex-dev` running, healthy, `Created`/`StartedAt` at run 929's own
+        window; its image digest is `sha256:e66149a837365b3716b4ba6082ba642bd47af9814a776f0b3da1b1cf6366c163`
+        — re-resolved the `main-dev` tag against the real registry independently and got the exact
+        same digest back, live, right now, confirming the deployed image is the CURRENT `main-dev`,
+        not a stale cache. `docker compose ls` config path is the job's own workspace, confirming
+        this run rendered and applied its own files end to end.
   - [ ] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
         message names the missing tag, **and the stand is still serving its previous version
         afterwards** (this is the row that proves the reordering in AC3 was real).
@@ -493,13 +501,20 @@ mechanism actually produces — or recorded as moot, with the reason.
         trigger. **Leave open, explicitly:** M7's manual application (now moot-by-idempotence if the
         deploy ran — say which), `fe_review_1_7` revocation (Oleg), `fe_reg_1_10_ro` disposition
         (Oleg), reboot-ordering (4.9), concurrency (4.4).
-  - [ ] 9.4 🔴 **H1 — say whether this story closed it.** The stand's pinned tag
+  - [x] 9.4 🔴 **H1 — say whether this story closed it.** The stand's pinned tag
         `sha-62e2ff8dc215-dev` is deleted from the registry **on or about 2026-09-02**; the recorded
         primary path for closing that is *"Story 4.3 ships and its first deploy publishes a fresh
         tag"*, with a **fallback trigger of 2026-08-30** for a manual redeploy by whoever holds s1
         access (`deferred-work.md:2634-2660`). If Task 8.1's PASS run landed, the item is closed by
         this story — record the tag it now runs and close it. If this story slips past 2026-08-30,
         say so and hand the fallback to Oleg **before** the date, not after.
+        ✅ **CLOSED by this story, primary path, well before the 2026-08-30 fallback.** Run 929
+        (Task 8.1) redeployed `fe-prionex-dev` onto `main-dev`'s current digest
+        (`sha256:e66149a83...`, confirmed live against the real registry, matches the running
+        container exactly) — built 2026-08-20, nothing to do with the old `sha-62e2ff8dc215-dev`
+        tag at all. The stand no longer depends on that tag's continued existence in any way; its
+        deletion on 2026-09-02 is now a non-event for this stand. The 2026-08-30 fallback trigger
+        is moot — never needed.
   - [ ] 9.5 Update the `README.md` in `.forgejo/workflows/` if it still claims the directory is
         "intentionally empty of workflows" — it is stale, and this story adds the first deploy
         workflow.
@@ -905,6 +920,7 @@ the coordinator dispatches and reports run ids).
 | 923/924 | — | numbers not yet confirmed — coordinator to reconcile by query at closing (parallel `ci.yml`/build activity noted around this window, unrelated runner) | — |
 | 925 | `workflow_dispatch` | `deploy-dev.yml`, `preflight`/`clone-test`/`digest-resolve-test` (all **success** — `github.token` fix confirmed live) + `deploy` (8581), `ref=main` | ladder all green; deploy **failure**, ~60s — but NOT in the ladder's territory: diagnosed live via SSH on s1 (host-side docker state, not logs) while the container was still up — clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, even the Kong guard had ALL already succeeded (container healthy, correct digest running, config path pointing at the job's own workspace). Real cause: AC6's own verification step (`docker inspect <container> --format '{{range .RepoDigests}}...'`) — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live. Fixed this push (Completion Note 8) |
 | 927 | `workflow_dispatch` | `deploy-dev.yml`, ladder all **success** (`github.token` confirmed again) + `deploy` (8591), `ref=main` | deploy **failure** again, ~60s — 4th red deploy dispatch. Host-side trace showed the container recreated AGAIN with the correct digest (a second real `down`/`up -d`) — the run 925 AC6 fix was correctly deployed but the job still failed EARLIER than AC6, at the "Fallback HTTP check." Root cause: every prior diagnosis this story ran its confirmation checks directly on s1's own host shell, which has correct access to the host's own loopback — masking that `FRONTEND_PORT=127.0.0.1:8082` (Oleg's M7 decision, deliberately host-loopback-only) is UNREACHABLE from any container's own network, including the deploy job's own. Confirmed by finally reproducing the checks from inside an actual simulated job container: `curl: (7) Failed to connect ... Could not connect to server`. This — not AC6 — was the true cause of BOTH 925 and 927. Fixed this push: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, reaching the real host-published port. Per the coordinator's instruction, also ran the ENTIRE `deploy` job (clone through the last verification step, fixes included) as one continuous `bash -x` script inside a real simulated job container on s1, TWICE in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running, already-correct stand) — both passes completed clean, `rc=0`, no further bugs found (Completion Note 9) |
+| 929 | `workflow_dispatch` | `deploy-dev.yml`, all four jobs (`preflight`/`clone-test`/`digest-resolve-test`/`deploy`), `ref=main` | **SUCCESS — the first successful Forgejo-native DEV deploy.** Task 8.1's PASS row. Confirmed host-side: `fe-prionex-dev` healthy, running `main-dev`'s current digest, re-resolved live against the real registry and matched exactly. Closes H1 (Task 9.4) — the stand no longer depends on the old `sha-62e2ff8dc215-dev` tag at all; its 2026-09-02 deletion is now moot, the 2026-08-30 fallback trigger never needed |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -1130,6 +1146,58 @@ further shell/template/idempotency bugs found. Credential/scratch files copied t
 simulation were removed afterward — no second standing copy left on disk (the exact class of issue
 `deferred-work.md`'s M1 item already flagged once for this project).
 
+**10. Run 929 — SUCCESS on all four jobs. The first Forgejo-native DEV deploy, and Task 8.1's PASS
+row.** Confirmed host-side, live: `fe-prionex-dev` healthy at the run's own timestamp; re-resolved
+`main-dev` against the real registry independently (not trusting the run's own claim) and got back
+the exact digest the container is running, `sha256:e66149a83...` — the deployed image is genuinely
+current, not a stale cache hit. **Closes H1 (Task 9.4)**: the stand's dependency on the old,
+soon-to-expire `sha-62e2ff8dc215-dev` tag is gone — it now runs a today's-build digest that has
+nothing to do with that tag. The 2026-08-30 fallback trigger is moot, never needed; H1's primary
+path ("Story 4.3 ships and its first deploy publishes a fresh tag") is exactly what happened.
+
+**11. Designed and prepared Task 8's three remaining discriminating FAIL rows, each verified
+constructible before asking for a dispatch — not guessed at.**
+- **AC4/manifest-unknown (row 1):** ref = a raw, full 40-character commit SHA from this repo's real
+  history (`044bf348c3f0c7aaf16c276a2d602e908e3b3ecd`, ten commits back from `main`). Verified two
+  things locally before recommending it: this Forgejo instance's git server DOES allow fetching an
+  arbitrary SHA by itself (`git fetch origin <sha>` succeeded from this session's own already-
+  authenticated remote — Task 4.1's own stated uncertainty, resolved); and the sanitized tag this
+  SHA produces (`<sha>-dev`) returns a clean, confirmed `404` from the real registry — this exact
+  ref was never built, guaranteed by construction (build.yml never tags a raw 40-char SHA). One
+  consequence flagged, not hidden: since `deploy` is gated on `digest-resolve-test` (Task 8.3's own
+  ladder) passing first, this ref will fail `digest-resolve-test` itself with the 404, and `deploy`
+  will be SKIPPED rather than running and failing at its own identical digest-resolve code — still
+  valid AC4 evidence (same classification logic, stand provably untouched since `down` never runs
+  anywhere in the chain), just surfacing in a sibling job instead of `deploy` itself.
+- **AC7/unauthorized (row 2):** a new, minimal `simulate_bad_credential` boolean input (default
+  `false`) added to `deploy-dev.yml`. When `true`, ONLY the `deploy` job's own digest-resolve step
+  (not `preflight`, not `digest-resolve-test` — those keep reflecting the credential's REAL state)
+  overwrites its local copy of `REG_TOKEN` with a fixed, deliberately-wrong string AFTER the login
+  step already ran (and succeeded, with the real credential) — hitting the registry's real `401`
+  and this step's own existing classifier message ("means the deploy job's OWN registry credential
+  ... is missing, wrong, or revoked — NOT that the image is missing"), rather than a bare `docker
+  login` failure one step earlier, which would not exercise the code Task 8.3 actually asks about.
+  A loud, unmissable warning is printed whenever this fires. The real `REGISTRY_TOKEN_RO` org secret
+  is never read again after the override, never logged, never weakened outside this one job's own
+  process — the input can only ever corrupt a value already in scope, never inject one, so there is
+  no privilege-escalation surface.
+- **AC5/unhealthy (row 3):** a new throwaway branch, `test/4-3-unhealthy-probe`, based on current
+  `main` with exactly one change — `docker-compose.stand.yml`'s `healthcheck.test` overridden to
+  `["CMD", "false"]` (fast interval/retries, so Docker marks the container explicitly `unhealthy`
+  within ~10s rather than making the poll loop wait out the full 120s bound). Confirmed `main`'s own
+  application code and tests are untouched by this change, so `ci.yml`'s lint/typecheck/test gate
+  (which the `image` job needs) still passes and a real image still gets built and published for
+  this branch — the failure is isolated to the health check specifically, not masked by an
+  upstream "no image" 404. **Consequence flagged explicitly, not hidden**: AC3's amended sequence
+  (resolve → pull → `down` → `up -d` → health-check) only protects the PREVIOUS version when the
+  image is MISSING (AC4) — it does not, and by this design was never meant to, protect against a
+  present-but-unhealthy replacement. Dispatching this row WILL tear down the currently-healthy
+  `fe-prionex-dev` and leave it genuinely broken (new container, correct image, permanently
+  unhealthy) until a follow-up good redeploy (`ref=main`) restores it — this is not a bug in the
+  test, it is what AC5's own guard is supposed to catch, but it is real collateral on the live DEV
+  stand and should be followed immediately by a clean `ref=main` redispatch once confirmed.
+  Branch commit message states plainly not to merge or build on it.
+
 ### File List
 
 **Added**
@@ -1150,7 +1218,12 @@ simulation were removed afterward — no second standing copy left on disk (the 
   do; now inspects the container's `.Image` (its image ID) instead; round 5 (run 927) fixed the
   ACTUAL root cause of both 925 and 927 — the fallback HTTP check and the Kong guard's `curl` both
   targeted `127.0.0.1:8082`, host-loopback-only by design and unreachable from any container's own
-  network; both now launch a `--network host` sibling container via the job's own `docker.sock`
+  network; both now launch a `--network host` sibling container via the job's own `docker.sock`;
+  round 6 (Task 8's remaining FAIL rows) added a `simulate_bad_credential` boolean input (default
+  `false`) — scoped to the `deploy` job's own digest-resolve step only, for AC7's discriminating row
+- `docker-compose.stand.yml` — **on `test/4-3-unhealthy-probe` only, not on this branch**: the
+  `frontend` service's `healthcheck.test` deliberately overridden to `["CMD", "false"]`, for Task
+  8.4's AC5 discriminating row. Throwaway, not to be merged.
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -1167,3 +1240,4 @@ simulation were removed afterward — no second standing copy left on disk (the 
 | 2026-08-20 | **Blocker cleared by the coordinator, no minting: `github.token` (Forgejo's automatic per-job token), precedent from CRM/api-prionex's own `deploy-dev.yml` on this same runner.** Wired into the git-fetch step and `clone-test`, adapted from the precedent's `git -c http.extraheader=...` (argv-exposed) into `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars, to keep the credential out of this job's own `ps auxww` per this file's own established rule. Mechanism verified on s1 before this push: `GIT_CURL_VERBOSE` confirmed the header reaches the request; a real (wrong-scope) credential got a clean `403`, not the anonymous-fetch failure — confirming the delivery mechanism works, independent of `github.token` itself, which is only testable inside a real dispatch. `clone-test` now expected to PASS; runs 919/922 recorded post-hoc as Task 8's new discriminating row 8.6 (no token → this exact failure) rather than re-earned by a redundant dispatch |
 | 2026-08-20 | **Run 925: the `github.token` fix worked completely (all three ladder jobs green); `deploy` still failed, but not in the ladder's territory.** Diagnosed via a new host-side SSH channel the coordinator pointed at (the deploy job talks to the host daemon over its mounted socket, so its footprint is directly visible from s1) rather than by construction: while the container was still up, confirmed live that clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, and even the Kong guard had ALL already succeeded — `docker compose ls` showed the config path pointing at the job's own workspace, the running image's digest matched exactly what the run resolved. Actual cause: AC6's own verification step, `docker inspect <container> --format '{{range .RepoDigests}}...'` — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live on s1. Fixed: inspect the container's `.Image` (its image ID) first, then that for `RepoDigests`. No ladder expansion needed — host-side SSH evidence alone fully discriminated the failure to one command |
 | 2026-08-20 | **Run 927: same failure shape a fourth time; diagnosed with a full-job simulation instead of another single-bug-per-dispatch cycle, per the coordinator's explicit instruction.** Host-side trace showed the container recreated again correctly (run 925's AC6 fix live and correct) but the job failed EARLIER than AC6 — at the fallback HTTP check. Root cause: a testing-methodology gap present in every SSH diagnosis this story had run so far — checks were run directly on s1's own host shell, which has correct access to its own loopback, masking that `FRONTEND_PORT=127.0.0.1:8082` (host-loopback-only by design) is unreachable from any container's own network, including the deploy job's own. Confirmed by finally running the same curl from inside an actual simulated job container: connection refused, every time. This — not AC6 — was the true cause of both 925 and 927. Fixed: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, self-identifying the job's own image tag dynamically rather than hardcoding it. Then, per the coordinator's instruction, ran the ENTIRE `deploy` job as one continuous `bash -x` script inside a real simulated job container on s1, twice in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running stand) — both passes completed clean, no further bugs found |
+| 2026-08-20 | **Run 929: SUCCESS on all four jobs — first Forgejo-native DEV deploy, Task 8.1's PASS row.** Confirmed host-side that `main-dev`'s live-resolved digest matches the running container exactly. Closes H1 (Task 9.4): the stand no longer depends on the old, soon-to-expire `sha-62e2ff8dc215-dev` tag; the 2026-08-30 fallback trigger was never needed. Designed and pre-verified (not guessed at) Task 8's three remaining discriminating FAIL rows: (1) AC4/manifest-unknown — a raw historical commit SHA, confirmed fetchable and confirmed its sanitized tag 404s; (2) AC7/unauthorized — new minimal `simulate_bad_credential` input, scoped to the `deploy` job's own digest-resolve step only, corrupts nothing outside that one process; (3) AC5/unhealthy — new throwaway branch `test/4-3-unhealthy-probe`, `docker-compose.stand.yml`'s healthcheck deliberately broken, confirmed the application/test suite is otherwise untouched so an image still builds |

@@ -69,6 +69,11 @@ on:
         description: 'Git ref to deploy (branch, tag, or SHA). The image tag is derived from this the same way build.yml derives its own branch tag.'
         required: true
         type: string
+      simulate_bad_credential:
+        description: 'TESTING ONLY (Task 8.3/AC7 discriminating row) — if true, the digest-resolve step uses a deliberately WRONG credential value, to exercise the unauthorized fail-closed path on demand instead of waiting for a real credential outage. Never reads, modifies, or exposes the real REGISTRY_USER_RO/REGISTRY_TOKEN_RO org secrets — only a local copy used by that one step is overwritten, and only for the request that asks for it. Leave false (the default) for every normal deploy.'
+        required: false
+        type: boolean
+        default: false
 
 # No concurrency block, deliberately (Task 6.4) — Story 4.4's to add. Two simultaneous deploys
 # colliding is a known, accepted, NAMED gap until then (epics.md:1696-1722); the runner's own
@@ -319,11 +324,25 @@ jobs:
           REG_USER: ${{ secrets.REGISTRY_USER_RO }}
           REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
           TAG: ${{ steps.tag.outputs.tag }}
+          SIMULATE_BAD_CREDENTIAL: ${{ inputs.simulate_bad_credential }}
         run: |
           set -euo pipefail
           HEADERS_FILE="$(mktemp)"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+
+          # Task 8.3/AC7 discriminating-row switch. Deliberately AFTER login (the step above uses
+          # the real REG_TOKEN and succeeds normally) so this corrupts ONLY the credential this
+          # step's own curl call uses — hitting the registry's real 401 and this step's own
+          # classifier message below (not a bare `docker login` failure, which would abort the job
+          # one step earlier and never reach the code Task 8.3 is actually testing). The real
+          # REGISTRY_TOKEN_RO secret is never read again after this reassignment, never logged.
+          if [ "${SIMULATE_BAD_CREDENTIAL:-false}" = "true" ]; then
+            echo "⚠️⚠️⚠️ TESTING MODE (simulate_bad_credential=true): deliberately corrupting the"\
+                 "credential THIS STEP uses, to exercise Task 8.3/AC7's discriminating fail-closed"\
+                 "path. This is NOT a real credential failure — the org secret is untouched."
+            REG_TOKEN="deliberately-invalid-credential-for-task-8-3-testing"
+          fi
 
           # Credential passed via curl's --config (stdin), never argv — `-u` or a literal
           # `-H "Authorization: ..."` would put the token in this job's own `ps auxww` on a shared,
