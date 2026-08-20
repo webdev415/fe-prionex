@@ -4,15 +4,18 @@ baseline_commit: 62e2ff8dc215afa5c6ace1ac9a82f917320e2983
 
 # Story 4.2: Provision the New DEV Stand on s1
 
-Status: review
+Status: done
 
-<!-- Code review 2026-08-20: changes requested, 5 high / 9 medium / 8 low / 4 deferred / 5 dismissed
-     — see `### Review Findings`. Fix-pass applied same day: Oleg decided both items that needed a
-     decision (H2 — revoke `fe_review_1_7`, pending, `fe_tmp_1_7`/`fe_pkg_3_6` stay standing; M7 —
-     close 8082 to 127.0.0.1 before 4.9, verified locally, application on s1 pending — no SSH access
-     this session). H1/H3/H4/H5 patched; M2/M5/M6/M9/L1/L4-L8 patched; M1/M3/L2 left open (need s1
-     access this session does not have) and handed off honestly rather than guessed at. Ledger stays
-     OPEN by design — final close is the coordinator's, by query (D4). -->
+<!-- Closed 2026-08-20 (PR #57 merged as bf6ca403, closeout on PR pr-2-ledger-closeout, precedent
+     Story 4.1/PR #56). Code review 2026-08-20: changes requested, 5 high / 9 medium / 8 low / 4
+     deferred / 5 dismissed — see `### Review Findings`. Fix-pass applied same day: Oleg decided both
+     items that needed a decision (H2 — revoke `fe_review_1_7`, pending Oleg, `fe_tmp_1_7`/`fe_pkg_3_6`
+     stay standing; M7 — close 8082 to 127.0.0.1 before 4.9, verified locally, application on s1
+     pending Oleg — no SSH access from any session so far). Both s1 actions remain open in
+     `deferred-work.md`, deliberately not closed by this closeout. H1/H3/H4/H5 patched;
+     M2/M5/M6/M9/L1/L4-L8 patched; M1/M3/L2 left open, handed off honestly (need s1 access no session
+     here has had). Ledger CLOSED BY QUERY at 7 runs (813/814/827/828/850/851/866) against baseline
+     802 — see Completion Note 11. -->
 
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
@@ -118,9 +121,10 @@ legacy backend is the failure this entire line of work exists to prevent.
   - [x] 1.5 The merge to `main` fires **`build-main.yml`** (`build-main.yml:59-63`, `on: push:
         branches: [main]`), a *different* workflow from `ci.yml` — which ignores `main`. That is the
         second of the two rows Story 4.1's form had no line for.
-  - [ ] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
+  - [x] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
         closed at PR-open is not closed. If the query cannot be run, close it with the literal word
-        **OPEN** — do not substitute a self-reported number.
+        **OPEN** — do not substitute a self-reported number. **Closed 2026-08-20**, coordinator's
+        queries after the merge — see Completion Note 11's "CLOSED BY QUERY" block.
 
 - [x] **Task 2 — Establish and record host access (AC1)**
   - [x] 2.1 Reach s1 as `root@10.67.0.1` (equivalently `root@s1.private.crm-prionex.com`). 🔴 The
@@ -314,9 +318,9 @@ legacy backend is the failure this entire line of work exists to prevent.
         ✅ **The fallback was not needed.** `POST /api/v1/repos/CRM/fe-prionex/pulls` with the
         host-local token → **201, PR #57**. `4-2-PR-description.md` is still written as the review
         brief.
-  - [ ] 10.6 Re-query the run ledger **after the merge lands** and close it (Task 1.6). *(Citation
+  - [x] 10.6 Re-query the run ledger **after the merge lands** and close it (Task 1.6). *(Citation
         corrected 2026-08-20, review finding L5 — the close-only-against-a-query rule is Task 1.6,
-        not 1.4.)*
+        not 1.4.)* **Done 2026-08-20** — see Task 1.6 and Completion Note 11.
 
 ## Dev Notes
 
@@ -719,6 +723,37 @@ fix-pass push's own 2 rows, the merge run, and the entire closeout PR's ~3 rows.
 OPEN**. Tasks 1.6 and 10.6 remain unchecked for exactly that reason; closing them early is the
 mistake Story 4.1 made and this story does not repeat it.
 
+✅ **CLOSED BY QUERY, 2026-08-20 — coordinator's queries, run-by-run, after the merge.** PR #57
+merged as `bf6ca403`. Baseline **802**.
+
+| run id | trigger | commit / event | note |
+|---|---|---|---|
+| 813 | `push` | `96586e3d` | first push, PR not yet open at push time |
+| 814 | `pull_request` | PR #57 opened (API, immediately after) | separate trigger, same underlying action |
+| 827 | `push` | `eb82c4f9` | PR already open — both triggers fire from one push |
+| 828 | `pull_request` (`synchronize`) | `eb82c4f9` | ″ |
+| 850 | `push` | `a25f9948` (fix-pass) | PR already open — both triggers fire from one push |
+| 851 | `pull_request` (`synchronize`) | `a25f9948` | ″ |
+| 866 | `push` (`build-main.yml`) | `bf6ca403` (merge) | **running at closeout — outcome recorded by follow-up query, not awaited here per the coordinator's instruction** |
+
+**Full ledger: 7 runs** — 813, 814, 827, 828, 850, 851, 866. Matches the corrected declaration's
+subtotal for this PR's own cycle **exactly** (2 + 2 + 2 + 1 = 7, from the 2026-08-20 fix-pass above).
+
+🔴 **Structural note, same conclusion Story 4.1 reached after its own merge — but reached here
+*before* close, not discovered after it.** Every push landing while the PR is already open costs
+**two** `action_run` rows, not one — `ci.yml` fires on both `push` and `pull_request: synchronize`
+for the same commit (`ci.yml:65-71`). Story 4.1's original declaration did not model this and was
+corrected only after merge, calling the two extra runs *"structural, not an accident."* This story's
+declaration modelled the multiplier **in advance** (2026-08-20 fix-pass, following the review's H3/M4
+findings) — the real count landed exactly on the declared number because the mechanism was already
+priced in, not because nothing was missed.
+
+**The closeout PR you are reading this on (`story-4-2/pr-2-ledger-closeout`) is a separate,
+structurally-anticipated cost, scoped out of the figure above** — matching Story 4.1's own precedent,
+where PR #56's costs were flagged as a finding but not folded into PR #55's closed number. Declared
+in the fix-pass as **+3** (push + PR-open + merge, PR #56's own shape); not yet queried, not part of
+this story's closed 7.
+
 ### Review Findings
 
 Code review 2026-08-20 (Opus, three parallel layers: adversarial, edge-case, acceptance). **5 high,
@@ -1106,3 +1141,4 @@ else)
 | 2026-08-20 | PR #57 opened directly via the Forgejo API — Task 10.5's file fallback not needed; `4-2-PR-description.md` written as the review brief; Completion Note 10 rewritten and the ledger note renumbered 10 → 11 (row added retroactively by the review, see L4) |
 | 2026-08-20 | Code review (Opus, three parallel layers): **changes requested**. 5 high, 9 medium, 8 low, 4 deferred, 5 dismissed — see `### Review Findings`. The two beyond documentation: **H1** the stand's `sha-…-dev` tag falls outside the live retention rule's `keep_pattern` (`build.yml:962`) and is deleted ~2026-09-02, unrecorded anywhere; **H4** registry auth resolves client-side, so AC4's host `docker login` cannot serve a deploy job under any of D28 §4's three options. **H5** the 4.3 blocker is stated as "measured" where it is partly inferred, and two cheaper paths (the deploy runner's own `docker.sock`; rendering compose/`.env` in the job workspace — the stand file declares no host path) are missing from the option set; the *choice* remains 4.3's. **H2** the `fe_review_1_7` transcript exposure never entered `deferred-work.md`, whose `:38` still reads "Its value never entered any transcript" — needs Oleg's revocation decision. **H3** the run budget still has no line for the closeout PR that Tasks 1.6/10.6 require, which is the exact structural miss it convicts 4.1 of. Verified clean: NFR5, D7, the must-not-touch list, D28's form, both retro-E5 failing runs, and the 4.1/D27 compose conventions |
 | 2026-08-20 | **Fix-pass on the code review, Oleg's decisions applied.** H1: scheduled-redeploy plan recorded (not a retag), primary path Story 4.3, fallback trigger 2026-08-30. H2: `deferred-work.md:38`'s false claim corrected; Oleg will revoke `fe_review_1_7` personally (pending), `fe_tmp_1_7`/`fe_pkg_3_6` stay standing by design. H3/M4/L1: Completion Note 11's ledger arithmetic corrected to sum, closeout-PR line added (+3), interim count raised to 4. H4: registry-auth-is-client-side recorded as a named, separate Story 4.3 constraint in D28 §4 and `deferred-work.md`. H5: "measured" narrowed to what was measured; two more path options and the read-write-to-every-tenant consequence added. M7: Oleg's decision to close port 8082 to `127.0.0.1` before 4.9, verified locally (no template change needed — `docker compose config` + a real `up -d` + `lsof`), exact command left for Oleg (no s1 access this session). M1/M3 left open — cannot be closed without s1 access, recorded honestly and handed to whoever next has it. M2, M5, M6, M9, L2-L8 — mechanical documentation fixes applied. Status returned to `review` |
+| 2026-08-20 | **Closeout, precedent Story 4.1/PR #56.** PR #57 merged as `bf6ca403`. Run ledger CLOSED BY QUERY (Task 1.6/10.6, coordinator's queries): baseline 802, runs 813/814 (`96586e3d`), 827/828 (`eb82c4f9`), 850/851 (`a25f9948`), 866 (merge, `build-main.yml`, outcome pending a follow-up query, not awaited here) — **7 runs**, matching the corrected declaration's subtotal exactly. Structural note recorded in advance rather than found after the fact (unlike Story 4.1's own precedent): every push landing while the PR is already open costs two runs (`push` + `pull_request: synchronize`), and this story's declaration priced that in before close. This closeout PR's own cost (~3 runs, PR #56's shape) is scoped out of the closed figure, matching how 4.1 scoped PR #56 out of PR #55's own number. The two s1-side actions from the fix-pass — port 8082 → `127.0.0.1`, and revocation of `fe_review_1_7` — remain **pending Oleg** in `deferred-work.md`, deliberately not closed by this closeout. Status: `done` |

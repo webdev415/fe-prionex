@@ -246,7 +246,11 @@ development_status:
   # session). H1/H3/H4/H5 patched in D28 + deferred-work.md; M2/M5/M6/M9/L1/L4-8 patched; M1/M3/L2
   # left open honestly (need s1 access this session doesn't have). Ledger stays OPEN — final close is
   # the coordinator's, by query (D4).
-  4-2-provision-the-new-dev-stand-on-s1: review
+  # ✅ CLOSED 2026-08-20 — PR #57 merged as bf6ca403. Ledger closed by the coordinator's own queries
+  # (precedent Story 4.1/PR #56): baseline 802, runs 813/814/827/828/850/851/866 = 7, matching the
+  # declaration's subtotal exactly. The two s1-side actions (port 8082 → 127.0.0.1; revoke
+  # `fe_review_1_7`) remain PENDING OLEG in deferred-work.md — deliberately not closed by this closeout.
+  4-2-provision-the-new-dev-stand-on-s1: done
   # ⬇️ Carries Story 4.2's blocker: the deploy job cannot reach ~/crm-prionex/fe-prionex-dev/ as
   # specified (D28 §4). Options a/b/c are recorded there; review added two more and found that the
   # registry credential problem (H4) is unsolved by all of them. Decide the mechanism here.
