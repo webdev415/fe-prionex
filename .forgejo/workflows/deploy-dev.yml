@@ -128,8 +128,110 @@ jobs:
           fi
           echo "OK: registry is reachable and answering correctly from this runner's own execution."
 
-  deploy:
+  # ── Round 2, after run 922: preflight passed (secrets present, registry reachable) but the
+  # deploy job still failed in <60s — the org-secret-access hypothesis is REFUTED. Two remaining
+  # candidates from the deploy job's own construction, both settled BEFORE this dispatch by direct
+  # reproduction on s1 (equivalent-scope credential, never printed; no dispatch spent to learn this):
+  #   (1) "Obtain docker-compose.stand.yml" does an ANONYMOUS `git fetch` over https — this repo is
+  #       private. Reproduced live on s1, exact job network, no credential: `git fetch` fails in
+  #       under a second, non-interactively: `fatal: could not read Username for
+  #       'https://git.crm-prionex.com': No such device or address` (exit 128) — not a hang, not a
+  #       timeout, a fast textbook "git wanted to prompt, there is no tty" failure. CONFIRMED root
+  #       cause, not merely leading.
+  #   (2) Digest resolution — RULED OUT. Resolved `main-dev` live against the real registry with an
+  #       EQUIVALENT-scope credential (`fe_reg_4_2_ro`, Story 4.2's own `robot-registry` token,
+  #       `read:package`, still on s1 at `/root/.fj_reg_4_2.token`, value never printed): clean 200
+  #       with a real digest. This step is not the failure.
+  #   Also checked: whether `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` (candidate 1's obvious first fix
+  #   — just reuse it for the clone) could authenticate the git fetch too. It cannot, by
+  #   construction, not merely by assumption: probed the SAME equivalent-scope `read:package`
+  #   credential against this repo's own content API and got a same-host, same-instance,
+  #   self-describing refusal — `403 {"message":"token does not have at least one of required
+  #   scope(s): [read:repository]"}`. A `read:package`-only credential (which is what this
+  #   workflow's own credential deliberately is, by AC7/Task 3's design) cannot read repository
+  #   contents on this Forgejo instance, regardless of which bot account holds it. Fixing candidate
+  #   1 needs a DIFFERENT, `read:repository`-scoped credential — not a scope this job currently
+  #   holds, not a code bug to patch around.
+  #   No automatic per-job token (`GITHUB_TOKEN`/`GITEA_TOKEN` equivalent) is referenced anywhere in
+  #   this project's existing workflows (`build.yml`, `ci.yml`) — this project's own established
+  #   convention is OpenBao-issued or explicitly-minted credentials, never an implicit runner token,
+  #   so one is not assumed to exist here either without confirmation.
+  #   Candidate 3 (an early guard misfiring) — reread: the sanitizer accepts "main" cleanly
+  #   ("main-dev", no leading [.-], non-empty) and run 922's preflight already proves the credential
+  #   guard did not fire falsely. No false-guard behavior found for this input.
+  # clone-test/digest-resolve-test below exist to put this same conclusion ON THE RECORD as live,
+  # job-list-visible evidence (Task 8's own "needs a live outcome matrix" rule) — not to re-decide
+  # an already-settled question locally.
+  clone-test:
+    name: "1. Clone-test — does the deploy job's own anonymous git fetch work? (expected FAIL — confirmed locally, see comment above)"
     needs: preflight
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 3
+    steps:
+      - name: Attempt the exact same anonymous git fetch the deploy job's checkout step performs
+        env:
+          REF_IN: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          rm -rf clone-test-checkout
+          mkdir clone-test-checkout
+          cd clone-test-checkout
+          git init --quiet
+          git remote add origin https://git.crm-prionex.com/CRM/fe-prionex.git
+          if ! git fetch --quiet --depth 1 origin "$REF_IN"; then
+            echo "FAIL: anonymous git fetch of this private repo does not work — confirmed locally"\
+                 "on s1 via SSH before this dispatch was ever requested (fatal: could not read"\
+                 "Username ... No such device or address, exit 128; non-interactive git refusing to"\
+                 "prompt for a private repo with no credential supplied). This job exists to confirm"\
+                 "the SAME failure inside a real Forgejo Actions job context, not just a plain"\
+                 "'docker run' simulation — closing Task 8's live-discriminating-row requirement."\
+                 "Fix needs a credential scoped read:repository on this Forgejo instance;"\
+                 "REGISTRY_USER_RO/REGISTRY_TOKEN_RO cannot be reused for it (confirmed: a"\
+                 "read:package-only credential gets 403 'required scope(s): [read:repository]'"\
+                 "from this same host's own repo-content API)."
+            exit 1
+          fi
+          echo "OK: anonymous fetch succeeded — the confirmed local finding did not reproduce here;"\
+               "root cause needs to be reconsidered."
+
+  digest-resolve-test:
+    name: "2. Digest-resolve-test — does REGISTRY_USER_RO/REGISTRY_TOKEN_RO actually resolve a real tag? (expected PASS)"
+    needs: preflight
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 3
+    steps:
+      - name: Resolve the digest for this dispatch's own ref, with the workflow's real credential
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          REF_IN: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          SANITIZED="$(printf '%s' "$REF_IN" | sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100)"
+          TAG="${SANITIZED}-dev"
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://git.crm-prionex.com/v2/crm/fe-prionex/manifests/${TAG}")"
+          echo "GET .../manifests/${TAG} -> HTTP ${HTTP_CODE}"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "FAIL: expected 200 resolving ${TAG} with the workflow's own credential. Locally"\
+                 "on s1 an EQUIVALENT-scope credential (fe_reg_4_2_ro, Story 4.2's, robot-registry,"\
+                 "read:package) resolved this exact tag cleanly (200) before this dispatch — a"\
+                 "different result here, with the workflow's OWN credential specifically, would"\
+                 "itself be a finding (this credential lacking a grant/scope the equivalent one has)."
+            cat "$BODY_FILE" 2>/dev/null || true
+            exit 1
+          fi
+          echo "OK: resolved ${TAG} with the workflow's own REGISTRY_USER_RO/REGISTRY_TOKEN_RO."
+
+  deploy:
+    needs: [preflight, clone-test, digest-resolve-test]
     name: "Deploy a ref to the DEV stand"
     runs-on: deploy-dev-preprod
     timeout-minutes: 10

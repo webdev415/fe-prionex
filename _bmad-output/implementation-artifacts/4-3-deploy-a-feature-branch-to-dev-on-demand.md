@@ -891,6 +891,7 @@ the coordinator dispatches and reports run ids).
 | 918 | `push` | `bcd98b4e` (`ci.yml`, deploy-dev.yml + three-job probe) | **success** |
 | 919 | `workflow_dispatch` | `deploy-dev.yml`, task 8551, first live dispatch (`ref=main`) | **failure**, <60s — diagnosed (Completion Note 3), fixed this push (`preflight` job) |
 | 920 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, three-job version | job 1 success, job 2 **failure** (Task 2.2 closed negatively, measured), job 3 success |
+| 922 | `workflow_dispatch` | `deploy-dev.yml`, `preflight` (8562) + `deploy` (8563), `ref=main` | preflight **success**; deploy **failure**, <60s — org-secret hypothesis refuted; root cause found by SSH, no dispatch spent (Completion Note 4); fixed this push (`clone-test` + `digest-resolve-test` ladder) |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -947,7 +948,49 @@ while writing it: `${#REG_USER}` alone crashes under `set -euo pipefail` ("unbou
 the secret resolves to genuinely unset rather than empty — fixed to `${REG_USER:-}` first, so the
 diagnostic cannot itself crash on the exact condition it exists to detect.
 
-**4. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
+**4. Run 922 refutes the org-secret hypothesis; the real cause was found and confirmed for free,
+via SSH, before spending a second dispatch.** Coordinator dispatched `preflight` (job 8562) —
+**success**: secrets present, registry reachable. `deploy` (job 8563) — **failure**, again fast
+(waiting→failure in ≤60s). This closes Completion Note 3's leading hypothesis negatively: the org
+secrets ARE granted to this repo; the failure is somewhere else in `deploy`'s own construction.
+Two remaining candidates, both settled on s1 by direct reproduction, no dispatch spent: **(1) the
+"Obtain docker-compose.stand.yml" step does an ANONYMOUS `git fetch` of a private repo** —
+reproduced live, exact job network, no credential supplied: `git fetch` fails in well under a
+second, non-interactively — `fatal: could not read Username for
+'https://git.crm-prionex.com': No such device or address` (exit 128), a clean "wanted to prompt,
+no tty" failure, not a hang or a timeout. **This is the confirmed root cause**, not a hypothesis.
+**(2) digest resolution — ruled out**: resolved `main-dev` live against the real registry using an
+EQUIVALENT-scope credential (`fe_reg_4_2_ro`, Story 4.2's own `robot-registry` token,
+`read:package`, still on s1 at `/root/.fj_reg_4_2.token`, value never read into any transcript) —
+clean `200` with a real digest. **Also checked, not assumed: can `REGISTRY_USER_RO`/
+`REGISTRY_TOKEN_RO` be reused to authenticate candidate (1)'s fix?** No — probed the same
+equivalent-scope `read:package` credential against this repo's own content API and got a
+self-describing refusal from the SAME Forgejo instance: `403
+{"message":"token does not have at least one of required scope(s): [read:repository]"}`. A
+`read:package`-only credential — which is what AC7/Task 3 deliberately scoped this workflow's own
+credential to — cannot read repository contents here, regardless of which bot account holds it;
+fixing candidate (1) needs a DIFFERENT credential with `read:repository` scope, not a code patch.
+No automatic per-job token (`GITHUB_TOKEN`/`GITEA_TOKEN` equivalent, the coordinator's own
+suggested candidate) is referenced anywhere in this project's existing workflows — this project's
+established convention is OpenBao-issued or explicitly-minted credentials, never an implicit
+runner token, so its existence is not assumed here either without confirmation. **Candidate 3
+(an early guard misfiring) reread and ruled out**: the sanitizer accepts `main` cleanly and run
+922's own `preflight` result already proves the credential guard did not fire falsely.
+**Fix, ladder form per the coordinator's own request:** two new jobs, `clone-test` (reproduces the
+exact broken fetch — job-list PASS/FAIL is the live-dispatch evidence Task 8 wants, expected to
+fail until a `read:repository`-scoped credential exists) and `digest-resolve-test` (resolves a real
+tag with the workflow's OWN `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, expected to pass, closing the
+loop on Note 3's now-refuted hypothesis using the live credential itself, not merely an equivalent
+one). `deploy` now `needs: [preflight, clone-test, digest-resolve-test]` — a job already known to
+fail at its own clone step no longer wastes a login+resolve+pull first.
+**Open question for the coordinator, not resolved by this session**: does an existing org/repo
+secret with `read:repository` scope already exist for a bot account usable here (mirroring how
+`REGISTRY_USER_RO` itself turned out to already exist, Note 1) — or does one need minting? Minting
+is a standing, non-revocable credential by this project's own established constraint (an admin
+cannot revoke another account's token), so it is not done unilaterally here; asked of the
+coordinator instead, same as Task 3's original resolution path.
+
+**5. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
 dispatch.** Job identity is uid 0/root (not the runner supervisor's `1501:988` — corrects D28 §4's
 own H5 amendment); docker/compose/git/curl/jq/wget versions recorded; the mounted socket reaches
 the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-resolution mechanism
@@ -955,7 +998,7 @@ the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-r
 (`fe_reg_4_2_ro`, Story 4.2's) *before* being written into `deploy-dev.yml` — the exact HTTP
 status/header shapes the workflow's own fail-closed guard (Task 5.4) now classifies.
 
-**5. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
+**6. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
 credential login → digest resolve (fail-closed on 401/404/other) → pull → render `.env` in the job
 workspace (digest-pinned `DOCKER_IMAGE`, `FRONTEND_PORT=127.0.0.1:8082`) → capture network id →
 `down` → `up -d` → confirm network unchanged → health-poll → anchored container/label check →
@@ -974,7 +1017,9 @@ job, explicitly, not this one's.**
 **Modified**
 - `.forgejo/workflows/deploy-dev.yml` — added the `preflight` job (diagnosing run 919: secret
   length/presence and registry reachability, independently job-listed, no log access needed);
-  `deploy` now `needs: preflight`
+  round 2 (run 922) added `clone-test` (reproduces the anonymous-git-fetch root cause live) and
+  `digest-resolve-test` (confirms the workflow's own registry credential resolves a real tag);
+  `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -987,3 +1032,4 @@ job, explicitly, not this one's.**
 | 2026-08-20 | **Registry-credential blocker resolved (coordinator): `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` are existing org-level secrets, not minted.** Task 3 rewritten. Budget declared before the first push (baseline requested, not self-queried — this session does not touch the Forgejo API this cycle). Local SSH simulation on s1 answers Task 2.3/2.4/2.5 without a dispatch. First probe pushed (single job); run 917 came back `failure`, ambiguous by design |
 | 2026-08-20 | **Probe redesigned into three jobs after run 917's ambiguous single-job result** (coordinator's report: dispatch-from-non-default-branch confirmed working; the `uses:` question stayed undetermined). `deploy-dev.yml` written in full, in the plain-`run:` form the precedent (`build.yml:107-124`) and the ambiguous-but-consistent probe result both point to — registry digest resolution proven live against the real registry (200/401/404) with a real credential before being written into the workflow. Tasks 1b/3/4/5/6/7 marked implemented, pending Task 8's live verification |
 | 2026-08-20 | **Run 920: `uses:` steps confirmed (not inferred) to not execute on this runner's job image — Task 2.2 closed negatively, measured.** Run 919: `deploy-dev.yml`'s first live dispatch (`ref=main`) failed in <60s. Diagnosed by reproducing the exact job network path on s1 via SSH — DNS, registry reachability, and `docker login` failure mode all clean, ruling out a network cause; leading hypothesis is the org secrets existing but not being granted to this repository specifically. Confirmed by SSH that the stand was untouched (fail-closed held). Fix: a new `preflight` job ahead of `deploy`, reporting secret presence (by length, never value) and registry reachability independently, so the run's job list alone (no log access) will show which is true on the next dispatch. Caught and fixed a real bug while writing it: `${#VAR}` crashes under `set -u` on a genuinely unset variable — changed to default-to-empty first |
+| 2026-08-20 | **Run 922: `preflight` passed, refuting the org-secret hypothesis; the real cause found and confirmed for free via SSH, no second dispatch spent to learn it.** Root cause confirmed: the "obtain compose file" step does an anonymous `git fetch` of a private repo — reproduced live on s1 (exact job network, no credential): fails in under a second, non-interactively, `fatal: could not read Username ... No such device or address`. Digest resolution ruled out (a real, equivalent-scope credential resolved a real tag cleanly, 200). Also checked, not assumed: the workflow's own `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` cannot be reused for the fetch — an equivalent-scope credential got a same-instance `403 required scope(s): [read:repository]` reading repo content. Fix needs a `read:repository`-scoped credential that does not yet exist in this workflow — flagged to the coordinator rather than minted unilaterally (a minted token here would be standing/non-revocable by this project's own established constraint). Ladder extended per the coordinator's request: `clone-test` (reproduces the fetch live — job-list evidence, expected to fail until a credential exists) and `digest-resolve-test` (resolves a real tag with the workflow's own live credential, expected to pass); `deploy` now needs all three preceding jobs |
