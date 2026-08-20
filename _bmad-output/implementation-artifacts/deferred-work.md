@@ -2888,3 +2888,39 @@ not been reviewed yet at time of writing), found while designing and locally pro
   the stand — it covers one of the two. **Owner: whoever documents/wraps the manual DR procedure
   (no story currently owns this; a candidate for Story 4.8's shared definition, or a plain
   operational note, not necessarily new workflow code).**
+
+## Deferred from: code review of story-4.4 (2026-08-20)
+
+Code review (Opus, three parallel layers) routed 7 high / 15 medium / 10 low findings back to the
+story as action items and 3 to Oleg as decisions — those stay in the story's own
+`### Review Findings` section. The two below are deferred because they cannot be closed from this
+session at all, not because they are minor.
+
+- ⚠️ **AC1 has no evidence of any kind, and the query that would close it needs access this project
+  does not currently have.** Story 4.4's `concurrency:` block is declared, is workflow-level, and is
+  a literal constant — but *which group a run is actually assigned* was never read, so AC1 is the
+  one acceptance criterion of six that ships unverified. The story declares this honestly
+  (Tasks 7.5/7.6, **UNPROVEN**, explicitly not inferred from the ~189 s WAIT timing) rather than
+  asserting it. The run-detail API exposes no `concurrency_group`/`concurrency_type` field —
+  confirmed by the coordinator against run 964, zero matching keys — and this session has SSH to s1
+  (the deploy target) but no path to the Forgejo instance's own host or database. The closing query,
+  recorded and not executed: `SELECT concurrency_group, concurrency_type FROM action_run WHERE id IN
+  (964, 965);` — `concurrency_type = 1` means an explicit group, `0` means the auto-group. Note that
+  the effectiveness half can never be settled here regardless: on a `capacity: 1` runner,
+  group-queueing and capacity-queueing are indistinguishable by timing, which is exactly why NFR10
+  requires the `flock` to be the load-bearing half. **Owner: whoever next has DB access to the
+  Forgejo instance** — a candidate for the Story 4.4 closeout PR if access appears, otherwise for
+  Story 4.8, which re-keys this block by stand and must re-measure it anyway.
+- ⚠️ **Concurrency queue *depth* was never measured, and a third dispatch may silently drop the
+  pending run.** Upstream Actions semantics, with `cancel-in-progress: false`, keep at most one
+  pending run per group: when a third dispatch arrives while one run is in progress and one is
+  pending, the *pending* one is cancelled and the newcomer takes its place. If this Forgejo build
+  follows them, a dispatched deploy can disappear at the run level and never reach the `flock` at
+  all — undetectable here, because this instance has no cancel API to observe (`:94-98`) and no
+  retrievable job logs. D8 measured queueing for **two** runs (probes 6/7) and cancellation for
+  `cancel-in-progress: true` (runs 8/9); depth beyond two was never probed, and D30 does not claim
+  it. This also undercuts the `WAIT=240` rationale written in the file (*"covers three queued
+  deploys"*), a scenario the design makes unreachable in a second, independent way. There is no
+  workflow-level fix — it is a platform behaviour to measure and document. **Owner: Story 4.8**
+  (which parameterizes the group per stand and must re-measure it), or whoever closes the AC1 item
+  above, since both are answered by the same database.

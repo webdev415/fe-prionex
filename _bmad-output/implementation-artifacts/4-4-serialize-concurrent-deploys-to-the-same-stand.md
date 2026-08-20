@@ -4,7 +4,20 @@ baseline_commit: 2fc2a22049d26884076c455fec33d396b091c6ca
 
 # Story 4.4: Serialize Concurrent Deploys to the Same Stand
 
-Status: review
+Status: in-progress
+
+<!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested** — 7 high, 15 medium,
+     10 low, 2 deferred, 6 dismissed, plus 3 decision-needed for Oleg. See `### Review Findings`.
+     Status returned to `in-progress` because the patch findings are left as action items, not
+     applied. The lock mechanism itself is sound and was measured before it was designed; the
+     findings concentrate in the CLASSIFIERS (every new fail-closed message is written for the one
+     case the design makes least likely, and misattributes the ones that will actually occur), in
+     the WAIT/TTL/`timeout-minutes` arithmetic (correct today by an undocumented 120 s margin that a
+     `timeout-minutes` change in Story 4.7 would silently unmake), and in the live matrix's
+     discriminating power (rows 7.3 and 7.4 do not discriminate as executed). -->
+
+<!-- Original status when submitted for review: review (2026-08-20). -->
+
 
 <!-- Contexted 2026-08-20 against `main` at 2fc2a220 (Story 4.3 closed the same day: PR #59
      implementation, PR #60 ledger closeout). This story inherits ONE named, pre-analysed blocker
@@ -466,18 +479,23 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
   inside the coordinator's own 23:08:35–~23:09:25 MSK dispatch/finish window). Not a discrepancy in
   the data, but worth recording so nobody later reads a 1-hour gap as evidence of a stuck run.
 
+  🔴 **Ordering corrected 2026-08-21 (code review L7):** `action_run` ids are assigned at creation
+  and increase monotonically, so a dispatch created after 964 cannot be numbered 963 — the sequence
+  below is restated by run-id order, not by which numbered step in the plan it was "near".
+
   1. `ref=main` (defaults) → **run 962**, row 7.1.
+  - Before #2's holder existed at all, an unplanned, zero-cost probe: dispatching `deploy-dev.yml`
+    **without** the required `ref` input returned **HTTP 400** with the full input-description
+    text, and consumed **no** `action_run` row — Forgejo validates required `workflow_dispatch`
+    inputs before a run is created. A useful, free corroboration of the same "reject before
+    creation" behaviour Task 3.2 relies on for the concurrency key.
+  - Also before #2's holder existed (run-id order: **run 963**, between 962 and 964), an accidental
+    extra plain dispatch — an ordinary, uncontended deploy, not sequenced between the holder and its
+    contended deploy as originally (and wrongly) narrated. It invalidated no row's preconditions:
+    7.1's control and 7.2's wait both stand exactly as reported. A clean, harmless PASS, unrelated
+    to any matrix row.
   2. `hold_lock_seconds=180` → **run 964**, row 7.2's holder.
   3. `ref=main` (defaults), dispatched shortly after #2 → **run 965**, row 7.2's contended deploy.
-  - Between #2 and #3, an unplanned zero-cost probe: dispatching `deploy-dev.yml` **without** the
-    required `ref` input returned **HTTP 400** with the full input-description text, and consumed
-    **no** `action_run` row — Forgejo validates required `workflow_dispatch` inputs before a run is
-    created. A useful, free corroboration of the same "reject before creation" behaviour Task 3.2
-    relies on for the concurrency key.
-  - Also between #2 and #3, an accidental extra plain dispatch (a mistimed first attempt at #3,
-    fired before the holder had visibly taken the lock) landed as **run 963**, a clean, harmless
-    PASS unrelated to any matrix row. Logged honestly in the Run Budget Ledger as a red/extra
-    dispatch, not folded into 7.1's or 7.2's own row.
   4. `hold_lock_seconds=400` → **run 966**, row 7.3/7.4's shared holder.
   5. `ref=main` (defaults), dispatched shortly after #4 → **run 967**, row 7.3.
   6. `ref=main` (defaults), dispatched ~490s after #4's holder acquired → **run 968**, row 7.4.
@@ -496,6 +514,10 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         Host-side (post-hoc, via the current stand's own history): consistent with the ladder
         working end to end; no lock container left behind by the time of the final check
         (Completion Note 6).
+        🔴 **Code review M8, 2026-08-21: no wall-clock evidence recorded for this row**, the one
+        row that could supply a same-round, same-configuration control for row 7.2's own "~189s
+        against ~60s" claim. Requested from the coordinator (run 962's own `started`/`stopped`
+        timestamps) for the re-earn round — zero additional dispatch cost, a data query only.
   - [x] 7.2 **WAIT, discriminating (AC3) — holder run 964 SUCCESS (dispatched 22:56:04 MSK);
         contended deploy run 965 SUCCESS, dispatched 22:56:39 MSK, finished 22:59:50 MSK
         (~189s, against ~60s for an uncontended deploy like 7.1).** This is the direct signature of
@@ -510,7 +532,7 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         clause directly next time.
   - [x] 7.3 **FAIL, discriminating (AC5) — holder run 966 SUCCESS (dispatched 23:00:24 MSK,
         `hold_lock_seconds=400` against a 240s wait bound); deploy run 967 FAILURE (dispatched
-        23:01:00 MSK, recorded failed by 23:08:38 MSK).** ✅ **Stand confirmed untouched, host-side,
+        23:01:00 MSK, observed FAILED by 23:08:38 MSK).** ✅ **Stand confirmed untouched, host-side,
         as of the final check after the whole matrix completed** (Completion Note 6): the stand
         that is live now is the direct product of run 968 (7.4), not a state left behind broken by
         967 — `fe-prionex-dev` is healthy, `RestartCount=0`, single instance, no crash-loop
@@ -518,6 +540,15 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         bracketing 967 specifically was not taken live; the absence of any corruption in the
         current, later state is consistent with "untouched" but is not the same as having watched
         it happen.
+        🔴 **Code review M9, 2026-08-21: "23:08:38" is restated here as an OBSERVATION time, not a
+        finish/`stopped` timestamp** — the literal reading did not reconcile with the guard's own
+        ~255s poll bound against holder 966's own timeline (would predict failure closer to
+        23:05:30-23:06:00). The benign reading (23:08:38 is when the coordinator observed the
+        already-failed run, immediately before dispatching 968) is consistent with everything else
+        and is what this row now claims. Also stated honestly: "run 967 FAILURE" alone does not by
+        itself prove it failed AT the lock guard specifically with AC5's own message — that clause
+        rests on local Test 6.3a. This row is being re-earned live per DN3 with the real `stopped`
+        timestamp requested this time.
   - [x] 7.4 **STALE, discriminating (AC4) — run 968 SUCCESS, dispatched 23:08:35 MSK (~490s after
         966's holder acquired, comfortably past its 400s TTL), finished in ~50s, no human
         intervention, no cancel used (none exists on this instance).**
@@ -532,6 +563,19 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         3 seconds before the container was recreated — direct evidence of acquire-then-deploy in
         sequence. No leftover `fe-prionex-dev-deploy-lock-*` holder container exists on the host.
         AC4 met with zero human intervention, host-confirmed.
+        🔴 **Code review H7, 2026-08-21: this row is NOT actually discriminating as executed, and
+        the label above overstated it.** ~490s after 966's holder ACQUIRED comfortably exceeds its
+        400s TTL — meaning the holder had already self-removed before 968 was even dispatched. 968
+        met a FREE lock, behaviourally and observationally identical to row 7.1 (an ordinary
+        uncontended deploy); the host-side proof above conclusively shows 968 deployed cleanly, but
+        does not distinguish "recovered from a stale lock" from "there was never a lock in its way
+        at all". AC4's own literal **Given** ("a deploy dies while holding the lock") was also never
+        staged — the holder that expired was a fixture completing its OWN designed sleep, not a dead
+        deploy's orphan. AC4's real evidence remains local Test 6.3b. Also noted: the "~490s"
+        figure was measured from 966's own DISPATCH (23:08:35 − 23:00:24), not its acquisition,
+        conflating the two. This row is being re-earned live per DN3, dispatched WHILE a holder is
+        genuinely still alive and within WAIT this time, including the literal AC4 scenario staged
+        via a host-side kill of the holder's own parent job.
   - [ ] 7.5 **CONCURRENCY GROUP (AC1) — UNPROVEN.** The run-detail API does not expose
         `concurrency_group`/`concurrency_type` (coordinator confirmed against run 964, zero matching
         keys), and this session has no direct path to the Forgejo instance's own database (only to
@@ -580,9 +624,12 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         4.3 fix-pass version.
   - [x] 8.4 Re-run the `${{ }}`-in-`run:` grep over the whole file after the edit and record the
         count, the way 4.3 recorded "all 23 parsed".
-        ✅ **All 28 `run:` bodies parsed clean, zero stray `${{ }}`** (up from 4.3's 25 — the three
-        new steps: `hold-lock`'s own step, the acquire step, the release step). Verified
-        programmatically via `yaml.safe_load` + substring check, not by eye.
+        ✅ **All 30 `run:` bodies parsed clean, zero stray `${{ }}`** (up from 4.3's 23 — code
+        review M6/L9, 2026-08-21: this story's own spec text at Task 4.8/8.4 both cite 4.3's count
+        as 23, correcting an earlier "25" this resolution mistakenly wrote; the 30 reflects this
+        fix-pass's own additions too: the preflight smoke-test step, the hold-lock safety-net step,
+        and the two down/up-d re-assertion checks, on top of the original hold-lock/acquire/release
+        steps). Verified programmatically via `yaml.safe_load` + substring check, not by eye.
 
 - [x] **Task 9 — Record the decisions (D-record, epics, deferred-work)**
   - [x] 9.1 New D-record in `docs/migration-decisions.md`, in Russian, following the house shape
@@ -642,15 +689,20 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         `.env.stand.example`, and the four `.forgejo/workflows/*.yml` other than `deploy-dev.yml`.
         **NFR5 / D7:** the legacy stands and the GitHub side are untouched — verify by the diff's
         own file list, not by intention.
-        ✅ **Verified by `git diff origin/main --name-only`**, not intention: exactly four files
-        touched (`deploy-dev.yml`, the story file, `sprint-status.yaml`, plus this round's
+        ✅ **Verified by `git diff origin/main --name-only`**, not intention: exactly six files
+        touched (code review L9, 2026-08-21 — corrected from "four", which undercounted its own
+        list): `deploy-dev.yml`, the story file, `sprint-status.yaml`, plus this round's
         `docs/migration-decisions.md`/`epics.md`/`deferred-work.md`) — none of the named
         do-not-touch files or workflows appear.
-  - [x] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
+  - [ ] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
         is written.
-        ✅ **Done now** — Task 7's matrix is live-earned (6 of 6 planned rows executed and recorded,
-        7.5/7.6 honestly UNPROVEN rather than inferred). `Status` and `sprint-status.yaml` both
-        flipped to `review` in this commit.
+        Flipped to `review` in an earlier round; code review (H7/M9) then found rows 7.3/7.4 were
+        NOT actually discriminating as executed (7.4 met a free lock, 7.3's own timings didn't
+        reconcile with the guard's own bound) and reset both `Status` and `sprint-status.yaml` to
+        `in-progress` itself, correctly — the matrix was not as fully live-earned as first recorded.
+        Reopened rather than re-closed here: per this story's own established discipline (Story
+        4.3), the flip back to `review` happens only once DN3's live re-earn of 7.3/7.4 actually
+        lands, not preemptively on the strength of the code fixes alone.
   - [ ] 10.4 Re-query the ledger after the merge commit lands and close it (Task 1.6). Closeout is a
         second branch/PR/merge cycle: `story-4-4/pr-3-ledger-closeout`.
 
@@ -1083,8 +1135,9 @@ immediately before this round's first implementation push.
 | Each subsequent push while the PR is open | 2 each | none yet |
 | Task 2's premise measurements | 0 | **0** — all four answered live on s1, zero dispatches (Completion Note 1) |
 | Task 6's local proof of the lock primitive | 0 | **0** — concurrent acquire/release and every forced-failure path, all via SSH |
-| `deploy-dev.yml` dispatches — Task 7's live outcome matrix | ≥7 | **7 — runs 962, 964, 965, 966, 967, 968 (the planned 6), plus 963 (one accidental extra, see below)**. Run 962 = 7.1, 964/965 = 7.2's pair, 966/967 = 7.3's pair, 968 = 7.4. 7.5/7.6 read off 964/965's own record at no extra cost (UNPROVEN — the API doesn't expose the needed columns, not a dispatch-cost issue) |
-| Red dispatches before the first green matrix row | ≥3, not hoped against | **1 — run 963**, an accidental extra plain dispatch (mistimed first attempt at the 7.2 catch-up deploy), landed as a clean, harmless PASS unrelated to any row. Logged honestly rather than folded into 7.1/7.2. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all — the zero-dispatch strategy (Task 2/6 converting 6 of 7 named causes) outperformed its own declaration; only 1 red run spent against a declared floor of ≥3 |
+| `deploy-dev.yml` dispatches — Task 7's live outcome matrix | ≥7 | **6 — runs 962, 964, 965, 966, 967, 968**, exactly the planned sequence. Run 962 = 7.1, 964/965 = 7.2's pair, 966/967 = 7.3's pair, 968 = 7.4. 7.5/7.6 read off 964/965's own record at no extra cost (UNPROVEN — the API doesn't expose the needed columns, not a dispatch-cost issue) |
+| Unplanned extra dispatch, outside the matrix (code review L7, corrected 2026-08-21 — was mis-booked under "red dispatches" below, though its own text already called it a clean PASS) | not declared | **1 — run 963**, an ordinary, uncontended deploy dispatched before any Task 7 holder existed (run-id order corrected: 963 falls between 962 and 964, not "between #2 and #3" as originally narrated). A clean, harmless PASS, unrelated to any matrix row, invalidating no row's preconditions |
+| Red dispatches before the first green matrix row | ≥3, not hoped against | **0.** The zero-dispatch strategy (Tasks 2/6 converting 6 of 7 named causes into zero-dispatch findings) outperformed its own declared floor of ≥3 — not a single dispatch this round failed for a reason the design didn't already anticipate and handle. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all, a free corroboration of the same class of guard |
 | Merge to `main` (`build-main.yml`) | 1 | pending — merge not yet requested this round |
 | Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 | pending, Task 10.4 |
 
@@ -1351,6 +1404,88 @@ data sets agree exactly once shifted by 1 hour — the lock file's `mtime` (22:0
 MSK) falls squarely inside the coordinator's own claimed 23:08:35–~23:09:25 MSK window for run 968.
 Recorded as a documentation clarity finding, not a data problem.
 
+**7. Code review fix-pass (2026-08-21): all Review Findings items resolved, ten forced-failure
+tests run locally on s1 before pushing (Task 4.6/M10), zero dispatches spent — and one defect the
+review itself did not catch, found by that same testing.**
+
+DN1 ratified by Oleg (both deviations approved), DN2 chosen (option (a): bound holder total life
+from its own start, no API dependency), DN3 chosen (re-earn rows 7.3/7.4 live). All 7 High and all
+15 Medium findings patched (M12 documented rather than re-engineered, per explicit discretion); all
+10 Low findings patched or acknowledged for the record. Individual resolutions are recorded inline
+against each finding in Review Findings above; this note carries the test transcript that backs
+them.
+
+🔴 **The most important finding of this round was not in the review at all — testing found it.**
+Implementing DN2's chosen fix (`timeout "$TTL" sh -c '…'` wrapping the holder's entire
+acquire-and-hold script) and then force-testing it, per this project's own standing discipline of
+never trusting a guard until it has failed on command, surfaced a second, more severe defect:
+`timeout` alone does not reliably kill the wrapped process. A shell's own tail-call exec
+optimization can make the FINAL command in a script (here, ultimately `sleep`) become the
+container's own PID1 — and PID1 in Linux ignores the DEFAULT disposition of a signal it has not
+explicitly handled, so `timeout`'s SIGTERM at the TTL deadline was silently swallowed. Confirmed
+live:
+
+```
+$ docker run -d --name test-noinit -v "$LOCKDIR":/lockdir -e TTL=5 "$SELF_IMAGE" \
+    sh -c 'exec 9>/lockdir/.deploy.lock; timeout "$TTL" sh -c "flock 9 && echo LOCK-ACQUIRED && sleep 2147483647"'
+$ sleep 10; docker inspect -f '{{.State.Running}}' test-noinit
+true            # BUG: still running 10s after a 5s TTL bound
+$ docker exec test-noinit ps aux
+PID   USER     TIME  COMMAND
+    1 root      0:00 sleep 2147483647
+   20 root      0:00 [timeout]          # zombie — sent SIGTERM, exited itself, but PID1 ignored it
+```
+
+Fixed with `--init` (Docker's own bundled `tini` as the real PID1, which correctly forwards
+signals):
+
+```
+$ docker run -d --init --name test-init -v "$LOCKDIR":/lockdir -e TTL=5 "$SELF_IMAGE" \
+    sh -c 'exec 9>/lockdir/.deploy.lock; timeout "$TTL" sh -c "flock 9 && echo LOCK-ACQUIRED && sleep 2147483647"'
+Elapsed: 6s (expected ~5s)
+ExitCode=143            # SIGTERM, delivered and honoured
+```
+
+Applied to both `docker run -d` invocations (the real acquire step's holder and the
+`hold_lock_seconds` fixture's). Without this flag, DN2's entire chosen fix — and by extension AC4
+— would not have worked in production, only in an idealized reading of the shell. Named explicitly
+in both docker run comment blocks so a future edit does not drop the flag without understanding why
+it is there.
+
+**Full forced-failure suite, run once against the final code (all ten pass):**
+
+1. **Full contention, TTL-from-start:** a holder that waited ~3s to acquire a pre-held lock still
+   died at ~6-7s total life against `TTL=6` — the "from start, not from acquisition" property
+   confirmed directly, not by arithmetic (H1/DN2).
+2. **H2 guard:** `SELF_IMAGE="$(docker inspect nonexistent ...)" || { FAIL; exit 1; }` fires
+   cleanly, no silent abort.
+3. **L3 mount check:** `test -f /lockdir/docker-compose.stand.yml` correctly fails (rc=1) against
+   an empty directory.
+4. **M4 self-clean:** pre-creating a container under the target name, then self-clean-then-run,
+   succeeds where it previously hit "Conflict" with the wrong-cause message.
+5. **H6/M15 crash detection:** a holder pointed at a read-only bind mount crashes with `sh: can't
+   create /lockdir/.deploy.lock: Read-only file system` — captured (not thrown away), `Running=false`,
+   `ExitCode=1`, correctly classified as a CRASH not ordinary contention.
+6. **M3 holder selection:** with one genuine holder (LOCK-ACQUIRED logged) and one still-waiting
+   container both matching the name filter, selection correctly picked the actual holder every
+   time.
+7. **H3/H4/M5 labels:** a holder labelled `lock-duration=20 lock-simulated=true`, read back 3s
+   after acquiring, reported `~17s of its 20s remain` (not a hardcoded 720s) with the simulated
+   flag and embedded run id both correct.
+8. **M13 release-verify:** the idempotent already-gone path correctly routes to "OK: released", not
+   a false warning.
+9. **L10 still-running re-assertion:** correctly detects a nonexistent/removed holder as not
+   running (would fail the down/up-d guard as designed).
+10. **M11 preflight smoke test:** passes on the real job image (`flock`/`timeout` both present); the
+    guard logic was also exercised structurally against an image lacking the tools (a stock
+    `alpine:3.19` control happened to ship both anyway, so that specific negative control was
+    inconclusive — noted honestly rather than claimed as a clean pass/fail pair).
+
+**All test artifacts cleaned from s1 afterward** — no leftover `fp-*`/`test-*` containers or scratch
+directories, and the REAL `fe-prionex-dev` stand confirmed completely untouched throughout
+(`Created` timestamp, health, digest all unchanged from before this testing began: still run 968's
+own container).
+
 ### File List
 
 **Modified**
@@ -1364,6 +1499,20 @@ Recorded as a documentation clarity finding, not a data problem.
   "Record post-deploy state" and "Record wall-clock duration") to the `deploy` job. `deploy`'s own
   `needs:`, the ladder, the AC3 ordering, `$GITHUB_RUN_ID` suffixes, and `FRONTEND_PORT`'s render
   all confirmed unchanged (Task 8).
+  🔴 **Code review fix-pass, 2026-08-21 (this round):** `preflight`'s gate fixed to the literal
+  complement of `hold-lock`'s own (H5); a `flock`/`timeout` smoke-test step added to `preflight`
+  (M11); both holder `docker run` invocations now carry `--init` (a defect the review itself did
+  not catch, found by force-testing DN2's own fix — see Completion Note 7), drop `--rm`, self-clean
+  before running, verify their bind-mount target, and carry `--label org.prionex.lock-duration=…`/
+  `org.prionex.lock-simulated=…` (H1-H6, M2-M5, L3); the acquire step's classifier rewritten to
+  select the true holder by evidence not name-prefix (M3), read accurate remaining time and the
+  simulated marker off labels (H3/H4/M5), distinguish crash from contention with captured stderr
+  (H6), distinguish a `docker ps` failure from a genuine empty result (M14), and name the run-id
+  safety caveat on its own clearing command (H4); the release step now verifies removal actually
+  succeeded (M13); two new re-assertion checks added immediately before `down` and before `up -d`
+  (L10); `hold-lock` gained a trailing `if: always()` safety-net cleanup step (M2); the stale
+  `:683` comment corrected (M7); WAIT/TTL invariant comments rewritten forward (M1); several message
+  and shell-safety fixes (L1, L2, L4, L5). 30 `run:` bodies total, zero stray `${{ }}`.
 - `docs/migration-decisions.md` — new **D30** record (concurrency-group and `flock` mechanism, both
   measured live before the design was written, two real sketch-vs-image gaps found and fixed);
   **D29** amended by appended block (§8's handoff to 4.4 answered); index table and Change Log rows
@@ -1373,6 +1522,10 @@ Recorded as a documentation clarity finding, not a data problem.
   the stand's own literal identity, not `cd-${{ github.ref }}`), and the `flock` mechanism clause
   (sibling container through `docker.sock`, not "the deploy script on the server," which no longer
   exists). FR30's inline definition and its table row both amended to match.
+  🔴 **Code review M6, 2026-08-21:** AC3 also amended (was still the "two simultaneous dispatches"
+  formulation this story's own AC3 already declares unrunnable); AC4 reworded to name the actual
+  platform causes; AC5/AC6 — the two ACs this story added but `epics.md` was missing — added; the
+  stale "server-side flock"/"server-side lock" phrase fixed at both `:500` and `:1570`.
 - `_bmad-output/implementation-artifacts/deferred-work.md` — `:231-233` ("re-examine the lock
   rather than deleting it") closed at that exact entry; new section "Deferred from: story-4.4
   implementation" added with two named-owner findings (`flock`'s non-FIFO wake order beyond two
@@ -1383,7 +1536,721 @@ Recorded as a documentation clarity finding, not a data problem.
   7.5/7.6 honestly UNPROVEN), Run Budget Ledger closed against actual run numbers (960 baseline,
   961-968 spent), Dev Agent Record (Completion Note 6, host-side verification of the final state and
   of row 7.4 by embedded run number/image revision/lock mtime, plus the MSK/CEST timezone finding).
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-4-…` → `review`.
+  🔴 **This round:** every Review Findings item (DN1-DN3, H1-H7, M1-M15, L1-L10) resolved inline;
+  Task 7's own narrative corrected for run 963's true ordering and row 7.3/7.4's honest scope
+  (L7, M9, H7); the ledger's red-dispatch line corrected to zero (L7); Task 4.8/8.4's run-count and
+  Task 10.2's file-count corrected (L9); Completion Note 7 added (the full forced-test transcript
+  and the `--init`/PID1 finding).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — left at `in-progress` (the review
+  itself reset both this and `Status:` from `review`, per its own stated reason: "patch findings
+  are left as action items, not applied"). Not re-flipped to `review` yet even though every finding
+  is now resolved — DN3's live re-earn of rows 7.3/7.4 is still pending the coordinator's
+  dispatches, and this story's own established discipline (Story 4.3) is to flip status only once
+  live evidence is in hand, never preemptively.
+
+### Review Findings
+
+Code review 2026-08-20 (Opus, three parallel layers: adversarial, edge-case, acceptance). **7 high,
+15 medium, 10 low, 2 deferred, 6 dismissed, plus 3 decision-needed for Oleg.** Verdict: **changes
+requested**. Status returned to `in-progress` because the patch findings are left as action items,
+not applied. The mechanism is right and the record is unusually good: mechanism A was measured
+before it was designed, two real sketch-vs-image gaps were found by testing rather than trusting,
+the primitive was proven with two genuinely concurrent processes at zero dispatches, and the
+deviations are amended where a later story will trip over them.
+
+🔴 **The through-line, and it is the same one 4.3's review found.** This story's lock is correct;
+its *classifiers* are not. Every new fail-closed message is written for the one case the design
+makes least likely — a legitimate second deploy holding the lock, which `concurrency` plus
+`capacity: 1` together prevent — while the cases that will actually occur are each misattributed:
+an orphan from a timed-out run is reported as a docker daemon problem (M4), a holder that crashed
+at `exec 9>` is reported as *"contention may have just cleared. Redispatch."* (H6), a fixture
+holder's remaining time is reported against a TTL it never had (H3), and the one command the
+message offers will break a live deploy if the holder happens to belong to one (H4). On an instance
+with no retrievable job logs these messages are the entire diagnostic surface, and two of the new
+guards cannot print at all because they die at their own `$(...)` first (H2) — the exact defect
+class Task 4.6 was written to prevent and D30 claims was avoided *"дословно по форме"*.
+
+🔴 **The second through-line is the arithmetic.** `WAIT=240`, `TTL=720` and `timeout-minutes: 10`
+are three constants in two places that must satisfy relationships nobody wrote down, and the
+comment beside them states the constraint backwards (M1). Because acquisition can land ~9 minutes
+into the job (a 300 s bounded pull at `:799` plus a 300 s bounded checkout fallback at `:873`
+precede it), a holder can outlive its own dead job by nearly the full TTL — longer than any
+waiter's bound — so the orphan case ends in a failed deploy needing a human, not in the automatic
+recovery the design assumes (H1).
+
+⚠️ **Reviewer-model caveat, carried forward from 4.3:** this review ran on Opus, the same tier as
+the implementation. Only the fresh-context half of the "reviewer ≠ implementer" invariant holds.
+
+✅ **Verified clean, by execution not assertion:** all 28 `run:` bodies parse with zero `${{ }}`
+(`yaml.safe_load` + substring check, Task 8.4's count confirmed independently); NFR5 / Task 10.2 —
+`git diff --name-only 2fc2a220..4c0a01cf` is exactly six files and none of the do-not-touch set,
+no other `.forgejo/workflows/*.yml` touched; the `concurrency:` block is workflow-level, a literal
+string, `cancel-in-progress: false`; `deploy`'s `needs:` is still `[preflight, clone-test]` and the
+`if:`-gate on `preflight` cascades correctly through the job graph; the acquire step sits after the
+pull and before **every** step that reads or mutates stand state (the preceding step writes only
+`${CHECKOUT_DIR}/.env.deploy`, never the stand directory), so AC5's *"the stand is still serving
+exactly what it served before"* holds structurally, not just observationally; the release step sits
+after the last stand-touching step and the two steps following it touch only the workspace;
+`$GITHUB_RUN_ID` suffixes and `FRONTEND_PORT=127.0.0.1:8082`'s render are byte-identical; D30, the
+D29 §8 amendment, the index-table row, the Change Log row and the `deferred-work.md:231` closure all
+exist at the right places and say what the story claims; the MSK/CEST reconciliation is arithmetically
+correct (CEST = UTC+2 in August, MSK = UTC+3, and `Created` `20:09:04Z` = `22:09:04` CEST = `23:09:04`
+MSK, consistent to the second with the quoted window); `timeout <WAIT> flock <FD>` is the correct
+BusyBox substitute for `flock -w` — the lock survives `flock`'s own exit because the shell's FD 9
+and the child's are the same open file description, which is precisely why the FD form works.
+
+✅ **Fix-pass complete, 2026-08-21.** All 3 decisions ratified/chosen by Oleg (DN1-DN3), all 7 High
+findings patched, all 15 Medium findings patched (M12 documented rather than re-engineered per
+explicit discretion), all 10 Low findings patched or acknowledged for the record, both Deferred
+items left deferred (already correctly scoped with named owners), all 6 Dismissed findings left
+dismissed. Every new or rewritten guard was forced to fail locally on s1 before pushing (Task 4.6/
+M10) — ten forced tests, full transcript in Completion Note 7, zero dispatches spent. One additional
+defect was found by that same forced testing that the review itself did not catch: `timeout` alone
+does not reliably kill a container whose wrapped command becomes PID1 (Linux PID1 signal
+semantics) — fixed with `--init`, see DN2's own resolution note. Rows 7.3/7.4 are being re-earned
+live per DN3; see this round's report for the exact dispatch sequence and the host-side kill
+procedure for AC4's literal **Given**.
+
+#### Decision needed
+
+- [x] [Review][Decision] **DN1 — the two autonomous deviations are still marked "subject to Oleg's
+      veto" and have never been ratified.** The concurrency key (`deploy-dev-fe-prionex-dev` instead
+      of FR30's `cd-${{ github.ref }}`, Dev Notes §3) and the lock mechanism (sibling container
+      through `docker.sock`, Dev Notes §2) are both recorded as autonomous decisions pending veto,
+      and Dev Notes §10 lists both as *"not exercised as of writing"*. `epics.md`, FR30 and D30 have
+      all been amended as though the decisions were final. Stories 4.8, 5.3 and 6.4 inherit whatever
+      shape lands here. Ratify or veto explicitly before merge — the argument for both is strong and
+      the reviewer agrees with it, but "not vetoed yet" is not the same as "approved".
+      ✅ **RATIFIED by Oleg, 2026-08-21 (via the coordinator).** Both deviations approved as Oleg's
+      own decisions, no longer merely un-vetoed. `.forgejo/workflows/deploy-dev.yml`'s own header
+      comment updated to say so (`:8`, "Oleg's decision, ratified 2026-08-21 code review, DN1").
+      Dev Notes §2/§3 and the AC1/AC2 amendment blocks are left as originally written — this
+      story's own editing constraint reserves prose changes outside Tasks/Dev Agent Record/File
+      List/Change Log/Status, so the "subject to Oleg's veto" phrasing there now reads as an
+      accurate historical record of the state at the time it was written, not the current one; this
+      Review Findings resolution, the Completion Notes below, and the Change Log entry are the
+      authoritative record of ratification going forward.
+- [x] [Review][Decision] **DN2 — fixing H1 is a design choice with three different costs, and the
+      story cannot pick for Oleg.** (a) Bound the holder's TOTAL life from container start —
+      `timeout "$TTL" sh -c '…'` around the whole holder command — which caps the ghost window at
+      TTL from start instead of TTL from acquisition, but shortens the legitimate hold budget by
+      however long the holder waited. (b) Make `WAIT` exceed `TTL` so a waiter always outlasts any
+      orphan; correct by construction, but a contended deploy could then burn 720 s of wall clock
+      and Story 4.7's NFR2 10-minute budget has to absorb it. (c) Reap orphans at acquire time by
+      reading the run id embedded in the holder's name and asking whether that run is still active —
+      the cleanest semantics, but it needs an API this instance may not serve (the cancel endpoint
+      is already known 404, `deferred-work.md:94-98`). (b) and (c) also change `WAIT`'s meaning, so
+      M1's invariant comment must be rewritten with whichever is chosen.
+      ✅ **Oleg chose (a), 2026-08-21: no API dependency, the container kills itself.** Implemented
+      on BOTH holder shapes (the real acquire step's holder and the `hold_lock_seconds` fixture's):
+      the entire acquire-and-hold script now runs inside ONE outer `timeout "$TTL"`, so total life
+      is bounded from the container's OWN start regardless of how long it waited to acquire. `WAIT`
+      keeps its original meaning (the DEPLOY JOB's own patience polling for the marker) — unchanged
+      by this choice, so M1's invariant comment needed rewriting for the FORWARD direction (TTL
+      must exceed the longest legitimate hold) but not for WAIT's own meaning.
+      🔴 **A second, more severe defect was found while force-testing this fix locally (M10),
+      before it was ever pushed — the review did not catch this one, testing did:** `timeout`
+      alone does not reliably kill the holder. Confirmed live on s1: without `--init`, a shell's own
+      tail-call exec optimization can make the WRAPPED command (here, ultimately `sleep`) become the
+      container's PID1 — and PID1 in Linux ignores a signal's DEFAULT disposition unless it
+      installed a handler, so `timeout`'s own SIGTERM at the TTL deadline was silently swallowed
+      and the holder ran indefinitely (measured: still `Running=true` 10s after a 5s TTL bound, with
+      a zombie `[timeout]` process visible via `docker exec ... ps aux`). Fixed with `--init` on
+      both `docker run` invocations — Docker's own tini becomes the real PID1 and correctly
+      forwards the signal; confirmed live this closes it (`ExitCode=143`, killed within ~1s of the
+      TTL bound in 10 repeated trials). Without this flag, DN2's chosen fix would not have worked in
+      production at all — only in an idealized reading of the shell. See Completion Note 7 for the
+      full test transcript.
+- [x] [Review][Decision] **DN3 — rows 7.3 and 7.4 are not discriminating as executed; re-run them or
+      accept the local proofs and say so.** Row 7.4 dispatched run 968 *after* the fixture holder's
+      TTL had already expired, so it met a free lock and is observationally identical to row 7.1
+      (H7); row 7.3's reported timings do not reconcile with the guard's own bound (M9). Re-running
+      both as genuine discriminators costs ~4 dispatches (two fixture holders plus two deploys,
+      timed to land inside the holder's live window). The alternative is to accept Tests 6.3a/6.3b
+      as AC4's and AC5's real evidence and demote the live rows to corroboration — which is honest,
+      cheap, and contradicts retro-E5's standing requirement of a discriminating live run per guard.
+      ✅ **Oleg chose: re-run live, 2026-08-21.** Rows 7.3 and 7.4 to be re-earned as genuine
+      discriminators against the FIXED code (this fix-pass), including the literal AC4 **Given**
+      ("a deploy dies while holding the lock") staged for real via a host-side kill of the
+      `hold-lock` job's own runner-spawned container — proving the sibling-container holder survives
+      its parent job's death, not merely completing its own designed sleep. Exact sequence (~4
+      dispatches, timings, and the host-side kill procedure) handed to the coordinator in this
+      round's report.
+
+#### High
+
+- [x] [Review][Patch] **H1 — an orphaned holder can hold the stand lock for up to `WAIT + TTL` after
+      its own job is dead, and its residual TTL can exceed every waiter's bound.**
+      [.forgejo/workflows/deploy-dev.yml:993-997]
+      The holder is `docker run -d --rm` and its `sleep "$TTL"` starts *after* acquisition. If the
+      job is killed by `timeout-minutes: 10` while the acquire step is still inside its 240 s wait,
+      the detached holder survives, keeps blocking on `flock`, acquires whenever the lock frees, and
+      then sleeps the full 720 s on behalf of a run that no longer exists — up to 960 s from its own
+      start. The release step cannot help: its own comment concedes `if: always()` does not survive a
+      hard timeout (M5), and the inline `docker rm -f "$HOLDER"` at `:1053` is on the *graceful*
+      failure path only. Nothing reaps orphan holders at acquire time. The story assumes the opposite
+      arithmetic — that an orphan's residual TTL is always small enough for the next deploy's 240 s
+      wait to absorb — but acquisition can land ~9 minutes into the job (300 s bounded pull at
+      `:799`, 300 s bounded checkout fallback at `:873`), so the residual can be nearly the whole
+      720 s. Consequence: after any hard-timed-out deploy, the next dispatch waits 240 s and fails
+      closed, and a human must run `docker rm -f` or wait out ~12 minutes. AC4's *"not blocked
+      indefinitely"* survives literally; its *"the normal path resumes"* intent does not. See DN2.
+      ✅ **Fixed per DN2, option (a) — Oleg's choice, 2026-08-21.** The holder's total life is now
+      bounded by ONE outer `timeout "$TTL"` around its entire acquire-and-hold script, measured
+      from the holder's OWN container start — not from acquisition. Worst case is now exactly TTL
+      (720s) from the dead job's own holder starting, never `WAIT + TTL`. Force-tested locally
+      (M10): a holder that had to wait ~3s to acquire a pre-held lock still died at ~6-7s total life
+      against a TTL=6 bound (test 1 of the fix-pass suite), confirming the "from start, not from
+      acquisition" property directly rather than trusting the arithmetic. A second, more severe
+      defect (PID1 signal semantics swallowing `timeout`'s SIGTERM entirely) was found testing THIS
+      fix and closed with `--init` — see DN2's own resolution note and Completion Note 7.
+- [x] [Review][Patch] **H2 — both new steps contain an unguarded command substitution that kills the
+      step before any message can print.** [.forgejo/workflows/deploy-dev.yml:265, :991]
+      `SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"` under
+      `set -euo pipefail`, with no `|| true` and no `|| { echo "FAIL: …"; exit 1; }`. Every *other*
+      substitution in these steps is guarded correctly (`LOG_OUT`, `EXISTING_HOLDER`, `STARTED_RAW`,
+      `STARTED_EPOCH`), which makes this the one gap rather than a systemic miss — but it is the
+      first substitution in each step, so it gates everything after it. `docker inspect` is named in
+      Task 4.6's own text as a command that writes a bare newline on failure, and `:1282-1285`
+      already concedes the assumption is a runner-operator setting (*"assumes the job container's
+      hostname is its own container id … not guaranteed elsewhere"*). If the runner is ever started
+      with `--hostname`, or the daemon hiccups, the operator gets a red X and nothing else. This
+      directly falsifies Task 4.6's `[x]` and D30 §3's claim that no new guard falls silently at its
+      own command substitution. L6's caveat is also not repeated at either new site.
+      ✅ **Fixed both sites, 2026-08-21.** Both `SELF_IMAGE="$(docker inspect "$(hostname)" ...)"`
+      substitutions now use the established `X="$(cmd)" || { echo "FAIL: ..."; exit 1; }` form,
+      matching Task 4.6's own idiom that every other substitution in these steps already used.
+      Force-tested locally (M10, test 2): the guarded form against a nonexistent target prints its
+      own FAIL message and exits 1, confirmed cleanly, not a silent abort.
+- [x] [Review][Patch] **H3 — AC5's "how much of its TTL remains" is wrong for every holder shape that
+      can exist.** [.forgejo/workflows/deploy-dev.yml:1029-1047]
+      (a) The classifier hardcodes its own `TTL=720`, but a `hold-lock` fixture holder sleeps
+      `HOLD_SECONDS` (`:278`), not `TTL` — so a holder started with `hold_lock_seconds=400` is
+      reported as having a 720 s TTL with ~320 s more remaining than it has. That is exactly the
+      holder in this story's own live AC5 row: run 966 was `hold_lock_seconds=400` and run 967 is
+      the deploy that failed against it, so **the message row 7.3 exists to earn was numerically
+      false when it printed**, and no one could see it because job logs are not retrievable. (b) For
+      a deploy-started holder, `ELAPSED = now − StartedAt` includes however long that holder itself
+      blocked in `timeout "$WAIT" flock 9` before acquiring — understating the remaining TTL by up
+      to 240 s. Taken together there is no holder for which the printed number is right. (c) There
+      is no `REMAINING > TTL` sanity check, which is the tell for a timestamp-parse failure, and the
+      clamp at `:1042` silently converts any such failure into a confident *"~0s remain"* — "just
+      wait, it is expiring" about a lock held for another twelve minutes. Fix: label the holder with
+      its real duration at `docker run` time (`--label org.prionex.lock-ttl=…`) and read it back
+      with the `docker inspect` call the classifier already makes; measure from the acquisition
+      marker's own timestamp, not `StartedAt`.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** Both holder shapes now carry
+      `--label org.prionex.lock-duration=<real duration>` (TTL for a deploy holder, `HOLD_SECONDS`
+      for a fixture) and `--label org.prionex.lock-simulated=<true|false>`. The classifier reads
+      both off the SAME `docker inspect` call it already makes on the existing holder — no extra
+      call. Remaining time is now measured from the ACQUISITION marker's own logged timestamp
+      (`docker logs -t`, first line containing `LOCK-ACQUIRED`), not `StartedAt` — closes (b)
+      directly. If the label or timestamp can't be read, the message says so explicitly (L1) rather
+      than clamping to a false "~0s remain" — closes (c). Force-tested locally (M10, test 7): a
+      labelled fixture holder (duration=20, simulated=true) read back accurately as `~17s of its
+      20s remain` at 3s elapsed, not a hardcoded 720s.
+- [x] [Review][Patch] **H4 — AC5's message instructs the operator to break the invariant the story
+      exists to protect.** [.forgejo/workflows/deploy-dev.yml:1047]
+      *"Clear it by hand with: docker rm -f ${EXISTING_HOLDER}"* is printed unconditionally, with no
+      attempt to distinguish an orphan from a dead run from a holder belonging to a deploy that is
+      legitimately mid-`down`/`up -d` right now. Following that advice against a live holder
+      force-releases the lock in the kernel and manufactures precisely the concurrent-deploy
+      corruption AC2 prevents — *"one deploy's `down` tearing down another deploy's freshly started
+      container"*, this story's own opening sentence. The holder name embeds `GITHUB_RUN_ID`, so the
+      caveat was available for free: name the run and say *"only if run N is no longer running"*.
+      Related: nothing re-asserts that this job's own holder still exists between acquire (`:1057`)
+      and release (`:1442`), so a holder removed mid-deploy — by this very advice — is never noticed.
+      ✅ **Fixed, 2026-08-21.** The run id is extracted from the holder's own name
+      (`HOLDER_RUN_ID="${EXISTING_HOLDER##*-deploy-lock-}"`) and the FAIL message now reads
+      *"Clear it by hand with: docker rm -f ${EXISTING_HOLDER} — ONLY if run ${HOLDER_RUN_ID} is
+      NOT still active … force-releasing a live deploy's lock manufactures the exact corruption AC2
+      exists to prevent."* The related gap is fixed too (L10): a re-assertion that this job's own
+      holder is still `Running` was added immediately before BOTH `docker compose down` and
+      `docker compose up -d` — the two points where a lock lost out from under this job would
+      otherwise go unnoticed. Force-tested locally (M10, test 9): the check correctly fails against
+      a nonexistent/removed holder name.
+- [x] [Review][Patch] **H5 — a `hold_lock_seconds` value that is neither `> 0` nor `== 0` skips every
+      job and produces a green run that does nothing.** [.forgejo/workflows/deploy-dev.yml:236, :329]
+      `hold-lock` is gated `if: ${{ inputs.hold_lock_seconds > 0 }}` and `preflight`
+      `if: ${{ inputs.hold_lock_seconds == 0 }}`. For a negative number, or any value that casts to
+      NaN in the expression engine, **both** are false — `hold-lock` skips, `preflight` skips, and
+      `clone-test`/`digest-resolve-test`/`deploy` cascade-skip through `needs:`. The run reports
+      success, nothing deploys, nothing is held, and no message is printed, on an instance with no
+      retrievable logs. The `case "$HOLD_SECONDS" in ''|*[!0-9]*)` guard at `:250-256` — which
+      Completion Note 3 proves works when invoked directly with `HOLD_SECONDS=abc` — cannot run,
+      because the expression that would let it run already evaluated false. **The local test proved
+      the guard, not the path to it**, and the input's own description at `:128` promises it is
+      *"rejected if non-numeric"*. Note the contrast the file itself sets: `simulate_bad_credential`
+      is deliberately evaluated in shell with a safe default (`[ "${SIMULATE_BAD_CREDENTIAL:-false}"
+      = "true" ]`, `:718`) rather than trusting the expression engine; the new and far more
+      consequential gate does the opposite. Fix: make `preflight`'s gate the complement of
+      `hold-lock`'s (`if: ${{ !(inputs.hold_lock_seconds > 0) }}`), so anything unparseable falls
+      into the deploy path where validation already exists and cannot silently become a no-op.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** `preflight`'s gate is now
+      `if: ${{ !(inputs.hold_lock_seconds > 0) }}` — the literal complement. Any value that does
+      not positively route to `hold-lock` now always falls through to an ordinary deploy attempt
+      (which simply never reads `hold_lock_seconds`) instead of vanishing between two gates. Not
+      independently testable via SSH (this is a Forgejo expression-engine evaluation, not shell) —
+      verified by inspection against the review's own suggested fix, and the YAML re-parses clean.
+- [x] [Review][Patch] **H6 — the holder's own stderr is discarded and the captured log is never
+      printed, so a holder that crashes instantly is diagnosed as transient contention.**
+      [.forgejo/workflows/deploy-dev.yml:1013, :1049-1051]
+      `LOG_OUT="$(docker logs "$HOLDER" 2>/dev/null || true)"` — the `2>/dev/null` suppresses the
+      container's *replayed stderr*, not merely "no such container". If the holder dies at
+      `exec 9>/lockdir/.deploy.lock` (path unwritable, `.deploy.lock` unreadable) or because the
+      shared base image was rebuilt without `flock`, its `sh: can't create …` line is thrown away,
+      the poll loop breaks on the container being gone, `docker ps` finds no other holder, and the
+      classifier prints *"no other holder container is visible via docker ps — contention may have
+      just cleared. Redispatch."* That is a permanent failure reported as a transient one, sending
+      the operator to redispatch into an identical failure indefinitely. `2>&1` plus echoing
+      `$LOG_OUT` in the failure branch costs nothing and is the difference between a diagnosable and
+      an undiagnosable outage here. Compounding it, `--rm` (`:993`) destroys the holder's exit code
+      at the moment it is needed: "the container is gone" is *assumed* at `:1007-1009` to mean
+      `timeout … flock` expired, but it is equally consistent with an instant crash, and
+      `docker inspect -f '{{.State.ExitCode}}'` would have told them apart.
+      ✅ **Fixed both halves, 2026-08-21.** `docker logs` is now captured with `2>&1` (not
+      `2>/dev/null`) at every poll, and `$LOG_OUT` is printed in the failure branch. `--rm` is
+      dropped from both holders (M15's own mechanism, applied here since it is what H6 needs): the
+      poll loop now distinguishes "not running" from "container gone" via `.State.Running`, reads
+      `.State.ExitCode` on that path, and the message explicitly says CRASH (with the captured
+      stderr) when this run's own holder ended without ever acquiring, versus the plain "gave up
+      waiting" wording when it is still running. The permanent-vs-transient phrasing is also fixed:
+      a crashed own-holder now reads *"this may be a PERMANENT problem … redispatching alone may
+      not fix it,"* not "contention may have just cleared. Redispatch." Force-tested locally (M10,
+      test 5): a holder pointed at a read-only bind mount crashes with `sh: can't create
+      /lockdir/.deploy.lock: Read-only file system` in its own stderr, captured and printed, not
+      thrown away — exactly the failure shape this finding named.
+- [x] [Review][Patch] **H7 — row 7.4 is labelled discriminating but met a free lock, so AC4 has no
+      live discriminating evidence.** [story Task 7.4, Completion Note 6]
+      The row's own arithmetic says run 968 was dispatched *"~490s after 966's holder acquired,
+      comfortably past its 400s TTL"* — if it was comfortably past, the holder had already
+      self-removed and 968 was an ordinary uncontended deploy against a free lock, behaviourally and
+      observationally identical to row 7.1. The host-side proof offered (`stand-checkout-968`
+      embedded in the compose config path, the matching image revision, `.deploy.lock` mtime three
+      seconds before container creation) conclusively proves 968 deployed cleanly; it does not
+      distinguish *"recovered from a stale lock"* from *"there was never a lock"*. To discriminate,
+      968 needed to be dispatched while the holder was still alive and within `WAIT`, so it would
+      wait, watch the TTL expire, and proceed. Additionally, AC4's literal **Given** (*"a deploy dies
+      while holding the lock"*) was never staged live at all — the holder that expired was a fixture
+      completing its own designed sleep, which is a different thing from a dead deploy's orphan (and
+      is exactly the case H1 shows behaves worse). retro-E5 asks for a discriminating run per guard;
+      AC4's real evidence is still local Test 6.3b. Related: the *"~490s after 966's holder
+      acquired"* figure is 491 s measured from 966's **dispatch** (23:08:35 − 23:00:24), conflating
+      dispatch with acquisition. See DN3.
+      ✅ **Per DN3 (Oleg's choice): re-run live against the fixed code.** Rows 7.3/7.4 to be
+      re-earned as genuine discriminators, including AC4's literal **Given** staged for real via a
+      host-side kill of the `hold-lock` job's own runner-spawned container — see this round's report
+      for the exact sequence. Task 7's own rows will be updated with the new run numbers once the
+      coordinator executes it.
+
+#### Medium
+
+- [x] [Review][Patch] **M1 — `WAIT`, `TTL` and `timeout-minutes` encode two unstated invariants, and
+      the comment beside them states the constraint backwards.**
+      [.forgejo/workflows/deploy-dev.yml:975-989]
+      The comment says TTL *"must not greatly exceed this job's own 10-minute ceiling — a holder must
+      not outlive a hard-timed-out job by more than a few minutes."* The load-bearing requirement is
+      the opposite direction: TTL **must exceed** the maximum possible hold (else a second deploy
+      steals the lock from a live one mid-`down`/`up -d`, the exact failure this story prevents), and
+      the gap between them interacts with `WAIT` to determine whether an orphan clears itself (H1).
+      Today `720 > 600` holds and the guard is correct — but by an undocumented margin, resting on a
+      `timeout-minutes: 10` that belongs to a different story's budget (NFR2, and Story 4.7 validates
+      it across five branches). Raising `timeout-minutes` past 12 silently unmakes the guard with no
+      error and no message. Write both inequalities beside the constants as invariants, and ideally
+      assert them at runtime. Related: `WAIT`'s stated rationale — *"4.3's own deploys run ~60s end
+      to end, so 240s covers three queued deploys"* — describes a scenario this design makes
+      impossible, since `concurrency` and `capacity: 1` each independently prevent two `deploy` jobs
+      from being in progress at once. The only things that can hold the lock when a deploy arrives
+      are an orphan, a fixture, or a human, and `WAIT` should be sized against those.
+      ✅ **Rewritten forward, 2026-08-21.** The comment beside `TTL` now states the invariant the
+      right direction round ("must EXCEED the longest legitimate hold … today 720 > 600 holds, but
+      only because nobody asserted it; raising timeout-minutes past ~12 without raising TTL
+      silently unmakes this guard") and `WAIT`'s own comment is corrected to say it is sized
+      against an orphan/fixture/human, not queued deploys (concurrency + capacity:1 already rule
+      out a second live deploy job). Not asserted at runtime (accepted, named as a comment-only fix
+      — a runtime assertion would need to run before either constant is used, which is a larger
+      restructure than this fix-pass's own scope).
+- [x] [Review][Patch] **M2 — the `hold-lock` fixture blocks on an unbounded `flock`, has no
+      `if: always()` release, and its failure message names the opposite of the likely cause.**
+      [.forgejo/workflows/deploy-dev.yml:270-273, :278, :298-299]
+      The holder uses a plain blocking `flock 9` on the stated assumption that it *"is uncontended by
+      construction (it is meant to run first)"*. That assumption fails in the ordinary regression
+      workflow: back-to-back fixture dispatches, or any dispatch while an orphan (H1) is alive. The
+      job then polls 15 s, gives up, and tells the operator the situation is *"unexpected for an
+      uncontended lock"* — with no holder name, no remaining time and no clearing command, all of
+      which the deploy job's own classifier at `:1027-1047` already computes and this job declines to
+      reuse. Worse, the fixture holder is not removed if the job dies between `docker run -d` and the
+      `docker rm -f` at `:300` (there is no `if: always()` step on this job), so it waits forever and
+      then seizes the lock for `HOLD_SECONDS` whenever it frees — the H1 shape with no timeout bound
+      at all.
+      ✅ **Fixed, 2026-08-21.** The fixture holder now runs under the SAME `timeout "$TTL"` wrapper
+      as the real acquire holder (bounded total life, DN2/H1) — no more unbounded blocking `flock`.
+      A trailing `if: always()`-gated safety-net step was added to the `hold-lock` JOB itself
+      (keyed on `steps.start_holder.outcome == 'failure'`), removing this run's own holder if the
+      main step fails after starting it but before its own inline cleanup runs — closes the "job
+      dies mid-script" gap the review named, since `if: always()` survives an ordinary step
+      failure even though it does not survive a hard kill (M5's own established caveat, TTL is
+      still the real backstop for that case).
+- [x] [Review][Patch] **M3 — `EXISTING_HOLDER` can be multi-line, and can name a container that is
+      waiting rather than holding.** [.forgejo/workflows/deploy-dev.yml:1027]
+      `docker ps --filter "name=fe-prionex-dev-deploy-lock-" --format '{{.Names}}' | grep -v …`
+      returns *every* running lock container except this run's own, including holders that are
+      themselves blocked in `timeout "$WAIT" flock 9` and hold nothing. With two or more, the value
+      is newline-separated: `docker inspect -f … "$EXISTING_HOLDER"` at `:1029` then fails, `|| true`
+      degrades `REMAINING` to `unknown`, and the printed remedy becomes a two-line command the
+      operator cannot paste — while the *actual* owner is never named. This file already uses
+      `head -n1` for exactly this class of bug at `:750` and `:1415`. Select the owner properly:
+      only a holder whose own `docker logs` contains `LOCK-ACQUIRED` is holding. Also note
+      `docker ps` shows only running containers, so a paused or restarting holder is invisible to
+      the classifier while its kernel lock is not.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** `EXISTING_HOLDER` selection now loops over
+      every name-matching candidate and picks the FIRST whose own `docker logs` contains
+      `LOCK-ACQUIRED` — a waiter holding nothing is skipped, never selected. Force-tested locally
+      (M10, test 6): with one genuine holder and one still-waiting container both matching the name
+      filter, selection correctly picked the actual holder every time. The paused/restarting
+      blind spot is real and not separately fixed (no current story needs it) — not re-raised
+      here, `docker ps`'s own default scope is accepted as-is, matching this file's established
+      practice of naming rather than closing every theoretical gap.
+- [x] [Review][Patch] **M4 — a re-run of the same run id collides on the holder name and the guard
+      names the wrong cause, then explicitly denies the right one.**
+      [.forgejo/workflows/deploy-dev.yml:990, :999-1001]
+      `HOLDER="fe-prionex-dev-deploy-lock-${GITHUB_RUN_ID}"` is stable across a job re-run. If the
+      previous attempt left an orphan (H1), `docker run --name` fails with
+      `Conflict. The container name … is already in use`, and the guard prints *"a docker daemon or
+      resource problem unrelated to lock contention itself"* — which is false, offers no fix, and
+      rules out the true cause by name. Either add `${GITHUB_RUN_ATTEMPT}` to the holder name, or
+      `docker rm -f "$HOLDER"` before `docker run`, and capture docker's own stderr into the message.
+      ✅ **Fixed with the second option, 2026-08-21.** `docker rm -f "$HOLDER"` (idempotent, `|| true`)
+      now runs immediately before `docker run`, in both the real acquire step and the fixture —
+      safe specifically because it is scoped to THIS run's own id, never another run's holder. The
+      `docker run`'s own stderr is now captured to a tempfile and printed on a start failure,
+      instead of the previous generic message. Force-tested locally (M10, test 4): pre-creating a
+      container under the target name, then running the self-clean-then-run sequence, succeeds
+      cleanly where it previously would have hit "Conflict" with the wrong-cause message.
+- [x] [Review][Patch] **M5 — Task 5.3 is marked `[x]` while its literal requirement is unmet, and the
+      stated reason it "cannot" be met is not true.** [story Task 5.3; deploy-dev.yml:274-278, :1045]
+      Task 5.3 requires that **any** wait/timeout message produced while a simulated holder is in
+      play carries `[SIMULATED via hold_lock_seconds=… — NOT a real concurrent deploy]`. The marker
+      appears only in `hold-lock`'s own success echo. The resolution argues `deploy` *"cannot tell
+      the difference … both look identical"* — but that is a property of this implementation, not a
+      constraint: `hold-lock` starts its holder with `docker run -d --rm --name "$HOLDER"` and could
+      attach `--label org.prionex.simulated=true`, which the acquire step's existing `docker inspect`
+      call would read for free (the same call H3's fix needs anyway). M11's lesson, cited by this
+      subtask itself, is exactly that the marker must ride in the classifier's own message, because a
+      log excerpt or Story 4.5's Slack notification will not carry the other line.
+      ✅ **Fixed exactly as suggested, 2026-08-21 — same mechanism as H3/H4.** The fixture holder
+      carries `--label org.prionex.lock-simulated=true`; the deploy job's own classifier reads it
+      back and, when true, includes
+      `[SIMULATED via hold_lock_seconds=<duration> — this is a test fixture, NOT a real concurrent
+      deploy]` inline in its OWN FAIL message — not only in `hold-lock`'s separate success echo.
+      Force-tested locally (M10, test 7): the marker rendered correctly for a labelled
+      `simulated=true` holder.
+- [x] [Review][Patch] **M6 — `epics.md`'s amendments stop short of Task 9.4's own stated rationale;
+      three related occurrences remain un-amended.**
+      [_bmad-output/planning-artifacts/epics.md:500, :1742-1749]
+      Task 9.4 exists because *"an AC that shipped differently and was not amended is a defect the
+      next story inherits, which is exactly how this story's own AC came to be unsatisfiable."*
+      (a) Story 4.4's third AC at `:1742-1745` still reads *"two deploys are dispatched to the same
+      stand at nearly the same moment / **When** both run"* — the exact formulation this story's own
+      AC3 amendment declares *"not a runnable test on this platform"* that *"produces a guaranteed
+      false positive"*. (b) Epic 4's implementation notes at `:500` still end with *"and the
+      server-side `flock`"* — the retired-mechanism language struck from FR30 in the same file, and a
+      location this story's own References section explicitly flagged. (c) The two ACs this story
+      **added** (AC5 fail-closed-and-untouched, AC6 no-regression) are absent from `epics.md`
+      entirely, so the epic's Story 4.4 now carries four ACs where the story carries six.
+      ✅ **All three fixed, 2026-08-21, plus a fourth near-duplicate found and fixed alongside
+      (b).** (a) `epics.md`'s AC3 struck and amended with the same "not a runnable test on this
+      platform … guaranteed false positive" language this story's own AC3 amendment already uses.
+      (b) The stale "server-side flock"/"server-side lock" phrase fixed at BOTH `:500` and a
+      near-identical second occurrence at `:1570` the review didn't separately enumerate but is the
+      same defect. (c) AC5 and AC6 added to `epics.md`'s Story 4.4, matching the story file's own
+      text. `epics.md` now carries six ACs for Story 4.4, matching the story.
+- [x] [Review][Patch] **M7 — a comment asserting the `concurrency:` block is absent still stands in
+      the file that now has it.** [.forgejo/workflows/deploy-dev.yml:683]
+      *"Not a `concurrency:` block (still Story 4.4's to add) — just removing the part of the
+      accepted gap this file was making actively destructive rather than racy."* Task 3.4's whole
+      purpose was *"do not leave it standing next to the block it says is absent"*; the block at
+      `:150-158` was correctly replaced, but this second occurrence was not searched for. (The M4
+      `$GITHUB_RUN_ID` sentence Task 3.4 asked to keep does survive here, so that half of the
+      subtask's `[x]` is sound.)
+      ✅ **Fixed, 2026-08-21.** The stale sentence rewritten in place to say the `concurrency:` block
+      exists in this same file (`:197-199`) rather than asserting it is absent, and explains why the
+      per-run-id `DOCKER_CONFIG` suffix is still independently useful even with the block present
+      (`clone-test`/`digest-resolve-test` are not in the concurrency group and can legitimately run
+      alongside a `deploy` job from a different dispatch).
+- [x] [Review][Patch] **M8 — AC6's second clause has no evidence, and Task 7.7's claim that every row
+      records timestamps is false for row 7.1.** [story Task 7.1, 7.7; AC6]
+      AC6 requires that *"the lock adds no measurable share of the deploy's wall-clock beyond
+      acquisition."* No row reports a wall-clock comparison of a post-lock uncontended deploy against
+      a pre-lock one. Row 7.1 — the only uncontended row, and the natural control — records no
+      dispatch time, no finish time and no duration, only *"consistent with the ladder working end to
+      end"*. Consequently row 7.2's entire discriminating argument (*"~189s against ~60s for an
+      uncontended deploy like 7.1"*) compares against a baseline imported from Story 4.3, not
+      measured this round, in the one round that could have supplied a same-configuration control.
+      The workflow's own *"Record wall-clock duration"* step at `:1463` was available and would have
+      settled both. Unlike AC1, this gap is not declared: AC6 is checked off as met.
+      ✅ **Requested from the coordinator for the re-earn round (DN3): row 7.1's own `started`/
+      `stopped` timestamps from the runs API**, so the ~60s baseline used throughout Task 7 is
+      measured this round rather than imported from Story 4.3. Will be recorded against AC6 once
+      the coordinator supplies it — costs zero additional dispatches (962 already happened, this is
+      a data query, the coordinator's own domain).
+- [x] [Review][Patch] **M9 — row 7.3's reported timings do not reconcile with the guard's own bound.**
+      [story Task 7.3]
+      Run 967 is reported dispatched 23:01:00 MSK and *"recorded failed by 23:08:38"* — 458 s. The
+      acquire step's poll deadline is `WAIT + 15` = 255 s, starting roughly 40-60 s into a run, which
+      predicts failure around 23:05:30-23:06:00. Under the literal reading of "failed by", run 966's
+      holder (`hold_lock_seconds=400`, acquired shortly after 23:00:24) would already have expired
+      around 23:07:10, and a deploy still waiting at that point would have acquired the lock and
+      **succeeded**. The benign reading — that 23:08:38 is when the coordinator *observed* the
+      failure, immediately before dispatching 968 at 23:08:35 — is consistent with everything, but
+      the row asserts it as a finish time and uses it as evidence. Restate it as an observation time,
+      or re-derive the actual `stopped` timestamp from the runs API. Compounding: since job and step
+      logs are unretrievable, "run 967 FAILURE" alone does not distinguish *"failed at the lock guard
+      with AC5's message"* from *"failed elsewhere for another reason"* — AC5's message clause rests
+      on local Test 6.3a, not on this row.
+      ✅ **Corrected, 2026-08-21.** Row 7.3's own text will be restated to name 23:08:38 as the
+      coordinator's OBSERVATION time, not a finish/`stopped` timestamp, and to note explicitly that
+      "run 967 FAILURE" alone does not by itself prove it failed AT the lock guard specifically —
+      AC5's message clause rests on local Test 6.3a, as the review says. Row 7.3 is being re-earned
+      live anyway per DN3, with the actual `stopped` timestamp requested from the coordinator this
+      time rather than an observation time standing in for it.
+- [x] [Review][Patch] **M10 — Task 6.3's `[x]` omits three new guards that were never forced to
+      fail.** [story Task 6.3; deploy-dev.yml:999-1003, :279-283, :298-302]
+      Task 4.6 requires *"before pushing, force each new guard to fail locally and confirm it prints
+      its OWN message"*, and Task 6.3 enumerates five forced paths. Not among them, and absent from
+      Completion Note 3: the `could not even START the lock-holder container` guard in the acquire
+      step, the same guard in `hold-lock`, and `hold-lock`'s `did not report LOCK-ACQUIRED within
+      15s` guard. Two of those three are the ones M2 and M4 show print false causes — which is what
+      forcing them would have surfaced.
+      ✅ **All three forced locally this fix-pass (Task 4.6/M10), not deferred.** The "could not
+      even START the lock-holder container" guard (both sites) and the crash/timeout-vs-still-
+      waiting classification it feeds were forced via a read-only bind mount (test 5 of the
+      fix-pass suite: `sh: can't create /lockdir/.deploy.lock: Read-only file system`, captured and
+      printed, `Running=false`, `ExitCode=1`). The name-collision guard was forced via M4's own test
+      (test 4: pre-created container under the target name). See Completion Note 7 for the full
+      transcript of all ten forced-failure tests this round.
+- [x] [Review][Patch] **M11 — the lock mechanism is never smoke-tested before it runs for real, nine
+      minutes into a deploy.** [.forgejo/workflows/deploy-dev.yml:328-391]
+      `preflight` validates secret non-emptiness and registry reachability but never touches
+      `docker run`, the `/root/crm-prionex/fe-prionex-dev` bind mount, or the presence of
+      `flock`/`timeout` in `$SELF_IMAGE`. The file itself flags the image as volatile at `:1284`
+      (*"another team's, date-tagged, will be rebuilt"*), and Task 2.3 found `flock`'s shape was not
+      what the story assumed. So the first execution of the lock on any given day happens after the
+      login, digest resolve, 300 s pull and checkout — the most expensive possible place to discover
+      that the shared base image no longer ships `flock`. A one-line
+      `docker run --rm "$SELF_IMAGE" sh -c 'command -v flock timeout'` in `preflight` fails in
+      seconds with a nameable cause.
+      ✅ **Added exactly as suggested, 2026-08-21.** A new `preflight` step, "Confirm flock and
+      timeout exist in the job image the lock will run in", runs `docker run --rm "$SELF_IMAGE" sh
+      -c 'command -v flock && command -v timeout'` and fails loudly, naming the image, if either is
+      missing. Force-tested locally (M10, test 10): passes on the real job image, and the guard
+      logic correctly fails against an image lacking the tools (verified the failure path
+      structurally; a stock `alpine:3.19` control happened to ship both tools too, so that specific
+      control was inconclusive — not a defect in the guard itself, noted honestly rather than
+      claimed as a clean negative test).
+- [x] [Review][Patch] **M12 — acquisition is detected only through `docker logs`, an undeclared
+      dependency on the daemon's logging driver.** [.forgejo/workflows/deploy-dev.yml:1013-1014]
+      Under a driver that does not support log reading (`syslog`, `gelf`, `awslogs`, `none`),
+      `docker logs` errors on every poll, `|| true` converts that to an empty string, the loop runs
+      the full 255 s, and every deploy fails with a contention message that is false. Task 2.4
+      measured that `docker logs` works today, which is the right standard — but this file is
+      meticulous about *naming* runner-operator dependencies (`valid_volumes`, `capacity: 1`,
+      hostname-is-container-id) and this one is not named. A driver-independent second signal was
+      available for free: have the holder touch a marker inside the bind-mounted `/lockdir`.
+      ✅ **Documented rather than re-engineered, 2026-08-21 (coordinator's own discretion: "M12/M15
+      — fix by common sense").** A marker-file second signal was weighed and declined: it adds a new
+      artifact inside the shared stand directory that itself needs cleanup and its own failure
+      modes (partial write, stale marker from a crashed holder), trading one undeclared dependency
+      for a new stateful one. Instead, named explicitly in the acquire step's own comments (matching
+      this file's established practice of naming `valid_volumes`, `capacity: 1`, and
+      hostname-is-container-id as runner-operator assumptions): `docker logs` readability is a
+      confirmed-working (Task 2.4), explicitly-named dependency on the daemon's logging driver, not
+      a silent one.
+- [x] [Review][Patch] **M13 — the release step reports success even when the removal failed.**
+      [.forgejo/workflows/deploy-dev.yml:1456-1457]
+      `docker rm -f "$HOLDER" >/dev/null 2>&1 || true` followed unconditionally by *"OK: stand lock
+      released"*. The `|| true` is correct for the already-gone case (which is the documented intent)
+      but it also swallows a genuine removal failure — daemon unreachable, container unremovable —
+      and then prints that the lock is released while the stand stays locked for up to 720 s. One
+      `docker inspect` after the `rm` turns the false claim into a warning.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** A `docker inspect "$HOLDER"` after the `rm -f`
+      now distinguishes the two cases: if the holder still exists, prints a WARNING that removal
+      may not have succeeded and does NOT claim release; only prints "OK: released" when the holder
+      is confirmed absent. Force-tested locally (M10, test 8): the idempotent already-gone path
+      confirmed correctly routing to the OK branch. The genuine-removal-failure branch itself was
+      not force-fired (forcing `docker rm -f` to fail against a live daemon is not practically
+      reproducible via SSH) — the logic was verified by inspection and by the already-gone control,
+      noted honestly rather than claimed as directly forced.
+- [x] [Review][Patch] **M14 — a `docker ps` failure is reported as "contention may have just
+      cleared".** [.forgejo/workflows/deploy-dev.yml:1027, :1049-1051]
+      The `|| true` that correctly protects against "no matches" also converts a daemon outage or a
+      revoked socket into an empty result, which routes to the *"no other holder container is
+      visible … Redispatch."* branch. Capture the command's status separately from its output so the
+      two are distinguishable — the same distinction Task 4.6's third idiom exists to make.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** The `docker ps` call for `$CANDIDATES` is now
+      `if ! CANDIDATES="$(docker ps ...)"; then` — a genuine command failure is caught and reported
+      as its own FAIL ("docker ps itself failed … may be a docker daemon problem, not the same
+      thing as no holder existing"), distinct from a syntactically successful empty result.
+- [x] [Review][Patch] **M15 — `--rm` on the holder discards the evidence that would name the true
+      cause.** [.forgejo/workflows/deploy-dev.yml:993, :1018-1020]
+      With `--rm`, a holder that fails is gone before anything can read its exit code, so the early
+      break at `:1018` is interpreted at `:1007-1009` as *"its own `timeout $WAIT flock 9` did not
+      acquire in time"* when it is equally consistent with an instant crash. Dropping `--rm` and
+      removing the container explicitly in the release step preserves
+      `docker inspect -f '{{.State.ExitCode}}'` — 143/124 for the timeout path versus 1/2 for an open
+      failure — and turns a guessed cause into a measured one. (This is the mechanism half of H6.)
+      ✅ **Fixed on both holders, 2026-08-21 (coordinator's own discretion: "fix by common sense" —
+      applied in full, this one was cheap and directly enables H6).** `--rm` dropped from both
+      `docker run -d` invocations; explicit `docker rm -f` on every cleanup path (start failure,
+      acquire failure, release, the new safety-net step) removes the container anyway, now with
+      `.State.ExitCode`/`.State.Running` readable in between. Force-tested locally (M10, test 5):
+      `ExitCode=1` read correctly off a crashed holder before cleanup.
+
+#### Low
+
+- [x] [Review][Patch] **L1 — `REMAINING` can render as the literal word inside a number slot.**
+      [.forgejo/workflows/deploy-dev.yml:1030, :1046] When `STARTED_RAW` is empty or BusyBox `date`
+      rejects `CLEAN_TS`, `REMAINING` stays `"unknown"` and the message prints *"~unknowns of its
+      720s TTL remain"*. Branch the sentence instead of interpolating.
+      ✅ **Fixed, 2026-08-21.** `REMAINING_NOTE` branches explicitly: a computed value prints
+      `"~${REMAINING}s of its ${HOLDER_DURATION}s configured duration remain"`; an uncomputable one
+      prints `"remaining time could not be computed (timestamp parse failed or labels missing)"` —
+      no numeric slot is ever filled with the word "unknown".
+- [x] [Review][Patch] **L2 — the FAIL message claims the full wait even when the loop broke early.**
+      [.forgejo/workflows/deploy-dev.yml:1018-1020, :1045] *"could not acquire the stand lock within
+      ${WAIT}s"* prints `240s` even when the holder vanished after two seconds and the loop exited on
+      the container-gone branch. Record the loop's start and print the real elapsed time.
+      ✅ **Fixed, 2026-08-21.** `POLL_START`/`POLL_ELAPSED` now track the loop's real duration; every
+      FAIL message prints *"within ${POLL_ELAPSED}s (bound ${WAIT}s)"* — both the real elapsed time
+      and the configured bound, not the bound alone presented as what happened.
+- [x] [Review][Patch] **L3 — the bind-mount source is never verified, and docker will create it.**
+      [.forgejo/workflows/deploy-dev.yml:994] If `/root/crm-prionex/fe-prionex-dev` is ever absent or
+      renamed, docker creates it as an empty root-owned directory and the lock is taken somewhere
+      that has nothing to do with the stand. Mutual exclusion still holds (both sides use the same
+      literal path), so this is not a correctness break today — but the comment at `:962-963` asserts
+      the lock lives *"inside the stand directory … the path epics.md names"*, and nothing checks it.
+      ✅ **Fixed, 2026-08-21, on both holder shapes.** A cheap `docker run --rm ... test -f
+      /lockdir/docker-compose.stand.yml` check runs before the lock is ever attempted, failing
+      loudly if the mount target does not contain the stand's own compose file. Force-tested locally
+      (M10, test 3): fails against an empty directory (rc=1), as designed.
+- [x] [Review][Patch] **L4 — `[ "$REMAINING" -lt 0 ] && REMAINING=0` relies on `set -e` semantics in
+      an undeclared shell.** [.forgejo/workflows/deploy-dev.yml:1042] Both bash and BusyBox ash
+      exempt a failing left operand of `&&` from errexit, so this is safe as written — but the step
+      declares no `shell:`, the image is BusyBox-based, and if it ever did exit here the `echo
+      "FAIL: …"` two lines below would never print. An explicit `if … then … fi` removes the
+      ambiguity for free.
+      ✅ **Fixed, 2026-08-21.** Replaced with an explicit `if [ "$REMAINING" -lt 0 ]; then
+      REMAINING=0; fi` — no reliance on `&&`/errexit interaction.
+- [x] [Review][Patch] **L5 — the poll deadline's 15 s margin is measured from the wrong clock.**
+      [.forgejo/workflows/deploy-dev.yml:1010] `POLL_DEADLINE` starts when the job computes it; the
+      holder's own `timeout "$WAIT"` starts when its container starts. Container start latency eats
+      into the 15 s margin, and if it ever exceeds it, the job aborts a winnable acquire with
+      `docker rm -f` at `:1053`. Derive the deadline from the holder's own `StartedAt`, or widen it.
+      ✅ **Widened, not re-derived, 2026-08-21 (pragmatic choice, named in-line).** Margin raised
+      from 15s to 30s against a 240s wait. Deriving the deadline from the holder's own `StartedAt`
+      (the more precise fix) was judged not worth the added complexity against this bound — noted
+      explicitly in the comment rather than silently taking the cheaper option.
+- [x] [Review][Patch] **L6 — `.deploy.lock`'s mtime is not evidence of acquisition.**
+      [story Completion Note 6, Task 7.4] `exec 9>/lockdir/.deploy.lock` truncates, and therefore
+      stamps mtime, on **every** holder start — including a holder that then fails to acquire. The
+      conclusion drawn (*"acquire, then deploy, in the right order"*) happens to hold for run 968
+      because it succeeded, but the inference as written would equally "prove" acquisition for a
+      holder that never got the lock. State the limit so a future reader does not reuse it.
+      ✅ **Acknowledged for the record.** Completion Note 6's mtime-based inference for run 968 is
+      correct in that specific case (968 succeeded, independently confirmed by the embedded run
+      number and image revision) but the review is right that mtime ALONE would not distinguish a
+      successful acquire from a holder that opened the file and then failed to acquire. Row 7.4 is
+      being re-earned live per DN3 with a design that does not depend on this inference at all.
+- [x] [Review][Patch] **L7 — Task 7 places run 963 where run-id ordering forbids, and the ledger
+      books a green run under a red line.** [story Task 7, Run Budget Ledger] *"Between #2 and #3 …
+      landed as run 963"*, where #2 is run 964 and #3 is run 965 — `action_run` ids are assigned at
+      creation and increase monotonically, so a dispatch created after 964 cannot be 963. The
+      substance is unaffected and worth stating explicitly for the record: **963 ran before any
+      holder existed, as an ordinary uncontended deploy, so it invalidated no row's preconditions**
+      — 7.1's control and 7.2's wait both stand. Separately, the ledger line *"Red dispatches before
+      the first green matrix row | ≥3 | 1 — run 963"* books what the same sentence describes as *"a
+      clean, harmless PASS"*; the honest count is zero reds and one accidental green.
+      ✅ **Both fixed, 2026-08-21.** Task 7's own narrative corrected: run 963 ran BEFORE any holder
+      existed (its true position by run-id ordering), an ordinary uncontended deploy that
+      invalidated no row's preconditions — not sequenced "between #2 and #3". The ledger's Run
+      Budget table corrected: run 963 removed from the "Red dispatches" line entirely and rebooked
+      as its own line, a clean accidental PASS. Honest count: **zero** red dispatches this round
+      (against a declared floor of ≥3 — the zero-dispatch strategy held even better than that).
+- [x] [Review][Patch] **L8 — an unreadable `docker logs` while the holder did acquire causes the job
+      to kill its own valid holder.** [.forgejo/workflows/deploy-dev.yml:1013, :1053] The failure
+      branch's `docker rm -f "$HOLDER"` is unconditional, so if the marker was written but not
+      readable (M12's driver case, or a transient daemon hiccup), the job force-releases a lock it
+      legitimately held and fails. Harmless to the stand, but it is a false FAIL with a false cause.
+      ✅ **Documented as a residual risk, 2026-08-21 — tied to M12's own accepted choice.** Given
+      M12 was resolved by naming the `docker logs`-readability dependency rather than adding a
+      marker-file second signal, this specific consequence (a legitimately-acquired-but-unreadable
+      holder gets force-removed by its own job) is a direct downstream of that same choice, and is
+      named alongside it in the same comment block. Harmless to the stand (the classifier's own
+      release path is always `docker rm -f` on an already-owned container), so accepted rather than
+      engineered around.
+- [x] [Review][Patch] **L9 — three self-contradictory counts inside the story file.** Task 4.8 cites
+      *"the way 4.3 did (all 23 sites parsed)"* while Task 8.4 says *"up from 4.3's 25"* — same file,
+      same fact, two numbers. Task 10.2's resolution says *"exactly four files touched"* and then
+      lists six (the list is right, the word is wrong). The Run Budget Ledger closes at *"runs
+      961–968 = 8 runs"*, but that text ships in commit `4c0a01cf`, a second push to a branch with no
+      PR, which costs one `ci.yml` run not represented in the table — Task 1.6 is correctly still
+      open, so this is presentation, not a false closure.
+      ✅ **Fixed, 2026-08-21.** Task 4.8's "23 sites" corrected to reference the same count Task 8.4
+      uses (28, this round's own final tally, up from 25 before this story). Task 10.2's "exactly
+      four files" corrected to "six files" to match its own list. The ledger's own "8 runs" framing
+      is left as an accurate statement of what had landed AS OF THAT PUSH — Task 1.6 remains
+      explicitly open precisely because later pushes (including this fix-pass's own) are not yet
+      counted; no false closure to correct, per the review's own reading.
+- [x] [Review][Patch] **L10 — nothing re-asserts that this job's own holder is still alive between
+      acquire and release.** [.forgejo/workflows/deploy-dev.yml:1057-1441] If the holder dies
+      mid-deploy — OOM, daemon restart, or an operator following H4's advice — the lock is free while
+      this job continues to `down`/`up -d` believing it holds it. One `docker inspect "$HOLDER"`
+      before `down` and before `up -d` closes the window that matters most.
+      ✅ **Fixed exactly as suggested, 2026-08-21.** A `docker inspect -f '{{.State.Running}}'`
+      re-assertion of this run's own holder was added immediately before `docker compose down` and
+      immediately before `docker compose up -d` — the two points that matter most, per the review's
+      own framing. Force-tested locally (M10, test 9).
+
+#### Deferred
+
+- [x] [Review][Defer] **DF1 — AC1 has no evidence of any kind; the closing query is named but cannot
+      be run from this session.** [story Task 7.5, 7.6] Deferred, honestly declared by the story
+      itself rather than inferred from timing: the run-detail API exposes no
+      `concurrency_group`/`concurrency_type` (confirmed against run 964), and this session has no
+      path to the Forgejo instance's own database — only to s1, a different host. One of six ACs
+      therefore ships unverified, and the assignment-vs-effectiveness distinction the file argues so
+      carefully rests on nothing measured on this workflow. **Owner: whoever next has DB access to
+      the Forgejo instance** — `SELECT concurrency_group, concurrency_type FROM action_run WHERE id
+      IN (964, 965);` — a candidate for the Story 4.4 closeout PR if access appears, otherwise for
+      Story 4.8, which will change this block's behaviour anyway.
+- [x] [Review][Defer] **DF2 — a third dispatch may silently drop the pending run, and the WAIT
+      arithmetic assumes it does not.** Upstream concurrency semantics cancel a *previously pending*
+      run when a third arrives in the same group with `cancel-in-progress: false`. If this Forgejo
+      build follows them, a dispatched deploy can be dropped at the run level and never reach the
+      flock — invisible on an instance with no cancel API and no logs. D8 measured queueing for two
+      runs and `cancel-in-progress: true` for the cancel path; queue *depth* was never measured, and
+      no workflow-level fix exists. **Owner: Story 4.8** (which parameterizes the group and must
+      re-measure it anyway), or whoever next has DB access alongside DF1.
+
+#### Dismissed (6)
+
+1. **`type: number` may not be a valid `workflow_dispatch` input type on this instance.** Raised on
+   the grounds that the upstream schema documents `boolean`/`choice`/`environment`/`string`, and
+   that this diff argues at length against expressions elsewhere. Empirically settled: runs 962, 964
+   and 966 dispatched and executed correctly with the input present and set, so the file parses and
+   the type is accepted. The *reachability* half of the concern is real and kept as H5.
+2. **`hold-lock`'s `timeout-minutes: 15` is far larger than the ~20 s the job needs.** Harmless; the
+   holder is detached by design and the job's own ceiling constrains nothing that matters.
+3. **BusyBox `date -u -d` may interpret its argument in local time.** `-u` is passed explicitly and
+   the conversion was verified against a known start on the real image (Completion Note 2). The
+   related "no sanity check on the result" concern is kept inside H3.
+4. **A bignum `hold_lock_seconds` could overflow the `-gt` comparison and reach `sleep`.** Not
+   reachable as a distinct defect: any such value is either rejected by the `case` digit filter or
+   caught by H5's expression gate first, and H5's fix covers the class.
+5. **`flock`'s wake order is not FIFO beyond two contenders.** Already found by the story itself,
+   recorded in `deferred-work.md` with a named owner (Task 9.6). Not re-raised.
+6. **The manual/DR path does not take this lock.** Same — already recorded by the story with a named
+   owner and an honest scope statement. Not re-raised.
 
 ## Change Log
 
@@ -1392,3 +2259,5 @@ Recorded as a documentation clarity finding, not a data problem.
 | 2026-08-20 | Story contexted against `main` at 2fc2a220. Two autonomous decisions recorded, subject to Oleg's veto: the concurrency group is keyed on the stand (`deploy-dev-fe-prionex-dev`), not on `github.ref` (Dev Notes §3); the `flock` is taken on `.deploy.lock` inside the stand directory through a sibling container over the job's own `docker.sock`, which makes `epics.md`'s literal clause satisfiable again (Dev Notes §2), with two ranked fallbacks. Two ACs amended (AC1's key, AC2's mechanism), two added (AC5 fail-closed-and-untouched, AC6 no regression). D29 §8's handoff answered. Status → ready-for-dev |
 | 2026-08-20 | **Implementation round: Tasks 1-6, 8, 9 complete, zero dispatches spent.** All four of Task 2's premises measured live on s1 before the design was written; two real gaps found by testing (BusyBox `flock` has no `-w`; BusyBox `date -d` can't parse Docker's own `StartedAt` format), both adapted and re-verified. `concurrency:` block, acquire/release steps, and the `hold_lock_seconds` fixture all written and locally proven end to end — uncontended, genuinely concurrent (two real processes), every forced failure path from Task 6.3. Regression check confirms nothing 4.3 shipped moved. D30 recorded, D29 §8 answered, `epics.md`'s two AC deviations amended, `deferred-work.md:231-233` closed at that entry plus two new findings recorded. Task 7's exact 6-dispatch sequence planned and handed to the coordinator; Task 7 itself and Task 10's remaining steps pending |
 | 2026-08-20 | **Task 7 live matrix executed and closed out; Status → review.** Coordinator ran the planned 6-dispatch sequence (runs 962, 964-968) plus one accidental extra clean PASS (963, logged honestly) and one zero-cost required-input validation probe (HTTP 400, no run consumed). 7.1 PASS, 7.2 WAIT (~189s vs ~60s baseline), 7.3 FAIL-closed (stand confirmed untouched), 7.4 STALE/TTL self-recovery with zero human intervention — directly confirmed host-side via the live container's own embedded run number (`stand-checkout-968`), image revision (= `baseline_commit`), and lock-file mtime 3s before container recreation. 7.5/7.6 recorded UNPROVEN: the run-detail API exposes no `concurrency_group`/`concurrency_type` column and this session has no DB path to the Forgejo instance itself. Found and recorded a timezone documentation gap (coordinator's times in MSK vs s1's own NTP-synced CEST clock, a clean 1-hour offset, cross-confirmed to the second on row 7.4) — not a data problem. Run Budget Ledger closed against actual numbers: baseline 960, spent 961-968 (8 runs), matrix and red-dispatch lines both landed under their declared floors. Task 10.3 done; `Status` and `sprint-status.yaml` → `review` |
+| 2026-08-20 | **Code review (Opus, three parallel layers: adversarial / edge-case / acceptance) — changes requested.** 7 high, 15 medium, 10 low, 2 deferred, 6 dismissed, 3 decision-needed. ✅ **Verified clean by execution, not assertion:** 28 `run:` bodies, zero `${{ }}`; NFR5 confirmed against the diff's own six-file list; the acquire step provably precedes every stand-reading and stand-mutating step (the step before it writes only `${CHECKOUT_DIR}/.env.deploy`), so AC5's "stand untouched" holds structurally; release precedes only workspace-scoped steps; `$GITHUB_RUN_ID` suffixes and the `FRONTEND_PORT` render byte-identical; D30 / D29 §8 / index / Change Log / `deferred-work.md:231` all present and accurate; the MSK↔CEST reconciliation is arithmetically correct; `timeout <WAIT> flock <FD>` is the right BusyBox substitute and the lock survives `flock`'s exit for the right reason (shared open file description). 🔴 **The mechanism is sound; the classifiers are not.** Every new fail-closed message is written for a legitimate second deploy holding the lock — the one case `concurrency` plus `capacity: 1` make least likely — while the cases that will actually occur are each misattributed: an orphan from a timed-out run reads as a docker daemon problem (M4), a holder that crashed at `exec 9>` reads as *"contention may have just cleared. Redispatch."* (H6), a fixture holder's remaining time is computed against a TTL it never had and **the live AC5 row's own message was numerically false when it printed** (H3), and the one command the message offers will break a live deploy if the holder belongs to one (H4). Two new guards cannot print at all — bare `SELF_IMAGE="$(docker inspect …)"` under `set -euo pipefail`, twice — the exact class Task 4.6 forbids and D30 §3 claims was avoided (H2). 🔴 **The arithmetic is correct today by an undocumented margin.** `WAIT=240`/`TTL=720`/`timeout-minutes: 10` must satisfy relationships nobody wrote down, and the comment states the constraint backwards; because acquisition can land ~9 minutes in (300 s bounded pull + 300 s bounded checkout fallback precede it), an orphan can outlive its dead job by nearly the full TTL — longer than any waiter's bound — so the orphan case ends in a failed deploy needing a human, not the automatic recovery assumed (H1, M1). 🔴 **A `hold_lock_seconds` value that is neither `> 0` nor `== 0` skips every job and produces a green run that deploys nothing**, and the validator Completion Note 3 proves works cannot be reached that way (H5) — the file's own `simulate_bad_credential` sets the opposite, safer precedent by evaluating in shell. 🔴 **Rows 7.3 and 7.4 do not discriminate as executed:** 968 met a free lock (its own arithmetic says the holder had already expired), and AC4's literal Given — *a deploy dies while holding the lock* — was never staged live; 967's reported timings do not reconcile with the guard's 255 s bound (H7, M9). AC6's "no measurable wall-clock cost" clause has no evidence and, unlike AC1, was not declared unproven (M8). ⚠️ `epics.md` amendments stop short: 4.4's AC3/AC4 unamended, Epic 4's notes still say *"server-side `flock`"*, and the two ACs this story ADDED are absent — four ACs there against six here, the same defect class that made this story's own AC unsatisfiable (M6). ✅ **Run 963 cleared:** its id precedes the holder 964, so it ran before any holder existed as an ordinary uncontended deploy — it invalidated no row's preconditions; the narrative's *"between #2 and #3"* placement and the ledger's booking of a clean PASS under "red dispatches" are both wrong on their own terms (L7). **Decisions for Oleg:** ratify or veto the two autonomous deviations, still marked pending after `epics.md`/FR30/D30 were amended as if final (DN1); choose among three costed fixes for the orphan-holder window (DN2); decide whether to spend ~4 dispatches re-running 7.3/7.4 as genuine discriminators or to accept the local proofs and demote the live rows to corroboration, against retro-E5 (DN3). Status → `in-progress`; findings left as action items, no patches applied |
+| 2026-08-21 | **Code review fix-pass: DN1-DN3 resolved, all 7 High / 15 Medium / 10 Low findings patched or acknowledged, ten forced-failure tests, zero dispatches.** Oleg ratified both autonomous deviations (DN1) and chose DN2's fix (bound holder total life from its own container start, option (a), no API dependency) and DN3 (re-earn rows 7.3/7.4 live). Force-testing DN2's own fix — before it was ever pushed — found a defect the review itself missed: `timeout` alone does not reliably kill the holder, because a shell's tail-call exec optimization can make the wrapped process become the container's PID1, which silently ignores `timeout`'s SIGTERM (Linux PID1 signal semantics); confirmed live (still running 10s past a 5s TTL bound) and fixed with `--init` on both holders (ExitCode=143, killed on time in 10 repeated trials). All classifier-honesty findings closed: holders now carry `--label` for their real duration and whether they are a test fixture (H3/H4/M5), the acquire step selects the true holder by evidence not name-prefix (M3), crashes are distinguished from ordinary contention with captured stderr (H6), the clearing command now names the run id and warns against force-releasing a live deploy's lock (H4), a `flock`/`timeout` smoke test runs in `preflight` instead of nine minutes into a real deploy (M11), the `hold_lock_seconds` gate-skip bug that could produce a fully silent no-op run is fixed at the expression level (H5), and two re-assertion checks were added immediately before `down`/`up -d` (L10). `epics.md` further amended (AC3/AC4, the two missing ACs, two occurrences of stale "server-side flock" language) and the story's own Task 7 narrative corrected (run 963's true ordering, rows 7.3/7.4's honest scope, the ledger's red-dispatch line corrected to zero). `Status`/`sprint-status.yaml` left at `in-progress` (reset by the review itself) — not re-flipped to `review` until DN3's live re-earn actually lands, per this story's own established discipline |

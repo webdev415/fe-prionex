@@ -497,7 +497,12 @@ while the legacy DEV stand keeps running untouched.
 by Epics 5 and 6: parameterized compose, **execution on a deploy runner located on the target
 host** (amended 2026-08-11; was ~~native `ssh`/`scp` instead of `appleboy/*`~~),
 fail-fast `docker pull` with no `:latest` fallback, health check parameterized by container
-name and port, Slack via `curl`, and the server-side `flock`.
+name and port, Slack via `curl`, and ~~the server-side `flock`~~ a sibling-container `flock`
+through `docker.sock`
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+The retired-mechanism phrase survived here after being struck from FR30 in this same file — there
+is no server-side deploy script at all (retired 2026-08-11); the lock is taken by a sibling
+container launched through the job's own `docker.sock`, bind-mounting the stand directory.
 
 ### Epic 5: PRE-PROD Release Candidate Environment
 
@@ -1562,7 +1567,10 @@ Any developer can deploy any feature branch to a new DEV stand on s1 without app
 the legacy DEV stand keeps serving untouched. This epic also establishes the deployment
 mechanics that Epics 5 and 6 reuse: parameterized compose, **execution on a deploy runner
 located on the target host** (amended 2026-08-11; was ~~native `ssh`/`scp`~~), fail-fast
-pull, parameterized health check, Slack via `curl`, and the server-side lock.
+pull, parameterized health check, Slack via `curl`, and ~~the server-side lock~~ a
+sibling-container `flock` through `docker.sock` (amended 2026-08-21, Story 4.4 code review M6,
+[D30](../../docs/migration-decisions.md#d30) — same defect as the near-identical phrase at :500,
+fixed alongside it).
 
 ### Story 4.1: Parameterize the Compose File for Coexisting Stands
 
@@ -1739,14 +1747,60 @@ container launched through the socket the job already holds can, confirmed live 
 was written (D28 §4's own H5 amendment (i), measured not inherited). Acquire/release placement,
 bounded wait (240s) and holder TTL (720s) — [D30](../../docs/migration-decisions.md#d30).
 
-**Given** two deploys are dispatched to the same stand at nearly the same moment
-**When** both run
+**Given** ~~two deploys are dispatched to the same stand at nearly the same moment~~
+**When** ~~both run~~
 **Then** the second waits for the first to finish
-**And** the final container state corresponds to exactly one of the two deploys, not a mix.
+**And** the final container state corresponds to exactly one of the two deploys, not a mix
+(verified host-side by image digest and container `Created`/`StartedAt`, not by a log line).
 
-**Given** a deploy is killed mid-run while holding the lock
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+*"Two simultaneous dispatches"* is not a runnable test on this platform, and a naive attempt at it
+produces a guaranteed false positive: the deploy runner's `capacity: 1` (D29 §8, re-verified by
+this story's Task 2.1) already serializes two deploy JOBS, so two dispatches would queue at the
+runner and the lock would never be exercised, while the run timings would look exactly like
+success — the same trap Story 1.3 solved with a disposable capacity-2 probe runner, and Story 3.6
+caught in validation before spending a run. Contention is made deterministic instead of hoped for:
+an input-gated hook (`hold_lock_seconds`, precedent `simulate_bad_credential`) starts the lock
+holder as a CONTAINER that outlives its own job, so the next — necessarily sequential — dispatch
+genuinely meets a held lock regardless of runner capacity.
+
+**Given** a deploy dies while holding the lock (job timeout, runner restart, host-side kill — an
+Actions-run **cancel** is not available on this instance, `deferred-work.md:94-98`)
 **When** a subsequent deploy is dispatched
-**Then** it is not blocked forever by a stale lock.
+**Then** it is not blocked indefinitely
+**And** no lock state survives on disk that a human must clean up by hand for the normal path to
+resume.
+
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+Wording aligned with the story's own AC4 — "killed mid-run" widened to name the causes this
+platform actually presents (job timeout, runner restart, host-side kill; no cancel API exists
+here), and "not blocked forever" sharpened to "not blocked indefinitely, and no lock state
+survives that needs manual cleanup" — the holder's own bounded TOTAL life (TTL from its own
+container start, not from acquisition; code review H1/DN2) is the mechanism.
+
+**Given** the lock is held past this deploy's bounded wait
+**When** the acquire step gives up
+**Then** the job fails **before** `docker compose down` is ever called
+**And** the stand is still serving exactly what it served before the dispatch
+**And** the message names the true cause (which run holds the lock, how much of its TTL remains, and
+the one command that clears it), not a generic timeout.
+
+🔴 **ADDED 2026-08-21 (Story 4.4 code review M6 — this AC existed in the story,
+[D30](../../docs/migration-decisions.md#d30), but was missing from this file, which used to carry
+four ACs where the story carries six).** Why this AC exists: a lock that is only ever observed
+succeeding is indistinguishable from no lock at all — this is the row that makes the guard
+falsifiable, and the row that proves the lock is taken on the safe side of `down`.
+
+**Given** the uncontended case, which is every ordinary deploy
+**When** a deploy runs with no competing holder
+**Then** it succeeds end to end exactly as an unguarded deploy did — healthy stand, digest matching
+the resolved digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace paths still
+in effect
+**And** the lock adds no measurable share of the deploy's wall-clock beyond acquisition.
+
+🔴 **ADDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)) —
+the second of the two ACs missing from this file.** The guard must not degrade the deploy it
+guards; this is the control row against every contended row above.
 
 ### Story 4.5: Notify Slack on Deploy Start, Success and Failure
 
