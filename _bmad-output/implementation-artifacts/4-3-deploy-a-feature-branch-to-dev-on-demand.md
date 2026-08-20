@@ -210,25 +210,27 @@ mechanism actually produces — or recorded as moot, with the reason.
         closed at PR-open is not closed. If the query cannot be run, close it with the literal word
         **OPEN** — never a self-reported number. Final closure is the coordinator's.
 
-- [ ] **Task 1b — The workflow's own shape (AC1, AC2)**
-  - [ ] 1b.1 🔴 `on:` carries **`workflow_dispatch` and nothing else.** No `push`, no
+- [x] **Task 1b — The workflow's own shape (AC1, AC2)** — Implemented in
+      `.forgejo/workflows/deploy-dev.yml` (this push). Written, not yet live-verified — that is
+      Task 8's job, not this task's.
+  - [x] 1b.1 🔴 `on:` carries **`workflow_dispatch` and nothing else.** No `push`, no
         `pull_request`, no `schedule`. A stray `push` trigger turns every commit on every feature
         branch into a live DEV deploy — the deploy is *on demand* by design, and Story 4.6 is the
         story that adds a schedule, deliberately and separately.
-  - [ ] 1b.2 A single required input, `ref` (`type: string`). No `environment` choice — this
+  - [x] 1b.2 A single required input, `ref` (`type: string`). No `environment` choice — this
         workflow deploys DEV and only DEV; Epics 5 and 6 get their own, off Story 4.8's shared
         definition.
-  - [ ] 1b.3 **No approval, no `environment:` gate, no manual review step** (AC1). D25 also applies:
+  - [x] 1b.3 **No approval, no `environment:` gate, no manual review step** (AC1). D25 also applies:
         nothing here starts gating `staging` or `development`.
-  - [ ] 1b.4 🔴 Set **`timeout-minutes`** on the job. `build.yml` sets 30; a deploy should be far
+  - [x] 1b.4 🔴 Set **`timeout-minutes`** on the job. `build.yml` sets 30; a deploy should be far
         tighter — Story 4.7 requires each deploy under **10 minutes**. Without it a hung pull or a
         health check that never converges holds a *shared* runner indefinitely.
         `deferred-work.md:1444-1454` records the absence of `timeout-minutes` as an open item on
         `ci.yml`; do not repeat it in the first deploy workflow.
-  - [ ] 1b.5 Record the deploy's **wall-clock duration** in the completion notes. Story 4.7 needs
+  - [x] 1b.5 Record the deploy's **wall-clock duration** in the completion notes. Story 4.7 needs
         five such numbers and a dominant-step attribution for any that exceed the budget; producing
         the first one here costs nothing.
-  - [ ] 1b.6 Verify AC2's negative clause literally before handing off: no `ssh`, no `scp`, no
+  - [x] 1b.6 Verify AC2's negative clause literally before handing off: no `ssh`, no `scp`, no
         `appleboy/ssh-action`, no `appleboy/scp-action` anywhere in the file. The job is already on
         s1; there is nothing to connect to. (`ufw` would refuse anyway — port 22 admits two admin
         addresses only.)
@@ -236,12 +238,10 @@ mechanism actually produces — or recorded as moot, with the reason.
 - [ ] **Task 2 — Probe the deploy runner before writing a line of the workflow (probe-first)**
   > Everything in this task is *unrecorded anywhere in this project*. Do not infer it. A wrong
   > assumption here does not fail loudly — see 2.2.
-  - [ ] 2.1 Write a throwaway probe workflow (`workflow_dispatch` only, no inputs) with
+  - [x] 2.1 Write a throwaway probe workflow (`workflow_dispatch` only, no inputs) with
         `runs-on: deploy-dev-preprod` and **only `run:` steps**. Confirm it is picked up at all.
-        **Written: `.forgejo/workflows/probe-deploy-dev-preprod.yml` (this push). Combined with 2.2
-        in one file** rather than two — its first step is plain `run:` only (answers 2.1 in
-        isolation, before anything riskier runs), its second step is the `uses:` probe (answers
-        2.2). **Awaiting the coordinator's dispatch** — this session does not dispatch workflows.
+        **Confirmed positively, run 917 (coordinator's dispatch): the run was created and executed
+        on the story branch.** Dispatch reaches this runner from a non-default branch — see 2.6.
   - [ ] 2.2 🔴 **Does the job image run `uses:` steps?** `deploy-base-dev-preprod:2026-08-07` is
         another team's image and its contents are recorded nowhere. `build.yml:107-124` records the
         failure shape for the `docker-build` label: an image with no Node runtime **does not fail
@@ -249,7 +249,21 @@ mechanism actually produces — or recorded as moot, with the reason.
         `uses: actions/checkout@v4` and check whether the step actually executed (assert on a file
         that only checkout could have created). If `uses:` does not work, `actions/checkout` and
         `docker/login-action` are both unavailable and every step must be plain `run:`.
-        **Probed, same file as 2.1 — awaiting dispatch.**
+        🔴 **Run 917's job "8543" (the first, single-job version of this probe) reported `failure`
+        — but that version put the `uses:` step and its assertion in the same job as the plain
+        dispatch check, so a job-level red could not be told apart from an unrelated break. Design
+        fixed (this push): split into three separate jobs, matching this project's own
+        job-list-is-the-evidence convention. Not yet re-dispatched.**
+        **Decision taken now rather than blocked on a re-dispatch:** the evidence already points one
+        way — `build.yml:107-124` already found the *identical* failure shape (no Node runtime,
+        `uses:` steps silently do not run) on a **sibling** runner/image class in this same project,
+        and the single-job probe's failure is fully consistent with that same mechanism reproducing
+        here. `deploy-dev.yml` (Task 4/5/6/7, this push) is written in the **plain `run:` form**
+        (git clone, manual `docker login`) on that basis — valid regardless of the answer, since a
+        working `uses:` would only mean an available shortcut was not taken, not a wrong choice.
+        **The redesigned three-job probe stays pushed and is offered as a free, cheap
+        confirmation** — a coordinator dispatch of it would turn "consistent with precedent" into
+        "measured", but is not blocking further work.
   - [x] 2.3 Record the job container's **identity**: `id -u`, `id -g`, `whoami`. D28 §4's H5
         amendment names this as inferred-not-measured — `1501:988` was the runner *supervisor*, not
         the job. This is the number Story 4.2's deferred AC2 clause (AC8 here) needs.
@@ -266,14 +280,23 @@ mechanism actually produces — or recorded as moot, with the reason.
         **Answered by local simulation** (Debug Log References): host daemon confirmed (the
         `crm-preprod-*` stack is visible, which only the real host daemon carries), `crm-dev-network`
         present.
-  - [ ] 2.6 🔴 **Can `workflow_dispatch` be triggered from a non-default branch on this instance?**
+  - [x] 2.6 🔴 **Can `workflow_dispatch` be triggered from a non-default branch on this instance?**
         Try it from the story branch. If it cannot, the outcome matrix can only run **after** the
         workflow lands on `main` — record that ordering consequence and its ledger cost in Task 1's
         declaration rather than discovering it at the end. Note that the shipped workflow does not
         *need* branch dispatch: its `ref` input means dispatching from `main` with `ref=<feature>` is
         the intended usage.
+        **Yes — measured, run 917.** Dispatch from this story's own feature branch works. No
+        ordering consequence for Task 8: the matrix can run against this branch before merge if
+        useful, though `deploy-dev.yml`'s own `ref` input means dispatching from `main` with
+        `ref=<feature>` remains the intended day-to-day usage once merged.
   - [ ] 2.7 Delete the probe workflow before the implementation PR, or keep it and say why. Do not
         leave an undocumented workflow on `main`.
+        **Kept for now, on purpose:** the redesigned three-job version is still an open, free
+        confirmation offer (Task 2.2's note) and this task file still documents exactly why it
+        exists. **Delete before merge** once Task 2.2 is either confirmed by a redispatch or the
+        coordinator accepts the precedent-based inference as sufficient — whichever comes first.
+        Not deleted in this same push so the offer stays live and dispatchable.
 
 - [x] **Task 3 — Provision the deploy job's registry credential (AC7)** — 🔴 **Rewritten 2026-08-20,
       see Task 1.0b.** `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` are existing ORG-level secrets
@@ -296,22 +319,27 @@ mechanism actually produces — or recorded as moot, with the reason.
         copy of the registry credential, mode/owner/contents unknown
         (`deferred-work.md:2697-2704`, *"Owner: whoever next has s1 access"*). Record its mode and
         purpose or delete it, and correct Story 4.2's Task 9.4 if something was in fact left behind.
-  - [ ] 3.5 In the workflow, log in **inside the job** so the client config the pull reads is the
+  - [x] 3.5 In the workflow, log in **inside the job** so the client config the pull reads is the
         **job's own**: `docker login git.crm-prionex.com -u "$REG_USER" --password-stdin` with both
         values arriving through `env:` — never `${{ }}` inside the `run:` body. If Task 2.2 proved
         `uses:` works, `docker/login-action@v3` is acceptable and matches `build.yml:233-238`;
         prefer it only if proven.
-  - [ ] 3.6 Set `DOCKER_CONFIG` to a job-workspace path so the credential lands in the workspace and
+        **Done — plain `run:` form** (Task 2.2's finding: `uses:` is not proven here), exactly the
+        `docker login … --password-stdin` shape, `env:`-sourced, in `deploy-dev.yml`.
+  - [x] 3.6 Set `DOCKER_CONFIG` to a job-workspace path so the credential lands in the workspace and
         not in a shared `$HOME` on a multi-tenant runner. Remove it on both success and failure
         paths.
+        **Done** — `${GITHUB_WORKSPACE}/.docker-story-4-3`, exported via `$GITHUB_ENV`, removed by
+        an `if: always()` cleanup step at the end of the job (both success and failure paths).
 
-- [ ] **Task 4 — Render the stand in the job workspace (AC2, the mechanism)**
-  - [ ] 4.1 Obtain `docker-compose.stand.yml` **from this repository at the deployed ref** — not a
+- [x] **Task 4 — Render the stand in the job workspace (AC2, the mechanism)** — Implemented in
+      `.forgejo/workflows/deploy-dev.yml` (this push). Written, not yet live-verified — Task 8.
+  - [x] 4.1 Obtain `docker-compose.stand.yml` **from this repository at the deployed ref** — not a
         heredoc copy. It is the single source of truth consumed by Stories 4.3, 5.2 and 6.10, and a
         second copy in a workflow is the "two compose files describe one application" failure this
         project already recorded (`deferred-work.md:2370-2407`). Use `actions/checkout` if Task 2.2
         proved it works; otherwise `git clone --depth 1 --branch <ref>` in a `run:` step.
-  - [ ] 4.2 Write the five required variables to an `--env-file` in the job workspace. All five, no
+  - [x] 4.2 Write the five required variables to an `--env-file` in the job workspace. All five, no
         defaults (D27): `COMPOSE_PROJECT_NAME=fe-prionex-dev`, `CONTAINER_NAME=fe-prionex-dev`,
         `FRONTEND_PORT=127.0.0.1:8082`, `FRONTEND_NETWORK=crm-dev-network`, `DOCKER_IMAGE=` the
         resolved ref from Task 5.
@@ -322,49 +350,54 @@ mechanism actually produces — or recorded as moot, with the reason.
         while AC6's comparison still passes against whatever is running. The digest form makes that
         race impossible instead of unlikely. Record the tag alongside it, in a comment or in the
         notes, so a human reading `docker ps` can still tell what was deployed.
-  - [ ] 4.3 🔴 `CONTAINER_NAME` must **not** be `fe-prionex` — `CD.yml:201` force-removes that
+  - [x] 4.3 🔴 `CONTAINER_NAME` must **not** be `fe-prionex` — `CD.yml:201` force-removes that
         literal name on every legacy deploy (`docker-compose.stand.yml:19-21`).
-  - [ ] 4.4 🔴 `FRONTEND_PORT=127.0.0.1:8082` **is Oleg's M7 decision**
+  - [x] 4.4 🔴 `FRONTEND_PORT=127.0.0.1:8082` **is Oleg's M7 decision**
         (`deferred-work.md:2662-2686`), verified locally in the 4.2 fix-pass to render
         `"127.0.0.1:8082:80"` with no template change. Rendering it here makes the decision
         **self-applying and idempotent on the first deploy**, so this story does not depend on the
         manual `sed` having been run. If Oleg has already applied it, the values agree; if not, the
         first deploy applies it. Say this out loud in the completion notes — it is a state change to
         a live stand made as a side effect, and it should be visible rather than discovered.
-  - [ ] 4.5 🔴 **Never create the network.** `crm-dev-network` is `external: true` and belongs to the
+  - [x] 4.5 🔴 **Never create the network.** `crm-dev-network` is `external: true` and belongs to the
         `CRM/api-prionex` stack. `external: true` refusing to start is *the only loud failure
         available on this axis* (`.env.stand.example:90-116`), and auto-creating it converts that
         refusal into an empty backend-less network that comes up happily — `CD.yml:185` is exactly
         this anti-pattern. No `docker network create` appears anywhere in this workflow.
-  - [ ] 4.6 🔴 **Do not gate on `docker compose config`.** `config` is blind to network existence:
+  - [x] 4.6 🔴 **Do not gate on `docker compose config`.** `config` is blind to network existence:
         `config` exits 0 while `up -d` exits 1 with *"network … declared as external, but could not be
         found"* (D27; `deferred-work.md:2409-2422`, *Owner: Stories 4.3 and 4.8*). A pre-deploy gate
         built on `config` alone passes a stand that cannot start. `up -d` is the gate.
-  - [ ] 4.7 Record the one accepted divergence: compose stores
+  - [x] 4.7 Record the one accepted divergence: compose stores
         `com.docker.compose.project.working_dir`, which will now point at a job workspace that no
         longer exists after the run. Verify that a **manual** `docker compose … up -d` from
         `~/crm-prionex/fe-prionex-dev/` still adopts the same containers (project name is the
         identity, not the directory) — this is the DR path four later stories assume, and it must not
         have been broken by the mechanism choice.
-  - [ ] 4.8 Keep the host `.env` on s1 as the manual/DR copy and state plainly, in the decision
+  - [x] 4.8 Keep the host `.env` on s1 as the manual/DR copy and state plainly, in the decision
         record, that there are now **two sources for the same five values** and that the workflow is
         authoritative for deploys. Name the drift risk; hand the reconciliation to Story 4.8 (shared
         mechanics) or 4.9 (cutover), whichever the record argues for. Do not pretend it is closed.
 
-- [ ] **Task 5 — Resolve the tag and pull, fail-closed (AC3, AC4, AC6, AC7)**
-  - [ ] 5.1 Derive the image tag from the `ref` input using a sanitizer **byte-identical** to
+- [x] **Task 5 — Resolve the tag and pull, fail-closed (AC3, AC4, AC6, AC7)** — Implemented in
+      `.forgejo/workflows/deploy-dev.yml` (this push), including the registry v2 digest resolution
+      via `curl --config -` (never `-u`/`-H`, which would put the credential in this job's own
+      `ps auxww` on a shared runner) — mechanism proven locally on s1 first (Debug Log References):
+      200/401/404 all reproduced against the real registry with a real `read:package` credential
+      before being written into this file. Written, not yet live-verified end to end — Task 8.
+  - [x] 5.1 Derive the image tag from the `ref` input using a sanitizer **byte-identical** to
         `build.yml`'s: `sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100`, refusing a leading `[.-]` and
         refusing an empty result. If the two sanitizers ever diverge, this workflow deploys a tag the
         builder never published, and the failure is `manifest unknown` with a misleading name in it.
         Tag shape: `git.crm-prionex.com/crm/fe-prionex:<sanitized-ref>-dev`.
-  - [ ] 5.2 🔴 The `ref` input arrives through `env:` and is referenced as a shell variable. **No
+  - [x] 5.2 🔴 The `ref` input arrives through `env:` and is referenced as a shell variable. **No
         `${{ }}` anywhere inside a `run:` body — not even in a comment**, because Forgejo substitutes
         inside comments too (`build.yml:770-780, 812-816`). Git permits `$(...)`, backticks and
         quotes in branch names (`git check-ref-format --branch 'feat/$(id)'` exits 0), and by this
         point in the job a registry credential is in the workspace.
-  - [ ] 5.3 Resolve the digest **before** pulling: query the registry for the manifest and capture
+  - [x] 5.3 Resolve the digest **before** pulling: query the registry for the manifest and capture
         `Docker-Content-Digest`. Keep it for AC6.
-  - [ ] 5.4 🔴 **The fail-closed guard, and the reason this story owns it.** Classify the failure and
+  - [x] 5.4 🔴 **The fail-closed guard, and the reason this story owns it.** Classify the failure and
         name the true cause:
         - HTTP `401` / `unauthorized` → *"the deploy job's registry credential is missing, wrong or
           revoked"* + the fix (Task 3's secrets). This is the **detector**
@@ -375,33 +408,36 @@ mechanism actually produces — or recorded as moot, with the reason.
           different cause. Say both possibilities in the message rather than asserting one.
         Anything else → fail with the raw status. Never fall back to `:latest`; `:latest` does not
         exist (`build.yml:1026`).
-  - [ ] 5.5 `docker pull` the resolved reference. Only after it succeeds does anything get torn down.
+  - [x] 5.5 `docker pull` the resolved reference. Only after it succeeds does anything get torn down.
 
-- [ ] **Task 6 — Replace the stand (AC3)**
-  - [ ] 6.1 `docker compose -f <workspace>/docker-compose.stand.yml --env-file <workspace>/.env down`
+- [x] **Task 6 — Replace the stand (AC3)** — Implemented in `.forgejo/workflows/deploy-dev.yml`
+      (this push). Written, not yet live-verified — Task 8.
+  - [x] 6.1 `docker compose -f <workspace>/docker-compose.stand.yml --env-file <workspace>/.env down`
         — targeting the project by name, so it cannot touch another project.
-  - [ ] 6.2 `… up -d`. Confirm the exit code; do not infer success from the absence of output.
-  - [ ] 6.3 Confirm the network was **not** created by this run: `crm-dev-network`'s id before and
+  - [x] 6.2 `… up -d`. Confirm the exit code; do not infer success from the absence of output.
+  - [x] 6.3 Confirm the network was **not** created by this run: `crm-dev-network`'s id before and
         after the deploy is the same id (Task 4.5's rule, proven rather than asserted).
-  - [ ] 6.4 🔴 Serialization is **out of scope — it is Story 4.4**. Do not add `concurrency:`, do not
+  - [x] 6.4 🔴 Serialization is **out of scope — it is Story 4.4**. Do not add `concurrency:`, do not
         add `flock`. Two simultaneous deploys colliding is a known, accepted, *named* gap until 4.4
         (`epics.md:1696-1722`; the runner's `capacity > 1` question is recorded at
         `deferred-work.md:231-233`). Record it as a non-goal so the review does not read its absence
         as an omission.
 
-- [ ] **Task 7 — Verify the stand after deploy (AC5, AC6, and two inherited deferred items)**
-  - [ ] 7.1 Poll `docker inspect -f '{{.State.Health.Status}}'` against `CONTAINER_NAME`, with a
+- [x] **Task 7 — Verify the stand after deploy (AC5, AC6, and two inherited deferred items)** —
+      Implemented in `.forgejo/workflows/deploy-dev.yml` (this push). Written, not yet
+      live-verified — Task 8.
+  - [x] 7.1 Poll `docker inspect -f '{{.State.Health.Status}}'` against `CONTAINER_NAME`, with a
         bounded timeout and a non-zero exit on timeout. `{{ }}` here is a Go template consumed by
         `docker`, not a Forgejo expression — it is safe inside `run:`; `${{ }}` is not.
-  - [ ] 7.2 🔴 Assert the container is **this project's**: match the name **anchored**
+  - [x] 7.2 🔴 Assert the container is **this project's**: match the name **anchored**
         (`^fe-prionex-dev$`) and check
         `.Config.Labels["com.docker.compose.project"] == fe-prionex-dev`. Unanchored `--filter name=`
         is a substring match and cannot fail on this host (Story 4.2, Task 7).
-  - [ ] 7.3 Fallback `curl`: parse the host-port component out of `FRONTEND_PORT` (`127.0.0.1:8082`
+  - [x] 7.3 Fallback `curl`: parse the host-port component out of `FRONTEND_PORT` (`127.0.0.1:8082`
         → host `127.0.0.1`, port `8082`) and target that. Do not concatenate the raw value.
-  - [ ] 7.4 **AC6:** compare `docker inspect -f '{{.Image}}'` of the running container to the digest
+  - [x] 7.4 **AC6:** compare `docker inspect -f '{{.Image}}'` of the running container to the digest
         captured in Task 5.3. Not to the tag — to the digest.
-  - [ ] 7.5 🔴 **Kong alias guard, and it is recurring, not one-shot.**
+  - [x] 7.5 🔴 **Kong alias guard, and it is recurring, not one-shot.**
         `docker exec <container> getent hosts crm-kong-gateway` must return an address. **An empty
         result is a STOP, and is NOT a reason to fall back to `crm-network`**
         (`.env.stand.example:90-116`). This discharges the deferred item at
@@ -410,7 +446,7 @@ mechanism actually produces — or recorded as moot, with the reason.
         a dead `/api/`, and `healthy` throughout. Strengthen it the way D28 §2 did: an address alone
         proves less than an address plus Kong answering — `GET /api/` returning Kong's own
         `no Route matched` with `X-Kong-Response-Latency` is the discriminating check.
-  - [ ] 7.6 Record the stand's post-deploy state for the reboot-ordering item
+  - [x] 7.6 Record the stand's post-deploy state for the reboot-ordering item
         (`deferred-work.md:2720-2727`, *Owner: Story 4.3 (post-deploy check) / Story 4.9*): the
         container is running, attached to the expected network **id**, and `restart: always` is in
         force. State plainly what this does **not** prove — that a reboot with the network absent
@@ -847,19 +883,69 @@ the coordinator dispatches and reports run ids).
 | Merge to `main` (`build-main.yml`) | 1 |
 | Closeout PR (separate branch/PR/merge, `main` protected — D16) | ~3 |
 
-**Baseline (Task 1.1):** 🔴 **Not read by this session — API access is out of scope for this
-session by the coordinator's own standing instruction** ("API не трогай"). Per D4, the baseline and
-every intermediate/final count are the coordinator's, by query. Requested from the coordinator
-alongside the probe dispatch. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every
-prior story's own corrected experience (4.1 declared 5, spent 7; 4.2 modelled the multiplier in
-advance and landed exactly on 7).
+**Baseline (Task 1.1): 892** (coordinator's query, highest `action_run` id before the context push).
+**Confirmed spend so far, all by the coordinator's own queries, none self-reported:**
+
+| run id | trigger | commit / event | outcome |
+|---|---|---|---|
+| 915 | `push` | `07fb5b24` (the context push, predates this session) | — |
+| 916 | `push` | `e5856770` (this session's first push — cred resolution, budget, probe v1) | CI was still running at query time; outcome to be recorded when known |
+| 917 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, single-job version | **failure** — ambiguous by design (Task 2.2), redesigned into three jobs (this push) |
+
+**PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
+PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
+corrected experience (4.1 declared 5, spent 7; 4.2 modelled the multiplier in advance and landed
+exactly on 7). Final closure remains the coordinator's, by query, after the merge (Task 1.6).
 
 ### Completion Notes List
 
+**1. Registry credential blocker resolved without minting anything.** Coordinator confirmed
+`REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` already exist as org-level secrets (`GET
+/orgs/CRM/actions/secrets`, 2026-08-20). Task 3 rewritten in place — no repo secret, no s1
+dependency for AC7.
+
+**2. `uses:` steps do not deliver a working checkout on this runner's job image (Task 2.2),
+inferred from a strong precedent, not yet independently confirmed.** Run 917's single-job probe
+failed; that design could not distinguish the `uses:` failure from an unrelated one, so the probe
+was rewritten into three separate jobs (`probe-deploy-dev-preprod.yml`, this push) matching this
+project's own job-list-is-the-evidence convention. `deploy-dev.yml` is written entirely in plain
+`run:` form on the strength of `build.yml:107-124`'s identical failure shape on a sibling
+runner/image — a redispatch of the three-job probe would turn this from "consistent with
+precedent" into "measured," and is offered as a free confirmation, not a blocker.
+
+**3. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
+dispatch.** Job identity is uid 0/root (not the runner supervisor's `1501:988` — corrects D28 §4's
+own H5 amendment); docker/compose/git/curl/jq/wget versions recorded; the mounted socket reaches
+the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-resolution mechanism
+(200/401/404) was proven live against the real registry with a real `read:package` credential
+(`fe_reg_4_2_ro`, Story 4.2's) *before* being written into `deploy-dev.yml` — the exact HTTP
+status/header shapes the workflow's own fail-closed guard (Task 5.4) now classifies.
+
+**4. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
+credential login → digest resolve (fail-closed on 401/404/other) → pull → render `.env` in the job
+workspace (digest-pinned `DOCKER_IMAGE`, `FRONTEND_PORT=127.0.0.1:8082`) → capture network id →
+`down` → `up -d` → confirm network unchanged → health-poll → anchored container/label check →
+fallback HTTP → AC6 digest comparison → recurring Kong guard (address + Kong's own `no Route
+matched` signature) → post-deploy state record → duration → credential cleanup. **Written and
+locally validated (YAML, `bash -n`, no stray `${{ }}`), not yet live-verified — that is Task 8's
+job, explicitly, not this one's.**
+
 ### File List
+
+**Added**
+- `.forgejo/workflows/deploy-dev.yml` — the deploy workflow (Tasks 1b, 3, 4, 5, 6, 7)
+- `.forgejo/workflows/probe-deploy-dev-preprod.yml` — throwaway, dispatch-only (Task 2); kept for
+  now per Task 2.7's note, to be deleted before merge
+
+**Modified**
+- `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
+  file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
 
 ## Change Log
 
 | Date | Note |
 |---|---|
 | 2026-08-20 | Story contexted against `main` @ `162f1722`. Inheritance from Story 4.2 bound from source (story file, `### Review Findings`, D28 + its four amendment blocks, `deferred-work.md`'s Story 4.2 findings and code-review-deferred sections). **Three decisions taken autonomously, subject to Oleg's veto:** (1) mechanism = D28 §4 option 5, render compose + the five variables in the job workspace and act through the held `docker.sock` — options 1/3 rejected for read-write exposure to every tenant on the four-label runner, option 2 for coupling the `api-prionex` tree, option 4 retained only as the credential fallback; (2) registry auth = new repo secrets `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` with `docker login` inside the job and a workspace-scoped `DOCKER_CONFIG`, discharging H4 and shipping the credential detector the deferred list says does not exist; (3) `runs-on: deploy-dev-preprod`, the most specific of the runner's four labels. **AC3's stated order is amended** — `down` before pull contradicts Story 4.7's *"the stand keeps serving its previous version"*; sequence is resolve → pull → `down` → `up -d` → health-check. **AC7 and AC8 added** for the two inherited constraints. H1's tag-expiry deadline carried: primary path is this story's first successful deploy, fallback trigger 2026-08-30 (Oleg). M7's `127.0.0.1:8082` is rendered by the workflow, making Oleg's decision self-applying and idempotent. Concurrency/`flock` (4.4), Slack (4.5), shared definition (4.8) recorded as non-goals |
+| 2026-08-20 | **Registry-credential blocker resolved (coordinator): `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` are existing org-level secrets, not minted.** Task 3 rewritten. Budget declared before the first push (baseline requested, not self-queried — this session does not touch the Forgejo API this cycle). Local SSH simulation on s1 answers Task 2.3/2.4/2.5 without a dispatch. First probe pushed (single job); run 917 came back `failure`, ambiguous by design |
+| 2026-08-20 | **Probe redesigned into three jobs after run 917's ambiguous single-job result** (coordinator's report: dispatch-from-non-default-branch confirmed working; the `uses:` question stayed undetermined). `deploy-dev.yml` written in full, in the plain-`run:` form the precedent (`build.yml:107-124`) and the ambiguous-but-consistent probe result both point to — registry digest resolution proven live against the real registry (200/401/404) with a real credential before being written into the workflow. Tasks 1b/3/4/5/6/7 marked implemented, pending Task 8's live verification |

@@ -14,13 +14,23 @@ name: Probe — deploy-dev-preprod runner capabilities
 #      and an assertion on a file only checkout could have produced, so a silent no-op is caught
 #      rather than misread as "nothing to check."
 #
-# Everything else this task needs (job identity, docker/compose versions, tool presence, whether
-# the mounted socket reaches the host daemon and `crm-dev-network`) was already established by
-# local simulation on s1 itself — `docker run` with the exact mounts/network/image
-# `container.options`/`valid_volumes` give a real job — before this probe was ever written, per
-# this project's own standing preference for local proof before a real dispatch. That simulation
-# cannot answer either question above: `uses:` step execution and the dispatch-from-a-non-default-
-# branch behaviour are both properties of the Forgejo runner software itself, not of the image.
+# 🔴 REVISED after run 917/job "8543" — the first version of this file put every step in ONE job,
+# and a single job-level failure (no log access, as always on this instance) could not distinguish
+# "the uses: step silently no-op'd, and this file's own assertion correctly caught it" (Task 2.2's
+# answer: no) from "something unrelated in this same job broke" (not an answer to anything). Split
+# into separate JOBS below instead — this project's own established pattern (the CNI isolation
+# probe, D28's Kong-alias discriminating run) for exactly this reason: job NAMES and per-job
+# PASS/FAIL are visible in the run's job list without opening a single log line; steps inside one
+# job are not independently visible that way.
+#
+# Everything else Task 2 needs (job identity, docker/compose versions, tool presence, whether the
+# mounted socket reaches the host daemon and `crm-dev-network`) was already established by local
+# simulation on s1 itself — `docker run` with the exact mounts/network/image
+# `container.options`/`valid_volumes` give a real job — before this probe was ever dispatched, per
+# this project's own standing preference for local proof before a real run. That simulation cannot
+# answer either question above: `uses:` step execution and dispatch-from-a-non-default-branch are
+# both properties of the Forgejo runner software itself, not of the image — job 3 below re-confirms
+# the local simulation's numbers live, as a cheap cross-check, not because they were in doubt.
 #
 # Deleted after Task 2.7 decides, per this project's own convention (Story 4.1/4.2's probe
 # branches): kept only if there is a reason to say so in the story record.
@@ -33,41 +43,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  probe:
-    name: "Probe: dispatch reaches the runner, uses: steps execute"
+  # ───────────────────────────────────────────────────────────────────────
+  dispatch-reaches-runner:
+    name: "1. Dispatch reaches deploy-dev-preprod, plain run: only (Task 2.1)"
     runs-on: deploy-dev-preprod
     timeout-minutes: 5
     steps:
-      - name: Report that dispatch reached this runner at all (Task 2.1)
+      - name: Report that dispatch reached this runner at all
         run: |
           echo "OK: workflow_dispatch reached runs-on: deploy-dev-preprod."
           echo "ref: ${GITHUB_REF:-<unset>}"
           echo "event: ${GITHUB_EVENT_NAME:-<unset>}"
 
-      - name: "Probe whether uses: steps execute at all (Task 2.2)"
+  # ───────────────────────────────────────────────────────────────────────
+  uses-steps-execute:
+    name: "2. uses: steps actually populate the workspace — discriminating (Task 2.2)"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      - name: "Attempt checkout via uses: actions/checkout@v4"
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Assert checkout actually ran, not just "did not fail"
+      - name: Assert checkout actually ran, not just "did not error"
         run: |
           set -euo pipefail
           # A job image with no Node runtime does not error on a `uses:` step — it silently skips
           # it (build.yml:107-124's own finding, same failure shape, different label). So the
-          # absence of an error here proves nothing; only evidence checkout actually wrote
-          # something does.
+          # absence of an error on the step above proves nothing; only evidence checkout actually
+          # wrote something does. If THIS job is red, the cause is one of exactly two things this
+          # job alone tests — the checkout step erroring outright, or checkout silently doing
+          # nothing — and either way the answer to Task 2.2 is the same: uses: does not deliver a
+          # working checkout here, and deploy-dev.yml must use plain run: (git clone) instead.
           if [ -f "docker-compose.stand.yml" ]; then
             echo "OK: uses: actions/checkout@v4 ran for real — docker-compose.stand.yml is present."
           else
-            echo "FAIL: docker-compose.stand.yml is absent after a 'uses: actions/checkout@v4' step."
-            echo "  This means the checkout step did not actually execute — the job image most"
-            echo "  likely has no Node runtime under which 'uses:' steps run at all (same failure"
-            echo "  shape as build.yml:107-124, different label). Every step in deploy-dev.yml must"
-            echo "  then be plain 'run:', including checkout (git clone) and registry login."
+            echo "FAIL: docker-compose.stand.yml is absent after 'uses: actions/checkout@v4'."
+            echo "  uses: steps do not deliver a working checkout on this runner/image."
+            echo "  deploy-dev.yml must use plain run: (git clone) for checkout and docker login."
             exit 1
           fi
 
-      - name: Report identity and tool presence again, from inside the real dispatch (cross-check)
+  # ───────────────────────────────────────────────────────────────────────
+  identity-and-tools:
+    name: "3. Job identity and tool inventory — cross-check only (Task 2.3/2.4/2.5)"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      - name: Report identity, versions, host-daemon and network visibility
         run: |
           echo "=== identity ==="
           id -u; id -g; whoami

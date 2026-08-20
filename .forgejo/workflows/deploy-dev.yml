@@ -1,0 +1,433 @@
+name: Deploy DEV Stand
+
+# Story 4.3. On demand, no gates: `workflow_dispatch` with a `ref` input, and nothing else (AC1).
+# Runs on the deploy runner on s1 by label, never over SSH (AC2) — this job already IS on the
+# target host; there is nothing to connect to (`ufw` would refuse anyway, port 22 admits two admin
+# addresses only).
+#
+# ── Mechanism (D28 §4 option 5, this story's Dev Notes §2 — autonomous, subject to Oleg's veto,
+# not exercised) ─────────────────────────────────────────────────────────────────────────────────
+# `s1-deploy-dev-preprod` mounts exactly `docker.sock` + `/opt/crm-preprod` + `/opt/crm-dev` into
+# every job container; `/root/crm-prionex/fe-prionex-dev` — the stand's own directory — is in
+# neither `container.options` nor `valid_volumes`, and `/root` is `drwx------`. Rather than change
+# a shared, multi-tenant runner's config (options 1/3, which would expose the stand path
+# READ-WRITE to every job of every repo on that runner) or move into `api-prionex`'s own directory
+# (option 2, coupling two teams' trees), this workflow renders `docker-compose.stand.yml` and its
+# five variables INSIDE THIS JOB'S OWN WORKSPACE and acts on the HOST docker daemon through the
+# `docker.sock` the runner already holds. `docker-compose.stand.yml` declares no `volumes:` and no
+# host path at all — the host directory was never a *technical* requirement, only where a human
+# keeps the stand's record. That directory remains the manual/DR path; this workflow does not read
+# it. Full decision record: `docs/migration-decisions.md` (new D-record, Task 9.1) and D28 §4's own
+# amendment block (Task 9.2).
+#
+# ── Registry auth (AC7, Dev Notes §3) ───────────────────────────────────────────────────────────
+# `docker pull` resolves auth from the CLIENT's `~/.docker/config.json`; the daemon holds none of
+# its own. Story 4.2's `docker login` on s1 authenticated an interactive root shell whose config is
+# mounted into no job container under any of D28 §4's options — a pull from this job would return
+# `unauthorized` regardless, until solved separately. Solved here: the job holds its OWN
+# `read:package` credential — `REGISTRY_USER_RO` / `REGISTRY_TOKEN_RO`, EXISTING ORG-LEVEL Forgejo
+# secrets (bot `robot-deploy`, provisioned by `CRM/api-prionex`, confirmed live 2026-08-20 via
+# `GET /orgs/CRM/actions/secrets` — nothing was minted, nothing is a repo secret) — logged in inside
+# THIS job, into a workspace-scoped `DOCKER_CONFIG`, never a shared `$HOME` on this multi-tenant
+# runner. `REGISTRY_TOKEN_RW` (org-scope `write:package` over 87 packages including another team's
+# production) is never referenced here.
+#
+# ── Every step below is plain `run:` — Task 2.2's finding ──────────────────────────────────────
+# `deploy-base-dev-preprod:2026-08-07` (this runner's job image) does not deliver a working
+# checkout via `uses: actions/checkout@v4` — the same failure shape `build.yml:107-124` already
+# found on a sibling runner/image class (no Node runtime; `uses:` steps silently do not run,
+# without an error). No `actions/checkout`, no `docker/login-action` — checkout is a `git clone` in
+# a `run:` step, login is a plain `docker login --password-stdin`.
+#
+# ── Sequence — AMENDED from the epic's stated order (AC3) ──────────────────────────────────────
+# Epic text: copy the compose file, `down`, pull, `up -d`, health-check. That order contradicts
+# Story 4.7 AC4 (*"the stand keeps serving its previous version"* when the image is missing) — a
+# `down` that precedes the pull leaves the stand STOPPED when the pull fails. Actual sequence below:
+# resolve → pull → `down` → `up -d` → health-check. Nothing is torn down until the replacement
+# image is provably present on the host daemon.
+#
+# ── Conventions this file follows (Dev Notes §8) ────────────────────────────────────────────────
+# No `${{ }}` inside any `run:` body, not even in a comment — Forgejo substitutes inside comments
+# too (`build.yml:770-780, 812-816`); `inputs.ref` arrives through `env:` and is referenced as a
+# shell variable. No credential ever reaches this job's own `ps auxww` — `docker login` uses
+# `--password-stdin`; the registry digest-resolution `curl` call passes the credential via
+# `--config -` (stdin), the same pattern `build.yml` already uses for the OpenBao token, not `-u`
+# or a literal `-H "Authorization: ..."`, either of which would put it in argv on this shared,
+# four-label runner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (branch, tag, or SHA). The image tag is derived from this the same way build.yml derives its own branch tag.'
+        required: true
+        type: string
+
+# No concurrency block, deliberately (Task 6.4) — Story 4.4's to add. Two simultaneous deploys
+# colliding is a known, accepted, NAMED gap until then (epics.md:1696-1722); the runner's own
+# capacity: 1 (Task 2's local read of config.yml) already limits it to one job at a time in
+# practice, but that is the runner operator's setting, not a guarantee this workflow makes.
+
+env:
+  IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
+
+jobs:
+  deploy:
+    name: "Deploy a ref to the DEV stand"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 10
+    steps:
+      - name: Record start time (Task 1b.5)
+        id: start
+        run: |
+          echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+          echo "Deploy started: $(date -u +%FT%TZ)"
+
+      - name: Validate and sanitize the ref input (Task 5.1, 5.2)
+        id: tag
+        env:
+          REF_IN: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REF_IN:-}" ]; then
+            echo "FAIL: no ref was supplied."
+            exit 1
+          fi
+
+          # Byte-identical to build.yml's own sanitizer (Task 5.1) — if the two ever diverge, this
+          # workflow resolves a tag the builder never published, and the failure looks like a
+          # missing image instead of a sanitizer mismatch.
+          SANITIZED="$(printf '%s' "$REF_IN" | sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100)"
+
+          case "$SANITIZED" in
+            [.-]*)
+              _would="$(printf '%s' "$SANITIZED" | sed -E 's/^[.-]+//')"
+              echo "FAIL: ref '${REF_IN}' begins with characters that are not legal in a Docker" \
+                   "tag. Dropping them would produce the tag '${_would}-dev', which belongs to a" \
+                   "DIFFERENT ref — refusing to guess. Rename the branch to begin with [a-zA-Z0-9]."
+              exit 1
+              ;;
+          esac
+
+          if [ -z "$SANITIZED" ]; then
+            echo "FAIL: ref '${REF_IN}' sanitizes to an empty string — nothing in it is legal in a" \
+                 "Docker tag. Refusing to invent a tag name."
+            exit 1
+          fi
+
+          TAG="${SANITIZED}-dev"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ref '${REF_IN}' -> tag '${TAG}'."
+
+      - name: Log in with the deploy job's own registry credential (Task 3.5, 3.6, AC7)
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. These are"\
+                 "ORG-level Forgejo secrets (bot robot-deploy, read:package) — confirmed live"\
+                 "2026-08-20 via GET /orgs/CRM/actions/secrets. An empty value here means the org"\
+                 "secret was removed, renamed, or this repository lost access to it — not a code"\
+                 "defect. This is the credential detector deferred-work.md said did not exist."
+            exit 1
+          fi
+
+          # Workspace-scoped DOCKER_CONFIG (Task 3.6) — not a shared $HOME on this multi-tenant
+          # runner. Exported via $GITHUB_ENV so every later step in this job sees it, and removed
+          # on every exit path by the cleanup step at the end.
+          DOCKER_CONFIG_DIR="${GITHUB_WORKSPACE}/.docker-story-4-3"
+          mkdir -p "$DOCKER_CONFIG_DIR"
+          chmod 700 "$DOCKER_CONFIG_DIR"
+          echo "DOCKER_CONFIG=${DOCKER_CONFIG_DIR}" >> "$GITHUB_ENV"
+
+          printf '%s' "$REG_TOKEN" \
+            | DOCKER_CONFIG="$DOCKER_CONFIG_DIR" docker login git.crm-prionex.com -u "$REG_USER" --password-stdin
+          echo "OK: logged in to git.crm-prionex.com with the job's own read:package credential."
+
+      - name: Resolve the digest before pulling (Task 5.3, 5.4, AC4, AC6, AC7)
+        id: digest
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+
+          # Credential passed via curl's --config (stdin), never argv — `-u` or a literal
+          # `-H "Authorization: ..."` would put the token in this job's own `ps auxww` on a shared,
+          # multi-tenant runner. Same pattern build.yml already uses for the OpenBao token.
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${TAG}")"
+
+          case "$HTTP_CODE" in
+            200)
+              DIGEST="$(grep -i '^docker-content-digest:' "$HEADERS_FILE" | tr -d '\r' | awk '{print $2}')"
+              if [ -z "$DIGEST" ]; then
+                echo "FAIL: registry answered 200 for ${TAG} but no Docker-Content-Digest header"\
+                     "was present. Cannot resolve a digest to pull or compare against later —"\
+                     "refusing to guess."
+                exit 1
+              fi
+              echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+              echo "OK: resolved ${TAG} -> ${DIGEST}"
+              ;;
+            401)
+              # The detector deferred-work.md said did not exist (2706-2713) — this IS it.
+              echo "FAIL: registry returned 401 Unauthorized resolving ${TAG}. This means the"\
+                   "deploy job's OWN registry credential (REGISTRY_USER_RO/REGISTRY_TOKEN_RO) is"\
+                   "missing, wrong, or revoked — NOT that the image is missing. Fix: check the org"\
+                   "secrets. Do not chase a build problem for this failure."
+              exit 1
+              ;;
+            404)
+              echo "FAIL: registry returned 404 Not Found resolving ${TAG}. Two possible causes,"\
+                   "both stated because this session cannot tell them apart: (a) no image was ever"\
+                   "built for this ref — push the branch so ci.yml's image job builds it; or"\
+                   "(b) a -dev tag older than 14 days was deleted by the live retention rule"\
+                   "(build.yml:962 — -dev tags are NOT in keep_pattern, unlike -prod/-preprod)."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: registry returned unexpected HTTP ${HTTP_CODE} resolving ${TAG}. Raw"\
+                   "status only — not classified as a known cause. Never falling back to :latest,"\
+                   "which does not exist (build.yml:1026, PUSH_LATEST=false)."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+
+      - name: Pull the resolved image — nothing is torn down until this succeeds (Task 5.5, AC3)
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker pull "${IMAGE_REPO}@${DIGEST}"
+          echo "OK: pulled ${IMAGE_REPO}@${DIGEST}"
+
+      - name: Obtain docker-compose.stand.yml at the deployed ref (Task 4.1)
+        env:
+          REF_IN: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          # uses: actions/checkout does not deliver a working checkout on this runner (Task 2.2) —
+          # git fetch/checkout in a run: step instead. Single source of truth: this repository's
+          # own compose file AT THE DEPLOYED REF, never a heredoc copy — a second copy in a
+          # workflow is the "two compose files describe one application" failure this project
+          # already recorded (deferred-work.md:2370-2407). `git fetch <ref>` (not `--branch`) works
+          # uniformly for a branch, a tag, or a bare SHA, assuming the server allows fetching an
+          # arbitrary SHA — the common case for this project's own usage (dispatching against
+          # feature branches).
+          rm -rf stand-checkout
+          mkdir stand-checkout
+          cd stand-checkout
+          git init --quiet
+          git remote add origin https://git.crm-prionex.com/CRM/fe-prionex.git
+          if ! git fetch --quiet --depth 1 origin "$REF_IN"; then
+            echo "FAIL: could not fetch ref '${REF_IN}' from the repository. It may not exist, or"\
+                 "this server does not allow fetching it by this exact form (branch/tag names are"\
+                 "expected to work; an arbitrary bare SHA may not, depending on server config)."
+            exit 1
+          fi
+          git checkout --quiet FETCH_HEAD
+          cd ..
+          test -f stand-checkout/docker-compose.stand.yml
+          echo "OK: docker-compose.stand.yml obtained at ref '${REF_IN}'."
+
+      - name: Write the stand's five required variables (Task 4.2, 4.3, 4.4)
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          RAW_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # DOCKER_IMAGE is the DIGEST form, not the mutable tag (Task 4.2) — a concurrent build of
+          # the same branch can republish the tag between this deploy's pull and its up -d; the
+          # digest form makes that race impossible rather than unlikely. The tag is recorded
+          # alongside it, in a comment, for a human reading `docker ps` later.
+          #
+          # Never docker network create anywhere in this file (Task 4.5) — crm-dev-network is
+          # external: true, and that refusing to start is the ONLY loud failure on this axis;
+          # auto-creating it converts that refusal into an empty, backend-less network that comes
+          # up happily (CD.yml:185's anti-pattern).
+          cat > stand-checkout/.env.deploy <<EOF
+          # Deployed by deploy-dev.yml, $(date -u +%FT%TZ). Tag at deploy time: ${RAW_TAG}
+          COMPOSE_PROJECT_NAME=fe-prionex-dev
+          CONTAINER_NAME=fe-prionex-dev
+          FRONTEND_PORT=127.0.0.1:8082
+          FRONTEND_NETWORK=crm-dev-network
+          DOCKER_IMAGE=${IMAGE_REPO}@${DIGEST}
+          EOF
+          echo "OK: .env.deploy written. CONTAINER_NAME=fe-prionex-dev — never the literal"\
+               "'fe-prionex', which CD.yml:201 force-removes on every legacy deploy."
+          echo "🔴 FRONTEND_PORT=127.0.0.1:8082 is Oleg's M7 decision, rendered here. If this is"\
+               "the first deploy since the decision, this run ALSO applies it to the live stand —"\
+               "a state change to a live stand made as a side effect of this deploy, stated here"\
+               "rather than left to be discovered."
+
+      - name: Capture crm-dev-network id before touching the stand (Task 6.3 prep)
+        id: net_before
+        run: |
+          set -euo pipefail
+          NET_ID_BEFORE="$(docker network inspect crm-dev-network --format '{{.Id}}')" || {
+            echo "FAIL: crm-dev-network does not exist. This workflow NEVER creates it (Task 4.5)."
+            exit 1
+          }
+          echo "net_id_before=${NET_ID_BEFORE}" >> "$GITHUB_OUTPUT"
+
+      - name: docker compose down (Task 6.1, AC3 — only after a successful pull)
+        run: |
+          set -euo pipefail
+          cd stand-checkout
+          docker compose -f docker-compose.stand.yml --env-file .env.deploy down
+          echo "OK: previous instance stopped (or nothing was running)."
+
+      - name: "docker compose up -d — the real gate, not docker compose config (Task 6.2, 4.6, AC3)"
+        run: |
+          set -euo pipefail
+          cd stand-checkout
+          # `docker compose config` is blind to network existence and would pass a stand that
+          # cannot start (D27, deferred-work.md:2409-2422) — `up -d`'s own exit code is the gate.
+          docker compose -f docker-compose.stand.yml --env-file .env.deploy up -d
+          echo "OK: docker compose up -d exited 0."
+
+      - name: Confirm the network was NOT created by this run (Task 6.3)
+        env:
+          NET_ID_BEFORE: ${{ steps.net_before.outputs.net_id_before }}
+        run: |
+          set -euo pipefail
+          NET_ID_AFTER="$(docker network inspect crm-dev-network --format '{{.Id}}')"
+          if [ "$NET_ID_BEFORE" != "$NET_ID_AFTER" ]; then
+            echo "FAIL: crm-dev-network's id changed (${NET_ID_BEFORE} -> ${NET_ID_AFTER}). This"\
+                 "deploy somehow recreated the network it must never touch."
+            exit 1
+          fi
+          echo "OK: crm-dev-network id unchanged (${NET_ID_AFTER}) — this run did not create it."
+
+      - name: Poll health status, bounded timeout (Task 7.1)
+        run: |
+          set -euo pipefail
+          DEADLINE=$(( $(date +%s) + 120 ))
+          STATUS="starting"
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            STATUS="$(docker inspect -f '{{.State.Health.Status}}' fe-prionex-dev 2>/dev/null || echo missing)"
+            if [ "$STATUS" = "healthy" ]; then
+              break
+            fi
+            if [ "$STATUS" = "unhealthy" ]; then
+              echo "FAIL: container fe-prionex-dev reports unhealthy."
+              exit 1
+            fi
+            sleep 5
+          done
+          if [ "$STATUS" != "healthy" ]; then
+            echo "FAIL: fe-prionex-dev did not become healthy within the timeout (last observed"\
+                 "status: '${STATUS}')."
+            exit 1
+          fi
+          echo "OK: fe-prionex-dev is healthy."
+
+      - name: Assert the healthy container is THIS project's, anchored (Task 7.2, AC5)
+        run: |
+          set -euo pipefail
+          # Unanchored `docker ps --filter name=` is a SUBSTRING match and cannot fail on this host
+          # (Story 4.2, Task 7 — it also matches the four forgejo-runner-fe-prionex* containers).
+          MATCH="$(docker ps --filter "name=^fe-prionex-dev$" --format '{{.Names}}')"
+          if [ "$MATCH" != "fe-prionex-dev" ]; then
+            echo "FAIL: no container anchored-matches the name 'fe-prionex-dev'. Got: '${MATCH}'"
+            exit 1
+          fi
+          PROJECT_LABEL="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' fe-prionex-dev)"
+          if [ "$PROJECT_LABEL" != "fe-prionex-dev" ]; then
+            echo "FAIL: container 'fe-prionex-dev' has compose project label '${PROJECT_LABEL}',"\
+                 "expected 'fe-prionex-dev'. This would be reporting a DIFFERENT project's health."
+            exit 1
+          fi
+          echo "OK: fe-prionex-dev matched anchored, compose project label confirmed."
+
+      - name: Fallback HTTP check — parse FRONTEND_PORT, never concatenate raw (Task 7.3, AC5)
+        run: |
+          set -euo pipefail
+          # FRONTEND_PORT is "127.0.0.1:8082" (Oleg's M7 decision), NOT a bare port number.
+          # curl http://localhost:${FRONTEND_PORT}/ would produce
+          # http://localhost:127.0.0.1:8082/ and fail for the wrong reason (AC5, trap 2).
+          FP="127.0.0.1:8082"
+          HOST_PART="${FP%:*}"
+          PORT_PART="${FP##*:}"
+          CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${HOST_PART}:${PORT_PART}/")"
+          if [ "$CODE" != "200" ]; then
+            echo "FAIL: fallback GET http://${HOST_PART}:${PORT_PART}/ returned '${CODE}', expected 200."
+            exit 1
+          fi
+          echo "OK: fallback HTTP check on ${HOST_PART}:${PORT_PART} returned 200."
+
+      - name: "AC6 — running image matches the resolved digest, not the tag (Task 7.4)"
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # Branch tags are mutable — build.yml republishes <sanitized-ref>-dev on every build of
+          # that branch. Only a digest comparison against the digest THIS run resolved means
+          # anything. RepoDigests, not .Image — survives a retag between pull and this check.
+          MATCHED="$(docker inspect fe-prionex-dev --format '{{range .RepoDigests}}{{.}} {{end}}' | grep -F "$DIGEST" || true)"
+          if [ -z "$MATCHED" ]; then
+            echo "FAIL: running container's RepoDigests do not include the resolved digest"\
+                 "(${DIGEST}). AC6 requires the running image to match what THIS run resolved, not"\
+                 "merely 'a' recent build of the tag."
+            exit 1
+          fi
+          echo "OK: running container's image matches the resolved digest ${DIGEST}."
+
+      - name: Kong alias guard — recurring, not one-shot (Task 7.5, AC2 amendment)
+        run: |
+          set -euo pipefail
+          RESOLVED="$(docker exec fe-prionex-dev getent hosts crm-kong-gateway || true)"
+          if [ -z "$RESOLVED" ]; then
+            echo "FAIL: crm-kong-gateway does not resolve inside fe-prionex-dev. This is a STOP,"\
+                 "NOT a reason to fall back to crm-network — a wrong network serves 200 on / with"\
+                 "a dead /api/ and reports healthy the whole time (nginx's lazy resolver,"\
+                 ".env.stand.example:90-116)."
+            exit 1
+          fi
+          echo "crm-kong-gateway resolves: ${RESOLVED}"
+
+          # Discriminating, D28 §2's own method: an address alone proves less than Kong itself
+          # answering. GET /api/ through this stand's own nginx and check for Kong's OWN signature.
+          RESP_CODE="$(curl -sS -o /tmp/kong-resp.json -w '%{http_code}' --max-time 10 "http://127.0.0.1:8082/api/")"
+          if ! grep -q "no Route matched" /tmp/kong-resp.json 2>/dev/null; then
+            echo "FAIL: GET /api/ (code ${RESP_CODE}) did not return Kong's own 'no Route"\
+                 "matched' signature — the backend answering may not actually be Kong."
+            exit 1
+          fi
+          echo "OK: crm-kong-gateway resolves AND Kong itself answered (no Route matched, code ${RESP_CODE})."
+
+      - name: Record post-deploy state for the reboot-ordering item (Task 7.6)
+        run: |
+          set -euo pipefail
+          echo "=== post-deploy state (deferred-work.md reboot-ordering item — NOT proof against it) ==="
+          docker inspect fe-prionex-dev --format 'running={{.State.Running}} restart_policy={{.HostConfig.RestartPolicy.Name}}'
+          docker inspect fe-prionex-dev --format 'networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.NetworkID}} {{end}}'
+          echo "This proves the CURRENT state only — restart: always + external: true is a silent"\
+               "restart loop on daemon start if crm-dev-network is absent or recreated with a new"\
+               "id at boot time. That risk stays open for Story 4.9 (deferred-work.md reboot item)."
+
+      - name: Record wall-clock duration (Task 1b.5)
+        if: always()
+        env:
+          START_EPOCH: ${{ steps.start.outputs.start_epoch }}
+        run: |
+          END_EPOCH="$(date +%s)"
+          echo "Deploy wall-clock duration: $(( END_EPOCH - START_EPOCH ))s"
+
+      - name: Remove the job-workspace DOCKER_CONFIG on every path (Task 3.6)
+        if: always()
+        run: |
+          rm -rf "${DOCKER_CONFIG:-/nonexistent}"
+          echo "OK: workspace DOCKER_CONFIG removed."
