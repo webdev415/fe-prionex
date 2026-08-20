@@ -41,11 +41,6 @@ export function useTAHotkeyLaunch(params: {
     if (!enabled) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // A held key repeats. The first press opens the modal; every repeat after
-      // it would either stack up "finish or close the open target action first"
-      // toasts or, before the state settles, attempt a second launch.
-      if (event.repeat) return
-
       const current = latest.current
       // The executor's own dialog is exempt from the "inside a dialog counts as
       // typing" rule: otherwise the press is dropped here, the single-modal
@@ -65,6 +60,16 @@ export function useTAHotkeyLaunch(params: {
       // happens even when the launch is refused below, so a bound key behaves
       // consistently whatever the modal state.
       event.preventDefault()
+
+      // Only now may a repeat be dropped. A held key fires keydown over and
+      // over; the first press is the instruction and the rest would either
+      // stack up "finish or close the open target action first" toasts or,
+      // before the state settles, attempt a second launch. This bails AFTER
+      // preventDefault deliberately — bailing first would let every repeat of
+      // a bound combination through to the browser, so holding Ctrl+1 opened
+      // the modal once and then switched tabs, contradicting the guarantee
+      // stated just above.
+      if (event.repeat) return
 
       const decision = decideHotkeyLaunch({
         template: templateId,

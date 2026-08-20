@@ -528,10 +528,6 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
 }
 
 /**
- * Get client tasks. Calls GET /tasks/client/{id}
- */
-
-/**
  * The client's most recent calls, in the raw API shape (KAN-973 §4).
  *
  * Deliberately separate from `useClientCallSmsHistory`, for two reasons that
@@ -566,6 +562,9 @@ export function useClientRecentCalls(clientId: number, enabled = true) {
   })
 }
 
+/**
+ * Get client tasks. Calls GET /tasks/client/{id}
+ */
 export function useClientTasks(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.tasks(clientId),

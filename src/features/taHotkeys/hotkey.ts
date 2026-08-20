@@ -48,6 +48,23 @@ export function normalizeKey(key: string): string {
  * * anything with Meta held. Cmd is out of scope, and silently dropping the
  *   modifier would make Cmd+1 fire a plain ``1`` binding on a Mac — a
  *   keystroke the operator never assigned.
+ *
+ * Reads ``event.key``, not ``event.code``, so a binding follows the printed
+ * legend rather than the physical position: on a French AZERTY keyboard the
+ * key an operator sees as ``A`` matches a binding recorded as ``A``, where
+ * ``event.code`` would report ``KeyQ``. The trade-off is that a binding does
+ * not survive the operator switching layout mid-session, which ``event.code``
+ * would give us.
+ *
+ * Deliberately deferred rather than overlooked (KAN-973 review, round 1 and 2).
+ * Bindings are persisted server-side as the formatted string this produces
+ * (``TAHotkeyBinding.hotkey``, matched by lookup with no parsing), so moving to
+ * ``event.code`` rewrites every stored binding — ``Ctrl+1`` becomes
+ * ``Ctrl+Digit1`` — and silently breaks every shortcut already saved unless a
+ * migration ships with it. That belongs with the KAN-975 Profile Settings tab:
+ * it owns the write side (assign / clear) and is where a combination is
+ * recorded in the first place, so the switch and the migration of existing
+ * bindings can land together with the screen that produces them.
  */
 export function hotkeyFromEvent(event: {
   key: string

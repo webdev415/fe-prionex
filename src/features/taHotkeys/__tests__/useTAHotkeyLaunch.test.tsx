@@ -162,6 +162,37 @@ describe('useTAHotkeyLaunch', () => {
     expect(onLaunch).toHaveBeenCalledTimes(1)
   })
 
+  // Round-2 review: the repeat guard used to be the handler's first statement,
+  // so only the opening press of a held combination was prevented and every
+  // repeat fell through to the browser — holding Ctrl+1 opened the modal once
+  // and then switched tabs. The behavioural tests above could not see it: they
+  // count launches and toasts, which the old order got right.
+  it('prevents the browser default on the repeats of a held bound key', () => {
+    render(<Harness onLaunch={vi.fn()} />)
+
+    const held = { key: '1', ctrlKey: true, bubbles: true, cancelable: true }
+    const first = new KeyboardEvent('keydown', held)
+    const repeat = new KeyboardEvent('keydown', { ...held, repeat: true })
+    document.dispatchEvent(first)
+    document.dispatchEvent(repeat)
+
+    expect(first.defaultPrevented).toBe(true)
+    expect(repeat.defaultPrevented).toBe(true)
+  })
+
+  it('leaves an unbound key alone, repeat or not', () => {
+    render(<Harness onLaunch={vi.fn()} />)
+
+    const unbound = { key: '9', ctrlKey: true, bubbles: true, cancelable: true }
+    const first = new KeyboardEvent('keydown', unbound)
+    const repeat = new KeyboardEvent('keydown', { ...unbound, repeat: true })
+    document.dispatchEvent(first)
+    document.dispatchEvent(repeat)
+
+    expect(first.defaultPrevented).toBe(false)
+    expect(repeat.defaultPrevented).toBe(false)
+  })
+
   it('does not toast repeatedly while a bound key is held with the modal open', async () => {
     const onLaunch = vi.fn()
     render(<Harness isExecutorOpen onLaunch={onLaunch} />)
