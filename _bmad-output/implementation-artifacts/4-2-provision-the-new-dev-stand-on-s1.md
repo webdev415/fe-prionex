@@ -302,6 +302,9 @@ legacy backend is the failure this entire line of work exists to prevent.
   - [x] 10.5 If the session cannot open the PR (Story 4.1 hit Forgejo API 403 unauthenticated; `gh` is
         GitHub-only and D7 forbids GitHub actions), write the full PR body to
         `4-2-PR-description.md` and record Task 10.5 as **not done** rather than silently skipped.
+        ✅ **The fallback was not needed.** `POST /api/v1/repos/CRM/fe-prionex/pulls` with the
+        host-local token → **201, PR #57**. `4-2-PR-description.md` is still written as the review
+        brief.
   - [ ] 10.6 Re-query the run ledger **after the merge lands** and close it (Task 1.4).
 
 ## Dev Notes
@@ -660,13 +663,25 @@ deliberately and no file in this repository contains it. **Decision needed from 
 revocation of a `platform-admin` token is his to make and the routes are limited (UI/API for his own
 account, or a DB row). Flagged here rather than left in the log.
 
-**10. Run ledger — declared, not yet closed.** Baseline **802**. Declared **7** = 4 pushes
+**10. The PR was opened from the session — a limitation Story 4.1 recorded is gone.** 4.1 wrote its
+PR body to a file and marked Task 9.4 *not done*, because the Forgejo API returned 403 unauthenticated
+and D7 forbids the GitHub path. With s1 access, `POST /api/v1/repos/CRM/fe-prionex/pulls` using the
+host-local token returned **201, PR #57**. `4-2-PR-description.md` is still written — it is the review
+brief — but Task 10.5's fallback branch did not have to be taken.
+
+**11. Run ledger — declared, deliberately not closed.** Baseline **802**. Declared **7** = 4 pushes
 (context, implementation, PR description, review fixes) + 1 PR-open + 1 merge, **plus one extra
 `ci.yml` row for every push landing while the PR is open** (`ci.yml:65-71`: a branch both pushed and
 in an open PR produces two runs per push), **plus** any run cancelled by concurrency. `ci.yml` has no
 `paths` filter, so this story's docs-only pushes each cost a full run. The ledger **stays OPEN until
 re-queried after the merge commit lands** — Tasks 1.6 and 10.6 remain unchecked for exactly that
 reason, and closing them early is the mistake Story 4.1 made.
+
+**Interim query, taken after PR-open (not a close):** runs above 802 → **2** — `813` (`push`) and
+`814` (`pull_request`). Exactly what the declaration predicted for this point: one row for the push,
+one for opening the PR. Still missing from the count by construction: the review-fix push (which
+will cost **2** rows, being a push onto a branch with an open PR) and the merge run
+(`build-main.yml`). Re-query after the merge commit.
 
 ### File List
 
