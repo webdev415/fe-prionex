@@ -62,6 +62,23 @@ name: Deploy DEV Stand
 # http.extraheader=...` on the command line (api-prionex's own precedent uses the argv form —
 # deliberately not copied, for this exact reason).
 
+# ── `simulate_bad_credential`, kept deliberately (Task 8.3/AC7, decided at story close) ─────────
+# A permanent, minimal regression hook for AC7's unauthorized fail-closed path, not a one-off left
+# behind by accident. Matches this project's own established "workflow-as-evidence" convention
+# (`probe-deploy-dev-preprod.yml`, this file's own `preflight`/`clone-test`/`digest-resolve-test`
+# ladder) — a cheap, on-demand way to re-earn Task 8.3's discriminating row after any future change
+# to the credential-handling code, without needing a real org-secret outage to test against.
+# Safety, worked through explicitly because a test-only switch in a deploy pipeline deserves it:
+# - Default `false`; every normal dispatch is unaffected.
+# - Can only WEAKEN a value already in this job's own scope — never inject or reveal a credential
+#   from outside it. There is no path from this input to privilege escalation.
+# - Worst case if set by anyone with `workflow_dispatch` access (a population that already holds
+#   push access to this repo, i.e. no new privilege boundary is created): the digest-resolve step
+#   gets a real `401` and the job fails BEFORE `down` ever runs — a harmless, instantly-recoverable
+#   refusal to deploy, not data loss, not a credential leak, not a way to touch the live stand.
+# - Loud, unmissable warning printed whenever it fires.
+# Confirmed live, run 936: ladder stayed green (it reflects the REAL credential's true state, this
+# input never touches it), `deploy` failed cleanly at the classifier this input targets.
 on:
   workflow_dispatch:
     inputs:
@@ -70,7 +87,7 @@ on:
         required: true
         type: string
       simulate_bad_credential:
-        description: 'TESTING ONLY (Task 8.3/AC7 discriminating row) — if true, the digest-resolve step uses a deliberately WRONG credential value, to exercise the unauthorized fail-closed path on demand instead of waiting for a real credential outage. Never reads, modifies, or exposes the real REGISTRY_USER_RO/REGISTRY_TOKEN_RO org secrets — only a local copy used by that one step is overwritten, and only for the request that asks for it. Leave false (the default) for every normal deploy.'
+        description: 'TESTING ONLY (Task 8.3/AC7 discriminating row, kept as a permanent regression hook — see the comment block above this input) — if true, the digest-resolve step uses a deliberately WRONG credential value, to exercise the unauthorized fail-closed path on demand instead of waiting for a real credential outage. Never reads, modifies, or exposes the real REGISTRY_USER_RO/REGISTRY_TOKEN_RO org secrets — only a local copy used by that one step is overwritten, and only for the request that asks for it. Leave false (the default) for every normal deploy.'
         required: false
         type: boolean
         default: false

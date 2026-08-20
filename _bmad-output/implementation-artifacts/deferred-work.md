@@ -2684,6 +2684,13 @@ curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8082/                
 # from OUTSIDE s1 (a developer machine, or the public internet): expect connection refused/timeout
 ```
 **Owner: Oleg — apply before Story 4.9.**
+✅ **CLOSED, moot by idempotence, Story 4.3, 2026-08-20.** `deploy-dev.yml` renders
+`FRONTEND_PORT=127.0.0.1:8082` into the stand's `.env.deploy` on EVERY deploy (Task 4.4) — no
+manual application was ever needed once the workflow existed; the value applies itself, every
+time, as a side effect of any deploy. Confirmed live on s1, run 929/938's own state: `docker ps`
+shows `127.0.0.1:8082->80/tcp`, and the actual listening socket (`lsof -nP -iTCP:8082
+-sTCP:LISTEN`) is bound to `127.0.0.1` only, not `0.0.0.0`. No manual `sed`/`up -d` on s1 was
+performed or needed — the workflow's own first successful run already carried this decision.
 
 ---
 
@@ -2702,6 +2709,13 @@ inside 4.2.
   its mode and purpose (mirroring the `.token` file's documented `0600`), or delete it if it is a
   stray copy, and correct Story 4.2's Task 9.4 ("confirm nothing was left behind") if it turns out
   something was.
+  ✅ **CLOSED, Story 4.3, 2026-08-20 (Task 3.4).** `/root/.fj_reg_4_2.raw` — mode `600`, root-owned,
+  80 bytes, mtime matching the original mint operation — confirmed (leading bytes plus a `diff`
+  against `.fj_reg_4_2.token`) to be the raw CLI output of the same mint command (label text + the
+  same token value), not a distinct credential. Served no ongoing purpose; deleted. A companion
+  `.fj_reg_4_2.err` (0 bytes, empty stderr capture from the same mint) deleted alongside it. Only
+  `/root/.fj_reg_4_2.token` remains on s1. Story 4.2's Task 9.4 needs no correction — nothing beyond
+  this stray copy was found.
 
 - 🔴 **The registry credential has no detector, and this story is the proof that it needs one.**
   Story 4.2 established that s1's `docker login` vanished on **13 Aug** with cause unknown, then
@@ -2711,6 +2725,16 @@ inside 4.2.
   container is unaffected → it surfaces as `unauthorized` at Story 4.3's first deploy, with nothing
   pointing back here. **Owner: whoever settles the deploy mechanism (4.3) or platform ops.** A
   periodic authenticated `GET /v2/…/tags/list` from s1 is the cheap version.
+  ✅ **CLOSED, Story 4.3, 2026-08-20 (H4).** `deploy-dev.yml`'s digest-resolve step classifies a
+  `401` from the registry with its own message naming the credential specifically (`REGISTRY_USER_RO
+  /REGISTRY_TOKEN_RO ... missing, wrong, or revoked — NOT that the image is missing`), on EVERY
+  deploy — the detector this item asked for, now running on every dispatch, not merely available.
+  Proven live, not asserted: run 936 (Task 8.3's discriminating row, via the new
+  `simulate_bad_credential` test input — kept as a permanent, safe, input-gated regression hook so
+  this detector can be re-earned cheaply after any future change, see `deploy-dev.yml`'s own header
+  comment on that input). The single-host-local-token failure mode this item named is a separate,
+  still-open risk (the credential itself is still one token with no independent health probe) — this
+  closure is specifically about the missing DETECTOR, which now exists and fires correctly.
 - ⚠️ **`fe_reg_1_10_ro` (id 99) has no disposition.** This file already records that whether it is
   still live in the instance *"is **not** established by this story — only that s1 no longer holds
   it."* The branch nobody has walked: if the 13-Aug actor holds the plaintext, that is a live
@@ -2732,3 +2756,10 @@ inside 4.2.
   and reports `healthy` throughout — the exact silent failure Story 4.2's Dev Notes §4.1 names. This
   is also the concrete reason AC3's one-shot identity proof wants a **recurring** guard rather than a
   single measurement. **Owner: Story 4.3 (guard), plus a heads-up to the backend team.**
+  ✅ **Guard half CLOSED, Story 4.3, 2026-08-20 (Task 7.5).** `deploy-dev.yml`'s Kong alias guard
+  runs on EVERY deploy, not once — `getent hosts crm-kong-gateway` plus a live `GET /api/` checked
+  for Kong's own `"no Route matched"` signature, discriminating (per D28 §2's own method) an address
+  alone from Kong itself actually answering. If the backend team's teardown ever force-disconnects
+  this stand, the NEXT deploy's own guard fails loudly instead of silently serving a dead `/api/` as
+  healthy. **Still open: the heads-up to the backend team itself** — this story had no channel to
+  deliver it; owner remains whoever next talks to `CRM/api-prionex`.

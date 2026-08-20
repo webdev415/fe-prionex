@@ -268,7 +268,7 @@ development_status:
   # directly, same as build.yml already does for REGISTRY_USER/REGISTRY_TOKEN_RW. Task 3 rewritten
   # accordingly. Veto points on the mechanism (D28 §4 option 5) and M7 (127.0.0.1:8082) not
   # exercised — both stand as recorded.
-  4-3-deploy-a-feature-branch-to-dev-on-demand: in-progress
+  4-3-deploy-a-feature-branch-to-dev-on-demand: review
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog

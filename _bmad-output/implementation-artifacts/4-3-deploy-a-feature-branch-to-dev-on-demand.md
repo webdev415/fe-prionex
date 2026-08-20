@@ -4,7 +4,7 @@ baseline_commit: 162f1722d614034037807dcd7af95752b67edf2b
 
 # Story 4.3: Deploy a Feature Branch to DEV on Demand
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-20 against `main` at 162f1722 (Story 4.2 closed the same day, PR #58).
      This story inherits TWO named blockers from Story 4.2's code review, both recorded with
@@ -287,12 +287,15 @@ mechanism actually produces — or recorded as moot, with the reason.
         ordering consequence for Task 8: the matrix can run against this branch before merge if
         useful, though `deploy-dev.yml`'s own `ref` input means dispatching from `main` with
         `ref=<feature>` remains the intended day-to-day usage once merged.
-  - [ ] 2.7 Delete the probe workflow before the implementation PR, or keep it and say why. Do not
+  - [x] 2.7 Delete the probe workflow before the implementation PR, or keep it and say why. Do not
         leave an undocumented workflow on `main`.
         **Kept for now, on purpose:** the redesigned three-job version is still an open, free
         confirmation offer (Task 2.2's note) and this task file still documents exactly why it
         exists. **Delete before merge** once Task 2.2 is either confirmed by a redispatch or the
         coordinator accepts the precedent-based inference as sufficient — whichever comes first.
+        ✅ **Deleted, at story close.** Task 2.2's own stated condition was met (run 920 confirmed
+        it, measured, negatively) — `probe-deploy-dev-preprod.yml` served its purpose and is
+        removed. Nothing undocumented lands on `main`.
         Not deleted in this same push so the offer stays live and dispatchable.
 
 - [x] **Task 3 — Provision the deploy job's registry credential (AC7)** — 🔴 **Rewritten 2026-08-20,
@@ -312,10 +315,17 @@ mechanism actually produces — or recorded as moot, with the reason.
         credential is `robot-deploy`'s existing org token, owned and rotated by whoever administers
         org secrets (not this story, not Oleg-as-s1-operator specifically) — recorded as such in
         `deferred-work.md` (Task 9.3) rather than under this story's own minted-credential convention.
-  - [ ] 3.4 While on s1, close the open item **M1**: `/root/.fj_reg_4_2.raw` — a second plaintext
+  - [x] 3.4 While on s1, close the open item **M1**: `/root/.fj_reg_4_2.raw` — a second plaintext
         copy of the registry credential, mode/owner/contents unknown
         (`deferred-work.md:2697-2704`, *"Owner: whoever next has s1 access"*). Record its mode and
         purpose or delete it, and correct Story 4.2's Task 9.4 if something was in fact left behind.
+        ✅ **Found, identified, deleted.** `/root/.fj_reg_4_2.raw` — mode `600`, root-owned, 80
+        bytes, mtime matching the original token-mint operation — confirmed (first bytes, and a
+        `diff` against `.fj_reg_4_2.token`) to be the raw CLI output of the mint command (label text
+        + the same token value), not a different credential. Served no ongoing purpose — `.token`
+        is what login/testing actually reads. Deleted. A companion `.fj_reg_4_2.err` (0 bytes, empty
+        stderr capture from the same mint) deleted alongside it, for the same reason. Only
+        `/root/.fj_reg_4_2.token` remains on s1 now.
   - [x] 3.5 In the workflow, log in **inside the job** so the client config the pull reads is the
         **job's own**: `docker login git.crm-prionex.com -u "$REG_USER" --password-stdin` with both
         values arriving through `env:` — never `${{ }}` inside the `run:` body. If Task 2.2 proved
@@ -449,7 +459,7 @@ mechanism actually produces — or recorded as moot, with the reason.
         force. State plainly what this does **not** prove — that a reboot with the network absent
         produces a silent restart loop, which stays open for 4.9.
 
-- [ ] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)**
+- [x] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)**
   > *"Every new guard ships a live outcome matrix including a discriminating run"* —
   > `epic-3-retro-2026-08-18.md:78`. Each row below is a **real dispatch on the real runner**, not a
   > local simulation. Record run id, trigger, exit code and the message the guard printed.
@@ -462,19 +472,55 @@ mechanism actually produces — or recorded as moot, with the reason.
         same digest back, live, right now, confirming the deployed image is the CURRENT `main-dev`,
         not a stale cache. `docker compose ls` config path is the job's own workspace, confirming
         this run rendered and applied its own files end to end.
-  - [ ] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
+        **Second PASS, run 938, `ref=main` (recovery dispatch after 937's deliberate breakage).**
+        SUCCESS, ~60s. Doubles as this row's own repeat-PASS AND as a live idempotent/recovery-path
+        confirmation matching Completion Note 9's own local `bash -x` idempotency finding (down/up
+        on an already-good digest is a clean no-op-equivalent success) — here proven against the
+        HARDER case, a genuinely broken prior state, not merely an already-good one. Confirmed
+        host-side, final: `fe-prionex-dev` healthy, `Created`/`StartedAt` at run 938's own window,
+        digest `sha256:e66149a83...` — matching, network id unchanged since 2026-08-13, no orphaned
+        containers/networks, one harmless dangling image layer from 937's own build (removed).
+  - [x] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
         message names the missing tag, **and the stand is still serving its previous version
         afterwards** (this is the row that proves the reordering in AC3 was real).
-  - [ ] 8.3 **FAIL, discriminating (AC7):** the registry credential deliberately wrong or absent →
+        **Run 935, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd`** (a real historical commit SHA,
+        confirmed fetchable and confirmed to have no built image, before the dispatch — see
+        Completion Note 11). `preflight` **success**, `clone-test` **success**, `digest-resolve-test`
+        **FAILURE** (404/manifest-unknown, exactly as pre-verified), `deploy` **SKIPPED** — the
+        gate held, and the skip is itself the "stand untouched" proof: `down` is a step *inside*
+        `deploy`, and `deploy` never ran at all. **This is the intended discriminating shape for
+        this ladder design**, not an incomplete test — recorded as designed, not as a gap.
+  - [x] 8.3 **FAIL, discriminating (AC7):** the registry credential deliberately wrong or absent →
         `unauthorized` path, message names the credential, **not** the tag. This is the row that
         proves the detector distinguishes the two causes.
-  - [ ] 8.4 **FAIL, discriminating (AC5):** deploy against a stopped/absent stand, or a container
+        **Run 936, `ref=main`, `simulate_bad_credential=true`.** Ladder all **success** (`preflight`/
+        `clone-test`/`digest-resolve-test` all reflect the REAL credential, untouched by the input —
+        exactly as designed) — `deploy` **FAILURE**, at the digest-resolve step's own 401
+        classifier, the code this row exists to exercise. Confirms the detector fires on a
+        credential problem specifically, isolated from every other guard in the chain.
+  - [x] 8.4 **FAIL, discriminating (AC5):** deploy against a stopped/absent stand, or a container
         that never becomes healthy → the health check reports failure and does **not** report healthy
         from another container. The 4.2 precedent for a real discriminating negative is D28 §2's
         throwaway container on the built-in `bridge` network (empty output, `exit 2`).
-  - [ ] 8.5 Optional but cheap, and it closes AC5's last clause hard: run the anchored container
+        **Run 937, `ref=test/4-3-unhealthy-probe`.** `deploy` **FAILURE**, ~60s — the health-poll's
+        own bounded fail path fired (Task 7.1), exactly as designed; the healthcheck override
+        (`["CMD", "false"]`) meant the container could never report healthy, and — per this row's own
+        pre-flagged, accepted consequence (Completion Note 11 and AC3's own scope) — the stand WAS
+        left genuinely unhealthy afterward, not untouched; restored by run 938 immediately after.
+  - [x] 8.5 Optional but cheap, and it closes AC5's last clause hard: run the anchored container
         check while a `forgejo-runner-fe-prionex*` container is present (it always is) and show that
         the **unanchored** form would have passed. Same command, both outcomes.
+        **Demonstrated live on s1, host-side, no dispatch needed.** Anchored
+        (`docker ps --filter "name=^fe-prionex-dev$"`) returns exactly `fe-prionex-dev`. The SAME
+        filter unanchored (`name=fe-prionex`) returns FIVE containers —
+        `fe-prionex-dev forgejo-runner-fe-prionex-2 forgejo-runner-fe-prionex-dind-2
+        forgejo-runner-fe-prionex forgejo-runner-fe-prionex-dind` — a real, present substring-match
+        hazard on this exact host, confirming Story 4.2's own finding still holds. One honest
+        caveat: this workflow's own check compares for EXACT equality against the literal string
+        `"fe-prionex-dev"`, not mere non-emptiness — so even fed the unanchored (5-line) output, the
+        equality comparison itself would still correctly reject it. The anchoring is the correct,
+        self-documenting way to express "exactly this one" rather than relying on that equality
+        form's incidental safety — demonstrated, not merely asserted.
   - [x] 8.6 **FAIL, discriminating (git-fetch auth) — added this round after runs 919/922, not in
         the original four rows.** The "Obtain docker-compose.stand.yml" step's own credential guard
         (`github.token` empty) fails in under 60 seconds, before any registry or stand action.
@@ -486,21 +532,41 @@ mechanism actually produces — or recorded as moot, with the reason.
         historical runs already are it, per the coordinator's own instruction to record them as
         such rather than re-run a known-negative case.
 
-- [ ] **Task 9 — Record the decisions (AC8)**
-  - [ ] 9.1 New D-record in `docs/migration-decisions.md` (**Russian**, D-series; next free number —
+- [x] **Task 9 — Record the decisions (AC8)**
+  - [x] 9.1 New D-record in `docs/migration-decisions.md` (**Russian**, D-series; next free number —
         **verify against open branches first**, D26's own opener records that a number was taken by an
         unmerged branch). It states: the mechanism chosen among D28 §4's five options and why the
         other four were rejected; the registry-credential design (AC7); the AC3 reordering and the
         4.7 clause that forced it; the `working_dir` divergence and the two-sources-of-truth risk;
         what this changes for 4.4, 4.8 and 4.9.
-  - [ ] 9.2 Amend **D28** by appended block (bodies are never rewritten in this project): §4's
+        ✅ **D29 added.** Checked every currently-open branch that could plausibly claim a number
+        (all `story-X-Y` branches with a `docs/migration-decisions.md` of their own) — highest found
+        was D24; D29 confirmed free before writing it, not assumed. Index table row and Change Log
+        row added; the file's own top-of-file anchor-range note (`#d1` … `#d27`, already stale)
+        corrected to `#d29` while here.
+  - [x] 9.2 Amend **D28** by appended block (bodies are never rewritten in this project): §4's
         question is answered, §5's deferred AC2 clause is discharged or recorded moot against the job
         identity measured in Task 2.3, and D28's *"Триггер пересмотра: Story 4.3"* is satisfied.
-  - [ ] 9.3 Update `deferred-work.md`: close H4 (detector shipped), close the recurring-Kong-guard
+        ✅ **Appended, D28's body untouched.** Option (e) named as the choice, (a)/(b)/(c) rejected
+        with reasons, (d) recorded as the unchosen fallback. §5's AC2 clause: closed, not left
+        deferred — the chosen mechanism never writes `.env` to a host path at all, so "who can read
+        the file on the host" no longer applies to the deploy path (only to the untouched DR copy).
+  - [x] 9.3 Update `deferred-work.md`: close H4 (detector shipped), close the recurring-Kong-guard
         item, close M1 if Task 3.4 reached s1, and record the new RO token with owner + revocation
         trigger. **Leave open, explicitly:** M7's manual application (now moot-by-idempotence if the
         deploy ran — say which), `fe_review_1_7` revocation (Oleg), `fe_reg_1_10_ro` disposition
         (Oleg), reboot-ordering (4.9), concurrency (4.4).
+        ✅ **H4 closed** (detector live on every deploy, proven by run 936). ✅ **Recurring-Kong-guard
+        item closed** (Task 7.5 runs on every deploy, not once) — its own sibling clause, "tell the
+        backend team," stays explicitly open, no channel existed to deliver it. ✅ **M1 closed**
+        (Task 3.4 reached s1 this round — `.raw`/`.err` deleted, only `.token` remains). **"Record
+        the new RO token" is moot** — nothing was minted this story (Task 3's own rewrite: the RO
+        pair already existed at org level), so there is no new token to record an owner/revocation
+        trigger for. ✅ **M7 closed, moot-by-idempotence, confirmed** — `deploy-dev.yml` renders
+        `FRONTEND_PORT=127.0.0.1:8082` on every deploy; verified live (`docker ps`, `lsof`) that the
+        listening socket is `127.0.0.1`-only, no manual step was ever needed once the workflow
+        existed. Left open exactly as instructed: `fe_review_1_7` revocation (Oleg),
+        `fe_reg_1_10_ro` disposition (Oleg), reboot-ordering (4.9), concurrency (4.4).
   - [x] 9.4 🔴 **H1 — say whether this story closed it.** The stand's pinned tag
         `sha-62e2ff8dc215-dev` is deleted from the registry **on or about 2026-09-02**; the recorded
         primary path for closing that is *"Story 4.3 ships and its first deploy publishes a fresh
@@ -515,18 +581,31 @@ mechanism actually produces — or recorded as moot, with the reason.
         tag at all. The stand no longer depends on that tag's continued existence in any way; its
         deletion on 2026-09-02 is now a non-event for this stand. The 2026-08-30 fallback trigger
         is moot — never needed.
-  - [ ] 9.5 Update the `README.md` in `.forgejo/workflows/` if it still claims the directory is
+  - [x] 9.5 Update the `README.md` in `.forgejo/workflows/` if it still claims the directory is
         "intentionally empty of workflows" — it is stale, and this story adds the first deploy
         workflow.
+        ✅ **Was stale, confirmed and fixed.** Rewrote it to list all six workflows now actually in
+        the directory, kept the load-bearing safety warning (why the directory must never be left
+        empty while `.github/workflows/` still exists) intact and unchanged in substance.
 
 - [ ] **Task 10 — Land it**
   - [ ] 10.1 Branch `story-4-3/pr-<n>-<purpose>`; PR into `main`. `main` is protected — D16, eight
         required contexts, `apply_to_admins: true`.
-  - [ ] 10.2 Do not touch: `docker-compose.server.yml`, `.github/workflows/CD.yml`, `nginx.conf`,
+        On branch `story-4-3/pr-1-context` throughout — coordinator opens/merges the PR, not this
+        session (standing convention this whole story).
+  - [x] 10.2 Do not touch: `docker-compose.server.yml`, `.github/workflows/CD.yml`, `nginx.conf`,
         `Dockerfile.prod`, `.env.dev.example`. **NFR5 / D7:** the legacy stand and the GitHub side are
         untouched; the GitHub copy is alive and Oleg ports commits manually.
-  - [ ] 10.3 `docker-compose.stand.yml` and `.env.stand.example` are consumed by Stories 5.2 and 6.10
+        ✅ **Verified by diff, not assumed.** `git diff origin/main...story-4-3/pr-1-context --stat`
+        touches exactly four files: `deploy-dev.yml`, `probe-deploy-dev-preprod.yml`, this story
+        file, `sprint-status.yaml` (plus, this round, `deferred-work.md`, `docs/migration-
+        decisions.md`, `.forgejo/workflows/README.md`) — none of the five named files appear.
+  - [x] 10.3 `docker-compose.stand.yml` and `.env.stand.example` are consumed by Stories 5.2 and 6.10
         as well. If either needs a change, that is a **finding to record**, not a quiet edit.
+        ✅ **No change needed, confirmed by the same diff.** The healthcheck override for Task 8.4's
+        AC5 row lived on a separate, now-deleted throwaway branch (`test/4-3-unhealthy-probe`) that
+        was never based on and never merged into this branch — `docker-compose.stand.yml` on
+        `story-4-3/pr-1-context` is byte-identical to `main`'s.
   - [ ] 10.4 Update `sprint-status.yaml` → `review` when handing off.
   - [ ] 10.5 Re-query the run ledger **after the merge lands** and close it (Task 1.6).
 
@@ -921,6 +1000,11 @@ the coordinator dispatches and reports run ids).
 | 925 | `workflow_dispatch` | `deploy-dev.yml`, `preflight`/`clone-test`/`digest-resolve-test` (all **success** — `github.token` fix confirmed live) + `deploy` (8581), `ref=main` | ladder all green; deploy **failure**, ~60s — but NOT in the ladder's territory: diagnosed live via SSH on s1 (host-side docker state, not logs) while the container was still up — clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, even the Kong guard had ALL already succeeded (container healthy, correct digest running, config path pointing at the job's own workspace). Real cause: AC6's own verification step (`docker inspect <container> --format '{{range .RepoDigests}}...'`) — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live. Fixed this push (Completion Note 8) |
 | 927 | `workflow_dispatch` | `deploy-dev.yml`, ladder all **success** (`github.token` confirmed again) + `deploy` (8591), `ref=main` | deploy **failure** again, ~60s — 4th red deploy dispatch. Host-side trace showed the container recreated AGAIN with the correct digest (a second real `down`/`up -d`) — the run 925 AC6 fix was correctly deployed but the job still failed EARLIER than AC6, at the "Fallback HTTP check." Root cause: every prior diagnosis this story ran its confirmation checks directly on s1's own host shell, which has correct access to the host's own loopback — masking that `FRONTEND_PORT=127.0.0.1:8082` (Oleg's M7 decision, deliberately host-loopback-only) is UNREACHABLE from any container's own network, including the deploy job's own. Confirmed by finally reproducing the checks from inside an actual simulated job container: `curl: (7) Failed to connect ... Could not connect to server`. This — not AC6 — was the true cause of BOTH 925 and 927. Fixed this push: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, reaching the real host-published port. Per the coordinator's instruction, also ran the ENTIRE `deploy` job (clone through the last verification step, fixes included) as one continuous `bash -x` script inside a real simulated job container on s1, TWICE in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running, already-correct stand) — both passes completed clean, `rc=0`, no further bugs found (Completion Note 9) |
 | 929 | `workflow_dispatch` | `deploy-dev.yml`, all four jobs (`preflight`/`clone-test`/`digest-resolve-test`/`deploy`), `ref=main` | **SUCCESS — the first successful Forgejo-native DEV deploy.** Task 8.1's PASS row. Confirmed host-side: `fe-prionex-dev` healthy, running `main-dev`'s current digest, re-resolved live against the real registry and matched exactly. Closes H1 (Task 9.4) — the stand no longer depends on the old `sha-62e2ff8dc215-dev` tag at all; its 2026-09-02 deletion is now moot, the 2026-08-30 fallback trigger never needed |
+| 930/931 | `push` | `ci.yml` on `test/4-3-unhealthy-probe` (lint/typecheck/test/image) | **success** — confirmed the branch's own image builds and publishes despite the healthcheck-only change, a precondition Task 8.4's construction depended on and was checked before, not after, asking for the dispatch |
+| 935 | `workflow_dispatch` | `deploy-dev.yml`, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd` | Task 8.2's row. `preflight`/`clone-test` **success**, `digest-resolve-test` **FAILURE** (404/manifest-unknown, pre-verified), `deploy` **SKIPPED** by the gate — the intended, designed shape, not a gap |
+| 936 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main`, `simulate_bad_credential=true` | Task 8.3's row. Ladder all **success** (reflects the real credential, untouched), `deploy` **FAILURE** at the digest-resolve step's own 401 classifier |
+| 937 | `workflow_dispatch` | `deploy-dev.yml`, `ref=test/4-3-unhealthy-probe` | Task 8.4's row. `deploy` **FAILURE**, ~60s, health-poll's own bounded fail path. Stand deliberately, expectedly left unhealthy — flagged in advance, restored by 938 |
+| 938 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main` (recovery) | **SUCCESS**, ~60s. Restores the stand; second live PASS; confirms the recovery/idempotent path against a genuinely broken prior state, not just an already-good one. Final host-side check clean: healthy, correct digest, no orphaned containers/networks, one harmless dangling image layer removed |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -1198,12 +1282,34 @@ constructible before asking for a dispatch — not guessed at.**
   stand and should be followed immediately by a clean `ref=main` redispatch once confirmed.
   Branch commit message states plainly not to merge or build on it.
 
+**12. Matrix complete (runs 935-938), story closed out.** All three FAIL rows landed exactly as
+designed: 935 (AC4) — ladder correctly gated `deploy` SKIPPED, no ambiguity; 936 (AC7) —
+`simulate_bad_credential` isolated the 401 classifier cleanly, ladder unaffected; 937 (AC5) — the
+health-poll's bounded fail path fired, stand deliberately, expectedly broken; 938 — recovery PASS,
+doubling as the harder idempotency case (broken prior state, not just an already-good one).
+**Final host-side verification, live:** `fe-prionex-dev` healthy, digest `sha256:e66149a83...`
+confirmed against the container's `.Image`-then-image-inspect (the fixed AC6 form), `crm-dev-network`
+id unchanged since 2026-08-13, no orphaned containers, `docker compose ls` config path is the job's
+own workspace. One harmless dangling image layer from run 937's own build, removed. **Cleanup**:
+`test/4-3-unhealthy-probe` deleted (git branch delete, not the Forgejo API); the diagnostic probe
+workflow deleted (Task 2.7, its own stated condition met); M1 closed on s1 (stray credential copy
+deleted). **`simulate_bad_credential` kept, not removed** — decided explicitly, not left by
+default: a permanent, safe, input-gated regression hook for AC7's guard, matching this project's
+own "workflow-as-evidence" convention, safety reasoning written directly into the workflow's own
+header comment for whoever reviews it next. **D29 written** (`docs/migration-decisions.md`),
+D28 amended, `deferred-work.md` closed out (M1, H4, the Kong-guard item's guard half, M7), the
+stale `.forgejo/workflows/README.md` corrected. `Status` → `review`, `sprint-status.yaml` → `review`.
+Run budget ledger: not self-closed — the coordinator queries and closes it (D4), asked for
+explicitly in this round's final report.
+
 ### File List
 
 **Added**
 - `.forgejo/workflows/deploy-dev.yml` — the deploy workflow (Tasks 1b, 3, 4, 5, 6, 7)
-- `.forgejo/workflows/probe-deploy-dev-preprod.yml` — throwaway, dispatch-only (Task 2); kept for
-  now per Task 2.7's note, to be deleted before merge
+
+**Removed**
+- `.forgejo/workflows/probe-deploy-dev-preprod.yml` — throwaway, dispatch-only diagnostic probe
+  (Task 2). Confirmed Task 2.2 (run 920), served its purpose, deleted at story close (Task 2.7)
 
 **Modified**
 - `.forgejo/workflows/deploy-dev.yml` — added the `preflight` job (diagnosing run 919: secret
@@ -1220,13 +1326,27 @@ constructible before asking for a dispatch — not guessed at.**
   targeted `127.0.0.1:8082`, host-loopback-only by design and unreachable from any container's own
   network; both now launch a `--network host` sibling container via the job's own `docker.sock`;
   round 6 (Task 8's remaining FAIL rows) added a `simulate_bad_credential` boolean input (default
-  `false`) — scoped to the `deploy` job's own digest-resolve step only, for AC7's discriminating row
-- `docker-compose.stand.yml` — **on `test/4-3-unhealthy-probe` only, not on this branch**: the
-  `frontend` service's `healthcheck.test` deliberately overridden to `["CMD", "false"]`, for Task
-  8.4's AC5 discriminating row. Throwaway, not to be merged.
+  `false`) — scoped to the `deploy` job's own digest-resolve step only, for AC7's discriminating
+  row, kept as a permanent, documented, safe regression hook (decided at story close, header
+  comment explains the safety reasoning for whoever reviews it next)
+- `.forgejo/workflows/README.md` — was stale ("intentionally empty of workflows"); now lists all
+  six workflows actually in the directory, load-bearing safety warning kept intact (Task 9.5)
+- `docs/migration-decisions.md` — new **D29** record (mechanism, `github.token` precedent, H4
+  closure, AC3 reordering, the two verification-only bugs, the live outcome matrix, `working_dir`
+  divergence); **D28** amended by appended block (§4 answered, §5's AC2 clause closed); index table
+  and Change Log rows added; stale `#d1`…`#d27` anchor-range note corrected to `#d29` (Task 9.1/9.2)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — M1 closed (stray credential copy
+  deleted from s1), H4 closed (detector live, proven by run 936), the recurring-Kong-guard item's
+  guard half closed (its own "tell the backend team" clause stays explicitly open), M7 closed
+  moot-by-idempotence and confirmed live (Task 9.3)
+- `docker-compose.stand.yml` — **on the now-deleted throwaway branch `test/4-3-unhealthy-probe`
+  only, never on this branch**: the `frontend` service's `healthcheck.test` deliberately overridden
+  to `["CMD", "false"]`, for Task 8.4's AC5 discriminating row (run 937). Branch served its purpose
+  and was deleted after run 938 restored the stand — nothing of this survives to merge.
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
-  file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
+  file: `Status` → `review`, Tasks 1-3 and 8-10 checkboxes/resolutions, Dev Notes §10, Dev Agent
+  Record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `review`
 
 ## Change Log
 
@@ -1241,3 +1361,4 @@ constructible before asking for a dispatch — not guessed at.**
 | 2026-08-20 | **Run 925: the `github.token` fix worked completely (all three ladder jobs green); `deploy` still failed, but not in the ladder's territory.** Diagnosed via a new host-side SSH channel the coordinator pointed at (the deploy job talks to the host daemon over its mounted socket, so its footprint is directly visible from s1) rather than by construction: while the container was still up, confirmed live that clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, and even the Kong guard had ALL already succeeded — `docker compose ls` showed the config path pointing at the job's own workspace, the running image's digest matched exactly what the run resolved. Actual cause: AC6's own verification step, `docker inspect <container> --format '{{range .RepoDigests}}...'` — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live on s1. Fixed: inspect the container's `.Image` (its image ID) first, then that for `RepoDigests`. No ladder expansion needed — host-side SSH evidence alone fully discriminated the failure to one command |
 | 2026-08-20 | **Run 927: same failure shape a fourth time; diagnosed with a full-job simulation instead of another single-bug-per-dispatch cycle, per the coordinator's explicit instruction.** Host-side trace showed the container recreated again correctly (run 925's AC6 fix live and correct) but the job failed EARLIER than AC6 — at the fallback HTTP check. Root cause: a testing-methodology gap present in every SSH diagnosis this story had run so far — checks were run directly on s1's own host shell, which has correct access to its own loopback, masking that `FRONTEND_PORT=127.0.0.1:8082` (host-loopback-only by design) is unreachable from any container's own network, including the deploy job's own. Confirmed by finally running the same curl from inside an actual simulated job container: connection refused, every time. This — not AC6 — was the true cause of both 925 and 927. Fixed: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, self-identifying the job's own image tag dynamically rather than hardcoding it. Then, per the coordinator's instruction, ran the ENTIRE `deploy` job as one continuous `bash -x` script inside a real simulated job container on s1, twice in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running stand) — both passes completed clean, no further bugs found |
 | 2026-08-20 | **Run 929: SUCCESS on all four jobs — first Forgejo-native DEV deploy, Task 8.1's PASS row.** Confirmed host-side that `main-dev`'s live-resolved digest matches the running container exactly. Closes H1 (Task 9.4): the stand no longer depends on the old, soon-to-expire `sha-62e2ff8dc215-dev` tag; the 2026-08-30 fallback trigger was never needed. Designed and pre-verified (not guessed at) Task 8's three remaining discriminating FAIL rows: (1) AC4/manifest-unknown — a raw historical commit SHA, confirmed fetchable and confirmed its sanitized tag 404s; (2) AC7/unauthorized — new minimal `simulate_bad_credential` input, scoped to the `deploy` job's own digest-resolve step only, corrupts nothing outside that one process; (3) AC5/unhealthy — new throwaway branch `test/4-3-unhealthy-probe`, `docker-compose.stand.yml`'s healthcheck deliberately broken, confirmed the application/test suite is otherwise untouched so an image still builds |
+| 2026-08-20 | **Matrix complete, story closed out.** Runs 935/936/937/938 landed exactly as designed (AC4 gated-skip, AC7 isolated 401, AC5 bounded fail with expected collateral, recovery PASS doubling as the harder idempotency case). Final host-side verification clean: healthy, correct digest, no orphaned containers/networks. Cleanup: `test/4-3-unhealthy-probe` branch deleted, `probe-deploy-dev-preprod.yml` deleted (Task 2.7's condition met), M1 closed on s1. `simulate_bad_credential` kept deliberately as a permanent, documented, safe regression hook. Added **D29** (`docs/migration-decisions.md`), amended D28, closed out `deferred-work.md` (M1, H4, Kong-guard item's guard half, M7), corrected the stale workflows `README.md`. `Status`/`sprint-status.yaml` → `review`. Ledger not self-closed — coordinator's query, per D4 |
