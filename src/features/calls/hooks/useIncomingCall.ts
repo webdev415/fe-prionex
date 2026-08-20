@@ -46,7 +46,7 @@ const EXTENSION_PATTERN = /^(?:[A-Za-z0-9]+\/)?(\d+)/
 // Matches the extension the app itself enforces on users (userSchemas.ts).
 const EXTENSION_LENGTH = { min: 3, max: 10 }
 
-function extensionOf(value: unknown): string | null {
+export function extensionOf(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const extension = EXTENSION_PATTERN.exec(value)?.[1]
   if (!extension) return null

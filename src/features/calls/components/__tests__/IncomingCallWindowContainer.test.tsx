@@ -21,6 +21,7 @@ const mutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: fals
 const rejectCall = mutation()
 const hangupCall = mutation()
 const holdCall = mutation()
+const onAnsweredSpy = vi.fn()
 
 const saveInteraction = mutation()
 
@@ -32,7 +33,10 @@ vi.mock('@/features/clients/hooks/useNoteInteraction', () => ({
   useInteractionResults: () => ({ data: [{ id: 4, name: 'Refusal' }] }),
   useCreateBulkInteraction: () => saveInteraction,
 }))
+const callDetails: { data: unknown } = { data: undefined }
+
 vi.mock('../../hooks/useCall', () => ({
+  useCallDetails: () => callDetails,
   useAnswerCall: () => mutation(),
   useHoldCall: () => holdCall,
   useRejectCall: () => rejectCall,
@@ -60,7 +64,7 @@ function renderContainer(
     <IncomingCallWindowContainer
       incomingCall={incomingCall}
       answeredAt={over.answeredAt ?? null}
-      onAnswered={vi.fn()}
+      onAnswered={onAnsweredSpy}
       agentExtension="2091"
       minimized={minimized}
       onMinimize={onMinimize}
@@ -81,7 +85,10 @@ function renderContainer(
 const minimize = () => screen.getByRole('button', { name: /minimize/i })
 
 describe('IncomingCallWindowContainer', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    callDetails.data = undefined
+  })
 
   it('asks to be minimised rather than deciding for itself', () => {
     const { onMinimize } = renderContainer()
@@ -110,6 +117,27 @@ describe('IncomingCallWindowContainer', () => {
     // The form unmounts while minimised, so the draft has to live above it —
     // a comment written with the caller on the line cannot be recovered.
     expect(screen.getByRole('textbox')).toHaveValue('Promised to pay Friday')
+  })
+
+  it('catches up when the answer happened before the window opened', async () => {
+    // DialEnd(ANSWER) carries the only `answered_by` there is, and the pop
+    // waits on a client lookup while that event does not — so an operator who
+    // picks up quickly is answered before this window exists, and nothing
+    // repeats it. Without reading the record the form is never reachable.
+    callDetails.data = { outcome: 'answered', agent_extension: '2091' }
+    renderContainer({ answeredAt: null })
+
+    await waitFor(() => expect(onAnsweredSpy).toHaveBeenCalled())
+  })
+
+  it('stays ringing when the record names a different operator', async () => {
+    callDetails.data = { outcome: 'answered', agent_extension: '2094' }
+    renderContainer({ answeredAt: null })
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    // On a ring group the record still names the first-rung agent until
+    // DialEnd adopts the answering leg, so a mismatch is somebody else's call.
+    expect(onAnsweredSpy).not.toHaveBeenCalled()
   })
 
   it('offers communication channels, not call directions', () => {

@@ -9,10 +9,18 @@ import {
   useInteractionTypes,
   useCreateBulkInteraction,
 } from '@/features/clients/hooks/useNoteInteraction'
-import { useAnswerCall, useHangupCall, useHoldCall, useRejectCall } from '../hooks/useCall'
+import {
+  useAnswerCall,
+  useCallDetails,
+  useHangupCall,
+  useHoldCall,
+  useRejectCall,
+} from '../hooks/useCall'
+import { extensionOf } from '../hooks/useIncomingCall'
 import { useIncludedClients } from '../hooks/useIncludedClients'
 import { useCallStore } from '@/stores/callStore'
 import { buildMatchedClients } from '../utils/callWindow'
+import { CallOutcome } from '../types'
 import type { IncomingCallData } from '../types'
 import { IncomingCallWindow } from './IncomingCallWindow'
 import type { CallInteractionDraft, CallInteractionDraftState } from './CallInteractionForm'
@@ -130,6 +138,24 @@ export function IncomingCallWindowContainer({
     channelId: effectiveChannelId,
     contactTypeId: draft.reasonId ?? undefined,
   })
+
+  // The one event carrying `answered_by` is the DialEnd(ANSWER) broadcast, and
+  // the screen-pop waits on a cross-service client lookup while that event does
+  // not. An operator who picks up quickly is answered before this window even
+  // exists, and nothing later repeats it — so the record is read while the call
+  // still looks like it is ringing, and the window catches up from it.
+  const { data: callDetails } = useCallDetails(answeredAt === null ? incomingCall.call_id : null)
+  useEffect(() => {
+    if (answeredAt !== null || !callDetails) return
+    if ((callDetails.outcome ?? '').toLowerCase() !== CallOutcome.ANSWERED) return
+    // Only when the record names *this* operator. After DialEnd adopts the
+    // answering leg this is the answerer; before that, on a ring group, it is
+    // still the first-rung agent — so a match is evidence and a mismatch is
+    // simply somebody else's call.
+    const answering = extensionOf(callDetails.agent_extension)
+    const mine = extensionOf(agentExtension)
+    if (answering !== null && mine !== null && answering === mine) onAnswered()
+  }, [callDetails, answeredAt, agentExtension, onAnswered])
 
   const answer = useAnswerCall(clients[0]?.clientId, agentExtension)
   const hold = useHoldCall(clients[0]?.clientId, agentExtension)
