@@ -585,19 +585,33 @@ jobs:
           fi
           echo "OK: fallback HTTP check on ${HOST_PART}:${PORT_PART} returned 200."
 
-      - name: "AC6 — running image matches the resolved digest, not the tag (Task 7.4)"
+      - name: "AC6 — running image matches the resolved digest, not the tag (Task 7.4, fixed after run 925)"
         env:
           DIGEST: ${{ steps.digest.outputs.digest }}
         run: |
           set -euo pipefail
           # Branch tags are mutable — build.yml republishes <sanitized-ref>-dev on every build of
           # that branch. Only a digest comparison against the digest THIS run resolved means
-          # anything. RepoDigests, not .Image — survives a retag between pull and this check.
-          MATCHED="$(docker inspect fe-prionex-dev --format '{{range .RepoDigests}}{{.}} {{end}}' | grep -F "$DIGEST" || true)"
+          # anything. RepoDigests, not the container's own .Image field value directly — survives a
+          # retag between pull and this check.
+          #
+          # Run 925's actual failure, found on s1 by direct inspection while the container was
+          # still up (everything upstream of this step — github.token clone, login, digest resolve,
+          # pull, .env render, down/up -d, health poll, anchored check, fallback HTTP, even the Kong
+          # guard below — had ALREADY succeeded): `docker inspect <CONTAINER>` has NO `.RepoDigests`
+          # field at all — that field exists only on the IMAGE object, not a container. The original
+          # form here (`docker inspect fe-prionex-dev --format '{{range .RepoDigests}}...'`) always
+          # threw `template parsing error: ... map has no entry for key "RepoDigests"`, which the
+          # trailing `|| true` silently turned into "no match found" — this step's own designed
+          # FAIL then fired even though the running image was, in fact, exactly the resolved digest
+          # the whole time. Fix: read the container's `.Image` (its image ID), then inspect THAT for
+          # `RepoDigests` — the field actually lives there.
+          IMAGE_ID="$(docker inspect fe-prionex-dev --format '{{.Image}}')"
+          MATCHED="$(docker inspect "$IMAGE_ID" --format '{{range .RepoDigests}}{{.}} {{end}}' | grep -F "$DIGEST" || true)"
           if [ -z "$MATCHED" ]; then
-            echo "FAIL: running container's RepoDigests do not include the resolved digest"\
-                 "(${DIGEST}). AC6 requires the running image to match what THIS run resolved, not"\
-                 "merely 'a' recent build of the tag."
+            echo "FAIL: running container's image (${IMAGE_ID}) RepoDigests do not include the"\
+                 "resolved digest (${DIGEST}). AC6 requires the running image to match what THIS"\
+                 "run resolved, not merely 'a' recent build of the tag."
             exit 1
           fi
           echo "OK: running container's image matches the resolved digest ${DIGEST}."

@@ -902,6 +902,8 @@ the coordinator dispatches and reports run ids).
 | 919 | `workflow_dispatch` | `deploy-dev.yml`, task 8551, first live dispatch (`ref=main`) | **failure**, <60s — diagnosed (Completion Note 3), fixed this push (`preflight` job) |
 | 920 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, three-job version | job 1 success, job 2 **failure** (Task 2.2 closed negatively, measured), job 3 success |
 | 922 | `workflow_dispatch` | `deploy-dev.yml`, `preflight` (8562) + `deploy` (8563), `ref=main` | preflight **success**; deploy **failure**, <60s — org-secret hypothesis refuted; root cause found by SSH, no dispatch spent (Completion Note 4); fixed this push (`clone-test` + `digest-resolve-test` ladder) |
+| 923/924 | — | numbers not yet confirmed — coordinator to reconcile by query at closing (parallel `ci.yml`/build activity noted around this window, unrelated runner) | — |
+| 925 | `workflow_dispatch` | `deploy-dev.yml`, `preflight`/`clone-test`/`digest-resolve-test` (all **success** — `github.token` fix confirmed live) + `deploy` (8581), `ref=main` | ladder all green; deploy **failure**, ~60s — but NOT in the ladder's territory: diagnosed live via SSH on s1 (host-side docker state, not logs) while the container was still up — clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, even the Kong guard had ALL already succeeded (container healthy, correct digest running, config path pointing at the job's own workspace). Real cause: AC6's own verification step (`docker inspect <container> --format '{{range .RepoDigests}}...'`) — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live. Fixed this push (Completion Note 8) |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -1044,6 +1046,36 @@ matched` signature) → post-deploy state record → duration → credential cle
 locally validated (YAML, `bash -n`, no stray `${{ }}`), not yet live-verified — that is Task 8's
 job, explicitly, not this one's.**
 
+**8. Run 925 — the `github.token` fix worked completely; the whole deploy mechanism is sound; a
+single verification step's own bug was the only thing standing between this run and Task 8.1's
+PASS row.** Ladder all green (`preflight`, `clone-test`, `digest-resolve-test`), confirming
+`github.token` delivers and authenticates live, not just in local simulation. `deploy` (job 8581)
+still failed, ~60s — but this time NOT in the ladder's own territory, and diagnosed through a new
+channel the coordinator pointed at rather than by construction alone: **the deploy job talks to the
+HOST daemon over the mounted socket, so its footprint is directly visible from s1 by SSH, while the
+container was still up.** Checked live, in order: `docker images --digests` showed a fresh pull
+timestamped to the run; `fe-prionex-dev`'s `Created`/`StartedAt` had moved to the run's own window
+(not Story 4.2's original timestamp); `docker compose ls` showed the config path as the JOB'S OWN
+WORKSPACE (`/workspace/CRM/fe-prionex/stand-checkout/docker-compose.stand.yml`), not the Story 4.2
+host directory — proving `down`/`up -d` ran, using this run's own rendered `.env`. Anchored
+name/label check, `crm-dev-network` id, the fallback HTTP check, and — checked specifically because
+it is the LAST guard before the job's own success path — the Kong alias guard (`getent hosts
+crm-kong-gateway` resolves; `GET /api/` returns Kong's own `"no Route matched"` signature) **all
+passed when reproduced live, independently, while the container was still healthy.** The container
+literally WAS the correct, healthy, correctly-digest-pinned deploy the whole time. **Actual cause,
+reproduced exactly:** AC6's own check —
+`docker inspect fe-prionex-dev --format '{{range .RepoDigests}}{{.}} {{end}}'` — throws `template
+parsing error: ... map has no entry for key "RepoDigests"` on EVERY run, because `.RepoDigests` is
+a field of the IMAGE object, not a container; `docker inspect <container>` simply does not have it.
+The trailing `|| true` swallowed the error into an empty match, and this step's own correctly-
+designed FAIL path then fired — for the wrong reason, on a deploy that had actually succeeded.
+**Fixed**: read the container's `.Image` (its image ID) first, then inspect THAT for `RepoDigests`
+— confirmed live on s1 (`git.crm-prionex.com/crm/fe-prionex@sha256:e661...` — an exact match for
+the digest this run resolved). No expansion of the ladder was needed (`render-test`/
+`socket-pull-test` were offered as a fallback if host-side evidence proved insufficient — it did
+not) — the host-side SSH channel alone fully discriminated the failure to one command, no logs
+required.
+
 ### File List
 
 **Added**
@@ -1059,7 +1091,9 @@ job, explicitly, not this one's.**
   round 3 fixed the actual root cause — the "Obtain docker-compose.stand.yml" step and `clone-test`
   now authenticate via `github.token` (precedent: CRM/api-prionex's own `deploy-dev.yml` on this
   same runner), header injected via `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`
-  (never argv); `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`
+  (never argv); `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`; round 4 (run
+  925) fixed the AC6 step — `docker inspect <container>` has no `.RepoDigests` field, only images
+  do; now inspects the container's `.Image` (its image ID) instead
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -1074,3 +1108,4 @@ job, explicitly, not this one's.**
 | 2026-08-20 | **Run 920: `uses:` steps confirmed (not inferred) to not execute on this runner's job image — Task 2.2 closed negatively, measured.** Run 919: `deploy-dev.yml`'s first live dispatch (`ref=main`) failed in <60s. Diagnosed by reproducing the exact job network path on s1 via SSH — DNS, registry reachability, and `docker login` failure mode all clean, ruling out a network cause; leading hypothesis is the org secrets existing but not being granted to this repository specifically. Confirmed by SSH that the stand was untouched (fail-closed held). Fix: a new `preflight` job ahead of `deploy`, reporting secret presence (by length, never value) and registry reachability independently, so the run's job list alone (no log access) will show which is true on the next dispatch. Caught and fixed a real bug while writing it: `${#VAR}` crashes under `set -u` on a genuinely unset variable — changed to default-to-empty first |
 | 2026-08-20 | **Run 922: `preflight` passed, refuting the org-secret hypothesis; the real cause found and confirmed for free via SSH, no second dispatch spent to learn it.** Root cause confirmed: the "obtain compose file" step does an anonymous `git fetch` of a private repo — reproduced live on s1 (exact job network, no credential): fails in under a second, non-interactively, `fatal: could not read Username ... No such device or address`. Digest resolution ruled out (a real, equivalent-scope credential resolved a real tag cleanly, 200). Also checked, not assumed: the workflow's own `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` cannot be reused for the fetch — an equivalent-scope credential got a same-instance `403 required scope(s): [read:repository]` reading repo content. Fix needs a `read:repository`-scoped credential that does not yet exist in this workflow — flagged to the coordinator rather than minted unilaterally (a minted token here would be standing/non-revocable by this project's own established constraint). Ladder extended per the coordinator's request: `clone-test` (reproduces the fetch live — job-list evidence, expected to fail until a credential exists) and `digest-resolve-test` (resolves a real tag with the workflow's own live credential, expected to pass); `deploy` now needs all three preceding jobs |
 | 2026-08-20 | **Blocker cleared by the coordinator, no minting: `github.token` (Forgejo's automatic per-job token), precedent from CRM/api-prionex's own `deploy-dev.yml` on this same runner.** Wired into the git-fetch step and `clone-test`, adapted from the precedent's `git -c http.extraheader=...` (argv-exposed) into `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars, to keep the credential out of this job's own `ps auxww` per this file's own established rule. Mechanism verified on s1 before this push: `GIT_CURL_VERBOSE` confirmed the header reaches the request; a real (wrong-scope) credential got a clean `403`, not the anonymous-fetch failure — confirming the delivery mechanism works, independent of `github.token` itself, which is only testable inside a real dispatch. `clone-test` now expected to PASS; runs 919/922 recorded post-hoc as Task 8's new discriminating row 8.6 (no token → this exact failure) rather than re-earned by a redundant dispatch |
+| 2026-08-20 | **Run 925: the `github.token` fix worked completely (all three ladder jobs green); `deploy` still failed, but not in the ladder's territory.** Diagnosed via a new host-side SSH channel the coordinator pointed at (the deploy job talks to the host daemon over its mounted socket, so its footprint is directly visible from s1) rather than by construction: while the container was still up, confirmed live that clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, and even the Kong guard had ALL already succeeded — `docker compose ls` showed the config path pointing at the job's own workspace, the running image's digest matched exactly what the run resolved. Actual cause: AC6's own verification step, `docker inspect <container> --format '{{range .RepoDigests}}...'` — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live on s1. Fixed: inspect the container's `.Image` (its image ID) first, then that for `RepoDigests`. No ladder expansion needed — host-side SSH evidence alone fully discriminated the failure to one command |
