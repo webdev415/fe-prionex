@@ -37,7 +37,11 @@ name: Deploy DEV Stand
 # checkout via `uses: actions/checkout@v4` — the same failure shape `build.yml:107-124` already
 # found on a sibling runner/image class (no Node runtime; `uses:` steps silently do not run,
 # without an error). No `actions/checkout`, no `docker/login-action` — checkout is a `git clone` in
-# a `run:` step, login is a plain `docker login --password-stdin`.
+# a `run:` step, login is a plain `docker login --password-stdin`. The repo is private, so the
+# clone needs its own auth too (found the hard way at runs 919/922: unauthenticated, it fails in
+# under a second) — `github.token`, Forgejo's own automatic per-job token, via an HTTP Basic header
+# set through git's `GIT_CONFIG_*` env vars (never argv), precedent from `CRM/api-prionex`'s own
+# `deploy-dev.yml` on this same runner.
 #
 # ── Sequence — AMENDED from the epic's stated order (AC3) ──────────────────────────────────────
 # Epic text: copy the compose file, `down`, pull, `up -d`, health-check. That order contradicts
@@ -53,7 +57,10 @@ name: Deploy DEV Stand
 # `--password-stdin`; the registry digest-resolution `curl` call passes the credential via
 # `--config -` (stdin), the same pattern `build.yml` already uses for the OpenBao token, not `-u`
 # or a literal `-H "Authorization: ..."`, either of which would put it in argv on this shared,
-# four-label runner.
+# four-label runner. Same rule for the git-fetch Basic-auth header (`github.token`): set via
+# `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars, not `git -c
+# http.extraheader=...` on the command line (api-prionex's own precedent uses the argv form —
+# deliberately not copied, for this exact reason).
 
 on:
   workflow_dispatch:
@@ -129,70 +136,71 @@ jobs:
           echo "OK: registry is reachable and answering correctly from this runner's own execution."
 
   # ── Round 2, after run 922: preflight passed (secrets present, registry reachable) but the
-  # deploy job still failed in <60s — the org-secret-access hypothesis is REFUTED. Two remaining
-  # candidates from the deploy job's own construction, both settled BEFORE this dispatch by direct
-  # reproduction on s1 (equivalent-scope credential, never printed; no dispatch spent to learn this):
-  #   (1) "Obtain docker-compose.stand.yml" does an ANONYMOUS `git fetch` over https — this repo is
-  #       private. Reproduced live on s1, exact job network, no credential: `git fetch` fails in
-  #       under a second, non-interactively: `fatal: could not read Username for
-  #       'https://git.crm-prionex.com': No such device or address` (exit 128) — not a hang, not a
-  #       timeout, a fast textbook "git wanted to prompt, there is no tty" failure. CONFIRMED root
-  #       cause, not merely leading.
-  #   (2) Digest resolution — RULED OUT. Resolved `main-dev` live against the real registry with an
-  #       EQUIVALENT-scope credential (`fe_reg_4_2_ro`, Story 4.2's own `robot-registry` token,
-  #       `read:package`, still on s1 at `/root/.fj_reg_4_2.token`, value never printed): clean 200
-  #       with a real digest. This step is not the failure.
-  #   Also checked: whether `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` (candidate 1's obvious first fix
-  #   — just reuse it for the clone) could authenticate the git fetch too. It cannot, by
-  #   construction, not merely by assumption: probed the SAME equivalent-scope `read:package`
-  #   credential against this repo's own content API and got a same-host, same-instance,
-  #   self-describing refusal — `403 {"message":"token does not have at least one of required
-  #   scope(s): [read:repository]"}`. A `read:package`-only credential (which is what this
-  #   workflow's own credential deliberately is, by AC7/Task 3's design) cannot read repository
-  #   contents on this Forgejo instance, regardless of which bot account holds it. Fixing candidate
-  #   1 needs a DIFFERENT, `read:repository`-scoped credential — not a scope this job currently
-  #   holds, not a code bug to patch around.
-  #   No automatic per-job token (`GITHUB_TOKEN`/`GITEA_TOKEN` equivalent) is referenced anywhere in
-  #   this project's existing workflows (`build.yml`, `ci.yml`) — this project's own established
-  #   convention is OpenBao-issued or explicitly-minted credentials, never an implicit runner token,
-  #   so one is not assumed to exist here either without confirmation.
-  #   Candidate 3 (an early guard misfiring) — reread: the sanitizer accepts "main" cleanly
-  #   ("main-dev", no leading [.-], non-empty) and run 922's preflight already proves the credential
-  #   guard did not fire falsely. No false-guard behavior found for this input.
-  # clone-test/digest-resolve-test below exist to put this same conclusion ON THE RECORD as live,
-  # job-list-visible evidence (Task 8's own "needs a live outcome matrix" rule) — not to re-decide
-  # an already-settled question locally.
+  # deploy job still failed in <60s — the org-secret-access hypothesis is REFUTED. Root cause
+  # confirmed by direct reproduction on s1 (no dispatch spent to learn it): "Obtain
+  # docker-compose.stand.yml" did an ANONYMOUS `git fetch` over https of a PRIVATE repo — fails in
+  # well under a second, non-interactively: `fatal: could not read Username for
+  # 'https://git.crm-prionex.com': No such device or address` (exit 128). Digest resolution was
+  # ruled out separately (resolved `main-dev` live with an equivalent-scope credential, clean 200).
+  # `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` cannot be reused for the clone either — confirmed
+  # (not assumed): that credential is deliberately `read:package`-only (AC7/Task 3) and gets a
+  # same-instance `403 required scope(s): [read:repository]` reading repo content.
+  #
+  # ── Round 3, RESOLVED (coordinator): `github.token`, Forgejo's own automatic per-job token, is
+  # the fix — precedent from CRM/api-prionex's own deploy-dev.yml, which deploys on this SAME
+  # runner and hits this SAME uses:-does-not-execute constraint, and already uses exactly this
+  # mechanism successfully. Wired into the "Obtain docker-compose.stand.yml" step above (adapted:
+  # their `git -c http.extraheader=...` form puts the credential in this job's own `ps auxww` on
+  # this shared runner, which this file's own rule forbids — used the equivalent
+  # `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env-var form instead, credential
+  # stays in `env:`, never in argv). Runs 919 and 922 already stand as the NEGATIVE discriminating
+  # row for this exact guard (no token present → this failure) — recorded post-hoc in Task 8's
+  # matrix rather than re-earned by a redundant negative dispatch. clone-test below now runs the
+  # SAME fixed, authenticated mechanism and is expected to PASS, live-confirming the fix the way
+  # this project's job-list-is-the-evidence convention requires.
   clone-test:
-    name: "1. Clone-test — does the deploy job's own anonymous git fetch work? (expected FAIL — confirmed locally, see comment above)"
+    name: "1. Clone-test — does the deploy job's own authenticated git fetch work? (expected PASS — fixed via github.token, api-prionex precedent)"
     needs: preflight
     runs-on: deploy-dev-preprod
     timeout-minutes: 3
     steps:
-      - name: Attempt the exact same anonymous git fetch the deploy job's checkout step performs
+      - name: Attempt the exact same authenticated git fetch the deploy job's checkout step performs
         env:
           REF_IN: ${{ inputs.ref }}
+          FJ_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO_SLUG: ${{ github.repository }}
         run: |
           set -euo pipefail
+          if [ -z "${FJ_TOKEN:-}" ]; then
+            echo "FAIL: github.token is empty. This is the exact guard runs 919/922 already proved"\
+                 "negatively (no token at all, back then, via a plain anonymous fetch) — now"\
+                 "testing that the positive side actually works."
+            exit 1
+          fi
+
+          AUTH_B64="$(printf 'x-access-token:%s' "$FJ_TOKEN" | base64 | tr -d '\n')"
+
           rm -rf clone-test-checkout
           mkdir clone-test-checkout
           cd clone-test-checkout
           git init --quiet
-          git remote add origin https://git.crm-prionex.com/CRM/fe-prionex.git
-          if ! git fetch --quiet --depth 1 origin "$REF_IN"; then
-            echo "FAIL: anonymous git fetch of this private repo does not work — confirmed locally"\
-                 "on s1 via SSH before this dispatch was ever requested (fatal: could not read"\
-                 "Username ... No such device or address, exit 128; non-interactive git refusing to"\
-                 "prompt for a private repo with no credential supplied). This job exists to confirm"\
-                 "the SAME failure inside a real Forgejo Actions job context, not just a plain"\
-                 "'docker run' simulation — closing Task 8's live-discriminating-row requirement."\
-                 "Fix needs a credential scoped read:repository on this Forgejo instance;"\
-                 "REGISTRY_USER_RO/REGISTRY_TOKEN_RO cannot be reused for it (confirmed: a"\
-                 "read:package-only credential gets 403 'required scope(s): [read:repository]'"\
-                 "from this same host's own repo-content API)."
+          git remote add origin "${SERVER_URL}/${REPO_SLUG}.git"
+
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.extraheader
+          export GIT_CONFIG_VALUE_0="Authorization: Basic ${AUTH_B64}"
+
+          if ! git fetch --quiet --depth 1 --no-tags origin "$REF_IN"; then
+            echo "FAIL: authenticated git fetch of ref '${REF_IN}' still failed. github.token was"\
+                 "non-empty (guard above passed) — this is a NEW finding, not the run 919/922"\
+                 "mechanism repeating; needs its own diagnosis, not an assumed re-run of the same"\
+                 "cause."
             exit 1
           fi
-          echo "OK: anonymous fetch succeeded — the confirmed local finding did not reproduce here;"\
-               "root cause needs to be reconsidered."
+
+          unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
+          echo "OK: authenticated fetch succeeded — the fix works."
 
   digest-resolve-test:
     name: "2. Digest-resolve-test — does REGISTRY_USER_RO/REGISTRY_TOKEN_RO actually resolve a real tag? (expected PASS)"
@@ -372,34 +380,84 @@ jobs:
           docker pull "${IMAGE_REPO}@${DIGEST}"
           echo "OK: pulled ${IMAGE_REPO}@${DIGEST}"
 
-      - name: Obtain docker-compose.stand.yml at the deployed ref (Task 4.1)
+      - name: Obtain docker-compose.stand.yml at the deployed ref (Task 4.1, fixed after run 919/922)
         env:
           REF_IN: ${{ inputs.ref }}
+          FJ_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO_SLUG: ${{ github.repository }}
         run: |
           set -euo pipefail
           # uses: actions/checkout does not deliver a working checkout on this runner (Task 2.2) —
           # git fetch/checkout in a run: step instead. Single source of truth: this repository's
           # own compose file AT THE DEPLOYED REF, never a heredoc copy — a second copy in a
           # workflow is the "two compose files describe one application" failure this project
-          # already recorded (deferred-work.md:2370-2407). `git fetch <ref>` (not `--branch`) works
-          # uniformly for a branch, a tag, or a bare SHA, assuming the server allows fetching an
-          # arbitrary SHA — the common case for this project's own usage (dispatching against
-          # feature branches).
+          # already recorded (deferred-work.md:2370-2407).
+          #
+          # Auth mechanism adapted from CRM/api-prionex's own deploy-dev.yml (~lines 245-290, itself
+          # copied from their deploy-preprod.yml:258-343, "Ловушка 6 — почему не actions/checkout")
+          # — same runner, same uses:-does-not-execute constraint, same private-repo-over-HTTPS
+          # problem this story hit at runs 919/922 (an UNAUTHENTICATED fetch fails in well under a
+          # second, non-interactively: "could not read Username ... No such device or address").
+          # `github.token` is Forgejo's own automatic per-job token — this project's own workflows
+          # never referenced it before this fix, but it is proven live by a sibling team on this
+          # exact runner. ONE deliberate change from their precedent: they pass the Basic-auth
+          # header via `git -c http.extraheader=...`, which puts the (base64, trivially reversible)
+          # credential in this job's own `ps auxww` on this shared, multi-tenant runner — exactly
+          # what this file's own header comment forbids. Passed via `GIT_CONFIG_COUNT`/
+          # `GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars instead (git >= 2.31; this runner is
+          # 2.47.2, confirmed by local simulation) — identical effect on `git fetch`, credential
+          # stays in `env:`, never in argv.
+          if [ -z "${FJ_TOKEN:-}" ]; then
+            echo "FAIL: github.token is empty. This is Forgejo's own automatic per-job token — an"\
+                 "empty value here is a runner/instance-level problem, not something this workflow"\
+                 "controls. This IS the discriminator runs 919/922 already proved negatively (no"\
+                 "token supplied at all, back then) — now testing the positive side."
+            exit 1
+          fi
+          if [ -z "${REF_IN:-}" ]; then
+            echo "FAIL: no ref was supplied."
+            exit 1
+          fi
+
+          AUTH_B64="$(printf 'x-access-token:%s' "$FJ_TOKEN" | base64 | tr -d '\n')"
+
           rm -rf stand-checkout
           mkdir stand-checkout
           cd stand-checkout
           git init --quiet
-          git remote add origin https://git.crm-prionex.com/CRM/fe-prionex.git
-          if ! git fetch --quiet --depth 1 origin "$REF_IN"; then
-            echo "FAIL: could not fetch ref '${REF_IN}' from the repository. It may not exist, or"\
-                 "this server does not allow fetching it by this exact form (branch/tag names are"\
-                 "expected to work; an arbitrary bare SHA may not, depending on server config)."
-            exit 1
+          git remote add origin "${SERVER_URL}/${REPO_SLUG}.git"
+
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.extraheader
+          export GIT_CONFIG_VALUE_0="Authorization: Basic ${AUTH_B64}"
+
+          # `git fetch <ref>` (not `--branch`) works uniformly for a branch, a tag, or a bare SHA,
+          # assuming the server allows fetching an arbitrary ref by this exact form. Fallback below
+          # (a full fetch of every branch and tag, same fallback api-prionex's own deploy-dev.yml
+          # uses) covers the case where it does not.
+          if git fetch --quiet --depth 1 --no-tags origin "$REF_IN"; then
+            git checkout --quiet --detach FETCH_HEAD
+          else
+            echo "Single-ref fetch of '${REF_IN}' failed (some Forgejo instances refuse to serve an"\
+                 "arbitrary ref/SHA in one shot) — falling back to a full fetch of every branch and"\
+                 "tag."
+            if ! git fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'; then
+              echo "FAIL: could not fetch from the repository at all, even a full fetch. Ref"\
+                   "'${REF_IN}' may not exist, or the credential/URL is wrong."
+              exit 1
+            fi
+            if ! git checkout --quiet --detach "$REF_IN"; then
+              echo "FAIL: ref '${REF_IN}' was not found after a full fetch of every branch and tag."\
+                   "It does not exist on this repository."
+              exit 1
+            fi
           fi
-          git checkout --quiet FETCH_HEAD
+
+          unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
           cd ..
           test -f stand-checkout/docker-compose.stand.yml
-          echo "OK: docker-compose.stand.yml obtained at ref '${REF_IN}'."
+          echo "OK: docker-compose.stand.yml obtained at ref '${REF_IN}' (HEAD $(cd stand-checkout && git rev-parse HEAD))."
 
       - name: Write the stand's five required variables (Task 4.2, 4.3, 4.4)
         env:

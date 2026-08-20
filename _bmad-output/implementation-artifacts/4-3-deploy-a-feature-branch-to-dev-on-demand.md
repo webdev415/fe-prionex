@@ -467,6 +467,16 @@ mechanism actually produces — or recorded as moot, with the reason.
   - [ ] 8.5 Optional but cheap, and it closes AC5's last clause hard: run the anchored container
         check while a `forgejo-runner-fe-prionex*` container is present (it always is) and show that
         the **unanchored** form would have passed. Same command, both outcomes.
+  - [x] 8.6 **FAIL, discriminating (git-fetch auth) — added this round after runs 919/922, not in
+        the original four rows.** The "Obtain docker-compose.stand.yml" step's own credential guard
+        (`github.token` empty) fails in under 60 seconds, before any registry or stand action.
+        **Already proven, post-hoc, by runs 919 and 922** — both failed via exactly this path (an
+        anonymous `git fetch` of a private repo, before the `github.token` fix existed in this
+        workflow at all), confirmed by direct SSH reproduction on s1 (the exact job network path,
+        no credential: `fatal: could not read Username ... No such device or address`, <1s), not
+        by log access (Completion Notes 3-4). No fresh dispatch spent to re-earn this row — the two
+        historical runs already are it, per the coordinator's own instruction to record them as
+        such rather than re-run a known-negative case.
 
 - [ ] **Task 9 — Record the decisions (AC8)**
   - [ ] 9.1 New D-record in `docs/migration-decisions.md` (**Russian**, D-series; next free number —
@@ -990,7 +1000,34 @@ is a standing, non-revocable credential by this project's own established constr
 cannot revoke another account's token), so it is not done unilaterally here; asked of the
 coordinator instead, same as Task 3's original resolution path.
 
-**5. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
+**5. Blocker cleared by the coordinator without minting: `github.token` (Forgejo's automatic
+per-job token), precedent from CRM/api-prionex's own `deploy-dev.yml` on this same runner.**
+Wired into the "Obtain docker-compose.stand.yml" step and mirrored in `clone-test`. One deliberate
+adaptation, not a blind copy: their precedent passes the Basic-auth header via `git -c
+http.extraheader=...`, which would put the (trivially reversible, base64) credential in this job's
+own `ps auxww` on this shared, multi-tenant runner — exactly what this file's own header comment
+forbids and every other credential in it already avoids. Used the equivalent
+`GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` environment-variable form instead (git
+>= 2.31; this runner's git is 2.47.2, already measured by local simulation) — same effect on `git
+fetch`, credential stays in `env:`, never in argv.
+**Mechanism verified locally on s1 before this push, no dispatch spent:** `GIT_CURL_VERBOSE=1`
+confirmed the header actually reaches the outgoing request (`Send header: Authorization: Basic
+<redacted>`), and — importantly — a first attempt with a deliberately wrong dummy token still
+showed `fatal: could not read Username ... No such device or address`, which looked at first like
+the header wasn't taking effect. It was a false alarm: retried with a REAL but wrong-*scope*
+credential (`fe_reg_4_2_ro`, `read:package`, the same one used to rule out digest resolution in
+Note 4) and got a clean `remote: Forbidden` / `403`, no interactive-prompt fallback at all — a 401
+sends git back into its own credential-retry/prompt logic (which fails with no tty, unrelated to
+this mechanism), a 403 does not. This confirms the `GIT_CONFIG_*` header-injection mechanism itself
+works correctly end to end; only the credential's *scope* was ever the variable in that check, not
+the delivery mechanism. `github.token` — the actual credential this fix uses — was not directly
+testable this way (it only exists inside a real job's own dispatch context), so live confirmation
+is `clone-test`'s job, next.
+**Task 8's matrix updated**: a new discriminating row 8.6 records runs 919/922 post-hoc as the
+NEGATIVE case for this exact guard (no token at all, before this fix existed) — not re-earned by a
+redundant dispatch, per the coordinator's own instruction.
+
+**6. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
 dispatch.** Job identity is uid 0/root (not the runner supervisor's `1501:988` — corrects D28 §4's
 own H5 amendment); docker/compose/git/curl/jq/wget versions recorded; the mounted socket reaches
 the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-resolution mechanism
@@ -998,7 +1035,7 @@ the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-r
 (`fe_reg_4_2_ro`, Story 4.2's) *before* being written into `deploy-dev.yml` — the exact HTTP
 status/header shapes the workflow's own fail-closed guard (Task 5.4) now classifies.
 
-**6. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
+**7. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
 credential login → digest resolve (fail-closed on 401/404/other) → pull → render `.env` in the job
 workspace (digest-pinned `DOCKER_IMAGE`, `FRONTEND_PORT=127.0.0.1:8082`) → capture network id →
 `down` → `up -d` → confirm network unchanged → health-poll → anchored container/label check →
@@ -1019,7 +1056,10 @@ job, explicitly, not this one's.**
   length/presence and registry reachability, independently job-listed, no log access needed);
   round 2 (run 922) added `clone-test` (reproduces the anonymous-git-fetch root cause live) and
   `digest-resolve-test` (confirms the workflow's own registry credential resolves a real tag);
-  `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`
+  round 3 fixed the actual root cause — the "Obtain docker-compose.stand.yml" step and `clone-test`
+  now authenticate via `github.token` (precedent: CRM/api-prionex's own `deploy-dev.yml` on this
+  same runner), header injected via `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`
+  (never argv); `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -1033,3 +1073,4 @@ job, explicitly, not this one's.**
 | 2026-08-20 | **Probe redesigned into three jobs after run 917's ambiguous single-job result** (coordinator's report: dispatch-from-non-default-branch confirmed working; the `uses:` question stayed undetermined). `deploy-dev.yml` written in full, in the plain-`run:` form the precedent (`build.yml:107-124`) and the ambiguous-but-consistent probe result both point to — registry digest resolution proven live against the real registry (200/401/404) with a real credential before being written into the workflow. Tasks 1b/3/4/5/6/7 marked implemented, pending Task 8's live verification |
 | 2026-08-20 | **Run 920: `uses:` steps confirmed (not inferred) to not execute on this runner's job image — Task 2.2 closed negatively, measured.** Run 919: `deploy-dev.yml`'s first live dispatch (`ref=main`) failed in <60s. Diagnosed by reproducing the exact job network path on s1 via SSH — DNS, registry reachability, and `docker login` failure mode all clean, ruling out a network cause; leading hypothesis is the org secrets existing but not being granted to this repository specifically. Confirmed by SSH that the stand was untouched (fail-closed held). Fix: a new `preflight` job ahead of `deploy`, reporting secret presence (by length, never value) and registry reachability independently, so the run's job list alone (no log access) will show which is true on the next dispatch. Caught and fixed a real bug while writing it: `${#VAR}` crashes under `set -u` on a genuinely unset variable — changed to default-to-empty first |
 | 2026-08-20 | **Run 922: `preflight` passed, refuting the org-secret hypothesis; the real cause found and confirmed for free via SSH, no second dispatch spent to learn it.** Root cause confirmed: the "obtain compose file" step does an anonymous `git fetch` of a private repo — reproduced live on s1 (exact job network, no credential): fails in under a second, non-interactively, `fatal: could not read Username ... No such device or address`. Digest resolution ruled out (a real, equivalent-scope credential resolved a real tag cleanly, 200). Also checked, not assumed: the workflow's own `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` cannot be reused for the fetch — an equivalent-scope credential got a same-instance `403 required scope(s): [read:repository]` reading repo content. Fix needs a `read:repository`-scoped credential that does not yet exist in this workflow — flagged to the coordinator rather than minted unilaterally (a minted token here would be standing/non-revocable by this project's own established constraint). Ladder extended per the coordinator's request: `clone-test` (reproduces the fetch live — job-list evidence, expected to fail until a credential exists) and `digest-resolve-test` (resolves a real tag with the workflow's own live credential, expected to pass); `deploy` now needs all three preceding jobs |
+| 2026-08-20 | **Blocker cleared by the coordinator, no minting: `github.token` (Forgejo's automatic per-job token), precedent from CRM/api-prionex's own `deploy-dev.yml` on this same runner.** Wired into the git-fetch step and `clone-test`, adapted from the precedent's `git -c http.extraheader=...` (argv-exposed) into `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars, to keep the credential out of this job's own `ps auxww` per this file's own established rule. Mechanism verified on s1 before this push: `GIT_CURL_VERBOSE` confirmed the header reaches the request; a real (wrong-scope) credential got a clean `403`, not the anonymous-fetch failure — confirming the delivery mechanism works, independent of `github.token` itself, which is only testable inside a real dispatch. `clone-test` now expected to PASS; runs 919/922 recorded post-hoc as Task 8's new discriminating row 8.6 (no token → this exact failure) rather than re-earned by a redundant dispatch |
