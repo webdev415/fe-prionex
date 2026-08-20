@@ -3893,7 +3893,8 @@
           "agent": "learned",
           "observation": "observation",
           "unknown": "other"
-        }
+        },
+        "collapsedHint": "{{count}} scopes · click to show"
       },
       "internals": {
         "title": "Assistant internals",

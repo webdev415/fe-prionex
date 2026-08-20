@@ -33,16 +33,55 @@ export function makeMemoryTitle(content: string): string {
 
 export type MemorySourceKey = 'user' | 'agent' | 'observation' | 'unknown'
 
+/** Записи этого вида — всегда наблюдения, каким бы ни был `source`. */
+const OBSERVATION_KIND = 'profile'
+
+/** `source`, которыми мозг помечает наблюдения о собеседнике и сид-справочник. */
+const OBSERVATION_SOURCES = new Set(['seed', 'profile', 'profiler'])
+
 /**
  * Ключ подписи происхождения. Неизвестный `source` даёт нейтральное «інше»:
  * мозг заводит новые виды раньше фронта, и бейдж не должен превращаться в
  * сырой слаг или пустоту.
+ *
+ * `kind` важнее `source`: наблюдения ночного профайлера приезжают как
+ * `kind='profile'`, а `source` у них менялся ('profile' → 'profiler'), и
+ * подпись «інше» на всей ленте профиля — ровно то, что мы этим чиним.
  */
-export function memorySourceKey(source: string): MemorySourceKey {
+export function memorySourceKey(source: string, kind?: string): MemorySourceKey {
+  if (kind === OBSERVATION_KIND) return 'observation'
   if (source === 'user') return 'user'
   if (source === 'agent') return 'agent'
-  if (source === 'seed' || source === 'profile') return 'observation'
+  if (OBSERVATION_SOURCES.has(source)) return 'observation'
   return 'unknown'
+}
+
+/** Хвостовое многоточие обрезанного заголовка (обе формы: символ и три точки). */
+const TITLE_ELLIPSIS = /(?:…|\.{3})\s*$/
+
+/**
+ * Показывать ли заголовок отдельной строкой под текстом факта.
+ *
+ * Заголовок полезен, только когда несёт что-то сверх самого текста. Он этого
+ * НЕ делает в двух случаях, и оба видны на живом экране:
+ * - наблюдения профайлера: там машинное «Профиль оператора: …» — служебный
+ *   префикс, который лишь дублирует начало факта;
+ * - записи оператора: фронт сам собирает title из первых ~60 символов текста,
+ *   так что подзаголовок оказывается обрезанной копией строки выше.
+ */
+export function shouldShowMemoryTitle(
+  title: string | null | undefined,
+  content: string,
+  sourceKey: MemorySourceKey
+): boolean {
+  const cleanTitle = (title ?? '').trim()
+  const cleanContent = content.trim()
+  if (!cleanTitle || cleanTitle === cleanContent) return false
+  if (sourceKey === 'observation') return false
+  // Обрезанный вариант того же текста: сравниваем по началу, сняв многоточие.
+  const head = cleanTitle.replace(TITLE_ELLIPSIS, '').trim()
+  if (head && cleanContent.startsWith(head)) return false
+  return true
 }
 
 export const MEMORY_SOURCE_BADGE_CLASS: Record<MemorySourceKey, string> = {

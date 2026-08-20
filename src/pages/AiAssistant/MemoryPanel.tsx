@@ -31,6 +31,7 @@ import { classifyMemoryError, type AssistantMemoryItem } from '@/features/aiAssi
 import {
   formatMemoryDate,
   makeMemoryTitle,
+  shouldShowMemoryTitle,
   MEMORY_CONTENT_MAX_LENGTH,
   MEMORY_SOURCE_BADGE_CLASS,
   memorySourceKey,
@@ -42,10 +43,10 @@ function MemoryRow({ item }: { item: AssistantMemoryItem }) {
 
   const title = item.title?.trim()
   const content = item.content.trim()
-  // Заголовок показываем подзаголовком только когда он несёт что-то сверх текста
-  // (сервер часто кладёт в title тот же текст — дублировать его незачем).
-  const showTitle = Boolean(title) && title !== content
-  const sourceKey = memorySourceKey(item.source)
+  const sourceKey = memorySourceKey(item.source, item.kind)
+  // Подзаголовок — только когда он несёт что-то сверх текста факта:
+  // машинное «Профиль оператора: …» и обрезанная копия строки выше не несут.
+  const showTitle = shouldShowMemoryTitle(title, content, sourceKey)
 
   const handleDelete = () => {
     deleteMutation.mutate(item.id, {

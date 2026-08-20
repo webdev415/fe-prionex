@@ -102,6 +102,13 @@ const USERS: UserListResponse = {
   pagination: { page: 1, page_size: 100, total_count: 1, total_pages: 1 },
 }
 
+/** Первая ступень: карточка свёрнута, список скоупов появляется по клику. */
+async function openScopeList(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await screen.findByTestId('assistant-memory-card')
+  await user.click(screen.getByTestId('assistant-memory-toggle'))
+  await screen.findAllByTestId(/^assistant-memory-scope-/)
+}
+
 /** Раскрыть строку скоупа, не завися от того, успел ли догрузиться справочник имён. */
 function expandScope(scope: string): HTMLElement {
   return within(screen.getByTestId(`assistant-memory-scope-${scope}`)).getByRole('button')
@@ -146,10 +153,28 @@ describe('AssistantMemorySection', () => {
     expect(screen.queryByTestId('assistant-memory-section')).not.toBeInTheDocument()
   })
 
-  it('renders the scope summary with the shared reference on top', async () => {
+  it('keeps the scope list collapsed until the card is clicked', async () => {
+    const user = userEvent.setup()
     renderSection()
 
-    expect(await screen.findByTestId('assistant-memory-card')).toBeInTheDocument()
+    await screen.findByTestId('assistant-memory-card')
+    // Свёрнуто: ни строк скоупов, ни запроса справочника имён.
+    expect(screen.queryAllByTestId(/^assistant-memory-scope-/)).toHaveLength(0)
+    expect(mockGetUsers).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId('assistant-memory-toggle'))
+    expect(await screen.findByTestId('assistant-memory-scope-global')).toBeInTheDocument()
+
+    // Повторный клик — снова прячем список.
+    await user.click(screen.getByTestId('assistant-memory-toggle'))
+    expect(screen.queryAllByTestId(/^assistant-memory-scope-/)).toHaveLength(0)
+  })
+
+  it('renders the scope summary with the shared reference on top', async () => {
+    const user = userEvent.setup()
+    renderSection()
+
+    await openScopeList(user)
     const rows = screen.getAllByTestId(/^assistant-memory-scope-/)
     expect(rows.map((row) => row.dataset.testid)).toEqual([
       'assistant-memory-scope-global',
@@ -168,7 +193,7 @@ describe('AssistantMemorySection', () => {
     const user = userEvent.setup()
     renderSection()
 
-    await screen.findByTestId('assistant-memory-card')
+    await openScopeList(user)
     expect(mockGetScope).not.toHaveBeenCalled()
 
     await user.click(expandScope('user:6951'))
@@ -182,7 +207,7 @@ describe('AssistantMemorySection', () => {
     const user = userEvent.setup()
     renderSection()
 
-    await screen.findByTestId('assistant-memory-card')
+    await openScopeList(user)
     await user.click(expandScope('user:6951'))
     await screen.findByTestId('assistant-memory-record-11')
 

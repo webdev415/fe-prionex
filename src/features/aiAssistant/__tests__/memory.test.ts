@@ -12,6 +12,7 @@ import { classifyMemoryError, normalizeMemoryList } from '../api'
 import {
   makeMemoryTitle,
   memorySourceKey,
+  shouldShowMemoryTitle,
   MEMORY_TITLE_LENGTH,
   formatMemoryDate,
 } from '../memoryPresentation'
@@ -42,16 +43,50 @@ describe('makeMemoryTitle', () => {
   })
 })
 
+describe('shouldShowMemoryTitle', () => {
+  it('прячет машинный заголовок наблюдения профайлера', () => {
+    expect(
+      shouldShowMemoryTitle(
+        'Профиль оператора: Предпочитаемый формат…',
+        'Предпочитаемый формат: количественные выборки.',
+        'observation'
+      )
+    ).toBe(false)
+  })
+
+  it('прячет обрезанную копию текста (заголовок из первых символов)', () => {
+    const content = 'Веду портфель Alfa, суммы пишу без копеек и всегда с валютой.'
+    expect(
+      shouldShowMemoryTitle('Веду портфель Alfa, суммы пишу без копеек…', content, 'user')
+    ).toBe(false)
+    expect(
+      shouldShowMemoryTitle('Веду портфель Alfa, суммы пишу без копеек...', content, 'user')
+    ).toBe(false)
+  })
+
+  it('показывает заголовок, который несёт своё содержание', () => {
+    expect(shouldShowMemoryTitle('Формат отчётов', 'Суммы пишу без копеек.', 'user')).toBe(true)
+  })
+
+  it('пустой заголовок и точная копия текста не показываются', () => {
+    expect(shouldShowMemoryTitle('', 'текст', 'user')).toBe(false)
+    expect(shouldShowMemoryTitle('текст', 'текст', 'user')).toBe(false)
+  })
+})
+
 describe('memorySourceKey', () => {
   it('maps the documented sources', () => {
     expect(memorySourceKey('user')).toBe('user')
     expect(memorySourceKey('agent')).toBe('agent')
     expect(memorySourceKey('seed')).toBe('observation')
     expect(memorySourceKey('profile')).toBe('observation')
+    expect(memorySourceKey('profiler')).toBe('observation')
   })
 
   it('falls back to a neutral badge for a source the brain invented later', () => {
     expect(memorySourceKey('call_qa')).toBe('unknown')
+    // kind важнее source: наблюдение профайлера остаётся наблюдением
+    expect(memorySourceKey('call_qa', 'profile')).toBe('observation')
     expect(memorySourceKey('')).toBe('unknown')
   })
 })

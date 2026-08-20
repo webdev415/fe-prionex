@@ -61,7 +61,7 @@ function MemoryRecord({ item, scope }: { item: AssistantMemoryItem; scope: strin
   const { t, i18n } = useTranslation('common')
   const deleteMutation = useDeleteAssistantMemoryRecord()
 
-  const sourceKey = memorySourceKey(item.source)
+  const sourceKey = memorySourceKey(item.source, item.kind)
 
   const handleDelete = () => {
     deleteMutation.mutate(
@@ -193,6 +193,10 @@ function ScopeRow({
 export function AssistantMemorySection() {
   const { t } = useTranslation('common')
   const summaryQuery = useAssistantMemorySummary()
+  // Две ступени: сначала раскрывается список скоупов, потом записи внутри одного.
+  // Свёрнуто по умолчанию — иначе таблица на сотню операторов занимает всю
+  // страницу настроек, а раздел здесь не главный.
+  const [listOpen, setListOpen] = useState(false)
   const [expandedScope, setExpandedScope] = useState<string | null>(null)
 
   const scopes = useMemo(() => {
@@ -206,7 +210,7 @@ export function AssistantMemorySection() {
     })
   }, [summaryQuery.data])
 
-  const directoryQuery = useUserDirectory(scopes.length > 0)
+  const directoryQuery = useUserDirectory(listOpen && scopes.length > 0)
   const directory = directoryQuery.data
 
   const scopeLabel = (scope: string): string => {
@@ -247,21 +251,42 @@ export function AssistantMemorySection() {
             data-testid="assistant-memory-card"
             className="border-border bg-card flex flex-col gap-2 rounded-xl border p-4 shadow-sm"
           >
-            <div className="flex items-start gap-3">
+            <button
+              type="button"
+              data-testid="assistant-memory-toggle"
+              aria-expanded={listOpen}
+              onClick={() => setListOpen((open) => !open)}
+              className="hover:bg-muted/50 -m-1 flex items-start gap-3 rounded-lg p-1 text-left transition-colors"
+            >
               <div className="bg-primary-100 text-primary-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
                 <Icons.AiBrain03 size={16} strokeWidth={2} />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-foreground text-sm font-medium">
                   {t('pages.aiSettings.memory.tableTitle')}
                 </div>
                 <div className="text-muted-foreground mt-0.5 text-xs">
-                  {t('pages.aiSettings.memory.tableDescription')}
+                  {listOpen
+                    ? t('pages.aiSettings.memory.tableDescription')
+                    : t('pages.aiSettings.memory.collapsedHint', { count: scopes.length })}
                 </div>
               </div>
-            </div>
+              {listOpen ? (
+                <Icons.ArrowUp
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-muted-foreground mt-1 shrink-0"
+                />
+              ) : (
+                <Icons.ArrowDown
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-muted-foreground mt-1 shrink-0"
+                />
+              )}
+            </button>
 
-            {scopes.length === 0 ? (
+            {!listOpen ? null : scopes.length === 0 ? (
               <div
                 data-testid="assistant-memory-empty"
                 className="text-muted-foreground py-2 text-sm"
