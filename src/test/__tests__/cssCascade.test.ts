@@ -118,13 +118,84 @@ describe('winningDeclaration', () => {
     expect(winningDeclaration(el, 'color')?.value).toBe('#ffffff')
   })
 
-  it('skips @media blocks rather than mis-ranking them', () => {
+  it('throws when an at-rule contains a genuine competitor', () => {
+    // Returning rgb(1,1,1) here would be a wrong winner, not a skipped rule:
+    // in a browser with the dark scheme active .wrap .item wins on specificity.
     const el = load(
       `.item { color: rgb(1, 1, 1); }
        @media (prefers-color-scheme: dark) { .wrap .item { color: rgb(2, 2, 2); } }`,
       `<div class="wrap"><li id="target" class="item"></li></div>`
     )
+    // The message must NAME the block: a reader hitting this needs to know
+    // whether it is a query that could apply here or one that never will.
+    expect(() => winningDeclaration(el, 'color')).toThrow(/@media \(prefers-color-scheme: dark\)/)
+  })
+
+  it('ignores at-rule contents that could not have competed', () => {
+    // Same block, different property and a non-matching selector: neither could
+    // change the answer, so the resolver must stay quiet rather than refuse to
+    // answer any question about a stylesheet that happens to contain @media.
+    const el = load(
+      `.item { color: rgb(1, 1, 1); }
+       @media (prefers-color-scheme: dark) {
+         .item { background-color: rgb(9, 9, 9); }
+         .somewhere-else { color: rgb(2, 2, 2); }
+       }`,
+      `<div class="wrap"><li id="target" class="item"></li></div>`
+    )
     expect(winningDeclaration(el, 'color')?.value).toBe('rgb(1, 1, 1)')
+  })
+
+  it('does not let a statement at-rule swallow the rule after it', () => {
+    // react-datepicker.css opens with @charset, and the prelude used to carry
+    // it into the next selector — which then looked like an at-rule and was
+    // dropped, losing that stylesheet's entire first rule.
+    const el = load(
+      `@charset "UTF-8";
+       .item { color: rgb(4, 4, 4); }`,
+      `<li id="target" class="item"></li>`
+    )
+    expect(winningDeclaration(el, 'color')?.value).toBe('rgb(4, 4, 4)')
+  })
+
+  it('treats a brace inside a quoted value as data, not structure', () => {
+    // ``content: "{"`` is legal CSS. Counting that brace mis-sliced every rule
+    // after it, and tripped the nesting guard on a rule that has no nesting.
+    const el = load(
+      `.item { content: "{"; color: rgb(3, 3, 3); }
+       .item { background-color: rgb(7, 7, 7); }`,
+      `<li id="target" class="item"></li>`
+    )
+    expect(winningDeclaration(el, 'color')?.value).toBe('rgb(3, 3, 3)')
+    // The rule AFTER it must still be found — proof the slice stayed aligned.
+    expect(winningDeclaration(el, 'background-color')?.value).toBe('rgb(7, 7, 7)')
+  })
+
+  it('throws on a nested rule rather than mis-attributing it', () => {
+    const el = load(
+      `.item { color: rgb(1, 1, 1); &:hover { color: rgb(2, 2, 2); } }`,
+      `<li id="target" class="item"></li>`
+    )
+    expect(() => winningDeclaration(el, 'color')).toThrow(/nested/)
+  })
+
+  it('does not split a declaration value on a quoted semicolon', () => {
+    // Must query the property whose OWN value holds the quoted ';' — a later
+    // declaration survives the bad split intact, so asserting on `color` here
+    // would pass with or without the fix.
+    const el = load(
+      `.item { content: "a;b"; color: rgb(6, 6, 6); }`,
+      `<li id="target" class="item"></li>`
+    )
+    expect(winningDeclaration(el, 'content')?.value).toBe('"a;b"')
+  })
+
+  it('does not split a selector list inside an attribute value', () => {
+    const el = load(
+      `[data-x="a,b"] .item { color: rgb(5, 5, 5); }`,
+      `<div data-x="a,b"><li id="target" class="item"></li></div>`
+    )
+    expect(winningDeclaration(el, 'color')?.value).toBe('rgb(5, 5, 5)')
   })
 
   it('ignores commented-out rules', () => {

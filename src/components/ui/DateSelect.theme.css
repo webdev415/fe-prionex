@@ -223,34 +223,21 @@
   background-color: var(--card) !important;
 }
 
-/* The ``:not([aria-disabled='true'])`` guard on the next two rules is
-   load-bearing (KAN-992). Both paint EVERY slot with ``!important``, which
-   outranks react-datepicker's own greying of a blocked slot (a plain
-   ``color: #ccc``, no ``!important``) however specific the library selector
-   is. Unguarded, a slot that ``filterTime`` has disabled — a past time on
-   today, for a step with "Date cannot be in the past" — drew in full
-   foreground colour and still lit up on hover, so it looked and felt
-   clickable while the click was silently dropped. react-datepicker sets
-   ``aria-disabled="true"`` on exactly those slots, so keying off it needs no
-   cooperation from the call site. Excluding them from the hover rule also
-   hands the hover background back to the library's own
-   ``--disabled:hover { background-color: transparent }``. The ``cursor`` was
-   never ours to break — nothing here sets it on a slot, so the library's
-   ``default`` on blocked slots already won both before and after.
+/* Both arguments to the ``:not()`` on the next two rules are load-bearing
+   (KAN-992), for different reasons.
 
-   The ``--selected`` half of each ``:not()`` is load-bearing for a different
-   reason: specificity, not matching. Before the guard existed these two rules
-   were (0,2,0)/(0,3,0) and merely TIED the ``--selected`` pair below, which
-   won on source order alone. Adding ``[aria-disabled]`` pushed them to
-   (0,3,0)/(0,4,0) and broke that tie the wrong way, so the selected slot lost
-   its white-on-primary look: dark ``--foreground`` text on the accent
-   background at rest, and ``--muted`` replacing the accent entirely on hover,
-   which made the operator's current value read as unselected while hovered.
-   Excluding ``--selected`` here means these rules no longer match a selected
-   slot at all, so the relative specificity stops mattering. This mirrors the
-   ``__day:hover:not(--selected, --keyboard-selected)`` rule above — same
-   hazard, same shape, and the reason that one spells the exclusion out
-   instead of trusting rule order. */
+   ``[aria-disabled='true']`` — these rules paint every slot with
+   ``!important``, which outranks react-datepicker's own greying of a blocked
+   slot however specific the library selector is. Excluding blocked slots is
+   what lets the greying rule below apply at all, and hands their hover
+   background back to the library's ``--disabled:hover``.
+
+   ``--selected`` — here the problem is specificity, not matching. Adding
+   ``[aria-disabled]`` lifts these rules above the ``--selected`` pair below
+   rather than tying it, so the operator's current value would lose its
+   white-on-primary look. The ``__day:hover:not(--selected,
+   --keyboard-selected)`` rule above spells out the same exclusion against the
+   same hazard. */
 .date-select-calendar
   .react-datepicker__time-list-item:not(
     [aria-disabled='true'],
@@ -269,19 +256,14 @@
 }
 
 /* Blocked slot. Mirrors ``__day--disabled`` above so a disabled time reads
-   exactly like a disabled day, and restates the look in theme tokens instead
-   of leaving it to the library's hardcoded #ccc — which is near-invisible on
-   the dark themes.
+   like a disabled day, in theme tokens rather than the library's hardcoded
+   #ccc — near-invisible on the dark themes.
 
-   The ``--selected`` exclusion keeps this change scoped to the bug. A slot can
-   be BOTH selected and blocked — an already-saved value that has since fallen
-   into the past, which the edit modal can reopen onto. An attribute selector
-   outranks the plain class in the ``--selected`` rule below, so without the
-   exclusion this would win and paint muted grey over that rule's primary-500
-   background: low contrast, and a silent change to a slot the bug report never
-   mentioned. Selection is the stronger signal there (it is the operator's
-   current value, and the step already renders an inline "date is in the past"
-   message next to it), so the selected look stays exactly as it was. */
+   Skips ``--selected``: a saved value that has since fallen into the past is
+   both, and greying it would put muted text on the accent background. The
+   selected look wins, so there the refused click is the only cue unless the
+   caller supplies its own message — ChainExecutor, EditTAInteractionModal and
+   AddTaskModal do; CreateKanbanTaskModal does not. */
 .date-select-calendar
   .react-datepicker__time-list-item[aria-disabled='true']:not(
     .react-datepicker__time-list-item--selected

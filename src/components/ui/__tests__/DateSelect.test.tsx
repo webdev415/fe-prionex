@@ -543,6 +543,30 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
     )
   })
 
+  it('does not light up a blocked slot on hover', async () => {
+    // The other half of the reported symptom, and the half that made the slot
+    // feel clickable rather than merely look it: --muted used to win here too.
+    // The guarded hover rule must not reach a blocked slot, leaving
+    // react-datepicker's own --disabled:hover to supply the background.
+    await openWithSelection(SELECTED)
+
+    const winner = winningDeclaration(screen.getByText('09:00'), 'background-color', {
+      hover: true,
+    })
+    expect(winner?.value).not.toBe('var(--muted)')
+    expect(winner?.selector).toContain('--disabled')
+  })
+
+  it('keeps a blocked slot grey while it is hovered', async () => {
+    // The greying rule carries no :hover of its own, so hover must not hand the
+    // slot back to the full-foreground rule.
+    await openWithSelection(SELECTED)
+
+    expect(winningDeclaration(screen.getByText('09:00'), 'color', { hover: true })?.value).toBe(
+      'var(--muted-foreground)'
+    )
+  })
+
   it('leaves a slot that is selected AND blocked looking selected', async () => {
     // Reopening a TA whose saved time has since passed. Two exclusions decide
     // this one: the blocked rule skips --selected, and the guarded rules skip

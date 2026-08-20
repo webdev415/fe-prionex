@@ -26,11 +26,16 @@
  * where the product paints its accent.
  *
  * Scope, deliberately: this covers the flat, single-document stylesheets these
- * component tests load. It does not descend into ``@media``/``@supports``
- * (those rules are skipped, not mis-ranked), does not expand shorthands (ask
- * for the longhand the stylesheet actually declares), and ignores inline
- * styles, ``@layer`` and inheritance. Reach for a real browser if any of that
- * starts to matter.
+ * component tests load. It does not rank rules inside ``@media``, ``@supports``
+ * or ``@layer`` — evaluating a media query is outside what it models, and
+ * ``@layer`` ordering overrides specificity outright, so no amount of parsing
+ * would make the ranking right. Those rules are not dropped either: a skipped
+ * rule that would have won is a mis-ranked cascade, so if one declares the
+ * property asked for AND matches the element, this THROWS rather than hand
+ * back the runner-up. Nested rules throw for the same reason. It does not
+ * expand shorthands (ask for the longhand the stylesheet actually declares),
+ * and ignores inline styles and inheritance. Reach for a real browser if any
+ * of that starts to matter.
  */
 
 /** Specificity triple: [id, class/attribute/pseudo-class, element]. */
@@ -39,14 +44,28 @@ export type Specificity = [number, number, number]
 const compareSpecificity = (a: Specificity, b: Specificity): number =>
   a[0] - b[0] || a[1] - b[1] || a[2] - b[2]
 
-/** Split on a separator that appears outside any parentheses. */
+/**
+ * Split on a separator that appears outside parentheses, brackets and quotes.
+ *
+ * Brackets and quotes matter as much as parens here: a selector list holding
+ * ``[data-x="a,b"]`` and a declaration value holding a quoted semicolon both
+ * split in the wrong place without them, and the resulting garbage selector
+ * fails to match rather than announcing itself.
+ */
 const splitTopLevel = (input: string, separator: string): string[] => {
   const parts: string[] = []
   let depth = 0
+  let quote: string | null = null
   let current = ''
   for (const ch of input) {
-    if (ch === '(') depth++
-    else if (ch === ')') depth--
+    if (quote) {
+      current += ch
+      if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '"' || ch === "'") quote = ch
+    else if (ch === '(' || ch === '[') depth++
+    else if (ch === ')' || ch === ']') depth--
     if (ch === separator && depth === 0) {
       parts.push(current)
       current = ''
@@ -162,6 +181,12 @@ interface Options {
    * so a ``:hover`` selector never matches there; hover selectors are matched
    * with the ``:hover`` removed, while their specificity is still computed
    * from the full selector.
+   *
+   * Every ``:hover`` in the selector is removed, not just a trailing one, so
+   * ``.parent:hover .child`` resolves as ``.parent .child`` — i.e. as though
+   * the CHILD were hovered. Every hover rule in the stylesheets these tests
+   * load ends in ``:hover`` on the subject, so the approximation is exact
+   * there; a descendant-of-hovered-ancestor rule would need a real browser.
    */
   hover?: boolean
 }
@@ -170,17 +195,87 @@ interface RawRule {
   selector: string
   body: string
   order: number
+  /** Enclosing at-rule prelude, when the rule was found inside one. */
+  atRule?: string
 }
 
-/** Strip comments, then collect top-level ``selector { body }`` pairs. */
-const parseRules = (css: string, into: RawRule[], counter: { n: number }): void => {
+interface ParseSink {
+  /** Rules this resolver can rank. */
+  rules: RawRule[]
+  /** Rules found inside an at-rule block, kept so they can be reported. */
+  deferred: RawRule[]
+  counter: { n: number }
+}
+
+/**
+ * Index of the quote that closes the one at ``start``, or the last index if the
+ * string is unterminated. Backslash escapes are honoured.
+ */
+const closingQuote = (text: string, start: number): number => {
+  const quote = text[start]
+  for (let k = start + 1; k < text.length; k++) {
+    if (text[k] === '\\') {
+      k++
+      continue
+    }
+    if (text[k] === quote) return k
+  }
+  return text.length - 1
+}
+
+/** Does the body hold a ``{`` that is real structure rather than string data? */
+const hasNestedBlock = (body: string): boolean => {
+  for (let k = 0; k < body.length; k++) {
+    const ch = body[k]
+    if (ch === '"' || ch === "'") {
+      k = closingQuote(body, k)
+      continue
+    }
+    if (ch === '{') return true
+  }
+  return false
+}
+
+/**
+ * Strip comments, then collect top-level ``selector { body }`` pairs.
+ *
+ * Rules inside an at-rule block go to ``deferred`` rather than being thrown
+ * away, so ``winningDeclaration`` can tell whether one of them would have
+ * changed the answer instead of silently returning the runner-up. ``atRule``
+ * carries the enclosing prelude down so the report can name it.
+ */
+const parseRules = (css: string, sink: ParseSink, atRule?: string): void => {
   const text = css.replace(/\/\*[\s\S]*?\*\//g, '')
   let prelude = ''
   let i = 0
 
   while (i < text.length) {
-    if (text[i] !== '{') {
-      prelude += text[i]
+    const ch = text[i]
+
+    // A quoted string is data, not structure. Stepping over it whole keeps a
+    // ``{``, ``}`` or ``;`` inside one — ``content: "{"`` is legal CSS — from
+    // being counted as a brace or a statement end, which would mis-slice every
+    // rule after it.
+    if (ch === '"' || ch === "'") {
+      const close = closingQuote(text, i)
+      prelude += text.slice(i, close + 1)
+      i = close + 1
+      continue
+    }
+
+    // A statement at-rule (``@charset "UTF-8";``, ``@import …;``, ``@layer a,
+    // b;``) ends at a semicolon and owns no block. Without this reset its text
+    // stays in the prelude and is glued onto the NEXT selector, which then
+    // starts with ``@`` and is dropped — react-datepicker.css opens with
+    // ``@charset`` and lost its entire first rule that way.
+    if (ch === ';') {
+      prelude = ''
+      i++
+      continue
+    }
+
+    if (ch !== '{') {
+      prelude += ch
       i++
       continue
     }
@@ -188,16 +283,36 @@ const parseRules = (css: string, into: RawRule[], counter: { n: number }): void 
     let depth = 1
     let j = i + 1
     while (j < text.length && depth > 0) {
-      if (text[j] === '{') depth++
-      else if (text[j] === '}') depth--
+      const c = text[j]
+      if (c === '"' || c === "'") {
+        j = closingQuote(text, j) + 1
+        continue
+      }
+      if (c === '{') depth++
+      else if (c === '}') depth--
       j++
     }
 
     const selector = prelude.trim()
-    // At-rules are skipped whole — see the scope note above.
-    if (selector && !selector.startsWith('@')) {
-      into.push({ selector, body: text.slice(i + 1, j - 1), order: counter.n++ })
+    const body = text.slice(i + 1, j - 1)
+
+    if (selector.startsWith('@')) {
+      // Descend so the rules inside are known, but keep them out of the
+      // ranking: @media needs its query evaluated and @layer overrides
+      // specificity outright, neither of which this resolver models.
+      parseRules(body, sink, atRule ? `${atRule} > ${selector}` : selector)
+    } else if (selector) {
+      if (hasNestedBlock(body)) {
+        throw new Error(
+          `cssCascade: the rule ${JSON.stringify(selector.slice(0, 80))} contains a nested ` +
+            `block. Nesting is not parsed, and the inner rules would be mis-attributed to ` +
+            `the outer selector. Flatten the rule or resolve it in a real browser.`
+        )
+      }
+      const rule: RawRule = { selector, body, order: sink.counter.n++, atRule }
+      ;(atRule ? sink.deferred : sink.rules).push(rule)
     }
+
     prelude = ''
     i = j
   }
@@ -221,14 +336,13 @@ const parseDeclaration = (body: string, property: string) => {
   return found
 }
 
-const loadedRules = (): RawRule[] => {
-  const rules: RawRule[] = []
-  const counter = { n: 0 }
+const loadedRules = (): ParseSink => {
+  const sink: ParseSink = { rules: [], deferred: [], counter: { n: 0 } }
 
   for (const sheet of Array.from(document.styleSheets)) {
     const raw = (sheet.ownerNode as HTMLStyleElement | null)?.textContent
     if (raw) {
-      parseRules(raw, rules, counter)
+      parseRules(raw, sink)
       continue
     }
     // No inline source (e.g. a constructed sheet): fall back to the CSSOM and
@@ -238,8 +352,7 @@ const loadedRules = (): RawRule[] => {
         Array.from(sheet.cssRules)
           .map((rule) => rule.cssText)
           .join('\n'),
-        rules,
-        counter
+        sink
       )
     } catch {
       // Unreadable cross-origin sheet — genuinely inaccessible, not a swallowed
@@ -248,7 +361,52 @@ const loadedRules = (): RawRule[] => {
     }
   }
 
-  return rules
+  return sink
+}
+
+/**
+ * Throw if a rule this resolver refused to rank would have been a candidate.
+ *
+ * An at-rule that declares the property AND matches the element could change
+ * the winner, so returning the runner-up as though it were the answer is the
+ * confidently-wrong result this helper exists to prevent. Silence is only safe
+ * when none of the deferred rules could have competed.
+ */
+const assertNoDeferredCandidate = (
+  deferred: RawRule[],
+  el: Element,
+  prop: string,
+  hover: boolean
+): void => {
+  for (const rule of deferred) {
+    if (!parseDeclaration(rule.body, prop)) continue
+
+    for (const rawSelector of splitTopLevel(rule.selector, ',')) {
+      const selector = rawSelector.trim().replace(/\s+/g, ' ')
+      if (!selector) continue
+      const isHoverSelector = selector.includes(':hover')
+      if (isHoverSelector && !hover) continue
+
+      let applies = false
+      try {
+        applies = el.matches(isHoverSelector ? selector.replace(/:hover/g, '') : selector)
+      } catch {
+        // Unmatchable here means it cannot be shown to compete; the loud throw
+        // for that case belongs to the ranking path below.
+        continue
+      }
+      if (!applies) continue
+
+      throw new Error(
+        `cssCascade: ${JSON.stringify(selector)} declares ${JSON.stringify(prop)} and matches ` +
+          `this element, but sits inside ${JSON.stringify(rule.atRule ?? 'an at-rule')}, whose ` +
+          `condition this resolver does not evaluate. The ranking would omit it and report ` +
+          `the runner-up as the winner. If that block cannot apply here (a print or ` +
+          `feature query, say), assert a property it does not set; otherwise use a real ` +
+          `browser or flatten the rule.`
+      )
+    }
+  }
 }
 
 /**
@@ -263,7 +421,10 @@ export const winningDeclaration = (
   const prop = property.toLowerCase()
   const matches: (MatchedDeclaration & { specificity: Specificity; order: number })[] = []
 
-  for (const rule of loadedRules()) {
+  const { rules, deferred } = loadedRules()
+  assertNoDeferredCandidate(deferred, el, prop, hover)
+
+  for (const rule of rules) {
     const declaration = parseDeclaration(rule.body, prop)
     if (!declaration) continue
 
