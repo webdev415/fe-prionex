@@ -2,16 +2,17 @@
  * A user's photo, or their initials when there is none.
  *
  * Most users will never upload a photo, so the monogram is the normal case
- * rather than an error state. A broken or unreachable image falls back to it
- * too, so a dead link never leaves an empty disc on the page.
+ * rather than an error state. It takes its colours from the theme so it matches
+ * the container it sits in, in light and dark alike. A broken or unreachable
+ * image falls back to it too, so a dead link never leaves an empty disc.
  */
 
 import { useState } from 'react'
+import { monogramInitials } from '@/lib/avatarMonogram'
 import { cn } from '@/lib/utils'
-import { monogramInitials, monogramSwatch } from '@/lib/avatarMonogram'
 
 export interface UserAvatarProps {
-  userId: number | null | undefined
+  userId?: number | null
   firstName?: string | null
   lastName?: string | null
   fullName?: string | null
@@ -21,7 +22,6 @@ export interface UserAvatarProps {
 }
 
 export function UserAvatar({
-  userId,
   firstName,
   lastName,
   fullName,
@@ -32,10 +32,7 @@ export function UserAvatar({
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
   const initials = monogramInitials(firstName, lastName, fullName)
-  const swatch = monogramSwatch(userId)
   const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
-
-  const shared = cn('inline-flex shrink-0 items-center justify-center rounded-full', className)
   const dimensions = { width: size, height: size }
 
   if (avatarUrl && failedUrl !== avatarUrl) {
@@ -44,7 +41,7 @@ export function UserAvatar({
         src={avatarUrl}
         alt={label ?? ''}
         style={dimensions}
-        className={cn(shared, 'object-cover')}
+        className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
         onError={() => setFailedUrl(avatarUrl)}
       />
     )
@@ -55,13 +52,12 @@ export function UserAvatar({
       role="img"
       aria-label={label}
       title={label}
-      style={{
-        ...dimensions,
-        backgroundColor: swatch.background,
-        color: swatch.foreground,
-        fontSize: Math.max(10, Math.round(size * 0.4)),
-      }}
-      className={cn(shared, 'leading-none font-medium select-none')}
+      style={{ ...dimensions, fontSize: Math.max(10, Math.round(size * 0.36)) }}
+      className={cn(
+        'bg-muted text-muted-foreground inline-flex shrink-0 items-center justify-center',
+        'rounded-full leading-none font-medium select-none',
+        className
+      )}
     >
       {initials}
     </span>

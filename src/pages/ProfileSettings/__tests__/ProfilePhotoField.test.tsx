@@ -29,7 +29,7 @@ function file(name: string, type: string, bytes: number) {
 }
 
 function renderField(avatarUrl: string | null = null) {
-  render(
+  const { container } = render(
     <ProfilePhotoField
       userId={7}
       firstName="Olena"
@@ -38,7 +38,7 @@ function renderField(avatarUrl: string | null = null) {
       avatarUrl={avatarUrl}
     />
   )
-  return screen.getByLabelText('Upload photo') as HTMLInputElement
+  return container.querySelector('input[type="file"]') as HTMLInputElement
 }
 
 describe('ProfilePhotoField', () => {
@@ -55,16 +55,39 @@ describe('ProfilePhotoField', () => {
     expect(screen.getByText('OK')).toBeInTheDocument()
   })
 
-  it('offers Upload when there is no photo and no Remove', () => {
+  it('offers an add control when there is no photo, and no Remove', () => {
     renderField(null)
     expect(screen.getByRole('button', { name: /upload photo/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^remove$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /remove photo/i })).not.toBeInTheDocument()
+  })
+
+  it('the icon-only control still names itself for assistive tech', () => {
+    renderField(null)
+    const control = screen.getByRole('button', { name: /upload photo/i })
+
+    expect(control).toHaveAttribute('aria-label', 'Upload photo')
+    expect(control).toHaveAttribute('title', 'Upload photo')
+    expect(control.textContent?.trim()).toBe('')
   })
 
   it('offers Replace and Remove once a photo exists', () => {
     renderField('/avatars/7.png')
     expect(screen.getByRole('button', { name: /replace photo/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^remove$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /remove photo/i })).toBeInTheDocument()
+  })
+
+  it('does not show the format hint', () => {
+    renderField(null)
+    expect(screen.queryByText(/up to 2 MB/i)).not.toBeInTheDocument()
+  })
+
+  it('overlays the add control on the avatar rather than beside it', () => {
+    const { container } = render(
+      <ProfilePhotoField userId={7} firstName="Olena" lastName="Kovalchuk" avatarUrl={null} />
+    )
+    const control = container.querySelector('button[aria-label="Upload photo"]')
+
+    expect(control?.className).toContain('absolute')
   })
 
   it('uploads an accepted image and refreshes the user', async () => {
@@ -102,7 +125,7 @@ describe('ProfilePhotoField', () => {
   it('removes the photo and refreshes the user', async () => {
     renderField('/avatars/7.png')
 
-    fireEvent.click(screen.getByRole('button', { name: /^remove$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /remove photo/i }))
 
     await waitFor(() => expect(deleteAvatar).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(refreshUser).toHaveBeenCalled())

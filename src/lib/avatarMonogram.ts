@@ -1,24 +1,10 @@
 /**
- * Initials and a stable colour for users with no uploaded photo.
+ * Initials shown for users with no uploaded photo.
  *
- * The colour is derived from the user id rather than the name, so it survives a
- * rename and two people who share initials still look different. Same id always
- * yields the same swatch, on every device and every session, because nothing is
- * stored and nothing is random.
+ * The monogram inherits the surrounding theme rather than carrying a colour of
+ * its own, so it reads the same in every theme and matches the avatar container
+ * it replaces.
  */
-
-export const MONOGRAM_PALETTE = [
-  { background: '#0F766E', foreground: '#FFFFFF' },
-  { background: '#1D4ED8', foreground: '#FFFFFF' },
-  { background: '#6D28D9', foreground: '#FFFFFF' },
-  { background: '#BE185D', foreground: '#FFFFFF' },
-  { background: '#B45309', foreground: '#FFFFFF' },
-  { background: '#15803D', foreground: '#FFFFFF' },
-  { background: '#0E7490', foreground: '#FFFFFF' },
-  { background: '#7C2D12', foreground: '#FFFFFF' },
-] as const
-
-export type MonogramSwatch = (typeof MONOGRAM_PALETTE)[number]
 
 function firstLetter(value: string | null | undefined): string {
   if (!value) return ''
@@ -50,12 +36,4 @@ export function monogramInitials(
     return `${firstLetter(words[0])}${firstLetter(words[1])}`
   }
   return Array.from(source).slice(0, 2).join('').toLocaleUpperCase()
-}
-
-/** Deterministic swatch for a user id. */
-export function monogramSwatch(userId: number | null | undefined): MonogramSwatch {
-  const id = Number(userId)
-  if (!Number.isFinite(id)) return MONOGRAM_PALETTE[0]
-  const index = Math.abs(Math.trunc(id)) % MONOGRAM_PALETTE.length
-  return MONOGRAM_PALETTE[index]
 }

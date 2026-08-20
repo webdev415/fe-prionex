@@ -12,6 +12,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { getErrorMessage } from '@/lib/errors'
 import { authApi } from '@/features/auth/api/authApi'
@@ -39,6 +40,10 @@ export function ProfilePhotoField({
   const refreshUser = useAuthStore((state) => state.refreshUser)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isBusy, setIsBusy] = useState(false)
+
+  const uploadLabel = avatarUrl
+    ? t('pages.profileSettings.photo.replace', 'Replace photo')
+    : t('pages.profileSettings.photo.upload', 'Upload photo')
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return
@@ -79,47 +84,47 @@ export function ProfilePhotoField({
   }
 
   return (
-    <div className="flex items-center gap-4">
-      <UserAvatar
-        userId={userId}
-        firstName={firstName}
-        lastName={lastName}
-        fullName={fullName}
-        avatarUrl={avatarUrl}
-        size={72}
-      />
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative">
+        <UserAvatar
+          userId={userId}
+          firstName={firstName}
+          lastName={lastName}
+          fullName={fullName}
+          avatarUrl={avatarUrl}
+          size={96}
+          className="border-border border-2"
+        />
 
-      <div className="flex flex-col items-start gap-2">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isBusy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {avatarUrl
-              ? t('pages.profileSettings.photo.replace', 'Replace photo')
-              : t('pages.profileSettings.photo.upload', 'Upload photo')}
-          </Button>
-
-          {avatarUrl && (
-            <Button type="button" variant="cancel" disabled={isBusy} onClick={handleRemove}>
-              {t('pages.profileSettings.photo.remove', 'Remove')}
-            </Button>
-          )}
-        </div>
-
-        <span className="text-muted-foreground text-xs">
-          {t('pages.profileSettings.photo.hint', 'JPEG, PNG or WebP, up to 2 MB')}
-        </span>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => inputRef.current?.click()}
+          title={uploadLabel}
+          aria-label={uploadLabel}
+          className="bg-primary text-primary-foreground border-card absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Icons.Add size={16} strokeWidth={2} />
+        </button>
       </div>
+
+      {avatarUrl && (
+        <Button
+          type="button"
+          variant="cancel"
+          disabled={isBusy}
+          onClick={handleRemove}
+          leftIcon={<Icons.Delete size={16} strokeWidth={1.5} />}
+        >
+          {t('pages.profileSettings.photo.remove', 'Remove photo')}
+        </Button>
+      )}
 
       <input
         ref={inputRef}
         type="file"
         accept={ACCEPTED.join(',')}
         className="hidden"
-        aria-label={t('pages.profileSettings.photo.upload', 'Upload photo')}
         onChange={(event) => void handleFile(event.target.files?.[0])}
       />
     </div>

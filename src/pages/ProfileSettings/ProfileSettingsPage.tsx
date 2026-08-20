@@ -207,10 +207,13 @@ export function ProfileSettingsPage() {
       <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         <div className="bg-card/50 flex w-full flex-col items-center gap-4 self-stretch rounded-xl px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
-            <div className="bg-muted relative flex flex-col items-center justify-center gap-[10px] rounded-full p-3.5">
-              <div className="border-border absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent" />
-              <Icons.User02 size={40} className="text-muted-foreground" strokeWidth={1} />
-            </div>
+            <ProfilePhotoField
+              userId={user?.id ? Number(user.id) : null}
+              firstName={form.first_name}
+              lastName={form.last_name}
+              fullName={user?.fullName}
+              avatarUrl={user?.avatar_url}
+            />
             <div className="text-foreground text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
               {user?.username}
             </div>
@@ -312,15 +315,6 @@ export function ProfileSettingsPage() {
               {t('pages.users.modals.edit.title')}
             </span>
             <div className="flex w-full flex-col items-center gap-6 self-stretch">
-              <div className="flex w-full self-stretch">
-                <ProfilePhotoField
-                  userId={user?.id ? Number(user.id) : null}
-                  firstName={form.first_name}
-                  lastName={form.last_name}
-                  fullName={user?.fullName}
-                  avatarUrl={user?.avatar_url}
-                />
-              </div>
               <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}

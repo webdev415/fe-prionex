@@ -303,8 +303,7 @@ vi.mock('react-i18next', () => ({
         // Profile settings: photo + work format.
         'pages.profileSettings.photo.upload': 'Upload photo',
         'pages.profileSettings.photo.replace': 'Replace photo',
-        'pages.profileSettings.photo.remove': 'Remove',
-        'pages.profileSettings.photo.hint': 'JPEG, PNG or WebP, up to 2 MB',
+        'pages.profileSettings.photo.remove': 'Remove photo',
         'pages.profileSettings.photo.wrongType': 'Choose a JPEG, PNG or WebP image',
         'pages.profileSettings.photo.tooLarge': 'The photo must be 2 MB or smaller',
         'pages.profileSettings.photo.uploaded': 'Photo updated',
