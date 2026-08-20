@@ -308,7 +308,6 @@ vi.mock('react-i18next', () => ({
         'pages.profileSettings.photo.uploaded': 'Photo updated',
         'pages.profileSettings.photo.removed': 'Photo removed',
         'pages.profileSettings.workFormat.label': 'Work format',
-        'pages.profileSettings.workFormat.unset': 'Not specified',
         'pages.profileSettings.workFormat.office': 'Office',
         'pages.profileSettings.workFormat.remote': 'Remote',
         // Shared soft-delete section labels.

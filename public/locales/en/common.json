@@ -10304,7 +10304,6 @@
       },
       "workFormat": {
         "label": "Work format",
-        "unset": "Not specified",
         "office": "Office",
         "remote": "Remote"
       }

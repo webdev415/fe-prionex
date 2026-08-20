@@ -50,7 +50,7 @@ export function ProfileSettingsPage() {
       language: currentLanguage,
       timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
-      work_format: (user?.work_format ?? '') as '' | 'office' | 'remote',
+      work_format: (user?.work_format ?? 'office') as 'office' | 'remote',
       currentPassword: '',
       newPassword: '',
     }
@@ -160,7 +160,7 @@ export function ProfileSettingsPage() {
       language: form.language || undefined,
       timezone: form.timezone || undefined,
       agent_status: user?.is_agent ? form.agent_status : undefined,
-      work_format: form.work_format || undefined,
+      work_format: form.work_format,
     }
 
     try {
@@ -381,21 +381,15 @@ export function ProfileSettingsPage() {
                     {t('pages.profileSettings.workFormat.label', 'Work format')}
                   </Label>
                   <Select
-                    value={form.work_format || 'unset'}
+                    value={form.work_format}
                     onValueChange={(v: string) =>
-                      setForm({
-                        ...form,
-                        work_format: v === 'unset' ? '' : (v as 'office' | 'remote'),
-                      })
+                      setForm({ ...form, work_format: v as 'office' | 'remote' })
                     }
                   >
                     <SelectTrigger id="work-format">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unset">
-                        {t('pages.profileSettings.workFormat.unset', 'Not specified')}
-                      </SelectItem>
                       <SelectItem value="office">
                         {t('pages.profileSettings.workFormat.office', 'Office')}
                       </SelectItem>
