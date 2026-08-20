@@ -77,6 +77,7 @@ export function ProfileSettingsPage() {
     language: initialForm.language,
     timezone: initialForm.timezone,
     work_format: initialForm.work_format,
+    agent_status: initialForm.agent_status,
   }))
 
   const workFormatOptions = [
@@ -144,6 +145,7 @@ export function ProfileSettingsPage() {
       last_name: current.last_name !== saved.last_name,
       timezone: current.timezone !== saved.timezone,
       language: current.language !== saved.language,
+      agent_status: current.agent_status !== saved.agent_status,
       // Picking the value already displayed leaves nothing to compare, which is
       // what the flag is for. Without it the pick would be silently reverted
       // here while the flag survived to save the reverted value.
@@ -156,7 +158,7 @@ export function ProfileSettingsPage() {
     setForm((prev) => ({
       ...prev,
       username: user.username || prev.username,
-      agent_status: user.agent_status || prev.agent_status,
+      agent_status: take(edited.agent_status, prev.agent_status, user.agent_status || undefined),
       email: take(edited.email, prev.email, user.email || undefined),
       first_name: take(edited.first_name, prev.first_name, user.firstName || undefined),
       last_name: take(edited.last_name, prev.last_name, user.lastName || undefined),
@@ -178,6 +180,7 @@ export function ProfileSettingsPage() {
       timezone: user.timezone || prev.timezone,
       language: serverLanguage ?? prev.language,
       work_format: user.work_format ?? prev.work_format,
+      agent_status: user.agent_status || prev.agent_status,
     }))
   }, [user])
 
@@ -191,6 +194,7 @@ export function ProfileSettingsPage() {
       form.language !== savedProfileSnapshot.language ||
       form.timezone !== savedProfileSnapshot.timezone ||
       form.work_format !== savedProfileSnapshot.work_format ||
+      form.agent_status !== savedProfileSnapshot.agent_status ||
       // Picking the value already on screen is not a value change, but it is
       // still something to save: the field may be showing its fallback while
       // the server holds the other one.
@@ -279,6 +283,7 @@ export function ProfileSettingsPage() {
         language: form.language,
         timezone: form.timezone,
         work_format: form.work_format,
+        agent_status: form.agent_status,
       })
       setWorkFormatTouched(false)
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
@@ -298,6 +303,7 @@ export function ProfileSettingsPage() {
       language: savedProfileSnapshot.language,
       timezone: savedProfileSnapshot.timezone,
       work_format: savedProfileSnapshot.work_format,
+      agent_status: savedProfileSnapshot.agent_status,
       currentPassword: '',
       newPassword: '',
     }))

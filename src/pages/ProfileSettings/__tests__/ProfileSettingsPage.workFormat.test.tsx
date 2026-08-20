@@ -241,3 +241,73 @@ describe('a refresh landing after the user picked the value already displayed', 
     expect(updateMyProfile.mock.calls[0][0].work_format).toBe('office')
   })
 })
+
+describe('agent status across a refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    state.user = tokenBuiltUser({ is_agent: true, agent_status: 'offline' })
+  })
+
+  async function chooseStatus(label: 'Online' | 'Busy' | 'Offline') {
+    const trigger = document.getElementById('agent-status') as HTMLButtonElement
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(trigger)
+    const menu = await screen.findByRole('menu')
+    fireEvent.click(within(menu).getByText(label))
+    return trigger
+  }
+
+  it('offers to save a status change on its own', async () => {
+    render(<ProfileSettingsPage />)
+
+    await chooseStatus('Online')
+
+    // Nothing else was edited, so the bar exists only if the status counts.
+    await waitFor(() => expect(cancelButton()).toBeInTheDocument())
+  })
+
+  it('does not revert a status the user just picked', async () => {
+    // The photo control refreshes the auth user after every upload, so this
+    // lands while the pick is unsaved.
+    const { rerender } = render(<ProfileSettingsPage />)
+    const trigger = await chooseStatus('Online')
+
+    state.user = tokenBuiltUser({ is_agent: true, agent_status: 'offline' })
+    rerender(<ProfileSettingsPage />)
+
+    await waitFor(() => expect(trigger).toHaveTextContent('Online'))
+  })
+
+  it('saves the status the user picked, not the one the refresh carried', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    await chooseStatus('Online')
+
+    state.user = tokenBuiltUser({ is_agent: true, agent_status: 'offline' })
+    rerender(<ProfileSettingsPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
+    expect(updateMyProfile.mock.calls[0][0].agent_status).toBe('online')
+  })
+
+  it('puts the status back when the edit is cancelled', async () => {
+    render(<ProfileSettingsPage />)
+    const trigger = await chooseStatus('Online')
+
+    fireEvent.click(cancelButton() as HTMLElement)
+
+    await waitFor(() => expect(trigger).toHaveTextContent('Offline'))
+    expect(cancelButton()).not.toBeInTheDocument()
+  })
+
+  it('still adopts a status the user has not touched', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+
+    state.user = tokenBuiltUser({ is_agent: true, agent_status: 'busy' })
+    rerender(<ProfileSettingsPage />)
+
+    await waitFor(() => expect(document.getElementById('agent-status')).toHaveTextContent('Busy'))
+    expect(cancelButton()).not.toBeInTheDocument()
+  })
+})

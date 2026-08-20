@@ -301,6 +301,10 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
         // Profile settings: photo + work format.
+        'pages.profile.agentStatus.online': 'Online',
+        'pages.profile.agentStatus.offline': 'Offline',
+        'pages.profile.agentStatus.busy': 'Busy',
+        'pages.profile.agentStatus.onCall': 'On Call',
         'pages.profileSettings.photo.upload': 'Upload photo',
         'pages.profileSettings.photo.replace': 'Replace photo',
         'pages.profileSettings.photo.confirmRemoveTitle': 'Remove your photo?',
