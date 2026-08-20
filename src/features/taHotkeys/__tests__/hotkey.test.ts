@@ -136,6 +136,18 @@ describe('isTypingTarget', () => {
     expect(isTypingTarget(dialog.querySelector('button'))).toBe(true)
   })
 
+  it('is true inside a popup that belongs to no dialog', () => {
+    // A Radix Select portals its listbox to the body, so on the client card it
+    // is outside every `role="dialog"`. The dialog rule alone therefore misses
+    // it, and a bare-key binding would be taken from the widget's type-ahead:
+    // the operator presses `P` to jump to an option and gets the TA modal.
+    const listbox = el('<div role="listbox"><div role="option">Phone</div></div>')
+    expect(isTypingTarget(listbox)).toBe(true)
+    expect(isTypingTarget(listbox.querySelector('[role="option"]'))).toBe(true)
+    expect(isTypingTarget(el('<button role="combobox">Choose</button>'))).toBe(true)
+    expect(isTypingTarget(el('<button aria-haspopup="menu">More</button>'))).toBe(true)
+  })
+
   it('is false for ordinary page elements', () => {
     expect(isTypingTarget(el('<div>text</div>'))).toBe(false)
     expect(isTypingTarget(el('<button>Click</button>'))).toBe(false)
@@ -164,6 +176,15 @@ describe('resolveHotkeyTarget', () => {
   it('does not fire while the operator is typing', () => {
     const input = document.createElement('input')
     expect(resolveHotkeyTarget({ ...evt({ key: 'p' }), target: input }, bindings)).toBeNull()
+  })
+
+  it('does not steal a keystroke aimed at an open dropdown', () => {
+    // The page behind the dropdown has no dialog, so nothing else suppresses
+    // this press. `P` is bound; the operator meant the option, not the modal.
+    const host = document.createElement('div')
+    host.innerHTML = '<div role="listbox"><div role="option">Phone</div></div>'
+    const option = host.querySelector('[role="option"]')!
+    expect(resolveHotkeyTarget({ ...evt({ key: 'p' }), target: option }, bindings)).toBeNull()
   })
 
   it('returns null against an empty binding map', () => {

@@ -40,8 +40,29 @@ const QUICK_PICKS = [
 
 let bindings: Array<{ hotkey: string; quick_pick_id: number }> = []
 
+// Both quick picks above hang off chain 1. The screen only offers templates
+// whose chain the executor can actually start, so the chain list has to be
+// present or every row is (correctly) filtered away.
+let chains: Array<{ id: number; chain_type: string }> = [{ id: 1, chain_type: 'manual' }]
+
+// The screen distinguishes "no shortcuts" from "could not load them", so the
+// hook mock has to carry the query state, not just the data.
+let bindingsFailed = false
+let chainsFailed = false
+let clearPendingFor: number | null = null
+const refetchBindings = vi.fn()
+const refetchChains = vi.fn()
+
 vi.mock('@/features/quickPicks/hooks/useQuickPicks', () => ({
   useQuickPicks: () => ({ data: QUICK_PICKS, isLoading: false }),
+}))
+vi.mock('@/features/taChains/hooks/useTAChains', () => ({
+  useTAChains: () => ({
+    data: chainsFailed ? undefined : { items: chains },
+    isLoading: false,
+    isError: chainsFailed,
+    refetch: refetchChains,
+  }),
 }))
 vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
   useTargetActions: () => ({
@@ -61,9 +82,18 @@ vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
   }),
 }))
 vi.mock('../hooks/useTAHotkeys', () => ({
-  useTAHotkeyList: () => ({ data: bindings }),
+  useTAHotkeyList: () => ({
+    data: bindings,
+    isError: bindingsFailed,
+    isLoading: false,
+    refetch: refetchBindings,
+  }),
   useAssignTAHotkey: () => ({ mutateAsync: assignMutate, isPending: false }),
-  useClearTAHotkey: () => ({ mutateAsync: clearMutate, isPending: false }),
+  useClearTAHotkey: () => ({
+    mutateAsync: clearMutate,
+    isPending: clearPendingFor !== null,
+    variables: clearPendingFor ?? undefined,
+  }),
 }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (sel?: (s: unknown) => unknown) => {
@@ -114,6 +144,12 @@ beforeEach(() => {
   assignMutate.mockClear()
   clearMutate.mockClear()
   bindings = []
+  chains = [{ id: 1, chain_type: 'manual' }]
+  bindingsFailed = false
+  chainsFailed = false
+  clearPendingFor = null
+  refetchBindings.mockClear()
+  refetchChains.mockClear()
 })
 
 function row(name: string) {
@@ -157,6 +193,98 @@ describe('KeyboardShortcutsSettings', () => {
     await user.clear(search)
     await user.type(search, 'zzzz')
     expect(screen.getByText('No templates match your search.')).toBeInTheDocument()
+  })
+
+  it('hides templates the executor cannot start', async () => {
+    // ChainExecutor keeps only quick picks on an active manual chain. A
+    // template outside that set resolves on keypress, opens the modal and then
+    // starts nothing — so offering it here invites the operator to bind a key
+    // that does nothing, with no error to explain it.
+    chains = [{ id: 1, chain_type: 'automatic' }]
+    const user = userEvent.setup()
+    render(<KeyboardShortcutsSettings />)
+
+    expect(screen.queryByText('Messenger — Restructuring')).not.toBeInTheDocument()
+    expect(screen.getByText('No templates are available to you.')).toBeInTheDocument()
+
+    // And not through the assign panel's dropdown either, which is the second
+    // way into a binding.
+    await user.click(screen.getByRole('combobox'))
+    expect(screen.queryByText('Messenger — Refusal')).not.toBeInTheDocument()
+  })
+
+  it('keeps showing a template that lost its chain but still holds a shortcut', () => {
+    // Deactivating the chain must not take the binding off the screen: the
+    // server still honours it, so a hidden row means a combination the
+    // operator can neither see nor clear, which returns later as a surprise
+    // reassignment. Remove is the whole point of the row.
+    chains = [{ id: 1, chain_type: 'automatic' }]
+    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    render(<KeyboardShortcutsSettings />)
+
+    const dead = row('Messenger — Restructuring')
+    expect(within(dead).getByText(/no longer available/i)).toBeInTheDocument()
+    expect(within(dead).getByLabelText('Remove')).toBeInTheDocument()
+    // Editing it would only move a dead key onto another dead key.
+    expect(within(dead).queryByLabelText('Edit')).not.toBeInTheDocument()
+    // The template with no binding stays hidden.
+    expect(screen.queryByText('Messenger — Refusal')).not.toBeInTheDocument()
+  })
+
+  it('says so when the shortcut list could not be loaded, and pauses assigning', async () => {
+    // Falling back to an empty list makes a failed fetch look exactly like
+    // "nothing assigned": no badges, no conflict warning, and a save that
+    // quietly takes a combination off a template nobody was warned about.
+    bindingsFailed = true
+    const user = userEvent.setup()
+    render(<KeyboardShortcutsSettings />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not be loaded/i)
+    // The way into the recorder is closed while the truth is unknown.
+    expect(screen.getByRole('combobox')).toBeDisabled()
+    for (const btn of screen.getAllByText('+ Assign shortcut')) {
+      expect(btn).toBeDisabled()
+    }
+
+    await user.click(screen.getByText('Retry'))
+    expect(refetchBindings).toHaveBeenCalled()
+  })
+
+  it('does not mistake a failed chain fetch for an empty chain list', async () => {
+    // The chains endpoint is permission gated, so a 403 is reachable. Filtering
+    // against the empty set that a failure leaves behind would hide every
+    // template under "No templates are available to you" — an error dressed up
+    // as a real empty state, which is the fault the banner exists to prevent.
+    chainsFailed = true
+    const user = userEvent.setup()
+    render(<KeyboardShortcutsSettings />)
+
+    expect(screen.getByText('Messenger — Restructuring')).toBeInTheDocument()
+    expect(screen.queryByText('No templates are available to you.')).not.toBeInTheDocument()
+    // Nothing is claimed about launchability while it is unknown.
+    expect(screen.queryByText(/no longer available/i)).not.toBeInTheDocument()
+    // But recording stays closed, and the banner says why.
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeDisabled()
+
+    await user.click(screen.getByText('Retry'))
+    expect(refetchChains).toHaveBeenCalled()
+    // The healthy query is left alone.
+    expect(refetchBindings).not.toHaveBeenCalled()
+  })
+
+  it('disables only the row whose shortcut is being removed', () => {
+    // `isPending` is shared mutation state, so using it alone greys out every
+    // row's Remove while one request is in flight.
+    bindings = [
+      { hotkey: 'Ctrl+1', quick_pick_id: 10 },
+      { hotkey: 'Ctrl+2', quick_pick_id: 11 },
+    ]
+    clearPendingFor = 10
+    render(<KeyboardShortcutsSettings />)
+
+    expect(within(row('Messenger — Restructuring')).getByLabelText('Remove')).toBeDisabled()
+    expect(within(row('Messenger — Refusal')).getByLabelText('Remove')).toBeEnabled()
   })
 
   it('still names a hidden template in the conflict warning', async () => {

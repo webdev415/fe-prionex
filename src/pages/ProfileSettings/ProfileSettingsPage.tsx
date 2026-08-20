@@ -300,6 +300,11 @@ export function ProfileSettingsPage() {
         </div>
 
         <div className="bg-card/50 flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl p-4 sm:gap-8 sm:p-6">
+          {/* A tab widget is a contract, not a set of roles: the panel has to
+              be findable from the tab (`aria-controls`), only the selected tab
+              may hold a tab stop, and the arrows must move between them —
+              otherwise a screen-reader user is told "tab 1 of 2" and then has
+              no way to reach tab 2. */}
           <div
             className="border-border flex w-full items-center gap-1 self-stretch border-b"
             role="tablist"
@@ -314,8 +319,30 @@ export function ProfileSettingsPage() {
                 key={id}
                 type="button"
                 role="tab"
+                id={`profile-tab-${id}`}
+                // Only the selected panel is mounted, so pointing the inactive
+                // tab at it would leave a dangling IDREF — worse than omitting
+                // the attribute, which ARIA permits.
+                aria-controls={activeTab === id ? `profile-tabpanel-${id}` : undefined}
                 aria-selected={activeTab === id}
+                tabIndex={activeTab === id ? 0 : -1}
                 onClick={() => setActiveTab(id)}
+                // On the tab rather than the tablist: only the selected tab is
+                // focusable, so it is the element that actually receives the
+                // key, and a container listener would need a tab stop of its
+                // own to be reachable at all.
+                onKeyDown={(e) => {
+                  const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+                  if (step === 0) return
+                  e.preventDefault()
+                  const order = ['account', 'shortcuts'] as const
+                  const next =
+                    order[(order.indexOf(activeTab) + step + order.length) % order.length]
+                  setActiveTab(next)
+                  // Roving focus follows the selection, or the arrow moves the
+                  // highlight while the keyboard stays on the tab left behind.
+                  document.getElementById(`profile-tab-${next}`)?.focus()
+                }}
                 className={
                   activeTab === id
                     ? 'text-foreground border-primary-500 -mb-px border-b-2 px-3 py-2 text-sm font-medium'
@@ -328,9 +355,21 @@ export function ProfileSettingsPage() {
           </div>
 
           {activeTab === 'shortcuts' ? (
-            <KeyboardShortcutsSettings />
+            <div
+              role="tabpanel"
+              id="profile-tabpanel-shortcuts"
+              aria-labelledby="profile-tab-shortcuts"
+              className="flex w-full flex-col self-stretch"
+            >
+              <KeyboardShortcutsSettings />
+            </div>
           ) : (
-            <>
+            <div
+              role="tabpanel"
+              id="profile-tabpanel-account"
+              aria-labelledby="profile-tab-account"
+              className="flex w-full flex-col items-start gap-6 self-stretch sm:gap-8"
+            >
               <AppearanceSettings />
 
               <form
@@ -517,7 +556,7 @@ export function ProfileSettingsPage() {
                   </div>
                 )}
               </form>
-            </>
+            </div>
           )}
         </div>
       </div>

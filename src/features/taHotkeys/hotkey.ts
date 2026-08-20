@@ -142,9 +142,17 @@ const TEXT_ENTRY_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
  * marked ``role="dialog"`` is off-limits, including its buttons, not just its
  * inputs. A hotkey pressed while a dialog is up should never reach the page
  * behind it.
+ *
+ * Popup widgets are checked through {@link ownsItsKeystrokes} for the same
+ * reason the exempt-dialog path checks them: a keystroke belongs to the
+ * control the operator is looking at. The dialog rule alone does not reach
+ * them — a Radix ``Select`` portals its listbox to the body, so on the client
+ * card it sits outside every dialog. Without this a bare-key binding such as
+ * ``P`` is taken from the dropdown's type-ahead and opens the TA modal
+ * instead of choosing the option the operator was aiming at.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  if (isTextEntryTarget(target)) return true
+  if (ownsItsKeystrokes(target)) return true
   if (!target || !(target instanceof Element)) return false
   return target.closest('[role="dialog"], [contenteditable="true"]') !== null
 }
@@ -162,13 +170,17 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Controls inside an exempt dialog that consume plain keys themselves.
+ * Controls that consume plain keys themselves.
  *
  * Text fields are the obvious case, but not the only one: a Radix dropdown
  * trigger is a ``button[role="combobox"]`` and its list uses type-ahead, so a
  * bare-key binding like ``P`` would be stolen from the widget — the operator
- * types to jump to an option and gets a toast instead. Dropdowns are the main
- * interaction in the TA modal, so the exemption has to stop at them.
+ * types to jump to an option and gets a toast instead.
+ *
+ * Used on both sides of the dialog rule. Inside an exempt dialog it is what
+ * stops the exemption at the widgets (dropdowns are the main interaction in
+ * the TA modal); outside one it is reached through {@link isTypingTarget},
+ * because a portalled listbox on the client card belongs to no dialog at all.
  */
 export function ownsItsKeystrokes(target: EventTarget | null): boolean {
   if (isTextEntryTarget(target)) return true

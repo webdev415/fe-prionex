@@ -94,6 +94,49 @@ describe('ProfileSettingsPage tabs', () => {
     expect(screen.queryByText('Shortcuts panel')).not.toBeInTheDocument()
   })
 
+  it('wires each tab to the panel it controls', () => {
+    // `role="tab"` on its own promises a widget that was not there: the panel
+    // has to be reachable from the tab, or a screen reader announces "tab 1 of
+    // 2" with nothing to move to.
+    render(<ProfileSettingsPage />)
+
+    const [account, shortcuts] = screen.getAllByRole('tab')
+    const panel = screen.getByRole('tabpanel')
+
+    expect(account).toHaveAttribute('aria-controls', panel.id)
+    expect(panel).toHaveAttribute('aria-labelledby', account.id)
+    // Only the selected panel is mounted, so the other tab must not advertise
+    // one: an aria-controls pointing at nothing is worse than none at all.
+    expect(shortcuts).not.toHaveAttribute('aria-controls')
+    for (const tab of screen.getAllByRole('tab')) {
+      const target = tab.getAttribute('aria-controls')
+      if (target) expect(document.getElementById(target)).not.toBeNull()
+    }
+    // Only the selected tab holds a tab stop; the arrows reach the other one.
+    expect(account).toHaveAttribute('tabindex', '0')
+    expect(shortcuts).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('moves between tabs with the arrow keys', async () => {
+    const user = userEvent.setup()
+    render(<ProfileSettingsPage />)
+
+    const [account] = screen.getAllByRole('tab')
+    account.focus()
+    await user.keyboard('{ArrowRight}')
+
+    const [, shortcuts] = screen.getAllByRole('tab')
+    expect(shortcuts).toHaveAttribute('aria-selected', 'true')
+    // Focus follows the selection, or the next arrow press starts over from
+    // the tab the operator has already left.
+    expect(shortcuts).toHaveFocus()
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', shortcuts.id)
+
+    // And wraps, so the widget has no dead end.
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('keeps the account column outside the tabs', () => {
     // Identity, password and 2FA are about the account itself, so they stay
     // visible whichever tab is showing.
