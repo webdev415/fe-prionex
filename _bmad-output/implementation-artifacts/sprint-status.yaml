@@ -254,7 +254,30 @@ development_status:
   # ⬇️ Carries Story 4.2's blocker: the deploy job cannot reach ~/crm-prionex/fe-prionex-dev/ as
   # specified (D28 §4). Options a/b/c are recorded there; review added two more and found that the
   # registry credential problem (H4) is unsolved by all of them. Decide the mechanism here.
-  4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
+  # Contexted 2026-08-20. Mechanism decided in the story (D28 §4 option 5 — render compose and the
+  # five variables in the job workspace, act through the held docker.sock; options 1/3 rejected for
+  # read-write exposure to every tenant of the four-label runner, 2 for coupling the api-prionex
+  # tree, 4 kept only as the credential fallback). H4 answered by new read:package repo secrets
+  # REGISTRY_USER_RO/REGISTRY_TOKEN_RO — those do NOT exist yet and are a blocking Oleg dependency.
+  # AC3's down-before-pull order amended (it contradicts Story 4.7); AC7/AC8 added. Carries H1's
+  # deadline: sha-62e2ff8dc215-dev is deleted ~2026-09-02, fallback trigger 2026-08-30 (Oleg).
+  # ✅ Registry-credential blocker RESOLVED 2026-08-20 (coordinator, GET /orgs/CRM/actions/secrets):
+  # REGISTRY_USER_RO/REGISTRY_TOKEN_RO already exist as ORG-level Forgejo secrets (bot robot-deploy,
+  # read:package, provisioned by api-prionex — see api-prionex_f/docs/5-5-weekly-dev-reset-to-main.md:583).
+  # No repo secrets to create, nothing to mint — the deploy workflow consumes the org secrets
+  # directly, same as build.yml already does for REGISTRY_USER/REGISTRY_TOKEN_RW. Task 3 rewritten
+  # accordingly. Veto points on the mechanism (D28 §4 option 5) and M7 (127.0.0.1:8082) not
+  # exercised — both stand as recorded.
+  # Code review 2026-08-20 (Opus, three layers): **changes requested** — 5 high, 12 medium, 12 low,
+  # 4 deferred, 8 dismissed, 3 decision-needed. Back to `in-progress`: patches left as action items.
+  # Mechanism, credential design and AC amendments all hold; findings sit in the verification layer.
+  # The two that gate closure: H1 (seven guards abort before their own message can print, verified
+  # by execution) and H2/DN1 (the ladder gates `deploy` with the same request, so AC4's 404 and
+  # AC7's 401 classifiers never run on a real failure — and the message that fires blames the
+  # credential for a missing image). DN2 follows: Task 8.2's AC4 row did not execute the code it
+  # certifies. DN3: H1's closure is primary-path only; the preserved DR path still pins the tag that
+  # expires ~2026-09-02. Ledger still open by D4 — coordinator closes it by query after the merge.
+  4-3-deploy-a-feature-branch-to-dev-on-demand: review
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
