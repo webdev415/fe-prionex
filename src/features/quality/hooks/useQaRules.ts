@@ -20,8 +20,9 @@ import {
 } from '../api/qaRulesService'
 import { templateKeys } from './useTemplates'
 import type {
+  QaBlockerCreatePayload,
   QaBlockerListFilters,
-  QaBlockerPayload,
+  QaBlockerUpdatePayload,
   TemplateCreatePayload,
   TemplateUpdatePayload,
 } from '../types'
@@ -48,7 +49,7 @@ export function useQaBlockers(filters: QaBlockerListFilters = {}, enabled = true
 export function useCreateQaBlocker() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: QaBlockerPayload) => createQaBlocker(payload),
+    mutationFn: (payload: QaBlockerCreatePayload) => createQaBlocker(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: qaRulesKeys.blockers() })
     },
@@ -58,7 +59,7 @@ export function useCreateQaBlocker() {
 export function useUpdateQaBlocker() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<QaBlockerPayload> }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: QaBlockerUpdatePayload }) =>
       updateQaBlocker(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: qaRulesKeys.blockers() })
@@ -81,6 +82,7 @@ export function useDeleteQaBlocker() {
 export function useQaRubrics(includeArchived = false, enabled = true) {
   return useQuery({
     queryKey: qaRulesKeys.rubricList(includeArchived),
+    // `purpose: 'ai'` is mandatory: the endpoint defaults to 'manual'.
     queryFn: () => listQaTemplates({ include_archived: includeArchived, purpose: 'ai' }),
     enabled,
     staleTime: 60_000,

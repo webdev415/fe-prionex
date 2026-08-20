@@ -3,9 +3,19 @@
  *
  * One row per phrase: phrase / category / severity / language / active.
  * Adding happens inline in the footer row, editing switches a row into
- * inputs in place, deleting asks for confirmation first. Everything here is
- * write-gated by `manage_qa_rules` upstream (the whole tab is), so the
- * component itself renders no permission checks.
+ * inputs in place, «видалити» asks for confirmation first.
+ *
+ * The endpoint can filter by category / severity / language / activity, but
+ * the dictionary is a few dozen rows, so it is fetched whole instead
+ * (inactive included — the activity checkbox has to be able to show and flip
+ * both states) and narrowed on the client: one cached list, no refetch and
+ * no flicker as the trainer flips filters.
+ *
+ * Deletion is SOFT server-side: it flips `is_active` to false and keeps the
+ * row, so the confirmation says «деактивувати», not «стерти».
+ *
+ * Everything here is write-gated by `manage_qa_rules` upstream (the whole
+ * tab is), so the component itself renders no permission checks.
  */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -21,12 +31,14 @@ import {
   useQaBlockers,
   useUpdateQaBlocker,
 } from '../../hooks/useQaRules'
+import { isConflict } from '../../lib/qaRuleErrors'
 import type {
   BlockerCategory,
   BlockerLang,
   BlockerSeverity,
   QaBlocker,
-  QaBlockerPayload,
+  QaBlockerCreatePayload,
+  QaBlockerUpdatePayload,
 } from '../../types'
 import {
   BLOCKER_CATEGORY_OPTIONS,
@@ -39,16 +51,24 @@ import {
   SEVERITY_TONE,
 } from './qaRuleOptions'
 
-const EMPTY_DRAFT: QaBlockerPayload = {
+const EMPTY_DRAFT: QaBlockerCreatePayload = {
   phrase: '',
   category: 'script_critical',
   severity: 'critical',
   lang: 'uk',
-  is_active: true,
 }
+
+/** Server-side bounds on `phrase`; mirrored so the 422 never happens. */
+const PHRASE_MIN = 2
+const PHRASE_MAX = 200
 
 const TH = 'px-3 py-2 text-left text-[11px] font-medium text-[#6B7280]'
 const TD = 'px-3 py-2 align-middle text-xs text-[#05040D]'
+
+function phraseValid(raw: string): boolean {
+  const phrase = raw.trim()
+  return phrase.length >= PHRASE_MIN && phrase.length <= PHRASE_MAX
+}
 
 export function QaBlockersTable() {
   const { t } = useTranslation('common')
@@ -56,32 +76,46 @@ export function QaBlockersTable() {
 
   const [categoryFilter, setCategoryFilter] = useState('')
   const [langFilter, setLangFilter] = useState('')
-  const [draft, setDraft] = useState<QaBlockerPayload>(EMPTY_DRAFT)
+  const [showInactive, setShowInactive] = useState(false)
+  const [draft, setDraft] = useState<QaBlockerCreatePayload>(EMPTY_DRAFT)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState<QaBlockerPayload>(EMPTY_DRAFT)
+  const [editDraft, setEditDraft] = useState<QaBlockerUpdatePayload>({})
 
-  const filters = useMemo(
-    () => ({
-      category: categoryFilter || undefined,
-      lang: langFilter || undefined,
-    }),
-    [categoryFilter, langFilter]
+  // Always fetched with the inactive rows: the activity checkbox must be able
+  // to show a deactivated phrase, and the list is small enough to filter here.
+  const { data: allBlockers = [], isLoading, isError } = useQaBlockers({ include_inactive: true })
+
+  const blockers = useMemo(
+    () =>
+      allBlockers.filter((blocker) => {
+        if (!showInactive && !blocker.is_active) return false
+        if (categoryFilter && blocker.category !== categoryFilter) return false
+        if (langFilter && blocker.lang !== langFilter) return false
+        return true
+      }),
+    [allBlockers, showInactive, categoryFilter, langFilter]
   )
-  const { data: blockers = [], isLoading, isError } = useQaBlockers(filters)
 
   const createMutation = useCreateQaBlocker()
   const updateMutation = useUpdateQaBlocker()
   const deleteMutation = useDeleteQaBlocker()
 
+  const reportError = (error: unknown) => {
+    toast.error(
+      isConflict(error)
+        ? t('pages.qaRules.blockers.duplicate', 'That phrase is already in the dictionary')
+        : t('pages.qaRules.saveError', 'Could not save the change')
+    )
+  }
+
   const handleCreate = async () => {
-    const phrase = draft.phrase.trim()
-    if (!phrase) return
+    if (!phraseValid(draft.phrase)) return
     try {
-      await createMutation.mutateAsync({ ...draft, phrase })
+      await createMutation.mutateAsync({ ...draft, phrase: draft.phrase.trim() })
       setDraft(EMPTY_DRAFT)
       toast.success(t('pages.qaRules.blockers.created', 'Blocker added'))
-    } catch {
-      toast.error(t('pages.qaRules.saveError', 'Could not save the change'))
+    } catch (error) {
+      reportError(error)
     }
   }
 
@@ -96,31 +130,35 @@ export function QaBlockersTable() {
     })
   }
 
-  const handleUpdate = async (id: string, payload: Partial<QaBlockerPayload>) => {
+  const handleUpdate = async (id: string, payload: QaBlockerUpdatePayload) => {
     try {
       await updateMutation.mutateAsync({ id, payload })
       setEditingId(null)
       toast.success(t('pages.qaRules.blockers.updated', 'Blocker updated'))
-    } catch {
-      toast.error(t('pages.qaRules.saveError', 'Could not save the change'))
+    } catch (error) {
+      reportError(error)
     }
   }
 
   const handleDelete = async (blocker: QaBlocker) => {
     const ok = await confirm({
-      title: t('pages.qaRules.blockers.deleteTitle', 'Delete blocker?'),
-      message: blocker.phrase,
-      confirmLabel: t('actions.delete', 'Delete'),
+      title: t('pages.qaRules.blockers.deleteTitle', 'Deactivate blocker?'),
+      message: t('pages.qaRules.blockers.deleteMessage', '«{{phrase}}» stops flagging calls.', {
+        phrase: blocker.phrase,
+      }),
+      confirmLabel: t('pages.qaRules.blockers.deactivate', 'Deactivate'),
       tone: 'danger',
     })
     if (!ok) return
     try {
       await deleteMutation.mutateAsync(blocker.id)
-      toast.success(t('pages.qaRules.blockers.deleted', 'Blocker deleted'))
-    } catch {
-      toast.error(t('pages.qaRules.saveError', 'Could not save the change'))
+      toast.success(t('pages.qaRules.blockers.deleted', 'Blocker deactivated'))
+    } catch (error) {
+      reportError(error)
     }
   }
+
+  const editPhraseValid = phraseValid(editDraft.phrase ?? '')
 
   return (
     <div className="flex flex-col gap-3" data-testid="qa-blockers-table">
@@ -153,6 +191,14 @@ export function QaBlockersTable() {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-1 text-[11px] text-[#6B7280]">
+          <input
+            type="checkbox"
+            checked={showInactive}
+            onChange={(e) => setShowInactive(e.target.checked)}
+          />
+          {t('pages.qaRules.blockers.showInactive', 'Show deactivated')}
+        </label>
         <span className="text-[11px] text-[#6B7280]">
           {t('pages.qaRules.blockers.total', 'Phrases')}: {blockers.length}
         </span>
@@ -196,26 +242,27 @@ export function QaBlockersTable() {
                     <td className={TD}>
                       <input
                         aria-label={t('pages.qaRules.blockers.phrase', 'Phrase')}
-                        value={editDraft.phrase}
+                        value={editDraft.phrase ?? ''}
+                        maxLength={PHRASE_MAX}
                         onChange={(e) => setEditDraft({ ...editDraft, phrase: e.target.value })}
                         className={`${QA_INPUT_CLS} w-full`}
                       />
                     </td>
                     <td className={TD}>
                       <CategorySelect
-                        value={editDraft.category}
+                        value={editDraft.category ?? 'script_critical'}
                         onChange={(category) => setEditDraft({ ...editDraft, category })}
                       />
                     </td>
                     <td className={TD}>
                       <SeveritySelect
-                        value={editDraft.severity}
+                        value={editDraft.severity ?? 'critical'}
                         onChange={(severity) => setEditDraft({ ...editDraft, severity })}
                       />
                     </td>
                     <td className={TD}>
                       <LangSelect
-                        value={editDraft.lang}
+                        value={editDraft.lang ?? 'uk'}
                         onChange={(lang) => setEditDraft({ ...editDraft, lang })}
                       />
                     </td>
@@ -223,7 +270,7 @@ export function QaBlockersTable() {
                       <input
                         type="checkbox"
                         aria-label={t('pages.qaRules.blockers.active', 'Active')}
-                        checked={editDraft.is_active}
+                        checked={editDraft.is_active ?? true}
                         onChange={(e) =>
                           setEditDraft({ ...editDraft, is_active: e.target.checked })
                         }
@@ -234,7 +281,7 @@ export function QaBlockersTable() {
                         <Button
                           size="sm"
                           variant="primary"
-                          disabled={!editDraft.phrase.trim() || updateMutation.isPending}
+                          disabled={!editPhraseValid || updateMutation.isPending}
                           onClick={() => handleUpdate(blocker.id, editDraft)}
                         >
                           {t('actions.save', 'Save')}
@@ -246,7 +293,10 @@ export function QaBlockersTable() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={blocker.id} className="border-b border-[#F1F1F1]">
+                  <tr
+                    key={blocker.id}
+                    className={`border-b border-[#F1F1F1] ${blocker.is_active ? '' : 'opacity-60'}`}
+                  >
                     <td className={`${TD} max-w-[320px]`}>{blocker.phrase}</td>
                     <td className={TD}>{t(categoryKey(blocker.category), blocker.category)}</td>
                     <td className={TD}>
@@ -277,13 +327,15 @@ export function QaBlockersTable() {
                         >
                           {t('actions.edit', 'Edit')}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(blocker)}
-                          className="rounded-md border border-[#FECACA] px-2 py-1 text-[11px] text-[#B91C1C] hover:bg-[#FEF2F2]"
-                        >
-                          {t('actions.delete', 'Delete')}
-                        </button>
+                        {blocker.is_active ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(blocker)}
+                            className="rounded-md border border-[#FECACA] px-2 py-1 text-[11px] text-[#B91C1C] hover:bg-[#FEF2F2]"
+                          >
+                            {t('pages.qaRules.blockers.deactivate', 'Deactivate')}
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -291,12 +343,14 @@ export function QaBlockersTable() {
               )
             )}
 
-            {/* Inline add row — always last, always visible. */}
+            {/* Inline add row — always last, always visible. A new phrase is
+              created active; `is_active` is not part of the POST body. */}
             <tr className="bg-[#FAFAFA]">
               <td className={TD}>
                 <input
                   aria-label={t('pages.qaRules.blockers.newPhrase', 'New phrase')}
                   value={draft.phrase}
+                  maxLength={PHRASE_MAX}
                   onChange={(e) => setDraft({ ...draft, phrase: e.target.value })}
                   placeholder={t('pages.qaRules.blockers.newPhrase', 'New phrase')}
                   className={`${QA_INPUT_CLS} w-full`}
@@ -317,20 +371,13 @@ export function QaBlockersTable() {
               <td className={TD}>
                 <LangSelect value={draft.lang} onChange={(lang) => setDraft({ ...draft, lang })} />
               </td>
-              <td className={TD}>
-                <input
-                  type="checkbox"
-                  aria-label={t('pages.qaRules.blockers.newActive', 'New blocker is active')}
-                  checked={draft.is_active}
-                  onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
-                />
-              </td>
+              <td className={TD} />
               <td className={`${TD} whitespace-nowrap`}>
                 <Button
                   size="sm"
                   variant="primary"
                   leftIcon={<Icons.Add size={14} />}
-                  disabled={!draft.phrase.trim() || createMutation.isPending}
+                  disabled={!phraseValid(draft.phrase) || createMutation.isPending}
                   onClick={handleCreate}
                 >
                   {t('pages.qaRules.blockers.add', 'Add')}

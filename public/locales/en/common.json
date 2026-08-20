@@ -10387,8 +10387,7 @@
       },
       "scale": {
         "binary": "Yes/No",
-        "0-5": "0–5",
-        "binary_critical": "Yes/No (critical)"
+        "0-5": "0–5"
       },
       "blockers": {
         "phrase": "Phrase",
@@ -10401,15 +10400,18 @@
         "langFilter": "Language",
         "allLangs": "All languages",
         "active": "Active",
-        "newActive": "New blocker is active",
         "add": "Add",
         "total": "Phrases",
         "empty": "No blockers yet.",
         "loadError": "Failed to load the blocker dictionary.",
         "created": "Blocker added",
         "updated": "Blocker updated",
-        "deleted": "Blocker deleted",
-        "deleteTitle": "Delete blocker?"
+        "deleted": "Blocker deactivated",
+        "deleteTitle": "Deactivate blocker?",
+        "deleteMessage": "«{{phrase}}» will stop flagging calls. You can bring it back with the «Active» switch.",
+        "deactivate": "Deactivate",
+        "showInactive": "Show deactivated",
+        "duplicate": "That phrase is already in the dictionary for this language"
       },
       "rubrics": {
         "name": "Rubric name",
@@ -10446,7 +10448,8 @@
         "weightError": "Weights must add up to 100",
         "slice": "Applies to",
         "sliceTaken": "Another rubric is already active for this slice: {{name}}",
-        "critical": "Critical"
+        "critical": "Critical",
+        "sliceTakenGeneric": "This slice already has a live rubric — archive it first"
       }
     }
   },

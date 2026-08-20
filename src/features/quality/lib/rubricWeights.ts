@@ -10,6 +10,9 @@ import type { Section } from '../types'
 
 export const RUBRIC_TOTAL_WEIGHT = 100
 
+/** Same slack quality-service's validator allows. */
+export const RUBRIC_WEIGHT_TOLERANCE = 0.01
+
 /** Sum of every criterion weight across every section. Non-numeric → 0. */
 export function sumCriteriaWeights(sections: Section[]): number {
   let total = 0
@@ -25,7 +28,9 @@ export function sumCriteriaWeights(sections: Section[]): number {
 }
 
 export function isRubricWeightValid(sections: Section[]): boolean {
-  return sumCriteriaWeights(sections) === RUBRIC_TOTAL_WEIGHT
+  // An empty rubric sums to 0, which is not "valid but unfinished" — the
+  // caller checks for criteria separately; here 0 simply isn't 100.
+  return Math.abs(sumCriteriaWeights(sections) - RUBRIC_TOTAL_WEIGHT) <= RUBRIC_WEIGHT_TOLERANCE
 }
 
 /** A key unique inside `taken`, derived from a human label where possible. */

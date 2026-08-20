@@ -8,9 +8,9 @@
  *      `purpose='ai'`, served by the existing `/api/v1/quality/templates`
  *      CRUD.
  *
- * Reads are open to `view_ai_reviews`; every write is server-gated by
- * `manage_qa_rules` (403 otherwise — the UI additionally hides the whole
- * tab, so a 403 here only happens if a role changes mid-session).
+ * Write gating is per-purpose on the template routes: `purpose='ai'` needs
+ * `manage_qa_rules`, `purpose='manual'` needs `manage_scorecard_templates`.
+ * Blocker writes are `manage_qa_rules` throughout.
  *
  * TOLERANT READER: `category`/`severity`/`lang` come back as raw strings —
  * the pipeline owns those vocabularies and may grow them ahead of the UI.
@@ -19,8 +19,9 @@
 import { api } from '@/lib/api'
 import type {
   QaBlocker,
+  QaBlockerCreatePayload,
   QaBlockerListFilters,
-  QaBlockerPayload,
+  QaBlockerUpdatePayload,
   ScorecardTemplate,
   TemplateCreatePayload,
   TemplateListFilters,
@@ -32,40 +33,46 @@ const TEMPLATES_URL = '/api/v1/quality/templates'
 
 // ----- Blockers -----
 
-/** Both the bare-array and the paged envelope are accepted (tolerant reader). */
-function unwrapList<T>(data: T[] | { items?: T[] } | null | undefined): T[] {
-  if (Array.isArray(data)) return data
-  if (data && Array.isArray(data.items)) return data.items
-  return []
-}
-
+/**
+ * The endpoint filters by activity, category, severity and language. The
+ * settings table deliberately doesn't use those: the dictionary is a few
+ * dozen rows, so it fetches once (`include_inactive`, no `is_active` — both
+ * states, which the activity switch needs) and narrows on the client, which
+ * keeps the filters instant and the cache single. The parameters are
+ * supported here for callers that want a narrower slice.
+ */
 export async function listQaBlockers(filters: QaBlockerListFilters = {}): Promise<QaBlocker[]> {
   const params = new URLSearchParams()
+  if (filters.include_inactive) params.set('include_inactive', 'true')
+  // Tri-state, and it overrides include_inactive — only send it when set.
   if (filters.is_active != null) params.set('is_active', String(filters.is_active))
   if (filters.category) params.set('category', filters.category)
   if (filters.severity) params.set('severity', filters.severity)
   if (filters.lang) params.set('lang', filters.lang)
-  const response = await api.get<QaBlocker[] | { items?: QaBlocker[] }>(BLOCKERS_URL, {
-    params,
-  })
-  return unwrapList(response.data)
+  const response = await api.get<QaBlocker[]>(BLOCKERS_URL, { params })
+  return Array.isArray(response.data) ? response.data : []
 }
 
-export async function createQaBlocker(payload: QaBlockerPayload): Promise<QaBlocker> {
+export async function createQaBlocker(payload: QaBlockerCreatePayload): Promise<QaBlocker> {
   const response = await api.post<QaBlocker>(BLOCKERS_URL, payload)
   return response.data
 }
 
 export async function updateQaBlocker(
   blockerId: string,
-  payload: Partial<QaBlockerPayload>
+  payload: QaBlockerUpdatePayload
 ): Promise<QaBlocker> {
   const response = await api.put<QaBlocker>(`${BLOCKERS_URL}/${blockerId}`, payload)
   return response.data
 }
 
-export async function deleteQaBlocker(blockerId: string): Promise<void> {
-  await api.delete(`${BLOCKERS_URL}/${blockerId}`)
+/**
+ * Soft delete: answers 200 with the row flipped to `is_active: false`, so a
+ * phrase is never actually lost — PUT `{is_active: true}` brings it back.
+ */
+export async function deleteQaBlocker(blockerId: string): Promise<QaBlocker> {
+  const response = await api.delete<QaBlocker>(`${BLOCKERS_URL}/${blockerId}`)
+  return response.data
 }
 
 // ----- AI rubrics (scorecard templates with purpose='ai') -----
@@ -75,17 +82,10 @@ export async function listQaTemplates(
 ): Promise<ScorecardTemplate[]> {
   const params = new URLSearchParams()
   if (filters.include_archived) params.set('include_archived', 'true')
+  // Server default is 'manual'; the settings tab must always ask for 'ai'.
   if (filters.purpose) params.set('purpose', filters.purpose)
-  const response = await api.get<ScorecardTemplate[] | { items?: ScorecardTemplate[] }>(
-    TEMPLATES_URL,
-    { params }
-  )
-  const rows = unwrapList(response.data)
-  // Belt and braces: a backend that ignores `?purpose=` must not leak the
-  // trainers' manual templates into the AI rubric list.
-  return filters.purpose
-    ? rows.filter((row) => (row.purpose ?? 'manual') === filters.purpose)
-    : rows
+  const response = await api.get<ScorecardTemplate[]>(TEMPLATES_URL, { params })
+  return Array.isArray(response.data) ? response.data : []
 }
 
 export async function createQaTemplate(payload: TemplateCreatePayload): Promise<ScorecardTemplate> {
@@ -106,6 +106,10 @@ export async function archiveQaTemplate(templateId: number): Promise<ScorecardTe
   return response.data
 }
 
+/**
+ * Answers 409 when the `(department_id, scorecard_type)` slice already has a
+ * live rubric — archive that one first. The message names the conflict.
+ */
 export async function unarchiveQaTemplate(templateId: number): Promise<ScorecardTemplate> {
   const response = await api.post<ScorecardTemplate>(`${TEMPLATES_URL}/${templateId}/unarchive`)
   return response.data
