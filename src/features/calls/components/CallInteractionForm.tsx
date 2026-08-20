@@ -177,7 +177,9 @@ export function CallInteractionForm({
             value={reasonId === null ? undefined : String(reasonId)}
             onValueChange={(value) => {
               setReasonId(Number(value))
-              report({ reasonId: Number(value) })
+              // Filters the result list too; same staleness as the channel.
+              setResultId(null)
+              report({ reasonId: Number(value), resultId: null })
             }}
             disabled={disabled}
           >
@@ -207,7 +209,13 @@ export function CallInteractionForm({
             value={channelId === null ? undefined : String(channelId)}
             onValueChange={(value) => {
               setChannelId(Number(value))
-              report({ channelId: Number(value) })
+              // The result list is filtered by channel, so a result chosen for
+              // the previous one may not be in it any more. Radix falls back to
+              // the placeholder, which reads as nothing selected while the id is
+              // still set and still saveable — filing a result that does not
+              // apply to the channel it was filed under.
+              setResultId(null)
+              report({ channelId: Number(value), resultId: null })
             }}
             disabled={disabled}
           >

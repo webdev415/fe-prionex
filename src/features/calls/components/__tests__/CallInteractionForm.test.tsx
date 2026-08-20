@@ -50,6 +50,23 @@ async function chooseResult(name: string) {
 }
 
 describe('CallInteractionForm', () => {
+  it('clears a result the new channel may not offer', async () => {
+    const { onSave } = renderForm()
+
+    await chooseResult('Refusal')
+    expect(saveButton()).toBeEnabled()
+
+    // The result list is filtered by channel. Radix falls back to the
+    // placeholder when the chosen option leaves the list, so the trigger reads
+    // "Select a result" while the id is still set and still saveable.
+    const [, , channelTrigger] = screen.getAllByRole('combobox')
+    fireEvent.click(channelTrigger)
+    fireEvent.click(await screen.findByText('SMS'))
+
+    expect(saveButton()).toBeDisabled()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('cannot be saved until a result is chosen', () => {
     renderForm()
 

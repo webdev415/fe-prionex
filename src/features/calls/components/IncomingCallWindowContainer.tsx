@@ -120,9 +120,14 @@ export function IncomingCallWindowContainer({
   const inboundType = types?.find((type) => type.code?.toLowerCase() === 'incoming') ?? types?.[0]
   // Filtered the same way AddNoteModal filters them, so the operator is not
   // offered results that do not apply to the channel and reason they picked.
+  // The form defaults the channel to the first option, so until the operator
+  // touches it the draft holds nothing while a channel is nonetheless what will
+  // be filed. Falling back to the same default keeps the results query and the
+  // filed subtype describing the same channel.
+  const effectiveChannelId = draft.channelId ?? channels?.[0]?.id
   const { data: results } = useInteractionResults({
     typeId: inboundType?.id,
-    channelId: draft.channelId ?? undefined,
+    channelId: effectiveChannelId,
     contactTypeId: draft.reasonId ?? undefined,
   })
 
@@ -145,7 +150,7 @@ export function IncomingCallWindowContainer({
       // nobody's card, so the request carries no clients.
       clientIds: includedClientIds,
       typeId: inboundType.id,
-      subtypeId: draft.channelId ?? undefined,
+      subtypeId: draft.channelId ?? effectiveChannelId,
       resultId: draft.resultId,
       contactTypeId: draft.reasonId ?? undefined,
       phoneUsed: incomingCall.customer_phone,
@@ -206,14 +211,23 @@ export function IncomingCallWindowContainer({
       }
       ended={ended}
       onCancel={() => {
+        // Nothing to end once the line is down: the window is only still here
+        // so the interaction could be filed, and posting a hangup for a
+        // channel Asterisk has torn down fails — leaving a window that cannot
+        // be dismissed while it holds the store registration that blocks
+        // click-to-call.
+        if (ended) {
+          onDismiss()
+          return
+        }
         // Reject declines a call that is still ringing and records it as
         // declined; once connected the call is hung up instead, or a finished
         // conversation is filed as one the operator refused.
         const ending = phase === 'connected' ? hangup : reject
-        // Dismissed only once the request lands. Closing first leaves the line
-        // up with no window to retry from, and makes `cancelPending` a state
-        // nothing can ever render.
-        ending.mutate(incomingCall.call_id, { onSuccess: onDismiss })
+        // Dismissed once the request settles rather than only on success: a
+        // failed hangup must not strand the window either, and the operator is
+        // told about the failure by the mutation's own error toast.
+        ending.mutate(incomingCall.call_id, { onSettled: onDismiss })
       }}
       acceptPending={answer.isPending}
       holdPending={hold.isPending}

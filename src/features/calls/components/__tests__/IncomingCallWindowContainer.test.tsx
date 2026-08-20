@@ -214,7 +214,22 @@ describe('IncomingCallWindowContainer', () => {
       // makes the pending state unreachable.
       expect(onDismiss).not.toHaveBeenCalled()
       const [, options] = rejectCall.mutate.mock.calls[0]
-      options.onSuccess()
+      // onSettled, not onSuccess: a failed request must not strand the window.
+      options.onSettled()
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('closes without posting a hangup for a call already over', () => {
+      const { onDismiss } = renderContainer({ answeredAt: Date.now(), ended: true })
+
+      fireEvent.click(screen.getByRole('button', { name: /close/i }))
+
+      // Asterisk tore the channel down when the caller rang off. Posting a
+      // hangup for it fails, and because dismissal hung off that request the
+      // window could not be closed at all — while still holding the store
+      // registration that blocks click-to-call.
+      expect(hangupCall.mutate).not.toHaveBeenCalled()
+      expect(rejectCall.mutate).not.toHaveBeenCalled()
       expect(onDismiss).toHaveBeenCalled()
     })
 
