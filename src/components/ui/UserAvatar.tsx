@@ -5,10 +5,14 @@
  * rather than an error state. It takes its colours from the theme so it matches
  * the container it sits in, in light and dark alike. A broken or unreachable
  * image falls back to it too, so a dead link never leaves an empty disc.
+ *
+ * The stored path is server-relative, so it is resolved against the API host
+ * before it reaches the browser - see resolveAssetUrl.
  */
 
 import { useState } from 'react'
 import { monogramInitials } from '@/lib/avatarMonogram'
+import { resolveAssetUrl } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export interface UserAvatarProps {
@@ -31,18 +35,19 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
+  const src = resolveAssetUrl(avatarUrl)
   const initials = monogramInitials(firstName, lastName, fullName)
   const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
   const dimensions = { width: size, height: size }
 
-  if (avatarUrl && failedUrl !== avatarUrl) {
+  if (src && failedUrl !== src) {
     return (
       <img
-        src={avatarUrl}
+        src={src}
         alt={label ?? ''}
         style={dimensions}
         className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
-        onError={() => setFailedUrl(avatarUrl)}
+        onError={() => setFailedUrl(src)}
       />
     )
   }

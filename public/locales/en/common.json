@@ -10296,7 +10296,6 @@
     "profileSettings": {
       "photo": {
         "upload": "Upload photo",
-        "replace": "Replace photo",
         "remove": "Remove photo",
         "wrongType": "Choose a JPEG, PNG or WebP image",
         "tooLarge": "The photo must be 2 MB or smaller",

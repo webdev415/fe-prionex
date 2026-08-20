@@ -70,10 +70,20 @@ describe('ProfilePhotoField', () => {
     expect(control.textContent?.trim()).toBe('')
   })
 
-  it('offers Replace and Remove once a photo exists', () => {
+  it('turns the single corner control into Remove once a photo exists', () => {
     renderField('/avatars/7.png')
-    expect(screen.getByRole('button', { name: /replace photo/i })).toBeInTheDocument()
+
     expect(screen.getByRole('button', { name: /remove photo/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /upload photo/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+
+  it('offers only Upload while there is no photo', () => {
+    renderField(null)
+
+    expect(screen.getByRole('button', { name: /upload photo/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /remove photo/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
   it('does not show the format hint', () => {

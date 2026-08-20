@@ -10315,7 +10315,6 @@
     "profileSettings": {
       "photo": {
         "upload": "Завантажити фото",
-        "replace": "Замінити фото",
         "remove": "Видалити фото",
         "wrongType": "Оберіть зображення у форматі JPEG, PNG або WebP",
         "tooLarge": "Фото має бути не більшим за 2 МБ",

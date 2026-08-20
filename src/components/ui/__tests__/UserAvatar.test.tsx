@@ -3,11 +3,19 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { UserAvatar } from '../UserAvatar'
 
 describe('UserAvatar', () => {
-  it('shows the photo when there is one', () => {
-    render(<UserAvatar fullName="Olena Kovalchuk" avatarUrl="/avatars/1.png" />)
+  it('points a server-relative photo at the API host, not the page origin', () => {
+    render(<UserAvatar fullName="Olena Kovalchuk" avatarUrl="/api/v1/users/avatars/1.png" />)
     expect(screen.getByRole('img', { name: 'Olena Kovalchuk' })).toHaveAttribute(
       'src',
-      '/avatars/1.png'
+      'https://api.dev.crm-prionex.online/api/v1/users/avatars/1.png'
+    )
+  })
+
+  it('leaves an already absolute photo url alone', () => {
+    render(<UserAvatar fullName="Olena Kovalchuk" avatarUrl="https://cdn.example.com/1.png" />)
+    expect(screen.getByRole('img', { name: 'Olena Kovalchuk' })).toHaveAttribute(
+      'src',
+      'https://cdn.example.com/1.png'
     )
   })
 

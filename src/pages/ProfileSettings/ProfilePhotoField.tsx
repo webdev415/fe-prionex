@@ -11,7 +11,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { getErrorMessage } from '@/lib/errors'
@@ -41,8 +40,8 @@ export function ProfilePhotoField({
   const inputRef = useRef<HTMLInputElement>(null)
   const [isBusy, setIsBusy] = useState(false)
 
-  const uploadLabel = avatarUrl
-    ? t('pages.profileSettings.photo.replace', 'Replace photo')
+  const actionLabel = avatarUrl
+    ? t('pages.profileSettings.photo.remove', 'Remove photo')
     : t('pages.profileSettings.photo.upload', 'Upload photo')
 
   const handleFile = async (file: File | undefined) => {
@@ -99,26 +98,18 @@ export function ProfilePhotoField({
         <button
           type="button"
           disabled={isBusy}
-          onClick={() => inputRef.current?.click()}
-          title={uploadLabel}
-          aria-label={uploadLabel}
+          onClick={() => (avatarUrl ? void handleRemove() : inputRef.current?.click())}
+          title={actionLabel}
+          aria-label={actionLabel}
           className="bg-primary text-primary-foreground border-card absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Icons.Add size={16} strokeWidth={2} />
+          {avatarUrl ? (
+            <Icons.Delete size={16} strokeWidth={2} />
+          ) : (
+            <Icons.Add size={16} strokeWidth={2} />
+          )}
         </button>
       </div>
-
-      {avatarUrl && (
-        <Button
-          type="button"
-          variant="cancel"
-          disabled={isBusy}
-          onClick={handleRemove}
-          leftIcon={<Icons.Delete size={16} strokeWidth={1.5} />}
-        >
-          {t('pages.profileSettings.photo.remove', 'Remove photo')}
-        </Button>
-      )}
 
       <input
         ref={inputRef}

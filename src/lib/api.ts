@@ -6,6 +6,22 @@ export const API_BASE_URL =
     ? import.meta.env.VITE_API_BASE_URL
     : 'http://localhost:8000'
 
+/**
+ * Turn a server-relative asset path into one the browser can actually fetch.
+ *
+ * The API returns paths like /api/v1/users/avatars/1-abc.png with no host, which
+ * is right - the host belongs to the deployment, not the database row. But an
+ * <img src> is resolved against the page origin, not against this client's
+ * baseURL, so a bare path asks the frontend host for a file only the API has.
+ * Anything already absolute is handed back untouched.
+ */
+export function resolveAssetUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined
+  if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path
+  if (!API_BASE_URL) return path
+  return `${API_BASE_URL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
 // Backend gunicorn timeout is 60s; FE must outlive it so a slow-but-eventually-
 // successful request is not cancelled by axios before the server responds.
 // 75s gives a 15s safety margin past the backend ceiling.
