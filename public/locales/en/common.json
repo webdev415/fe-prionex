@@ -687,6 +687,8 @@
       "memory": {
         "title": "Personalization",
         "helper": "What the assistant remembers about you — it shapes its answers.",
+        "usageTitle": "Facts in memory: {{used}} of {{limit}}",
+        "limitHint": "The memory is full: the oldest and unused facts are evicted automatically. You can also delete extras manually.",
         "empty": "Memory is empty. Add a fact about your work and the assistant will take it into account.",
         "loadError": "Failed to load the memory.",
         "retry": "Retry",
@@ -701,6 +703,7 @@
           "user": "added manually",
           "agent": "learned",
           "observation": "observation",
+          "consolidated": "consolidated",
           "unknown": "other"
         },
         "errors": {
@@ -3882,6 +3885,8 @@
         "unavailable": "The assistant memory service is unavailable.",
         "columnScope": "Scope",
         "columnRecords": "Records",
+        "usageTitle": "Records: {{used}} of {{limit}}",
+        "overLimit": "over limit",
         "columnLastAt": "Last",
         "globalScope": "Shared reference",
         "globalHint": "Applies to every operator",
@@ -3894,6 +3899,7 @@
           "user": "added manually",
           "agent": "learned",
           "observation": "observation",
+          "consolidated": "consolidated",
           "unknown": "other"
         },
         "collapsedHint": "{{count}} scopes · click to show"

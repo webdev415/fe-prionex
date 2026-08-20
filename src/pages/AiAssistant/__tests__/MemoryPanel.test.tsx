@@ -53,6 +53,10 @@ function memoryItem(id: number, extra: Partial<AssistantMemoryItem> = {}): Assis
 
 /** Серверное состояние памяти — мок списка читает его при каждом запросе. */
 let store: AssistantMemoryItem[] = []
+/** Потолок скоупа и объём памяти на сервере: `total` не обязан равняться длине
+ * выдачи (в ответ уходит страница), а `limit` может не прийти вовсе. */
+let storeLimit: number | null = null
+let storeTotal: number | null = null
 
 function renderPanel() {
   const queryClient = new QueryClient({
@@ -71,7 +75,13 @@ beforeEach(() => {
     memoryItem(2, { content: 'Просит суммы без копеек', source: 'agent' }),
     memoryItem(3, { content: 'Смена с 9 до 18', source: 'seed' }),
   ]
-  mockedGetMemoryItems.mockImplementation(async () => ({ items: store, total: store.length }))
+  storeLimit = null
+  storeTotal = null
+  mockedGetMemoryItems.mockImplementation(async () => ({
+    items: store,
+    total: storeTotal ?? store.length,
+    limit: storeLimit,
+  }))
   mockedDeleteMemoryItem.mockImplementation(async (id: number) => {
     store = store.filter((item) => item.id !== id)
   })
@@ -160,6 +170,46 @@ describe('MemoryPanel', () => {
     )
     // Текст остаётся в поле, чтобы оператор мог его поправить.
     expect(screen.getByTestId('memory-input')).toHaveValue('Веду портфель Alfa')
+  })
+
+  it('shows how full the memory is when the server sends a cap', async () => {
+    storeLimit = 50
+    storeTotal = 12
+    renderPanel()
+
+    expect(await screen.findByTestId('memory-usage')).toHaveTextContent('12 / 50')
+    // Место ещё есть — подсказки о вытеснении быть не должно.
+    expect(screen.queryByTestId('memory-limit-hint')).not.toBeInTheDocument()
+  })
+
+  it('draws no counter when the backend sends no cap yet', async () => {
+    // Фронт может выкатиться раньше бэкенда: ответ без `limit` обязан дать
+    // прежний экран, а не пустой счётчик и не падение.
+    storeLimit = null
+    renderPanel()
+
+    expect(await screen.findByTestId('memory-item-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('memory-usage')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('memory-limit-hint')).not.toBeInTheDocument()
+  })
+
+  it('explains the eviction once the memory is full', async () => {
+    storeLimit = 50
+    storeTotal = 65
+    renderPanel()
+
+    expect(await screen.findByTestId('memory-usage')).toHaveTextContent('65 / 50')
+    expect(screen.getByTestId('memory-limit-hint')).toHaveTextContent(
+      'pages.aiAssistant.memory.limitHint'
+    )
+  })
+
+  it('labels a consolidated fact with its own origin', async () => {
+    store = [memoryItem(4, { content: 'Сводный факт о смене', source: 'consolidated' })]
+    renderPanel()
+
+    expect(await screen.findByTestId('memory-item-4')).toBeInTheDocument()
+    expect(screen.getByText('pages.aiAssistant.memory.sources.consolidated')).toBeInTheDocument()
   })
 
   it('falls back to a localized message when a 422 carries no detail', async () => {

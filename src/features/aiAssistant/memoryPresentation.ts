@@ -31,13 +31,20 @@ export function makeMemoryTitle(content: string): string {
   return `${head.trimEnd()}…`
 }
 
-export type MemorySourceKey = 'user' | 'agent' | 'observation' | 'unknown'
+export type MemorySourceKey = 'user' | 'agent' | 'observation' | 'consolidated' | 'unknown'
 
 /** Записи этого вида — всегда наблюдения, каким бы ни был `source`. */
 const OBSERVATION_KIND = 'profile'
 
 /** `source`, которыми мозг помечает наблюдения о собеседнике и сид-справочник. */
 const OBSERVATION_SOURCES = new Set(['seed', 'profile', 'profiler'])
+
+/**
+ * `source` сводного факта: мозг схлопывает несколько похожих записей в одну,
+ * когда упирается в потолок памяти. Для оператора это не «вивчено» — запись
+ * пережила чистку и заменила собой предшественников, поэтому подпись своя.
+ */
+const CONSOLIDATED_SOURCE = 'consolidated'
 
 /**
  * Ключ подписи происхождения. Неизвестный `source` даёт нейтральное «інше»:
@@ -52,6 +59,7 @@ export function memorySourceKey(source: string, kind?: string): MemorySourceKey 
   if (kind === OBSERVATION_KIND) return 'observation'
   if (source === 'user') return 'user'
   if (source === 'agent') return 'agent'
+  if (source === CONSOLIDATED_SOURCE) return 'consolidated'
   if (OBSERVATION_SOURCES.has(source)) return 'observation'
   return 'unknown'
 }
@@ -88,7 +96,33 @@ export const MEMORY_SOURCE_BADGE_CLASS: Record<MemorySourceKey, string> = {
   user: 'bg-primary-50 text-primary-700',
   agent: 'bg-success-100 text-success-700',
   observation: 'bg-muted text-muted-foreground',
+  consolidated: 'bg-info-50 text-info-700',
   unknown: 'bg-muted text-muted-foreground',
+}
+
+/** Потолок задан только когда пришло положительное конечное число. */
+function hasMemoryLimit(limit: number | null | undefined): limit is number {
+  return typeof limit === 'number' && Number.isFinite(limit) && limit > 0
+}
+
+/**
+ * Счётчик «занято / потолок» — либо `null`, когда потолка нет.
+ *
+ * Оба экрана показывают объём памяти одинаково, и оба обязаны пережить ответ
+ * без `limit` (бэкенд с потолком выкатывается отдельно от фронта, а у общего
+ * справочника потолка нет вовсе): вместо счётчика тогда остаётся голое число.
+ */
+export function memoryUsageLabel(used: number, limit: number | null | undefined): string | null {
+  return hasMemoryLimit(limit) ? `${used} / ${limit}` : null
+}
+
+/**
+ * Память заполнена: с этого момента мозг вытесняет самые старые и неиспользуемые
+ * факты. Это штатный режим работы, а не отказ, — отсюда `>=`, а не `>`: на самой
+ * границе новый факт уже кого-то вытеснит.
+ */
+export function isMemoryFull(used: number, limit: number | null | undefined): boolean {
+  return hasMemoryLimit(limit) && used >= limit
 }
 
 /** Дата записи в коротком локальном формате; мусор в поле даёт пустую строку. */

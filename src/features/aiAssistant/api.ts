@@ -416,9 +416,11 @@ export async function markCitationStep({
 /**
  * Происхождение факта памяти:
  * `user` — сотрудник добавил руками, `agent` — мозг вывел из диалога,
- * `seed`/`profile` — наблюдение, засеянное при инициализации памяти.
+ * `seed`/`profile` — наблюдение, засеянное при инициализации памяти,
+ * `consolidated` — сводный факт, которым мозг схлопнул несколько похожих
+ * записей при вытеснении по потолку.
  */
-export type AssistantMemorySource = 'user' | 'agent' | 'seed' | 'profile'
+export type AssistantMemorySource = 'user' | 'agent' | 'seed' | 'profile' | 'consolidated'
 
 /**
  * Факт, который ассистент помнит о сотруднике. Влияет на ответы, поэтому
@@ -441,25 +443,44 @@ export interface AssistantMemoryItem {
 export interface AssistantMemoryList {
   items: AssistantMemoryItem[]
   total: number
+  /**
+   * Потолок активных записей скоупа. `null` — потолка нет: либо он выключен на
+   * мозге, либо бэкенд ещё старый и поля не присылает. Для UI оба случая
+   * означают одно — счётчик не рисуем.
+   */
+  limit: number | null
+}
+
+/**
+ * Привести потолок из ответа к `number | null`.
+ *
+ * Потолком считается только положительное конечное число: `null`, отсутствие
+ * поля и мусор одинаково означают «предела нет». Один разбор на оба экрана —
+ * пользовательский список и админскую сводку по скоупам.
+ */
+export function normalizeMemoryLimit(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
 }
 
 /**
  * Привести ответ списка к {@link AssistantMemoryList}.
  *
- * Контракт — конверт `{items, total}`, но урок `citations` повторять не хочется:
- * голый массив (или пустое тело) от промежуточной версии бэкенда не должен
- * ронять панель на `.map is not a function`.
+ * Контракт — конверт `{items, total, limit}`, но урок `citations` повторять не
+ * хочется: голый массив (или пустое тело) от промежуточной версии бэкенда не
+ * должен ронять панель на `.map is not a function`, а отсутствующий `limit` —
+ * прятать список за счётчиком, которого нет.
  */
 export function normalizeMemoryList(payload: unknown): AssistantMemoryList {
   if (Array.isArray(payload)) {
-    return { items: payload as AssistantMemoryItem[], total: payload.length }
+    return { items: payload as AssistantMemoryItem[], total: payload.length, limit: null }
   }
   const items = (payload as { items?: unknown } | null)?.items
-  if (!Array.isArray(items)) return { items: [], total: 0 }
+  if (!Array.isArray(items)) return { items: [], total: 0, limit: null }
   const total = (payload as { total?: unknown }).total
   return {
     items: items as AssistantMemoryItem[],
     total: typeof total === 'number' ? total : items.length,
+    limit: normalizeMemoryLimit((payload as { limit?: unknown }).limit),
   }
 }
 
