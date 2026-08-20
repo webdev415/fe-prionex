@@ -3,23 +3,20 @@
  *
  * Most users will never upload a photo, so the monogram is the normal case
  * rather than an error state. It takes its colours from the theme so it matches
- * the container it sits in, in light and dark alike. A broken or unreachable
- * image falls back to it too, so a dead link never leaves an empty disc.
+ * the container it sits in, in light and dark alike. A photo that cannot be
+ * fetched falls back to it too, so a dead link never leaves an empty disc.
  *
- * The stored path is server-relative, so it is resolved against the API host
- * before it reaches the browser - see resolveAssetUrl.
- *
- * The mount that serves these files is deliberately unauthenticated: the
- * browser issues the image GET itself, so it carries none of the headers the
- * API client attaches. That makes a photo readable by anyone holding its URL,
- * and the random file name is what keeps one user's from being reachable from
- * another's. It also means a failure here looks exactly like having no photo,
- * so the fallback says so rather than swallowing it.
+ * The photo endpoint requires a token, so the bytes cannot be fetched by
+ * putting the path in src - the browser would issue that request itself and
+ * send no Authorization header. They are fetched through the API client
+ * instead, and the tag is given an object URL. Until that resolves the monogram
+ * stands in, which is also what a signed-out or expired session ends up
+ * showing.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { monogramInitials } from '@/lib/avatarMonogram'
-import { resolveAssetUrl } from '@/lib/api'
+import { avatarSource, loadAvatarObjectUrl } from '@/lib/avatarImage'
 import { cn } from '@/lib/utils'
 
 export interface UserAvatarProps {
@@ -40,27 +37,49 @@ export function UserAvatar({
   size = 32,
   className,
 }: UserAvatarProps) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  // Held with the source it belongs to rather than reset when the source
+  // changes: clearing it from the effect would be a synchronous set during
+  // render, and a stale photo would flash under the new name until the fetch
+  // came back. Deriving it means a source with nothing loaded yet shows the
+  // monogram without anyone having to clear anything.
+  const [loaded, setLoaded] = useState<{ source: string; url: string } | null>(null)
 
-  const src = resolveAssetUrl(avatarUrl)
+  const source = avatarSource(avatarUrl)
+
+  useEffect(() => {
+    if (!source) return
+
+    let active = true
+    loadAvatarObjectUrl(source)
+      .then((url) => {
+        if (active) setLoaded({ source, url })
+      })
+      .catch((error) => {
+        if (!active) return
+        // Nothing is stored for this source, so the monogram stands. Logged
+        // because otherwise a failure is indistinguishable from having no
+        // photo: the initials appear and nothing says why.
+        console.error(`Avatar failed to load: ${source}`, error)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [source])
+
+  const objectUrl = loaded && loaded.source === source ? loaded.url : null
+
   const initials = monogramInitials(firstName, lastName, fullName)
   const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
   const dimensions = { width: size, height: size }
 
-  if (src && failedUrl !== src) {
+  if (source && objectUrl) {
     return (
       <img
-        src={src}
+        src={objectUrl}
         alt={label ?? ''}
         style={dimensions}
         className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
-        onError={() => {
-          console.error(
-            `Avatar failed to load: ${src}. Showing initials instead. ` +
-              'A 401 here means the avatar path is behind authentication the browser cannot send.'
-          )
-          setFailedUrl(src)
-        }}
       />
     )
   }
