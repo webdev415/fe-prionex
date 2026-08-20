@@ -4,7 +4,7 @@ baseline_commit: 162f1722d614034037807dcd7af95752b67edf2b
 
 # Story 4.3: Deploy a Feature Branch to DEV on Demand
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Contexted 2026-08-20 against `main` at 162f1722 (Story 4.2 closed the same day, PR #58).
      This story inherits TWO named blockers from Story 4.2's code review, both recorded with
@@ -152,8 +152,32 @@ mechanism actually produces — or recorded as moot, with the reason.
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
-  - [ ] 1.0 Flip `sprint-status.yaml` `4-3-deploy-a-feature-branch-to-dev-on-demand` → `in-progress`
+  - [x] 1.0 Flip `sprint-status.yaml` `4-3-deploy-a-feature-branch-to-dev-on-demand` → `in-progress`
         before starting implementation, so the tracker never disagrees with reality mid-story.
+        **Done.**
+
+  - [x] 1.0b **🔴 Blocking-question resolution recorded here, closed by the coordinator (2026-08-20),
+        before this story's own Task 3 was ever executed as originally written.** Dev Notes §10's
+        table said the RO registry secrets "do not exist" and were blocking. That premise was wrong:
+        `REGISTRY_USER_RO` and `REGISTRY_TOKEN_RO` are **existing ORG-level Forgejo secrets** (bot
+        `robot-deploy`, scope `read:package`), provisioned by `CRM/api-prionex` — their model is
+        documented on that project's own side, e.g. `api-prionex_f/docs/5-5-weekly-dev-reset-to-main.md:583`
+        (org-level; the value only ever reaches a job as an environment variable, never a flag — the
+        same rule this project already applies to `REGISTRY_TOKEN_RW`). **Confirmed by the
+        coordinator's own query, `GET /orgs/CRM/actions/secrets` (2026-08-20):** the returned list
+        includes `REGISTRY_USER`, `REGISTRY_USER_RO`, `REGISTRY_TOKEN_RW`, `SLACK_CD_WEBHOOK_URL`,
+        `REGISTRY_TOKEN_RO`. Oleg's instruction — *"возьми из api-prionex_f"* — means: use this
+        existing model. **Consequence: Task 3 as originally written (create repository secrets,
+        mint or reuse a host-local token) is moot.** The deploy workflow consumes the two org
+        secrets directly, exactly the way `build.yml` already consumes `REGISTRY_USER`/
+        `REGISTRY_TOKEN_RW` — no repo-level secret declaration, no minting, no s1 dependency for
+        this AC. Task 3 is rewritten below to reflect this. **Popcorn fact for Story 4.5, not acted
+        on here:** `SLACK_CD_WEBHOOK_URL` is *also* org-level, per the same query — noted for
+        whoever writes that story, since Story 1.13 left its value a dead `example.invalid` stub
+        regardless of scope.
+        **Veto points not exercised (coordinator, 2026-08-20):** Oleg did not veto the mechanism
+        (D28 §4 option 5, Dev Notes §2) or the self-applying `FRONTEND_PORT=127.0.0.1:8082` (M7,
+        Task 4.4) — both stand exactly as this story already recorded them.
   - [ ] 1.1 Query the pre-work baseline: highest `action_run` id before this story's first
         *implementation* push, via
         `GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=100`.
@@ -163,18 +187,25 @@ mechanism actually produces — or recorded as moot, with the reason.
         `fe_pkg_3_6` per the standing token model, or ask. **Never print a token value**; Story 4.2's
         Completion Note 9 is the record of what happens when a `401` body echoes the presented
         string back.
-  - [ ] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
+        **Done, differently: this session does not touch the Forgejo API at all** (coordinator's
+        standing instruction this cycle). The query above is requested from the coordinator instead
+        — same D4 principle (query, not self-report), different hands on the keyboard. Baseline not
+        yet known; requested alongside the Task 2 probe dispatch.
+  - [x] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
         arithmetic in Dev Notes §9. Do not restate "5 pushes" style flat counts — Story 4.1 declared
         5 and spent 7; Story 4.2 modelled the multiplier in advance and landed exactly on 7.
-  - [ ] 1.3 🔴 The multiplier is structural: **every push that lands while the PR is already open
+        **Done** — see Dev Agent Record → Run Budget Ledger, declared before this commit.
+  - [x] 1.3 🔴 The multiplier is structural: **every push that lands while the PR is already open
         costs 2 `action_run` rows**, not 1 (`ci.yml:65-71`, measured). Cancelled runs still occupy a
-        row and still count.
-  - [ ] 1.4 🔴 **This story is the first that also spends `workflow_dispatch` runs.** Each dispatch
+        row and still count. **Modelled in the declaration.**
+  - [x] 1.4 🔴 **This story is the first that also spends `workflow_dispatch` runs.** Each dispatch
         of `deploy-dev.yml` is its own `action_run` row. The retro-E5 outcome matrix (Task 8) is
         *at least four* dispatches — one pass and three discriminating failures — plus re-runs after
         every fix. Price them in the declaration explicitly; they are the largest line.
-  - [ ] 1.5 The merge to `main` fires **`build-main.yml`**, a different workflow from `ci.yml` (which
+        **Modelled — the largest declared line, as directed.**
+  - [x] 1.5 The merge to `main` fires **`build-main.yml`**, a different workflow from `ci.yml` (which
         ignores `main`): **+1**. The closeout PR is a second branch/PR/merge cycle: **+3**.
+        **Modelled.**
   - [ ] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
         closed at PR-open is not closed. If the query cannot be run, close it with the literal word
         **OPEN** — never a self-reported number. Final closure is the coordinator's.
@@ -207,6 +238,10 @@ mechanism actually produces — or recorded as moot, with the reason.
   > assumption here does not fail loudly — see 2.2.
   - [ ] 2.1 Write a throwaway probe workflow (`workflow_dispatch` only, no inputs) with
         `runs-on: deploy-dev-preprod` and **only `run:` steps**. Confirm it is picked up at all.
+        **Written: `.forgejo/workflows/probe-deploy-dev-preprod.yml` (this push). Combined with 2.2
+        in one file** rather than two — its first step is plain `run:` only (answers 2.1 in
+        isolation, before anything riskier runs), its second step is the `uses:` probe (answers
+        2.2). **Awaiting the coordinator's dispatch** — this session does not dispatch workflows.
   - [ ] 2.2 🔴 **Does the job image run `uses:` steps?** `deploy-base-dev-preprod:2026-08-07` is
         another team's image and its contents are recorded nowhere. `build.yml:107-124` records the
         failure shape for the `docker-build` label: an image with no Node runtime **does not fail
@@ -214,15 +249,23 @@ mechanism actually produces — or recorded as moot, with the reason.
         `uses: actions/checkout@v4` and check whether the step actually executed (assert on a file
         that only checkout could have created). If `uses:` does not work, `actions/checkout` and
         `docker/login-action` are both unavailable and every step must be plain `run:`.
-  - [ ] 2.3 Record the job container's **identity**: `id -u`, `id -g`, `whoami`. D28 §4's H5
+        **Probed, same file as 2.1 — awaiting dispatch.**
+  - [x] 2.3 Record the job container's **identity**: `id -u`, `id -g`, `whoami`. D28 §4's H5
         amendment names this as inferred-not-measured — `1501:988` was the runner *supervisor*, not
         the job. This is the number Story 4.2's deferred AC2 clause (AC8 here) needs.
-  - [ ] 2.4 Record what the job actually has: `docker version` (client and the daemon it reaches
+        **Answered by local simulation** (Debug Log References) **and cross-checked by the probe's
+        own last step** once dispatched: **uid 0 / gid 0 / root.**
+  - [x] 2.4 Record what the job actually has: `docker version` (client and the daemon it reaches
         through the mounted socket), `docker compose version`, `git --version`, presence of `curl`,
         `jq`, `wget`. The workflow may use nothing that is not on this list.
-  - [ ] 2.5 Confirm the mounted socket reaches the **host** daemon and not a nested one: the host's
+        **Answered by local simulation** (Debug Log References): docker client 27.5.1 / server
+        29.4.0, compose v2.33.0, git 2.47.2, `curl`/`jq`/`wget` all present.
+  - [x] 2.5 Confirm the mounted socket reaches the **host** daemon and not a nested one: the host's
         containers (`fe-prionex-dev`, the runner containers, the `crm-dev` stack) must be visible
         from `docker ps`, and `crm-dev-network` must be present in `docker network ls`.
+        **Answered by local simulation** (Debug Log References): host daemon confirmed (the
+        `crm-preprod-*` stack is visible, which only the real host daemon carries), `crm-dev-network`
+        present.
   - [ ] 2.6 🔴 **Can `workflow_dispatch` be triggered from a non-default branch on this instance?**
         Try it from the story branch. If it cannot, the outcome matrix can only run **after** the
         workflow lands on `main` — record that ordering consequence and its ledger cost in Task 1's
@@ -232,21 +275,23 @@ mechanism actually produces — or recorded as moot, with the reason.
   - [ ] 2.7 Delete the probe workflow before the implementation PR, or keep it and say why. Do not
         leave an undocumented workflow on `main`.
 
-- [ ] **Task 3 — Provision the deploy job's registry credential (AC7)**
-  - [ ] 3.1 Create repository secrets **`REGISTRY_USER_RO`** and **`REGISTRY_TOKEN_RO`**, carrying a
-        **`read:package`-only** credential. Do **not** reuse `REGISTRY_TOKEN_RW` (`build.yml:238`):
-        that is an org-scope `write:package` credential over 87 packages including another team's
-        production, and this job runs on a **shared, four-label, multi-tenant runner**.
-  - [ ] 3.2 Source of the value — two routes, both requiring someone with s1 access:
-        (a) reuse `fe_reg_4_2_ro` (account `robot-registry`, scope `read:package`), whose plaintext
-        is at `/root/.fj_reg_4_2.token` on s1, mode `600` (D28 §3); or (b) mint a fresh one with
-        `gitea admin user generate-access-token` — the account password is not needed. **This is an
-        Oleg dependency. Do not proceed silently around it** — if the secret does not exist, stop and
-        say so; do not substitute the RW credential "for now".
-  - [ ] 3.3 ⚠️ Whatever is minted is **standing by construction** — an admin cannot revoke another
-        account's token without its password or a DB row (`deferred-work.md`, standing entry). Record
-        owner and revocation trigger in `deferred-work.md` **at the moment of minting**, not at the
-        end of the story. Precedent: D28 §3.
+- [x] **Task 3 — Provision the deploy job's registry credential (AC7)** — 🔴 **Rewritten 2026-08-20,
+      see Task 1.0b.** `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` are existing ORG-level secrets
+      (bot `robot-deploy`, `read:package`), confirmed live by the coordinator's own
+      `GET /orgs/CRM/actions/secrets` query. Nothing is created, minted, or reused from s1 for this
+      task — the subtasks below are the original ones struck through, replaced with what was
+      actually done.
+  - [x] ~~3.1 Create repository secrets `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`~~ — **moot.** They
+        already exist at org scope; a repo-level secret of the same name would only ever shadow the
+        org one for no reason. Confirmed org-level, not repo-level, so no repo secret is declared.
+  - [x] ~~3.2 Source of the value (reuse `fe_reg_4_2_ro` or mint fresh)~~ — **moot**, same reason.
+        No s1 dependency for this AC. The workflow references `secrets.REGISTRY_USER_RO` /
+        `secrets.REGISTRY_TOKEN_RO` directly, exactly as `build.yml:237-238` already references the
+        org-level `secrets.REGISTRY_USER`/`secrets.REGISTRY_TOKEN_RW`.
+  - [x] ~~3.3 Record owner/revocation trigger at mint time~~ — **moot, nothing was minted.** The
+        credential is `robot-deploy`'s existing org token, owned and rotated by whoever administers
+        org secrets (not this story, not Oleg-as-s1-operator specifically) — recorded as such in
+        `deferred-work.md` (Task 9.3) rather than under this story's own minted-credential convention.
   - [ ] 3.4 While on s1, close the open item **M1**: `/root/.fj_reg_4_2.raw` — a second plaintext
         copy of the registry credential, mode/owner/contents unknown
         (`deferred-work.md:2697-2704`, *"Owner: whoever next has s1 access"*). Record its mode and
@@ -649,12 +694,13 @@ Treat the total as a **floor, not a ceiling**.
 
 | Item | State | Effect on this story |
 |---|---|---|
-| `REGISTRY_USER_RO` / `REGISTRY_TOKEN_RO` secrets | **Do not exist** | **Blocking for AC7.** Task 3.2. Stop rather than substitute the RW credential. |
+| `REGISTRY_USER_RO` / `REGISTRY_TOKEN_RO` secrets | ✅ **RESOLVED 2026-08-20 — already exist, org-level** (coordinator, `GET /orgs/CRM/actions/secrets`). Not repo secrets; not minted. | No longer blocking. Task 3 rewritten to consume them directly, mirroring `build.yml`'s existing `REGISTRY_USER`/`REGISTRY_TOKEN_RW` usage. |
 | Rebind stand port to `127.0.0.1:8082` (M7) | Decided, **not applied** on s1 | Not blocking — Task 4.4 renders the value, making the decision self-applying and idempotent. Say so in the notes; it is a live-stand state change. |
 | Revoke `fe_review_1_7` | **Pending** | A ledger query using `/root/.fj_token` will start returning `401`. That is the revocation, not a bug (Task 1.1). |
 | `fe_reg_1_10_ro` (id 99) disposition | Unknown custody | Not blocking. Do not assume it is dead or alive. |
-| Veto on the mechanism choice (§2) | Not sought | The work proceeds on option 5; a veto changes Task 4 and the decision record, not the ACs. |
+| Veto on the mechanism choice (§2) | ✅ **Not exercised (coordinator, 2026-08-20).** | Option 5 stands as recorded; Task 4 proceeds unchanged. |
 | `workflow_dispatch` from a non-default branch | **Unmeasured** | Task 2.6. If unavailable, Task 8's matrix runs after the workflow lands on `main` — declare that ordering, do not discover it. |
+| SLACK_CD_WEBHOOK_URL scope | 📍 **Noted, not acted on** — also org-level per the same 2026-08-20 query. For Story 4.5. | None on this story. |
 
 ### Project Structure Notes
 
@@ -747,9 +793,66 @@ Treat the total as a **floor, not a ceiling**.
 
 ### Agent Model Used
 
-_(to be filled by dev-story)_
+Opus 5, dev-story cycle, 2026-08-20.
 
 ### Debug Log References
+
+**Local simulation of the job container, via SSH on s1, before any real dispatch (Task 2.3–2.5).**
+`root@10.67.0.1` reachable directly (no `~/.ssh/config` alias needed — same address Story 4.2 used).
+Read `/opt/forgejo-runner-deploy/config.yml` directly: confirms D28 §4's `container.options`
+(`docker.sock` + `/opt/crm-preprod` + `/opt/crm-dev` + `--add-host`) and `valid_volumes`
+(the same three paths) with no drift, plus new context D28 didn't carry — `network:
+forgejo-runner-crm-deploy_runner` (192.168.225.0/24, not the default bridge; nginx ACL already
+allows this subnet) and `force_pull: false` (the job image is a local tag, not registry-sourced).
+
+Ran a container reproducing the exact job shape (`deploy-base-dev-preprod:2026-08-07`, same three
+bind mounts, same `--add-host`, same network):
+
+```
+$ docker run --rm --network forgejo-runner-crm-deploy_runner \
+    -v /var/run/docker.sock:/var/run/docker.sock -v /opt/crm-preprod:/opt/crm-preprod \
+    -v /opt/crm-dev:/opt/crm-dev --add-host=git.crm-prionex.com:10.70.0.1 \
+    deploy-base-dev-preprod:2026-08-07 sh -c '...'
+=== identity ===        uid=0 gid=0 whoami=root
+=== docker ===          client 27.5.1, server (host daemon) 29.4.0
+=== compose ===         v2.33.0
+=== tools ===            git 2.47.2, curl, jq, wget all present
+=== host daemon visibility ===  crm-preprod-* stack containers visible — real host daemon, not nested
+=== crm-dev-network ===  present (62d1b3fc449b…)
+```
+
+**Answers Task 2.3 directly, correcting D28 §4's own H5 amendment**: the job container's identity
+is **uid 0 / root**, not the `1501:988` the runner *supervisor* container runs as — D28 §4 had
+already flagged this as measured-for-the-wrong-identity, and this is the actual measurement.
+Answers 2.4 (tool/version inventory) and 2.5 (socket reaches the host daemon; `crm-dev-network`
+visible) directly. **Does not and cannot answer 2.1/2.2** — whether `workflow_dispatch` is picked
+up from a non-default branch, and whether `uses:` steps execute inside a real Forgejo Actions job
+against this image, are properties of the runner *software*, not reproducible via a bare `docker
+run`. `.forgejo/workflows/probe-deploy-dev-preprod.yml` (this push) exists to answer those two —
+dispatch requested from the coordinator, per this project's standing division (I commit and push;
+the coordinator dispatches and reports run ids).
+
+### Run Budget Ledger
+
+*Declared 2026-08-20, before the first implementation push (Task 1.2), per the model in Dev Notes
+§9 — not a flat count.*
+
+| Line | Runs |
+|---|---|
+| This push (context edits to Task 1/3/Dev Notes §10 + the probe workflow; PR not open yet) | 1 |
+| Probe dispatch (`probe-deploy-dev-preprod.yml`, Task 2.1/2.2) — coordinator's | ≥1, more if it needs a fix-and-redispatch |
+| Implementation push(es) after the probe's answer is known | 1 for the first, **2 each** for every subsequent push once the PR is open (`ci.yml:65-71`) |
+| PR-open event | 1 (folds into the "2 each" line above for whichever push it coincides with, per Story 4.2's own measured pattern — not double-counted separately) |
+| `deploy-dev.yml` dispatches — Task 8's live outcome matrix | **≥4** (one PASS row, three discriminating FAIL rows: AC4/manifest-unknown, AC7/unauthorized, AC5/unhealthy) **+ Task 2's own probe** + any re-run after a fix. **This is the largest line, per Dev Notes §9, and it is new to this story.** |
+| Merge to `main` (`build-main.yml`) | 1 |
+| Closeout PR (separate branch/PR/merge, `main` protected — D16) | ~3 |
+
+**Baseline (Task 1.1):** 🔴 **Not read by this session — API access is out of scope for this
+session by the coordinator's own standing instruction** ("API не трогай"). Per D4, the baseline and
+every intermediate/final count are the coordinator's, by query. Requested from the coordinator
+alongside the probe dispatch. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every
+prior story's own corrected experience (4.1 declared 5, spent 7; 4.2 modelled the multiplier in
+advance and landed exactly on 7).
 
 ### Completion Notes List
 

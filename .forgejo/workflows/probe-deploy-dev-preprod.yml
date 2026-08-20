@@ -1,0 +1,83 @@
+name: Probe — deploy-dev-preprod runner capabilities
+
+# Story 4.3, Task 2. THROWAWAY — dispatch-only, never runs automatically, not referenced by any
+# other workflow. Answers two questions this project has never measured about the deploy runner
+# (`s1-deploy-dev-preprod`, image `deploy-base-dev-preprod:2026-08-07`, D28/D10):
+#
+#   1. Is `workflow_dispatch` against this runner picked up at all, and from a non-default branch?
+#      (Task 2.6 — if dispatch from a feature branch is refused, Story 4.3's own outcome matrix,
+#      Task 8, can only run after the workflow lands on `main`.)
+#   2. Does the job image run `uses:` steps? `deploy-base-dev-preprod:2026-08-07` is another team's
+#      image, its contents are recorded nowhere, and `build.yml:107-124` already found one sibling
+#      failure shape on this project: an image with no Node runtime does not fail informatively —
+#      it simply never executes a `uses:` step. Probed here with a trivial `actions/checkout@v4`
+#      and an assertion on a file only checkout could have produced, so a silent no-op is caught
+#      rather than misread as "nothing to check."
+#
+# Everything else this task needs (job identity, docker/compose versions, tool presence, whether
+# the mounted socket reaches the host daemon and `crm-dev-network`) was already established by
+# local simulation on s1 itself — `docker run` with the exact mounts/network/image
+# `container.options`/`valid_volumes` give a real job — before this probe was ever written, per
+# this project's own standing preference for local proof before a real dispatch. That simulation
+# cannot answer either question above: `uses:` step execution and the dispatch-from-a-non-default-
+# branch behaviour are both properties of the Forgejo runner software itself, not of the image.
+#
+# Deleted after Task 2.7 decides, per this project's own convention (Story 4.1/4.2's probe
+# branches): kept only if there is a reason to say so in the story record.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: probe-deploy-dev-preprod
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: "Probe: dispatch reaches the runner, uses: steps execute"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      - name: Report that dispatch reached this runner at all (Task 2.1)
+        run: |
+          echo "OK: workflow_dispatch reached runs-on: deploy-dev-preprod."
+          echo "ref: ${GITHUB_REF:-<unset>}"
+          echo "event: ${GITHUB_EVENT_NAME:-<unset>}"
+
+      - name: "Probe whether uses: steps execute at all (Task 2.2)"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Assert checkout actually ran, not just "did not fail"
+        run: |
+          set -euo pipefail
+          # A job image with no Node runtime does not error on a `uses:` step — it silently skips
+          # it (build.yml:107-124's own finding, same failure shape, different label). So the
+          # absence of an error here proves nothing; only evidence checkout actually wrote
+          # something does.
+          if [ -f "docker-compose.stand.yml" ]; then
+            echo "OK: uses: actions/checkout@v4 ran for real — docker-compose.stand.yml is present."
+          else
+            echo "FAIL: docker-compose.stand.yml is absent after a 'uses: actions/checkout@v4' step."
+            echo "  This means the checkout step did not actually execute — the job image most"
+            echo "  likely has no Node runtime under which 'uses:' steps run at all (same failure"
+            echo "  shape as build.yml:107-124, different label). Every step in deploy-dev.yml must"
+            echo "  then be plain 'run:', including checkout (git clone) and registry login."
+            exit 1
+          fi
+
+      - name: Report identity and tool presence again, from inside the real dispatch (cross-check)
+        run: |
+          echo "=== identity ==="
+          id -u; id -g; whoami
+          echo "=== docker ==="
+          docker version || true
+          echo "=== compose ==="
+          docker compose version || true
+          echo "=== tools ==="
+          command -v git curl jq wget || true
+          echo "=== host daemon visibility ==="
+          docker ps --format '{{.Names}}' | head -20
+          echo "=== crm-dev-network ==="
+          docker network ls | grep crm-dev || echo "NOT FOUND"

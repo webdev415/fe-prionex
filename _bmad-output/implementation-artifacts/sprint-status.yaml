@@ -261,7 +261,14 @@ development_status:
   # REGISTRY_USER_RO/REGISTRY_TOKEN_RO — those do NOT exist yet and are a blocking Oleg dependency.
   # AC3's down-before-pull order amended (it contradicts Story 4.7); AC7/AC8 added. Carries H1's
   # deadline: sha-62e2ff8dc215-dev is deleted ~2026-09-02, fallback trigger 2026-08-30 (Oleg).
-  4-3-deploy-a-feature-branch-to-dev-on-demand: ready-for-dev
+  # ✅ Registry-credential blocker RESOLVED 2026-08-20 (coordinator, GET /orgs/CRM/actions/secrets):
+  # REGISTRY_USER_RO/REGISTRY_TOKEN_RO already exist as ORG-level Forgejo secrets (bot robot-deploy,
+  # read:package, provisioned by api-prionex — see api-prionex_f/docs/5-5-weekly-dev-reset-to-main.md:583).
+  # No repo secrets to create, nothing to mint — the deploy workflow consumes the org secrets
+  # directly, same as build.yml already does for REGISTRY_USER/REGISTRY_TOKEN_RW. Task 3 rewritten
+  # accordingly. Veto points on the mechanism (D28 §4 option 5) and M7 (127.0.0.1:8082) not
+  # exercised — both stand as recorded.
+  4-3-deploy-a-feature-branch-to-dev-on-demand: in-progress
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
