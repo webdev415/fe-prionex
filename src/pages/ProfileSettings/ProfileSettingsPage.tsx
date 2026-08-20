@@ -10,20 +10,24 @@ import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/Select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
-import { normalizeBackendLanguage } from '@/lib/i18n'
+import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
+
+const TRIGGER_CLASS =
+  'text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between rounded-lg border px-4 py-2 text-sm font-light'
+
+const CONTENT_CLASS =
+  'max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5'
 
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -68,6 +72,39 @@ export function ProfileSettingsPage() {
     timezone: initialForm.timezone,
     work_format: initialForm.work_format,
   }))
+
+  const workFormatOptions = [
+    { value: 'office' as const, label: t('pages.profileSettings.workFormat.office', 'Office') },
+    { value: 'remote' as const, label: t('pages.profileSettings.workFormat.remote', 'Remote') },
+  ]
+
+  const agentStatusOptions = [
+    {
+      value: 'online',
+      label: t('pages.profile.agentStatus.online') || 'Online',
+      dot: 'bg-green-500',
+    },
+    { value: 'busy', label: t('pages.profile.agentStatus.busy') || 'Busy', dot: 'bg-yellow-500' },
+    {
+      value: 'on-call',
+      label: t('pages.profile.agentStatus.onCall') || 'On Call',
+      dot: 'bg-red-500',
+    },
+    {
+      value: 'offline',
+      label: t('pages.profile.agentStatus.offline') || 'Offline',
+      dot: 'bg-gray-400',
+    },
+  ]
+
+  // Switching the language has to reach i18n as well as the form: the label the
+  // dropdown shows comes from the form, but the rest of the page is translated
+  // live. LanguageSwitcher used to own this; the profile page was its only
+  // caller, so the call moved here with it.
+  const handleLanguageChange = async (lang: (typeof SUPPORTED_LANGUAGES)[number]) => {
+    await i18n.changeLanguage(lang)
+    setForm((prev) => ({ ...prev, language: lang }))
+  }
 
   // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
   useEffect(() => {
@@ -255,15 +292,14 @@ export function ProfileSettingsPage() {
               {user?.is_agent && user?.agent_status && (
                 <div className="flex items-center gap-2">
                   <span
-                    className={`h-2 w-2 rounded-full ${
-                      user.agent_status === 'online'
-                        ? 'bg-green-500'
-                        : user.agent_status === 'busy'
-                          ? 'bg-yellow-500'
-                          : user.agent_status === 'on-call'
-                            ? 'bg-red-500'
-                            : 'bg-gray-400'
-                    }`}
+                    className={`h-2 w-2 rounded-full ${user.agent_status === 'online'
+                      ? 'bg-green-500'
+                      : user.agent_status === 'busy'
+                        ? 'bg-yellow-500'
+                        : user.agent_status === 'on-call'
+                          ? 'bg-red-500'
+                          : 'bg-gray-400'
+                      }`}
                   />
                   <span className="text-muted-foreground text-xs capitalize">
                     {user.agent_status}
@@ -320,7 +356,7 @@ export function ProfileSettingsPage() {
                   label={t('pages.users.forms.username')}
                   value={form.username}
                   disabled
-                  onChange={() => {}}
+                  onChange={() => { }}
                   helperText={t('pages.users.editForm.usernameCannotBeChanged')}
                   className="w-full"
                 />
@@ -368,55 +404,105 @@ export function ProfileSettingsPage() {
               <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
-                  <LanguageSwitcher
-                    id="language"
-                    variant="dashboard"
-                    value={form.language}
-                    onValueChange={(v: string) => setForm({ ...form, language: v as 'en' | 'uk' })}
-                  />
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="language" type="button" className={TRIGGER_CLASS}>
+                        <span className="text-left">{LANGUAGE_NAMES[form.language]}</span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <DropdownMenuItem
+                          key={lang}
+                          className="cursor-pointer"
+                          onClick={() => void handleLanguageChange(lang)}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{LANGUAGE_NAMES[lang]}</span>
+                            {form.language === lang ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="work-format">
                     {t('pages.profileSettings.workFormat.label', 'Work format')}
                   </Label>
-                  <Select
-                    value={form.work_format}
-                    onValueChange={(v: string) =>
-                      setForm({ ...form, work_format: v as 'office' | 'remote' })
-                    }
-                  >
-                    <SelectTrigger id="work-format">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="office">
-                        {t('pages.profileSettings.workFormat.office', 'Office')}
-                      </SelectItem>
-                      <SelectItem value="remote">
-                        {t('pages.profileSettings.workFormat.remote', 'Remote')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="work-format" type="button" className={TRIGGER_CLASS}>
+                        <span className="text-left">
+                          {workFormatOptions.find((o) => o.value === form.work_format)?.label}
+                        </span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {workFormatOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className="cursor-pointer"
+                          onClick={() => setForm({ ...form, work_format: option.value })}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{option.label}</span>
+                            {form.work_format === option.value ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="timezone">{t('pages.users.forms.timezone')}</Label>
-                  <Select
-                    value={form.timezone}
-                    onValueChange={(v: string) => setForm({ ...form, timezone: v })}
-                  >
-                    <SelectTrigger id="timezone">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timezoneOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="timezone" type="button" className={TRIGGER_CLASS}>
+                        <span className="line-clamp-1 text-left">
+                          {timezoneOptions.find((o) => o.value === form.timezone)?.label ??
+                            form.timezone}
+                        </span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {timezoneOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className="cursor-pointer"
+                          onClick={() => setForm({ ...form, timezone: option.value })}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{option.label}</span>
+                            {form.timezone === option.value ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -427,7 +513,7 @@ export function ProfileSettingsPage() {
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                     value={user?.asterisk_extension || ''}
                     disabled
-                    onChange={() => {}}
+                    onChange={() => { }}
                     placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
                     className="w-full"
                   />
@@ -435,7 +521,7 @@ export function ProfileSettingsPage() {
                     label={t('pages.users.forms.dialerExtension') || 'Predictive Dialer Extension'}
                     value={user?.dialer_extension || ''}
                     disabled
-                    onChange={() => {}}
+                    onChange={() => { }}
                     placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
                     className="w-full"
                   />
@@ -447,40 +533,53 @@ export function ProfileSettingsPage() {
                       >
                         {t('pages.users.forms.agentStatus') || 'Agent Status'}
                       </label>
-                      <Select
-                        value={form.agent_status}
-                        onValueChange={(v: string) => setForm({ ...form, agent_status: v })}
-                      >
-                        <SelectTrigger id="agent-status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="online">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-green-500" />
-                              <span>{t('pages.profile.agentStatus.online') || 'Online'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="busy">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                              <span>{t('pages.profile.agentStatus.busy') || 'Busy'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="on-call">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-red-500" />
-                              <span>{t('pages.profile.agentStatus.onCall') || 'On Call'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="offline">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-gray-400" />
-                              <span>{t('pages.profile.agentStatus.offline') || 'Offline'}</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button id="agent-status" type="button" className={TRIGGER_CLASS}>
+                            <span className="flex items-center gap-2 text-left">
+                              <span
+                                className={`h-2 w-2 rounded-full ${agentStatusOptions.find((o) => o.value === form.agent_status)
+                                  ?.dot ?? 'bg-gray-400'
+                                  }`}
+                              />
+                              <span>
+                                {
+                                  agentStatusOptions.find((o) => o.value === form.agent_status)
+                                    ?.label
+                                }
+                              </span>
+                            </span>
+                            <Icons.ArrowDown
+                              size={16}
+                              strokeWidth={1.5}
+                              className="text-muted-foreground shrink-0"
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                          {agentStatusOptions.map((option) => (
+                            <DropdownMenuItem
+                              key={option.value}
+                              className="cursor-pointer"
+                              onClick={() => setForm({ ...form, agent_status: option.value })}
+                            >
+                              <span className="flex w-full items-center justify-between gap-2">
+                                <span className="flex items-center gap-2">
+                                  <span className={`h-2 w-2 rounded-full ${option.dot}`} />
+                                  <span>{option.label}</span>
+                                </span>
+                                {form.agent_status === option.value ? (
+                                  <Icons.Tick02
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-primary"
+                                  />
+                                ) : null}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
                 </div>
