@@ -103,3 +103,59 @@ describe('ProfileSettingsPage choice fields', () => {
     expect(within(menu).getAllByRole('menuitem').length).toBeGreaterThan(1)
   })
 })
+
+describe('ProfileSettingsPage work format form state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    render(<ProfileSettingsPage />)
+  })
+
+  async function chooseRemote() {
+    const trigger = openField('work-format')
+    const menu = await screen.findByRole('menu')
+    fireEvent.click(within(menu).getByText('Remote'))
+    await waitFor(() => expect(trigger).toHaveTextContent('Remote'))
+    return trigger
+  }
+
+  it('puts the field back when the edit is cancelled', async () => {
+    const trigger = await chooseRemote()
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    await waitFor(() => expect(trigger).toHaveTextContent('Office'))
+  })
+
+  it('clears the unsaved-changes row when the edit is cancelled', async () => {
+    await chooseRemote()
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^cancel$/i })).not.toBeInTheDocument()
+    )
+  })
+
+  it('does not write the work format when the user never touched it', async () => {
+    // The field shows office as a display default, and a token-built user
+    // carries no work format at all. Saving an unrelated edit must not record
+    // a choice nobody made.
+    const email = screen.getByDisplayValue('admin@technofinance.com')
+    fireEvent.change(email, { target: { value: 'new@technofinance.com' } })
+
+    fireEvent.click(await screen.findByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
+    expect(updateMyProfile.mock.calls[0][0].work_format).toBeUndefined()
+  })
+
+  it('writes the work format when the user does pick one', async () => {
+    await chooseRemote()
+
+    fireEvent.click(await screen.findByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
+    expect(updateMyProfile.mock.calls[0][0].work_format).toBe('remote')
+  })
+})

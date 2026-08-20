@@ -28,6 +28,10 @@ function file(name: string, type: string, bytes: number) {
   return new File([new Uint8Array(bytes)], name, { type })
 }
 
+function corner(label: string) {
+  return document.querySelector(`button.absolute[aria-label="${label}"]`)
+}
+
 function renderField(avatarUrl: string | null = null) {
   const { container } = render(
     <ProfilePhotoField
@@ -55,35 +59,37 @@ describe('ProfilePhotoField', () => {
     expect(screen.getByText('OK')).toBeInTheDocument()
   })
 
-  it('offers an add control when there is no photo, and no Remove', () => {
+  it('offers only an upload control when there is no photo', () => {
     renderField(null)
-    expect(screen.getByRole('button', { name: /upload photo/i })).toBeInTheDocument()
+
+    // Both the avatar and the corner button open the picker while empty, so the
+    // name appears twice and neither is a Remove.
+    expect(screen.getAllByRole('button', { name: /upload photo/i })).toHaveLength(2)
     expect(screen.queryByRole('button', { name: /remove photo/i })).not.toBeInTheDocument()
   })
 
   it('the icon-only control still names itself for assistive tech', () => {
     renderField(null)
-    const control = screen.getByRole('button', { name: /upload photo/i })
+    const control = corner('Upload photo')
 
     expect(control).toHaveAttribute('aria-label', 'Upload photo')
     expect(control).toHaveAttribute('title', 'Upload photo')
-    expect(control.textContent?.trim()).toBe('')
+    expect(control?.textContent?.trim()).toBe('')
   })
 
-  it('turns the single corner control into Remove once a photo exists', () => {
+  it('turns the corner control into Remove once a photo exists', () => {
     renderField('/avatars/7.png')
 
     expect(screen.getByRole('button', { name: /remove photo/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /upload photo/i })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
-  it('offers only Upload while there is no photo', () => {
-    renderField(null)
+  it('keeps a direct replace path once a photo exists', () => {
+    renderField('/avatars/7.png')
 
-    expect(screen.getByRole('button', { name: /upload photo/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /remove photo/i })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button')).toHaveLength(1)
+    // Clicking the photo itself replaces it, so changing a photo never has to
+    // go through deleting it first.
+    expect(screen.getByRole('button', { name: /replace photo/i })).toBeInTheDocument()
   })
 
   it('does not show the format hint', () => {
@@ -95,9 +101,9 @@ describe('ProfilePhotoField', () => {
     const { container } = render(
       <ProfilePhotoField userId={7} firstName="Olena" lastName="Kovalchuk" avatarUrl={null} />
     )
-    const control = container.querySelector('button[aria-label="Upload photo"]')
+    const control = container.querySelector('button.absolute[aria-label="Upload photo"]')
 
-    expect(control?.className).toContain('absolute')
+    expect(control).not.toBeNull()
   })
 
   it('uploads an accepted image and refreshes the user', async () => {
@@ -132,13 +138,24 @@ describe('ProfilePhotoField', () => {
     expect(uploadAvatar).not.toHaveBeenCalled()
   })
 
-  it('removes the photo and refreshes the user', async () => {
+  it('removes the photo once the user confirms', async () => {
     renderField('/avatars/7.png')
 
-    fireEvent.click(screen.getByRole('button', { name: /remove photo/i }))
+    fireEvent.click(corner('Remove photo') as HTMLElement)
+    fireEvent.click(await screen.findByRole('button', { name: /^remove photo$/i }))
 
     await waitFor(() => expect(deleteAvatar).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(refreshUser).toHaveBeenCalled())
+  })
+
+  it('does not remove the photo when the user backs out', async () => {
+    renderField('/avatars/7.png')
+
+    fireEvent.click(corner('Remove photo') as HTMLElement)
+    fireEvent.click(await screen.findByRole('button', { name: /cancel/i }))
+
+    await waitFor(() => expect(deleteAvatar).not.toHaveBeenCalled())
+    expect(refreshUser).not.toHaveBeenCalled()
   })
 
   it('reports a failed upload and leaves the photo alone', async () => {

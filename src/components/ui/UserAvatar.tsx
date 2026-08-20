@@ -8,6 +8,13 @@
  *
  * The stored path is server-relative, so it is resolved against the API host
  * before it reaches the browser - see resolveAssetUrl.
+ *
+ * The mount that serves these files is deliberately unauthenticated: the
+ * browser issues the image GET itself, so it carries none of the headers the
+ * API client attaches. That makes a photo readable by anyone holding its URL,
+ * and the random file name is what keeps one user's from being reachable from
+ * another's. It also means a failure here looks exactly like having no photo,
+ * so the fallback says so rather than swallowing it.
  */
 
 import { useState } from 'react'
@@ -47,7 +54,13 @@ export function UserAvatar({
         alt={label ?? ''}
         style={dimensions}
         className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
-        onError={() => setFailedUrl(src)}
+        onError={() => {
+          console.error(
+            `Avatar failed to load: ${src}. Showing initials instead. ` +
+              'A 401 here means the avatar path is behind authentication the browser cannot send.'
+          )
+          setFailedUrl(src)
+        }}
       />
     )
   }

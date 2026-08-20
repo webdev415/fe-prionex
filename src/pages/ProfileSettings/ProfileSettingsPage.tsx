@@ -197,7 +197,13 @@ export function ProfileSettingsPage() {
       language: form.language || undefined,
       timezone: form.timezone || undefined,
       agent_status: user?.is_agent ? form.agent_status : undefined,
-      work_format: form.work_format,
+      // Only when the user actually picked something. The field falls back to
+      // office for display, and when /users/me is unavailable the store builds
+      // the user from the token, which carries no work format at all - sending
+      // the fallback would record a choice nobody made and could overwrite a
+      // remote employee with office on an unrelated save.
+      work_format:
+        form.work_format === savedProfileSnapshot.work_format ? undefined : form.work_format,
     }
 
     try {
@@ -230,6 +236,7 @@ export function ProfileSettingsPage() {
       phone: savedProfileSnapshot.phone,
       language: savedProfileSnapshot.language,
       timezone: savedProfileSnapshot.timezone,
+      work_format: savedProfileSnapshot.work_format,
       currentPassword: '',
       newPassword: '',
     }))

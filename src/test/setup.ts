@@ -302,6 +302,10 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.download': 'Download .txt',
         // Profile settings: photo + work format.
         'pages.profileSettings.photo.upload': 'Upload photo',
+        'pages.profileSettings.photo.replace': 'Replace photo',
+        'pages.profileSettings.photo.confirmRemoveTitle': 'Remove your photo?',
+        'pages.profileSettings.photo.confirmRemoveMessage':
+          'Your initials will be shown instead. You can upload a new photo at any time.',
         'pages.profileSettings.photo.remove': 'Remove photo',
         'pages.profileSettings.photo.wrongType': 'Choose a JPEG, PNG or WebP image',
         'pages.profileSettings.photo.tooLarge': 'The photo must be 2 MB or smaller',

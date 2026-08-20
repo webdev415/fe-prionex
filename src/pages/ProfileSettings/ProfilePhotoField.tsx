@@ -1,6 +1,11 @@
 /**
  * Upload, replace or remove the signed-in user's profile photo.
  *
+ * The photo itself is the upload target, so replacing one is a single click and
+ * never goes through an empty state. The corner button is the destructive one
+ * and asks first: the previous file is deleted on the server, so a mis-click on
+ * the spot where "+" used to be would otherwise be unrecoverable.
+ *
  * The size and type checks here are a courtesy so the user gets an immediate
  * answer instead of a round trip. They are not the guard: the file name, the
  * extension and the type the browser reports all travel with the request and
@@ -13,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { getErrorMessage } from '@/lib/errors'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -36,12 +42,17 @@ export function ProfilePhotoField({
   avatarUrl,
 }: ProfilePhotoFieldProps) {
   const { t } = useTranslation('common')
+  const { confirm, confirmDialog } = useConfirm()
   const refreshUser = useAuthStore((state) => state.refreshUser)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isBusy, setIsBusy] = useState(false)
 
   const actionLabel = avatarUrl
     ? t('pages.profileSettings.photo.remove', 'Remove photo')
+    : t('pages.profileSettings.photo.upload', 'Upload photo')
+
+  const pickerLabel = avatarUrl
+    ? t('pages.profileSettings.photo.replace', 'Replace photo')
     : t('pages.profileSettings.photo.upload', 'Upload photo')
 
   const handleFile = async (file: File | undefined) => {
@@ -70,6 +81,18 @@ export function ProfilePhotoField({
   }
 
   const handleRemove = async () => {
+    const confirmed = await confirm({
+      title: t('pages.profileSettings.photo.confirmRemoveTitle', 'Remove your photo?'),
+      message: t(
+        'pages.profileSettings.photo.confirmRemoveMessage',
+        'Your initials will be shown instead. You can upload a new photo at any time.'
+      ),
+      confirmLabel: t('pages.profileSettings.photo.remove', 'Remove photo'),
+      cancelLabel: t('actions.cancel'),
+      tone: 'danger',
+    })
+    if (!confirmed) return
+
     try {
       setIsBusy(true)
       await authApi.deleteAvatar()
@@ -84,16 +107,26 @@ export function ProfilePhotoField({
 
   return (
     <div className="flex flex-col items-center gap-3">
+      {confirmDialog}
       <div className="relative">
-        <UserAvatar
-          userId={userId}
-          firstName={firstName}
-          lastName={lastName}
-          fullName={fullName}
-          avatarUrl={avatarUrl}
-          size={96}
-          className="border-border border-2"
-        />
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => inputRef.current?.click()}
+          title={pickerLabel}
+          aria-label={pickerLabel}
+          className="rounded-full disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <UserAvatar
+            userId={userId}
+            firstName={firstName}
+            lastName={lastName}
+            fullName={fullName}
+            avatarUrl={avatarUrl}
+            size={96}
+            className="border-border border-2"
+          />
+        </button>
 
         <button
           type="button"
