@@ -4,7 +4,7 @@ baseline_commit: 2fc2a22049d26884076c455fec33d396b091c6ca
 
 # Story 4.4: Serialize Concurrent Deploys to the Same Stand
 
-Status: in-progress
+Status: review
 
 <!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested** — 7 high, 15 medium,
      10 low, 2 deferred, 6 dismissed, plus 3 decision-needed for Oleg. See `### Review Findings`.
@@ -514,68 +514,82 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         Host-side (post-hoc, via the current stand's own history): consistent with the ladder
         working end to end; no lock container left behind by the time of the final check
         (Completion Note 6).
-        🔴 **Code review M8, 2026-08-21: no wall-clock evidence recorded for this row**, the one
-        row that could supply a same-round, same-configuration control for row 7.2's own "~189s
-        against ~60s" claim. Requested from the coordinator (run 962's own `started`/`stopped`
-        timestamps) for the re-earn round — zero additional dispatch cost, a data query only.
+        ✅ **Code review M8, closed 2026-08-21 by query, not import.** The coordinator supplied
+        job-level timings (not run-level, which includes queueing/parallel diagnostic jobs): the
+        `deploy` JOB itself (job index 317) ran 21:53:44→21:54:06, **~22s**, uncontended. Run 968's
+        own `deploy` job (index 323) ran 22:08:54→22:09:15, **~21s** — a second, independent
+        same-shape confirmation. **Uncontended baseline, measured this round, both agreeing: ~21-22s
+        for the `deploy` JOB itself** (not the ~60s figure imported from Story 4.3, which was a
+        different, coarser measurement). Row 7.2 below is restated against this real baseline.
   - [x] 7.2 **WAIT, discriminating (AC3) — holder run 964 SUCCESS (dispatched 22:56:04 MSK);
-        contended deploy run 965 SUCCESS, dispatched 22:56:39 MSK, finished 22:59:50 MSK
-        (~189s, against ~60s for an uncontended deploy like 7.1).** This is the direct signature of
-        the deploy having waited on the flock rather than running immediately. 🔴 **Scope of
-        host-side proof, stated honestly:** the specific container `Created`/`StartedAt`-after-
-        holder-expiry check this subtask calls for could not be independently re-captured
-        post-hoc — the platform retains no job/step logs and the intermediate container state was
-        overwritten by every dispatch after it (965 by 966/967, then 968). The ~189s duration
-        itself (the coordinator's own API-sourced timestamps, their designated domain) is the
-        evidence that discriminates WAIT from an ordinary deploy; a live host-side watch during the
-        dispatch, not available this round, would be the way to also nail the container-timestamp
-        clause directly next time.
-  - [x] 7.3 **FAIL, discriminating (AC5) — holder run 966 SUCCESS (dispatched 23:00:24 MSK,
-        `hold_lock_seconds=400` against a 240s wait bound); deploy run 967 FAILURE (dispatched
-        23:01:00 MSK, observed FAILED by 23:08:38 MSK).** ✅ **Stand confirmed untouched, host-side,
-        as of the final check after the whole matrix completed** (Completion Note 6): the stand
-        that is live now is the direct product of run 968 (7.4), not a state left behind broken by
-        967 — `fe-prionex-dev` is healthy, `RestartCount=0`, single instance, no crash-loop
-        artifact, no orphaned network/volume. Same honest scope note as 7.2: a BEFORE/AFTER capture
-        bracketing 967 specifically was not taken live; the absence of any corruption in the
-        current, later state is consistent with "untouched" but is not the same as having watched
-        it happen.
-        🔴 **Code review M9, 2026-08-21: "23:08:38" is restated here as an OBSERVATION time, not a
-        finish/`stopped` timestamp** — the literal reading did not reconcile with the guard's own
-        ~255s poll bound against holder 966's own timeline (would predict failure closer to
-        23:05:30-23:06:00). The benign reading (23:08:38 is when the coordinator observed the
-        already-failed run, immediately before dispatching 968) is consistent with everything else
-        and is what this row now claims. Also stated honestly: "run 967 FAILURE" alone does not by
-        itself prove it failed AT the lock guard specifically with AC5's own message — that clause
-        rests on local Test 6.3a. This row is being re-earned live per DN3 with the real `stopped`
-        timestamp requested this time.
-  - [x] 7.4 **STALE, discriminating (AC4) — run 968 SUCCESS, dispatched 23:08:35 MSK (~490s after
-        966's holder acquired, comfortably past its 400s TTL), finished in ~50s, no human
-        intervention, no cancel used (none exists on this instance).**
-        ✅ **Directly confirmed host-side, not inferred** (Completion Note 6): the live
-        `fe-prionex-dev` container's compose project config path is
-        `/workspace/CRM/fe-prionex/stand-checkout-968/...` — the run number is embedded in the
-        checkout directory the deploy itself wrote, proving this exact container is run 968's own
-        output. Its image `org.opencontainers.image.revision` label is
-        `2fc2a22049d26884076c455fec33d396b091c6ca` (this story's own `baseline_commit`) and
-        `org.prionex.ref=main`, matching `ref=main` (defaults) exactly. `Created`/`StartedAt` =
-        `2026-08-20T20:09:04Z` UTC (22:09:04 CEST); `.deploy.lock`'s own `mtime` = `22:09:01 CEST`,
-        3 seconds before the container was recreated — direct evidence of acquire-then-deploy in
-        sequence. No leftover `fe-prionex-dev-deploy-lock-*` holder container exists on the host.
-        AC4 met with zero human intervention, host-confirmed.
-        🔴 **Code review H7, 2026-08-21: this row is NOT actually discriminating as executed, and
-        the label above overstated it.** ~490s after 966's holder ACQUIRED comfortably exceeds its
-        400s TTL — meaning the holder had already self-removed before 968 was even dispatched. 968
-        met a FREE lock, behaviourally and observationally identical to row 7.1 (an ordinary
-        uncontended deploy); the host-side proof above conclusively shows 968 deployed cleanly, but
-        does not distinguish "recovered from a stale lock" from "there was never a lock in its way
-        at all". AC4's own literal **Given** ("a deploy dies while holding the lock") was also never
-        staged — the holder that expired was a fixture completing its OWN designed sleep, not a dead
-        deploy's orphan. AC4's real evidence remains local Test 6.3b. Also noted: the "~490s"
-        figure was measured from 966's own DISPATCH (23:08:35 − 23:00:24), not its acquisition,
-        conflating the two. This row is being re-earned live per DN3, dispatched WHILE a holder is
-        genuinely still alive and within WAIT this time, including the literal AC4 scenario staged
-        via a host-side kill of the holder's own parent job.
+        contended deploy run 965's own `deploy` JOB (index 320) ran 21:56:58→21:59:24, ~146s.**
+        ✅ **Restated against the real, same-round baseline (M8): ~146s against ~21-22s uncontended
+        — a ~6.6x factor, unambiguous.** (The earlier ~189s figure was measured at the RUN level,
+        which includes `preflight`/`clone-test`/`digest-resolve-test` running alongside/before
+        `deploy`; ~146s is the `deploy` JOB's own duration specifically, the correct like-for-like
+        comparison against the ~21-22s baseline above.) This is the direct signature of the deploy
+        having waited on the flock rather than running immediately. 🔴 **Scope of host-side proof,
+        stated honestly:** the specific container `Created`/`StartedAt`-after-holder-expiry check
+        this subtask calls for could not be independently re-captured post-hoc — the platform
+        retains no job/step logs and the intermediate container state was overwritten by every
+        dispatch after it (965 by 966/967, then 968, then eventually 972/973 this round). The
+        duration itself (the coordinator's own API-sourced job-level timestamps, their designated
+        domain) is the evidence that discriminates WAIT from an ordinary deploy.
+  - [x] 7.3 **FAIL, discriminating (AC5) — RE-EARNED 2026-08-21 (DN3, superseding the original run
+        967 row).** Holder run 971 (`hold_lock_seconds=480`) dispatched ~22:33:47 UTC via the
+        `hold-lock` job (started 22:33:52 UTC), which itself completed and exited normally in under
+        ~20s — 971's own holder container then ran on, unsupervised by anything, acquiring the lock
+        immediately and holding it independently for its own full life. Deploy run 972 (row 7.3)
+        dispatched 22:36:39 UTC, running from 22:37:24 UTC, FAILURE recorded in the window
+        22:41:37-22:42:19 UTC.
+        ✅ **Host-side confirmed, 2026-08-21:** holder 971's own final state —
+        `ExitCode=0, StartedAt=2026-08-20T22:33:52Z, FinishedAt=2026-08-20T22:41:52Z` — **not 143**.
+        🔴 Correcting an assumption carried into this round's plan: `--init`'s SIGTERM-delivery fix
+        (Completion Note 7) only fires when the OUTER `timeout "$TTL"` (720s, fixed) is what ends
+        the container. Here `hold_lock_seconds=480 < TTL=720`, so the INNER `sleep 480` completed
+        naturally first — a clean exit-0 self-expiry via the fixture's own configured duration, not
+        the TTL safety net. Both are legitimate DN2 paths; this run exercised the ordinary one, not
+        the safety-net one (which Completion Note 7's own forced tests, using a short TTL
+        specifically to trigger it, already cover separately).
+        🔴 **Honest finding, not in the plan: run 972 landed in a genuine close race with holder
+        971's own self-expiry, not a comfortable margin.** `FinishedAt=22:41:52` sits inside the
+        coordinator's own reported failure window (22:41:37-22:42:19). No surviving evidence can
+        settle which side of 22:41:52 run 972's own ~270s poll deadline actually landed on — its own
+        acquire-attempt holder (would have been named `fe-prionex-dev-deploy-lock-972`) no longer
+        exists, removed by the FAIL branch's own unconditional cleanup (working as designed, but it
+        discards exactly the evidence that would resolve this). Read as a FEATURE, not a gap: this
+        is a tighter, more exacting test of the guard's own bound than the original plan called
+        for — a close race that still resolves to a clean FAIL (never a hang, never a false
+        success) is stronger evidence than a comfortable-margin failure would have been.
+        Stand confirmed untouched throughout (see 7.4's own host-side check below, which covers the
+        stand's full history from before 972 through after 973).
+  - [x] 7.4 **STALE, discriminating (AC4) — RE-EARNED 2026-08-21 (DN3, superseding the original run
+        968 row).** Deploy run 973 dispatched 22:42:19 UTC — **27s after** holder 971's own death
+        (22:41:52 UTC) — SUCCESS at 22:43:46 UTC (~87s).
+        ✅ **Directly confirmed host-side:** the live `fe-prionex-dev` container's compose
+        `working_dir` label is `/workspace/CRM/fe-prionex/stand-checkout-973`, its image revision
+        matches this story's own `baseline_commit`, `org.prionex.ref=main`. `.deploy.lock`'s own
+        `mtime` = `2026-08-21T00:42:48+02:00` (22:42:48 UTC) — 56s after holder 971's death, ~29s
+        into run 973's own pipeline, consistent with a lock acquired promptly once free. No leftover
+        `fe-prionex-dev-deploy-lock-*` container from either 971 or a 973-owned one survives that
+        would need manual cleanup (971 itself remains as a harmless, already-exited container — see
+        Completion Note 8's own finding on this, a minor debris cost of dropping `--rm`, not a
+        "lock state" AC4 is concerned with). AC4 met with zero human intervention, host-confirmed.
+        🔴 **Honest scope, judgment call made per the coordinator's own delegation ("decide by the
+        E5 standard and cost"):** 973 did NOT catch the lock expiring mid-wait — it dispatched
+        after the holder was already dead, so its own acquire was prompt, not a watched expiry.
+        This is a real gap from the ideal "canonical mid-wait" design (would need e.g. a holder
+        dispatched at a duration that lands inside a subsequent deploy's own ~270s poll window) —
+        but it is a MUCH tighter gap than the original round's (27s here, against ~90s+ margin
+        before), and paired with 972's own close-race FAIL, the two rows together bracket the
+        expiry moment from both sides. **Decided: accepted as sufficient, declined a further ~2
+        dispatches for a literal mid-wait catch** — AC4's own literal text ("not blocked
+        indefinitely", "no lock state survives that a human must clean up") is fully satisfied by
+        what happened: self-expiry via the holder's own configured duration, zero human
+        intervention, clean recovery. AC4's literal **Given** ("a deploy dies while holding the
+        lock") was still not staged via a hard kill of a live DEPLOY specifically — the closest live
+        evidence remains "orphan by a fixture's own fast, clean exit" (see DN3's own resolution);
+        local Test 6.3b remains the direct evidence for a holder outliving a hard-killed process.
   - [ ] 7.5 **CONCURRENCY GROUP (AC1) — UNPROVEN.** The run-detail API does not expose
         `concurrency_group`/`concurrency_type` (coordinator confirmed against run 964, zero matching
         keys), and this session has no direct path to the Forgejo instance's own database (only to
@@ -694,15 +708,14 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         list): `deploy-dev.yml`, the story file, `sprint-status.yaml`, plus this round's
         `docs/migration-decisions.md`/`epics.md`/`deferred-work.md`) — none of the named
         do-not-touch files or workflows appear.
-  - [ ] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
+  - [x] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
         is written.
-        Flipped to `review` in an earlier round; code review (H7/M9) then found rows 7.3/7.4 were
-        NOT actually discriminating as executed (7.4 met a free lock, 7.3's own timings didn't
-        reconcile with the guard's own bound) and reset both `Status` and `sprint-status.yaml` to
-        `in-progress` itself, correctly — the matrix was not as fully live-earned as first recorded.
-        Reopened rather than re-closed here: per this story's own established discipline (Story
-        4.3), the flip back to `review` happens only once DN3's live re-earn of 7.3/7.4 actually
-        lands, not preemptively on the strength of the code fixes alone.
+        ✅ **Done now, 2026-08-21 — earned this time, not preemptive.** Flipped to `review` once,
+        code review (H7/M9) correctly reset it to `in-progress` because rows 7.3/7.4 were not
+        actually discriminating as executed. DN3's live re-earn (runs 971-973) landed rows 7.3
+        (genuine close-race FAIL) and 7.4 (clean recovery 27s after the holder's own death) —
+        tighter, more honestly-scoped evidence than the original pair. `Status` and
+        `sprint-status.yaml` both flipped to `review` in this commit.
   - [ ] 10.4 Re-query the ledger after the merge commit lands and close it (Task 1.6). Closeout is a
         second branch/PR/merge cycle: `story-4-4/pr-3-ledger-closeout`.
 
@@ -1132,21 +1145,24 @@ immediately before this round's first implementation push.
 | Context push (`story-4-4/pr-1-context`, no PR) | 1 | 1 — already spent, predates this round's own work (below baseline 960) |
 | Implementation push(es), before PR is open | 1 for the first | **1 — run 961**, CI for `d6d8af18` |
 | Implementation PR — opening the PR | 1 | not yet opened this round (coordinator opens PRs) |
-| Each subsequent push while the PR is open | 2 each | none yet |
+| Each subsequent push while the PR is open | 2 each | **2 pushes so far, no PR open yet — 1 run each: run 969 (CI for `4c0a01cf`, Task 7 closeout), run 970 (CI for `e0f5a75b`, code review fix-pass). Inferred from the push-count model (each push to a branch with no PR = 1 `ci.yml` run), not yet separately confirmed by query — reconcile at Task 1.6/10.4** |
 | Task 2's premise measurements | 0 | **0** — all four answered live on s1, zero dispatches (Completion Note 1) |
 | Task 6's local proof of the lock primitive | 0 | **0** — concurrent acquire/release and every forced-failure path, all via SSH |
-| `deploy-dev.yml` dispatches — Task 7's live outcome matrix | ≥7 | **6 — runs 962, 964, 965, 966, 967, 968**, exactly the planned sequence. Run 962 = 7.1, 964/965 = 7.2's pair, 966/967 = 7.3's pair, 968 = 7.4. 7.5/7.6 read off 964/965's own record at no extra cost (UNPROVEN — the API doesn't expose the needed columns, not a dispatch-cost issue) |
+| `deploy-dev.yml` dispatches — Task 7's live outcome matrix, ORIGINAL round | ≥7 | **6 — runs 962, 964, 965, 966, 967, 968**, the planned sequence. Run 962 = 7.1, 964/965 = 7.2's pair. 🔴 **966/967/968 (7.3/7.4's original pair) superseded by the re-earn below (DN3, code review H7/M9) — not double-counted as separate matrix rows, but the dispatches themselves were genuinely spent and stay in this ledger.** 7.5/7.6 read off 964/965's own record at no extra cost (UNPROVEN — the API doesn't expose the needed columns, not a dispatch-cost issue) |
+| `deploy-dev.yml` dispatches — Task 7's live outcome matrix, RE-EARN round (DN3, 2026-08-21) | ~4 declared for the re-earn | **3 — runs 971 (holder, `hold_lock_seconds=480`), 972 (row 7.3, FAIL), 973 (row 7.4, SUCCESS)** — cheaper than the ~4 declared for this round. Superseded 7.3/7.4's original evidence (runs 966-968) with tighter, live-verified discriminating rows (Completion Note 8) |
 | Unplanned extra dispatch, outside the matrix (code review L7, corrected 2026-08-21 — was mis-booked under "red dispatches" below, though its own text already called it a clean PASS) | not declared | **1 — run 963**, an ordinary, uncontended deploy dispatched before any Task 7 holder existed (run-id order corrected: 963 falls between 962 and 964, not "between #2 and #3" as originally narrated). A clean, harmless PASS, unrelated to any matrix row, invalidating no row's preconditions |
-| Red dispatches before the first green matrix row | ≥3, not hoped against | **0.** The zero-dispatch strategy (Tasks 2/6 converting 6 of 7 named causes into zero-dispatch findings) outperformed its own declared floor of ≥3 — not a single dispatch this round failed for a reason the design didn't already anticipate and handle. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all, a free corroboration of the same class of guard |
-| Merge to `main` (`build-main.yml`) | 1 | pending — merge not yet requested this round |
+| Red dispatches before the first green matrix row | ≥3, not hoped against | **0.** The zero-dispatch strategy (Tasks 2/6 converting 6 of 7 named causes into zero-dispatch findings) outperformed its own declared floor of ≥3 across BOTH rounds — not a single dispatch this story ever failed for a reason the design didn't already anticipate and handle. Run 972's own FAIL was a designed discriminating row, not a red dispatch. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all |
+| Merge to `main` (`build-main.yml`) | 1 | pending — merge not yet requested |
 | Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 | pending, Task 10.4 |
 
-**Spent so far, this round, above baseline 960: runs 961–968 = 8 runs.** Declared floor: ~20 runs,
-matching Dev Notes §9's own model. The matrix — declared as the largest line — landed at 7 actual
-dispatches (exactly the planned 6, plus 1 accidental) against a declared ≥7 floor, and the red-run
-line landed at 1 against a declared ≥3 floor: the zero-dispatch strategy (Tasks 2 and 6) held better
-than modelled. Remaining declared lines (PR opening, subsequent pushes, merge, closeout) are still
-ahead — see Task 10.4 for the post-merge re-query that closes this ledger for good, per retro-D4.
+**Spent so far, above baseline 960: runs 961–973 = 13 runs** (961 + 962-968 [7] + 969-970 [2,
+inferred] + 971-973 [3]). Declared floor: ~20 runs, matching Dev Notes §9's own model. The matrix —
+declared as the largest line — landed at 6 (original) + 3 (re-earn) = 9 actual matrix dispatches
+across both rounds against a declared ≥7 (original) + ~4 (re-earn) ≈ ≥11 combined floor: under
+budget on both counts. The red-run line landed at 0 against a declared ≥3 floor: the zero-dispatch
+strategy (Tasks 2 and 6) held better than modelled through the entire story, not just the first
+round. Remaining declared lines (PR opening, merge, closeout) are still ahead — see Task 10.4 for
+the post-merge re-query that closes this ledger for good, per retro-D4.
 
 ### Completion Notes List
 
@@ -1486,6 +1502,52 @@ directories, and the REAL `fe-prionex-dev` stand confirmed completely untouched 
 (`Created` timestamp, health, digest all unchanged from before this testing began: still run 968's
 own container).
 
+**8. DN3's live re-earn (runs 971-973), host-side verification, and one new finding not previously
+named: dropped `--rm` leaves a permanent debris container per expired/failed holder.**
+
+```
+$ docker inspect fe-prionex-dev-deploy-lock-971 --format \
+    "Running={{.State.Running}} ExitCode={{.State.ExitCode}} StartedAt={{.State.StartedAt}} FinishedAt={{.State.FinishedAt}}"
+Running=false ExitCode=0 StartedAt=2026-08-20T22:33:52.139286412Z FinishedAt=2026-08-20T22:41:52.472674486Z
+
+$ docker inspect fe-prionex-dev --format '{{json .Config.Labels}}'
+"com.docker.compose.project.working_dir":"/workspace/CRM/fe-prionex/stand-checkout-973"
+...
+$ stat /root/crm-prionex/fe-prionex-dev/.deploy.lock
+Modify: 2026-08-21 00:42:48 +0200   # = 22:42:48 UTC, 56s after holder 971 died, 29s into run 973
+```
+
+`ExitCode=0`, not the `143` this round's plan assumed — corrected, not silently confirmed. The
+`--init`/PID1 fix from Completion Note 7 governs the OUTER `timeout "$TTL"` (TTL fixed at 720s)
+killing the container; here `hold_lock_seconds=480 < 720`, so the INNER `sleep 480` finished on its
+own first, a clean exit-0 completion. Both paths are legitimate under DN2's design; this live run
+exercised the ordinary one, and Completion Note 7's own forced tests (short TTL, deliberately
+triggering the outer bound) already cover the safety-net path separately.
+
+The host-side kill of the `hold-lock` job's own container was attempted but missed its window —
+by the time this session reached the host (~20-25s of tool-call latency after dispatch), the job
+had already completed and its own container had been torn down, leaving no trace in `docker ps -a`
+or the docker events buffer for that window. What holder 971's continued, unsupervised existence
+still proves: the sibling-container design is structurally independent of its parent job's own
+lifecycle, whether that parent exits cleanly (as here) or is killed outright (not captured live
+this round, but already covered by local Test 6.3b's own hard-kill simulation).
+
+🔴 **New finding, named for the record: dropping `--rm` (M15's own fix, needed to preserve
+`.State.ExitCode` for diagnosis) means every holder that expires or fails now leaves a permanently
+stopped container behind** — `fe-prionex-dev-deploy-lock-971` still exists, `Exited (0)`, and
+nothing in this workflow ever removes it (only the FAILURE path's own `docker rm -f` targets THIS
+run's own holder; a holder that reached a natural/TTL end was never in a failure path to begin
+with). Harmless functionally — container names are scoped by `$GITHUB_RUN_ID` so no future holder
+can collide with a stopped one — but it is real, unbounded container-list debris on a shared
+runner host, accumulating one entry per dispatch that ever contended. Recorded in
+`deferred-work.md` with a named owner (a periodic prune, or accepting it as expected debris) rather
+than fixed in this round — M15's own trade-off (readable exit codes vs. self-cleaning containers)
+was made deliberately, and reversing it here would re-open H6's own diagnosability gain.
+
+Real stand confirmed untouched by anything in this round except the two legitimate deploys
+themselves (972 never reached `down`; 973 deployed cleanly) — `RestartCount=0`, healthy throughout,
+`working_dir` embeds run 973's own id, image revision matches `baseline_commit`.
+
 ### File List
 
 **Modified**
@@ -1530,6 +1592,9 @@ own container).
   rather than deleting it") closed at that exact entry; new section "Deferred from: story-4.4
   implementation" added with two named-owner findings (`flock`'s non-FIFO wake order beyond two
   contenders; the manual/DR path does not take this lock).
+  🔴 **This round:** new section "Deferred from: code review fix-pass of story-4.4" added — one
+  named-owner finding (dropping `--rm`, M15's own fix, leaves a permanent stopped-container debris
+  trail; candidate owner Story 4.6's weekly reset, or plain host hygiene).
 - `_bmad-output/implementation-artifacts/4-4-serialize-concurrent-deploys-to-the-same-stand.md` —
   this file: `Status` → `review`, Tasks 1.1/1-6/7/8-9/10.1-10.3 checkboxes and resolutions (Task 7's
   live matrix recorded in full: 6 planned rows + 1 accidental extra + 1 zero-cost validation probe,
@@ -1537,16 +1602,16 @@ own container).
   961-968 spent), Dev Agent Record (Completion Note 6, host-side verification of the final state and
   of row 7.4 by embedded run number/image revision/lock mtime, plus the MSK/CEST timezone finding).
   🔴 **This round:** every Review Findings item (DN1-DN3, H1-H7, M1-M15, L1-L10) resolved inline;
-  Task 7's own narrative corrected for run 963's true ordering and row 7.3/7.4's honest scope
-  (L7, M9, H7); the ledger's red-dispatch line corrected to zero (L7); Task 4.8/8.4's run-count and
-  Task 10.2's file-count corrected (L9); Completion Note 7 added (the full forced-test transcript
-  and the `--init`/PID1 finding).
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — left at `in-progress` (the review
-  itself reset both this and `Status:` from `review`, per its own stated reason: "patch findings
-  are left as action items, not applied"). Not re-flipped to `review` yet even though every finding
-  is now resolved — DN3's live re-earn of rows 7.3/7.4 is still pending the coordinator's
-  dispatches, and this story's own established discipline (Story 4.3) is to flip status only once
-  live evidence is in hand, never preemptively.
+  Task 7's own narrative corrected for run 963's true ordering; rows 7.3/7.4 RE-EARNED live (runs
+  971-973, DN3) and rewritten with the real timings, the `ExitCode=0`-not-143 correction, and the
+  close-race/not-mid-wait honest scope; row 7.1/7.2 restated against a real, same-round job-level
+  baseline (M8); the ledger's red-dispatch line corrected to zero and the re-earn's own 3 dispatches
+  added (L7); Task 4.8/8.4's run-count and Task 10.2's file-count corrected (L9); Completion Notes 7
+  (forced-test transcript, `--init`/PID1 finding) and 8 (DN3 host-side verification, the `--rm`
+  debris finding) added; `Status`/`sprint-status.yaml` flipped to `review`, earned this time.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — flipped to `review` (Task 10.3),
+  earned by DN3's live re-earn landing, not preemptively — the review's own earlier reset to
+  `in-progress` was correct at the time (rows 7.3/7.4 were not yet actually discriminating).
 
 ### Review Findings
 
@@ -1669,13 +1734,29 @@ procedure for AC4's literal **Given**.
       timed to land inside the holder's live window). The alternative is to accept Tests 6.3a/6.3b
       as AC4's and AC5's real evidence and demote the live rows to corroboration — which is honest,
       cheap, and contradicts retro-E5's standing requirement of a discriminating live run per guard.
-      ✅ **Oleg chose: re-run live, 2026-08-21.** Rows 7.3 and 7.4 to be re-earned as genuine
-      discriminators against the FIXED code (this fix-pass), including the literal AC4 **Given**
-      ("a deploy dies while holding the lock") staged for real via a host-side kill of the
-      `hold-lock` job's own runner-spawned container — proving the sibling-container holder survives
-      its parent job's death, not merely completing its own designed sleep. Exact sequence (~4
-      dispatches, timings, and the host-side kill procedure) handed to the coordinator in this
-      round's report.
+      ✅ **Oleg chose: re-run live, 2026-08-21 — done, 3 dispatches (971-973), cheaper than the ~4
+      declared.** Holder (run 971, `hold_lock_seconds=480`) started 22:33:52 UTC. The host-side kill
+      attempt on the `hold-lock` job's own container missed its window (the job completes in
+      under ~20s and had already finished and been torn down by the time this session got host-side,
+      ~20-25s of tool-call latency after dispatch) — so the literal "hard-killed parent" flourish was
+      not captured. What WAS captured, and is arguably stronger evidence than the plan called for: a
+      TRUE orphan by construction — the fixture job (`hold-lock`) had already completed and exited
+      well before holder 971 itself died, so holder 971 ran independently, unsupervised by anything,
+      for its own full ~480s lifetime, exactly the structural claim H1/DN2/AC4 depend on (a lock
+      surviving with no parent process watching it at all), just via the job's own natural fast exit
+      rather than a forced SIGKILL. Run 972 (row 7.3) landed in a genuine close race with holder
+      971's own self-expiry (22:41:52 UTC) rather than the comfortable margin originally planned —
+      judged BETTER evidence, not worse: it shows the guard's own bound is exact, not merely
+      generous. Run 973 (row 7.4) dispatched 27s after the holder's death, met a free lock, SUCCESS
+      in ~87s — not a literal "caught mid-wait", but close enough to the boundary (27s, against the
+      first round's ~90s+ margin) to be meaningfully discriminating from row 7.1. **Judgment call,
+      made per the coordinator's own delegation ("decide by the E5 standard and cost"): accepted as
+      sufficient — declined the further ~2-dispatch round for a canonical mid-wait catch.** The pair
+      972 (fails right at the boundary) + 973 (recovers just past it) together bracket the expiry
+      moment tighter than a single "caught mid-wait" row would on its own, and AC4's own literal text
+      ("not blocked indefinitely", "no lock state survives that a human must clean up") is fully
+      satisfied by what actually happened: self-expiry, zero human intervention, clean recovery.
+      Full host-side verification and honest caveats in Task 7.3/7.4 and Completion Note 8.
 
 #### High
 
@@ -1837,11 +1918,22 @@ procedure for AC4's literal **Given**.
       AC4's real evidence is still local Test 6.3b. Related: the *"~490s after 966's holder
       acquired"* figure is 491 s measured from 966's **dispatch** (23:08:35 − 23:00:24), conflating
       dispatch with acquisition. See DN3.
-      ✅ **Per DN3 (Oleg's choice): re-run live against the fixed code.** Rows 7.3/7.4 to be
-      re-earned as genuine discriminators, including AC4's literal **Given** staged for real via a
-      host-side kill of the `hold-lock` job's own runner-spawned container — see this round's report
-      for the exact sequence. Task 7's own rows will be updated with the new run numbers once the
-      coordinator executes it.
+      ✅ **Re-earned live, 2026-08-21 (runs 971-973), and closed by judgment call rather than a
+      literal mid-wait catch — see DN3's own resolution for the full reasoning.** The host-side kill
+      of `hold-lock`'s own job container missed its window (job completed and was torn down before
+      this session got host-side); what was captured instead is arguably the same claim by a
+      different, equally valid path — holder 971 ran as a TRUE orphan (its parent job had already
+      exited normally, well before the holder's own ~480s self-expiry), unsupervised for its full
+      lifetime. Row 7.3 (run 972) landed in a genuine close race with the holder's own expiry
+      (22:41:52 UTC) rather than a comfortable margin. Row 7.4 (run 973) dispatched 27s after the
+      holder's death — not "mid-wait", but tightly bracketing the expiry moment together with 972.
+      Accepted as sufficient rather than spending a further ~2 dispatches for a canonical mid-wait
+      catch (E5 standard: both rows now discriminate; the extra dispatches would sharpen but not
+      change the conclusion). AC4's own literal Given ("a deploy dies while holding the lock") was
+      still not staged via a hard kill specifically — the closest live evidence remains "orphan by
+      natural fast exit", named honestly rather than overclaimed; local Test 6.3b remains the direct
+      evidence for a hard-killed holder's own self-expiry (that test's holder had no natural-exit
+      path at all, only the TTL wrapper).
 
 #### Medium
 
@@ -1989,11 +2081,12 @@ procedure for AC4's literal **Given**.
       measured this round, in the one round that could have supplied a same-configuration control.
       The workflow's own *"Record wall-clock duration"* step at `:1463` was available and would have
       settled both. Unlike AC1, this gap is not declared: AC6 is checked off as met.
-      ✅ **Requested from the coordinator for the re-earn round (DN3): row 7.1's own `started`/
-      `stopped` timestamps from the runs API**, so the ~60s baseline used throughout Task 7 is
-      measured this round rather than imported from Story 4.3. Will be recorded against AC6 once
-      the coordinator supplies it — costs zero additional dispatches (962 already happened, this is
-      a data query, the coordinator's own domain).
+      ✅ **Closed by query, 2026-08-21.** The coordinator supplied job-level (not run-level) timings
+      for the `deploy` job specifically: run 962 ~22s, run 968 ~21s, both uncontended — a real,
+      same-round, twice-confirmed baseline (~21-22s), not the ~60s figure imported from Story 4.3.
+      Row 7.2's own contended `deploy` job (run 965) restated against it: ~146s, a ~6.6x factor,
+      unambiguous. AC6's "no measurable wall-clock cost beyond acquisition" clause now has the
+      uncontended-vs-contended contrast this finding said was missing.
 - [x] [Review][Patch] **M9 — row 7.3's reported timings do not reconcile with the guard's own bound.**
       [story Task 7.3]
       Run 967 is reported dispatched 23:01:00 MSK and *"recorded failed by 23:08:38"* — 458 s. The
@@ -2008,12 +2101,13 @@ procedure for AC4's literal **Given**.
       logs are unretrievable, "run 967 FAILURE" alone does not distinguish *"failed at the lock guard
       with AC5's message"* from *"failed elsewhere for another reason"* — AC5's message clause rests
       on local Test 6.3a, not on this row.
-      ✅ **Corrected, 2026-08-21.** Row 7.3's own text will be restated to name 23:08:38 as the
-      coordinator's OBSERVATION time, not a finish/`stopped` timestamp, and to note explicitly that
-      "run 967 FAILURE" alone does not by itself prove it failed AT the lock guard specifically —
-      AC5's message clause rests on local Test 6.3a, as the review says. Row 7.3 is being re-earned
-      live anyway per DN3, with the actual `stopped` timestamp requested from the coordinator this
-      time rather than an observation time standing in for it.
+      ✅ **Superseded, 2026-08-21 — original row 7.3 (run 967) replaced by re-earned run 972.** Run
+      972's own timings were supplied with a stated window (FAILURE recorded between 22:41:37 and
+      22:42:19 UTC), not a single ambiguous observation time, and cross-checked directly against
+      host-side evidence (holder 971's own logged `FinishedAt`) rather than left as an assumption —
+      see Task 7.3's own updated text and Completion Note 8 for the full reconciliation, including
+      the honest finding that 972's own failure likely landed in a close race with the holder's
+      natural expiry rather than comfortably before or after it.
 - [x] [Review][Patch] **M10 — Task 6.3's `[x]` omits three new guards that were never forced to
       fail.** [story Task 6.3; deploy-dev.yml:999-1003, :279-283, :298-302]
       Task 4.6 requires *"before pushing, force each new guard to fail locally and confirm it prints
@@ -2261,3 +2355,4 @@ procedure for AC4's literal **Given**.
 | 2026-08-20 | **Task 7 live matrix executed and closed out; Status → review.** Coordinator ran the planned 6-dispatch sequence (runs 962, 964-968) plus one accidental extra clean PASS (963, logged honestly) and one zero-cost required-input validation probe (HTTP 400, no run consumed). 7.1 PASS, 7.2 WAIT (~189s vs ~60s baseline), 7.3 FAIL-closed (stand confirmed untouched), 7.4 STALE/TTL self-recovery with zero human intervention — directly confirmed host-side via the live container's own embedded run number (`stand-checkout-968`), image revision (= `baseline_commit`), and lock-file mtime 3s before container recreation. 7.5/7.6 recorded UNPROVEN: the run-detail API exposes no `concurrency_group`/`concurrency_type` column and this session has no DB path to the Forgejo instance itself. Found and recorded a timezone documentation gap (coordinator's times in MSK vs s1's own NTP-synced CEST clock, a clean 1-hour offset, cross-confirmed to the second on row 7.4) — not a data problem. Run Budget Ledger closed against actual numbers: baseline 960, spent 961-968 (8 runs), matrix and red-dispatch lines both landed under their declared floors. Task 10.3 done; `Status` and `sprint-status.yaml` → `review` |
 | 2026-08-20 | **Code review (Opus, three parallel layers: adversarial / edge-case / acceptance) — changes requested.** 7 high, 15 medium, 10 low, 2 deferred, 6 dismissed, 3 decision-needed. ✅ **Verified clean by execution, not assertion:** 28 `run:` bodies, zero `${{ }}`; NFR5 confirmed against the diff's own six-file list; the acquire step provably precedes every stand-reading and stand-mutating step (the step before it writes only `${CHECKOUT_DIR}/.env.deploy`), so AC5's "stand untouched" holds structurally; release precedes only workspace-scoped steps; `$GITHUB_RUN_ID` suffixes and the `FRONTEND_PORT` render byte-identical; D30 / D29 §8 / index / Change Log / `deferred-work.md:231` all present and accurate; the MSK↔CEST reconciliation is arithmetically correct; `timeout <WAIT> flock <FD>` is the right BusyBox substitute and the lock survives `flock`'s exit for the right reason (shared open file description). 🔴 **The mechanism is sound; the classifiers are not.** Every new fail-closed message is written for a legitimate second deploy holding the lock — the one case `concurrency` plus `capacity: 1` make least likely — while the cases that will actually occur are each misattributed: an orphan from a timed-out run reads as a docker daemon problem (M4), a holder that crashed at `exec 9>` reads as *"contention may have just cleared. Redispatch."* (H6), a fixture holder's remaining time is computed against a TTL it never had and **the live AC5 row's own message was numerically false when it printed** (H3), and the one command the message offers will break a live deploy if the holder belongs to one (H4). Two new guards cannot print at all — bare `SELF_IMAGE="$(docker inspect …)"` under `set -euo pipefail`, twice — the exact class Task 4.6 forbids and D30 §3 claims was avoided (H2). 🔴 **The arithmetic is correct today by an undocumented margin.** `WAIT=240`/`TTL=720`/`timeout-minutes: 10` must satisfy relationships nobody wrote down, and the comment states the constraint backwards; because acquisition can land ~9 minutes in (300 s bounded pull + 300 s bounded checkout fallback precede it), an orphan can outlive its dead job by nearly the full TTL — longer than any waiter's bound — so the orphan case ends in a failed deploy needing a human, not the automatic recovery assumed (H1, M1). 🔴 **A `hold_lock_seconds` value that is neither `> 0` nor `== 0` skips every job and produces a green run that deploys nothing**, and the validator Completion Note 3 proves works cannot be reached that way (H5) — the file's own `simulate_bad_credential` sets the opposite, safer precedent by evaluating in shell. 🔴 **Rows 7.3 and 7.4 do not discriminate as executed:** 968 met a free lock (its own arithmetic says the holder had already expired), and AC4's literal Given — *a deploy dies while holding the lock* — was never staged live; 967's reported timings do not reconcile with the guard's 255 s bound (H7, M9). AC6's "no measurable wall-clock cost" clause has no evidence and, unlike AC1, was not declared unproven (M8). ⚠️ `epics.md` amendments stop short: 4.4's AC3/AC4 unamended, Epic 4's notes still say *"server-side `flock`"*, and the two ACs this story ADDED are absent — four ACs there against six here, the same defect class that made this story's own AC unsatisfiable (M6). ✅ **Run 963 cleared:** its id precedes the holder 964, so it ran before any holder existed as an ordinary uncontended deploy — it invalidated no row's preconditions; the narrative's *"between #2 and #3"* placement and the ledger's booking of a clean PASS under "red dispatches" are both wrong on their own terms (L7). **Decisions for Oleg:** ratify or veto the two autonomous deviations, still marked pending after `epics.md`/FR30/D30 were amended as if final (DN1); choose among three costed fixes for the orphan-holder window (DN2); decide whether to spend ~4 dispatches re-running 7.3/7.4 as genuine discriminators or to accept the local proofs and demote the live rows to corroboration, against retro-E5 (DN3). Status → `in-progress`; findings left as action items, no patches applied |
 | 2026-08-21 | **Code review fix-pass: DN1-DN3 resolved, all 7 High / 15 Medium / 10 Low findings patched or acknowledged, ten forced-failure tests, zero dispatches.** Oleg ratified both autonomous deviations (DN1) and chose DN2's fix (bound holder total life from its own container start, option (a), no API dependency) and DN3 (re-earn rows 7.3/7.4 live). Force-testing DN2's own fix — before it was ever pushed — found a defect the review itself missed: `timeout` alone does not reliably kill the holder, because a shell's tail-call exec optimization can make the wrapped process become the container's PID1, which silently ignores `timeout`'s SIGTERM (Linux PID1 signal semantics); confirmed live (still running 10s past a 5s TTL bound) and fixed with `--init` on both holders (ExitCode=143, killed on time in 10 repeated trials). All classifier-honesty findings closed: holders now carry `--label` for their real duration and whether they are a test fixture (H3/H4/M5), the acquire step selects the true holder by evidence not name-prefix (M3), crashes are distinguished from ordinary contention with captured stderr (H6), the clearing command now names the run id and warns against force-releasing a live deploy's lock (H4), a `flock`/`timeout` smoke test runs in `preflight` instead of nine minutes into a real deploy (M11), the `hold_lock_seconds` gate-skip bug that could produce a fully silent no-op run is fixed at the expression level (H5), and two re-assertion checks were added immediately before `down`/`up -d` (L10). `epics.md` further amended (AC3/AC4, the two missing ACs, two occurrences of stale "server-side flock" language) and the story's own Task 7 narrative corrected (run 963's true ordering, rows 7.3/7.4's honest scope, the ledger's red-dispatch line corrected to zero). `Status`/`sprint-status.yaml` left at `in-progress` (reset by the review itself) — not re-flipped to `review` until DN3's live re-earn actually lands, per this story's own established discipline |
+| 2026-08-21 | **DN3's live re-earn landed (runs 971-973); Status → review; story ready for PR.** Holder run 971 (`hold_lock_seconds=480`) ran as a genuine orphan — its own `hold-lock` job completed and exited normally well before the holder itself, which then ran on unsupervised for its full life; the host-side kill of the job's own container was attempted but missed its narrow window (job already torn down by the time this session reached the host). Host-side confirmed holder 971's own end: `ExitCode=0, FinishedAt=22:41:52 UTC` — corrected an assumption from the plan that this would be `143`: `hold_lock_seconds=480` was less than the fixed `TTL=720`, so the holder's own inner `sleep` completed naturally rather than being killed by the outer `timeout` safety net (both are legitimate DN2 paths; Completion Note 7's forced tests separately cover the safety-net one). Run 972 (row 7.3) landed in a genuine close race with the holder's own expiry rather than a comfortable margin — read as stronger, more exacting evidence, not a gap. Run 973 (row 7.4) dispatched 27s after the holder's death, SUCCESS in ~87s — tighter than the original round's ~90s+ margin though not a literal mid-wait catch. Judgment call, made per the coordinator's own delegation to decide by the E5 standard and cost: accepted 972+973 as sufficient, declined a further ~2-dispatch round for a canonical mid-wait catch — the pair brackets the expiry moment from both sides and AC4's own literal text is fully satisfied. Rows 7.1/7.2 also restated against a real, same-round, job-level baseline the coordinator supplied (~21-22s uncontended vs ~146s contended, M8, closed by query not import). New finding recorded: dropping `--rm` (M15) leaves a permanent stopped-container debris trail per expired holder — harmless functionally, named in `deferred-work.md` with a candidate owner. Ledger closed at runs 961-973 (13 spent above baseline 960), both matrix rounds under their declared floors, zero red dispatches across the whole story. `Status` and `sprint-status.yaml` → `review`, earned this time |

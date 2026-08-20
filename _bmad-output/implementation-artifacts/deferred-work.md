@@ -2924,3 +2924,26 @@ session at all, not because they are minor.
   workflow-level fix — it is a platform behaviour to measure and document. **Owner: Story 4.8**
   (which parameterizes the group per stand and must re-measure it), or whoever closes the AC1 item
   above, since both are answered by the same database.
+
+## Deferred from: code review fix-pass of story-4.4 (2026-08-21)
+
+- ⚠️ **Dropping `--rm` from both lock-holder containers (code review M15's own fix, needed to keep
+  `.State.ExitCode` readable for diagnosis) means every holder that reaches a natural or TTL-bounded
+  end now leaves a permanently STOPPED container behind, with nothing in this workflow ever removing
+  it.** Live example: `fe-prionex-dev-deploy-lock-971`, `Exited (0)`, confirmed still present after
+  its own self-expiry during this story's own DN3 re-earn round (Completion Note 8). Only the
+  acquire step's own FAILURE path calls `docker rm -f` on a holder, and only for THIS run's own
+  attempt — a holder that reached the end of its life normally (fixture completing its own
+  `hold_lock_seconds`, or the TTL wrapper firing on an orphan) was never in a failure path to begin
+  with, so nothing ever cleans it up. Harmless functionally: container NAMES are scoped by
+  `$GITHUB_RUN_ID`, so a stopped holder can never collide with or be mistaken for a live one, and it
+  holds no kernel-level lock (that died with the container's own last open file descriptor). The
+  cost is unbounded container-list debris on a shared, multi-tenant runner host — one stopped
+  container per dispatch that ever contended, forever, unless pruned by hand or by an external
+  process (`docker container prune`, a scheduled job, or similar). No current story owns periodic
+  runner hygiene. **Owner: whoever next touches this runner's own operational housekeeping** — a
+  candidate for Story 4.6 (which already resets the DEV stand on a weekly schedule and could add a
+  stopped-container prune alongside it), or a plain host-level cron job outside any story's own
+  scope. Not reversed in this fix-pass: M15's own trade-off (readable exit codes vs. self-cleaning
+  containers) was made deliberately for H6's diagnosability gain, and undoing it here would re-open
+  that gap.
