@@ -1456,12 +1456,30 @@ export function ClientDetailPage() {
         calls: recentCalls ?? [],
         phones: client?.phones ?? [],
         nowMs: Date.now(),
+        // Only THIS operator's calls may drive the pre-selection. A colleague
+        // can have spoken to the same client inside the window, and their
+        // number would otherwise be seeded into this operator's log without
+        // anyone choosing it. Operators with no extension configured keep the
+        // unfiltered behaviour rather than silently losing the feature.
+        agentExtension: user?.asterisk_extension,
       })
 
       // Only the prefill source — NOT contactSource, which would filter the
       // chain list and could hide the very template this hotkey launches.
+      //
+      // Gated on the id actually being in the map. `classifyContactSource`
+      // coerces anything it cannot find to 'recommender', and
+      // `contactTypesById` is still empty while `useContactTypes('all')` is in
+      // flight — a hotkey can be pressed seconds after mount, unlike the phone
+      // row below which fires long after. Defaulting there would seed only
+      // 'recommender' contact steps and silently drop a client phone, so leave
+      // the source unset: ChainExecutor then seeds nothing rather than seeding
+      // into the wrong step class.
+      const prefillContactTypeId = recentPhone?.contactTypeId
       setChainExecutorPrefilledPhoneSource(
-        recentPhone ? classifyContactSource(recentPhone.contactTypeId) : null
+        prefillContactTypeId != null && contactTypesById.has(prefillContactTypeId)
+          ? classifyContactSource(prefillContactTypeId)
+          : null
       )
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(recentPhone?.number ?? null)

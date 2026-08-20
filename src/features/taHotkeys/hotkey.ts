@@ -24,6 +24,23 @@ export interface Hotkey {
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta', 'AltGraph', 'CapsLock'])
 
 /**
+ * Keys that already carry universal activation semantics.
+ *
+ * The launch path calls ``preventDefault`` on any combination it recognises, so
+ * honouring a binding on one of these would stop it working everywhere focus is
+ * not a text field: Enter on a focused button, Space on a checkbox, Tab out of
+ * a control, Escape out of a popover. Refused here on the READ side, so such a
+ * binding can never be honoured even if one reaches the client — the assign UI
+ * in KAN-975 should refuse to record them too, but that guard has to hold
+ * independently of a screen that does not ship yet.
+ *
+ * ``parseHotkey`` deliberately still reads them back: a stored binding that
+ * should never have existed has to stay visible in the settings list, or the
+ * operator cannot see it to delete it.
+ */
+const ACTIVATION_KEYS = new Set(['Enter', ' ', 'Spacebar', 'Tab', 'Escape', 'Esc'])
+
+/**
  * Normalise a raw ``KeyboardEvent.key`` into the form we store and compare.
  *
  * Single printable characters are upper-cased so ``a`` and ``A`` are the same
@@ -74,6 +91,7 @@ export function hotkeyFromEvent(event: {
   metaKey: boolean
 }): Hotkey | null {
   if (MODIFIER_KEYS.has(event.key)) return null
+  if (ACTIVATION_KEYS.has(event.key)) return null
   if (event.metaKey) return null
   if (!event.key) return null
 
