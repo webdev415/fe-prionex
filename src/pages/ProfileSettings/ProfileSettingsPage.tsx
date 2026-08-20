@@ -62,6 +62,12 @@ export function ProfileSettingsPage() {
 
   const [form, setForm] = useState(initialForm)
 
+  // Whether the user has actually chosen a work format in this session. It
+  // cannot be inferred by comparing values: the field falls back to office for
+  // display, so a user picking office when the server holds remote produces no
+  // difference to compare and the correction would never be sent.
+  const [workFormatTouched, setWorkFormatTouched] = useState(false)
+
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState(() => ({
     email: initialForm.email,
     first_name: initialForm.first_name,
@@ -122,6 +128,21 @@ export function ProfileSettingsPage() {
         ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
         : prev.language,
     }))
+    // The snapshot is what the server holds, so it has to move with the same
+    // refresh. Seeded once it would drift: refreshUser runs on mount, the form
+    // takes the refreshed values and the stale snapshot then reads as an edit
+    // the user never made.
+    setSavedProfileSnapshot((prev) => ({
+      ...prev,
+      email: user.email || prev.email,
+      first_name: user.firstName || prev.first_name,
+      last_name: user.lastName || prev.last_name,
+      timezone: user.timezone || prev.timezone,
+      work_format: user.work_format ?? prev.work_format,
+      language: user.language
+        ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
+        : prev.language,
+    }))
   }, [user])
 
   const hasProfileChanges = useMemo(() => {
@@ -133,9 +154,13 @@ export function ProfileSettingsPage() {
       form.phone !== savedProfileSnapshot.phone ||
       form.language !== savedProfileSnapshot.language ||
       form.timezone !== savedProfileSnapshot.timezone ||
-      form.work_format !== savedProfileSnapshot.work_format
+      form.work_format !== savedProfileSnapshot.work_format ||
+      // Picking the value already on screen is not a value change, but it is
+      // still something to save: the field may be showing its fallback while
+      // the server holds the other one.
+      workFormatTouched
     )
-  }, [form, savedProfileSnapshot])
+  }, [form, savedProfileSnapshot, workFormatTouched])
 
   // Refresh auth user once on mount so profile has full /me data (projects, agent fields, names)
   useEffect(() => {
@@ -202,8 +227,7 @@ export function ProfileSettingsPage() {
       // the user from the token, which carries no work format at all - sending
       // the fallback would record a choice nobody made and could overwrite a
       // remote employee with office on an unrelated save.
-      work_format:
-        form.work_format === savedProfileSnapshot.work_format ? undefined : form.work_format,
+      work_format: workFormatTouched ? form.work_format : undefined,
     }
 
     try {
@@ -220,6 +244,7 @@ export function ProfileSettingsPage() {
         timezone: form.timezone,
         work_format: form.work_format,
       })
+      setWorkFormatTouched(false)
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)
@@ -240,6 +265,7 @@ export function ProfileSettingsPage() {
       currentPassword: '',
       newPassword: '',
     }))
+    setWorkFormatTouched(false)
   }
 
   return (
@@ -464,7 +490,10 @@ export function ProfileSettingsPage() {
                         <DropdownMenuItem
                           key={option.value}
                           className="cursor-pointer"
-                          onClick={() => setForm({ ...form, work_format: option.value })}
+                          onClick={() => {
+                            setWorkFormatTouched(true)
+                            setForm({ ...form, work_format: option.value })
+                          }}
                         >
                           <span className="flex w-full items-center justify-between gap-2">
                             <span>{option.label}</span>
