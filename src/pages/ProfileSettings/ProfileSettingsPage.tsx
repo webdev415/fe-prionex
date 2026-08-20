@@ -292,14 +292,15 @@ export function ProfileSettingsPage() {
               {user?.is_agent && user?.agent_status && (
                 <div className="flex items-center gap-2">
                   <span
-                    className={`h-2 w-2 rounded-full ${user.agent_status === 'online'
-                      ? 'bg-green-500'
-                      : user.agent_status === 'busy'
-                        ? 'bg-yellow-500'
-                        : user.agent_status === 'on-call'
-                          ? 'bg-red-500'
-                          : 'bg-gray-400'
-                      }`}
+                    className={`h-2 w-2 rounded-full ${
+                      user.agent_status === 'online'
+                        ? 'bg-green-500'
+                        : user.agent_status === 'busy'
+                          ? 'bg-yellow-500'
+                          : user.agent_status === 'on-call'
+                            ? 'bg-red-500'
+                            : 'bg-gray-400'
+                    }`}
                   />
                   <span className="text-muted-foreground text-xs capitalize">
                     {user.agent_status}
@@ -356,7 +357,7 @@ export function ProfileSettingsPage() {
                   label={t('pages.users.forms.username')}
                   value={form.username}
                   disabled
-                  onChange={() => { }}
+                  onChange={() => {}}
                   helperText={t('pages.users.editForm.usernameCannotBeChanged')}
                   className="w-full"
                 />
@@ -513,7 +514,7 @@ export function ProfileSettingsPage() {
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                     value={user?.asterisk_extension || ''}
                     disabled
-                    onChange={() => { }}
+                    onChange={() => {}}
                     placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
                     className="w-full"
                   />
@@ -521,7 +522,7 @@ export function ProfileSettingsPage() {
                     label={t('pages.users.forms.dialerExtension') || 'Predictive Dialer Extension'}
                     value={user?.dialer_extension || ''}
                     disabled
-                    onChange={() => { }}
+                    onChange={() => {}}
                     placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
                     className="w-full"
                   />
@@ -538,9 +539,10 @@ export function ProfileSettingsPage() {
                           <button id="agent-status" type="button" className={TRIGGER_CLASS}>
                             <span className="flex items-center gap-2 text-left">
                               <span
-                                className={`h-2 w-2 rounded-full ${agentStatusOptions.find((o) => o.value === form.agent_status)
-                                  ?.dot ?? 'bg-gray-400'
-                                  }`}
+                                className={`h-2 w-2 rounded-full ${
+                                  agentStatusOptions.find((o) => o.value === form.agent_status)
+                                    ?.dot ?? 'bg-gray-400'
+                                }`}
                               />
                               <span>
                                 {
