@@ -8467,6 +8467,7 @@
           "overall": "Whole period"
         },
         "empty": "No data for the selected period",
+        "emptyDepartment": "No operators in this department for the period — every department is shown on the «All» tab",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {

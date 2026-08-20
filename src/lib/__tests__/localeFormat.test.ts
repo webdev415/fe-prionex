@@ -39,6 +39,25 @@ describe('localeFormat', () => {
       expect(formatNumber('not-a-number', 'en')).toBe('—')
     })
 
+    it('formatMoneyAmount carries that guard to nullable money columns too', () => {
+      // A report whose amount is legitimately absent (no promise, no payment)
+      // hands the null straight to this helper instead of keeping a private
+      // formatter to null-check it first.
+      expect(formatMoneyAmount(null, 'en')).toBe('—')
+      expect(formatMoneyAmount(undefined, 'en')).toBe('—')
+      expect(formatMoneyAmount('not-a-number', 'en')).toBe('—')
+      expect(formatMoneyAmount(Number.NaN, 'en')).toBe('—')
+      // A real zero is a value, not a gap.
+      expect(formatMoneyAmount(0, 'en')).toBe('0.00')
+    })
+
+    it('formatMoneyAmount rounds to the hundredth and keeps a negative negative', () => {
+      // Production money really does arrive over-precise ("34508717.5067"), and
+      // a negative amount is a real state (more collected than was due).
+      expect(formatMoneyAmount('34508717.5067', 'en')).toBe('34,508,717.51')
+      expect(formatMoneyAmount('-7400.00', 'en')).toBe('-7,400.00')
+    })
+
     it('reuses cached Intl.NumberFormat instances per locale+options', () => {
       // Same input twice must format identically through the cache path.
       expect(formatNumber(1234.5, 'en', { maximumFractionDigits: 1 })).toBe('1,234.5')

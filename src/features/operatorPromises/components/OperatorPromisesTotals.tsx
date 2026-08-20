@@ -14,8 +14,15 @@
  * Both are always shown, side by side, and that is the point: a department tab
  * must never read as "this is the whole period", and on the «Всі» tab the two
  * columns are a live reconciliation of the client-side arithmetic against the
- * server's exact-Decimal one. A gap there is a real signal — a department name
- * that drifted in the auth directory, for instance, would show up as one.
+ * server's exact-Decimal one — a gap there means the two summations disagree
+ * (float drift on our side, a totals bug on either).
+ *
+ * That reconciliation does NOT detect a department renamed in the auth
+ * directory: «Всі» does not filter, so both columns cover the identical row
+ * set and a rename moves neither number. The rename shows up only as an empty
+ * department tab, which the tab component reports as such — see the docblock of
+ * utils/departmentTabs.ts for the limitation and why it has no automatic
+ * signal.
  *
  * Both conversions are RATIOS in both columns and are therefore recomputed from
  * the summed money on each side (`Σ paid / Σ sum_to`), never averaged; "—"

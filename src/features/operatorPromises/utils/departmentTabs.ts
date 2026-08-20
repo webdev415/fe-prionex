@@ -23,11 +23,23 @@
  * carries `department` as a display STRING and no department id (the auth
  * directory's org-context batch was left untouched by this migration). The
  * usual rule "key UI by id, never by a displayed string" cannot be applied
- * until the contract grows an id — renaming a department in the directory would
- * silently empty its tab here. The «Всі» tab is the safety net: it never
- * filters, so no row can become unreachable, and its own totals are shown next
- * to the backend's period totals, which makes a drifted name visible as a gap
- * between the two numbers.
+ * until the contract grows an id.
+ *
+ * The consequence is real and NOT defended against: renaming «ТП» in the auth
+ * directory empties this tab here, and nothing in the UI can tell that apart
+ * from a period in which the department genuinely did nothing. There is no
+ * automatic signal to be had — the numbers a drifted name would have to move
+ * are the SAME on both sides of the totals block («Всі» does not filter, so
+ * both its columns cover the identical row set and a rename changes neither),
+ * and no accounting identity is broken: the row is still there, still summed,
+ * just under a name no tab asks for. What the report does instead is refuse to
+ * pretend: when the response HAS rows and none of them match the active tab,
+ * the tab says so explicitly (`emptyDepartment`) rather than reusing the
+ * "no data for the period" message, and «Всі» always shows the row.
+ *
+ * The limitation is documented on the backend side too
+ * (docs/operator-promises-report.md, "Known limitation"), so a future
+ * department id lands as a contract change with a known consumer.
  */
 
 import type { OperatorPromisesRow } from '../api/types'

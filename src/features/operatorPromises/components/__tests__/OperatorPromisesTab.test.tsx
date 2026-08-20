@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
+import enCommon from '@/../public/locales/en/common.json'
+import ukCommon from '@/../public/locales/uk/common.json'
 import { OperatorPromisesTab } from '../OperatorPromisesTab'
 import { getOperatorPromisesReport } from '../../api/operatorPromisesApi'
 import { OPERATOR_PROMISES_COLUMN_COUNT } from '../OperatorPromisesTable'
@@ -317,6 +319,33 @@ describe('OperatorPromisesTab', () => {
     for (const field of dateInputs()) expect(field).not.toHaveAttribute('aria-invalid')
   })
 
+  it('lets an inverted window be PICKED and answers with the guard, not a dead calendar', async () => {
+    // The pickers deliberately do not bound each other: with the today–today
+    // default a mutual min/max opens both calendars with a single selectable
+    // day, so whichever field the user reaches for first is dead with nothing
+    // on screen explaining why. Picking through is allowed; the pair-level
+    // guard is what refuses, in words, and no request leaves.
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?opf=2026-07-10&opt=2026-07-31'])
+    await screen.findByText('Баженов Олексій Володимирович')
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+
+    // «по» set BEFORE «з». Honest scope note: this drives the manual-input
+    // path, which bypassed the picker's `min` even before that bound was
+    // removed — so the test pins the GUARD's behaviour on an inverted pair,
+    // not the removal of `min`/`max` itself (the DateSelect stub ignores
+    // those props, so a real "no disabled days" pin is not expressible here).
+    fireEvent.change(dateInputs()[1], { target: { value: '2026-07-01' } })
+
+    expect(
+      await screen.findByText('pages.reports.operatorPromises.invalidRange')
+    ).toBeInTheDocument()
+    // The choice is kept (the user can fix either bound), but nothing is sent.
+    await waitFor(() => expect(search()).toContain('opt=2026-07-01'))
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+  })
+
   it('mirrors the backend’s 366-day cap instead of letting it answer 400', async () => {
     mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
 
@@ -520,14 +549,60 @@ describe('OperatorPromisesTab', () => {
     expect(panel).toHaveAttribute('aria-labelledby', 'operator-promises-tab-dialer')
   })
 
-  it('shows the calm empty message for a department with no rows', async () => {
+  it('says the DEPARTMENT is empty when the period is not', async () => {
     mockGetReport.mockResolvedValue(makeResponse([makeRow({ department: 'ТП' })]))
 
     renderTab(['/?opd=dialer'])
 
-    // A normal 200: nobody of that department touched a chain run or collected
-    // money in the period.
+    // "No data for the selected period" would be a lie here: the period has
+    // data, this tab just does not match it. It is also the only shape in which
+    // a department renamed in the auth directory can ever surface — the tabs
+    // match a display string — so the message sends the reader to «Всі».
+    expect(
+      await screen.findByText('pages.reports.operatorPromises.emptyDepartment')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.operatorPromises.empty')).not.toBeInTheDocument()
+  })
+
+  it('does not mask a renamed department as an empty period', async () => {
+    // The rename this cannot detect, acted out: every operator tab goes blank
+    // while «Всі» still holds the row and the money.
+    mockGetReport.mockResolvedValue(
+      makeResponse([makeRow({ fio: 'Тепенко Тарас', department: 'Технічна підтримка' })])
+    )
+
+    renderTab(['/?opd=tp'])
+
+    expect(
+      await screen.findByText('pages.reports.operatorPromises.emptyDepartment')
+    ).toBeInTheDocument()
+
+    await userEvent.click(subTab('all'))
+    expect(await screen.findByText('Тепенко Тарас')).toBeInTheDocument()
+  })
+
+  it('keeps the calm period message for a genuinely empty answer', async () => {
+    // A normal 200 with no rows at all: nobody touched a chain run or collected
+    // money in the period — nothing is hidden, so nothing is claimed either.
+    mockGetReport.mockResolvedValue(makeResponse([]))
+
+    renderTab(['/?opd=dialer'])
+
     expect(await screen.findByText('pages.reports.operatorPromises.empty')).toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.reports.operatorPromises.emptyDepartment')
+    ).not.toBeInTheDocument()
+  })
+
+  it('never shows the department message on «Всі», which filters nothing', async () => {
+    mockGetReport.mockResolvedValue(makeResponse([]))
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.operatorPromises.empty')).toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.reports.operatorPromises.emptyDepartment')
+    ).not.toBeInTheDocument()
   })
 
   // ==========================================================================
@@ -772,5 +847,42 @@ describe('OperatorPromisesTab', () => {
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /next|prev/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('OperatorPromises locale keys', () => {
+  // The tab renders KEYS in tests (react-i18next is mocked globally), so
+  // nothing above would notice a key added to one locale only — these read the
+  // actual translation files.
+  const uk = ukCommon.pages.reports.operatorPromises
+  const en = enCommon.pages.reports.operatorPromises
+
+  function flatten(obj: Record<string, unknown>, prefix = ''): string[] {
+    return Object.entries(obj).flatMap(([key, value]) => {
+      const path = prefix ? `${prefix}.${key}` : key
+      return value && typeof value === 'object' && !Array.isArray(value)
+        ? flatten(value as Record<string, unknown>, path)
+        : [path]
+    })
+  }
+
+  it('carries the same key set, and the same number of keys, in both locales', () => {
+    const ukKeys = flatten(uk).sort()
+    const enKeys = flatten(en).sort()
+
+    expect(ukKeys).toEqual(enKeys)
+    expect(ukKeys).toHaveLength(enKeys.length)
+  })
+
+  it('spells the two empty states differently in both locales', () => {
+    // The whole point of `emptyDepartment` is that it does NOT say "no data for
+    // the period" — a duplicated string would silently restore the masking.
+    expect(uk.emptyDepartment).toBeTruthy()
+    expect(en.emptyDepartment).toBeTruthy()
+    expect(uk.emptyDepartment).not.toBe(uk.empty)
+    expect(en.emptyDepartment).not.toBe(en.empty)
+    // …and it names «Всі» / «All», the tab that certainly holds the rows.
+    expect(uk.emptyDepartment).toContain(uk.subtabs.all)
+    expect(en.emptyDepartment).toContain(en.subtabs.all)
   })
 })

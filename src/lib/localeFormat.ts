@@ -69,8 +69,18 @@ export function formatNumber(
   return getNumberFormat(intlLocaleForUiLanguage(language), opts).format(num)
 }
 
-/** Amount with fixed two decimals (no currency symbol — call-sites add ₴). */
-export function formatMoneyAmount(value: number | string, language: string): string {
+/**
+ * Amount with fixed two decimals (no currency symbol — call-sites add ₴).
+ *
+ * Missing (null/undefined) or non-finite values render as "—", never "NaN":
+ * the guard lives in `formatNumber`, and the signature admits them so a caller
+ * whose amount is legitimately optional (a nullable money column) does not need
+ * a null-check of its own — or a private copy of this formatter.
+ */
+export function formatMoneyAmount(
+  value: number | string | null | undefined,
+  language: string
+): string {
   return formatNumber(value, language, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

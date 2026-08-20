@@ -55,7 +55,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { isTransientFailure } from '@/lib/api'
 import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, isApiError } from '@/lib/errors'
+import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperatorPromisesReport } from '../hooks'
@@ -93,36 +93,6 @@ const MAX_RANGE_DAYS = 366
 
 const MS_PER_DAY = 86_400_000
 
-/**
- * True when the failed response actually carries a message of the backend's own.
- *
- * `getErrorMessage` has no such thing as "nothing to say": with an empty or
- * body-less response it degrades to axios' own `error.message` — the
- * untranslated "Request failed with status code 400" — which is exactly what a
- * proxy that strips the body produces, and not a sentence to show an operator.
- * So the branches below pass a server detail through only when there IS one and
- * take the localized text otherwise.
- *
- * The shapes checked are the ones `getErrorMessage` reads out of the BODY for a
- * FastAPI endpoint like this one: a bare string body, `detail` (string or the
- * validation array), and `message`. An empty string or an empty array is no
- * detail either: the empty string falls through to `message` and then to the
- * axios text, while an empty array makes `getErrorMessage` return its
- * hardcoded English "Validation error occurred" — both equally unfit to show,
- * so the helper treats both as "no detail".
- */
-function hasResponseDetail(error: unknown): boolean {
-  if (!isApiError(error)) return false
-  const data = error.response?.data
-  if (typeof data === 'string') return data.trim() !== ''
-  if (!data || typeof data !== 'object') return false
-  const record = data as Record<string, unknown>
-  const detail = record.detail
-  if (typeof detail === 'string') return detail.trim() !== ''
-  if (Array.isArray(detail)) return detail.length > 0
-  return typeof record.message === 'string' && record.message.trim() !== ''
-}
-
 export function OperatorPromisesTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -154,9 +124,10 @@ export function OperatorPromisesTab() {
   const dateFrom = rawFrom ? (isFromInvalid ? undefined : rawFrom) : today
   const dateTo = rawTo ? (isToInvalid ? undefined : rawTo) : today
 
-  // Manual input can bypass the pickers' min/max, so an inverted or oversized
-  // window must not reach the API. ISO YYYY-MM-DD strings compare correctly as
-  // strings.
+  // The only guard against an inverted or oversized window: the pickers
+  // deliberately do not bound each other (see the fields below), and manual
+  // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
+  // strings compare correctly as strings.
   const isInverted = !!dateFrom && !!dateTo && dateFrom > dateTo
   const isTooLong =
     !!dateFrom &&
@@ -235,6 +206,13 @@ export function OperatorPromisesTab() {
   const visibleRows = useMemo(() => filterRowsByTab(rows, activeTab), [rows, activeTab])
   const visibleTotals = useMemo(() => sumOperatorPromisesRows(visibleRows), [visibleRows])
 
+  // "The period produced rows, but none of them belong to this tab" — a
+  // different fact from "the period produced nothing", and the only shape in
+  // which a department renamed in the auth directory can surface (see
+  // utils/departmentTabs.ts). By construction this is never true on «Всі»,
+  // which does not filter.
+  const hasUnmatchedRows = rows.length > 0 && visibleRows.length === 0
+
   // keepPreviousData shows the previous window's rows while a new one loads —
   // they must not look final, hence the busy overlay. Placeholder only: a
   // background refetch of the SAME window shows current data and needs none.
@@ -277,12 +255,23 @@ export function OperatorPromisesTab() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Both bounds are required — this report has no default period at all */}
+      {/* Both bounds are required — this report has no default period at all.
+
+          NEITHER picker is bounded by the other (no `min`/`max`), on purpose.
+          The default window is today–today, so a mutual bound would open BOTH
+          calendars with exactly one selectable day: whichever field the user
+          reaches for first is dead — every other day greyed out — and the only
+          way through is to widen the other bound first, which is not a rule
+          anything on screen states. Letting an inverted window be PICKED and
+          then refused by the guard above (`isInverted` → the pair-level alert,
+          no request) trades an unexplained dead calendar for a sentence, and
+          the guard is needed regardless: manual input bypasses picker bounds
+          anyway. The sibling processing tab still carries the dead calendar —
+          same fix, tracked in TASK-010. */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
         <DateSelect
           label={t('pages.reports.operatorPromises.dateFrom')}
           value={dateFrom ?? null}
-          max={dateTo}
           // Only the bound that actually carries the unusable value is marked.
           // `error` (not `invalidText`) is the right prop: the value arrives
           // already committed, from the URL, not as half-typed text.
@@ -296,7 +285,6 @@ export function OperatorPromisesTab() {
         <DateSelect
           label={t('pages.reports.operatorPromises.dateTo')}
           value={dateTo ?? null}
-          min={dateFrom}
           error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
@@ -375,12 +363,22 @@ export function OperatorPromisesTab() {
               // browser's.
               timezone={userTimezone}
             />
-            {/* An empty department is a normal 200: a period in which nobody of
-                that department touched a chain run or collected money
-                legitimately holds no rows — hence a calm message, not an error. */}
+            {/* Two different silences, told apart. A genuinely empty answer is
+                a normal 200 — nobody worked the period — and gets the calm
+                "no data for the period". An answer that HAS rows none of which
+                match this tab is a different fact, and saying "no data for the
+                period" there would be false: the period has data, this tab
+                just cannot see it. That is also the only surface on which a
+                department renamed in the auth directory can ever appear (the
+                tabs match a display string — see utils/departmentTabs.ts), so
+                the message points at «Всі», where the rows certainly are. */}
             <OperatorPromisesTable
               rows={visibleRows}
-              emptyMessage={t('pages.reports.operatorPromises.empty')}
+              emptyMessage={t(
+                hasUnmatchedRows
+                  ? 'pages.reports.operatorPromises.emptyDepartment'
+                  : 'pages.reports.operatorPromises.empty'
+              )}
             />
             {isRefreshing && (
               <div
