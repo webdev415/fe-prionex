@@ -5437,7 +5437,6 @@
         "priority": "Priority",
         "targetTag": "Target Tag",
         "triggerTag": "Expired Tag",
-        "replaceTag": "Replace With Tag",
         "tagToAdd": "Tag to add",
         "tagToReplace": "Tag to be replaced",
         "replaceEffect": "This rule replaces \"{{remove}}\" with \"{{add}}\" for clients that have \"{{remove}}\".",

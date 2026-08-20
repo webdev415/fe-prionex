@@ -952,14 +952,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
-                {/* Spells out the effect, because the field names alone did not.
-                    replace_tag_code is the tag that comes OFF and target_tag_code
-                    the one that goes ON, the opposite of how the old "Target Tag"
-                    / "Replace With Tag" pair read. Rules were saved with the two
-                    swapped and then silently did nothing: the engine looked for a
-                    client holding the tag the operator wanted to end up with,
-                    found none, and skipped. Rendered from the current selections,
-                    so an existing rule can be checked by opening it. */}
+                {/* Rendered from the current selections, so a rule saved with
+                    the pair swapped can be spotted by opening it. */}
                 {replaceTagCode && targetTagCode && (
                   <p className="text-xs text-gray-500">
                     {t('pages.tags.rules.replaceEffect', {
