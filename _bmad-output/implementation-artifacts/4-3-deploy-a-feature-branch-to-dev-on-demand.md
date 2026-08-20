@@ -904,6 +904,7 @@ the coordinator dispatches and reports run ids).
 | 922 | `workflow_dispatch` | `deploy-dev.yml`, `preflight` (8562) + `deploy` (8563), `ref=main` | preflight **success**; deploy **failure**, <60s — org-secret hypothesis refuted; root cause found by SSH, no dispatch spent (Completion Note 4); fixed this push (`clone-test` + `digest-resolve-test` ladder) |
 | 923/924 | — | numbers not yet confirmed — coordinator to reconcile by query at closing (parallel `ci.yml`/build activity noted around this window, unrelated runner) | — |
 | 925 | `workflow_dispatch` | `deploy-dev.yml`, `preflight`/`clone-test`/`digest-resolve-test` (all **success** — `github.token` fix confirmed live) + `deploy` (8581), `ref=main` | ladder all green; deploy **failure**, ~60s — but NOT in the ladder's territory: diagnosed live via SSH on s1 (host-side docker state, not logs) while the container was still up — clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, even the Kong guard had ALL already succeeded (container healthy, correct digest running, config path pointing at the job's own workspace). Real cause: AC6's own verification step (`docker inspect <container> --format '{{range .RepoDigests}}...'`) — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live. Fixed this push (Completion Note 8) |
+| 927 | `workflow_dispatch` | `deploy-dev.yml`, ladder all **success** (`github.token` confirmed again) + `deploy` (8591), `ref=main` | deploy **failure** again, ~60s — 4th red deploy dispatch. Host-side trace showed the container recreated AGAIN with the correct digest (a second real `down`/`up -d`) — the run 925 AC6 fix was correctly deployed but the job still failed EARLIER than AC6, at the "Fallback HTTP check." Root cause: every prior diagnosis this story ran its confirmation checks directly on s1's own host shell, which has correct access to the host's own loopback — masking that `FRONTEND_PORT=127.0.0.1:8082` (Oleg's M7 decision, deliberately host-loopback-only) is UNREACHABLE from any container's own network, including the deploy job's own. Confirmed by finally reproducing the checks from inside an actual simulated job container: `curl: (7) Failed to connect ... Could not connect to server`. This — not AC6 — was the true cause of BOTH 925 and 927. Fixed this push: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, reaching the real host-published port. Per the coordinator's instruction, also ran the ENTIRE `deploy` job (clone through the last verification step, fixes included) as one continuous `bash -x` script inside a real simulated job container on s1, TWICE in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running, already-correct stand) — both passes completed clean, `rc=0`, no further bugs found (Completion Note 9) |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -1075,6 +1076,59 @@ the digest this run resolved). No expansion of the ladder was needed (`render-te
 `socket-pull-test` were offered as a fallback if host-side evidence proved insufficient — it did
 not) — the host-side SSH channel alone fully discriminated the failure to one command, no logs
 required.
+**Correction, from run 927's diagnosis (Completion Note 9) — recorded here, not silently fixed,
+because the mistake is itself informative:** the claim above that the fallback HTTP check and Kong
+guard "already succeeded" was WRONG. Every check in this note was run directly on s1's own host
+shell via SSH — which has correct access to the host's own loopback — not from inside an actual
+simulated job container. That masked the real bug (`127.0.0.1:8082` is host-loopback-only by
+design and unreachable from any container's network) entirely. AC6's bug was real and the fix was
+correct, but AC6 was never actually the step that failed run 925 — the fallback HTTP check, earlier
+in the sequence, was. This is why the SAME class of failure recurred at run 927, after this fix
+was already live.
+
+**9. Run 927 — same failure shape a fourth time; diagnosed with a full-job simulation instead of
+another single-bug-per-dispatch cycle, per the coordinator's explicit instruction to stop spending
+dispatches one bug at a time.** Host-side trace (same technique as Note 8) showed the container had
+been recreated AGAIN, correctly, at a fresh timestamp — the run 925 AC6 fix was live and correct,
+and the job still got all the way through login, digest resolve, pull, `github.token` clone (ladder
+all green again), `.env` render, `down`, `up -d`. But it failed EARLIER than AC6 this time, not
+later — at the "Fallback HTTP check." **Root cause: a testing-methodology gap that had been in
+every diagnosis this story ran on s1 so far.** All of it — Note 3's, 4's, and 8's SSH checks — ran
+directly on s1's OWN host shell. The host shell has correct, unmediated access to its own loopback,
+so `curl http://127.0.0.1:8082/` from there always returns 200. The ACTUAL deploy job runs INSIDE a
+container on `forgejo-runner-crm-deploy_runner`, an isolated bridge network — and
+`FRONTEND_PORT=127.0.0.1:8082` (Oleg's M7 decision) is deliberately bound to the HOST's own
+loopback only, unreachable from ANY container's own network namespace, including the deploy job's.
+Confirmed by finally running the exact same curl from inside an actual simulated job container:
+`curl: (7) Failed to connect to 127.0.0.1 port 8082 ... Could not connect to server` — immediate,
+every time. This — not AC6 — was the true cause of both run 925 and run 927.
+**Fixed, preserving the original intent (AC5: the host-published port mapping genuinely works, not
+merely the container-internal Docker HEALTHCHECK):** both the fallback HTTP check and the Kong
+guard's own `curl` now launch a SIBLING container via the docker.sock this job already holds, with
+`--network host` — sharing the host's own network namespace exactly the way s1's shell does. The
+job's own image tag is discovered dynamically (`docker inspect "$(hostname)" --format
+'{{.Config.Image}}'`, a container's standard self-identification trick, verified live) rather than
+hardcoded, so it can't drift from whatever the runner is actually using. The Kong guard's `curl`
+additionally needed both the response BODY and status code; since the sibling container has its own
+separate filesystem (writing to a file inside it is invisible to the job container), both are now
+captured through the sibling's own stdout via a delimiter, with no file or shared volume needed.
+**Then, per the coordinator's explicit instruction, not fixed point-by-point again: the ENTIRE
+`deploy` job — clone through the last verification step, all fixes included — was assembled and run
+as ONE continuous `bash -x` script inside a real simulated job container on s1** (same network,
+same `docker.sock` mount, same job image), substituting only what a script running outside a live
+dispatch cannot hold: `ref=main` (matches every real dispatch), an EQUIVALENT-scope registry
+credential (`fe_reg_4_2_ro`, not the real workflow secret, same substitution this story has used
+throughout), and the git-fetch/`github.token` step itself pre-seeded from `main`'s real
+`docker-compose.stand.yml` (fetched via this session's own already-authenticated local git remote,
+not through the job network) — that specific mechanism has already been proven live by two real
+dispatches (925, 927, both green on `clone-test`) and re-proving it again locally would not have
+caught anything new. **Run TWICE in the same container, back to back** — a fresh deploy, then an
+idempotency re-deploy of the identical digest against the already-running, already-correct stand
+(the coordinator's own explicit case: "already on this digest" must either be a no-op or a clean
+`down`/`up -d`, not a failure) — both passes completed with every guard clause cleared, `rc=0`, no
+further shell/template/idempotency bugs found. Credential/scratch files copied to s1 for this
+simulation were removed afterward — no second standing copy left on disk (the exact class of issue
+`deferred-work.md`'s M1 item already flagged once for this project).
 
 ### File List
 
@@ -1093,7 +1147,10 @@ required.
   same runner), header injected via `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`
   (never argv); `deploy` now `needs: [preflight, clone-test, digest-resolve-test]`; round 4 (run
   925) fixed the AC6 step — `docker inspect <container>` has no `.RepoDigests` field, only images
-  do; now inspects the container's `.Image` (its image ID) instead
+  do; now inspects the container's `.Image` (its image ID) instead; round 5 (run 927) fixed the
+  ACTUAL root cause of both 925 and 927 — the fallback HTTP check and the Kong guard's `curl` both
+  targeted `127.0.0.1:8082`, host-loopback-only by design and unreachable from any container's own
+  network; both now launch a `--network host` sibling container via the job's own `docker.sock`
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -1109,3 +1166,4 @@ required.
 | 2026-08-20 | **Run 922: `preflight` passed, refuting the org-secret hypothesis; the real cause found and confirmed for free via SSH, no second dispatch spent to learn it.** Root cause confirmed: the "obtain compose file" step does an anonymous `git fetch` of a private repo — reproduced live on s1 (exact job network, no credential): fails in under a second, non-interactively, `fatal: could not read Username ... No such device or address`. Digest resolution ruled out (a real, equivalent-scope credential resolved a real tag cleanly, 200). Also checked, not assumed: the workflow's own `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` cannot be reused for the fetch — an equivalent-scope credential got a same-instance `403 required scope(s): [read:repository]` reading repo content. Fix needs a `read:repository`-scoped credential that does not yet exist in this workflow — flagged to the coordinator rather than minted unilaterally (a minted token here would be standing/non-revocable by this project's own established constraint). Ladder extended per the coordinator's request: `clone-test` (reproduces the fetch live — job-list evidence, expected to fail until a credential exists) and `digest-resolve-test` (resolves a real tag with the workflow's own live credential, expected to pass); `deploy` now needs all three preceding jobs |
 | 2026-08-20 | **Blocker cleared by the coordinator, no minting: `github.token` (Forgejo's automatic per-job token), precedent from CRM/api-prionex's own `deploy-dev.yml` on this same runner.** Wired into the git-fetch step and `clone-test`, adapted from the precedent's `git -c http.extraheader=...` (argv-exposed) into `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` env vars, to keep the credential out of this job's own `ps auxww` per this file's own established rule. Mechanism verified on s1 before this push: `GIT_CURL_VERBOSE` confirmed the header reaches the request; a real (wrong-scope) credential got a clean `403`, not the anonymous-fetch failure — confirming the delivery mechanism works, independent of `github.token` itself, which is only testable inside a real dispatch. `clone-test` now expected to PASS; runs 919/922 recorded post-hoc as Task 8's new discriminating row 8.6 (no token → this exact failure) rather than re-earned by a redundant dispatch |
 | 2026-08-20 | **Run 925: the `github.token` fix worked completely (all three ladder jobs green); `deploy` still failed, but not in the ladder's territory.** Diagnosed via a new host-side SSH channel the coordinator pointed at (the deploy job talks to the host daemon over its mounted socket, so its footprint is directly visible from s1) rather than by construction: while the container was still up, confirmed live that clone, login, digest resolve, pull, `.env` render, `down`/`up -d`, health poll, anchored check, fallback HTTP, and even the Kong guard had ALL already succeeded — `docker compose ls` showed the config path pointing at the job's own workspace, the running image's digest matched exactly what the run resolved. Actual cause: AC6's own verification step, `docker inspect <container> --format '{{range .RepoDigests}}...'` — containers have no `.RepoDigests` field, only images do; reproduced the exact template-parsing error live on s1. Fixed: inspect the container's `.Image` (its image ID) first, then that for `RepoDigests`. No ladder expansion needed — host-side SSH evidence alone fully discriminated the failure to one command |
+| 2026-08-20 | **Run 927: same failure shape a fourth time; diagnosed with a full-job simulation instead of another single-bug-per-dispatch cycle, per the coordinator's explicit instruction.** Host-side trace showed the container recreated again correctly (run 925's AC6 fix live and correct) but the job failed EARLIER than AC6 — at the fallback HTTP check. Root cause: a testing-methodology gap present in every SSH diagnosis this story had run so far — checks were run directly on s1's own host shell, which has correct access to its own loopback, masking that `FRONTEND_PORT=127.0.0.1:8082` (host-loopback-only by design) is unreachable from any container's own network, including the deploy job's own. Confirmed by finally running the same curl from inside an actual simulated job container: connection refused, every time. This — not AC6 — was the true cause of both 925 and 927. Fixed: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, self-identifying the job's own image tag dynamically rather than hardcoding it. Then, per the coordinator's instruction, ran the ENTIRE `deploy` job as one continuous `bash -x` script inside a real simulated job container on s1, twice in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running stand) — both passes completed clean, no further bugs found |

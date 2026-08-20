@@ -569,18 +569,38 @@ jobs:
           fi
           echo "OK: fe-prionex-dev matched anchored, compose project label confirmed."
 
-      - name: Fallback HTTP check — parse FRONTEND_PORT, never concatenate raw (Task 7.3, AC5)
+      - name: Fallback HTTP check — parse FRONTEND_PORT, never concatenate raw (Task 7.3, AC5, fixed after run 925/927)
         run: |
           set -euo pipefail
           # FRONTEND_PORT is "127.0.0.1:8082" (Oleg's M7 decision), NOT a bare port number.
           # curl http://localhost:${FRONTEND_PORT}/ would produce
           # http://localhost:127.0.0.1:8082/ and fail for the wrong reason (AC5, trap 2).
+          #
+          # THE ACTUAL run 925/927 bug, found by finally running this exact command from INSIDE a
+          # simulated job container instead of s1's own host shell (every earlier diagnosis this
+          # story ran host-side, which has correct access to the host's own loopback and so never
+          # caught this): 127.0.0.1 published bindings are HOST-loopback-only, by design (that is
+          # the entire point of M7's decision — not reachable from ANY container's own network,
+          # including this job's own). A plain `curl` here fails immediately, every run:
+          # `curl: (7) Failed to connect to 127.0.0.1 port 8082 ... Could not connect to server`.
+          # This is well under 60s and explains BOTH run 925 and run 927's failures — the AC6 bug
+          # fixed after run 925 was real but was never actually reached; this step, earlier in the
+          # sequence, was.
+          # Fix: launch a SIBLING container via the docker.sock this job already holds, with
+          # `--network host` — it shares the HOST's own network namespace exactly the way s1's own
+          # shell does, so it reaches the real host-published mapping. This still tests what AC5
+          # actually asks for (the host-level port mapping works), not merely the container-internal
+          # health check the Docker HEALTHCHECK directive already covers on its own.
           FP="127.0.0.1:8082"
           HOST_PART="${FP%:*}"
           PORT_PART="${FP##*:}"
-          CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${HOST_PART}:${PORT_PART}/")"
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+          CODE="$(docker run --rm --network host "$SELF_IMAGE" \
+            curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${HOST_PART}:${PORT_PART}/")"
           if [ "$CODE" != "200" ]; then
-            echo "FAIL: fallback GET http://${HOST_PART}:${PORT_PART}/ returned '${CODE}', expected 200."
+            echo "FAIL: fallback GET http://${HOST_PART}:${PORT_PART}/ (via a --network host"\
+                 "sibling container, sharing the host's own loopback) returned '${CODE}', expected"\
+                 "200."
             exit 1
           fi
           echo "OK: fallback HTTP check on ${HOST_PART}:${PORT_PART} returned 200."
@@ -595,17 +615,14 @@ jobs:
           # anything. RepoDigests, not the container's own .Image field value directly — survives a
           # retag between pull and this check.
           #
-          # Run 925's actual failure, found on s1 by direct inspection while the container was
-          # still up (everything upstream of this step — github.token clone, login, digest resolve,
-          # pull, .env render, down/up -d, health poll, anchored check, fallback HTTP, even the Kong
-          # guard below — had ALREADY succeeded): `docker inspect <CONTAINER>` has NO `.RepoDigests`
-          # field at all — that field exists only on the IMAGE object, not a container. The original
-          # form here (`docker inspect fe-prionex-dev --format '{{range .RepoDigests}}...'`) always
-          # threw `template parsing error: ... map has no entry for key "RepoDigests"`, which the
-          # trailing `|| true` silently turned into "no match found" — this step's own designed
-          # FAIL then fired even though the running image was, in fact, exactly the resolved digest
-          # the whole time. Fix: read the container's `.Image` (its image ID), then inspect THAT for
-          # `RepoDigests` — the field actually lives there.
+          # `docker inspect <CONTAINER>` has NO `.RepoDigests` field at all — that field exists only
+          # on the IMAGE object, not a container. The original form here (`docker inspect
+          # fe-prionex-dev --format '{{range .RepoDigests}}...'`) always threw `template parsing
+          # error: ... map has no entry for key "RepoDigests"`. This was found and fixed after run
+          # 925, on the (later corrected) assumption that the job had reached this step — it had
+          # not (see the fallback-HTTP-check step above, fixed after run 927 for the actual reason).
+          # The bug here is real regardless and stays fixed: read the container's `.Image` (its
+          # image ID), then inspect THAT for `RepoDigests` — the field actually lives there.
           IMAGE_ID="$(docker inspect fe-prionex-dev --format '{{.Image}}')"
           MATCHED="$(docker inspect "$IMAGE_ID" --format '{{range .RepoDigests}}{{.}} {{end}}' | grep -F "$DIGEST" || true)"
           if [ -z "$MATCHED" ]; then
@@ -616,7 +633,7 @@ jobs:
           fi
           echo "OK: running container's image matches the resolved digest ${DIGEST}."
 
-      - name: Kong alias guard — recurring, not one-shot (Task 7.5, AC2 amendment)
+      - name: Kong alias guard — recurring, not one-shot (Task 7.5, AC2 amendment, fixed after run 925/927)
         run: |
           set -euo pipefail
           RESOLVED="$(docker exec fe-prionex-dev getent hosts crm-kong-gateway || true)"
@@ -631,8 +648,20 @@ jobs:
 
           # Discriminating, D28 §2's own method: an address alone proves less than Kong itself
           # answering. GET /api/ through this stand's own nginx and check for Kong's OWN signature.
-          RESP_CODE="$(curl -sS -o /tmp/kong-resp.json -w '%{http_code}' --max-time 10 "http://127.0.0.1:8082/api/")"
-          if ! grep -q "no Route matched" /tmp/kong-resp.json 2>/dev/null; then
+          #
+          # Same host-loopback-only reachability problem as the fallback HTTP check above — a plain
+          # curl from this job container's own network cannot reach 127.0.0.1:8082 at all. Same fix
+          # (a --network host sibling container via docker.sock), with one addition: that sibling
+          # container has ITS OWN filesystem, separate from this job container's — writing to
+          # `-o /tmp/...` inside it would be invisible here. Captures BOTH the body and the status
+          # code through the sibling's own stdout instead, delimited, so nothing needs a shared
+          # file or volume.
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+          OUTPUT="$(docker run --rm --network host "$SELF_IMAGE" \
+            curl -sS -w '\nHTTPSTATUS:%{http_code}' --max-time 10 "http://127.0.0.1:8082/api/")"
+          RESP_CODE="$(printf '%s' "$OUTPUT" | grep '^HTTPSTATUS:' | cut -d: -f2)"
+          RESP_BODY="$(printf '%s' "$OUTPUT" | grep -v '^HTTPSTATUS:')"
+          if ! printf '%s' "$RESP_BODY" | grep -q "no Route matched"; then
             echo "FAIL: GET /api/ (code ${RESP_CODE}) did not return Kong's own 'no Route"\
                  "matched' signature — the backend answering may not actually be Kong."
             exit 1
