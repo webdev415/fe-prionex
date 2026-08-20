@@ -100,6 +100,12 @@ export function DialogsListTab() {
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
+  // Typed filters are debounced like the ПІБ search above: a date field emits
+  // an onChange per keystroke (2026-0…, 2026-06…) and the spinner fires per
+  // click, each of which would otherwise be a request.
+  const debouncedCallFrom = useDebounce(callFrom, 300)
+  const debouncedCallTo = useDebounce(callTo, 300)
+  const debouncedMinDuration = useDebounce(minDuration, 300)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<Selected | null>(null)
@@ -175,16 +181,16 @@ export function DialogsListTab() {
     return { extensions: exts, operatorByExtension: extToOp }
   }, [operators, operatorIds])
 
-  const useCustomRange = !!(callFrom || callTo)
+  const useCustomRange = !!(debouncedCallFrom || debouncedCallTo)
   const filters = useMemo(
     () => ({
       agent_extensions: extensions,
       period: useCustomRange ? undefined : ('last_30d' as const),
-      from_datetime: dayStartIso(callFrom),
-      to_datetime: dayEndIso(callTo),
+      from_datetime: dayStartIso(debouncedCallFrom),
+      to_datetime: dayEndIso(debouncedCallTo),
       telephony_types: telephonyType ? [telephonyType] : undefined,
       category: category || undefined,
-      min_duration: parsePositiveInt(minDuration),
+      min_duration: parsePositiveInt(debouncedMinDuration),
       sort: 'date_desc' as const,
       limit: pageSize,
       offset: (page - 1) * pageSize,
@@ -192,11 +198,11 @@ export function DialogsListTab() {
     [
       extensions,
       useCustomRange,
-      callFrom,
-      callTo,
+      debouncedCallFrom,
+      debouncedCallTo,
       telephonyType,
       category,
-      minDuration,
+      debouncedMinDuration,
       page,
       pageSize,
     ]
@@ -208,20 +214,37 @@ export function DialogsListTab() {
         extensions,
         telephonyType,
         category,
-        callFrom,
-        callTo,
-        minDuration,
+        debouncedCallFrom,
+        debouncedCallTo,
+        debouncedMinDuration,
         pageSize,
       ]),
-    [extensions, telephonyType, category, callFrom, callTo, minDuration, pageSize]
+    [
+      extensions,
+      telephonyType,
+      category,
+      debouncedCallFrom,
+      debouncedCallTo,
+      debouncedMinDuration,
+      pageSize,
+    ]
   )
   const [trackedResetKey, setTrackedResetKey] = useState(resetKey)
   if (resetKey !== trackedResetKey) {
     setTrackedResetKey(resetKey)
     setPage(1)
+    // The right panel belonged to the previous result set — narrowing the
+    // filters must not leave a call on screen that the list no longer shows.
+    // Kept while the scorecard editor is dirty: silently dropping a
+    // half-written evaluation is worse than a stale panel (the row-switch
+    // guard below asks before discarding for exactly that reason).
+    if (!reviewDirty) setSelected(null)
   }
 
-  const { data, isLoading, isError } = useCallMonitoring(filters, extensions.length > 0)
+  // No extension → no `agent_extensions` to query by → the request is
+  // pointless. Tracked explicitly so the table can name the reason.
+  const noExtensions = extensions.length === 0
+  const { data, isLoading, isError } = useCallMonitoring(filters, !noExtensions)
   const calls = useMemo(() => data?.calls ?? [], [data?.calls])
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -405,7 +428,16 @@ export function DialogsListTab() {
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
         <div className="flex flex-col gap-3">
-          {isLoading ? (
+          {noExtensions ? (
+            // The query never fires without extensions (`enabled` below), so
+            // "no dialogs match the filters" would be a lie — say why instead.
+            <EmptyBox>
+              {t(
+                'pages.training.dialogue.dialogs.noExtensions',
+                'The selected employees have no telephony extensions'
+              )}
+            </EmptyBox>
+          ) : isLoading ? (
             <EmptyBox>{t('common.loading', 'Loading…')}</EmptyBox>
           ) : isError ? (
             <EmptyBox tone="error">
@@ -425,7 +457,7 @@ export function DialogsListTab() {
               onSelect={handleSelectRow}
             />
           )}
-          {!isLoading && !isError && total > 0 ? (
+          {!noExtensions && !isLoading && !isError && total > 0 ? (
             <Pagination
               currentPage={page}
               totalPages={totalPages}

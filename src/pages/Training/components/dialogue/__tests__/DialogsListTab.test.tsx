@@ -225,3 +225,47 @@ describe('DialogsListTab (call-grain)', () => {
     expect(screen.getByText('pages.training.dialogue.dialogs.empty')).toBeInTheDocument()
   })
 })
+
+describe('DialogsListTab — filter behaviour', () => {
+  it('names the missing extensions instead of claiming there are no dialogs', () => {
+    // The list is queried by `agent_extensions`; with none there is nothing to
+    // ask for, so "no dialogs match the filters" would be a lie.
+    mockUseOperators.mockReturnValue({
+      data: [{ id: 41, full_name: 'Kateryna Antonova', asterisk_extension: null }],
+    } as unknown as ReturnType<typeof useOperators>)
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+
+    expect(screen.getByText('pages.training.dialogue.dialogs.noExtensions')).toBeInTheDocument()
+    expect(screen.queryByText('pages.training.dialogue.dialogs.empty')).not.toBeInTheDocument()
+    // …and the query stays disabled.
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[1]).toBe(false)
+  })
+
+  it('clears the selected dialog when the filters change', async () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText('pages.training.dialogue.filters.minDuration'), {
+      target: { value: '30' },
+    })
+    // The right panel must not keep showing a call from the previous result set.
+    await waitFor(() => expect(screen.getByText(/panel:none/)).toBeInTheDocument())
+  })
+
+  it('debounces the min-duration filter instead of querying per keystroke', async () => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    const input = screen.getByPlaceholderText('pages.training.dialogue.filters.minDuration')
+
+    fireEvent.change(input, { target: { value: '3' } })
+    fireEvent.change(input, { target: { value: '30' } })
+    // Still the pre-typing query — the debounce hasn't fired yet.
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.min_duration).toBeUndefined()
+
+    await waitFor(() => expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.min_duration).toBe(30))
+  })
+})

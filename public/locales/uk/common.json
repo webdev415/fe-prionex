@@ -2254,7 +2254,8 @@
         },
         "detail": {
           "assignTask": "Призначити завдання",
-          "empty": "Оберіть діалог для перегляду"
+          "empty": "Оберіть діалог для перегляду",
+          "transcript": "Транскрипт та AI-оцінка"
         },
         "employee": {
           "all": "Усі співробітники",
@@ -2289,7 +2290,8 @@
           "evaluation": "Оцінка",
           "notEvaluated": "Не оцінено",
           "loadError": "Не вдалося завантажити діалоги.",
-          "empty": "Немає діалогів за фільтрами."
+          "empty": "Немає діалогів за фільтрами.",
+          "noExtensions": "У вибраних співробітників немає активних розширень телефонії"
         }
       },
       "transcript": {
@@ -10362,6 +10364,95 @@
       "confirmDeleteValueTitle": "Видалити значення?",
       "confirmDeleteValue": "Видалити «{{name}}»? Значення прибереться з усіх контактів, але залишиться видимим в історії тегів.",
       "valueDeleted": "Значення видалено"
+    },
+    "qaRules": {
+      "title": "Прослуховування (AI)",
+      "helper": "Стоп-фрази, які роблять дзвінок критичним, і рубрики, за якими AI оцінює розмови.",
+      "saveError": "Не вдалося зберегти зміну",
+      "tabs": {
+        "blockers": "Критичні стоп-фрази",
+        "rubrics": "AI-рубрики"
+      },
+      "category": {
+        "profanity": "Нецензурна лексика",
+        "threat": "Погрози",
+        "third_party_disclosure": "Розкриття третім особам",
+        "misleading_legal": "Введення в оману щодо права",
+        "pressure": "Тиск",
+        "insult": "Образа",
+        "data_violation": "Порушення роботи з даними",
+        "script_critical": "Критичне порушення скрипту"
+      },
+      "severity": {
+        "low": "Низька",
+        "medium": "Середня",
+        "high": "Висока",
+        "critical": "Критична"
+      },
+      "lang": {
+        "uk": "Українська",
+        "ru": "Російська"
+      },
+      "scale": {
+        "binary": "Так/Ні",
+        "0-5": "0–5",
+        "binary_critical": "Так/Ні (критичний)"
+      },
+      "blockers": {
+        "phrase": "Фраза",
+        "newPhrase": "Нова фраза",
+        "category": "Категорія",
+        "categoryFilter": "Категорія",
+        "allCategories": "Усі категорії",
+        "severity": "Тяжкість",
+        "lang": "Мова",
+        "langFilter": "Мова",
+        "allLangs": "Усі мови",
+        "active": "Активна",
+        "newActive": "Нова фраза активна",
+        "add": "Додати",
+        "total": "Фраз",
+        "empty": "Стоп-фраз ще немає.",
+        "loadError": "Не вдалося завантажити словник стоп-фраз.",
+        "created": "Стоп-фразу додано",
+        "updated": "Стоп-фразу оновлено",
+        "deleted": "Стоп-фразу видалено",
+        "deleteTitle": "Видалити стоп-фразу?"
+      },
+      "rubrics": {
+        "name": "Назва рубрики",
+        "description": "Опис",
+        "scorecardType": "Співрозмовник",
+        "typeClient": "Боржник",
+        "typeThirdParty": "Третя особа",
+        "allTypes": "Усі співрозмовники",
+        "department": "Відділ",
+        "allDepartments": "Усі відділи",
+        "universal": "Універсальна (запасна)",
+        "status": "Статус",
+        "statusActive": "Активна",
+        "statusArchived": "В архіві",
+        "statusAll": "Усі",
+        "create": "Нова рубрика",
+        "empty": "Для цього зрізу AI-рубрик немає.",
+        "loadError": "Не вдалося завантажити AI-рубрики.",
+        "saved": "Рубрику збережено",
+        "archive": "В архів",
+        "unarchive": "Відновити",
+        "archiveTitle": "Перенести рубрику в архів?",
+        "unarchiveTitle": "Відновити рубрику?",
+        "sectionName": "Назва секції",
+        "addSection": "Додати секцію",
+        "removeSection": "Видалити секцію",
+        "criterionName": "Критерій",
+        "criterionDescription": "Інструкція для AI",
+        "addCriterion": "Додати критерій",
+        "removeCriterion": "Видалити критерій",
+        "weight": "Вага",
+        "scale": "Шкала",
+        "weightTotal": "Сума ваг",
+        "weightError": "Сума ваг має дорівнювати 100"
+      }
     }
   },
   "contactTypes": {

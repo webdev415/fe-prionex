@@ -2245,7 +2245,8 @@
         },
         "detail": {
           "assignTask": "Assign task",
-          "empty": "Select a dialog to review"
+          "empty": "Select a dialog to review",
+          "transcript": "Transcript and AI review"
         },
         "employee": {
           "all": "All employees",
@@ -2280,7 +2281,8 @@
           "evaluation": "Evaluation",
           "notEvaluated": "Not evaluated",
           "loadError": "Failed to load dialogs.",
-          "empty": "No dialogs match the filters."
+          "empty": "No dialogs match the filters.",
+          "noExtensions": "The selected employees have no telephony extensions"
         }
       },
       "transcript": {
@@ -10343,6 +10345,95 @@
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted"
+    },
+    "qaRules": {
+      "title": "Listening (AI)",
+      "helper": "Stop-phrases that mark a call critical, and the rubrics the AI scores calls against.",
+      "saveError": "Could not save the change",
+      "tabs": {
+        "blockers": "Critical blockers",
+        "rubrics": "AI rubrics"
+      },
+      "category": {
+        "profanity": "Profanity",
+        "threat": "Threat",
+        "third_party_disclosure": "Third-party disclosure",
+        "misleading_legal": "Misleading legal claim",
+        "pressure": "Pressure",
+        "insult": "Insult",
+        "data_violation": "Data handling violation",
+        "script_critical": "Critical script breach"
+      },
+      "severity": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "lang": {
+        "uk": "Ukrainian",
+        "ru": "Russian"
+      },
+      "scale": {
+        "binary": "Yes/No",
+        "0-5": "0–5",
+        "binary_critical": "Yes/No (critical)"
+      },
+      "blockers": {
+        "phrase": "Phrase",
+        "newPhrase": "New phrase",
+        "category": "Category",
+        "categoryFilter": "Category",
+        "allCategories": "All categories",
+        "severity": "Severity",
+        "lang": "Language",
+        "langFilter": "Language",
+        "allLangs": "All languages",
+        "active": "Active",
+        "newActive": "New blocker is active",
+        "add": "Add",
+        "total": "Phrases",
+        "empty": "No blockers yet.",
+        "loadError": "Failed to load the blocker dictionary.",
+        "created": "Blocker added",
+        "updated": "Blocker updated",
+        "deleted": "Blocker deleted",
+        "deleteTitle": "Delete blocker?"
+      },
+      "rubrics": {
+        "name": "Rubric name",
+        "description": "Description",
+        "scorecardType": "Interlocutor",
+        "typeClient": "Debtor",
+        "typeThirdParty": "Third party",
+        "allTypes": "All interlocutors",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "universal": "Universal (fallback)",
+        "status": "Status",
+        "statusActive": "Active",
+        "statusArchived": "Archived",
+        "statusAll": "All",
+        "create": "New rubric",
+        "empty": "No AI rubrics for this slice.",
+        "loadError": "Failed to load AI rubrics.",
+        "saved": "Rubric saved",
+        "archive": "Archive",
+        "unarchive": "Restore",
+        "archiveTitle": "Archive rubric?",
+        "unarchiveTitle": "Restore rubric?",
+        "sectionName": "Section name",
+        "addSection": "Add section",
+        "removeSection": "Remove section",
+        "criterionName": "Criterion",
+        "criterionDescription": "AI instruction",
+        "addCriterion": "Add criterion",
+        "removeCriterion": "Remove criterion",
+        "weight": "Weight",
+        "scale": "Scale",
+        "weightTotal": "Weights",
+        "weightError": "Weights must add up to 100"
+      }
     }
   },
   "contactTypes": {
