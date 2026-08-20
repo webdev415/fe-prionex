@@ -285,6 +285,14 @@ export async function sendChatMessage(
   }
 
   const outcome = await consumeSseStream(response.body, {
+    // CRM `meta` — авторитетный id строки диалога. Читать его ОБЯЗАТЕЛЬНО:
+    // `session.session_id` ниже приходит от «мозга» и содержит его внутренний
+    // ключ (hex-строка вида `06a76d1f72744d79`), а не id записи. Number() от
+    // такой строки — NaN, поэтому id оставался 0, следующий ход уходил с
+    // `conversation_id: 0`, прокси такой диалог не находил и отвечал 404
+    // «Асистент зараз недоступний» (живой баг прода 20.08.2026: воспроизводился
+    // на ЛЮБОМ втором сообщении и при клике по кнопке-уточнению).
+    onMeta: (meta) => applySessionId(meta.conversation_id),
     onSession: (session) => {
       applySessionId(session.session_id)
       callbacks.onSession?.(session)
