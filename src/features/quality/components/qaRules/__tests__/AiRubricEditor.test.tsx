@@ -179,3 +179,78 @@ describe('AiRubricEditor — the slice the rubric applies to', () => {
     expect(screen.queryByTestId('rubric-slice-conflict')).not.toBeInTheDocument()
   })
 })
+
+describe('AiRubricEditor — fields the form does not render', () => {
+  // The template PUT replaces `sections` whole. Anything the editor rebuilds
+  // from its own inputs is therefore deleted from the rubric on save — and
+  // `critical` is the one that must never go: it caps the whole call at 40
+  // when the criterion fails, so losing it turns a blocking rule into an
+  // ordinary one and inflates scores from that moment on, with nothing in the
+  // UI to show it happened.
+  function makeRubricWithExtras(): ScorecardTemplate {
+    const base = makeRubric([60, 40])
+    const [first, second] = base.sections[0].criteria
+    return {
+      ...base,
+      sections: [
+        {
+          ...base.sections[0],
+          criteria: [
+            { ...first, critical: true, examples: 'Іван Іванович, доброго дня.', raw_points: 5 },
+            { ...second, examples: 'Повна сума до закриття складає ___.', raw_points: 10 },
+          ],
+        },
+      ],
+    }
+  }
+
+  it('keeps critical, examples and raw_points through an unrelated edit', () => {
+    const { onSave } = renderEditor(makeRubricWithExtras())
+    fireEvent.click(saveButton())
+
+    const payload = onSave.mock.calls[0][0]
+    const [first, second] = payload.sections[0].criteria
+    expect(first.critical).toBe(true)
+    expect(first.examples).toBe('Іван Іванович, доброго дня.')
+    expect(first.raw_points).toBe(5)
+    expect(second.examples).toBe('Повна сума до закриття складає ___.')
+    expect(second.raw_points).toBe(10)
+  })
+
+  it('offers only the scales the API accepts', () => {
+    // `binary_critical` is not an API scale: the server takes binary | 0-5 and
+    // reads criticality off the separate flag. Listing it here produced a 422
+    // on the very rule a trainer most wants to mark.
+    renderEditor(makeRubricWithExtras())
+    const scaleSelect = screen
+      .getAllByRole('combobox')
+      .find((el) => el.getAttribute('aria-label') === 'pages.qaRules.rubrics.scale')
+    const values = Array.from(scaleSelect!.querySelectorAll('option')).map((o) =>
+      o.getAttribute('value')
+    )
+    expect(values).toEqual(['binary', '0-5'])
+  })
+
+  it('lets a trainer mark a criterion critical', () => {
+    const { onSave } = renderEditor(makeRubric([60, 40]))
+    const boxes = screen.getAllByRole('checkbox')
+    fireEvent.click(boxes[0])
+    fireEvent.click(saveButton())
+
+    const payload = onSave.mock.calls[0][0]
+    expect(payload.sections[0].criteria[0].critical).toBe(true)
+    expect(payload.sections[0].criteria[1].critical ?? null).toBeNull()
+  })
+
+  it('still applies the edits the form does render', () => {
+    const { onSave } = renderEditor(makeRubricWithExtras())
+    const weightInputs = screen.getAllByRole('spinbutton')
+    fireEvent.change(weightInputs[0], { target: { value: '70' } })
+    fireEvent.change(weightInputs[1], { target: { value: '30' } })
+    fireEvent.click(saveButton())
+
+    const payload = onSave.mock.calls[0][0]
+    expect(payload.sections[0].criteria.map((c: { weight: number }) => c.weight)).toEqual([70, 30])
+    expect(payload.sections[0].criteria[0].critical).toBe(true)
+  })
+})

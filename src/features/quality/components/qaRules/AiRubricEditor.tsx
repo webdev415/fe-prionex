@@ -58,6 +58,15 @@ function cloneSections(sections: Section[] | undefined): Section[] {
     key: section.key,
     name: section.name,
     criteria: (section.criteria ?? []).map((criterion) => ({
+      // Spread first: the template PUT replaces `sections` whole, so a field
+      // this editor does not render is deleted from the rubric the moment a
+      // trainer saves an unrelated weight change. `critical` caps the call at
+      // 40 points when the criterion fails — dropping it silently downgrades a
+      // blocking rule and inflates every score that follows. `examples` and
+      // `raw_points` come from the trainer's own checklist (the pipeline feeds
+      // examples to the model; raw_points let a rubric be reconciled against
+      // the source sheet).
+      ...criterion,
       key: criterion.key,
       name: criterion.name,
       // Seeded rubrics may omit `scale` — the pipeline's default is the 0..5 band.
@@ -219,6 +228,11 @@ export function AiRubricEditor({
           )
           taken.add(criterionKey)
           return {
+            // Carry the untouched fields through: `sections` is replaced whole
+            // by the PUT, so a criterion rebuilt from the four inputs this form
+            // renders would silently drop `critical` (the 40-point cap on a
+            // failed blocking rule), `examples` and `raw_points`.
+            ...criterion,
             key: criterionKey,
             name: criterion.name.trim(),
             scale: criterion.scale,
@@ -401,6 +415,23 @@ export function AiRubricEditor({
                       </option>
                     ))}
                   </select>
+                  {/* Critical is a flag beside the scale, not a scale of its
+                      own — that is how the API models it, and the pipeline
+                      caps the whole call at 40 points when such a criterion
+                      fails. Without this control a trainer had no way to mark
+                      a blocking rule at all. */}
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={criterion.critical === true}
+                      onChange={(e) =>
+                        patchCriterion(sectionIndex, criterionIndex, {
+                          critical: e.target.checked ? true : null,
+                        })
+                      }
+                    />
+                    {t('pages.qaRules.rubrics.critical', 'Critical')}
+                  </label>
                   <input
                     aria-label={t('pages.qaRules.rubrics.criterionDescription', 'Instruction')}
                     value={criterion.description ?? ''}

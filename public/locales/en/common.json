@@ -10445,7 +10445,8 @@
         "weightTotal": "Weights",
         "weightError": "Weights must add up to 100",
         "slice": "Applies to",
-        "sliceTaken": "Another rubric is already active for this slice: {{name}}"
+        "sliceTaken": "Another rubric is already active for this slice: {{name}}",
+        "critical": "Critical"
       }
     }
   },

@@ -21,6 +21,20 @@ export interface Criterion {
   weight: number
   /** AI rubrics carry an instruction for the model; manual templates don't. */
   description?: string | null
+  /**
+   * Fields the AI rubrics carry that this editor does not expose. They must
+   * still survive a round-trip: the template PUT replaces `sections` whole, so
+   * anything dropped here is deleted from the rubric.
+   *
+   * `critical` is the dangerous one — it caps the whole call at 40 when the
+   * criterion fails. Losing it silently turns a blocking rule into an ordinary
+   * one and inflates every later score.
+   */
+  critical?: boolean | null
+  /** Wording from the trainer's checklist; the pipeline feeds it to the model. */
+  examples?: string | null
+  /** The checklist's own points, before weights were normalised to Σ=100. */
+  raw_points?: number | null
 }
 
 export interface Section {
