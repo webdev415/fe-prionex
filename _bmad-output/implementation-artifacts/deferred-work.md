@@ -35,11 +35,23 @@
   **Stored host-local at `/root/.fj_token` on s1, mode `600`, owner `root:root`** — deliberately
   *not* in this repository, so the standing "never write the token into any file" rule (which is
   about repository files, the same rule that keeps `.runner` and `runner-config.yml` on the host)
-  is respected. Its value never entered any transcript.
-  **Owner: Oleg. Revocation:** both `fe_tmp_1_7` and `fe_review_1_7` should be revoked together
-  when Forgejo API write access is no longer needed — and note that **two live tokens now exist
-  where the model calls for one**, which is itself an argument for settling the policy question
-  above. Whether `fe_tmp_1_7` is still live was not checked during the review: «не проверено».
+  is respected.
+  🔴 **CORRECTED 2026-08-20 (Story 4.2 code review, finding H2) — the line below was false.** ~~Its
+  value never entered any transcript.~~ It did: Story 4.2's Completion Note 9 discloses that a
+  ledger query sent `FJ_TOKEN=<value>` as the bearer token, Forgejo answered `401`, and the presented
+  string was echoed back into that response — the value of `fe_review_1_7` entered that session's
+  transcript. Not printed deliberately, and no file in this repository holds it, but the "never
+  enters a transcript" guarantee this entry made is not true and was not narrowed until Story 4.2's
+  own review caught the contradiction between the two records.
+  **Owner: Oleg. Revocation, decided 2026-08-20:** `fe_review_1_7` — the token that was actually
+  exposed — will be revoked by Oleg personally (**pending**, not yet executed as of this entry).
+  `fe_tmp_1_7` and `fe_pkg_3_6` are **not** part of this revocation — both remain standing, by
+  design, per this project's own standing token model (an admin cannot revoke another account's
+  token without its password or a DB row, so standing tokens are a deliberate operating choice, not
+  an oversight). The earlier framing here — *"both `fe_tmp_1_7` and `fe_review_1_7` should be
+  revoked together"* — is superseded by this decision and should not be read as still operative.
+  Whether `fe_tmp_1_7` is still live was not checked during the Story 1.7 review: «не проверено», and
+  that remains unchanged — it stays standing regardless of liveness, by the decision above.
 - `docs/forgejo-migration.md:19` current-state table still lists «`v*` → production» although
   the `tags: ['v*']` trigger was removed from `CD.yml` by commit `09591984`; the `CD.yml:5`
   citation on that row is correct — only the `v*` clause is stale content.
@@ -2515,9 +2527,22 @@ obvious guess here was 5. This is the concrete case for why D4 requires a query.
 
 ## Story 4.2 findings (2026-08-19) — the DEV stand is up, and the thing that provisions it next cannot reach it
 
-🔴 **Story 4.3 is blocked as currently specified, and the block is measured, not suspected.**
-`s1-deploy-dev-preprod` mounts into **every** job container exactly what its `config.yml`
-`container.options` lists:
+🔴 **CORRECTED 2026-08-20 (Story 4.2 code review, finding H5) — "measured, not suspected" overstated
+the finding; the paragraph below states what was actually measured and separates it from what was
+inferred.** What is directly measured: the path is not in `container.options` or `valid_volumes`,
+and `sudo -u forgejo-runner-deploy ls …` on the host returns `Permission denied`. Three further
+things are **inferred**, not measured, and the option set below was incomplete because of it:
+(i) `valid_volumes` constrains only what the **runner itself** bind-mounts into a job container — it
+does not constrain what a job does **through** the `docker.sock` it already holds, which is
+root-equivalent by D10's own documented exception; (ii) `docker-compose.stand.yml` declares no
+`volumes:` and no host path, so compose and `--env-file` can in principle be rendered **inside the
+job's own workspace** (the compose file is already in the repo) rather than requiring any host mount
+at all; (iii) *"uid 1501 cannot read it"* measured the runner **supervisor** container's identity —
+the deploy **job** runs in its own separate container (`deploy-base-dev-preprod:2026-08-07`), whose
+uid is not recorded anywhere in this project and was never checked.
+
+🔴 **Story 4.3 is blocked as currently specified.** `s1-deploy-dev-preprod` mounts into **every** job
+container exactly what its `config.yml` `container.options` lists:
 
 ```
 -v /var/run/docker.sock:/var/run/docker.sock
@@ -2531,21 +2556,56 @@ including the operator's own `options`, proven empirically in Story 1.6 (`[/var/
 not a valid volume, will be ignored`) — contains the same three paths and nothing else.
 
 `~/crm-prionex/fe-prionex-dev/` (`/root/crm-prionex/fe-prionex-dev`) is in neither list, and `/root`
-is `drwx------`, so it is unreachable twice over: `sudo -u forgejo-runner-deploy ls …` →
-`Permission denied`. The runner container itself runs as `1501:988`.
+is `drwx------`, so a runner-mounted path to it does not exist today: `sudo -u forgejo-runner-deploy
+ls …` → `Permission denied`. The runner **supervisor** container itself runs as `1501:988` — the
+**job** container's own identity is a separate, unmeasured question (see (iii) above).
 
 **The stand was left where AC1 names it** — four later stories cite that path, and
 `docker-compose.stand.yml`'s own `:?` error messages spell it out. Inventing a mount was explicitly
-out of this story's scope. The three options, none chosen here:
+out of this story's scope. **Five options, none chosen here** — three from the original record, two
+added by the review:
 
 1. add the path to **both** `options` and `valid_volumes` on a shared, multi-tenant runner owned by
    the platform;
 2. move the stand into the already-mounted `/opt/crm-dev` — which is the `api-prionex` stack's own
    directory, so this couples the two teams' trees;
-3. a separate `/opt/crm-fe-dev`, plus the same runner-config change.
+3. a separate `/opt/crm-fe-dev`, plus the same runner-config change;
+4. **(new, H5)** have the deploy job bind-mount `/root/crm-prionex/fe-prionex-dev` into a helper
+   container itself, through the `docker.sock` it already holds — root-equivalent by construction
+   (D10), so `drwx------` does not stop it. Needs **no** runner-config change and no cross-team
+   coupling;
+5. **(new, H5)** render `docker-compose.stand.yml` and the five required variables inside the job's
+   **own workspace** instead of reading a host path at all — the compose file is already in the
+   repo, `--env-file` needs no host presence, and the five values (`COMPOSE_PROJECT_NAME`,
+   `CONTAINER_NAME`, `FRONTEND_PORT`, `DOCKER_IMAGE`, `FRONTEND_NETWORK`) can come from Forgejo
+   variables/secrets instead of a checked-out `.env`. Avoids the host-mount question for the compose
+   file entirely; does not by itself answer AC1/FR26's "stand has a directory on the host" framing,
+   which four later stories already cite.
 
-**Owner: Story 4.3 (mechanism), Oleg / platform owner (the runner-config change).** Whatever is
-chosen also settles the next item, and it changes Story 4.9's cutover shape.
+**A consequence of options 1 and 3 not previously named: both allowlist the stand's path
+READ-WRITE into every job container of every repository permitted on that four-label,
+multi-tenant runner** — the inverse of the access-restriction AC2's deferred clause exists to
+provide. Option 2 has the mirror problem in the other direction: `.env` sits inside a tree another
+team's jobs already mount read-write and can `down`/`clean`/`rsync --delete`. Options 4 and 5 avoid
+both shapes of that exposure, at the cost of (4) still needing the job's own uid answered, and (5)
+being a bigger mechanism change than a mount.
+
+**Owner: Story 4.3 (mechanism choice among all five), Oleg / platform owner (any runner-config
+change, i.e. options 1 and 3 only).** Whatever is chosen also settles the next item, and it changes
+Story 4.9's cutover shape.
+
+🔴 **H4 (Story 4.2 code review, 2026-08-20) — even after the path question is settled, none of the
+five options above supplies a working registry credential to the pull that deploy will need.**
+`docker pull` / `docker compose pull` resolve auth from the **client's** `~/.docker/config.json` and
+send it as `X-Registry-Auth`; the daemon itself holds no credential of its own. AC4's `docker login`
+on s1 (`fe_reg_4_2_ro`, §3 above) authenticated an **interactive root shell** — its `config.json` is
+not among any path `container.options`/`valid_volumes` allows into a job container under options 1-3,
+and options 4/5 do not create or mount one either. **A job pulling a new image tag returns
+`unauthorized` regardless of which path option is chosen**, unless the credential question is solved
+as its own, separate step — e.g. a registry credential rendered into the job's own `config.json`
+(mirroring option 5's approach for the compose file), or baking read access into whichever mount path
+is chosen. **Owner: Story 4.3**, named as an explicit constraint alongside the path question, not
+assumed solved by solving the path.
 
 ⚠️ **AC2's second clause is deferred, not passed.** "The file is readable only by the deploy user"
 cannot be discharged until the reader is known (above). The stand took the recorded default —
@@ -2571,13 +2631,77 @@ is unobservable from s1 — the legacy stand is on `72.62.17.132`, unreachable a
 match and would have returned the four `forgejo-runner-fe-prionex*` containers plus this story's own
 stand, i.e. it cannot fail); no competing compose project; legacy host not contacted.
 
+🔴 **H1 (Story 4.2 code review, 2026-08-20) — the stand's image tag falls outside the live retention
+rule and is deleted on or about 2026-09-02, with nothing pointing back here.** `.env` on s1 carries
+`DOCKER_IMAGE=…:sha-62e2ff8dc215-dev`. The live `package_cleanup_rule` (id 1, `remove_days=14`)
+protects only `keep_pattern`, whose sole `sha-` alternative is `sha-[0-9a-f]{7,64}-(pre)?prod`
+(`build.yml:962`) — a `-dev` tag does not match it, matching the exact string with `-prod` does, and
+[migration-decisions.md:1903](../../docs/migration-decisions.md) already states the asymmetry
+outright: *«`-prod` и `-preprod` вечны, а `-dev` истекает за 14 дней»*. `62e2ff8d` merged
+2026-08-19, so the tag disappears from the registry **on or about 2026-09-02**. The running
+container is unaffected (it holds the image locally), but any `compose up`, any re-pull, any reboot
+after an image prune, and Story 4.3's first deploy against this exact ref all fail closed with
+`manifest unknown`.
+**Decision, per this project's own convention (D26's `v1.0.0-buildkit-cni` precedent considered and
+rejected):** do **not** retag this image into a `keep_pattern`-permanent form. `-dev` tags are
+deliberately ephemeral by design (D18/D20) — a long-lived DEV stand pinned to a 19-day-old commit
+would misrepresent what "DEV" means on this project, and a pseudo-permanent `-dev` tag is a new kind
+of orphan the retention model was not built for. **The remedy is a scheduled redeploy, not a
+retag:**
+- **Primary path:** Story 4.3 ships and its first deploy of this stand publishes a fresh tag,
+  closing this naturally, well before 2026-09-02 in the ordinary case.
+- **Fallback trigger, stated explicitly so it does not depend on 4.3's timeline:** if Story 4.3 has
+  not shipped **by 2026-08-30** (three days of margin before the 2026-09-02 deletion), whoever holds
+  s1 access must manually redeploy the stand against a current `main`-HEAD tag (`docker compose -f
+  docker-compose.stand.yml --env-file .env pull && … up -d` from the stand directory, after updating
+  `DOCKER_IMAGE` in `.env` to a live tag) before the old tag expires.
+**Owner: Story 4.3 (primary path) / Oleg or whoever holds s1 access (fallback trigger, 2026-08-30).**
+Retention rule itself is DB-only and out of scope for either path — see the standing note elsewhere
+in this file about `keep_pattern` never being editable from this repository.
+
+🔴 **M7, decided by Oleg 2026-08-20 — the stand's port 8082 is being closed to `127.0.0.1` before
+Story 4.9, not left on `0.0.0.0`.** The stand came up as `0.0.0.0:8082->80/tcp` (D28 §1); the review
+flagged that reachability from the public internet was never checked, and that the neighbouring
+`8081` (`vm-cadvisor`'s `docker-proxy`) is deliberately bound to `127.0.0.1` only. Decision: match
+that precedent. **Verified locally (this session, Docker Desktop, no template change needed):**
+`docker-compose.stand.yml`'s `ports:` line is `"${FRONTEND_PORT:?…}:80"` — compose's short syntax
+already accepts an `IP:PORT` value for the host side, so setting `FRONTEND_PORT=127.0.0.1:8082`
+(instead of the bare `8082`) in the stand's `.env` renders `"127.0.0.1:8082:80"`, confirmed both by
+`docker compose config` (`host_ip: 127.0.0.1`) and by a real `up -d` (`docker ps` →
+`127.0.0.1:8082->80/tcp`; the listening socket, checked with `lsof -nP -iTCP:8082 -sTCP:LISTEN`, is
+bound to `127.0.0.1` only, not `0.0.0.0`). **No `docker-compose.stand.yml` or `.env.stand.example`
+change is required** — this is purely a value change in the stand's own `.env` on s1.
+**This session has no SSH access to s1** (no `~/.ssh/config` alias, same wall every prior story in
+this file has recorded) — the change is therefore **not yet applied on the live stand**. Exact
+command for Oleg (or whoever has s1 access) to apply and verify it:
+```bash
+# on s1, from the stand directory
+cd ~/crm-prionex/fe-prionex-dev
+sed -i 's/^FRONTEND_PORT=.*/FRONTEND_PORT=127.0.0.1:8082/' .env
+docker compose -f docker-compose.stand.yml --env-file .env up -d
+docker ps --filter name=fe-prionex-dev --format 'table {{.Names}}\t{{.Ports}}'   # expect 127.0.0.1:8082->80/tcp
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8082/                 # from s1 itself: expect 200
+# from OUTSIDE s1 (a developer machine, or the public internet): expect connection refused/timeout
+```
+**Owner: Oleg — apply before Story 4.9.**
+
 ---
 
 ## Deferred from: code review of story-4.2 (2026-08-20)
 
-Four items the review judged real but not this story's to close. The high/medium findings are action
-items in `4-2-…md`'s `### Review Findings`, not here — these four are the ones with no owner inside
-4.2.
+Four items the review judged real but not this story's to close, plus one added by the 2026-08-20
+fix-pass (M1, below) that could not be closed for lack of s1 access. The high/medium findings are
+action items in `4-2-…md`'s `### Review Findings`, not here — these are the ones with no owner
+inside 4.2.
+
+- 🔴 **M1 — `/root/.fj_reg_4_2.raw` on s1: a second plaintext copy of the registry credential, of
+  unknown mode/owner/contents, not covered by the recorded revocation trigger.** Flagged by the
+  2026-08-20 code review; could not be closed by the same day's fix-pass because that session had no
+  SSH access to s1 (no `~/.ssh/config` alias — the same wall recorded elsewhere in this file for
+  every prior story). **Owner: whoever next has s1 access.** Check `/root/.fj_reg_4_2.raw` — record
+  its mode and purpose (mirroring the `.token` file's documented `0600`), or delete it if it is a
+  stray copy, and correct Story 4.2's Task 9.4 ("confirm nothing was left behind") if it turns out
+  something was.
 
 - 🔴 **The registry credential has no detector, and this story is the proof that it needs one.**
   Story 4.2 established that s1's `docker login` vanished on **13 Aug** with cause unknown, then

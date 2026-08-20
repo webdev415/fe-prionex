@@ -240,7 +240,13 @@ development_status:
   # the job workspace — docker-compose.stand.yml declares no host path at all). The CHOICE stays 4.3's.
   # Awaiting Oleg on two: revoke the exposed `fe_review_1_7`, and whether 8082 should be internet-
   # reachable. Clean: NFR5, D7, must-not-touch list, D28's form, both retro-E5 failing runs.
-  4-2-provision-the-new-dev-stand-on-s1: in-progress
+  # ✅ Fix-pass 2026-08-20 — both Oleg decisions applied: `fe_review_1_7` revoked by Oleg personally
+  # (pending), `fe_tmp_1_7`/`fe_pkg_3_6` stay standing by design; port 8082 closes to 127.0.0.1 before
+  # 4.9 (verified locally, no template change needed — application on s1 pending, no SSH this
+  # session). H1/H3/H4/H5 patched in D28 + deferred-work.md; M2/M5/M6/M9/L1/L4-8 patched; M1/M3/L2
+  # left open honestly (need s1 access this session doesn't have). Ledger stays OPEN — final close is
+  # the coordinator's, by query (D4).
+  4-2-provision-the-new-dev-stand-on-s1: review
   # ⬇️ Carries Story 4.2's blocker: the deploy job cannot reach ~/crm-prionex/fe-prionex-dev/ as
   # specified (D28 §4). Options a/b/c are recorded there; review added two more and found that the
   # registry credential problem (H4) is unsolved by all of them. Decide the mechanism here.
