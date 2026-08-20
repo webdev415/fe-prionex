@@ -223,13 +223,53 @@
   background-color: var(--card) !important;
 }
 
-.date-select-calendar .react-datepicker__time-list-item {
+/* Both arguments to the ``:not()`` on the next two rules are load-bearing
+   (KAN-992), for different reasons.
+
+   ``[aria-disabled='true']`` — these rules paint every slot with
+   ``!important``, which outranks react-datepicker's own greying of a blocked
+   slot however specific the library selector is. Excluding blocked slots is
+   what lets the greying rule below apply at all, and hands their hover
+   background back to the library's ``--disabled:hover``.
+
+   ``--selected`` — here the problem is specificity, not matching. Adding
+   ``[aria-disabled]`` lifts these rules above the ``--selected`` pair below
+   rather than tying it, so the operator's current value would lose its
+   white-on-primary look. The ``__day:hover:not(--selected,
+   --keyboard-selected)`` rule above spells out the same exclusion against the
+   same hazard. */
+.date-select-calendar
+  .react-datepicker__time-list-item:not(
+    [aria-disabled='true'],
+    .react-datepicker__time-list-item--selected
+  ) {
   color: var(--foreground) !important;
 }
 
-.date-select-calendar .react-datepicker__time-list-item:hover {
+.date-select-calendar
+  .react-datepicker__time-list-item:not(
+    [aria-disabled='true'],
+    .react-datepicker__time-list-item--selected
+  ):hover {
   background-color: var(--muted) !important;
   color: var(--foreground) !important;
+}
+
+/* Blocked slot. Mirrors ``__day--disabled`` above so a disabled time reads
+   like a disabled day, in theme tokens rather than the library's hardcoded
+   #ccc — near-invisible on the dark themes.
+
+   Skips ``--selected``: a saved value that has since fallen into the past is
+   both, and greying it would put muted text on the accent background. The
+   selected look wins, so there the refused click is the only cue unless the
+   caller supplies its own message — ChainExecutor, EditTAInteractionModal and
+   AddTaskModal do; CreateKanbanTaskModal does not. */
+.date-select-calendar
+  .react-datepicker__time-list-item[aria-disabled='true']:not(
+    .react-datepicker__time-list-item--selected
+  ) {
+  color: var(--muted-foreground) !important;
+  opacity: 0.5;
 }
 
 .date-select-calendar .react-datepicker__time-list-item--selected,
