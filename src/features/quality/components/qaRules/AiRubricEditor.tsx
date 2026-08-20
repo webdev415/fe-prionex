@@ -42,6 +42,12 @@ export interface AiRubricEditorProps {
   /** Existing rubric to edit; undefined → a blank new one. */
   rubric?: ScorecardTemplate
   departments: DepartmentOption[]
+  /**
+   * Every rubric the section knows about — used only to name the rubric that
+   * already owns the slice being edited (quality-service keeps at most one
+   * active rubric per (department, interlocutor) and refuses the second).
+   */
+  siblings?: ScorecardTemplate[]
   saving?: boolean
   onSave: (payload: TemplateCreatePayload) => Promise<void> | void
   onCancel?: () => void
@@ -74,6 +80,7 @@ function collectKeys(sections: Section[]): Set<string> {
 export function AiRubricEditor({
   rubric,
   departments,
+  siblings = [],
   saving = false,
   onSave,
   onCancel,
@@ -87,6 +94,31 @@ export function AiRubricEditor({
   )
   const [departmentId, setDepartmentId] = useState<number | ''>(rubric?.department_id ?? '')
   const [sections, setSections] = useState<Section[]>(() => cloneSections(rubric?.sections))
+
+  // The slice, spelled out: who the call is with and which department it
+  // belongs to. Follows the selects live, so the header always describes the
+  // rubric that would be saved — not the one that was loaded.
+  const departmentLabel =
+    departmentId === ''
+      ? t('pages.qaRules.rubrics.universal', 'Universal (fallback)')
+      : (departments.find((d) => d.id === departmentId)?.name ?? `ID ${departmentId}`)
+  const typeLabel =
+    scorecardType === 'third_party'
+      ? t('pages.qaRules.rubrics.typeThirdParty', 'Third party')
+      : t('pages.qaRules.rubrics.typeClient', 'Debtor')
+
+  // Another *active* rubric on the same slice → saving this one is refused
+  // server-side. Say so before the request instead of after the toast.
+  const sliceOwner = useMemo(() => {
+    const target = departmentId === '' ? null : Number(departmentId)
+    return siblings.find(
+      (r) =>
+        r.id !== rubric?.id &&
+        !r.is_archived &&
+        (r.scorecard_type ?? 'client') === scorecardType &&
+        (r.department_id ?? null) === target
+    )
+  }, [siblings, rubric?.id, scorecardType, departmentId])
 
   const totalWeight = useMemo(() => sumCriteriaWeights(sections), [sections])
   const weightValid = isRubricWeightValid(sections)
@@ -216,6 +248,39 @@ export function AiRubricEditor({
       className="flex flex-col gap-4 rounded-xl border border-[#EBECE8] bg-white p-4"
       data-testid="ai-rubric-editor"
     >
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#EBECE8] pb-3">
+        <span className="text-xs font-medium text-[#05040D]">
+          {rubric ? rubric.name : t('pages.qaRules.rubrics.create', 'New rubric')}
+        </span>
+        <span
+          data-testid="rubric-slice"
+          className="rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-[11px] text-[#4B5563]"
+        >
+          {t('pages.qaRules.rubrics.slice', 'Applies to')}: {typeLabel} · {departmentLabel}
+        </span>
+        {rubric ? (
+          <span
+            data-testid="rubric-status"
+            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              rubric.is_archived ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-[#DCFCE7] text-[#15803D]'
+            }`}
+          >
+            {rubric.is_archived
+              ? t('pages.qaRules.rubrics.statusArchived', 'Archived')
+              : t('pages.qaRules.rubrics.statusActive', 'Active')}
+          </span>
+        ) : null}
+      </div>
+
+      {sliceOwner ? (
+        <p data-testid="rubric-slice-conflict" className="text-[11px] text-[#B45309]">
+          {t('pages.qaRules.rubrics.sliceTaken', {
+            defaultValue: 'Another rubric is already active for this slice: {{name}}',
+            name: sliceOwner.name,
+          })}
+        </p>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-[11px] text-[#6B7280]">

@@ -269,6 +269,7 @@ export function AiRubricsSection() {
           key={editing.mode === 'edit' ? editing.id : 'new'}
           rubric={editingRubric}
           departments={departments}
+          siblings={rubrics}
           saving={saving}
           onSave={handleSave}
           onCancel={() => setEditing(null)}

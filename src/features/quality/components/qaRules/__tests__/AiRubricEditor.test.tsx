@@ -87,3 +87,95 @@ describe('AiRubricEditor — weight validation', () => {
     expect(saveButton()).toBeDisabled()
   })
 })
+
+describe('AiRubricEditor — the slice the rubric applies to', () => {
+  it('spells out interlocutor + department instead of raw ids', () => {
+    render(
+      <AiRubricEditor
+        rubric={{ ...makeRubric([100]), department_id: 5, scorecard_type: 'third_party' }}
+        departments={[{ id: 5, name: 'Стягнення' }]}
+        onSave={vi.fn()}
+      />
+    )
+    const slice = screen.getByTestId('rubric-slice')
+    expect(slice).toHaveTextContent('pages.qaRules.rubrics.typeThirdParty')
+    expect(slice).toHaveTextContent('Стягнення')
+    expect(slice).not.toHaveTextContent('5')
+  })
+
+  it('calls a department-less rubric universal, not «null»', () => {
+    renderEditor(makeRubric([100]))
+    expect(screen.getByTestId('rubric-slice')).toHaveTextContent('pages.qaRules.rubrics.universal')
+  })
+
+  it('follows the selects live, so the header describes what would be saved', () => {
+    render(
+      <AiRubricEditor
+        rubric={makeRubric([100])}
+        departments={[{ id: 5, name: 'Стягнення' }]}
+        onSave={vi.fn()}
+      />
+    )
+    fireEvent.change(screen.getByDisplayValue('pages.qaRules.rubrics.universal'), {
+      target: { value: '5' },
+    })
+    expect(screen.getByTestId('rubric-slice')).toHaveTextContent('Стягнення')
+  })
+
+  it('badges the rubric active or archived', () => {
+    const { unmount } = render(
+      <AiRubricEditor rubric={makeRubric([100])} departments={[]} onSave={vi.fn()} />
+    )
+    expect(screen.getByTestId('rubric-status')).toHaveTextContent(
+      'pages.qaRules.rubrics.statusActive'
+    )
+    unmount()
+
+    render(
+      <AiRubricEditor
+        rubric={{ ...makeRubric([100]), is_archived: true }}
+        departments={[]}
+        onSave={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('rubric-status')).toHaveTextContent(
+      'pages.qaRules.rubrics.statusArchived'
+    )
+  })
+
+  it('has no status badge for a rubric that does not exist yet', () => {
+    render(<AiRubricEditor departments={[]} onSave={vi.fn()} />)
+    expect(screen.queryByTestId('rubric-status')).not.toBeInTheDocument()
+  })
+
+  it('warns when another active rubric already owns the slice', () => {
+    const owner: ScorecardTemplate = { ...makeRubric([100]), id: 2, name: 'Чинна рубрика' }
+    render(
+      <AiRubricEditor
+        rubric={{ ...makeRubric([100]), id: 1 }}
+        departments={[]}
+        siblings={[owner]}
+        onSave={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('rubric-slice-conflict')).toBeInTheDocument()
+  })
+
+  it('stays quiet when the other rubric is archived or sits on another slice', () => {
+    const archived: ScorecardTemplate = { ...makeRubric([100]), id: 2, is_archived: true }
+    const otherSlice: ScorecardTemplate = {
+      ...makeRubric([100]),
+      id: 3,
+      scorecard_type: 'third_party',
+    }
+    render(
+      <AiRubricEditor
+        rubric={{ ...makeRubric([100]), id: 1 }}
+        departments={[]}
+        siblings={[archived, otherSlice]}
+        onSave={vi.fn()}
+      />
+    )
+    expect(screen.queryByTestId('rubric-slice-conflict')).not.toBeInTheDocument()
+  })
+})

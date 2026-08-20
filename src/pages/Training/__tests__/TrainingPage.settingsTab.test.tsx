@@ -15,7 +15,9 @@ import { MemoryRouter } from 'react-router-dom'
 
 import { TrainingPage } from '../TrainingPage'
 
-const authState: { user: { permissions: string[]; active_project_id?: number; id?: number } } = {
+const authState: {
+  user: { permissions: string[]; active_project_id?: number; id?: number } | null
+} = {
   user: { permissions: [], active_project_id: 1, id: 7 },
 }
 
@@ -105,6 +107,17 @@ describe('TrainingPage — settings tab gate', () => {
 
   it('does not render the settings body on a deep link without the permission', () => {
     renderPage('/dashboard/training?tab=settings')
+    expect(screen.queryByTestId('training-settings-tab')).not.toBeInTheDocument()
+  })
+
+  // The gate reads `user.permissions`, and `user` is null until /me answers —
+  // so the tab can only appear *after* the permission is known, never flash
+  // before it. Locking that direction in: a regression that defaulted the gate
+  // open would show the tab to everyone for a frame.
+  it('keeps the tab hidden while the permissions are still loading', () => {
+    authState.user = null
+    renderPage('/dashboard/training?tab=settings')
+    expect(screen.queryByText('pages.training.topTabs.settings')).not.toBeInTheDocument()
     expect(screen.queryByTestId('training-settings-tab')).not.toBeInTheDocument()
   })
 })

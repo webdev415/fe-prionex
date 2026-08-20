@@ -25,6 +25,12 @@ export const TELEPHONY_TYPE_VALUES: readonly TelephonyType[] = ['white', 'grey',
 
 export interface CallMonitoringFilters {
   agent_extensions?: string[]
+  /**
+   * Department slice of the call list. Empty / omitted = every department.
+   * Resolved server-side (agent extension → user → department), so it also
+   * covers agents missing from the caller's roster.
+   */
+  department_ids?: number[]
   phone_number?: string
   outcome_filter?: CallMonitoringOutcomeFilter
   min_duration?: number

@@ -20,6 +20,9 @@ vi.mock('@/features/quality/coaching/hooks', () => ({
   }),
 }))
 vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
+// The departments directory is `manage_roles`-gated; the tab falls back to the
+// roster, which is what these tests exercise.
+vi.mock('@/features/departments', () => ({ useDepartments: () => ({ data: undefined }) }))
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClientNames: () => new Map([[99, 'Acme Corp']]),
 }))
@@ -56,8 +59,20 @@ const mockUseOperators = vi.mocked(useOperators)
 const mockUseScopedUserIds = vi.mocked(useScopedUserIds)
 
 const OPERATORS = [
-  { id: 41, full_name: 'Kateryna Antonova', asterisk_extension: '101' },
-  { id: 42, full_name: 'Oleh Bondar', asterisk_extension: '102' },
+  {
+    id: 41,
+    full_name: 'Kateryna Antonova',
+    asterisk_extension: '101',
+    department_id: 5,
+    department_name: 'Стягнення',
+  },
+  {
+    id: 42,
+    full_name: 'Oleh Bondar',
+    asterisk_extension: '102',
+    department_id: 6,
+    department_name: 'Юридичний',
+  },
 ] as unknown as OperatorUser[]
 
 function call(overrides: Record<string, unknown> = {}) {
@@ -267,5 +282,67 @@ describe('DialogsListTab — filter behaviour', () => {
     expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.min_duration).toBeUndefined()
 
     await waitFor(() => expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.min_duration).toBe(30))
+  })
+})
+
+describe('DialogsListTab — department filter', () => {
+  const openPicker = () =>
+    fireEvent.click(screen.getByLabelText('pages.training.dialogue.department.label'))
+
+  beforeEach(() => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+  })
+
+  it('queries every department until one is picked', () => {
+    render(<DialogsListTab />)
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.department_ids).toBeUndefined()
+  })
+
+  it('sends the picked departments as department_ids and narrows the extensions', () => {
+    render(<DialogsListTab />)
+    openPicker()
+    fireEvent.click(screen.getByText('Стягнення'))
+
+    const filters = mockUseCallMonitoring.mock.calls.at(-1)?.[0]
+    // Server-side slice…
+    expect(filters?.department_ids).toEqual([5])
+    // …and the client-side narrowing that keeps the list right until the
+    // backend param ships.
+    expect(filters?.agent_extensions).toEqual(['101'])
+  })
+
+  it('accumulates a multi-department selection', () => {
+    render(<DialogsListTab />)
+    openPicker()
+    fireEvent.click(screen.getByText('Стягнення'))
+    fireEvent.click(screen.getByText('Юридичний'))
+
+    const filters = mockUseCallMonitoring.mock.calls.at(-1)?.[0]
+    expect(filters?.department_ids).toEqual([5, 6])
+    expect(filters?.agent_extensions).toEqual(['101', '102'])
+  })
+
+  it('clears back to "all departments" from the pinned row', () => {
+    render(<DialogsListTab />)
+    openPicker()
+    fireEvent.click(screen.getByText('Стягнення'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.department_ids).toEqual([5])
+
+    // The list stays open after a pick, so the "all" row is right there.
+    fireEvent.click(screen.getByText('pages.training.dialogue.dialogs.allDepartments'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.department_ids).toBeUndefined()
+  })
+
+  it('locks the picker when the page scope already pins the department', () => {
+    mockUseScopedUserIds.mockReturnValue({
+      scope: 'department',
+      userIds: [41],
+      employeePickerDisabled: false,
+      departmentPickerDisabled: true,
+      disabledLabelKey: 'pages.training.scope.department',
+      isEmptyResolution: false,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByLabelText('pages.training.dialogue.department.label')).toBeDisabled()
   })
 })

@@ -2286,6 +2286,11 @@
           "loadError": "Failed to load dialogs.",
           "empty": "No dialogs match the filters.",
           "noExtensions": "The selected employees have no telephony extensions"
+        },
+        "department": {
+          "empty": "No departments available",
+          "label": "Department",
+          "selected": "{{count}} departments"
         }
       },
       "transcript": {
@@ -10438,7 +10443,9 @@
         "weight": "Weight",
         "scale": "Scale",
         "weightTotal": "Weights",
-        "weightError": "Weights must add up to 100"
+        "weightError": "Weights must add up to 100",
+        "slice": "Applies to",
+        "sliceTaken": "Another rubric is already active for this slice: {{name}}"
       }
     }
   },
