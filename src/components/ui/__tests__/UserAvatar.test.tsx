@@ -33,12 +33,15 @@ describe('UserAvatar', () => {
     )
   })
 
-  it('leaves an already absolute photo url alone', async () => {
-    render(<UserAvatar fullName="Olena Kovalchuk" avatarUrl="https://cdn.example.com/1.png" />)
-
-    await waitFor(() =>
-      expect(loadAvatarObjectUrl).toHaveBeenCalledWith('https://cdn.example.com/1.png')
+  it('renders a photo from another host directly, without our credentials', async () => {
+    // The API client attaches the session token and cookies to whatever host it
+    // is given, so a foreign avatar_url must not go through it.
+    const { container } = render(
+      <UserAvatar fullName="Olena Kovalchuk" avatarUrl="https://cdn.example.com/1.png" />
     )
+
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://cdn.example.com/1.png')
+    expect(loadAvatarObjectUrl).not.toHaveBeenCalled()
   })
 
   it('renders what the client fetched, never the path itself', async () => {

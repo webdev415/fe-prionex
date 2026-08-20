@@ -185,6 +185,21 @@ api.interceptors.request.use(
 // ---------------------------------------------------------------------------
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _transientRetryCount?: number
+  /**
+   * Opt out of the global handling below. Set by requests that fetch one
+   * subresource rather than carrying the page: a profile photo that 401s means
+   * that photo is gone, not that the session is, and ending the session over it
+   * would sign the user out mid-edit. Such a request wants the error returned
+   * to it so it can degrade on its own.
+   */
+  _skipAuthRedirect?: boolean
+  _noTransientRetry?: boolean
+}
+
+/** Per-request escape hatches, for callers outside this module. */
+export interface RequestOverrides {
+  _skipAuthRedirect?: boolean
+  _noTransientRetry?: boolean
 }
 
 /**
@@ -216,6 +231,7 @@ function shouldRetryTransient(
   config: RetryableRequestConfig | undefined
 ): boolean {
   if (!config) return false
+  if (config._noTransientRetry) return false
   const method = (config.method || 'get').toLowerCase()
   // Only safe methods. Mutations may not be idempotent, so we let the React
   // Query mutation-default layer handle them (network-error only, 1 try).
@@ -266,7 +282,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as RetryableRequestConfig | undefined
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
 
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest?._skipAuthRedirect) {
       triggerAuthExpired()
       return Promise.reject(error)
     }
