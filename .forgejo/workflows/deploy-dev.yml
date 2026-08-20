@@ -124,6 +124,11 @@ on:
         required: false
         type: boolean
         default: false
+      hold_lock_seconds:
+        description: "TESTING ONLY (Story 4.4, Task 5 — AC3/AC4/AC5's permanent regression hook, same shape as simulate_bad_credential above) — if greater than 0, this dispatch does NOT deploy at all: it starts the stand lock's holder container for this many seconds and exits. Use it to stage real contention for a following dispatch on this capacity-1 runner, where two deploy JOBS can never overlap. Bounded to the holder TTL constant (720s) and rejected if non-numeric. Leave 0 (the default) for every normal deploy."
+        required: false
+        type: number
+        default: 0
 
 # ── `simulate_bad_credential`, kept deliberately (Task 8.3/AC7, decided at story close) ─────────
 # A permanent, minimal regression hook for AC7's unauthorized fail-closed path, not a one-off left
@@ -147,20 +152,160 @@ on:
 # Confirmed live, run 936: ladder stayed green (it reflects the REAL credential's true state, this
 # input never touches it), `deploy` failed cleanly at the classifier this input targets.
 
-# No concurrency block, deliberately (Task 6.4) — Story 4.4's to add. Two simultaneous deploys
-# colliding is a known, accepted, NAMED gap until then (epics.md:1696-1722); the runner's own
-# capacity: 1 (Task 2's local read of config.yml) already limits it to one job at a time in
-# practice, but that is the runner operator's setting, not a guarantee this workflow makes.
-# Code review M4: within that accepted gap, this file no longer makes a second concurrent dispatch
-# actively DESTRUCTIVE — `DOCKER_CONFIG` and the checkout directory are suffixed with
-# `$GITHUB_RUN_ID` (unique per dispatch), so job A's cleanup can no longer delete job B's live
-# credential or checkout mid-run. This narrows 4.4's gap to "racy," not "one run can sabotage
-# another" — it does not add a `concurrency:` block, which stays 4.4's to add.
+# ── `concurrency:` — the workflow-level half of Story 4.4's guard (AC1) ────────────────────────
+# Job-level `concurrency:` is silently ignored on this instance (D8) — "silently" meaning a guard
+# that looks present and is not. This block is workflow-level, outside `jobs:`, and is the only
+# form that actually queues runs.
+#
+# `group:` is a LITERAL CONSTANT, `deploy-dev-fe-prionex-dev` — not the epic's own
+# `cd-${{ github.ref }}` key, and not `inputs.ref` either (Story 3.2's fix for `build.yml`'s
+# identical-looking defect, which is the WRONG fix here). This workflow protects one STAND, not a
+# per-ref artifact: two deploys of *different* refs to the *same* stand collide exactly as badly
+# as two of the same ref, so per-ref groups would split them apart and remove the guard entirely.
+# The group therefore names the contended resource itself — `COMPOSE_PROJECT_NAME=fe-prionex-dev`
+# — not the thing that happens to be constant today by accident of this file being
+# `workflow_dispatch`-only. A second reason for a literal, not an expression: a workflow file this
+# instance cannot parse fails BEFORE any job exists, with the error visible only in
+# `action_run.pre_execution_error_details` — no job, no log, no API route for it (D21). A constant
+# string cannot fail that way; an expression can, and on a workflow whose failure mode is "the team
+# cannot deploy," that is worth the lost generality. Full argument: `docs/migration-decisions.md`
+# D30 (this story), superseding D29 §8's own handoff.
+#
+# `cancel-in-progress: false` — NOT stylistic, must not be "optimized" later. A cancel landing
+# between `down` and a healthy `up -d` leaves the stand STOPPED with no rollback path (H5, deferred
+# to 4.7/4.8; run 937 is the live proof a broken stand stays broken until a human redispatches).
+# Also moot on THIS instance specifically: there is no Actions-run cancel endpoint at all
+# (`deferred-work.md:94-98` — `POST .../actions/runs/{id}/cancel` → 404 against the full swagger),
+# so `true` would buy nothing and risk everything.
+#
+# 🔴 What this block IS and IS NOT evidence for: D8's own Probe B measured queueing BY GROUP on a
+# disposable capacity-2 probe runner (runs 6/7) — real, but not this runner. On `s1-deploy-dev-
+# preprod` (capacity: 1, Task 2.1), this instance has never measured group-queueing SEPARATELY from
+# capacity-queueing, because the two are indistinguishable by timing alone here. What IS measured,
+# every dispatch, is which group a run is ASSIGNED (`action_run.concurrency_group`/
+# `concurrency_type`, D21's own columns) — that is the claim this workflow can make about this
+# block. The block's ASSIGNMENT is verified; its EFFECTIVENESS under contention on this specific
+# runner is NOT separable from `capacity: 1` by any observation available here — precisely why
+# NFR10 exists (serialization must not depend on `concurrency`) and why the `flock` below, not this
+# block, is the load-bearing half of Story 4.4.
+#
+# 🔴 This block governs the DISPATCH path only, and dies SILENTLY the day Story 4.8 turns this file
+# into a `workflow_call` callee — D21: a called workflow's run carries the CALLER's own auto-group;
+# the callee's own `concurrency:` block produces no group and no error. Whatever 4.8 extracts must
+# move this block to every caller, or lose the guard without being told (the same warning
+# `build.yml:90-99` already carries beside its own block).
+concurrency:
+  group: deploy-dev-fe-prionex-dev
+  cancel-in-progress: false
+
+# ── The `${{ }}` house rule (Dev Notes §8) is not in tension with the block above ──────────────
+# The rule forbids expressions inside `run:` step BODIES; a workflow-level key like `concurrency:`
+# is not a `run:` body, and this block does not use an expression anyway — it is a literal string,
+# by deliberate choice (see above), not because the rule required it here.
 
 env:
   IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
 
 jobs:
+  # ── hold-lock: Story 4.4's contention fixture — a SEPARATE job, not a branch inside `deploy`
+  # (Task 5, AC3/AC4/AC5's permanent regression hook, same shape and safety argument as
+  # `simulate_bad_credential` above) ───────────────────────────────────────────────────────────
+  # `capacity: 1` on this runner (Task 2.1, measured, current) means two `deploy` JOBS can never
+  # overlap — a naive "dispatch twice" test would just queue at the runner and never exercise the
+  # lock at all, producing a false positive that looks identical to success. This job moves the
+  # contention OUT of the job and INTO a container: it starts the SAME holder mechanism the real
+  # `deploy` job's acquire step uses, but the holder OUTLIVES this job (`docker run -d`), so the
+  # NEXT — necessarily sequential — dispatch meets a genuinely held lock regardless of runner
+  # capacity. This dispatch does not touch the stand, does not pull an image, does not need the
+  # registry or repo credentials at all.
+  # Gating `preflight` below with `if: inputs.hold_lock_seconds == 0` (rather than adding an `if:`
+  # to every one of `deploy`'s ~20 steps) is what keeps a hold-lock dispatch cheap and fast:
+  # `clone-test`/`digest-resolve-test`/`deploy` all `needs: preflight` (directly or transitively),
+  # and a job whose `needs:` did not succeed is skipped by default — so gating the one root job
+  # cascades to all four without touching their own definitions.
+  # Safety, same shape `simulate_bad_credential`'s own block already uses:
+  # - Default `0`; every normal dispatch is unaffected, and the four real jobs run exactly as before.
+  # - Bounded to the holder TTL constant (720s) and rejected if non-numeric, inside the job itself
+  #   (Task 5.2) — an unbounded hold in a deploy pipeline is a denial-of-deploy switch; a bounded
+  #   one is a test fixture. Worst case if misused: the STAND is never touched (this job never
+  #   reaches `down`), and the effect is instantly recoverable with one command
+  #   (`docker rm -f <holder>`) — never data loss, never a credential path.
+  # - The population that can set it already holds push access to this repo — no new privilege
+  #   boundary is created.
+  hold-lock:
+    if: ${{ inputs.hold_lock_seconds > 0 }}
+    name: "Hold-lock test fixture (Task 5, AC3/AC4/AC5 — does not deploy)"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 15
+    steps:
+      - name: Validate hold_lock_seconds and start the stand-lock holder
+        env:
+          HOLD_SECONDS: ${{ inputs.hold_lock_seconds }}
+        run: |
+          set -euo pipefail
+          TTL=720
+
+          # Task 5.2: reject non-numeric and out-of-bound values, fail closed, before anything
+          # touches docker at all.
+          case "$HOLD_SECONDS" in
+            ''|*[!0-9]*)
+              echo "FAIL: hold_lock_seconds='${HOLD_SECONDS}' is not a non-negative integer."\
+                   "Refusing to start a holder with an unparseable duration."
+              exit 1
+              ;;
+          esac
+          if [ "$HOLD_SECONDS" -gt "$TTL" ]; then
+            echo "FAIL: hold_lock_seconds=${HOLD_SECONDS} exceeds the holder TTL constant"\
+                 "(${TTL}s). An unbounded hold in a deploy pipeline is a denial-of-deploy"\
+                 "switch, not a test fixture. Refusing."
+            exit 1
+          fi
+
+          HOLDER="fe-prionex-dev-deploy-lock-${GITHUB_RUN_ID}"
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+
+          # Same mechanism the real acquire step uses (AC2): a sibling container, launched
+          # through the docker.sock this job already holds, bind-mounts the stand directory
+          # (confirmed reachable despite valid_volumes, Task 2.2) and takes an exclusive flock on
+          # `.deploy.lock` inside it. This holder is uncontended by construction (it is meant to
+          # run first), so a plain blocking `flock` is enough here — no `timeout` wrapper needed,
+          # unlike the real acquire step, which must bound its own wait against a holder that may
+          # already exist.
+          if ! docker run -d --rm --name "$HOLDER" \
+            -v /root/crm-prionex/fe-prionex-dev:/lockdir \
+            -e HOLD_SECONDS="$HOLD_SECONDS" \
+            "$SELF_IMAGE" \
+            sh -c 'exec 9>/lockdir/.deploy.lock; flock 9 && echo LOCK-ACQUIRED && sleep "$HOLD_SECONDS"'
+          then
+            echo "FAIL: could not even START the lock-holder container '${HOLDER}' — a docker"\
+                 "daemon or resource problem, not lock contention itself."
+            exit 1
+          fi
+
+          # Confirm it actually acquired before declaring success — a holder that cannot get its
+          # OWN uncontended lock (should never happen) must not report false success.
+          DEADLINE=$(( $(date +%s) + 15 ))
+          ACQUIRED=""
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            LOG_OUT="$(docker logs "$HOLDER" 2>/dev/null || true)"
+            if printf '%s' "$LOG_OUT" | grep -q "LOCK-ACQUIRED"; then
+              ACQUIRED="yes"
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$ACQUIRED" ]; then
+            echo "FAIL: holder '${HOLDER}' did not report LOCK-ACQUIRED within 15s of its own"\
+                 "start — unexpected for an uncontended lock. Not declaring success."
+            docker rm -f "$HOLDER" >/dev/null 2>&1 || true
+            exit 1
+          fi
+
+          echo "⚠️⚠️⚠️ TESTING MODE (hold_lock_seconds=${HOLD_SECONDS}): holder '${HOLDER}' now"\
+               "holds the stand lock for ${HOLD_SECONDS}s. This dispatch does NOT deploy —"\
+               "[SIMULATED via hold_lock_seconds=${HOLD_SECONDS} — NOT a real concurrent deploy]."
+          echo "OK: lock held by '${HOLDER}'. Clear early with: docker rm -f ${HOLDER}"
+
   # ── Diagnostic job, added after run 919 failed in <60s with no retrievable log ────────────────
   # SSH on s1 ruled out the network path: the exact job network (`forgejo-runner-crm-deploy_runner`
   # + the runner's own `--add-host=git.crm-prionex.com:10.70.0.1`) resolves DNS correctly and a
@@ -175,7 +320,13 @@ jobs:
   # Run 922 REFUTED the org-secret-access hypothesis (this job passed; `deploy` still failed) — kept
   # running on every dispatch regardless, because "secrets present and registry reachable" remains
   # a generically useful precondition to confirm before anything tag-specific runs.
+  # 🔴 Gated on `hold_lock_seconds == 0` (Task 5) — a hold-lock-only dispatch does not need the
+  # registry/repo credentials this job and everything downstream of it exist to confirm. Cascades:
+  # `clone-test`/`digest-resolve-test`/`deploy` all `needs: preflight` (directly or transitively),
+  # and a job whose `needs:` did not succeed is skipped by default, so gating this one root job is
+  # enough — nothing downstream needs its own copy of this condition.
   preflight:
+    if: ${{ inputs.hold_lock_seconds == 0 }}
     name: "0. Preflight — org secrets present, registry reachable"
     runs-on: deploy-dev-preprod
     timeout-minutes: 3
@@ -800,6 +951,111 @@ jobs:
                "a state change to a live stand made as a side effect of this deploy, stated here"\
                "rather than left to be discovered."
 
+      - name: Acquire the stand lock (Task 4.2, AC2, AC5, Story 4.4)
+        run: |
+          set -euo pipefail
+          # Placed AFTER the pull succeeds (the long, idempotent, stand-independent part — holding
+          # the lock across it would serialize two deploys for no benefit) and BEFORE the
+          # hand-provisioned-stand guard below, the first step that reads live stand state. From
+          # here through the last verification step, this job holds the lock exclusively.
+          #
+          # AC2: exclusive flock on `.deploy.lock` inside the stand directory
+          # (`/root/crm-prionex/fe-prionex-dev/`, the path epics.md names), taken by a SIBLING
+          # container launched through the docker.sock this job already holds — the deploy job
+          # itself cannot reach that directory (neither `container.options` nor `valid_volumes`
+          # allow it, `/root` is `drwx------`), but a sibling container CAN bind-mount it anyway
+          # (Task 2.2, confirmed live: `valid_volumes` constrains what the RUNNER mounts, not what
+          # the job does through the socket it already holds).
+          # The holder is `docker run -d --rm`, so it OUTLIVES this step (and this job, if the job
+          # dies) — the job's own acquire step only POLLS `docker logs` for the holder's own
+          # acquisition marker (Task 2.4, confirmed: the daemon's own log channel, unrelated to
+          # Forgejo's missing job logs), it does not hold the flock itself.
+          # Bounded via `timeout` wrapping a BLOCKING `flock`, not `flock -w` — this image's
+          # `flock` is BusyBox's and has no `-w` option at all (Task 2.3, confirmed by direct
+          # test: `flock -w 5 9` → `flock: unrecognized option: w`). `timeout <WAIT> flock <FD>`
+          # was verified live on s1 to behave identically: instant success when free, blocked for
+          # exactly the bound then killed when held.
+          WAIT=240   # Task 4.4: 4.3's own deploys run ~60s end to end, so 240s covers three
+                     # queued deploys; 240s wait + ~90s deploy stays inside this job's own
+                     # 10-minute timeout with room. Do not raise the job timeout to fit a longer
+                     # wait without re-reading Story 4.7's 10-minute budget (NFR2).
+          TTL=720    # Task 4.5, AC4's whole answer: must exceed the longest legitimate hold
+                     # (~2-3 min) and must not greatly exceed this job's own 10-minute ceiling —
+                     # a holder must not outlive a hard-timed-out job by more than a few minutes.
+                     # There is no Actions-run cancel endpoint on this instance
+                     # (`deferred-work.md:94-98`), and `if: always()` does not survive cancel or
+                     # timeout (code review M5) — TTL expiry is the ONLY reliable release for a
+                     # dead job, which is why AC4 is satisfied by this constant, not by the
+                     # release step below.
+          HOLDER="fe-prionex-dev-deploy-lock-${GITHUB_RUN_ID}"
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+
+          if ! docker run -d --rm --name "$HOLDER" \
+            -v /root/crm-prionex/fe-prionex-dev:/lockdir \
+            -e WAIT="$WAIT" -e TTL="$TTL" \
+            "$SELF_IMAGE" \
+            sh -c 'exec 9>/lockdir/.deploy.lock; timeout "$WAIT" flock 9 && echo LOCK-ACQUIRED && sleep "$TTL"'
+          then
+            echo "FAIL: could not even START the lock-holder container '${HOLDER}' — a docker"\
+                 "daemon or resource problem unrelated to lock contention itself. The stand has"\
+                 "not been touched."
+            exit 1
+          fi
+
+          # Code review H1's idiom, reused verbatim in shape (Task 4.6): poll rather than trust a
+          # single check, and treat "the holder container is already gone" as data the classifier
+          # below reads, not a silent abort. A holder that exits without ever printing the marker
+          # means its own `timeout $WAIT flock 9` did not acquire in time — a genuine failure to
+          # acquire, not a polling gap, so the loop below exits early on that signal too.
+          POLL_DEADLINE=$(( $(date +%s) + WAIT + 15 ))
+          ACQUIRED=""
+          while [ "$(date +%s)" -lt "$POLL_DEADLINE" ]; do
+            LOG_OUT="$(docker logs "$HOLDER" 2>/dev/null || true)"
+            if printf '%s' "$LOG_OUT" | grep -q "LOCK-ACQUIRED"; then
+              ACQUIRED="yes"
+              break
+            fi
+            if ! docker inspect "$HOLDER" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "$ACQUIRED" ]; then
+            # AC5: name the cause, not a generic timeout — which run holds the lock, how much of
+            # its TTL remains, and the one command that clears it.
+            EXISTING_HOLDER="$(docker ps --filter "name=fe-prionex-dev-deploy-lock-" --format '{{.Names}}' | grep -v "^${HOLDER}\$" || true)"
+            if [ -n "$EXISTING_HOLDER" ]; then
+              STARTED_RAW="$(docker inspect -f '{{.State.StartedAt}}' "$EXISTING_HOLDER" 2>/dev/null || true)"
+              REMAINING="unknown"
+              if [ -n "$STARTED_RAW" ]; then
+                # BusyBox `date -d` does not parse Docker's RFC3339Nano StartedAt directly
+                # (verified: "invalid date" on the raw string) — strip fractional seconds/`Z`
+                # and swap `T` for a space first, into the one form BusyBox's own `date`
+                # documents that it accepts (`YYYY-MM-DD hh:mm:ss`).
+                CLEAN_TS="$(printf '%s' "$STARTED_RAW" | sed -E 's/\.[0-9]+Z$//; s/Z$//; s/T/ /')"
+                STARTED_EPOCH="$(date -u -d "$CLEAN_TS" +%s 2>/dev/null || true)"
+                if [ -n "$STARTED_EPOCH" ]; then
+                  NOW_EPOCH="$(date -u +%s)"
+                  ELAPSED=$(( NOW_EPOCH - STARTED_EPOCH ))
+                  REMAINING=$(( TTL - ELAPSED ))
+                  [ "$REMAINING" -lt 0 ] && REMAINING=0
+                fi
+              fi
+              echo "FAIL: could not acquire the stand lock within ${WAIT}s. Held by container"\
+                   "'${EXISTING_HOLDER}' (started ${STARTED_RAW:-unknown}, ~${REMAINING}s of its"\
+                   "${TTL}s TTL remain). Clear it by hand with: docker rm -f ${EXISTING_HOLDER}"
+            else
+              echo "FAIL: could not acquire the stand lock within ${WAIT}s, and no other holder"\
+                   "container is visible via docker ps — contention may have just cleared."\
+                   "Redispatch."
+            fi
+            docker rm -f "$HOLDER" >/dev/null 2>&1 || true
+            exit 1
+          fi
+
+          echo "OK: stand lock acquired via holder '${HOLDER}'."
+
       - name: Guard against a hand-provisioned stand before down (Task 6.1 prep, code review M7)
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
@@ -1182,6 +1438,27 @@ jobs:
           echo "This proves the CURRENT state only — restart: always + external: true is a silent"\
                "restart loop on daemon start if crm-dev-network is absent or recreated with a new"\
                "id at boot time. That risk stays open for Story 4.9 (deferred-work.md reboot item)."
+
+      - name: Release the stand lock (Task 4.3, AC2/AC4, Story 4.4)
+        if: always()
+        run: |
+          set -euo pipefail
+          # `if: always()` runs on every path THIS STEP can reach — but it does NOT survive job
+          # cancellation or a hard `timeout-minutes` kill (code review M5, already found the hard
+          # way for the DOCKER_CONFIG cleanup step below). That is precisely why AC4 is answered by
+          # the holder's own TTL (Task 4.5), not by this step: a dead job's lock is released by the
+          # holder's `sleep` finishing on its own, with no human intervention and no cancel API
+          # (`deferred-work.md:94-98`) required.
+          # `docker rm -f` closes the file descriptor and releases the flock in the kernel.
+          # Idempotent — already-gone (acquire itself failed before creating it, or the holder
+          # already self-expired) is not an error, `|| true` reflects that deliberately.
+          HOLDER="fe-prionex-dev-deploy-lock-${GITHUB_RUN_ID}"
+          docker rm -f "$HOLDER" >/dev/null 2>&1 || true
+          echo "OK: stand lock released (holder '${HOLDER}' removed, or was already gone)."
+          # Task 6.4: `.deploy.lock` persisting on disk as a zero-byte file after this is NORMAL —
+          # flock releases with the file descriptor, not by deleting the file. A future reader
+          # finding that file must not "clean it up" and must not read its existence as a held
+          # lock; only a running holder container (or the kernel's own lock table) means anything.
 
       - name: Record wall-clock duration (Task 1b.5, code review L11)
         if: always()

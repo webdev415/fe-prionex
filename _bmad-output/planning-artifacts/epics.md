@@ -255,9 +255,16 @@ FR28: A Forgejo runner is registered at the `CRM` organization level with two la
 
 FR29: A second runner is online before required status checks are enabled on `main`.
 
-FR30: Concurrent deploys to the same stand serialize via `concurrency: cd-${{ github.ref }}`
-with `cancel-in-progress: false`, **plus** a server-side `flock` on a file in the stand
+FR30: Concurrent deploys to the same stand serialize via ~~`concurrency: cd-${{ github.ref }}`~~
+with `cancel-in-progress: false`, **plus** ~~a server-side~~ `flock` on a file in the stand
 directory that does not depend on the Forgejo version.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** Concurrency
+key is the literal `deploy-dev-fe-prionex-dev` (the stand's own identity), not
+`cd-${{ github.ref }}` — this workflow serializes on the STAND, not on a ref, and the epic's own
+key would be wrong for that purpose the moment it stopped being an accidental constant. There is
+no "server-side" in the deploy mechanism as it exists (SSH/`scp` retired 2026-08-11) — the `flock`
+is taken by a sibling container through the job's own `docker.sock`, which still satisfies "a file
+in the stand directory that does not depend on the Forgejo version" exactly as written.
 
 **Cutover and decommissioning (Phases 7, 8)**
 
@@ -428,7 +435,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR27 | Epic 5 | Dedicated network (agreed name, their convention: `crm-preprod-network`) with its own Kong, answering to `crm-kong-gateway` inside it (amended 13.08) |
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
-| FR30 | Epic 4 | `concurrency` plus version-independent server-side `flock` |
+| FR30 | Epic 4 | `concurrency` (literal stand-identity key, not `cd-${{ github.ref }}`) plus a sibling-container `flock` on a stand-directory file, version-independent (amended 20.08, [D30](../../docs/migration-decisions.md#d30)) |
 | FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08) |
 | FR32 | Epic 6 | Cutover validated by a no-op `rollback: true` deploy |
 | FR33 | — | **Cancelled** — no action on GitHub. File deletion only, via Story 7.2 |
@@ -1703,14 +1710,34 @@ So that one deploy's `down` cannot tear down another deploy's freshly started co
 
 **Given** the behaviour of `concurrency` observed in Story 1.3
 **When** `deploy-dev.yml` is configured
-**Then** it declares `concurrency: cd-${{ github.ref }}` with `cancel-in-progress: false`,
+**Then** it declares ~~`concurrency: cd-${{ github.ref }}`~~ with `cancel-in-progress: false`,
 matching `CD.yml:19-21`.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** The key is a
+**literal constant, `deploy-dev-fe-prionex-dev`**, not `cd-${{ github.ref }}`. `deploy-dev.yml` is
+`workflow_dispatch`-only and lives only on `main`, so `github.ref` is constant in practice today —
+the literal key produces the same behaviour for the right reason, where the expression would have
+produced it for the wrong one, and would split into per-branch groups the moment this file gains a
+`push` trigger or is dispatched from another branch (available on this instance, measured, run
+917). This workflow protects ONE STAND, not a per-ref artifact — two deploys of different refs to
+the same stand collide exactly as badly as two of the same ref, so a per-ref key (Story 3.2's own
+fix for `build.yml`'s look-alike defect) would be actively wrong here. `cancel-in-progress: false`
+stands as written.
 
 **Given** `concurrency` may be silently ignored by this Forgejo version
-**When** the deploy script runs on the server
+**When** ~~the deploy script runs on the server~~
 **Then** it acquires an exclusive `flock` on a file inside the stand directory before touching
 containers
 **And** it releases the lock on both success and failure paths.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** There is no
+deploy script on the server — that mechanism was abandoned 2026-08-11
+(`sprint-change-proposal-2026-08-11-deploy-runner.md`) in favour of a job container on the target
+host holding `docker.sock`. The clause survives literally anyway: the `flock` is taken by a
+**sibling container**, launched through that same `docker.sock`, which bind-mounts the stand
+directory and holds the lock inside it — the deploy job itself cannot reach that directory
+(neither `container.options` nor `valid_volumes` allow it, `/root` is `drwx------`), but a sibling
+container launched through the socket the job already holds can, confirmed live before the design
+was written (D28 §4's own H5 amendment (i), measured not inherited). Acquire/release placement,
+bounded wait (240s) and holder TTL (720s) — [D30](../../docs/migration-decisions.md#d30).
 
 **Given** two deploys are dispatched to the same stand at nearly the same moment
 **When** both run

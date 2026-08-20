@@ -231,6 +231,18 @@
   ⚠️ **Still open for Story 4.4:** the `flock` server-side lock was designed against concurrent SSH
   sessions. A runner with `capacity > 1` still permits two simultaneous deploys, so **re-examine
   the lock rather than deleting it**.
+  ✅ **CLOSED, Story 4.4, 2026-08-20 — re-examined, kept, rebuilt for the actual mechanism.** The
+  SSH-session design this note warned about no longer applies (SSH deploy retired 2026-08-11,
+  same as the note above records) — re-examined from scratch against the job-container mechanism
+  that replaced it, not patched. `capacity: 1` on `s1-deploy-dev-preprod` re-measured directly
+  (`/opt/forgejo-runner-deploy/config.yml`, mtime 2026-08-13, current) — the runner-capacity
+  question this note raised is answered: capacity is 1, so two deploy JOBS cannot overlap on this
+  runner today, but the lock does not depend on that staying true (it is a genuine `flock`, not a
+  capacity-derived assumption) — if capacity were ever raised, the lock still serializes correctly.
+  Mechanism: an exclusive `flock` on `.deploy.lock` inside the stand directory, taken by a sibling
+  container launched through the job's own `docker.sock` (the job itself cannot reach that
+  directory directly — `valid_volumes` blocks it — but a sibling container through the socket the
+  job already holds can, confirmed live). Full record: `docs/migration-decisions.md` D30.
   ⚠️ **Label status changed:** `dev`, `preprod`, `deploy`, `deploy-dev-preprod` and
   `s2-prod-deploy` stop being forbidden from Epic 4 onward and become the intended deploy targets.
   They remain forbidden for Story 1.8, which is a smoke test bound to `node-20`/`docker-build`.
@@ -2849,3 +2861,30 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   `up -d` failure with no attribution back to this cause — on a host shared with another team's
   production. Belongs with the reboot-ordering item already recorded above, which has the same owner
   and the same "state of s1 between deploys" character. **Owner: Story 4.9 / platform ops.**
+
+## Deferred from: story-4.4 implementation (2026-08-20)
+
+Two items this story's own Task 9.6 found and did not fix — not routed by a code review (4.4 has
+not been reviewed yet at time of writing), found while designing and locally proving the lock
+(D30, Task 6).
+
+- ⚠️ **`flock`'s wake order is not FIFO.** With exactly two contenders, Story 4.4's AC3 wording
+  holds precisely: "the second waits for the first." With three or more simultaneous waiters, that
+  same clause still holds for the FIRST pair, but the order in which the REMAINING waiters are
+  granted the lock is unspecified by `flock` itself (kernel/BusyBox implementation detail, not
+  something this story's design controls or measured beyond the two-contender case it actually
+  tested — Completion Note 2's Test 6.2). Not a bug in what shipped — AC3 only ever promised
+  ordering for the two-deploy case — but a real gap if a THIRD dispatch ever queues behind two
+  already-contending ones: it will wait its turn, but "whose turn" past the first is not
+  guaranteed. **Owner: whoever next needs more-than-two-way ordering guarantees (no story currently
+  requires it — Stories 5.3/6.4 each inherit the lock for their OWN stand, not a shared queue).**
+- ⚠️ **The manual/DR path does not take this lock.** A human running `docker compose … up -d`
+  directly from `~/crm-prionex/fe-prionex-dev/` (the manual/DR path D28 §4/D29 §1 preserve
+  deliberately) does not acquire `.deploy.lock` at all — nothing makes them, and nothing in this
+  story adds a wrapper that would. A manual redeploy racing an in-flight automated one collides
+  exactly as before this story, with no serialization on that side. This was never in scope for
+  Story 4.4 (which serializes the WORKFLOW's own dispatches, AC1-AC6, not human operators), but is
+  worth naming rather than leaving an implicit assumption that "the lock" now covers every path to
+  the stand — it covers one of the two. **Owner: whoever documents/wraps the manual DR procedure
+  (no story currently owns this; a candidate for Story 4.8's shared definition, or a plain
+  operational note, not necessarily new workflow code).**

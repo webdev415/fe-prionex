@@ -289,7 +289,7 @@ development_status:
   # 🔴 Measurement problem named up front, not discovered: `capacity: 1` on the deploy runner plus
   # no Actions-run cancel API means "two simultaneous dispatches" is not a runnable test — an
   # input-gated hold hook moves the contention into a container that outlives its own job.
-  4-4-serialize-concurrent-deploys-to-the-same-stand: ready-for-dev
+  4-4-serialize-concurrent-deploys-to-the-same-stand: in-progress
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
   4-7-validate-dev-deploys-across-five-feature-branches: backlog
