@@ -684,6 +684,32 @@
       "historyArchiveEmpty": "The archive is empty.",
       "historyBackToChats": "Back to chats",
       "historyUpdateError": "Failed to update the chat.",
+      "memory": {
+        "title": "Personalization",
+        "helper": "What the assistant remembers about you — it shapes its answers.",
+        "empty": "Memory is empty. Add a fact about your work and the assistant will take it into account.",
+        "loadError": "Failed to load the memory.",
+        "retry": "Retry",
+        "addAria": "New fact for the assistant memory",
+        "addPlaceholder": "For example: I run the Alfa portfolio, amounts without cents",
+        "addAction": "Add fact",
+        "addSuccess": "Fact added to the memory",
+        "deleteAria": "Delete fact from the memory",
+        "deleteError": "Failed to delete the fact.",
+        "tooLong": "Maximum {{max}} characters",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "unknown": "other"
+        },
+        "errors": {
+          "duplicate": "A similar fact is already in the memory.",
+          "validation": "The server rejected the text. Remove personal data and try again.",
+          "forbidden": "You are not allowed to change the assistant memory.",
+          "unknown": "Failed to add the fact. Try again."
+        }
+      },
       "voiceFallback": "Server speech recognition is unavailable — switched to browser recognition.",
       "voiceFinalizing": "Processing speech…",
       "voiceHoldHint": "Click to dictate, hold to record a voice message",
@@ -3844,6 +3870,30 @@
           "unknown": "Could not save. Try again."
         },
         "overridden": "overridden"
+      },
+      "memory": {
+        "title": "Memory",
+        "helper": "What the assistant remembers about employees and what it takes from the shared reference.",
+        "tableTitle": "Memory scopes",
+        "tableDescription": "Click a row to see its records and delete what should not be there.",
+        "empty": "The memory is empty — no records yet.",
+        "unavailable": "The assistant memory service is unavailable.",
+        "columnScope": "Scope",
+        "columnRecords": "Records",
+        "columnLastAt": "Last",
+        "globalScope": "Shared reference",
+        "globalHint": "Applies to every operator",
+        "unknownUser": "Employee #{{id}}",
+        "recordsEmpty": "This scope has no records.",
+        "recordsError": "Failed to load the scope records.",
+        "deleteAria": "Delete memory record",
+        "deleteError": "Failed to delete the record.",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "unknown": "other"
+        }
       },
       "internals": {
         "title": "Assistant internals",

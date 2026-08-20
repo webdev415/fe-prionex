@@ -4,7 +4,9 @@
  * Renders the saved conversations with a pinned group on top and the rest
  * grouped by activity date (Today / Yesterday / Earlier), with search, a
  * new-chat action, per-item actions (pin, rename, archive) behind a hover
- * kebab / right-click menu, and an archive view toggled from the footer.
+ * kebab / right-click menu, and two extra views toggled from the footer:
+ * the archive and «Персоналізація» (the assistant's memory about the
+ * operator, see MemoryPanel).
  * The desktop variant has a collapse toggle that shrinks the panel into a
  * narrow icon rail; the drawer variant is used inside the mobile overlay and
  * exposes a close button instead.
@@ -31,11 +33,19 @@ import {
   useUpdateAssistantConversation,
 } from '@/features/aiAssistant/hooks'
 import type { AssistantConversationSummary } from '@/features/aiAssistant/api'
+import { MemoryPanel } from './MemoryPanel'
 
 const ACTIVE_FILTERS = { limit: 100, archived: false } as const
 const ARCHIVED_FILTERS = { limit: 100, archived: true } as const
 
 const MAX_TITLE_LENGTH = 120
+
+/**
+ * Что показывает панель. Раньше это был флаг `showArchived`; третий режим
+ * («Персоналізація» — память ассистента) сделал бы из него второй булев флаг с
+ * невозможной комбинацией, поэтому режим один и явный.
+ */
+type SidebarMode = 'chats' | 'archive' | 'memory'
 
 const MINUTE = 60 * 1000
 const HOUR = 60 * MINUTE
@@ -124,13 +134,18 @@ export function ConversationSidebar({
 }: ConversationSidebarProps) {
   const { t, i18n } = useTranslation('common')
   const [search, setSearch] = useState('')
-  const [showArchived, setShowArchived] = useState(false)
+  const [mode, setMode] = useState<SidebarMode>('chats')
   const [menuId, setMenuId] = useState<number | null>(null)
   const [renamingId, setRenamingId] = useState<number | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
 
+  const showArchived = mode === 'archive'
+  const showMemory = mode === 'memory'
+
+  // В режиме памяти список диалогов не нужен — запрос выключен, кеш остаётся.
   const conversationsQuery = useAssistantConversations(
-    showArchived ? ARCHIVED_FILTERS : ACTIVE_FILTERS
+    showArchived ? ARCHIVED_FILTERS : ACTIVE_FILTERS,
+    !showMemory
   )
   const updateMutation = useUpdateAssistantConversation()
 
@@ -226,8 +241,8 @@ export function ConversationSidebar({
     updateMutation.mutate({ id: item.id, patch: { title } }, { onError: notifyUpdateError })
   }
 
-  const switchMode = (archived: boolean) => {
-    setShowArchived(archived)
+  const switchMode = (next: SidebarMode) => {
+    setMode(next)
     setSearch('')
     setMenuId(null)
     cancelRename()
@@ -266,6 +281,18 @@ export function ConversationSidebar({
         >
           <Icons.MessageMultiple01 size={16} strokeWidth={1.5} />
         </button>
+        <button
+          type="button"
+          data-testid="memory-rail-toggle"
+          aria-label={t('pages.aiAssistant.memory.title')}
+          onClick={() => {
+            switchMode('memory')
+            onCollapsedChange?.(false)
+          }}
+          className={ICON_BUTTON_CLASS}
+        >
+          <Icons.AiBrain03 size={16} strokeWidth={1.5} />
+        </button>
       </div>
     )
   }
@@ -280,7 +307,13 @@ export function ConversationSidebar({
     >
       <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1">
         <span className="text-foreground inline-flex min-w-0 items-center gap-2 text-sm font-medium tracking-tight">
-          {showArchived ? (
+          {showMemory ? (
+            <Icons.AiBrain03
+              size={16}
+              strokeWidth={1.5}
+              className="text-muted-foreground shrink-0"
+            />
+          ) : showArchived ? (
             <Icons.Archive size={16} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
           ) : (
             <Icons.MessageMultiple01
@@ -290,9 +323,11 @@ export function ConversationSidebar({
             />
           )}
           <span className="truncate">
-            {showArchived
-              ? t('pages.aiAssistant.historyArchive')
-              : t('pages.aiAssistant.historyTitle')}
+            {showMemory
+              ? t('pages.aiAssistant.memory.title')
+              : showArchived
+                ? t('pages.aiAssistant.historyArchive')
+                : t('pages.aiAssistant.historyTitle')}
           </span>
         </span>
         {variant === 'desktop' ? (
@@ -316,12 +351,12 @@ export function ConversationSidebar({
         )}
       </div>
 
-      {showArchived ? (
+      {showArchived || showMemory ? (
         <div className="px-3 pt-1">
           <button
             type="button"
-            data-testid="archive-back"
-            onClick={() => switchMode(false)}
+            data-testid={showMemory ? 'memory-back' : 'archive-back'}
+            onClick={() => switchMode('chats')}
             className="border-border text-foreground hover:bg-muted bg-card flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-light transition-colors"
           >
             <Icons.ArrowLeft size={16} strokeWidth={1.5} />
@@ -341,260 +376,273 @@ export function ConversationSidebar({
         </div>
       )}
 
-      <div className="px-3 pt-2 pb-1">
-        <div className="border-border bg-muted/60 focus-within:border-primary-300 flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-colors">
-          <Icons.Search size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('pages.aiAssistant.historySearchPlaceholder')}
-            aria-label={t('pages.aiAssistant.historySearchPlaceholder')}
-            className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
-          />
-        </div>
-      </div>
+      {showMemory && <MemoryPanel />}
 
-      <div className="ai-chat-input-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2">
-        {conversationsQuery.isPending && (
-          <div className="space-y-2 px-1 pt-1" aria-hidden>
-            {[0, 1, 2, 3].map((row) => (
-              <div key={row} className="bg-muted h-12 animate-pulse rounded-xl" />
-            ))}
-          </div>
-        )}
-
-        {conversationsQuery.isError && (
-          <div className="flex flex-col items-start gap-2 px-2 pt-2">
-            <p className="text-muted-foreground text-xs leading-snug font-light">
-              {t('pages.aiAssistant.historyLoadError')}
-            </p>
-            <button
-              type="button"
-              onClick={() => void conversationsQuery.refetch()}
-              className="text-primary-600 hover:text-primary-700 inline-flex cursor-pointer items-center gap-1 text-xs font-medium"
-            >
-              <Icons.Reload size={12} strokeWidth={1.5} />
-              {t('pages.aiAssistant.historyRetry')}
-            </button>
-          </div>
-        )}
-
-        {conversationsQuery.isSuccess && !hasConversations && (
-          <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
-            {showArchived ? (
-              <Icons.Archive size={24} strokeWidth={1} className="text-muted-foreground/60" />
-            ) : (
-              <Icons.MessageMultiple01
-                size={24}
-                strokeWidth={1}
-                className="text-muted-foreground/60"
+      {!showMemory && (
+        <>
+          <div className="px-3 pt-2 pb-1">
+            <div className="border-border bg-muted/60 focus-within:border-primary-300 flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-colors">
+              <Icons.Search
+                size={14}
+                strokeWidth={1.5}
+                className="text-muted-foreground shrink-0"
               />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('pages.aiAssistant.historySearchPlaceholder')}
+                aria-label={t('pages.aiAssistant.historySearchPlaceholder')}
+                className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="ai-chat-input-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2">
+            {conversationsQuery.isPending && (
+              <div className="space-y-2 px-1 pt-1" aria-hidden>
+                {[0, 1, 2, 3].map((row) => (
+                  <div key={row} className="bg-muted h-12 animate-pulse rounded-xl" />
+                ))}
+              </div>
             )}
-            <p className="text-muted-foreground text-xs leading-snug font-light">
-              {showArchived
-                ? t('pages.aiAssistant.historyArchiveEmpty')
-                : t('pages.aiAssistant.historyEmpty')}
-            </p>
-          </div>
-        )}
 
-        {conversationsQuery.isSuccess && hasConversations && groups.length === 0 && (
-          <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
-            <Icons.Search size={24} strokeWidth={1} className="text-muted-foreground/60" />
-            <p className="text-muted-foreground text-xs leading-snug font-light">
-              {t('pages.aiAssistant.historyNoResults')}
-            </p>
-          </div>
-        )}
+            {conversationsQuery.isError && (
+              <div className="flex flex-col items-start gap-2 px-2 pt-2">
+                <p className="text-muted-foreground text-xs leading-snug font-light">
+                  {t('pages.aiAssistant.historyLoadError')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void conversationsQuery.refetch()}
+                  className="text-primary-600 hover:text-primary-700 inline-flex cursor-pointer items-center gap-1 text-xs font-medium"
+                >
+                  <Icons.Reload size={12} strokeWidth={1.5} />
+                  {t('pages.aiAssistant.historyRetry')}
+                </button>
+              </div>
+            )}
 
-        {groups.map((group) => (
-          <div key={group.key}>
-            <p className="text-muted-foreground inline-flex items-center gap-1 px-2 pt-3 pb-1 text-[11px] font-medium tracking-wide uppercase first:pt-1">
-              {group.key === 'pinned' && <Icons.Pin size={11} strokeWidth={2} aria-hidden />}
-              {t(GROUP_LABEL_KEYS[group.key])}
-            </p>
-            <ul className="space-y-0.5">
-              {group.items.map((item) => {
-                const ts = conversationTimestamp(item)
-                const isActive = item.id === activeConversationId
-                const isRenaming = item.id === renamingId
+            {conversationsQuery.isSuccess && !hasConversations && (
+              <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
+                {showArchived ? (
+                  <Icons.Archive size={24} strokeWidth={1} className="text-muted-foreground/60" />
+                ) : (
+                  <Icons.MessageMultiple01
+                    size={24}
+                    strokeWidth={1}
+                    className="text-muted-foreground/60"
+                  />
+                )}
+                <p className="text-muted-foreground text-xs leading-snug font-light">
+                  {showArchived
+                    ? t('pages.aiAssistant.historyArchiveEmpty')
+                    : t('pages.aiAssistant.historyEmpty')}
+                </p>
+              </div>
+            )}
 
-                if (isRenaming) {
-                  return (
-                    <li key={item.id}>
-                      <div
-                        className={cn(
-                          'bg-card rounded-xl border px-3 py-2',
-                          renameTooLong ? 'border-error-300' : 'border-primary-300'
-                        )}
-                      >
-                        <input
-                          type="text"
-                          // Focus the editor as soon as it mounts and select
-                          // the current name so typing replaces it (the
-                          // jsx-a11y/no-autofocus-safe equivalent: this is a
-                          // user-initiated inline edit, not a page landing).
-                          ref={(node) => {
-                            if (node && document.activeElement !== node) {
-                              node.focus()
-                              node.select()
-                            }
-                          }}
-                          value={renameDraft}
-                          data-testid="conversation-rename-input"
-                          aria-label={t('pages.aiAssistant.historyRename')}
-                          placeholder={t('pages.aiAssistant.historyRenamePlaceholder')}
-                          onChange={(event) => setRenameDraft(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              commitRename(item)
-                            } else if (event.key === 'Escape') {
-                              event.preventDefault()
-                              cancelRename()
-                            }
-                          }}
-                          onBlur={cancelRename}
-                          className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
-                        />
-                        {renameTooLong && (
-                          <p className="text-error-600 pt-0.5 text-[11px] font-light">
-                            {t('pages.aiAssistant.historyRenameTooLong', {
-                              max: MAX_TITLE_LENGTH,
-                            })}
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  )
-                }
+            {conversationsQuery.isSuccess && hasConversations && groups.length === 0 && (
+              <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
+                <Icons.Search size={24} strokeWidth={1} className="text-muted-foreground/60" />
+                <p className="text-muted-foreground text-xs leading-snug font-light">
+                  {t('pages.aiAssistant.historyNoResults')}
+                </p>
+              </div>
+            )}
 
-                return (
-                  <li key={item.id} className="group/convo relative">
-                    <button
-                      type="button"
-                      data-testid={`conversation-item-${item.id}`}
-                      aria-current={isActive ? 'true' : undefined}
-                      onClick={() => onSelectConversation(item.id)}
-                      onContextMenu={(event) => {
-                        event.preventDefault()
-                        setMenuId(item.id)
-                      }}
-                      title={new Date(ts).toLocaleString(language || 'en')}
-                      className={cn(
-                        'flex w-full cursor-pointer flex-col gap-0.5 rounded-xl border py-2 pr-9 pl-3 text-left transition-colors',
-                        isActive
-                          ? 'border-primary-200 bg-primary-50'
-                          : 'hover:bg-muted border-transparent'
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className={cn(
-                            'min-w-0 truncate text-sm font-light',
-                            isActive ? 'text-primary-700' : 'text-foreground'
-                          )}
-                        >
-                          {conversationLabel(item)}
-                        </span>
-                        {item.pinned && !showArchived && (
-                          <Icons.Pin
-                            size={12}
-                            strokeWidth={1.5}
-                            aria-hidden
+            {groups.map((group) => (
+              <div key={group.key}>
+                <p className="text-muted-foreground inline-flex items-center gap-1 px-2 pt-3 pb-1 text-[11px] font-medium tracking-wide uppercase first:pt-1">
+                  {group.key === 'pinned' && <Icons.Pin size={11} strokeWidth={2} aria-hidden />}
+                  {t(GROUP_LABEL_KEYS[group.key])}
+                </p>
+                <ul className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const ts = conversationTimestamp(item)
+                    const isActive = item.id === activeConversationId
+                    const isRenaming = item.id === renamingId
+
+                    if (isRenaming) {
+                      return (
+                        <li key={item.id}>
+                          <div
                             className={cn(
-                              'shrink-0',
-                              isActive ? 'text-primary-500' : 'text-muted-foreground'
+                              'bg-card rounded-xl border px-3 py-2',
+                              renameTooLong ? 'border-error-300' : 'border-primary-300'
                             )}
-                          />
-                        )}
-                      </span>
-                      <span className="text-muted-foreground truncate text-[11px] font-light">
-                        {formatDateTime(ts, nowTs, language)}
-                        {' · '}
-                        {formatRelativeTime(ts, nowTs, language)}
-                      </span>
-                    </button>
+                          >
+                            <input
+                              type="text"
+                              // Focus the editor as soon as it mounts and select
+                              // the current name so typing replaces it (the
+                              // jsx-a11y/no-autofocus-safe equivalent: this is a
+                              // user-initiated inline edit, not a page landing).
+                              ref={(node) => {
+                                if (node && document.activeElement !== node) {
+                                  node.focus()
+                                  node.select()
+                                }
+                              }}
+                              value={renameDraft}
+                              data-testid="conversation-rename-input"
+                              aria-label={t('pages.aiAssistant.historyRename')}
+                              placeholder={t('pages.aiAssistant.historyRenamePlaceholder')}
+                              onChange={(event) => setRenameDraft(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault()
+                                  commitRename(item)
+                                } else if (event.key === 'Escape') {
+                                  event.preventDefault()
+                                  cancelRename()
+                                }
+                              }}
+                              onBlur={cancelRename}
+                              className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
+                            />
+                            {renameTooLong && (
+                              <p className="text-error-600 pt-0.5 text-[11px] font-light">
+                                {t('pages.aiAssistant.historyRenameTooLong', {
+                                  max: MAX_TITLE_LENGTH,
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      )
+                    }
 
-                    <DropdownMenu
-                      modal={false}
-                      open={menuId === item.id}
-                      onOpenChange={(open) => setMenuId(open ? item.id : null)}
-                    >
-                      <DropdownMenuTrigger asChild>
+                    return (
+                      <li key={item.id} className="group/convo relative">
                         <button
                           type="button"
-                          data-testid={`conversation-menu-${item.id}`}
-                          aria-label={t('pages.aiAssistant.historyMenuAria')}
+                          data-testid={`conversation-item-${item.id}`}
+                          aria-current={isActive ? 'true' : undefined}
+                          onClick={() => onSelectConversation(item.id)}
+                          onContextMenu={(event) => {
+                            event.preventDefault()
+                            setMenuId(item.id)
+                          }}
+                          title={new Date(ts).toLocaleString(language || 'en')}
                           className={cn(
-                            'text-muted-foreground absolute top-1/2 right-1.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg opacity-0 transition-opacity',
-                            'hover:bg-muted hover:text-foreground group-hover/convo:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100',
-                            isActive && 'opacity-100'
+                            'flex w-full cursor-pointer flex-col gap-0.5 rounded-xl border py-2 pr-9 pl-3 text-left transition-colors',
+                            isActive
+                              ? 'border-primary-200 bg-primary-50'
+                              : 'hover:bg-muted border-transparent'
                           )}
                         >
-                          <Icons.MoreVertical size={15} strokeWidth={1.5} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="bg-card w-48">
-                        {!showArchived && (
-                          <DropdownMenuItem
-                            className={MENU_ITEM_CLASS}
-                            onSelect={() => handleTogglePin(item)}
-                          >
-                            {item.pinned ? (
-                              <>
-                                <Icons.PinOff size={14} strokeWidth={1.5} />
-                                {t('pages.aiAssistant.historyUnpin')}
-                              </>
-                            ) : (
-                              <>
-                                <Icons.Pin size={14} strokeWidth={1.5} />
-                                {t('pages.aiAssistant.historyPin')}
-                              </>
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className={cn(
+                                'min-w-0 truncate text-sm font-light',
+                                isActive ? 'text-primary-700' : 'text-foreground'
+                              )}
+                            >
+                              {conversationLabel(item)}
+                            </span>
+                            {item.pinned && !showArchived && (
+                              <Icons.Pin
+                                size={12}
+                                strokeWidth={1.5}
+                                aria-hidden
+                                className={cn(
+                                  'shrink-0',
+                                  isActive ? 'text-primary-500' : 'text-muted-foreground'
+                                )}
+                              />
                             )}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          className={MENU_ITEM_CLASS}
-                          onSelect={() => startRename(item)}
-                        >
-                          <Icons.PencilEdit size={14} strokeWidth={1.5} />
-                          {t('pages.aiAssistant.historyRename')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-muted" />
-                        <DropdownMenuItem
-                          className={MENU_ITEM_CLASS}
-                          onSelect={() => handleToggleArchived(item)}
-                        >
-                          {item.archived ? (
-                            <>
-                              <Icons.Unarchive size={14} strokeWidth={1.5} />
-                              {t('pages.aiAssistant.historyUnarchiveAction')}
-                            </>
-                          ) : (
-                            <>
-                              <Icons.Archive size={14} strokeWidth={1.5} />
-                              {t('pages.aiAssistant.historyArchiveAction')}
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+                          </span>
+                          <span className="text-muted-foreground truncate text-[11px] font-light">
+                            {formatDateTime(ts, nowTs, language)}
+                            {' · '}
+                            {formatRelativeTime(ts, nowTs, language)}
+                          </span>
+                        </button>
 
-      <div className="border-border/80 border-t px-3 py-2">
+                        <DropdownMenu
+                          modal={false}
+                          open={menuId === item.id}
+                          onOpenChange={(open) => setMenuId(open ? item.id : null)}
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              data-testid={`conversation-menu-${item.id}`}
+                              aria-label={t('pages.aiAssistant.historyMenuAria')}
+                              className={cn(
+                                'text-muted-foreground absolute top-1/2 right-1.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg opacity-0 transition-opacity',
+                                'hover:bg-muted hover:text-foreground group-hover/convo:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100',
+                                isActive && 'opacity-100'
+                              )}
+                            >
+                              <Icons.MoreVertical size={15} strokeWidth={1.5} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-card w-48">
+                            {!showArchived && (
+                              <DropdownMenuItem
+                                className={MENU_ITEM_CLASS}
+                                onSelect={() => handleTogglePin(item)}
+                              >
+                                {item.pinned ? (
+                                  <>
+                                    <Icons.PinOff size={14} strokeWidth={1.5} />
+                                    {t('pages.aiAssistant.historyUnpin')}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Icons.Pin size={14} strokeWidth={1.5} />
+                                    {t('pages.aiAssistant.historyPin')}
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              className={MENU_ITEM_CLASS}
+                              onSelect={() => startRename(item)}
+                            >
+                              <Icons.PencilEdit size={14} strokeWidth={1.5} />
+                              {t('pages.aiAssistant.historyRename')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-muted" />
+                            <DropdownMenuItem
+                              className={MENU_ITEM_CLASS}
+                              onSelect={() => handleToggleArchived(item)}
+                            >
+                              {item.archived ? (
+                                <>
+                                  <Icons.Unarchive size={14} strokeWidth={1.5} />
+                                  {t('pages.aiAssistant.historyUnarchiveAction')}
+                                </>
+                              ) : (
+                                <>
+                                  <Icons.Archive size={14} strokeWidth={1.5} />
+                                  {t('pages.aiAssistant.historyArchiveAction')}
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Режимы панели: архив и «Персоналізація» (память ассистента о
+          сотруднике). Повторный клик по подсвеченному режиму возвращает к
+          списку чатов — иначе из режима было бы два выхода с разным поведением. */}
+      <div className="border-border/80 flex flex-col gap-0.5 border-t px-3 py-2">
         <button
           type="button"
           data-testid="archive-toggle"
           aria-pressed={showArchived}
-          onClick={() => switchMode(!showArchived)}
+          onClick={() => switchMode(showArchived ? 'chats' : 'archive')}
           className={cn(
             'flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-light transition-colors',
             showArchived
@@ -604,6 +652,21 @@ export function ConversationSidebar({
         >
           <Icons.Archive size={16} strokeWidth={1.5} />
           {t('pages.aiAssistant.historyArchive')}
+        </button>
+        <button
+          type="button"
+          data-testid="memory-toggle"
+          aria-pressed={showMemory}
+          onClick={() => switchMode(showMemory ? 'chats' : 'memory')}
+          className={cn(
+            'flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-light transition-colors',
+            showMemory
+              ? 'bg-primary-50 text-primary-700'
+              : 'hover:bg-muted hover:text-foreground text-muted-foreground'
+          )}
+        >
+          <Icons.AiBrain03 size={16} strokeWidth={1.5} />
+          {t('pages.aiAssistant.memory.title')}
         </button>
       </div>
     </div>

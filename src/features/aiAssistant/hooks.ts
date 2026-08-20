@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createMemoryItem,
+  deleteMemoryItem,
   getConversation,
   getConversations,
+  getMemoryItems,
   markCitationStep,
   sendChatMessage,
   sendFeedback,
@@ -11,7 +14,9 @@ import {
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
   type AssistantFeedbackRequest,
+  type AssistantMemoryList,
   type AssistantMarkCitationRequest,
+  type CreateAssistantMemoryRequest,
   type SendChatMessageCallbacks,
 } from './api'
 
@@ -22,6 +27,8 @@ export const aiAssistantKeys = {
   conversations: (filters: AssistantConversationsFilters) =>
     [...aiAssistantKeys.all, 'conversations', filters] as const,
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
+  /** Персональная память сотрудника («Персоналізація»). */
+  memory: ['aiAssistant', 'memory'] as const,
 }
 
 /**
@@ -128,5 +135,65 @@ export function useSendFeedback() {
 export function useMarkCitation() {
   return useMutation({
     mutationFn: (payload: AssistantMarkCitationRequest) => markCitationStep(payload),
+  })
+}
+
+/**
+ * Персональная память ассистента для текущего сотрудника.
+ *
+ * `enabled` держит запрос выключенным, пока панель «Персоналізація» закрыта:
+ * сайдбар живёт на странице всегда, и лишний round-trip на каждом заходе в чат
+ * памяти не нужен.
+ */
+export function useAssistantMemory(enabled = true) {
+  return useQuery({
+    queryKey: aiAssistantKeys.memory,
+    queryFn: getMemoryItems,
+    enabled,
+    staleTime: 60_000,
+  })
+}
+
+export function useCreateAssistantMemory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateAssistantMemoryRequest) => createMemoryItem(payload),
+    onSuccess: () => {
+      // Сервер сам решает title/kind/source — забираем список целиком, а не
+      // дописываем в кеш ответ POST'а.
+      void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.memory })
+    },
+  })
+}
+
+/**
+ * Удаление факта с оптимистичным обновлением и откатом — по образцу архивации
+ * диалогов ({@link useUpdateAssistantConversation}): строка исчезает сразу, а
+ * упавший DELETE возвращает прежний список (вызывающий показывает тост).
+ */
+export function useDeleteAssistantMemory() {
+  const queryClient = useQueryClient()
+  return useMutation<void, unknown, number, { previous?: AssistantMemoryList }>({
+    mutationFn: (id: number) => deleteMemoryItem(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: aiAssistantKeys.memory })
+      const previous = queryClient.getQueryData<AssistantMemoryList>(aiAssistantKeys.memory)
+      if (previous) {
+        const items = previous.items.filter((item) => item.id !== id)
+        queryClient.setQueryData<AssistantMemoryList>(aiAssistantKeys.memory, {
+          items,
+          total: Math.max(0, previous.total - (previous.items.length - items.length)),
+        })
+      }
+      return { previous }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(aiAssistantKeys.memory, context.previous)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.memory })
+    },
   })
 }
