@@ -1,13 +1,26 @@
 // Quality service types (KAN-410). Mirror the Pydantic schemas in
 // api-prionex/services/quality/app/schemas/.
 
-export type CriterionScale = 'binary' | '0-5'
+// 'binary_critical' is the AI-rubric scale (purpose='ai' templates): a
+// yes/no criterion whose "no" is a critical miss. Scored like 'binary'
+// everywhere on the manual path — the criticality lives in the AI pipeline.
+export type CriterionScale = 'binary' | '0-5' | 'binary_critical'
+
+/** Scales a criterion may take on the manual trainer scorecard. */
+export const CRITERION_SCALES: CriterionScale[] = ['binary', '0-5', 'binary_critical']
+
+/** True for both yes/no scales — the 0..1 valued ones. */
+export function isBinaryScale(scale: CriterionScale): boolean {
+  return scale === 'binary' || scale === 'binary_critical'
+}
 
 export interface Criterion {
   key: string
   name: string
   scale: CriterionScale
   weight: number
+  /** AI rubrics carry an instruction for the model; manual templates don't. */
+  description?: string | null
 }
 
 export interface Section {
@@ -18,12 +31,20 @@ export interface Section {
 
 export type ScorecardType = 'client' | 'third_party'
 
+/**
+ * What a template is for: the trainer's manual scorecard, or the Call QA
+ * rubric the brain scores calls against. Optional on the wire — templates
+ * created before the split answer without the field and read as 'manual'.
+ */
+export type TemplatePurpose = 'manual' | 'ai'
+
 export interface ScorecardTemplate {
   id: number
   project_id: number
   name: string
   description: string | null
   call_type: 'inbound' | 'outbound' | null
+  purpose?: TemplatePurpose | null
   department_id: number | null
   // KAN-504: 'client' | 'third_party' for the two typed templates; null for
   // the legacy "Default Scorecard".
@@ -33,6 +54,78 @@ export interface ScorecardTemplate {
   created_by: number
   created_at: string
   updated_at: string
+}
+
+/** Body of POST /api/v1/quality/templates. */
+export interface TemplateCreatePayload {
+  name: string
+  description?: string | null
+  call_type?: 'inbound' | 'outbound' | null
+  purpose?: TemplatePurpose
+  department_id?: number | null
+  scorecard_type?: ScorecardType | null
+  sections: Section[]
+}
+
+/** Body of PUT /api/v1/quality/templates/{id} (full replace of the editable set). */
+export type TemplateUpdatePayload = Partial<TemplateCreatePayload>
+
+/** Filter set of GET /api/v1/quality/templates. */
+export interface TemplateListFilters {
+  include_archived?: boolean
+  purpose?: TemplatePurpose
+}
+
+// ----- Call QA listening rules: the critical-blocker dictionary -----
+
+/**
+ * Blocker categories, verbatim from the pipeline's `red_flags.py`. OPEN set
+ * on read (tolerant reader — an unknown category renders as its raw key);
+ * closed on write, since the editor only offers what the brain understands.
+ */
+export const BLOCKER_CATEGORIES = [
+  'profanity',
+  'threat',
+  'third_party_disclosure',
+  'misleading_legal',
+  'pressure',
+  'insult',
+  'data_violation',
+  'script_critical',
+] as const
+export type BlockerCategory = (typeof BLOCKER_CATEGORIES)[number]
+
+export const BLOCKER_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const
+export type BlockerSeverity = (typeof BLOCKER_SEVERITIES)[number]
+
+export const BLOCKER_LANGS = ['uk', 'ru'] as const
+export type BlockerLang = (typeof BLOCKER_LANGS)[number]
+
+export interface QaBlocker {
+  /** uuid — quality_db.blocker_dictionary.id. */
+  id: string
+  phrase: string
+  category: string
+  severity: string
+  lang: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string | null
+}
+
+export interface QaBlockerPayload {
+  phrase: string
+  category: BlockerCategory
+  severity: BlockerSeverity
+  lang: BlockerLang
+  is_active: boolean
+}
+
+export interface QaBlockerListFilters {
+  is_active?: boolean
+  category?: string
+  severity?: string
+  lang?: string
 }
 
 // Filled-in value for a single criterion. `value` is integer 0..5 for the

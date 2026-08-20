@@ -1,0 +1,43 @@
+/**
+ * Weight arithmetic for AI rubrics (`purpose='ai'` scorecard templates).
+ *
+ * quality-service rejects an AI rubric whose criteria weights don't add up
+ * to exactly 100 (the boевой `rubric.json` the brain scores against is built
+ * the same way). The editor mirrors that rule locally so the trainer sees
+ * the running total instead of discovering it in a 422.
+ */
+import type { Section } from '../types'
+
+export const RUBRIC_TOTAL_WEIGHT = 100
+
+/** Sum of every criterion weight across every section. Non-numeric → 0. */
+export function sumCriteriaWeights(sections: Section[]): number {
+  let total = 0
+  for (const section of sections) {
+    for (const criterion of section.criteria ?? []) {
+      const weight = Number(criterion.weight)
+      if (Number.isFinite(weight)) total += weight
+    }
+  }
+  // Weights are entered as integers, but a float creeping in through the API
+  // must not make the comparison flaky.
+  return Math.round(total * 100) / 100
+}
+
+export function isRubricWeightValid(sections: Section[]): boolean {
+  return sumCriteriaWeights(sections) === RUBRIC_TOTAL_WEIGHT
+}
+
+/** A key unique inside `taken`, derived from a human label where possible. */
+export function makeUniqueKey(label: string, taken: Set<string>, fallback: string): string {
+  const base =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 40) || fallback
+  if (!taken.has(base)) return base
+  let n = 2
+  while (taken.has(`${base}_${n}`)) n += 1
+  return `${base}_${n}`
+}

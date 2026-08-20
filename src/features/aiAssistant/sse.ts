@@ -106,8 +106,23 @@ export function parseSseChunk(text: string): SseFrame[] {
   return [...parser.push(text), ...parser.flush()]
 }
 
+/** CRM-side frame: the id of the dialog row this stream is persisted into. */
+export interface SseMetaPayload {
+  conversation_id?: number
+}
+
 /** Callbacks invoked as the assistant stream is consumed. */
 export interface SseStreamCallbacks {
+  /**
+   * CRM `meta` frame — the ONLY authoritative source of `conversation_id`.
+   *
+   * The brain's own `session` frame carries its internal gw key (a hex string
+   * like `06a76d1f72744d79`), NOT a row id: parsing it as a number yields NaN,
+   * the front keeps `conversation_id = 0`, and the next turn 404s with
+   * «Асистент зараз недоступний» (live prod bug, 20.08.2026). The proxy emits
+   * this frame right before relaying the brain — read the id from here.
+   */
+  onMeta?: (payload: SseMetaPayload) => void
   /** First frame: identifies the session the stream belongs to. */
   onSession?: (payload: SseSessionPayload) => void
   /** A text delta — accumulate to build the streamed answer. */
@@ -351,6 +366,9 @@ export function dispatchSseEvent(
   callbacks: SseStreamCallbacks
 ): 'done' | 'error' | undefined {
   switch (frame.event) {
+    case 'meta':
+      callbacks.onMeta?.(parseFrameData<SseMetaPayload>(frame) ?? {})
+      return undefined
     case 'session':
       callbacks.onSession?.(parseFrameData<SseSessionPayload>(frame) ?? {})
       return undefined

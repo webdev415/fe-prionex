@@ -23,6 +23,7 @@ import {
 } from '../hooks/useScorecards'
 import { useTemplates } from '../hooks/useTemplates'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
+import { isBinaryScale } from '../types'
 import type { Criterion, Section } from '../types'
 
 const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
@@ -626,7 +627,7 @@ interface CriterionRowProps {
 
 function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
   const { t } = useTranslation('common')
-  const isBinary = criterion.scale === 'binary'
+  const isBinary = isBinaryScale(criterion.scale)
   const needsScore = !disabled && Number(criterion.weight) > 0 && entry?.value == null
   return (
     <div
