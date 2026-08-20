@@ -141,3 +141,103 @@ describe('work format when the store user arrives incomplete', () => {
     expect(document.getElementById('work-format')).toHaveTextContent('Office')
   })
 })
+
+describe('a refresh landing in the middle of an edit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    state.user = tokenBuiltUser({ work_format: 'office' })
+  })
+
+  it('keeps what the user typed', async () => {
+    // The photo control refreshes the auth user after every upload, so this
+    // lands while the form is dirty rather than only on mount.
+    const { rerender } = render(<ProfileSettingsPage />)
+    const firstName = screen.getByDisplayValue('System')
+    fireEvent.change(firstName, { target: { value: 'Olena' } })
+
+    state.user = tokenBuiltUser({ work_format: 'office' })
+    rerender(<ProfileSettingsPage />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('Olena')).toBeInTheDocument())
+  })
+
+  it('still offers to save what the user typed', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    fireEvent.change(screen.getByDisplayValue('System'), { target: { value: 'Olena' } })
+    expect(cancelButton()).toBeInTheDocument()
+
+    state.user = tokenBuiltUser({ work_format: 'office' })
+    rerender(<ProfileSettingsPage />)
+
+    // The bar disappearing here would be the edit vanishing with no signal.
+    await waitFor(() => expect(cancelButton()).toBeInTheDocument())
+  })
+
+  it('does not revert a work format the user just picked', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    await choose('Remote')
+
+    state.user = tokenBuiltUser({ work_format: 'office' })
+    rerender(<ProfileSettingsPage />)
+
+    await waitFor(() => expect(document.getElementById('work-format')).toHaveTextContent('Remote'))
+  })
+
+  it('saves the format the user picked, not the one the refresh carried', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    await choose('Remote')
+
+    state.user = tokenBuiltUser({ work_format: 'office' })
+    rerender(<ProfileSettingsPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
+    expect(updateMyProfile.mock.calls[0][0].work_format).toBe('remote')
+  })
+
+  it('still adopts server values for fields the user has not touched', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    fireEvent.change(screen.getByDisplayValue('System'), { target: { value: 'Olena' } })
+
+    state.user = tokenBuiltUser({ work_format: 'office', lastName: 'Kovalchuk' })
+    rerender(<ProfileSettingsPage />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('Kovalchuk')).toBeInTheDocument())
+    expect(screen.getByDisplayValue('Olena')).toBeInTheDocument()
+  })
+})
+
+describe('a refresh landing after the user picked the value already displayed', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // The token fallback carries no work format, so the field shows its office
+    // default while the server may well hold remote.
+    state.user = tokenBuiltUser()
+  })
+
+  it('does not let the refresh overwrite the pick', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    await choose('Office')
+
+    state.user = tokenBuiltUser({ work_format: 'remote' })
+    rerender(<ProfileSettingsPage />)
+
+    // Nothing here is comparable - the pick matched what was on screen - so
+    // only the record that the user chose can keep it.
+    await waitFor(() => expect(document.getElementById('work-format')).toHaveTextContent('Office'))
+  })
+
+  it('saves the pick rather than the value the refresh carried', async () => {
+    const { rerender } = render(<ProfileSettingsPage />)
+    await choose('Office')
+
+    state.user = tokenBuiltUser({ work_format: 'remote' })
+    rerender(<ProfileSettingsPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
+    expect(updateMyProfile.mock.calls[0][0].work_format).toBe('office')
+  })
+})

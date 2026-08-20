@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -112,36 +112,72 @@ export function ProfileSettingsPage() {
     setForm((prev) => ({ ...prev, language: lang }))
   }
 
+  // Read inside the re-sync effect below, which must not re-run when they
+  // change - only when the user does.
+  const latest = useRef({ form, savedProfileSnapshot, workFormatTouched })
+  useEffect(() => {
+    latest.current = { form, savedProfileSnapshot, workFormatTouched }
+  }, [form, savedProfileSnapshot, workFormatTouched])
+
   // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
+  //
+  // A refresh can land in the middle of an edit: it runs on mount, and again
+  // after every photo upload or removal. So a server value is taken only for a
+  // field the user has not touched. Overwriting a touched one would discard
+  // what they typed, and because the snapshot moves in step the unsaved-changes
+  // bar would vanish with it - the edit would be gone with nothing to say so.
   useEffect(() => {
     if (!user) return
+
+    const {
+      form: current,
+      savedProfileSnapshot: saved,
+      workFormatTouched: touched,
+    } = latest.current
+    const serverLanguage = user.language
+      ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
+      : undefined
+
+    const edited = {
+      email: current.email !== saved.email,
+      first_name: current.first_name !== saved.first_name,
+      last_name: current.last_name !== saved.last_name,
+      timezone: current.timezone !== saved.timezone,
+      language: current.language !== saved.language,
+      // Picking the value already displayed leaves nothing to compare, which is
+      // what the flag is for. Without it the pick would be silently reverted
+      // here while the flag survived to save the reverted value.
+      work_format: touched || current.work_format !== saved.work_format,
+    }
+
+    const take = <T,>(isEdited: boolean, mine: T, incoming: T | undefined): T =>
+      isEdited || incoming === undefined ? mine : incoming
+
     setForm((prev) => ({
       ...prev,
       username: user.username || prev.username,
-      email: user.email || prev.email,
-      first_name: user.firstName || prev.first_name,
-      last_name: user.lastName || prev.last_name,
-      timezone: user.timezone || prev.timezone,
       agent_status: user.agent_status || prev.agent_status,
-      work_format: user.work_format ?? prev.work_format,
-      language: user.language
-        ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
-        : prev.language,
+      email: take(edited.email, prev.email, user.email || undefined),
+      first_name: take(edited.first_name, prev.first_name, user.firstName || undefined),
+      last_name: take(edited.last_name, prev.last_name, user.lastName || undefined),
+      timezone: take(edited.timezone, prev.timezone, user.timezone || undefined),
+      language: take(edited.language, prev.language, serverLanguage),
+      work_format: take(edited.work_format, prev.work_format, user.work_format ?? undefined),
     }))
-    // The snapshot is what the server holds, so it has to move with the same
-    // refresh. Seeded once it would drift: refreshUser runs on mount, the form
-    // takes the refreshed values and the stale snapshot then reads as an edit
-    // the user never made.
+
+    // The snapshot is what the server holds, so it always follows the server -
+    // no edited check here. That is what makes "changed" mean "differs from the
+    // server": an untouched field moves with it and reads as clean, while a
+    // field the form is holding an edit for stays different and keeps offering
+    // to save.
     setSavedProfileSnapshot((prev) => ({
       ...prev,
       email: user.email || prev.email,
       first_name: user.firstName || prev.first_name,
       last_name: user.lastName || prev.last_name,
       timezone: user.timezone || prev.timezone,
+      language: serverLanguage ?? prev.language,
       work_format: user.work_format ?? prev.work_format,
-      language: user.language
-        ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
-        : prev.language,
     }))
   }, [user])
 
