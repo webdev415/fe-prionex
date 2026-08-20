@@ -242,28 +242,25 @@ mechanism actually produces — or recorded as moot, with the reason.
         `runs-on: deploy-dev-preprod` and **only `run:` steps**. Confirm it is picked up at all.
         **Confirmed positively, run 917 (coordinator's dispatch): the run was created and executed
         on the story branch.** Dispatch reaches this runner from a non-default branch — see 2.6.
-  - [ ] 2.2 🔴 **Does the job image run `uses:` steps?** `deploy-base-dev-preprod:2026-08-07` is
+  - [x] 2.2 🔴 **Does the job image run `uses:` steps?** `deploy-base-dev-preprod:2026-08-07` is
         another team's image and its contents are recorded nowhere. `build.yml:107-124` records the
         failure shape for the `docker-build` label: an image with no Node runtime **does not fail
         informatively — it simply does not run any `uses:` step**. Probe with a trivial
         `uses: actions/checkout@v4` and check whether the step actually executed (assert on a file
         that only checkout could have created). If `uses:` does not work, `actions/checkout` and
         `docker/login-action` are both unavailable and every step must be plain `run:`.
-        🔴 **Run 917's job "8543" (the first, single-job version of this probe) reported `failure`
-        — but that version put the `uses:` step and its assertion in the same job as the plain
-        dispatch check, so a job-level red could not be told apart from an unrelated break. Design
-        fixed (this push): split into three separate jobs, matching this project's own
-        job-list-is-the-evidence convention. Not yet re-dispatched.**
-        **Decision taken now rather than blocked on a re-dispatch:** the evidence already points one
-        way — `build.yml:107-124` already found the *identical* failure shape (no Node runtime,
-        `uses:` steps silently do not run) on a **sibling** runner/image class in this same project,
-        and the single-job probe's failure is fully consistent with that same mechanism reproducing
-        here. `deploy-dev.yml` (Task 4/5/6/7, this push) is written in the **plain `run:` form**
-        (git clone, manual `docker login`) on that basis — valid regardless of the answer, since a
-        working `uses:` would only mean an available shortcut was not taken, not a wrong choice.
-        **The redesigned three-job probe stays pushed and is offered as a free, cheap
-        confirmation** — a coordinator dispatch of it would turn "consistent with precedent" into
-        "measured", but is not blocking further work.
+        ✅ **CLOSED NEGATIVELY, measured, run 920 (coordinator's dispatch of the redesigned
+        three-job probe).** Job 1 ("dispatch reaches the runner, plain `run:`") — **success.** Job 2
+        ("`uses:` steps actually populate the workspace — discriminating") — **failure.** Job 3
+        (identity/tools cross-check) — **success**, confirming the local-simulation numbers live.
+        Clean answer, exactly what the job split was for: **`uses:` steps do not execute on this
+        runner's job image** — job 2 isolates that specifically, with jobs 1 and 3 both green around
+        it, so the failure cannot be attributed to anything else in the same run. This matches
+        `build.yml:107-124`'s precedent exactly (no Node runtime, `uses:` steps silently do not run)
+        and confirms — not merely infers — that `deploy-dev.yml`'s **plain `run:` form is a
+        necessity, not a caution.** Run 917's original single-job probe is now understood
+        correctly in hindsight: that same mechanism was firing then too, the design just could not
+        say so on its own.
   - [x] 2.3 Record the job container's **identity**: `id -u`, `id -g`, `whoami`. D28 §4's H5
         amendment names this as inferred-not-measured — `1501:988` was the runner *supervisor*, not
         the job. This is the number Story 4.2's deferred AC2 clause (AC8 here) needs.
@@ -890,7 +887,10 @@ the coordinator dispatches and reports run ids).
 |---|---|---|---|
 | 915 | `push` | `07fb5b24` (the context push, predates this session) | — |
 | 916 | `push` | `e5856770` (this session's first push — cred resolution, budget, probe v1) | CI was still running at query time; outcome to be recorded when known |
-| 917 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, single-job version | **failure** — ambiguous by design (Task 2.2), redesigned into three jobs (this push) |
+| 917 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, single-job version | **failure** — ambiguous by design (Task 2.2), redesigned into three jobs |
+| 918 | `push` | `bcd98b4e` (`ci.yml`, deploy-dev.yml + three-job probe) | **success** |
+| 919 | `workflow_dispatch` | `deploy-dev.yml`, task 8551, first live dispatch (`ref=main`) | **failure**, <60s — diagnosed (Completion Note 3), fixed this push (`preflight` job) |
+| 920 | `workflow_dispatch` | `probe-deploy-dev-preprod.yml`, three-job version | job 1 success, job 2 **failure** (Task 2.2 closed negatively, measured), job 3 success |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -904,16 +904,50 @@ exactly on 7). Final closure remains the coordinator's, by query, after the merg
 /orgs/CRM/actions/secrets`, 2026-08-20). Task 3 rewritten in place — no repo secret, no s1
 dependency for AC7.
 
-**2. `uses:` steps do not deliver a working checkout on this runner's job image (Task 2.2),
-inferred from a strong precedent, not yet independently confirmed.** Run 917's single-job probe
-failed; that design could not distinguish the `uses:` failure from an unrelated one, so the probe
-was rewritten into three separate jobs (`probe-deploy-dev-preprod.yml`, this push) matching this
-project's own job-list-is-the-evidence convention. `deploy-dev.yml` is written entirely in plain
-`run:` form on the strength of `build.yml:107-124`'s identical failure shape on a sibling
-runner/image — a redispatch of the three-job probe would turn this from "consistent with
-precedent" into "measured," and is offered as a free confirmation, not a blocker.
+**2. `uses:` steps do not deliver a working checkout on this runner's job image (Task 2.2) —
+✅ measured, run 920, not just inferred.** Run 917's single-job probe failed ambiguously; redesigned
+into three separate jobs (`probe-deploy-dev-preprod.yml`) matching this project's own
+job-list-is-the-evidence convention. Run 920: job 1 (plain `run:`) success, job 2 (`uses:`,
+discriminating) **failure**, job 3 (identity cross-check) success — the failure isolates cleanly to
+the `uses:` mechanism itself, with both neighbouring jobs green. Confirms `build.yml:107-124`'s
+identical failure shape on this sibling runner/image. `deploy-dev.yml`'s plain-`run:` form
+(written ahead of this confirmation, on the strength of the precedent alone) is now known to be a
+necessity, not merely a cautious default.
 
-**3. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
+**3. Run 919 — `deploy-dev.yml`'s first live dispatch failed in under 60 seconds, with no
+retrievable log; diagnosed by construction and by SSH, not guessed at.** Job "Deploy a ref to the
+DEV stand" (task 8551) ran ~16:00:28–16:00:3x local (per the runner's own container log, which
+only records task start times, not step output — Forgejo job logs are not retrievable from this
+runner either, same standing limitation as the CI runners). **Ruled out by direct reproduction on
+s1, through the EXACT job network path** (`--network forgejo-runner-crm-deploy_runner` +
+`--add-host=git.crm-prionex.com:10.70.0.1`, the same `docker run` shape Task 2's local simulation
+already used): DNS resolves correctly, `curl` to the registry's `/v2/` base returns a clean `401`,
+and `docker login` with *deliberately wrong* credentials fails with a clean `unauthorized` — not a
+timeout, not a network error. **The network/DNS path is not the cause.**
+**Leading hypothesis, not yet directly confirmed: `secrets.REGISTRY_USER_RO`/
+`secrets.REGISTRY_TOKEN_RO` may exist at the ORG level (confirmed by the coordinator's own query)
+without being GRANTED to this specific repository** — Forgejo, like GitHub, can scope an org
+secret to selected repositories, and `REGISTRY_USER`/`REGISTRY_TOKEN_RW` already working for
+`fe-prionex` does not prove the newer RO pair carries the same grant. This would produce exactly
+the observed shape: the workflow's own guard (Task 3.5, "REGISTRY_USER_RO / REGISTRY_TOKEN_RO is
+empty or unset") fires within the first two real steps, well under 60 seconds, and aborts before
+anything touches the stand.
+**Confirmed by SSH: the stand was NOT touched.** `fe-prionex-dev`'s `Created`/`StartedAt` are both
+`2026-08-19T17:55:25` — unchanged since Story 4.2 first provisioned it, `State=running`,
+`Health=healthy`, and `docker compose ls` still shows the project's config file as
+`/root/crm-prionex/fe-prionex-dev/docker-compose.stand.yml` (the host-directory path from Story
+4.2), not a job-workspace path from this run. **The fail-closed property held — nothing ran `down`
+before aborting**, which is itself evidence for Task 8's matrix, even though this dispatch was not
+an intentional discriminating row.
+**Fix, "workflow-as-evidence" per the coordinator's own suggestion:** a new `preflight` job added
+ahead of `deploy` (`needs: preflight`) — checks the two secrets' *lengths* (never their values) and
+confirms registry reachability independent of credentials, entirely on its own, so its PASS/FAIL is
+visible in the run's job list without any log access, exactly like the probe redesign. Bug caught
+while writing it: `${#REG_USER}` alone crashes under `set -euo pipefail` ("unbound variable") if
+the secret resolves to genuinely unset rather than empty — fixed to `${REG_USER:-}` first, so the
+diagnostic cannot itself crash on the exact condition it exists to detect.
+
+**4. Local simulation of the deploy job (SSH, s1) closed three subtasks before spending a real
 dispatch.** Job identity is uid 0/root (not the runner supervisor's `1501:988` — corrects D28 §4's
 own H5 amendment); docker/compose/git/curl/jq/wget versions recorded; the mounted socket reaches
 the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-resolution mechanism
@@ -921,7 +955,7 @@ the real host daemon and `crm-dev-network`. Separately, the registry v2 digest-r
 (`fe_reg_4_2_ro`, Story 4.2's) *before* being written into `deploy-dev.yml` — the exact HTTP
 status/header shapes the workflow's own fail-closed guard (Task 5.4) now classifies.
 
-**4. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
+**5. `deploy-dev.yml` written end to end** (Tasks 1b, 3.5/3.6, 4, 5, 6, 7) — sequence resolve →
 credential login → digest resolve (fail-closed on 401/404/other) → pull → render `.env` in the job
 workspace (digest-pinned `DOCKER_IMAGE`, `FRONTEND_PORT=127.0.0.1:8082`) → capture network id →
 `down` → `up -d` → confirm network unchanged → health-poll → anchored container/label check →
@@ -938,6 +972,9 @@ job, explicitly, not this one's.**
   now per Task 2.7's note, to be deleted before merge
 
 **Modified**
+- `.forgejo/workflows/deploy-dev.yml` — added the `preflight` job (diagnosing run 919: secret
+  length/presence and registry reachability, independently job-listed, no log access needed);
+  `deploy` now `needs: preflight`
 - `_bmad-output/implementation-artifacts/4-3-deploy-a-feature-branch-to-dev-on-demand.md` — this
   file: `Status`, Task 1/2/3 checkboxes and resolutions, Dev Notes §10, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-3-…` → `in-progress`
@@ -949,3 +986,4 @@ job, explicitly, not this one's.**
 | 2026-08-20 | Story contexted against `main` @ `162f1722`. Inheritance from Story 4.2 bound from source (story file, `### Review Findings`, D28 + its four amendment blocks, `deferred-work.md`'s Story 4.2 findings and code-review-deferred sections). **Three decisions taken autonomously, subject to Oleg's veto:** (1) mechanism = D28 §4 option 5, render compose + the five variables in the job workspace and act through the held `docker.sock` — options 1/3 rejected for read-write exposure to every tenant on the four-label runner, option 2 for coupling the `api-prionex` tree, option 4 retained only as the credential fallback; (2) registry auth = new repo secrets `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` with `docker login` inside the job and a workspace-scoped `DOCKER_CONFIG`, discharging H4 and shipping the credential detector the deferred list says does not exist; (3) `runs-on: deploy-dev-preprod`, the most specific of the runner's four labels. **AC3's stated order is amended** — `down` before pull contradicts Story 4.7's *"the stand keeps serving its previous version"*; sequence is resolve → pull → `down` → `up -d` → health-check. **AC7 and AC8 added** for the two inherited constraints. H1's tag-expiry deadline carried: primary path is this story's first successful deploy, fallback trigger 2026-08-30 (Oleg). M7's `127.0.0.1:8082` is rendered by the workflow, making Oleg's decision self-applying and idempotent. Concurrency/`flock` (4.4), Slack (4.5), shared definition (4.8) recorded as non-goals |
 | 2026-08-20 | **Registry-credential blocker resolved (coordinator): `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` are existing org-level secrets, not minted.** Task 3 rewritten. Budget declared before the first push (baseline requested, not self-queried — this session does not touch the Forgejo API this cycle). Local SSH simulation on s1 answers Task 2.3/2.4/2.5 without a dispatch. First probe pushed (single job); run 917 came back `failure`, ambiguous by design |
 | 2026-08-20 | **Probe redesigned into three jobs after run 917's ambiguous single-job result** (coordinator's report: dispatch-from-non-default-branch confirmed working; the `uses:` question stayed undetermined). `deploy-dev.yml` written in full, in the plain-`run:` form the precedent (`build.yml:107-124`) and the ambiguous-but-consistent probe result both point to — registry digest resolution proven live against the real registry (200/401/404) with a real credential before being written into the workflow. Tasks 1b/3/4/5/6/7 marked implemented, pending Task 8's live verification |
+| 2026-08-20 | **Run 920: `uses:` steps confirmed (not inferred) to not execute on this runner's job image — Task 2.2 closed negatively, measured.** Run 919: `deploy-dev.yml`'s first live dispatch (`ref=main`) failed in <60s. Diagnosed by reproducing the exact job network path on s1 via SSH — DNS, registry reachability, and `docker login` failure mode all clean, ruling out a network cause; leading hypothesis is the org secrets existing but not being granted to this repository specifically. Confirmed by SSH that the stand was untouched (fail-closed held). Fix: a new `preflight` job ahead of `deploy`, reporting secret presence (by length, never value) and registry reachability independently, so the run's job list alone (no log access) will show which is true on the next dispatch. Caught and fixed a real bug while writing it: `${#VAR}` crashes under `set -u` on a genuinely unset variable — changed to default-to-empty first |

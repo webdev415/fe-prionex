@@ -72,7 +72,64 @@ env:
   IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
 
 jobs:
+  # ── Diagnostic job, added after run 919 failed in <60s with no retrievable log ────────────────
+  # SSH on s1 ruled out the network path: the exact job network (`forgejo-runner-crm-deploy_runner`
+  # + the runner's own `--add-host=git.crm-prionex.com:10.70.0.1`) resolves DNS correctly and a
+  # `docker login` with deliberately wrong credentials fails cleanly with "unauthorized" — a real
+  # auth response, not a network timeout. That leaves the leading hypothesis: `secrets.
+  # REGISTRY_USER_RO` / `secrets.REGISTRY_TOKEN_RO` — confirmed to EXIST at org level
+  # (`GET /orgs/CRM/actions/secrets`) — may not be GRANTED to this specific repository the way
+  # `REGISTRY_USER`/`REGISTRY_TOKEN_RW` already are (org secrets can be scoped to selected
+  # repositories). This job tests exactly that, split out on its own so its PASS/FAIL is visible in
+  # the run's job list without any log access — the same reason the probe workflow was redesigned
+  # into three jobs after run 917's ambiguous single-job result.
+  preflight:
+    name: "0. Preflight — do the org secrets reach this repo? (diagnosing run 919's early failure)"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 3
+    steps:
+      - name: Check REGISTRY_USER_RO / REGISTRY_TOKEN_RO are non-empty, without printing them
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+        run: |
+          set -euo pipefail
+          # `${#REG_USER}` alone would crash under `set -u` ("unbound variable") if the secret
+          # resolves to fully unset rather than an empty string — default to empty first, exactly
+          # the failure mode this step exists to detect, not one it should crash on instead.
+          REG_USER_VAL="${REG_USER:-}"
+          REG_TOKEN_VAL="${REG_TOKEN:-}"
+          USER_LEN=${#REG_USER_VAL}
+          TOKEN_LEN=${#REG_TOKEN_VAL}
+          echo "REGISTRY_USER_RO length: ${USER_LEN} (0 means empty/not visible to this repo)"
+          echo "REGISTRY_TOKEN_RO length: ${TOKEN_LEN} (0 means empty/not visible to this repo)"
+          if [ "$USER_LEN" -eq 0 ] || [ "$TOKEN_LEN" -eq 0 ]; then
+            echo "FAIL: at least one of REGISTRY_USER_RO/REGISTRY_TOKEN_RO is empty in THIS"\
+                 "repository's secrets context, even though the org secret exists. Diagnoses run"\
+                 "919's early failure directly — the deploy job's own guard (Task 3.5) fires on"\
+                 "exactly this and never reaches the registry at all. Fix is an org/repo access"\
+                 "grant, not a code change."
+            exit 1
+          fi
+          echo "OK: both secrets are non-empty in this repository's context."
+
+      - name: Confirm registry reachability from this exact runner/network, independent of creds
+        run: |
+          set -euo pipefail
+          CODE="$(curl -sS -m 10 -o /dev/null -w '%{http_code}' https://git.crm-prionex.com/v2/)"
+          echo "GET https://git.crm-prionex.com/v2/ -> HTTP ${CODE} (401 expected: reachable,"\
+               "unauthenticated)"
+          if [ "$CODE" != "401" ]; then
+            echo "FAIL: expected 401 (reachable but unauthenticated), got '${CODE}'. This points at"\
+                 "a network/DNS problem specific to this job's own execution, not a credential"\
+                 "problem — already ruled out once by SSH simulation on the same host/network, so a"\
+                 "different result here would itself be a finding."
+            exit 1
+          fi
+          echo "OK: registry is reachable and answering correctly from this runner's own execution."
+
   deploy:
+    needs: preflight
     name: "Deploy a ref to the DEV stand"
     runs-on: deploy-dev-preprod
     timeout-minutes: 10
