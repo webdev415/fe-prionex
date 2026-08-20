@@ -4,7 +4,7 @@ baseline_commit: 162f1722d614034037807dcd7af95752b67edf2b
 
 # Story 4.3: Deploy a Feature Branch to DEV on Demand
 
-Status: in-progress
+Status: review
 
 <!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested**. 5 high, 12 medium,
      12 low, 4 deferred, 8 dismissed, plus 3 decision-needed for Oleg — see `### Review Findings`.
@@ -466,10 +466,9 @@ mechanism actually produces — or recorded as moot, with the reason.
         force. State plainly what this does **not** prove — that a reboot with the network absent
         produces a silent restart loop, which stays open for 4.9.
 
-- [ ] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)** —
-      reopened by code review (H2/H3/DN2): 8.2 needs re-earning now that `digest-resolve-test` no
-      longer gates `deploy` (DN1's fix); 8.3's message needs reconfirming with the new simulation
-      marker (M11's fix). Pending the coordinator's redispatch.
+- [x] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)** —
+      reopened by code review (H2/H3/DN2), now re-closed: runs 948/949/950 (below) confirm the
+      fix-pass live, exactly as DN2 required — 8.2 and 8.3 re-earned for real, not merely re-argued.
   > *"Every new guard ships a live outcome matrix including a discriminating run"* —
   > `epic-3-retro-2026-08-18.md:78`. Each row below is a **real dispatch on the real runner**, not a
   > local simulation. Record run id, trigger, exit code and the message the guard printed.
@@ -490,32 +489,37 @@ mechanism actually produces — or recorded as moot, with the reason.
         host-side, final: `fe-prionex-dev` healthy, `Created`/`StartedAt` at run 938's own window,
         digest `sha256:e66149a83...` — matching, network id unchanged since 2026-08-13, no orphaned
         containers/networks, one harmless dangling image layer from 937's own build (removed).
-  - [ ] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
+        **Third PASS, run 950, `ref=main` — the control run for the whole fix-pass ("did we break
+        anything fixing everything else").** SUCCESS. Confirmed host-side, final: `fe-prionex-dev`
+        healthy, `Created`/`StartedAt` at run 950's own window; digest re-resolved live against the
+        real registry and matched exactly — `sha256:e66149a83...`, `main` has not moved since run
+        938. `docker compose ls` config path is `stand-checkout-950` — direct, live confirmation that
+        code review M4's `$GITHUB_RUN_ID`-suffixed workspace path fix is genuinely in effect, not
+        merely written. `crm-dev-network` id unchanged since 2026-08-13; fallback HTTP and Kong guard
+        both clean (`200`, Kong's own `no Route matched` on `/api/`); no orphaned containers.
+  - [x] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
         message names the missing tag, **and the stand is still serving its previous version
         afterwards** (this is the row that proves the reordering in AC3 was real).
-        🔴 **Run 935's result reopened by code review (H2/H3/DN2): `deploy` was SKIPPED, not run —
-        the message that fired was `digest-resolve-test`'s own generic one, not AC4's actual
-        classifier at `:394-401`, which never executed.** The story's earlier framing of the skip as
-        "the intended discriminating shape" was itself an undocumented weakening of this row's
-        stated requirement (*"message names the missing tag"*) — corrected, not defended. Now that
-        `digest-resolve-test` no longer gates `deploy` (DN1), the same ref
-        (`044bf348c3f0c7aaf16c276a2d602e908e3b3ecd`) should make `deploy` itself run and reach its
-        own 404 classifier. **Pending the coordinator's re-dispatch of this exact ref** — run number
-        to be recorded here once it lands.
+        **Run 948, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd` — re-earned for real after DN1's
+        fix, not the run-935 skip this row originally (wrongly) claimed.** `deploy` FAILURE, and this
+        time it genuinely ran and reached its OWN AC4 classifier (`digest-resolve-test` no longer
+        gates it) — the coordinator confirmed `deploy` reached its own 404 classifier live. Stand
+        untouched by construction, not directly re-observed between 948 and 950 (950 ran after and
+        would have overwritten any host-side trace either way): the digest-resolve step aborts before
+        `down` anywhere in the sequence, so a 404 there cannot reach the stand regardless. This
+        closes DN2's own stated requirement: the row now proves what it claims, not merely what a
+        sibling job proved on its behalf.
   - [x] 8.3 **FAIL, discriminating (AC7):** the registry credential deliberately wrong or absent →
         `unauthorized` path, message names the credential, **not** the tag. This is the row that
         proves the detector distinguishes the two causes.
-        **Run 936, `ref=main`, `simulate_bad_credential=true`.** Ladder all **success** (`preflight`/
-        `clone-test`/`digest-resolve-test` all reflect the REAL credential, untouched by the input —
-        exactly as designed) — `deploy` **FAILURE**, at the digest-resolve step's own 401
-        classifier, the code this row exists to exercise. Confirms the detector fires on a
-        credential problem specifically, isolated from every other guard in the chain.
-        🔴 **Refinement per code review M11, not a re-earning:** the 401 classifier's message did
-        not yet carry a simulation marker at run 936 — indistinguishable, in a log excerpt or an
-        alert, from a real credential outage. Fixed this push (the message now appends `[SIMULATED
-        via simulate_bad_credential=true — NOT a real credential outage]`). **Pending the
-        coordinator's re-dispatch** of the same input to confirm the marker prints — run number to
-        be recorded here once it lands.
+        **Run 936 (original), refined by run 949, `ref=main`, `simulate_bad_credential=true` — same
+        shape, now WITH the M11 simulation marker.** Ladder all **success** (`preflight`/`clone-test`
+        reflect the REAL credential, untouched by the input — `digest-resolve-test` is no longer part
+        of the gate at all after DN1) — `deploy` **FAILURE** at the digest-resolve step's own 401
+        classifier, confirmed by the coordinator to carry the `[SIMULATED via
+        simulate_bad_credential=true — NOT a real credential outage]` marker this fix-pass added.
+        Closes M11: a log excerpt or alert seeing only the classifier's own line can no longer
+        mistake this for a real credential outage.
   - [x] 8.4 **FAIL, discriminating (AC5):** deploy against a stopped/absent stand, or a container
         that never becomes healthy → the health check reports failure and does **not** report healthy
         from another container. The 4.2 precedent for a real discriminating negative is D28 §2's
@@ -636,13 +640,10 @@ mechanism actually produces — or recorded as moot, with the reason.
         AC5 row lived on a separate, now-deleted throwaway branch (`test/4-3-unhealthy-probe`) that
         was never based on and never merged into this branch — `docker-compose.stand.yml` on
         `story-4-3/pr-1-context` is byte-identical to `main`'s.
-  - [ ] 10.4 Update `sprint-status.yaml` → `review` when handing off.
-        L12 caught this unchecked while the file itself already read `review` in that diff — since
-        corrected the other direction: the code review's own "changes requested" verdict reset
-        `sprint-status.yaml` to `in-progress` (the review tooling's own doing, found already in the
-        working tree at the start of this fix-pass round, not this session's edit). Left unchecked,
-        accurately, until the coordinator's post-fix dispatches confirm the patches live and this
-        goes back to `review` for real — not flipped preemptively a second time.
+  - [x] 10.4 Update `sprint-status.yaml` → `review` when handing off.
+        ✅ Done for real this time — runs 948/949/950 confirmed the fix-pass live (Task 8, above),
+        so `Status`/`sprint-status.yaml` move to `review` now on genuine post-confirmation grounds,
+        not preemptively the way the earlier (corrected) attempt did.
   - [ ] 10.5 Re-query the run ledger **after the merge lands** and close it (Task 1.6).
 
 ## Dev Notes
@@ -1041,6 +1042,10 @@ the coordinator dispatches and reports run ids).
 | 936 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main`, `simulate_bad_credential=true` | Task 8.3's row. Ladder all **success** (reflects the real credential, untouched), `deploy` **FAILURE** at the digest-resolve step's own 401 classifier |
 | 937 | `workflow_dispatch` | `deploy-dev.yml`, `ref=test/4-3-unhealthy-probe` | Task 8.4's row. `deploy` **FAILURE**, ~60s, health-poll's own bounded fail path. Stand deliberately, expectedly left unhealthy — flagged in advance, restored by 938 |
 | 938 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main` (recovery) | **SUCCESS**, ~60s. Restores the stand; second live PASS; confirms the recovery/idempotent path against a genuinely broken prior state, not just an already-good one. Final host-side check clean: healthy, correct digest, no orphaned containers/networks, one harmless dangling image layer removed |
+| 939-947 | `push` (`ci.yml`) | `push` of `4ed00b97` (code review fix-pass) — `ci.yml`'s own lint/typecheck/test/build/image jobs | outcome to be confirmed by the coordinator's closing query (D4) — self-report is not closure |
+| 948 | `workflow_dispatch` | `deploy-dev.yml`, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd` | Task 8.2 v2's row, post-DN1/H1-fix. `deploy` **FAILURE** — reached its own AC4/404 classifier for real this time (`digest-resolve-test` no longer gates it) |
+| 949 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main`, `simulate_bad_credential=true` | Task 8.3 v2's row, post-M11-fix. `deploy` **FAILURE** at the 401 classifier, confirmed carrying the new simulation marker |
+| 950 | `workflow_dispatch` | `deploy-dev.yml`, `ref=main` (control) | **SUCCESS** — the fix-pass's own control run ("did fixing everything else break anything"). Confirmed host-side: healthy, digest unchanged, `stand-checkout-950` workspace path live-confirms the `$GITHUB_RUN_ID` suffix fix (M4) |
 
 **PR not open yet** — one row per push so far, not two; the multiplier starts applying only once a
 PR exists. **Total above is a floor, not a ceiling**, per Dev Notes §9 and every prior story's own
@@ -1377,6 +1382,22 @@ was individually forced to fail and confirmed to print its own message rather th
 the fixes against the real runner, not merely local simulation — the coordinator's three planned
 redispatches (the historical-SHA ref again, `ref=main` with `simulate_bad_credential=true` again,
 and a clean control `ref=main`) will supply the run numbers this note is written ahead of.
+
+**14. Fix-pass confirmed live — runs 948/949/950, exactly per DN2's plan. Task 8 re-closed for
+real.** Run 948 (`ref=044bf348…`, the same historical SHA as run 935): `deploy` **FAILURE**, and
+this time genuinely reached its own AC4/404 classifier — `digest-resolve-test` no longer intercepts
+it (DN1's fix confirmed live, not merely reasoned about). Run 949 (`ref=main`,
+`simulate_bad_credential=true`): `deploy` **FAILURE** at the 401 classifier, confirmed carrying the
+`[SIMULATED ...]` marker M11 added — no longer indistinguishable from a real outage in a log
+excerpt. Run 950 (`ref=main`, control): **SUCCESS** — the fix-pass's own "did fixing seven guards,
+six verification steps and a dozen other things break anything" check. Host-side, final: healthy,
+digest `sha256:e66149a83...` unchanged (re-resolved live against the registry, `main` has not moved
+since run 938), `crm-dev-network` id unchanged since 2026-08-13, fallback HTTP and Kong guard both
+clean. **One live confirmation beyond what was asked for**: `docker compose ls`'s config path reads
+`.../stand-checkout-950/docker-compose.stand.yml` — direct proof the `$GITHUB_RUN_ID`-suffixed
+workspace path (M4's fix) is genuinely active in production, not just written and locally
+simulated. Task 8's top-level checkbox, 8.2, and 8.3 all re-closed on this evidence. `Status` and
+`sprint-status.yaml` moved to `review` — this time on confirmed grounds, not preemptively.
 
 ### Review Findings
 
@@ -1981,3 +2002,4 @@ site, for a reader who wants to verify rather than trust:
 | 2026-08-20 | **Matrix complete, story closed out.** Runs 935/936/937/938 landed exactly as designed (AC4 gated-skip, AC7 isolated 401, AC5 bounded fail with expected collateral, recovery PASS doubling as the harder idempotency case). Final host-side verification clean: healthy, correct digest, no orphaned containers/networks. Cleanup: `test/4-3-unhealthy-probe` branch deleted, `probe-deploy-dev-preprod.yml` deleted (Task 2.7's condition met), M1 closed on s1. `simulate_bad_credential` kept deliberately as a permanent, documented, safe regression hook. Added **D29** (`docs/migration-decisions.md`), amended D28, closed out `deferred-work.md` (M1, H4, Kong-guard item's guard half, M7), corrected the stale workflows `README.md`. `Status`/`sprint-status.yaml` → `review`. Ledger not self-closed — coordinator's query, per D4 |
 | 2026-08-20 | Code review (Opus, three parallel layers: adversarial, edge-case, acceptance): **changes requested**. 5 high, 12 medium, 12 low, 4 deferred, 8 dismissed, 3 decision-needed — see `### Review Findings`. Verified clean by inspection: NFR5, no `${{ }}` in any `run:` body (all 23 parsed), no credential secret-half in argv, AC3's reordering, AC6's fixed inspect form, the anchored `docker ps` filter, AC8's decision record, and `simulate_bad_credential`'s no-privilege-escalation claim. Every high finding is in the **verification layer**, not the mechanism. **H1**: seven more guards abort before their own explanatory message can print under `set -euo pipefail` (verified by execution) — including the missing-`Docker-Content-Digest` guard, which is dead code, and AC5's fallback-HTTP message, unreachable for the very failure that cost runs 925/927. **H2/DN1**: `digest-resolve-test` gates `deploy` while issuing the same request with the same credential, so AC4's 404 and AC7's 401 classifiers never run on a real failure and the message that does fire blames the credential for a missing image — which also makes `deferred-work.md`'s H4 closure true only in the simulated case. **H3/DN2**: consequently Task 8.2's AC4 row did not execute the code it certifies (run 935's `deploy` was SKIPPED), and Task 8.6 credits runs 919/922 to a guard that did not exist at the time. **H3(AC5)**: the container name and port are hardcoded in every verification step rather than read from the `.env.deploy` the job writes. **H4**: nothing verifies the pulled image was built from the ref checked out, though `build.yml` already stamps `org.opencontainers.image.revision`. **DN3**: H1's closure holds for the primary path only — the DR path this decision preserves still pins the tag that expires ~2026-09-02. Downgraded on evidence: one layer's CRITICAL "argument injection is RCE" — the http transport ignores `--upload-pack` (tested), kept as M10 |
 | 2026-08-20 | **Code review fix-pass: DN1-DN3 (Oleg's decisions) implemented, all 5 High and all 24 Medium/Low findings addressed.** `deploy` now `needs: [preflight, clone-test]` only, `digest-resolve-test` ungated (DN1/H2); Task 8.2 reopened (run 935's `deploy` was skipped, never earned its own AC4 message), Task 8.6 reworded (919/922 are mechanism evidence, not a live guard row) per DN2; DR path rewritten (`deploy-dev.yml ref=main` as primary, a local never-pushed `dr-backup-dev` docker tag on s1 as emergency fallback) per DN3. H1's seven dead-guard sites fixed — caught and fixed a genuine bug while doing it: curl's own `-w '%{http_code}'` already writes `000` on total failure, so `|| echo '000'` doubled it into `000000`; fixed to `|| true`, with the analogous `docker inspect`-writes-a-newline case fixed via explicit if/then. H3 (AC5 hardcoded) parameterized from `.env.deploy` in all six verification steps. H4 (no revision check) added. H5 (overclaimed rollback) reframed to name its real window, in both the workflow header and D29 §5. All 12 Medium and 12 Low findings fixed — ref normalization, sanitizer parity, run-id-suffixed workspace paths, bounded fetch/pull, health-poll crash-loop detection, pre-down label guard, registry resolution hardening, ref-shape validation, simulated-credential message marker, and more. Local simulation, including forced-failure testing of every H1 site, confirmed clean before this push |
+| 2026-08-20 | **Fix-pass confirmed live, runs 948/949/950, exactly per DN2's plan — Task 8 re-closed for real, Status/sprint-status.yaml → review.** Run 948 (same historical SHA as 935): `deploy` genuinely reached its own AC4/404 classifier this time, confirming DN1's fix live. Run 949 (`simulate_bad_credential=true`): 401 classifier confirmed carrying M11's new simulation marker. Run 950 (control `ref=main`): SUCCESS, confirming the fix-pass broke nothing — host-side verification clean (healthy, digest unchanged, network stable), and `docker compose ls`'s config path (`stand-checkout-950`) directly confirms M4's `$GITHUB_RUN_ID` workspace-path fix is live in production, not only locally simulated |
