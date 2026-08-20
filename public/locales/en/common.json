@@ -6307,7 +6307,12 @@
           "card": "Card"
         },
         "email": "E-mail",
-        "dateOfBirthWithAge": "{{date}} ({{age}} years)"
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)",
+        "easypayMethods": {
+          "card": "Card",
+          "google_pay": "Google Pay",
+          "apple_pay": "Apple Pay"
+        }
       },
       "debtSummary": {
         "title": "Debt Summary",

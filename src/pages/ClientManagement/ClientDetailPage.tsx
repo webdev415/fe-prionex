@@ -160,6 +160,7 @@ import { TagSelectorModal } from './components/TagSelectorModal'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
+import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
@@ -1216,6 +1217,7 @@ export function ClientDetailPage() {
           paymentDate: string
           amount: number
           paymentMethod: string
+          easypayMethod?: string | null
           status: string
           paymentDistribution: string
           employee: string
@@ -1253,6 +1255,7 @@ export function ClientDetailPage() {
             systemPayments.push({
               ...mapped,
               paymentMethod: p.payment_method,
+              easypayMethod: p.easypay_method,
               status: p.status,
               paymentDistribution: p.payment_type ?? '-',
               employee: p.assigned_user_full_name ?? '-',
@@ -2354,10 +2357,15 @@ export function ClientDetailPage() {
       key: 'paymentMethod',
       header: t('pages.clients.detail.tableHeaders.paymentMethod'),
       align: 'left',
-      render: (payment) =>
-        backendToFrontendPaymentMethod(
-          payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
-        ),
+      render: (payment) => (
+        <PaymentMethodCell
+          baseLabel={backendToFrontendPaymentMethod(
+            payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
+          )}
+          easypayMethod={payment.easypayMethod}
+          t={t}
+        />
+      ),
     },
     {
       key: 'status',
