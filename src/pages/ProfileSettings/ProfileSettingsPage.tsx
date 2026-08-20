@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { ProfilePhotoField } from './ProfilePhotoField'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
@@ -49,6 +50,7 @@ export function ProfileSettingsPage() {
       language: currentLanguage,
       timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
+      work_format: (user?.work_format ?? '') as '' | 'office' | 'remote',
       currentPassword: '',
       newPassword: '',
     }
@@ -64,6 +66,7 @@ export function ProfileSettingsPage() {
     phone: initialForm.phone,
     language: initialForm.language,
     timezone: initialForm.timezone,
+    work_format: initialForm.work_format,
   }))
 
   // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
@@ -77,6 +80,7 @@ export function ProfileSettingsPage() {
       last_name: user.lastName || prev.last_name,
       timezone: user.timezone || prev.timezone,
       agent_status: user.agent_status || prev.agent_status,
+      work_format: user.work_format ?? prev.work_format,
       language: user.language
         ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
         : prev.language,
@@ -91,7 +95,8 @@ export function ProfileSettingsPage() {
       form.middle_name !== savedProfileSnapshot.middle_name ||
       form.phone !== savedProfileSnapshot.phone ||
       form.language !== savedProfileSnapshot.language ||
-      form.timezone !== savedProfileSnapshot.timezone
+      form.timezone !== savedProfileSnapshot.timezone ||
+      form.work_format !== savedProfileSnapshot.work_format
     )
   }, [form, savedProfileSnapshot])
 
@@ -155,6 +160,7 @@ export function ProfileSettingsPage() {
       language: form.language || undefined,
       timezone: form.timezone || undefined,
       agent_status: user?.is_agent ? form.agent_status : undefined,
+      work_format: form.work_format || undefined,
     }
 
     try {
@@ -169,6 +175,7 @@ export function ProfileSettingsPage() {
         phone: form.phone,
         language: form.language,
         timezone: form.timezone,
+        work_format: form.work_format,
       })
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
@@ -305,6 +312,15 @@ export function ProfileSettingsPage() {
               {t('pages.users.modals.edit.title')}
             </span>
             <div className="flex w-full flex-col items-center gap-6 self-stretch">
+              <div className="flex w-full self-stretch">
+                <ProfilePhotoField
+                  userId={user?.id ? Number(user.id) : null}
+                  firstName={form.first_name}
+                  lastName={form.last_name}
+                  fullName={user?.fullName}
+                  avatarUrl={user?.avatar_url}
+                />
+              </div>
               <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}
@@ -364,6 +380,36 @@ export function ProfileSettingsPage() {
                     value={form.language}
                     onValueChange={(v: string) => setForm({ ...form, language: v as 'en' | 'uk' })}
                   />
+                </div>
+
+                <div className="flex w-full flex-col gap-2 self-stretch">
+                  <Label htmlFor="work-format">
+                    {t('pages.profileSettings.workFormat.label', 'Work format')}
+                  </Label>
+                  <Select
+                    value={form.work_format || 'unset'}
+                    onValueChange={(v: string) =>
+                      setForm({
+                        ...form,
+                        work_format: v === 'unset' ? '' : (v as 'office' | 'remote'),
+                      })
+                    }
+                  >
+                    <SelectTrigger id="work-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unset">
+                        {t('pages.profileSettings.workFormat.unset', 'Not specified')}
+                      </SelectItem>
+                      <SelectItem value="office">
+                        {t('pages.profileSettings.workFormat.office', 'Office')}
+                      </SelectItem>
+                      <SelectItem value="remote">
+                        {t('pages.profileSettings.workFormat.remote', 'Remote')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex w-full flex-col gap-2 self-stretch">

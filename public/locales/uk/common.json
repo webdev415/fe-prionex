@@ -10311,6 +10311,24 @@
       "confirmDeleteValueTitle": "Видалити значення?",
       "confirmDeleteValue": "Видалити «{{name}}»? Значення прибереться з усіх контактів, але залишиться видимим в історії тегів.",
       "valueDeleted": "Значення видалено"
+    },
+    "profileSettings": {
+      "photo": {
+        "upload": "Завантажити фото",
+        "replace": "Замінити фото",
+        "remove": "Видалити",
+        "hint": "JPEG, PNG або WebP, до 2 МБ",
+        "wrongType": "Оберіть зображення у форматі JPEG, PNG або WebP",
+        "tooLarge": "Фото має бути не більшим за 2 МБ",
+        "uploaded": "Фото оновлено",
+        "removed": "Фото видалено"
+      },
+      "workFormat": {
+        "label": "Формат роботи",
+        "unset": "Не вказано",
+        "office": "Офіс",
+        "remote": "Віддалено"
+      }
     }
   },
   "contactTypes": {

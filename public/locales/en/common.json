@@ -10292,6 +10292,24 @@
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted"
+    },
+    "profileSettings": {
+      "photo": {
+        "upload": "Upload photo",
+        "replace": "Replace photo",
+        "remove": "Remove",
+        "hint": "JPEG, PNG or WebP, up to 2 MB",
+        "wrongType": "Choose a JPEG, PNG or WebP image",
+        "tooLarge": "The photo must be 2 MB or smaller",
+        "uploaded": "Photo updated",
+        "removed": "Photo removed"
+      },
+      "workFormat": {
+        "label": "Work format",
+        "unset": "Not specified",
+        "office": "Office",
+        "remote": "Remote"
+      }
     }
   },
   "contactTypes": {
