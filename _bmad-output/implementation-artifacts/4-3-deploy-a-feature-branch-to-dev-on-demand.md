@@ -4,7 +4,14 @@ baseline_commit: 162f1722d614034037807dcd7af95752b67edf2b
 
 # Story 4.3: Deploy a Feature Branch to DEV on Demand
 
-Status: review
+Status: in-progress
+
+<!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested**. 5 high, 12 medium,
+     12 low, 4 deferred, 8 dismissed, plus 3 decision-needed for Oleg — see `### Review Findings`.
+     Status returned to `in-progress` because the patch findings are left as action items, not
+     applied. The mechanism, the credential design and the AC amendments all hold; the findings are
+     concentrated in the verification layer. -->
+
 
 <!-- Contexted 2026-08-20 against `main` at 162f1722 (Story 4.2 closed the same day, PR #58).
      This story inherits TWO named blockers from Story 4.2's code review, both recorded with
@@ -459,7 +466,10 @@ mechanism actually produces — or recorded as moot, with the reason.
         force. State plainly what this does **not** prove — that a reboot with the network absent
         produces a silent restart loop, which stays open for 4.9.
 
-- [x] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)**
+- [ ] **Task 8 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)** —
+      reopened by code review (H2/H3/DN2): 8.2 needs re-earning now that `digest-resolve-test` no
+      longer gates `deploy` (DN1's fix); 8.3's message needs reconfirming with the new simulation
+      marker (M11's fix). Pending the coordinator's redispatch.
   > *"Every new guard ships a live outcome matrix including a discriminating run"* —
   > `epic-3-retro-2026-08-18.md:78`. Each row below is a **real dispatch on the real runner**, not a
   > local simulation. Record run id, trigger, exit code and the message the guard printed.
@@ -480,16 +490,18 @@ mechanism actually produces — or recorded as moot, with the reason.
         host-side, final: `fe-prionex-dev` healthy, `Created`/`StartedAt` at run 938's own window,
         digest `sha256:e66149a83...` — matching, network id unchanged since 2026-08-13, no orphaned
         containers/networks, one harmless dangling image layer from 937's own build (removed).
-  - [x] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
+  - [ ] 8.2 **FAIL, discriminating (AC4):** a ref with no built image → `manifest unknown` path,
         message names the missing tag, **and the stand is still serving its previous version
         afterwards** (this is the row that proves the reordering in AC3 was real).
-        **Run 935, `ref=044bf348c3f0c7aaf16c276a2d602e908e3b3ecd`** (a real historical commit SHA,
-        confirmed fetchable and confirmed to have no built image, before the dispatch — see
-        Completion Note 11). `preflight` **success**, `clone-test` **success**, `digest-resolve-test`
-        **FAILURE** (404/manifest-unknown, exactly as pre-verified), `deploy` **SKIPPED** — the
-        gate held, and the skip is itself the "stand untouched" proof: `down` is a step *inside*
-        `deploy`, and `deploy` never ran at all. **This is the intended discriminating shape for
-        this ladder design**, not an incomplete test — recorded as designed, not as a gap.
+        🔴 **Run 935's result reopened by code review (H2/H3/DN2): `deploy` was SKIPPED, not run —
+        the message that fired was `digest-resolve-test`'s own generic one, not AC4's actual
+        classifier at `:394-401`, which never executed.** The story's earlier framing of the skip as
+        "the intended discriminating shape" was itself an undocumented weakening of this row's
+        stated requirement (*"message names the missing tag"*) — corrected, not defended. Now that
+        `digest-resolve-test` no longer gates `deploy` (DN1), the same ref
+        (`044bf348c3f0c7aaf16c276a2d602e908e3b3ecd`) should make `deploy` itself run and reach its
+        own 404 classifier. **Pending the coordinator's re-dispatch of this exact ref** — run number
+        to be recorded here once it lands.
   - [x] 8.3 **FAIL, discriminating (AC7):** the registry credential deliberately wrong or absent →
         `unauthorized` path, message names the credential, **not** the tag. This is the row that
         proves the detector distinguishes the two causes.
@@ -498,6 +510,12 @@ mechanism actually produces — or recorded as moot, with the reason.
         exactly as designed) — `deploy` **FAILURE**, at the digest-resolve step's own 401
         classifier, the code this row exists to exercise. Confirms the detector fires on a
         credential problem specifically, isolated from every other guard in the chain.
+        🔴 **Refinement per code review M11, not a re-earning:** the 401 classifier's message did
+        not yet carry a simulation marker at run 936 — indistinguishable, in a log excerpt or an
+        alert, from a real credential outage. Fixed this push (the message now appends `[SIMULATED
+        via simulate_bad_credential=true — NOT a real credential outage]`). **Pending the
+        coordinator's re-dispatch** of the same input to confirm the marker prints — run number to
+        be recorded here once it lands.
   - [x] 8.4 **FAIL, discriminating (AC5):** deploy against a stopped/absent stand, or a container
         that never becomes healthy → the health check reports failure and does **not** report healthy
         from another container. The 4.2 precedent for a real discriminating negative is D28 §2's
@@ -521,16 +539,18 @@ mechanism actually produces — or recorded as moot, with the reason.
         equality comparison itself would still correctly reject it. The anchoring is the correct,
         self-documenting way to express "exactly this one" rather than relying on that equality
         form's incidental safety — demonstrated, not merely asserted.
-  - [x] 8.6 **FAIL, discriminating (git-fetch auth) — added this round after runs 919/922, not in
-        the original four rows.** The "Obtain docker-compose.stand.yml" step's own credential guard
-        (`github.token` empty) fails in under 60 seconds, before any registry or stand action.
-        **Already proven, post-hoc, by runs 919 and 922** — both failed via exactly this path (an
-        anonymous `git fetch` of a private repo, before the `github.token` fix existed in this
-        workflow at all), confirmed by direct SSH reproduction on s1 (the exact job network path,
-        no credential: `fatal: could not read Username ... No such device or address`, <1s), not
-        by log access (Completion Notes 3-4). No fresh dispatch spent to re-earn this row — the two
-        historical runs already are it, per the coordinator's own instruction to record them as
-        such rather than re-run a known-negative case.
+  - [x] 8.6 **Evidence of a MECHANISM, not a live row for a guard — reworded per code review
+        H3/DN2, corrected from an earlier overclaim.** The earlier text credited runs 919/922 to
+        "the `github.token`-empty guard" as if that guard's own FAIL path had fired live — it had
+        not, and could not have: the guard did not exist in the workflow at the time of those two
+        runs (they predate the `github.token` fix entirely). What 919/922 actually demonstrate,
+        correctly stated: an anonymous `git fetch` of this private repo fails fast and
+        non-interactively (`fatal: could not read Username ... No such device or address`, <1s) —
+        the underlying MECHANISM the later guard was built to detect and refuse closed on. Confirmed
+        by direct SSH reproduction on s1 (the exact job network path, no credential), not by log
+        access (Completion Notes 3-4). The guard's own live FAIL path — `github.token` present in
+        context but somehow empty — has no discriminating row yet, and manufacturing one would
+        require an artificial org-secret outage; left open rather than claimed.
 
 - [x] **Task 9 — Record the decisions (AC8)**
   - [x] 9.1 New D-record in `docs/migration-decisions.md` (**Russian**, D-series; next free number —
@@ -581,6 +601,16 @@ mechanism actually produces — or recorded as moot, with the reason.
         tag at all. The stand no longer depends on that tag's continued existence in any way; its
         deletion on 2026-09-02 is now a non-event for this stand. The 2026-08-30 fallback trigger
         is moot — never needed.
+        🔴 **Correction (code review DN3): the closure above was true for the PRIMARY path only,
+        and this story did not say so at the time.** The DR path (`~/crm-prionex/fe-prionex-dev/`,
+        preserved explicitly by AC2's amendment and D29 §7) still pointed at the same expiring tag
+        — this story never updated the host `.env`, and Task 4.7 was checked `[x]` on D29 §7's own
+        sentence without a Debug Log entry showing it was actually exercised against that file as it
+        stood. Fixed, decided by Oleg: the DR path itself is rewritten (see DN3 above and
+        `deferred-work.md`'s H1 block) — dispatching `deploy-dev.yml ref=main` is now the primary DR
+        path (no stale tag dependency at all), with a local, never-pushed `dr-backup-dev` docker tag
+        on s1 as the narrower emergency fallback if Forgejo itself is unreachable. H1 is genuinely
+        closed now, for both paths, not only the one this story originally checked.
   - [x] 9.5 Update the `README.md` in `.forgejo/workflows/` if it still claims the directory is
         "intentionally empty of workflows" — it is stale, and this story adds the first deploy
         workflow.
@@ -607,6 +637,12 @@ mechanism actually produces — or recorded as moot, with the reason.
         was never based on and never merged into this branch — `docker-compose.stand.yml` on
         `story-4-3/pr-1-context` is byte-identical to `main`'s.
   - [ ] 10.4 Update `sprint-status.yaml` → `review` when handing off.
+        L12 caught this unchecked while the file itself already read `review` in that diff — since
+        corrected the other direction: the code review's own "changes requested" verdict reset
+        `sprint-status.yaml` to `in-progress` (the review tooling's own doing, found already in the
+        working tree at the start of this fix-pass round, not this session's edit). Left unchecked,
+        accurately, until the coordinator's post-fix dispatches confirm the patches live and this
+        goes back to `review` for real — not flipped preemptively a second time.
   - [ ] 10.5 Re-query the run ledger **after the merge lands** and close it (Task 1.6).
 
 ## Dev Notes
@@ -1302,6 +1338,561 @@ stale `.forgejo/workflows/README.md` corrected. `Status` → `review`, `sprint-s
 Run budget ledger: not self-closed — the coordinator queries and closes it (D4), asked for
 explicitly in this round's final report.
 
+**13. Code review fix-pass — three of Oleg's own decisions (DN1-DN3) implemented, all 5 High, all
+24 Medium/Low findings addressed, and a real bug caught IN the fix itself before it shipped.**
+DN1: `digest-resolve-test` dropped from `deploy`'s `needs:` (was masking AC4/AC7's own classifiers
+on every real failure — H2); kept as an ungated, parallel diagnostic with the same classification
+`deploy`'s own step carries, so it stays informative on its own. `clone-test` stays a gate (it
+duplicates no tag-specific classifier). DN2: Task 8.2 reopened — run 935's `deploy` was SKIPPED,
+never reached AC4's own message, and the earlier framing of that as "the intended shape" was an
+undocumented weakening of the row's own stated requirement, corrected rather than defended. Task
+8.6 reworded — runs 919/922 are evidence of the underlying MECHANISM (an unauthenticated fetch
+fails fast), not a live row for a guard that did not exist yet at the time. DN3: the DR path was
+found still pinning the very tag H1 was about — this story never touched the host `.env`. Rewritten
+end to end: primary DR path is now "dispatch `deploy-dev.yml ref=main`" (no host access, always
+fresh); a local, never-pushed `dr-backup-dev` docker tag created on s1 as the narrower emergency
+fallback if Forgejo itself is unreachable (registry retention cannot see a tag that was never
+pushed). H1's `deferred-work.md` closure corrected to reflect both paths, not only the one this
+story originally checked.
+H1 (7 guards dying before their own message): fixed at every named site plus three more the
+pattern implied. **A real bug was caught doing this, not merely applied by rote**: the natural fix
+for an HTTP-status capture looked like `CODE="$(curl ... -w '%{http_code}' ... || echo '000')"` —
+local testing (forced connection-refused and DNS-failure cases) showed this produces `000000`, not
+`000`, because curl's own `-w` format ALREADY writes `000` to its own stdout on total failure while
+still exiting nonzero, so the `|| echo` fallback doubles it. Fixed to `|| true` throughout. The
+identical class of bug turned up independently in two `docker inspect`-based captures (`docker
+inspect` on a nonexistent target also writes a bare newline to stdout on failure) — fixed with an
+explicit `if ! X="$(cmd)"; then X="fallback"; fi` instead. Every one of the 9 affected sites was
+re-verified against a fresh forced failure after the fix, not assumed correct from the pattern
+alone. H3 (AC5 hardcoded): all six verification steps now read the stand's own identity back from
+`.env.deploy`. H4 (no revision cross-check): added to the checkout step, comparing
+`org.opencontainers.image.revision` against checkout HEAD. H5 (overclaimed rollback framing):
+header comment and D29 §5 now name the exact window (pull-failure only) the AC3 reorder protects.
+All 12 Medium and 12 Low findings addressed — see the Review Findings section's own resolution
+ledger for the exact site of each.
+**Local simulation confirmed clean after every fix** — YAML parses, `bash -n` passes on all
+extracted `run:` bodies, no stray `${{ }}`, `deploy` needs the right two jobs, and every H1 site
+was individually forced to fail and confirmed to print its own message rather than abort silently.
+**Task 8 reopened, not closed**: 8.2 and 8.3's message both need a fresh live dispatch to confirm
+the fixes against the real runner, not merely local simulation — the coordinator's three planned
+redispatches (the historical-SHA ref again, `ref=main` with `simulate_bad_credential=true` again,
+and a clean control `ref=main`) will supply the run numbers this note is written ahead of.
+
+### Review Findings
+
+Code review 2026-08-20 (Opus, three parallel layers: adversarial, edge-case, acceptance). **5 high,
+12 medium, 12 low, 4 deferred, 8 dismissed.** Verdict: **changes requested** — the mechanism is
+sound, the amendments are properly recorded, the credential design is clean, and D28 §4 option 5 is
+genuinely proven end to end on the real host. Every high finding is in the **verification layer**:
+the steps that check this story's construction, and the rows that certify them.
+
+🔴 **The through-line.** This story diagnosed two guards that lied about their own cause (AC6's
+`.RepoDigests` template error, the loopback-unreachable health check) and fixed both. The class was
+not swept: **seven more guards abort before their own explanatory message can print** (H1, verified
+by execution), and **the ladder gate makes AC4's and AC7's classifiers unreachable on every real
+failure while printing a message that names the wrong subsystem** (H2). H2 also means the AC4 row of
+the live matrix did not execute the code it certifies (H3), and that `deferred-work.md`'s H4 closure
+is over-claimed.
+
+⚠️ **Reviewer-model caveat, carried forward:** this review ran on Opus, the same tier as the
+implementation. Only the fresh-context half of the "reviewer ≠ implementer" invariant holds.
+
+✅ **Verified clean, by inspection not assertion:** NFR5 (`.github/` untouched — checked against the
+diff's own file list); no `${{ }}` in any `run:` body (all 23 parsed); no credential secret-half in
+argv anywhere (`--password-stdin`, `curl --config -`, `GIT_CONFIG_*`) — and the deliberate deviation
+from api-prionex's `http.extraheader` argv form is correct and better than its source; AC3's
+reordering; AC6's fixed `.Image`-then-image-inspect form; the anchored `docker ps` filter plus the
+compose-project-label assertion; AC8's decision record; `simulate_bad_credential`'s
+no-privilege-escalation claim (see the dismissed list).
+
+#### Decision needed
+
+- [x] [Review][Decision] **DN1 — H2's fix is a design choice with different costs: classify in the
+      ladder, or stop letting the ladder gate `deploy`.** `deploy` is
+      `needs: [preflight, clone-test, digest-resolve-test]` (`deploy-dev.yml:264`), and
+      `digest-resolve-test` issues the *same* request with the *same* credential as the deploy job's
+      own digest step. So on any real dispatch: a missing image → `digest-resolve-test` gets 404 →
+      prints *"expected 200 resolving ${TAG} with the workflow's own credential … a different result
+      here, with the workflow's OWN credential specifically, would itself be a finding (this
+      credential lacking a grant/scope the equivalent one has)"* (`:253-257`) → `deploy` **SKIPPED** →
+      AC4's two-cause 404 classifier (`:394-401`) never runs. A genuinely revoked
+      `REGISTRY_TOKEN_RO` → 401 → the same generic message → AC7's 401 classifier (`:386-392`) never
+      runs. **The message that does fire sends the operator to the credential when the cause is a
+      missing image** — the exact defect class this story fixed twice elsewhere.
+      Consequence for the record: `deferred-work.md`'s H4 closure (*"the detector … now running on
+      every dispatch, not merely available"*) is true of the shipped code only in the simulated case,
+      because `simulate_bad_credential` is wired into `deploy` alone and deliberately leaves the
+      ladder green (`:355-361`). The only live proof of AC7's detector required routing around the
+      gate that masks it in production.
+      **Options:** (a) give `digest-resolve-test` the same 401/404/`*)` classification as
+      `:374-409` — cheapest, keeps the ladder's job-list-is-the-evidence value; (b) drop `clone-test`
+      and `digest-resolve-test` from `deploy`'s `needs:` so the classifying step is the one that
+      reports, keeping them as ungated diagnostics; (c) delete the ladder now that its investigation
+      is closed and let `deploy` classify. Each changes what a future run's job list means, so this
+      is Oleg's call, not a mechanical patch.
+      ✅ **DECIDED (Oleg): hybrid.** `digest-resolve-test` dropped from `deploy`'s `needs:` (option
+      b, for that job specifically) — kept in the file as an ungated, parallel diagnostic, given the
+      same 401/404/`000`/`*)` classification `deploy`'s own step carries (folding in option (a)'s
+      own value) so it stays informative on its own merits, not only as a former gate.
+      `clone-test` STAYS a gate — it does not duplicate any tag-specific classifier `deploy` owns
+      (it tests repo-checkout access, a different resource than the registry), so gating on it
+      wastes no distinct message; it only pre-empts a checkout `deploy` would have failed identically.
+      `deploy: needs: [preflight, clone-test]` now.
+- [x] [Review][Decision] **DN2 — two live-matrix rows do not prove what they claim; re-earning them
+      costs dispatches against a governed budget.** retro-E5 requires *"a live outcome matrix
+      including a discriminating run"*, and Task 8's own preamble requires each row to *"record run
+      id, trigger, exit code **and the message the guard printed**"*.
+      **Row 8.2 (AC4):** requires *"message names the missing tag"*. Run 935's `deploy` was
+      **SKIPPED** (the story records this), so that message never printed; what printed was DN1's
+      misdirecting one. The story reframes the skip as *"the intended discriminating shape for this
+      ladder design, not an incomplete test"* — that is an undocumented weakening of the row's own
+      stated requirement.
+      **Row 8.6 (git-fetch auth):** credits runs 919/922 to the `github.token`-empty guard
+      (`:447-453`). That guard did not exist at 919/922 — the failure then was an *anonymous* fetch,
+      a different code path in a different version of the file. A plausible inference, not a live row.
+      **Also structural:** no row records "the message the guard printed", because logs are
+      unretrievable from this runner (Completion Note 3) — so every *"the message names X"* claim in
+      this story is unverifiable as written. And several shipped guards have no failing row at all:
+      the Kong alias guard (`:672-706`, the recurring guard `deferred-work.md` specifically asked
+      for), the network-id-unchanged guard (`:554-565`), the sanitizer's two refusals (`:291-305`),
+      and the missing-`Docker-Content-Digest` branch (`:377-382` — which H1 shows can never run).
+      **Options:** (a) correct the rows to claim only what they prove, and say plainly that message
+      text is not verifiable on this runner; (b) spend dispatches to re-earn 8.2 and 8.6 properly
+      after DN1 is fixed; (c) both. Budget-governed, so Oleg's call.
+      ✅ **DECIDED (Oleg): both — 8.2 reworked and re-earned live after DN1's fix (deploy now
+      genuinely reaches its own AC4 classifier since digest-resolve-test no longer gates it); 8.6
+      reworded honestly (919/922 credited as evidence of the underlying MECHANISM — an
+      unauthenticated fetch of a private repo fails fast — not to a guard that did not exist at the
+      time; the `github.token`-empty guard itself gets no live row yet, pending a future dispatch
+      that can exercise it without an org-secret outage).** New rows to be recorded once the
+      coordinator's post-fix dispatches land.
+- [x] [Review][Decision] **DN3 — the DR path this decision leans on still pins a tag that expires
+      ~2026-09-02, and closing it means touching s1.** AC2's amendment and D29 §7 keep
+      `~/crm-prionex/fe-prionex-dev/` as *"the stand's record and its manual/DR path"*. Nothing in
+      this story records updating that directory's `.env`, which still carries
+      `DOCKER_IMAGE=…:sha-62e2ff8dc215-dev` (Story 4.2's H1). H1 is declared **closed** by Task 9.4,
+      D29 and Completion Note 10 — but it is closed for the **primary path only**: the workflow no
+      longer reads that file, while the DR path it explicitly preserves would recreate the stand on a
+      deleted tag. Related: Task 4.7 (DR path still works) is checked `[x]` on the strength of D29
+      §7's one sentence, with no Debug Log entry or command output — and had it been run against the
+      host `.env` as it stands, it would have recreated the stand on the old pinned image,
+      contradicting Completion Note 12's recorded final state. **Options:** (a) update the host `.env`
+      on s1 to the current digest and record it; (b) declare the DR path digest-agnostic and rewrite
+      H1's closure to say the primary path only; (c) retire the host directory as a DR path. Requires
+      Oleg's host access and his intent for the DR path.
+      ✅ **DECIDED (Oleg): DR path rewritten, not just re-scoped.** Primary DR path is now "dispatch
+      `deploy-dev.yml` with `ref=main`" — no host access needed, always resolves the current digest
+      fresh, never a stale pinned tag. Narrower emergency fallback (only if Forgejo itself is
+      unreachable): a local, never-pushed docker tag on s1,
+      `git.crm-prionex.com/crm/fe-prionex:dr-backup-dev`, pointing at the live digest — created via
+      SSH this round, immune to the registry's `remove_days=14` rule (that rule only ever acts on
+      rows in the registry, not a local host tag). Host `.env` deliberately left as-is; neither path
+      requires updating it in advance. Full rewrite: `docs/migration-decisions.md` D28's amendment
+      and D29 §5/§7 (both amended, not rewritten), `deferred-work.md`'s H1 block (closure corrected).
+
+#### High
+
+- [x] [Review][Patch] **H1 — seven guards abort before their own explanatory message can print,
+      under this file's own `set -euo pipefail`.** Verified by execution, not inference: `X="$(cmd)"`
+      aborts the step at `cmd`'s exit status, so the `if` beneath it never runs. Sites, worst first:
+      `deploy-dev.yml:376` — `DIGEST="$(grep -i '^docker-content-digest:' … | tr … | awk …)"`; `grep`
+      exits 1 when the header is absent, so the *"registry answered 200 but no Docker-Content-Digest
+      header … refusing to guess"* guard at `:377-382` **can never execute**.
+      `:634` — `CODE="$(docker run --rm --network host … curl …)"`; curl exits 7 on connection
+      refused, so AC5's fallback-HTTP message at `:636-641` is unreachable for the single most likely
+      failure — **the exact failure that cost runs 925 and 927**, in the step rewritten twice to fix
+      it. `:696` — same shape, Kong guard's message at `:700-704` unreachable.
+      `:699` — `RESP_BODY="$(… | grep -v '^HTTPSTATUS:')"` exits 1 on a truly empty body.
+      `:148` — preflight's *"a network/DNS problem specific to this job's own execution"* message can
+      only print when the network is fine. `:245` and `:367` — under `pipefail`, any transport error
+      (DNS/refused/TLS/timeout) skips the whole `case`, so the `*)` arm's *"Raw status only"* promise
+      never covers non-HTTP failures. Also `:559`, `:600` (nil `.Config.Labels` → template error) die
+      unexplained, and `:663`'s `|| true` swallows a genuine `docker inspect` failure and reports it
+      as *"RepoDigests do not include the resolved digest"* — the same lie in the other direction.
+      **The correct idiom is already in this file** (`:532-535` uses `|| { …; exit 1; }`; `:573`,
+      `:675` use `|| true` correctly) — it is applied inconsistently. Fix: `if ! X="$(cmd)"; then …`
+      or `X="$(cmd || true)"` plus an explicit exit-code branch at each site.
+      ✅ **Fixed at every named site, plus the ones the review's own examples implied (`:663`
+      MATCHED, extended to separate "inspect failed" from "no match found").** All curl `%{http_code}`
+      captures use `|| true` — verified live, not assumed: curl already writes the literal `000` to
+      its OWN stdout on a total transport failure while still exiting nonzero, so an earlier draft's
+      `|| echo '000'` was caught and rejected in local testing (it double-appended, producing
+      `000000`); `|| true` correctly lets curl's own `000` stand. The SAME double-fallback bug was
+      found and fixed for two `docker inspect` sites (`:911`-equivalent health-poll state,
+      `:1112`-equivalent Kong-guard running check) — `docker inspect` on a nonexistent target also
+      writes a bare newline to its own stdout on failure, so those two now use an explicit
+      `if ! X="$(cmd)"; then X="fallback"; fi` instead of `|| echo`, for the same reason. Every one
+      of the 9 sites this triggered — digest-resolve's `DIGEST` (both deploy's and
+      `digest-resolve-test`'s copies), fallback-HTTP `CODE`, Kong-guard `OUTPUT`/`RESP_CODE`/
+      `RESP_BODY`, preflight's registry-reachability `CODE`, `NET_ID_AFTER`, the anchored check's
+      `PROJECT_LABEL`, AC6's `IMAGE_ID`/`REPO_DIGESTS` — was run through a forced-failure local
+      simulation (transport failure via an unreachable host/closed port, `docker inspect` against a
+      nonexistent container/image) and confirmed to print its OWN message, not abort silently,
+      before this push.
+- [x] [Review][Patch] **H2 — the ladder gate makes AC4's and AC7's classifiers unreachable, and the
+      message that fires instead names the wrong cause.** Full detail and the options in **DN1** —
+      recorded here too because it is the highest-consequence finding and the fix is not optional,
+      only its shape is.
+      ✅ **Fixed via DN1's decision** — see DN1 above. `deploy` no longer depends on
+      `digest-resolve-test`; its own AC4/AC7 classifiers now run on every real dispatch.
+- [x] [Review][Patch] **H3 — AC5 is not parameterized: the stand's identity is hardcoded in every
+      verification step.** AC5 requires the poll to target *"the stand's `CONTAINER_NAME` variable"*
+      and the fallback curl *"the stand's `FRONTEND_PORT` variable"*. Shipped: the step titled
+      *"parse FRONTEND_PORT, never concatenate raw"* does `FP="127.0.0.1:8082"` (`:630`) — it parses
+      a **literal**, not the `.env.deploy` the job wrote 113 lines earlier (`:517`); the Kong guard
+      skips the parse entirely and inlines `http://127.0.0.1:8082/api/` (`:697`); and
+      `fe-prionex-dev` is hardcoded at `:573`, `:595`, `:600`, `:662`, `:675`, `:711-712`. Three
+      copies of one port value and six of one container name, in one file, presented as one
+      parameterized value. **This is not cosmetic:** the compose file is fetched from an *arbitrary
+      ref* (`:475-496`), so a ref whose `docker-compose.stand.yml` sets a different `container_name`
+      makes every check silently target a container this deploy did not create — the precise failure
+      mode AC5 exists to prevent. Same two-sources-of-truth class the story flags for the host `.env`
+      (D29 §7), reproduced inside a single file. Fix: read the five values back from `.env.deploy`
+      (or set them once as job-level `env:`) and use them everywhere.
+      ✅ **Fixed in all six verification steps** (health poll, anchored check, fallback HTTP, AC6,
+      Kong guard, post-deploy record) — each now does
+      `CONTAINER_NAME="$(grep '^CONTAINER_NAME=' "${CHECKOUT_DIR}/.env.deploy" | cut -d= -f2-)"`
+      (and the equivalent for `FRONTEND_PORT` where a step needs it) instead of a hardcoded literal,
+      reading the SAME file the job itself wrote 113 lines earlier. `CHECKOUT_DIR` (now suffixed
+      with `$GITHUB_RUN_ID`, see M4) is threaded through as a step output so every later step knows
+      where to find it.
+- [x] [Review][Patch] **H4 — the deploy never verifies that the image it pulled was built from the
+      ref it checked out; AC6 is satisfied in letter, not intent.** The tag is derived from `ref` by a
+      lossy sanitizer, so `feature/foo` and a real branch `feature-foo` both produce `feature-foo-dev`
+      (verified). AC6 (`:644-670`) compares the running container to the digest **this run resolved
+      for that tag** — which passes even when the image came from a different ref, and, for a moving
+      branch, routinely passes when the compose file (fetched *now*) and the image (tag resolved
+      *now*) are different commits. `build.yml:1358-1361` already stamps
+      `org.opencontainers.image.revision=<full_sha>` on every image, and the checkout step already
+      prints the fetched `HEAD` (`:496`). Comparing the two is ~2 lines and closes AC6's stated
+      intent (*"the running container is the image that was requested"*) rather than its letter.
+      ✅ **Fixed, added to the checkout step** (right after the compose file is confirmed present,
+      since the image is already pulled by then in the sequence): reads
+      `org.opencontainers.image.revision` off the just-pulled `${IMAGE_REPO}@${DIGEST}` and compares
+      it to the just-fetched checkout `HEAD` SHA. Mismatch is a hard FAIL (refuses to deploy a
+      compose file and image built from different commits); label genuinely absent (older images
+      predating the stamp) is a non-fatal warning, not a FAIL — AC6's own digest comparison later in
+      the job stays the binding check either way.
+- [x] [Review][Patch] **H5 — "nothing is torn down until the replacement image is provably present"
+      is true only of the pull step; six failure modes after `down` leave the stand broken with no
+      rollback.** The AC3 reorder (`:46-51`) is correct and well argued **for the pull-failure path**,
+      and that is where the protection ends. `down` at `:542` succeeding, then `up -d`, the health
+      poll, the anchored check, the fallback HTTP check, AC6 or the Kong guard failing, leaves the
+      stand stopped or unhealthy — the previous container already removed, the previous digest never
+      captured, and no `if: failure()` path to restore it. **Run 937 is the live proof:** the stand
+      stayed genuinely unhealthy until run 938 was dispatched by hand. Story 4.7 AC4's guarantee
+      (*"the stand keeps serving its previous version"*) therefore holds for exactly one of the
+      several ways this deploy can fail. The rollback **mechanism** is deferred to Story 4.7/4.8
+      (see the deferred list); what is a patch here is the blanket framing in the header comment and
+      in D29 §5, which should name the window it actually covers.
+      ✅ **Framing fixed, mechanism correctly left to 4.7/4.8.** `deploy-dev.yml`'s own header
+      comment now states explicitly that the reorder protects only the pull-failure path, and names
+      the six-guard window after `down` that has no rollback, citing run 937 as the live proof.
+      `docs/migration-decisions.md` D29 §5 amended (not rewritten) with the same correction.
+
+#### Medium
+
+- [x] [Review][Patch] **M1 — the "corrected" README documents a workflow deleted in the same commit,
+      and omits one that exists.** `.forgejo/workflows/README.md` lists
+      `probe-deploy-dev-preprod.yml` as *"kept alongside `deploy-dev.yml` as a free, cheap
+      confirmation offer"* — while commit `7f921636` **deletes that file**, as this story's own File
+      List and Change Log both state. It also omits `build-main.yml`, which is in the directory and
+      which the run-budget line depends on. Task 9.5 claims the README *"lists all six workflows now
+      actually in the directory"*; it is wrong in both directions on the day it was written. The same
+      stale reference survives at `deploy-dev.yml:67-68`, which cites the probe as an established
+      convention.
+      ✅ README rewritten: probe reference removed (now an explicit note that it was deleted and
+      should not be re-added), `build-main.yml` added, count now genuinely accurate. The header
+      comment's own probe reference was already worded as "since deleted, its work done" in the
+      round that removed the file — checked, not stale.
+- [x] [Review][Patch] **M2 — a bare SHA and a full `refs/…` ref — both advertised by the input's own
+      description — can never resolve, and the 404 message blames the wrong thing.** The input says
+      *"branch, tag, or SHA"* (`:86`). `build.yml` publishes commit images as `sha-<12hex>-<env>`;
+      this workflow derives `<sanitized-ref>-dev`, so `62e2ff8dc215` → `62e2ff8dc215-dev`, never
+      published. Likewise `refs/heads/main` → `refs-heads-main-dev`, while `build.yml` strips the
+      prefix before sanitizing and publishes `main-dev`. In both cases the `git fetch` half succeeds
+      and the 404 classifier (`:394-401`) then blames *"no image was ever built for this ref"* or the
+      14-day retention rule — never the real cause. Fix: normalize `refs/heads/`–`refs/tags/`
+      prefixes and map SHA-shaped refs to `sha-<short>`, or narrow the input description to what
+      actually works.
+- [x] [Review][Patch] **M3 — a third copy of the ref→tag sanitizer, without either of the other two's
+      guards, in the job that runs first.** `:240` (`digest-resolve-test`) has the `sed`/`cut` but
+      **neither** the leading-`[.-]` refusal nor the empty-string refusal that `deploy` applies at
+      `:291-305`; `build.yml:850-895` has both. Because `digest-resolve-test` is a hard `needs:` of
+      `deploy`, the unguarded copy is the one that decides. The file's own comment at `:286-288`
+      warns that a diverging sanitizer makes *"the failure look like a missing image instead of a
+      sanitizer mismatch"* — and the divergence is now inside the same file.
+- [x] [Review][Patch] **M4 — fixed workspace paths make a second concurrent dispatch destructive
+      rather than merely racy; this is the one axis on which 4.3 makes 4.4's named gap worse.** The
+      accepted gap (`:95-98`) is *"two simultaneous deploys colliding"*. But
+      `DOCKER_CONFIG_DIR="${GITHUB_WORKSPACE}/.docker-story-4-3"` (`:329`) and `stand-checkout`
+      (`:461`) are **fixed paths in a workspace a self-hosted runner reuses**: job A's `if: always()`
+      `rm -rf "$DOCKER_CONFIG"` (`:728`) deletes job B's live registry credential mid-pull, and job
+      B's `rm -rf stand-checkout` deletes the checkout job A is about to `cd` into. Both produce
+      failures pointing nowhere near the cause. Suffixing both paths with `$GITHUB_RUN_ID` removes
+      this without waiting for Story 4.4 and without adding a `concurrency:` block.
+- [x] [Review][Patch] **M5 — the workspace `DOCKER_CONFIG` is removed only by the step least likely
+      to run.** The comment at `:326-332` says it is *"removed on every exit path by the cleanup step
+      at the end"*. `if: always()` does not survive job cancellation or `timeout-minutes: 10` expiry
+      — and the job contains an **unbounded** full-history fetch (`:481`, no `--depth`, no timeout)
+      and an unbounded `docker pull` (`:416`). On either path, `config.json` holding the base64
+      `read:package` credential survives in a reused workspace on a **shared, multi-tenant** runner —
+      the exact exposure the workspace-scoping exists to prevent. `mkdir -p` (`:330`) also does not
+      clear a stale directory left by a previous cancelled run. Fix: `rm -rf` the directory on the way
+      *in* as well as out, and bound the fetch/pull.
+- [x] [Review][Patch] **M6 — the health poll cannot distinguish "no healthcheck", "container gone"
+      and "slow start", and a crash-looping container passes the gate.** `:573` maps both a container
+      with no health config and a removed container to `missing`, which is neither `healthy` nor
+      `unhealthy`, so the loop spins the full 120 s and reports *"did not become healthy within the
+      timeout"* — never naming either real cause. Reachable, because the compose file comes from an
+      arbitrary ref whose `docker-compose.stand.yml` may predate the `healthcheck:` block. Worse:
+      Docker retains the last `.State.Health.Status` across restarts, so a container that became
+      healthy once, crashed, and is now `restarting` returns `healthy` on the **first** poll and
+      `break`s out (`:574-576`); `.State.Running`/`.State.Restarting` are never inspected, and
+      `restarting` containers still appear in `docker ps`, so the anchored check at `:595` does not
+      catch it either.
+- [x] [Review][Patch] **M7 — `down` is a no-op against a stand not provisioned by compose, and the
+      label assertion that would catch it runs too late.** `docker compose down` (`:542`) removes
+      containers by compose **project label**. Story 4.2 provisioned this stand by hand; if the live
+      `fe-prionex-dev` carries no `com.docker.compose.project=fe-prionex-dev` label, `down` reports
+      success (*"or nothing was running"*) while the container survives, and `up -d` then fails with
+      *"container name /fe-prionex-dev is already in use"*. The label assertion exists (`:600-605`)
+      but runs **after** `up -d`, not before `down`.
+- [x] [Review][Patch] **M8 — registry resolution: the Docker manifest-list media type is missing, the
+      digest is neither format- nor count-validated, and transient statuses are fatal.** `:369-371`
+      accepts `manifest.v2+json`, `oci.image.manifest.v1+json` and `oci.image.index.v1+json` but not
+      `application/vnd.docker.distribution.manifest.list.v2+json` — a Docker-format multi-arch tag
+      either 404s or is down-converted to a digest that is **not** what a real `docker pull` would
+      resolve, which AC6 then compares against. `:376` has no `head -n1` and no
+      `^sha256:[0-9a-f]{64}$` check, while `curl -D` appends headers for **every** response in a
+      redirect chain — a two-line `DIGEST` would corrupt `$GITHUB_OUTPUT`'s framing and then be
+      interpolated into `docker pull`. And a 429 or a transient 503 lands in `*)` and fails the
+      deploy indistinguishably from a permanent misconfiguration, with no retry and no `-L`.
+- [x] [Review][Patch] **M9 — the fallback fetch fires on any primary failure, then asserts a cause it
+      did not test, and runs unbounded.** `:475-491`'s `else` branch is entered for transient network
+      errors, auth expiry, a dead remote or disk exhaustion — not only *"some Forgejo instances
+      refuse to serve an arbitrary ref/SHA in one shot"* as `:478-480` claims. It then runs a
+      full-history, all-branches-and-tags fetch with no `--depth` and no timeout inside a 10-minute
+      budget. If the checkout then fails, `:487-489` asserts *"It does not exist on this
+      repository"*, which is **false** for a SHA that exists but is unreachable from any branch or
+      tag — precisely the SHA case the input description invites. Related: the two paths can also
+      deploy different content for one input, since `git checkout` resolves `refs/tags/` ahead of
+      `refs/remotes/origin/` while the primary path resolves server-side.
+- [x] [Review][Patch] **M10 — unvalidated `ref` reaches `git fetch` as options, in the job that runs
+      first.** `clone-test` (`:216`) performs **no** shape validation, and `deploy`'s leading-`-`
+      rejection (`:291-299`) lives in a later job. Git parses options *after* positional arguments
+      (verified), so `ref=--upload-pack=…` is consumed as an option rather than a refspec at `:216`,
+      `:475`, `:481` and `:486`. **Rated Medium, not Critical, on evidence:** the origin is always
+      `${github.server_url}/…`, i.e. HTTPS, and git answers *"warning: setting remote service path
+      not supported by protocol"* — the http transport ignores `--upload-pack`, so there is **no**
+      local command execution (confirmed by direct test; the same construction *does* execute over a
+      local/ssh transport). The real consequence today is confusing failures plus a latent hazard if
+      the URL scheme ever changes. Fix: `--` before `"$REF_IN"` at all four sites, and move the shape
+      check into the first job that touches the input.
+- [x] [Review][Patch] **M11 — `simulate_bad_credential` makes the 401 classifier print a factual
+      falsehood.** When the switch fires, `:388-391` still reads *"the deploy job's OWN registry
+      credential … is missing, wrong, or revoked … Fix: check the org secrets."* The ⚠️ warning at
+      `:358-360` is a **separate line**, which a log excerpt, an alert rule, or Story 4.5's Slack
+      notification will not carry. A test-only input that induces a production-shaped false alarm
+      should annotate or suppress the classifier it triggers.
+- [x] [Review][Patch] **M12 — three deferred-work closures landed at the wrong entries, so a reader
+      of `deferred-work.md` still sees open items owned by a story about to be marked done.** Task
+      9.3 says *"close H4"*, but the ✅ block was appended to the **detector** item while H4's own
+      block still reads open with *"Owner: Story 4.3"* and carries no forward pointer. H1's block is
+      untouched entirely despite Task 9.4/D29/Completion Note 10 declaring it closed (substance:
+      **DN3**). Story 4.2's deferred AC2 clause (*"the `.env` is readable only by the deploy user"*)
+      is discharged in the D28 amendment but unannotated where it lives. AC8 is still satisfied by
+      the decision record — this is bookkeeping, in a project where the record is the deliverable.
+
+#### Low
+
+- [x] [Review][Patch] **L1 — D29 §8 misses the concrete consequence AC8 asks for: Story 4.4's AC is
+      now unsatisfiable as written.** `epics.md:1709-1712` requires the lock be *"an exclusive
+      `flock` on a file inside the stand directory"* — and this story's entire decision is that the
+      deploy job **cannot reach** that directory. D29 §8 says only *"гэп подтверждён, не закрыт"*,
+      which is about concurrency generally. This is the same shape of dead AC clause this story had
+      to amend for 4.2's AC2; name it now rather than have 4.4 rediscover it.
+- [x] [Review][Patch] **L2 — D29 §6 claims a five-row matrix and enumerates four**, with run 938
+      folded into the 929 bullet as *"повтор"*. The no-token row (919/922) lives in §4 and in Task
+      8.6 but not in the matrix §6 heads.
+- [x] [Review][Patch] **L3 — the Kong guard hard-requires that `/api/` stay UNROUTED.** `:700` fails
+      unless the body contains `"no Route matched"`. When the backend team eventually configures a
+      route for this stand — the desired end state — **every deploy starts failing**. The guard
+      encodes today's Kong configuration as an invariant. Related: `RESP_CODE` is computed at `:698`
+      and never asserted, carried only as message decoration.
+- [x] [Review][Patch] **L4 — `docker exec … || true` (`:675`) collapses every exec failure into "does
+      not resolve".** Container not running, exec disabled, `getent` absent from the image (the
+      runtime is `nginx:alpine`, where `getent` comes from `musl-utils`, and the compose healthcheck
+      uses busybox `wget`), or a daemon error all yield empty `RESOLVED` and the unconditional
+      message *"crm-kong-gateway does not resolve inside fe-prionex-dev. This is a STOP"* — sending
+      the operator to debug DNS for what may be a stopped container.
+- [x] [Review][Patch] **L5 — delimiter collision in the Kong guard.** `grep '^HTTPSTATUS:' | cut -d:
+      -f2` (`:698`) matches **every** line starting with the delimiter; a response body containing
+      one yields a multi-line `RESP_CODE`, printed into the FAIL message. Use `tail -n1` for the code
+      and `sed '$d'` for the body.
+- [x] [Review][Patch] **L6 — the sibling health-check image is unpinned, inherited, and assumed to
+      have no `ENTRYPOINT`.** `SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"`
+      (`:633`, `:695`) assumes the job container's hostname is its container id — a runner-operator
+      setting on a shared runner — and then `docker run … "$SELF_IMAGE" curl …` assumes
+      `deploy-base-dev-preprod:2026-08-07` (another team's, date-tagged, so it will be rebuilt) has no
+      `ENTRYPOINT` and still ships `curl`. If it acquires an `ENTRYPOINT`, `curl …` silently becomes
+      *arguments to it* and `CODE` becomes entrypoint output rather than an HTTP status.
+- [x] [Review][Patch] **L7 — `${FP%:*}` / `${FP##*:}` is not a port parser.** For the bare form
+      `8082` it yields `HOST_PART=8082`, `PORT_PART=8082` → `http://8082:8082/`. Moot only because
+      `FP` is hardcoded (H3) — but the code advertises itself as handling the general case its own
+      comment warns about.
+- [x] [Review][Patch] **L8 — preflight prints exact secret lengths** (`:133-134`). Forgejo masks
+      secret *values*, not derived facts about them; `0` vs non-zero is all the diagnostic needs.
+      Related: a whitespace-only secret passes both non-empty guards (`:135`, `:317`) and then fails
+      at `docker login` for a reason the detector was written to catch; and a token containing `"` or
+      `\` mis-parses inside `curl --config`'s quoted value, surfacing as a real 401 that blames a
+      healthy secret.
+- [x] [Review][Patch] **L9 — `docker login -u "$REG_USER"` (`:335`) puts a Forgejo secret in argv**,
+      so the header's unqualified claim at `:56-60` (*"No credential ever reaches this job's own
+      `ps auxww`"*) is false as written. The consequence is negligible — it is the bot **username**,
+      and the token half is correctly on stdin — but in this project the claim is the deliverable.
+      Narrow it to the secret half. Related: `unset GIT_CONFIG_*` (`:224`, `:493`) reads as a
+      security control and is not one (the variables die with the step's shell, and on the failure
+      path `exit 1` runs first), and `http.extraheader` is set unscoped rather than per-host.
+- [x] [Review][Patch] **L10 — the registry URL is env-derived in one job and hardcoded in two
+      others.** `:372` builds it from `env.IMAGE_REPO`; `:250` hardcodes
+      `https://git.crm-prionex.com/v2/crm/fe-prionex/…` and `:335` hardcodes the host. Changing
+      `IMAGE_REPO` moves the deploy and leaves the gate validating a different repository.
+- [x] [Review][Patch] **L11 — three steps omit the `set -euo pipefail` every other step sets**
+      (`:271`, `:721`, `:727`), and the duration step does `$(( END_EPOCH - START_EPOCH ))` on an
+      `if: always()` path where `START_EPOCH` can be empty (job cancelled during the first step),
+      producing a bash arithmetic error instead of a note. Also `test -f
+      stand-checkout/docker-compose.stand.yml` (`:495`) fails **silently** for any ref older than
+      Story 4.1, and nothing validates the checked-out compose file's variable set against the five
+      written at `:513-520` — a sixth required variable surfaces as a raw compose error *after*
+      `down`. And the *"sanitizes to an empty string"* branch (`:301-305`) is unreachable: `sed`
+      collapses all-illegal input to `-`, which the leading-`[.-]` branch catches first with a
+      message telling the user to rename their branch.
+- [x] [Review][Patch] **L12 — permanent gates named after a refuted investigation, plus three ledger
+      loose ends.** Job display names ship as *"0. Preflight — do the org secrets reach this repo?
+      (diagnosing run 919's early failure)"* (`:116`) and *"1. Clone-test — … (expected PASS — fixed
+      via github.token …)"* (`:184`), while the file's own comments at `:160-166` record that the
+      run-919 hypothesis was **REFUTED**. Story 4.8 will inherit these as the "shared definition".
+      Separately, the ledger still carries run 916 as *"outcome to be recorded when known"* and
+      *"923/924 — numbers not yet confirmed"*, states no total, and never mentions 921, 926, 928,
+      932-934 or 939. retro-D4 legitimately defers closure to a post-merge query, but these are
+      answerable by the query already run. Also: Task 10.4 (*"Update `sprint-status.yaml` → review"*)
+      is unchecked although the file is at `review` in this very diff.
+
+#### Deferred
+
+- [x] [Review][Defer] **No rollback to the previous digest after `down`** [`deploy-dev.yml:538-588`]
+      — deferred, belongs to Story 4.7 (AC4's *"keeps serving its previous version"*) and Story 4.8
+      (shared mechanics). H5 patches the overstated claim; the mechanism — capture the running
+      digest before `down`, restore it on `if: failure()` — is later work.
+- [x] [Review][Defer] **Two sources of truth for the stand's five variables** (host `.env` vs the
+      workflow's render) [`deploy-dev.yml:513-520`, D29 §7] — deferred, already named in D29 §7 and
+      assigned to Stories 4.8/4.9. Recorded in `deferred-work.md` so it is tracked where the other
+      open items live, not only inside a decision record.
+- [x] [Review][Defer] **The ref→tag scheme is lossy, so two refs can share one image tag**
+      [`build.yml:850-895`] — deferred, pre-existing: inherited from `build.yml`'s tagging scheme,
+      not introduced here. H4 is the deploy-side mitigation; changing the scheme is not 4.3's.
+- [x] [Review][Defer] **No image cleanup on s1; digest-pinned pulls accumulate unpruned**
+      [`deploy-dev.yml:416`] — deferred, pre-existing class: a full disk surfaces as a `docker pull`
+      or `up -d` failure with no attribution. Owner: Story 4.9 / platform ops, alongside the
+      reboot-ordering item.
+
+#### Dismissed (8)
+
+1. **`--network host` sibling container as a privilege concern** — the job already mounts
+   `docker.sock`, which is root on s1; the sibling adds no boundary. It is `--rm`, unnamed (so no
+   collision), and runs one fixed `curl`. The pinning/`ENTRYPOINT` aspects are kept as **L6**.
+2. **Absence of a `concurrency:` block** — explicitly Story 4.4's, named at `:95-98` and in D29 §8.
+   Where this file genuinely makes it worse is kept as **M4**.
+3. **`simulate_bad_credential` as a privilege-escalation path** — claim verified sound. It overwrites
+   one local shell variable in one step, *after* `docker login` already consumed the real value; it
+   cannot read, print or widen anything, and it fails before `down` ever runs. Only the *message* is
+   a defect (**M11**).
+4. **`${{ }}` inside `run:` bodies** — none. All 23 `run:` bodies parsed; every `${{ }}` occurrence
+   is in an `env:` or `name:` position.
+5. **NFR5 / legacy untouched** — verified against the diff's own file list: zero files under
+   `.github/`.
+6. **Token halves in argv** — verified clean (`--password-stdin`, `curl --config -`, `GIT_CONFIG_*`).
+   The deliberate deviation from api-prionex's `http.extraheader` argv form is correct. Only the
+   username (**L9**) and the overstated claim survive.
+7. **"Argument injection is remote code execution"** — rated CRITICAL by one layer, **falsified by
+   direct test**: the http transport ignores `--upload-pack`. Downgraded and kept as **M10**.
+8. **"The argv-vs-env model is nullified because every tenant holds `docker.sock`"** — the control is
+   still correct defence-in-depth; only the recorded rationale slightly overstates what it buys,
+   folded into **L9**.
+
+#### Resolution ledger — M1-M12, L1-L12 (checkboxes above marked; this is where, concretely)
+
+Every Medium and Low finding is fixed in `deploy-dev.yml` (or the named doc) as of this push. Exact
+site, for a reader who wants to verify rather than trust:
+- **M1** (README stale) — `.forgejo/workflows/README.md` rewritten: probe reference removed with an
+  explicit "deleted, don't re-add" note, `build-main.yml` added.
+- **M2** (bare SHA / `refs/…` never resolve) — both `deploy`'s own sanitizer and
+  `digest-resolve-test`'s copy now strip `refs/heads/`/`refs/tags/` and map a bare
+  7-40-char-hex ref to `sha-<12hex>-dev` (build.yml's own publishing form) before falling through
+  to the generic sanitizer.
+- **M3** (unguarded third sanitizer copy) — `digest-resolve-test`'s copy now carries the same
+  leading-`[.-]` and empty-string refusals `deploy`'s own copy has.
+- **M4** (fixed workspace paths, concurrent-dispatch destructive) — `DOCKER_CONFIG_DIR` and the
+  checkout directory (renamed `stand-checkout-${GITHUB_RUN_ID}`) are both suffixed with
+  `$GITHUB_RUN_ID`; threaded through later steps via a step output.
+- **M5** (DOCKER_CONFIG cleanup gaps) — cleared on the way IN too (`rm -rf` before `mkdir -p`);
+  `docker pull` and the fallback git fetch both bounded with `timeout 300`.
+- **M6** (health poll can't distinguish causes, crash-loop passes) — rewritten to capture
+  Running/Restarting/Health together, reject "container gone" and "no healthcheck configured"
+  immediately by name, and require Running=true + Restarting=false + Health=healthy together, not
+  a stale Health value alone.
+- **M7** (`down` no-ops on a hand-provisioned stand) — new step, "Guard against a hand-provisioned
+  stand before down," runs BEFORE `down`: if a container with the target name exists but lacks the
+  matching compose project label, fails closed instead of letting `down` silently no-op.
+- **M8** (registry resolution gaps) — manifest-list media type header added; digest format
+  (`^sha256:[0-9a-f]{64}$`) and single-line (`head -n1`) validated; `--retry 2 --retry-connrefused`
+  covers a transient 429/503; `-L` follows a redirect. Applied to both digest-resolve occurrences.
+- **M9** (fallback fetch message overclaims cause) — message no longer asserts a specific cause for
+  entering the fallback branch or for the fallback's own failure; bounded with `timeout 300`.
+- **M10** (unvalidated ref reaches git as options) — `clone-test` (first job to touch the input)
+  rejects a leading `-` before any git call; `--` added before `"$REF_IN"` at every git
+  fetch/checkout call site in the file.
+- **M11** (simulated 401 message lacks a marker) — the classifier message itself now appends
+  `[SIMULATED via simulate_bad_credential=true — NOT a real credential outage]` when the switch
+  fired, not only a separate warning line.
+- **M12** (deferred-work.md closures at the wrong entries) — `deferred-work.md`'s ACTUAL H4 entry
+  (registry-credential-supply, distinct from the "no detector" bullet closed earlier) now has its
+  own ✅ block; H1's block (tag expiry) now has a closure note reflecting DN3's full rewrite.
+- **L1** (Story 4.4's AC now unsatisfiable) — named explicitly in D29 §8's amendment: the deploy job
+  cannot reach the directory `epics.md`'s `flock` clause requires.
+- **L2** (D29 §6 claims 5 rows, lists 4) — D29 §6 amended with the complete, unfolded list including
+  the no-token row (919/922) and run 938 as its own bullet.
+- **L3** (Kong guard hard-requires `/api/` stay unrouted) — comment added at the guard naming this
+  as today's Kong config, not a permanent invariant; tracked alongside the still-open
+  "tell the backend team" item.
+- **L4** (`docker exec || true` conflates causes) — `RUNNING` checked first, separately, before the
+  `getent` call; a stopped container now reports as stopped, not as a DNS miss.
+- **L5** (delimiter collision) — `tail -n1` (not a bare grep) for `RESP_CODE`, `sed '$d'` (not
+  `grep -v`) for `RESP_BODY`.
+- **L6** (unpinned sibling image, `ENTRYPOINT` assumption) — named explicitly in the fallback-HTTP
+  step's own comment as an accepted, stated assumption rather than a silent one.
+- **L7** (`${FP%:*}`/`${FP##*:}` not a general port parser) — a `case` guard now rejects a
+  `FRONTEND_PORT` with no host-prefix outright, naming why, instead of silently mis-parsing it.
+- **L8** (preflight prints exact lengths; whitespace-only secret passes) — length-only was already
+  correct (not the value); a new whitespace-only check added, catching the case that used to pass
+  here and fail later at `docker login` for an undiagnosed reason.
+- **L9** (username in argv, overstated `ps auxww` claim, cosmetic `unset`) — the file's header
+  comment now says "no credential SECRET reaches `ps auxww`" and states the username exception by
+  name, rather than an unqualified "no credential ever."
+- **L10** (registry URL hardcoded in two places) — the login step and `digest-resolve-test`'s own
+  request both now derive the host from `${IMAGE_REPO%%/*}`/`${IMAGE_REPO#*/}` instead of a literal.
+- **L11** (missing `set -euo pipefail`; duration-step arithmetic on empty; silent `test -f`) — added
+  to the three named steps; the duration step now checks `START_EPOCH` for emptiness first and
+  prints an explanatory line instead of erroring; the checkout step's `test -f` wrapped in an
+  `if`/`FAIL` instead of a bare assertion; the unreachable empty-string sanitizer branch kept, with
+  a comment stating why it is currently unreachable and why it stays as a backstop.
+- **L12** (gates named after a refuted hypothesis; ledger loose ends) — `preflight`/`clone-test`/
+  `digest-resolve-test`'s own job `name:` fields no longer lean on the run-919 narrative or an
+  "expected PASS" framing tied to a since-confirmed question; that history stays in the file's
+  header/step comments, where full context belongs. Run-ledger loose ends (921/926/928/932-934/939,
+  no stated total) are for the coordinator's closing query (D4), not self-resolved here.
+
 ### File List
 
 **Added**
@@ -1328,17 +1919,43 @@ explicitly in this round's final report.
   round 6 (Task 8's remaining FAIL rows) added a `simulate_bad_credential` boolean input (default
   `false`) — scoped to the `deploy` job's own digest-resolve step only, for AC7's discriminating
   row, kept as a permanent, documented, safe regression hook (decided at story close, header
-  comment explains the safety reasoning for whoever reviews it next)
-- `.forgejo/workflows/README.md` — was stale ("intentionally empty of workflows"); now lists all
-  six workflows actually in the directory, load-bearing safety warning kept intact (Task 9.5)
+  comment explains the safety reasoning for whoever reviews it next); **round 7, code review
+  fix-pass (H1-H5, M1-M12, L1-L12, DN1-DN3)** — `deploy` now `needs: [preflight, clone-test]` only
+  (DN1); `digest-resolve-test` ungated, given the same 401/404/`000` classification as `deploy`'s
+  own step; every command substitution feeding an `if` fixed to print its own message on failure
+  instead of aborting silently (H1 — including a real bug caught in local testing: curl's own `-w
+  '%{http_code}'` already writes `000` on total failure, so `|| echo '000'` double-appended into
+  `000000`; fixed to `|| true`, and the analogous `docker inspect`-writes-a-bare-newline case fixed
+  with an explicit `if ! X="$(cmd)"; then X="fallback"; fi`); all six verification steps now read
+  `CONTAINER_NAME`/`FRONTEND_PORT` back from `.env.deploy` instead of a hardcoded literal (H3);
+  `org.opencontainers.image.revision` cross-checked against checkout HEAD (H4); header comment and
+  D29 §5 corrected to name the exact window the AC3 reorder protects (H5); ref normalization for
+  `refs/heads|tags/` and bare-SHA inputs (M2); `digest-resolve-test`'s sanitizer given the same
+  guards `deploy`'s own carries (M3); workspace paths suffixed with `$GITHUB_RUN_ID` (M4); `pull`
+  and the fallback fetch bounded with `timeout 300` (M5, M9); health-poll rewritten to distinguish
+  container-gone/no-healthcheck/crash-loop (M6); a new pre-`down` label-collision guard (M7);
+  manifest-list media type, digest format validation, and `--retry` added to both digest-resolve
+  occurrences (M8); ref-shape validation in `clone-test`, the first job to touch the input, plus
+  `--` before every `git fetch`/`checkout` call (M10); the simulated-credential 401 message now
+  carries its own marker (M11); job display names no longer lean on a superseded run-919 narrative
+  (L12); plus L1-L11's message/parsing/doc fixes
+- `.forgejo/workflows/README.md` — was stale twice over (still listed the deleted probe, omitted
+  `build-main.yml` — code review M1); corrected
 - `docs/migration-decisions.md` — new **D29** record (mechanism, `github.token` precedent, H4
   closure, AC3 reordering, the two verification-only bugs, the live outcome matrix, `working_dir`
   divergence); **D28** amended by appended block (§4 answered, §5's AC2 clause closed); index table
-  and Change Log rows added; stale `#d1`…`#d27` anchor-range note corrected to `#d29` (Task 9.1/9.2)
+  and Change Log rows added; stale `#d1`…`#d27` anchor-range note corrected to `#d29` (Task 9.1/9.2);
+  **round 2 (code review H5/L1/L2/DN3)** — D29 §5 amended to name the pull-failure-only window the
+  AC3 reorder actually protects; §6 amended with the full, unfolded five-row-plus-mechanism matrix
+  (was 5 claimed, 4 listed); §7/§8 amended with DN3's DR-path rewrite and Story 4.4's now-literally-
+  unsatisfiable AC, named explicitly
 - `_bmad-output/implementation-artifacts/deferred-work.md` — M1 closed (stray credential copy
   deleted from s1), H4 closed (detector live, proven by run 936), the recurring-Kong-guard item's
   guard half closed (its own "tell the backend team" clause stays explicitly open), M7 closed
-  moot-by-idempotence and confirmed live (Task 9.3)
+  moot-by-idempotence and confirmed live (Task 9.3); **round 2 (code review M12/DN3)** — the closure
+  note above was found landed on the WRONG H4 entry (this file has two); the correct H4 entry (path
+  question's own registry-credential-supply constraint) now carries its own closure; H1's block
+  (tag expiry) rewritten with DN3's full DR-path correction, not merely re-annotated
 - `docker-compose.stand.yml` — **on the now-deleted throwaway branch `test/4-3-unhealthy-probe`
   only, never on this branch**: the `frontend` service's `healthcheck.test` deliberately overridden
   to `["CMD", "false"]`, for Task 8.4's AC5 discriminating row (run 937). Branch served its purpose
@@ -1362,3 +1979,5 @@ explicitly in this round's final report.
 | 2026-08-20 | **Run 927: same failure shape a fourth time; diagnosed with a full-job simulation instead of another single-bug-per-dispatch cycle, per the coordinator's explicit instruction.** Host-side trace showed the container recreated again correctly (run 925's AC6 fix live and correct) but the job failed EARLIER than AC6 — at the fallback HTTP check. Root cause: a testing-methodology gap present in every SSH diagnosis this story had run so far — checks were run directly on s1's own host shell, which has correct access to its own loopback, masking that `FRONTEND_PORT=127.0.0.1:8082` (host-loopback-only by design) is unreachable from any container's own network, including the deploy job's own. Confirmed by finally running the same curl from inside an actual simulated job container: connection refused, every time. This — not AC6 — was the true cause of both 925 and 927. Fixed: both the fallback HTTP check and the Kong guard's `curl` now launch a `--network host` sibling container via the job's own `docker.sock`, self-identifying the job's own image tag dynamically rather than hardcoding it. Then, per the coordinator's instruction, ran the ENTIRE `deploy` job as one continuous `bash -x` script inside a real simulated job container on s1, twice in a row (fresh deploy, then an idempotency re-deploy of the same digest against the already-running stand) — both passes completed clean, no further bugs found |
 | 2026-08-20 | **Run 929: SUCCESS on all four jobs — first Forgejo-native DEV deploy, Task 8.1's PASS row.** Confirmed host-side that `main-dev`'s live-resolved digest matches the running container exactly. Closes H1 (Task 9.4): the stand no longer depends on the old, soon-to-expire `sha-62e2ff8dc215-dev` tag; the 2026-08-30 fallback trigger was never needed. Designed and pre-verified (not guessed at) Task 8's three remaining discriminating FAIL rows: (1) AC4/manifest-unknown — a raw historical commit SHA, confirmed fetchable and confirmed its sanitized tag 404s; (2) AC7/unauthorized — new minimal `simulate_bad_credential` input, scoped to the `deploy` job's own digest-resolve step only, corrupts nothing outside that one process; (3) AC5/unhealthy — new throwaway branch `test/4-3-unhealthy-probe`, `docker-compose.stand.yml`'s healthcheck deliberately broken, confirmed the application/test suite is otherwise untouched so an image still builds |
 | 2026-08-20 | **Matrix complete, story closed out.** Runs 935/936/937/938 landed exactly as designed (AC4 gated-skip, AC7 isolated 401, AC5 bounded fail with expected collateral, recovery PASS doubling as the harder idempotency case). Final host-side verification clean: healthy, correct digest, no orphaned containers/networks. Cleanup: `test/4-3-unhealthy-probe` branch deleted, `probe-deploy-dev-preprod.yml` deleted (Task 2.7's condition met), M1 closed on s1. `simulate_bad_credential` kept deliberately as a permanent, documented, safe regression hook. Added **D29** (`docs/migration-decisions.md`), amended D28, closed out `deferred-work.md` (M1, H4, Kong-guard item's guard half, M7), corrected the stale workflows `README.md`. `Status`/`sprint-status.yaml` → `review`. Ledger not self-closed — coordinator's query, per D4 |
+| 2026-08-20 | Code review (Opus, three parallel layers: adversarial, edge-case, acceptance): **changes requested**. 5 high, 12 medium, 12 low, 4 deferred, 8 dismissed, 3 decision-needed — see `### Review Findings`. Verified clean by inspection: NFR5, no `${{ }}` in any `run:` body (all 23 parsed), no credential secret-half in argv, AC3's reordering, AC6's fixed inspect form, the anchored `docker ps` filter, AC8's decision record, and `simulate_bad_credential`'s no-privilege-escalation claim. Every high finding is in the **verification layer**, not the mechanism. **H1**: seven more guards abort before their own explanatory message can print under `set -euo pipefail` (verified by execution) — including the missing-`Docker-Content-Digest` guard, which is dead code, and AC5's fallback-HTTP message, unreachable for the very failure that cost runs 925/927. **H2/DN1**: `digest-resolve-test` gates `deploy` while issuing the same request with the same credential, so AC4's 404 and AC7's 401 classifiers never run on a real failure and the message that does fire blames the credential for a missing image — which also makes `deferred-work.md`'s H4 closure true only in the simulated case. **H3/DN2**: consequently Task 8.2's AC4 row did not execute the code it certifies (run 935's `deploy` was SKIPPED), and Task 8.6 credits runs 919/922 to a guard that did not exist at the time. **H3(AC5)**: the container name and port are hardcoded in every verification step rather than read from the `.env.deploy` the job writes. **H4**: nothing verifies the pulled image was built from the ref checked out, though `build.yml` already stamps `org.opencontainers.image.revision`. **DN3**: H1's closure holds for the primary path only — the DR path this decision preserves still pins the tag that expires ~2026-09-02. Downgraded on evidence: one layer's CRITICAL "argument injection is RCE" — the http transport ignores `--upload-pack` (tested), kept as M10 |
+| 2026-08-20 | **Code review fix-pass: DN1-DN3 (Oleg's decisions) implemented, all 5 High and all 24 Medium/Low findings addressed.** `deploy` now `needs: [preflight, clone-test]` only, `digest-resolve-test` ungated (DN1/H2); Task 8.2 reopened (run 935's `deploy` was skipped, never earned its own AC4 message), Task 8.6 reworded (919/922 are mechanism evidence, not a live guard row) per DN2; DR path rewritten (`deploy-dev.yml ref=main` as primary, a local never-pushed `dr-backup-dev` docker tag on s1 as emergency fallback) per DN3. H1's seven dead-guard sites fixed — caught and fixed a genuine bug while doing it: curl's own `-w '%{http_code}'` already writes `000` on total failure, so `|| echo '000'` doubled it into `000000`; fixed to `|| true`, with the analogous `docker inspect`-writes-a-newline case fixed via explicit if/then. H3 (AC5 hardcoded) parameterized from `.env.deploy` in all six verification steps. H4 (no revision check) added. H5 (overclaimed rollback) reframed to name its real window, in both the workflow header and D29 §5. All 12 Medium and 12 Low findings fixed — ref normalization, sanitizer parity, run-id-suffixed workspace paths, bounded fetch/pull, health-poll crash-loop detection, pre-down label guard, registry resolution hardening, ref-shape validation, simulated-credential message marker, and more. Local simulation, including forced-failure testing of every H1 site, confirmed clean before this push |

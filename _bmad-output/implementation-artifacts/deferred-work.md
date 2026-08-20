@@ -2606,6 +2606,15 @@ as its own, separate step — e.g. a registry credential rendered into the job's
 (mirroring option 5's approach for the compose file), or baking read access into whichever mount path
 is chosen. **Owner: Story 4.3**, named as an explicit constraint alongside the path question, not
 assumed solved by solving the path.
+✅ **CLOSED, Story 4.3, 2026-08-20 (this is the H4 Task 9.3 meant to close — code review M12 found
+the earlier closure note landed on a DIFFERENT bullet, "the registry credential has no detector,"
+below, which is real but not this one).** `deploy-dev.yml` renders the job's OWN `read:package`
+credential (`REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`) into a workspace-scoped `DOCKER_CONFIG` inside
+the job container itself, exactly the "rendered into the job's own config.json, mirroring option
+5's approach for the compose file" solution named above — `docker login` runs inside the job,
+`docker pull` reads that same job-scoped config, and this has now pulled successfully on every
+live dispatch since run 929. Not client-side-only and not solved by chance; the mechanism this item
+asked for.
 
 ⚠️ **AC2's second clause is deferred, not passed.** "The file is readable only by the deploy user"
 cannot be discharged until the reader is known (above). The stand took the recorded default —
@@ -2658,6 +2667,34 @@ retag:**
 **Owner: Story 4.3 (primary path) / Oleg or whoever holds s1 access (fallback trigger, 2026-08-30).**
 Retention rule itself is DB-only and out of scope for either path — see the standing note elsewhere
 in this file about `keep_pattern` never being editable from this repository.
+✅ **CLOSED, Story 4.3, 2026-08-20 — primary path landed (run 929, well before the 2026-08-30
+fallback trigger). Correction from code review (DN3): the closure recorded at story-close was
+over-claimed — it covered the primary (workflow) path only, and left the fallback path described
+above pointing at the very tag this item is about.** `~/crm-prionex/fe-prionex-dev/.env` on s1 was
+never touched by this story; it still carries `DOCKER_IMAGE=…:sha-62e2ff8dc215-dev` as written
+above. If that fallback procedure were followed literally today, it would redeploy the stand onto
+the tag that is about to be deleted — the opposite of what H1 asks for. **Rewritten, decided by
+Oleg:**
+- **The fallback trigger above is retired as written.** The primary path — dispatch
+  `deploy-dev.yml` with `ref=main` — now covers the fallback case too: it requires no host access
+  to s1 at all, resolves the CURRENT `main-dev` digest fresh on every run (never a stale pinned
+  tag), and is strictly cheaper and safer than the manual `.env` edit + `docker compose pull`
+  sequence this item originally specified. There is no longer a reason to prefer the manual path
+  when the workflow path is available.
+- **New, narrower fallback — only if Forgejo itself is unreachable**, so `deploy-dev.yml` cannot be
+  dispatched at all: a local, NEVER-pushed docker tag,
+  `git.crm-prionex.com/crm/fe-prionex:dr-backup-dev`, created on s1 pointing at the current live
+  digest (`sha256:e66149a83…` as of 2026-08-20). The registry's `remove_days=14` rule only ever
+  acts on rows IN the registry — a local-only tag on the host is invisible to it and cannot expire
+  this way. Restore with: update `DOCKER_IMAGE` in the host `.env` to
+  `git.crm-prionex.com/crm/fe-prionex:dr-backup-dev`, then `docker compose -f
+  docker-compose.stand.yml --env-file .env up -d` from the stand directory — the same manual
+  mechanics as before, now pointed at a tag the retention rule cannot touch.
+- The host `.env` itself is deliberately left carrying its historical value — neither fallback path
+  above requires updating it in advance, and rewriting it preemptively would just create a THIRD
+  value to keep in sync (deferred-work.md's own §7/D29 two-sources-of-truth item, already open).
+**Owner: closed. No further action pending** unless Forgejo becomes unreachable, in which case the
+`dr-backup-dev` local tag is the documented answer.
 
 🔴 **M7, decided by Oleg 2026-08-20 — the stand's port 8082 is being closed to `127.0.0.1` before
 Story 4.9, not left on `0.0.0.0`.** The stand came up as `0.0.0.0:8082->80/tcp` (D28 §1); the review
@@ -2763,3 +2800,52 @@ inside 4.2.
   this stand, the NEXT deploy's own guard fails loudly instead of silently serving a dead `/api/` as
   healthy. **Still open: the heads-up to the backend team itself** — this story had no channel to
   deliver it; owner remains whoever next talks to `CRM/api-prionex`.
+
+---
+
+## Deferred from: code review of story-4.3 (2026-08-20)
+
+Four items routed `defer` by the Opus three-layer code review of Story 4.3
+(`4-3-deploy-a-feature-branch-to-dev-on-demand.md`, `### Review Findings`). Each is real, none is
+actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in the story file.
+
+- 🔴 **No rollback to the previous digest once `down` has run.** `deploy-dev.yml`'s AC3 reordering
+  (resolve → pull → `down` → `up -d` → health) protects the **pull-failure** window only, and the
+  workflow header's blanket framing ("nothing is torn down until the replacement image is provably
+  present") reads wider than what it covers. Once `down` at `deploy-dev.yml:542` has run, six later
+  steps can fail — `up -d`, the health poll, the anchored check, the fallback HTTP check, AC6, the
+  Kong guard — and each leaves the stand stopped or unhealthy: the previous container is already
+  removed, the previous digest was never captured, and there is no `if: failure()` path to restore
+  it. **Run 937 is the live proof** — the stand stayed genuinely unhealthy until run 938 was
+  dispatched by hand. Story 4.7 AC4 ("*the stand keeps serving its previous version*") therefore
+  holds for exactly one of the several ways this deploy can fail. The cheap version: capture the
+  running container's digest before `down` and restore it on `if: failure()`.
+  **Owner: Story 4.7 (the AC that requires it) / Story 4.8 (shared mechanics).**
+
+- ⚠️ **Two sources of truth for the stand's five variables.** The host `.env` in
+  `~/crm-prionex/fe-prionex-dev/` (manual/DR path) and `deploy-dev.yml`'s own render into
+  `.env.deploy` (`deploy-dev.yml:513-520`, authoritative for deploys) now carry the same five values
+  independently, with nothing keeping them in step. Named in D29 §7 and assigned there to 4.8/4.9;
+  recorded here so it is tracked where the other open items live rather than only inside a decision
+  record. Note the review found the same class *inside* the workflow file as well (finding H3: the
+  container name and port are hardcoded in the verification steps instead of read back from the
+  `.env.deploy` the job just wrote) — that half is a patch in the story, not deferred.
+  **Owner: Story 4.8 (shared definition) / Story 4.9 (cutover).**
+
+- ⚠️ **The ref→tag scheme is lossy: two different refs can share one image tag.** `build.yml`'s
+  sanitizer maps every run of characters outside `[a-zA-Z0-9._-]` to a single `-`, so `feature/foo`
+  and a real branch named `feature-foo` both produce `feature-foo-dev` (verified in review); refs
+  sharing a 100-character prefix collide the same way via `cut -c1-100`. A deploy can therefore ship
+  a different branch's image than the operator asked for, and AC6's digest comparison still passes,
+  because it compares against the digest the registry served **for that tag**. Pre-existing —
+  inherited from the tagging scheme, not introduced by 4.3. The deploy-side mitigation (compare the
+  image's `org.opencontainers.image.revision` label, which `build.yml:1358-1361` already stamps,
+  against the SHA the deploy actually checked out) is finding H4 in Story 4.3 and is cheap; changing
+  the *scheme* is not 4.3's to do. **Owner: whoever revisits the tagging scheme (Epic 3 follow-up).**
+
+- ⚠️ **No image cleanup on s1; digest-pinned pulls accumulate unpruned.** Every dispatch pulls by
+  digest (`deploy-dev.yml:416`) and nothing prunes, so each deploy leaves another image on the host.
+  Unbounded disk growth across repeat dispatches, and a full disk surfaces as a `docker pull` or
+  `up -d` failure with no attribution back to this cause — on a host shared with another team's
+  production. Belongs with the reboot-ordering item already recorded above, which has the same owner
+  and the same "state of s1 between deploys" character. **Owner: Story 4.9 / platform ops.**

@@ -268,7 +268,16 @@ development_status:
   # directly, same as build.yml already does for REGISTRY_USER/REGISTRY_TOKEN_RW. Task 3 rewritten
   # accordingly. Veto points on the mechanism (D28 §4 option 5) and M7 (127.0.0.1:8082) not
   # exercised — both stand as recorded.
-  4-3-deploy-a-feature-branch-to-dev-on-demand: review
+  # Code review 2026-08-20 (Opus, three layers): **changes requested** — 5 high, 12 medium, 12 low,
+  # 4 deferred, 8 dismissed, 3 decision-needed. Back to `in-progress`: patches left as action items.
+  # Mechanism, credential design and AC amendments all hold; findings sit in the verification layer.
+  # The two that gate closure: H1 (seven guards abort before their own message can print, verified
+  # by execution) and H2/DN1 (the ladder gates `deploy` with the same request, so AC4's 404 and
+  # AC7's 401 classifiers never run on a real failure — and the message that fires blames the
+  # credential for a missing image). DN2 follows: Task 8.2's AC4 row did not execute the code it
+  # certifies. DN3: H1's closure is primary-path only; the preserved DR path still pins the tag that
+  # expires ~2026-09-02. Ledger still open by D4 — coordinator closes it by query after the merge.
+  4-3-deploy-a-feature-branch-to-dev-on-demand: in-progress
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
