@@ -2570,3 +2570,41 @@ is unobservable from s1 — the legacy stand is on `72.62.17.132`, unreachable a
 `fe-prionex` on s1 (checked with an **anchored** match — `docker ps --filter name=` is a substring
 match and would have returned the four `forgejo-runner-fe-prionex*` containers plus this story's own
 stand, i.e. it cannot fail); no competing compose project; legacy host not contacted.
+
+---
+
+## Deferred from: code review of story-4.2 (2026-08-20)
+
+Four items the review judged real but not this story's to close. The high/medium findings are action
+items in `4-2-…md`'s `### Review Findings`, not here — these four are the ones with no owner inside
+4.2.
+
+- 🔴 **The registry credential has no detector, and this story is the proof that it needs one.**
+  Story 4.2 established that s1's `docker login` vanished on **13 Aug** with cause unknown, then
+  reconstituted the identical single point of failure: one host-local token, one `config.json`, no
+  probe, no alert. The recorded revocation trigger — *"revoke when s1 no longer pulls from the
+  registry"* — is an event with no observer. Failure path: the login disappears again → the running
+  container is unaffected → it surfaces as `unauthorized` at Story 4.3's first deploy, with nothing
+  pointing back here. **Owner: whoever settles the deploy mechanism (4.3) or platform ops.** A
+  periodic authenticated `GET /v2/…/tags/list` from s1 is the cheap version.
+- ⚠️ **`fe_reg_1_10_ro` (id 99) has no disposition.** This file already records that whether it is
+  still live in the instance *"is **not** established by this story — only that s1 no longer holds
+  it."* The branch nobody has walked: if the 13-Aug actor holds the plaintext, that is a live
+  `read:package` token of unknown custody — and per the entry above, an admin cannot revoke another
+  account's token without its password or a DB row. Recorded as unknown is the right answer; leaving
+  it with no owner is not. **Owner: Oleg**, same decision surface as the `fe_review_1_7` question.
+- ⚠️ **Reboot ordering: `restart: always` + `external: true` is a silent restart loop, not a loud
+  failure.** Story 4.2's Task 7.4 leans on `external: true` refusing to start as *"the only loud
+  failure available on this axis"* — but that refusal is **compose-time**. On daemon start the
+  container is started by the restart policy, not by compose: if `crm-dev-network` is absent, or was
+  recreated with a new id by the backend team's `down`/`up`, the start fails, `always` retries
+  forever, and the healthcheck never runs because the container never runs. Nothing reports it. No
+  boot-ordering statement and no post-reboot verification exists anywhere. **Owner: Story 4.3
+  (post-deploy check) / Story 4.9 (cutover readiness).**
+- ⚠️ **The stand's endpoint now blocks the network owner's teardown, and they were not told.** Docker
+  refuses `network rm` while an endpoint is attached, so `CRM/api-prionex`'s `docker compose down` on
+  `crm-dev` now trips over a container in a compose project they cannot see from their tree. If they
+  resolve it by force-disconnecting our container, the stand serves `200` on `/` with a dead `/api/`
+  and reports `healthy` throughout — the exact silent failure Story 4.2's Dev Notes §4.1 names. This
+  is also the concrete reason AC3's one-shot identity proof wants a **recurring** guard rather than a
+  single measurement. **Owner: Story 4.3 (guard), plus a heads-up to the backend team.**

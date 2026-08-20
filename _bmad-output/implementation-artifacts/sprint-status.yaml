@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-19
+last_updated: 2026-08-20
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -230,7 +230,20 @@ development_status:
   # chosen here. AC2's permissions clause deferred to 4.3, AC5 substituted (legacy stand is on
   # another host). D10 and D14 amended: s1 had no registry credential at all, and 72.62.17.132 is
   # not s1. Run ledger declared 7 against baseline 802 — OPEN until re-queried after the merge.
-  4-2-provision-the-new-dev-stand-on-s1: review
+  # 🔴 Code review 2026-08-20 (Opus, three layers): CHANGES REQUESTED — 5 high, 9 medium, 8 low as
+  # action items in the story's `### Review Findings`; 4 deferred; 5 dismissed. Beyond documentation:
+  # H1 the stand's `sha-62e2ff8dc215-dev` tag is OUTSIDE the live retention rule's keep_pattern
+  # (build.yml:962) and is deleted ~2026-09-02 — unrecorded anywhere; H4 registry auth resolves
+  # client-side, so AC4's host `docker login` cannot serve a deploy job under ANY of D28 §4's three
+  # options. H5 the 4.3 blocker is stated as "measured" where partly inferred, and two cheaper paths
+  # are missing from the option set (the deploy runner's own docker.sock; rendering compose/.env in
+  # the job workspace — docker-compose.stand.yml declares no host path at all). The CHOICE stays 4.3's.
+  # Awaiting Oleg on two: revoke the exposed `fe_review_1_7`, and whether 8082 should be internet-
+  # reachable. Clean: NFR5, D7, must-not-touch list, D28's form, both retro-E5 failing runs.
+  4-2-provision-the-new-dev-stand-on-s1: in-progress
+  # ⬇️ Carries Story 4.2's blocker: the deploy job cannot reach ~/crm-prionex/fe-prionex-dev/ as
+  # specified (D28 §4). Options a/b/c are recorded there; review added two more and found that the
+  # registry credential problem (H4) is unsolved by all of them. Decide the mechanism here.
   4-3-deploy-a-feature-branch-to-dev-on-demand: backlog
   4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog

@@ -4,7 +4,13 @@ baseline_commit: 62e2ff8dc215afa5c6ace1ac9a82f917320e2983
 
 # Story 4.2: Provision the New DEV Stand on s1
 
-Status: review
+Status: in-progress
+
+<!-- Code review 2026-08-20: changes requested. 5 high / 9 medium / 8 low left as action items in
+     `### Review Findings`; 4 deferred to `deferred-work.md`; 5 dismissed. Two items need Oleg's
+     decision before the patch pass: H2 (revoke the exposed `fe_review_1_7`?) and M7 (is 8082 meant
+     to be internet-reachable?). No patches were applied by the review. -->
+
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -683,6 +689,255 @@ one for opening the PR. Still missing from the count by construction: the review
 will cost **2** rows, being a push onto a branch with an open PR) and the merge run
 (`build-main.yml`). Re-query after the merge commit.
 
+### Review Findings
+
+Code review 2026-08-20 (Opus, three parallel layers: adversarial, edge-case, acceptance). **5 high,
+9 medium, 8 low, 4 deferred, 5 dismissed.** Verdict: **changes requested** — the stand itself is
+sound and retro-E5 is genuinely discharged twice on the real host; every finding below is in the
+*record*, which for this story is the deliverable.
+
+🔴 **The two that are not documentation.** H1 puts a 14-day expiry on the stand's own image and
+nobody wrote it down. H4 means AC4's credential cannot serve the deploy job it was provisioned for.
+Both were found by walking the story's claims into files it did not cite.
+
+⚠️ **Reviewer-model caveat, carried forward from the Dev Agent Record:** this review ran on Opus,
+the same tier as the implementation. Only the fresh-context half of the "reviewer ≠ implementer"
+invariant holds.
+
+#### High
+
+- [ ] [Review][Patch] **H1 — the stand is pinned to an image tag that the live retention rule deletes
+      in 14 days, and no record says so.** `.env` carries
+      `DOCKER_IMAGE=…:sha-62e2ff8dc215-dev`. The live rule (`package_cleanup_rule` id 1,
+      `enabled=true`, `remove_days=14`, `remove_pattern=fe-prionex/.+`, Story 1.11) protects only
+      `keep_pattern`, whose sole `sha-` alternative is `sha-[0-9a-f]{7,64}-(pre)?prod`
+      (`build.yml:962`). **Verified in review: `sha-62e2ff8dc215-dev` does not match; the same string
+      with `-prod` does.** `migration-decisions.md:1903` states it outright: *«`-prod` и `-preprod`
+      вечны, а `-dev` истекает за 14 дней»*. `62e2ff8d` merged 2026-08-19, so the tag disappears
+      **on or about 2026-09-02**: the running container survives on its local image, but any
+      `compose up`, any re-pull, any reboot after an image prune, and Story 4.3's first deploy
+      against that ref fail with `manifest unknown`. D28 §1 presents the tag purely as traceability
+      («стенд прослеживается до коммита»). The project already met this hazard and built the
+      compensator — the permanent `v1.0.0-buildkit-cni` tag exists precisely because it matches
+      `keep_pattern` — and neither the pattern nor the precedent is mentioned. **Fix: record the
+      expiry date, the `manifest unknown` failure mode and an owner in D28 §1 and `deferred-work.md`.**
+      Note that a digest pin is *not* a clean escape — untagged manifests are collected by the
+      separate `cleanup_sha256` cron. Choosing the remedy is Story 4.3's; naming the time bomb is this
+      story's.
+- [ ] [Review][Decision] **H2 — the leaked `platform-admin` token never reached the register that
+      owns it, and the entry it falsifies still stands.** Completion Note 9 discloses that
+      `fe_review_1_7` (`write:repository,read:organization`) entered this session's transcript.
+      `deferred-work.md:38` still reads, untouched by this PR: *"Its value never entered any
+      transcript."* The new "Story 4.2 findings" section lists five items — 4.3 blocker, AC2 deferral,
+      s1 access, retro-E5, AC5 substitution — **and not this one.** So the story's own highest-severity
+      item lives only in a story file and a PR description, both of which stop being read when 4.2 is
+      marked `done`, while Task 5.2b's mint-time discipline was applied scrupulously to the new
+      *read-only* token. The severity ordering is inverted. **Fix (mechanical): amend `:38`, add the
+      exposure to the findings section with owner and trigger.** **Decision for Oleg (not this
+      story's): whether to revoke `fe_review_1_7` + `fe_tmp_1_7`** — noting the project's own standing
+      finding that an admin cannot revoke another account's token without its password or a DB row,
+      so the exit has to be planned, not assumed.
+- [ ] [Review][Patch] **H3 — the run budget has no line for the closeout PR that Tasks 1.6/10.6
+      structurally require.** Closing the ledger means editing this file after the merge; `main` is
+      protected with eight required contexts and `apply_to_admins: true`, so that is a second branch,
+      PR and merge — push + PR-open + merge ≈ 3 runs. That is exactly what Story 4.1 spent on PR #56,
+      and exactly the rows this story's own Debug Log identifies: *"798/799/802 are Story 4.1's second
+      PR (#56), which its own closeout did not count."* The declaration diagnoses the structural
+      undercount and then reproduces it one level up. **Fix: add the closeout line to the declaration
+      before the ledger closes** (or record that 4.2's close will be folded into another PR, and which).
+      Related: the story asserts both *"4.1 declared 5, spent 7"* (Task 1.2) and the 798/799/802
+      finding (Debug Log), which together mean 4.1 spent **10**; the two figures are never reconciled,
+      and `4-1-…md:865` / `sprint-status.yaml:214-216` still say 7.
+- [ ] [Review][Patch] **H4 — registry auth is client-side, so AC4's credential does not serve any
+      deploy job, under any of the three options.** `docker pull` / `compose pull` resolve auth from
+      the **client's** `config.json` and pass it as `X-Registry-Auth`; the daemon holds none of its
+      own. A job container talking to the mounted `docker.sock` has an empty config, and
+      `/root/.docker` is in neither `container.options` nor `valid_volumes`. **AC4 was discharged for
+      an interactive root shell only** — the first pull of a new tag from a deploy job returns
+      `unauthorized` regardless of which mount option 4.3 picks. Recorded nowhere: not in D28 §3, not
+      in the 4.3 handoff. **Fix: record it as a named 4.3 constraint alongside the path question** —
+      it is the same class of finding and arguably the larger half.
+- [ ] [Review][Patch] **H5 — the 4.3 blocker is stated more strongly than the evidence supports, and
+      its option set is incomplete.** `deferred-work.md`: *"Story 4.3 is blocked as currently
+      specified, and the block is **measured**, not suspected."* What is measured is that the path is
+      not mounted and `/root` is `drwx------`. Three things are inferred:
+      (i) **`valid_volumes` constrains only what the *runner* mounts** — it does not constrain what a
+      job does *through* the `docker.sock` it already holds. D10 records that socket as a deliberate,
+      documented exception and the changelog records the accepted consequence in these words:
+      *«джоба деплоя получает root-эквивалентный контроль над демоном»*. A job can have the root
+      daemon bind-mount `/root/crm-prionex/fe-prionex-dev` into a helper container; `drwx------` does
+      not stop uid 0. This fourth path needs no runner-config change and no cross-team coupling, and
+      it is not enumerated.
+      (ii) **`docker-compose.stand.yml` declares no `volumes:` and no host path** — verified in
+      review. Compose reads the file and `--env-file` client-side, so they can be rendered in the job
+      workspace (the compose file is already in the repo, byte-identical) with the five values from
+      Forgejo variables. The convention question (AC1/FR26 name the path; four stories cite it) is
+      real; the *technical* block is narrower than "unreachable twice over".
+      (iii) **"uid 1501 cannot read it" measures the wrong identity.** `User=1501:988` is the runner
+      *supervisor* container; `sudo -u forgejo-runner-deploy` is a *host* user. The deploy **job**
+      runs in its own container (`deploy-base-dev-preprod:2026-08-07`) whose uid is recorded nowhere —
+      if it is root, a `root:root 0600` file bind-mounted in is readable. AC2's deferral and the
+      blocker's second half both rest on this.
+      Also unwalked: options (a)/(c) allowlist the stand path **read-write into every job container of
+      every repo permitted on that four-label runner** — the inverse of the AC2 clause they were meant
+      to discharge; option (b) puts `.env` inside a tree another team's jobs mount read-write and can
+      `down`/`clean`/`rsync --delete`. **Fix: soften "measured" to what was measured, add the two
+      missing paths and the per-option consequences.** ➡️ **The *choice* stays Story 4.3's — do not
+      decide it here.** Not dismissed, and not 4.3's to fix: the *analysis* is 4.2's deliverable and
+      it is permanent in a D-record 4.3 will act on.
+
+#### Medium
+
+- [ ] [Review][Patch] **M1 — `/root/.fj_reg_4_2.raw`: a second plaintext copy of an unrevocable
+      credential, described nowhere but the File List.** The `0600` binds to `.token`; `.raw` has no
+      recorded mode, owner or contents, appears in neither D28 §3 nor the mint-time
+      `deferred-work.md` entry, and is not covered by the recorded revocation trigger — while Task 9.4
+      (*"Confirm nothing was left behind"*) is `[x]`. Fix: record its mode and purpose, or remove it
+      and say so.
+- [ ] [Review][Patch] **M2 — Task 8.3's in-container HTTP check was replaced by a host-side one, and
+      the substitution is not recorded.** 8.3 prescribes
+      `docker exec fe-prionex-dev wget … http://crm-kong-gateway:8000/`. What is recorded is
+      `GET 127.0.0.1:8082/api/` — from the host, through the published port and nginx. The evidence is
+      arguably *stronger* end to end, which is why the silent swap matters: this story ceremonially
+      documents exactly this move for AC5. (AC3's letter is still met — 8.1/8.2's DNS and identity
+      proof *are* from inside the container.) Fix: name the substitution, or run the prescribed command.
+- [ ] [Review][Patch] **M3 — a cluster of `[x]` tasks discharged by conclusion in a story whose stated
+      method is outputs.** Dev Notes §1: *"the tasks insist on outputs rather than conclusions."*
+      Missing: 2.3's anchored `grep -x fe-prionex` exit code and the `8080` listener check; 3.3's
+      **second** sha256 (one value is recorded and equality asserted — which defeats the stated point
+      of making later drift detectable); 6.4's `ls -l`; 7.5/9.2's `docker compose ls`; 7.6's
+      `docker inspect` on the *container*; 8.5's healthcheck rationale (present only as pre-existing
+      contexting text in Dev Notes §4); 9.4's cleanup output; 5.5's `*-dev` tag listing.
+- [ ] [Review][Patch] **M4 — the interim ledger is stale in the commit that carries it.** `eb82c4f9`
+      (2026-08-20 12:08) landed **after** PR #57 opened and is pushed, so by the story's own multiplier
+      it costs **2** rows. The note says runs above 802 → 2 and lists as *"still missing by
+      construction"* only the review-fix push and the merge — not itself. True count at time of review
+      is 4. Also: *"Exactly what the declaration predicted"* does not hold, since the declaration named
+      a separate "context" push that never existed (`96586e3d` carries context + implementation + PR
+      description together).
+- [ ] [Review][Patch] **M5 — the story invalidated its own line citations, which is the failure Task
+      10.2 flags in bold.** This commit inserts 6 lines at `deferred-work.md:145` and 5 at `:171`,
+      moving the `fe_reg_1_10_ro` entry **306 → 317**. `deferred-work.md:306-307` is still cited in
+      AC4, Dev Notes §5 and References. The new `sprint-status.yaml` comment cites `D14:1265-1267` and
+      `D10:663-666`, now `:1276` and `:664-667` after this commit's own index row and amendments.
+      Mitigating: `baseline_commit` is declared in frontmatter and every citation was correct against
+      it. Fix: re-point the three prose citations, or state once that citations are baseline-relative.
+- [ ] [Review][Patch] **M6 — AC4's "Then" clause is unmet and is not among the recorded deviations.**
+      `epics.md`: *"the `read:package` token from Story 1.10 **is used**."* A different token was
+      minted. The reasoning is documented thoroughly (Note 5, D28 §3), but the AC block amends only the
+      *premise*, and both Completion Note 7 and the PR description announce *"**Two** recorded
+      deviations"* (AC2, AC5). This is a third, by the story's own standard: *"Record the substitution
+      explicitly rather than reporting the original clause as passed."*
+- [ ] [Review][Decision] **M7 — `0.0.0.0:8082` on a host with a public IP, external reachability never
+      checked.** Recorded as an achievement in Note 1, D28 §1 and the PR description. The same record
+      establishes s1 is `185.185.49.127` with a curated `ufw`, and that the neighbouring `8081` is
+      deliberately bound to `127.0.0.1` only. Docker's DNAT/FORWARD rules are not filtered by ufw's
+      INPUT policy and no `DOCKER-USER` rule appears anywhere in the repo. A story that measured DNS
+      from two directions did not measure its own listener. **Oleg's call: is a DEV stand on s1 meant
+      to be internet-reachable on 8082?** Story 4.9's cutover points DNS at this host and port, so the
+      answer is needed either way.
+- [ ] [Review][Patch] **M9 — the blocker has no home in the row that owns it.** `sprint-status.yaml`'s
+      `4-3-…: backlog` line is untouched and carries no comment; the whole blocker narrative sits in
+      the **4.2** row, which flips to `done` and stops being read. The *"Oleg / platform owner"* half —
+      a config change on a machine this project does not own — has no ticket, trigger or deadline
+      anywhere in the diff. The story correctly refused to *make* the decision; it did not put it where
+      a decision-maker will meet it.
+
+#### Low
+
+- [ ] [Review][Patch] **L1 — the declaration's arithmetic does not close: "7 = 4 pushes + 1 PR-open +
+      1 merge" is 6.** Repeated verbatim in Task 1.2, Completion Note 11 and the PR description. The
+      7th row exists only once Task 1.3's multiplier is folded in, which the itemization never shows —
+      so a reader cannot check 6 against 7 against 8. The total happens to be defensible; the stated
+      sum is not. Compounding: *"plus **any** run cancelled by concurrency"* makes the declaration a
+      floor rather than a number, and retro-D4 wants a figure that can be overrun.
+- [ ] [Review][Patch] **L2 — Task 1.0 is `[x]` but no pushed state ever said `in-progress`.** The
+      branch shows one transition, `backlog` → `review`, inside the implementation commit. The task's
+      stated purpose — *"so the tracker never disagrees with reality mid-story"* — was not achieved.
+- [ ] [Review][Patch] **L3 — File List omits `4-2-PR-description.md`,** which is a file this PR
+      creates. It appears only as *"possibly"* in Project Structure Notes.
+- [ ] [Review][Patch] **L4 — no Change Log row for the 2026-08-20 commit,** which rewrote Completion
+      Note 10 and renumbered the ledger note 10 → 11. Both story rows and both D28 changelog rows are
+      dated 19.08. A project whose stated discipline is *«явный маркер амендмента, а не тихая
+      перезапись»* applied it to other people's records and not to its own.
+- [ ] [Review][Patch] **L5 — Task 10.6 cites Task 1.4;** the close-only-against-a-query rule is 1.6
+      (Completion Note 11 cites it correctly). Also `eb82c4f9`'s message says *"the Task 2
+      declaration"* — Task 2 is Story 4.1's numbering.
+- [ ] [Review][Patch] **L6 — *"Anything above 802 belongs to this story"* is a condition stated as a
+      fact,** and the unremarked `803–812` gap is the tell: run ids are instance-global while the query
+      is repo-scoped. The method is sound; it holds only because nobody else pushed to
+      `CRM/fe-prionex` in the interval. One sentence fixes it.
+- [ ] [Review][Patch] **L7 — the page-cache reconciliation answers a different question than the one
+      a reader will ask.** Page cache explains **7.2 free vs 80 available**; it does not explain
+      **7.2 free vs 12 free**, the same column, which the sentence leaves standing as *"not a change in
+      the host"*. Task 2.4 asked for one sentence *"so the next story does not re-derive it"*. Also,
+      provenance: the 7.2 GiB figure originates at `2-2-…md:575` (`free -h`, verified); `2-4-…md:917`
+      is a summary table quoting it.
+- [ ] [Review][Patch] **L8 — "scope proven by refusal" exercised only the manifest path.** The probe
+      reused an image already present, so `Layer already exists` meant no blob write was ever
+      attempted. D28 §3 records this caveat correctly; the bare claim is repeated in the story, the PR
+      description and `deferred-work.md` without it. (Minor, and the manifest `401` is adequate for a
+      `read:package` token — but the probe was fired at the live `crm/fe-prionex` namespace by a story
+      that declines to create a Docker network.)
+
+#### Deferred — real, not this story's to close
+
+- [ ] [Review][Defer] **The credential has no detector.** This story established that s1's login
+      vanished on 13 Aug with cause unknown, then reconstituted the identical single point of failure
+      with no probe and no alert. The trigger *"revoke when s1 no longer pulls"* is an event with no
+      observer; the next disappearance surfaces as `unauthorized` in Story 4.3 with nothing pointing
+      back here.
+- [ ] [Review][Defer] **`fe_reg_1_10_ro`'s custody is unresolved.** `deferred-work.md` states plainly
+      that whether id 99 is still live *"is not established by this story"*. The branch where the
+      13-Aug actor holds the plaintext is a live `read:package` token of unknown custody that an admin
+      cannot revoke without a DB row. Recorded as unknown — correctly — but with no disposition.
+- [ ] [Review][Defer] **Reboot ordering: `restart: always` + `external: true` is a silent restart
+      loop, not the loud failure Task 7.4 relies on.** That refusal is *compose-time*. On daemon start
+      the restart policy starts the container directly; if `crm-dev-network` is absent or was recreated
+      with a new id by the backend team's `down`/`up`, the start fails, `always` retries forever, and
+      the healthcheck never runs because the container never runs. No boot-order statement or
+      post-reboot check exists. ➡️ Story 4.3 / 4.9.
+- [ ] [Review][Defer] **The stand's endpoint blocks the network owner's teardown.** Docker refuses
+      `network rm` while an endpoint is attached, so the backend team's `compose down` on `crm-dev` now
+      trips over a container in a compose project they cannot see. If they force-disconnect it, the
+      stand serves `200` on `/` with a dead `/api/` and reports `healthy` throughout — the exact
+      failure mode Dev Notes §4.1 names. Worth telling them; also the reason AC3's one-shot identity
+      proof wants a recurring guard in 4.3.
+
+#### Dismissed
+
+- *"Use the project's own runner `s1-fe-prionex-1` on s1"* as a fourth option — **not viable**:
+  D10 and `docs/runners/docker-compose.yml:43` establish it is DinD-isolated with **no host
+  `docker.sock`**, so it cannot see the host daemon, `crm-dev-network`, or the stand's containers.
+- Resource figures drifting between Tasks and Debug Log (13→12 free, 530→529 GB, load 5.34→20.97) as
+  a *correctness* problem — these are legitimate re-measurements at a different hour, which Task 2.4
+  demanded; 20.97 on 104 cores is ~20% and the capacity verdict holds at either value. The wording
+  issue that survives is L7.
+- *"Verdict (b) fenced it off"* as a substantive error — loose wording for "treated as live, so not
+  touched", with the right conclusion. The legacy host was not contacted for reasons that hold
+  independently.
+- *"Something removed it afterwards"* as unsupported inference — the story already records cause as
+  **unknown** in three places; the residual overreach is cosmetic.
+- Mutable-tag re-push / restart-never-re-pulls as separate findings — subsumed into H1, which is the
+  reachable version of the same hazard.
+
+#### Verified clean
+
+`docker-compose.stand.yml` sha256 `7f449dac…` matches the repo byte for byte, and the file is
+unchanged — five `${VAR:?}` guards with **no defaults**, `external: true` with no fallback, no image
+default (4.1/D27 conventions intact). `.env.stand.example` unchanged, exactly five `<CHANGE_ME>`
+assignments. **NFR5 clean** — `docker-compose.server.yml` and `.github/workflows/CD.yml` untouched,
+legacy host never contacted, `CONTAINER_NAME=fe-prionex-dev` avoids the literal name `CD.yml:201`
+force-removes. **D7 clean** — PR opened through the Forgejo API; nothing under `.github/`. **No
+`${{ }}` in `run:` bodies** — no workflow file is touched. **No secret residue in the diff** —
+scanned; only sha256 digests and the baseline commit. **"Must NOT touch" list respected in full.**
+**D28 is well-formed** — anchor unique, index row in numeric order after D27, body after D27, section
+cross-references (§3/§4/§6) resolve. **retro-E5 genuinely discharged twice on the real host** — the
+`401` on the manifest `PUT` and the `exit 2` on the built-in `bridge` are real discriminating runs,
+and AC3's identity proof (address match plus `X-Kong-Response-Latency`) exceeds what the AC asked.
+**retro-D4 honoured in letter** — Tasks 1.6/10.6 unchecked, ledger says OPEN, no self-reported close;
+the defects are in the declaration's structure (H3, L1), not in the refusal to guess.
+
 ### File List
 
 **Modified**
@@ -716,3 +971,5 @@ else)
 |---|---|
 | 2026-08-19 | Story contexted; adversarial validation applied (run budget corrected 5 → 7 + multiplier, unanchored `fe-prionex` check anchored, retro-E5 negative moved to the built-in `bridge`, mint route and token path supplied, two contradicting D-records identified) |
 | 2026-08-19 | Implementation: DEV stand provisioned on s1 and healthy on `8082`; Kong alias proven by identity; registry credential re-established after finding none on the host; D28 written; D10 and D14 amended; Story 4.3 blocker recorded |
+| 2026-08-20 | PR #57 opened directly via the Forgejo API — Task 10.5's file fallback not needed; `4-2-PR-description.md` written as the review brief; Completion Note 10 rewritten and the ledger note renumbered 10 → 11 (row added retroactively by the review, see L4) |
+| 2026-08-20 | Code review (Opus, three parallel layers): **changes requested**. 5 high, 9 medium, 8 low, 4 deferred, 5 dismissed — see `### Review Findings`. The two beyond documentation: **H1** the stand's `sha-…-dev` tag falls outside the live retention rule's `keep_pattern` (`build.yml:962`) and is deleted ~2026-09-02, unrecorded anywhere; **H4** registry auth resolves client-side, so AC4's host `docker login` cannot serve a deploy job under any of D28 §4's three options. **H5** the 4.3 blocker is stated as "measured" where it is partly inferred, and two cheaper paths (the deploy runner's own `docker.sock`; rendering compose/`.env` in the job workspace — the stand file declares no host path) are missing from the option set; the *choice* remains 4.3's. **H2** the `fe_review_1_7` transcript exposure never entered `deferred-work.md`, whose `:38` still reads "Its value never entered any transcript" — needs Oleg's revocation decision. **H3** the run budget still has no line for the closeout PR that Tasks 1.6/10.6 require, which is the exact structural miss it convicts 4.1 of. Verified clean: NFR5, D7, the must-not-touch list, D28's form, both retro-E5 failing runs, and the 4.1/D27 compose conventions |
