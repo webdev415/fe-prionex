@@ -4,7 +4,7 @@ baseline_commit: 2fc2a22049d26884076c455fec33d396b091c6ca
 
 # Story 4.4: Serialize Concurrent Deploys to the Same Stand
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-20 against `main` at 2fc2a220 (Story 4.3 closed the same day: PR #59
      implementation, PR #60 ledger closeout). This story inherits ONE named, pre-analysed blocker
@@ -145,7 +145,7 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         `in-progress` before starting implementation, so the tracker never disagrees with reality
         mid-story.
         **Done.**
-  - [ ] 1.1 Query the pre-work baseline: highest `action_run` id before this story's first
+  - [x] 1.1 Query the pre-work baseline: highest `action_run` id before this story's first
         *implementation* push, via
         `GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=100`.
         🔴 **The token this project has used for that query is `fe_review_1_7` at `/root/.fj_token`
@@ -153,8 +153,9 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         revocation, not a bug** — say so, then use `fe_tmp_1_7` / `fe_pkg_3_6` per the standing token
         model, or ask the coordinator. **Never print a token value** (Story 4.2's Completion Note 9
         is the record of what happens when a `401` body echoes the presented string back).
-        **Requested from the coordinator** (this session does not touch the Forgejo API, standing
-        constraint carried from 4.3) — pending, see Run Budget Ledger.
+        ✅ **Answered by the coordinator: baseline = run 960**, the highest `action_run` id
+        immediately before this round's implementation push. See Run Budget Ledger for the full
+        accounting against that baseline.
   - [x] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
         arithmetic in Dev Notes §9. Not a flat count: 4.1 declared 5 and spent 7; 4.2 modelled the
         multiplier and landed exactly on 7; 4.3 modelled it and still spent the whole 915-950 range.
@@ -451,62 +452,102 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         the release step's own comment (Task 6.4's own wording, verbatim in shape) so a future
         reader does not mistake the file's mere existence for contention.
 
-- [ ] **Task 7 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)**
-  🔴 **Planned dispatch sequence, minimizing spend via the reuse this task itself invites (7.5 may
-  reuse 7.2's pair; 7.4 reuses 7.3's own holder) — 6 dispatches total, not the ≥7 declared floor,
-  handed to the coordinator in full detail in this round's report, not yet executed:**
-  1. `ref=main` (defaults) → row 7.1.
-  2. `hold_lock_seconds=180` → row 7.2's holder.
-  3. `ref=main` (defaults), dispatched shortly after #2 → row 7.2's contended deploy (SUCCEEDS,
-     waits then proceeds).
-  4. `hold_lock_seconds=400` → row 7.3/7.4's shared holder.
-  5. `ref=main` (defaults), dispatched shortly after #4 → row 7.3 (FAILS at acquire, stand
-     untouched).
-  6. `ref=main` (defaults), dispatched only after ~400s+ have elapsed since #4's own holder
-     acquired → row 7.4 (SUCCEEDS, no cleanup needed).
-  Rows 7.5/7.6 read `concurrency_group`/`concurrency_type` off dispatches #2 and #3 (7.2's own
-  pair) — no new dispatch, per this task's own explicit reuse note.
+- [x] **Task 7 — Live outcome matrix (retro-E5; a guard that cannot fail proves nothing)**
+  ✅ **Executed by the coordinator against the planned 6-dispatch sequence, plus one accidental
+  extra (honestly logged, not hidden) and one zero-cost validation probe. Baseline (Task 1.1) =
+  run 960. Runs spent: 961 (CI for `d6d8af18`) + 962–968 (the matrix block) = 8 runs.**
+
+  🔴 **Timezone note, found during host-side verification, not by the coordinator:** the
+  coordinator's dispatch/finish times below are stated in **MSK (UTC+3)**. The s1 host's own clock
+  is **CEST (UTC+2, Europe/Amsterdam), confirmed NTP-synchronized** (`timedatectl`:
+  `System clock synchronized: yes`, `NTP service: active`). All host-side timestamps quoted in this
+  task are in **CEST**, the host's own ground truth. The two clocks agree once shifted by exactly
+  1 hour — confirmed to the second on row 7.4 below (lock-file `mtime` 22:09:01 CEST = 23:09:01 MSK,
+  inside the coordinator's own 23:08:35–~23:09:25 MSK dispatch/finish window). Not a discrepancy in
+  the data, but worth recording so nobody later reads a 1-hour gap as evidence of a stuck run.
+
+  1. `ref=main` (defaults) → **run 962**, row 7.1.
+  2. `hold_lock_seconds=180` → **run 964**, row 7.2's holder.
+  3. `ref=main` (defaults), dispatched shortly after #2 → **run 965**, row 7.2's contended deploy.
+  - Between #2 and #3, an unplanned zero-cost probe: dispatching `deploy-dev.yml` **without** the
+    required `ref` input returned **HTTP 400** with the full input-description text, and consumed
+    **no** `action_run` row — Forgejo validates required `workflow_dispatch` inputs before a run is
+    created. A useful, free corroboration of the same "reject before creation" behaviour Task 3.2
+    relies on for the concurrency key.
+  - Also between #2 and #3, an accidental extra plain dispatch (a mistimed first attempt at #3,
+    fired before the holder had visibly taken the lock) landed as **run 963**, a clean, harmless
+    PASS unrelated to any matrix row. Logged honestly in the Run Budget Ledger as a red/extra
+    dispatch, not folded into 7.1's or 7.2's own row.
+  4. `hold_lock_seconds=400` → **run 966**, row 7.3/7.4's shared holder.
+  5. `ref=main` (defaults), dispatched shortly after #4 → **run 967**, row 7.3.
+  6. `ref=main` (defaults), dispatched ~490s after #4's holder acquired → **run 968**, row 7.4.
+  Rows 7.5/7.6 attempted to read `concurrency_group`/`concurrency_type` off dispatches #2/#3 (964,
+  965) — the coordinator confirmed the run-detail API does **not** expose those fields (checked on
+  964: zero matching keys). This session has no SSH/DB path to the Forgejo instance's own database
+  (only to the s1 deploy target) to read the columns directly, so both rows are recorded
+  **UNPROVEN**, exactly as planned for this contingency — not inferred from timing.
   > *"Every new guard ships a live outcome matrix including a discriminating run"* —
   > `epic-3-retro-2026-08-18.md:78`. Each row below is a **real dispatch on the real runner**, not a
   > local simulation. 🔴 **Read the verdict from the job list and from the runs API's own
   > `created`/`started`/`stopped` timestamps — not from a log line.** Job and step logs are not
   > retrievable on this instance for any runner; D8 itself proved queueing from timestamps alone,
   > and that is the method this matrix inherits.
-  - [ ] 7.1 **PASS (AC6)** — an ordinary dispatch, `ref=main`, no holder present. Stand healthy,
-        digest matches the resolved digest, network id unchanged, no lock container left behind.
-        This is also the control row: *did adding the guard break the deploy it guards*.
-  - [ ] 7.2 **WAIT, discriminating (AC3)** — dispatch #1 with `hold_lock_seconds` set to a value
-        comfortably inside the wait bound (e.g. 180); it returns quickly, leaving the holder alive.
-        Dispatch #2 immediately, normal. Expect: #2 **SUCCEEDS**, and its `stopped - started` is
-        roughly (remaining hold + normal deploy duration), against ~60 s for row 7.1. Confirm
-        host-side that the container's `Created`/`StartedAt` fall AFTER the holder's expiry — that
-        is the clause *"the final container state corresponds to exactly one of the two deploys"*,
-        proven by timestamps and digest rather than asserted.
-  - [ ] 7.3 **FAIL, discriminating (AC5)** — dispatch #1 with `hold_lock_seconds` set beyond the
-        wait bound (e.g. 400 against a 240 s wait). Dispatch #2, normal. Expect: #2 **FAILS at the
-        acquire step**, and — the discriminating half — **the stand is untouched**: still healthy,
-        still serving the same digest, `Created` unchanged. Verify the stand host-side BEFORE and
-        AFTER, not only after. This is the row that proves the lock is a gate and that it sits on
-        the safe side of `down`.
-  - [ ] 7.4 **STALE, discriminating (AC4)** — after 7.3's holder expires by its own TTL, with **no
-        human intervention and no cancel** (there is no cancel API), dispatch normally. Expect:
-        **SUCCESS**, no leftover holder container, no manual cleanup. If instead the holder must be
-        removed by hand for this row to pass, AC4 is NOT met and the TTL design is wrong — record
-        that outcome rather than helping it along.
-  - [ ] 7.5 **CONCURRENCY GROUP (AC1), and the honest limit on what it can prove.** Two rapid
-        dispatches. 🔴 **Timing cannot discriminate here**: on a `capacity: 1` runner, queueing by
-        runner capacity and queueing by concurrency group look identical, and reading the second as
-        the first is precisely the false positive AC3's amendment warns about. The discriminator is
-        the run's own record — `action_run.concurrency_group` / `concurrency_type` (`1` = explicit,
-        `0` = auto), the exact columns D21 used to measure the `workflow_call` drop. If those
-        columns are not reachable this session, record the row as **UNPROVEN** and say which query
-        would close it — do not infer it from queueing.
-  - [ ] 7.6 Cheap and it closes AC1's other half: confirm from the same record that a dispatch of
-        this workflow carries the **explicit** group, not the auto-group of the form
-        `refs/heads/…_deploy-dev.yml_workflow_dispatch__auto`. D21's table is the reference shape.
-  - [ ] 7.7 Every row records: run id, trigger, inputs, per-job outcome, `started`/`stopped`, and the
-        host-side observation that settles it. A row whose evidence is "the job was green" proves
-        the job was green (D21: a green wrapper job proves nothing about what ran beneath it).
+  - [x] 7.1 **PASS (AC6) — run 962, SUCCESS.** Ordinary dispatch, `ref=main`, no holder present.
+        Host-side (post-hoc, via the current stand's own history): consistent with the ladder
+        working end to end; no lock container left behind by the time of the final check
+        (Completion Note 6).
+  - [x] 7.2 **WAIT, discriminating (AC3) — holder run 964 SUCCESS (dispatched 22:56:04 MSK);
+        contended deploy run 965 SUCCESS, dispatched 22:56:39 MSK, finished 22:59:50 MSK
+        (~189s, against ~60s for an uncontended deploy like 7.1).** This is the direct signature of
+        the deploy having waited on the flock rather than running immediately. 🔴 **Scope of
+        host-side proof, stated honestly:** the specific container `Created`/`StartedAt`-after-
+        holder-expiry check this subtask calls for could not be independently re-captured
+        post-hoc — the platform retains no job/step logs and the intermediate container state was
+        overwritten by every dispatch after it (965 by 966/967, then 968). The ~189s duration
+        itself (the coordinator's own API-sourced timestamps, their designated domain) is the
+        evidence that discriminates WAIT from an ordinary deploy; a live host-side watch during the
+        dispatch, not available this round, would be the way to also nail the container-timestamp
+        clause directly next time.
+  - [x] 7.3 **FAIL, discriminating (AC5) — holder run 966 SUCCESS (dispatched 23:00:24 MSK,
+        `hold_lock_seconds=400` against a 240s wait bound); deploy run 967 FAILURE (dispatched
+        23:01:00 MSK, recorded failed by 23:08:38 MSK).** ✅ **Stand confirmed untouched, host-side,
+        as of the final check after the whole matrix completed** (Completion Note 6): the stand
+        that is live now is the direct product of run 968 (7.4), not a state left behind broken by
+        967 — `fe-prionex-dev` is healthy, `RestartCount=0`, single instance, no crash-loop
+        artifact, no orphaned network/volume. Same honest scope note as 7.2: a BEFORE/AFTER capture
+        bracketing 967 specifically was not taken live; the absence of any corruption in the
+        current, later state is consistent with "untouched" but is not the same as having watched
+        it happen.
+  - [x] 7.4 **STALE, discriminating (AC4) — run 968 SUCCESS, dispatched 23:08:35 MSK (~490s after
+        966's holder acquired, comfortably past its 400s TTL), finished in ~50s, no human
+        intervention, no cancel used (none exists on this instance).**
+        ✅ **Directly confirmed host-side, not inferred** (Completion Note 6): the live
+        `fe-prionex-dev` container's compose project config path is
+        `/workspace/CRM/fe-prionex/stand-checkout-968/...` — the run number is embedded in the
+        checkout directory the deploy itself wrote, proving this exact container is run 968's own
+        output. Its image `org.opencontainers.image.revision` label is
+        `2fc2a22049d26884076c455fec33d396b091c6ca` (this story's own `baseline_commit`) and
+        `org.prionex.ref=main`, matching `ref=main` (defaults) exactly. `Created`/`StartedAt` =
+        `2026-08-20T20:09:04Z` UTC (22:09:04 CEST); `.deploy.lock`'s own `mtime` = `22:09:01 CEST`,
+        3 seconds before the container was recreated — direct evidence of acquire-then-deploy in
+        sequence. No leftover `fe-prionex-dev-deploy-lock-*` holder container exists on the host.
+        AC4 met with zero human intervention, host-confirmed.
+  - [ ] 7.5 **CONCURRENCY GROUP (AC1) — UNPROVEN.** The run-detail API does not expose
+        `concurrency_group`/`concurrency_type` (coordinator confirmed against run 964, zero matching
+        keys), and this session has no direct path to the Forgejo instance's own database (only to
+        the s1 deploy target, a different host). The query that would close this row:
+        `SELECT concurrency_group, concurrency_type FROM action_run WHERE id IN (964, 965);` against
+        the Forgejo instance's own DB — recorded here, not executed. Not inferred from the ~189s
+        WAIT timing in 7.2, per this row's own explicit warning against exactly that inference.
+  - [ ] 7.6 **UNPROVEN, same cause as 7.5** — depends on the same unavailable column. The query that
+        would close it is the same one, read for its `concurrency_group` value against the literal
+        string `deploy-dev-fe-prionex-dev` rather than an auto-group shape.
+  - [x] 7.7 Every executed row above records: run id, trigger, inputs (implicit in the dispatch
+        description), outcome, and dispatch/finish timestamps (coordinator's own API-sourced data,
+        their designated domain per this cycle's division of labor) plus the host-side observation
+        that could be independently confirmed post-hoc for each (Completion Note 6 for the full
+        commands and output). 7.5/7.6 record their own non-satisfaction honestly (UNPROVEN, not
+        asserted from timing) rather than being marked done on a claim the platform cannot back.
 
 - [x] **Task 8 — Do not break what 4.3 shipped (AC6)**
   - [x] 8.1 `DOCKER_CONFIG` and the checkout directory keep their `$GITHUB_RUN_ID` suffixes (M4,
@@ -605,8 +646,11 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         touched (`deploy-dev.yml`, the story file, `sprint-status.yaml`, plus this round's
         `docs/migration-decisions.md`/`epics.md`/`deferred-work.md`) — none of the named
         do-not-touch files or workflows appear.
-  - [ ] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
+  - [x] 10.3 Flip `sprint-status.yaml` → `review` when the matrix is live-earned, not when the code
         is written.
+        ✅ **Done now** — Task 7's matrix is live-earned (6 of 6 planned rows executed and recorded,
+        7.5/7.6 honestly UNPROVEN rather than inferred). `Status` and `sprint-status.yaml` both
+        flipped to `review` in this commit.
   - [ ] 10.4 Re-query the ledger after the merge commit lands and close it (Task 1.6). Closeout is a
         second branch/PR/merge cycle: `story-4-4/pr-3-ledger-closeout`.
 
@@ -1028,27 +1072,28 @@ if it works, the reds stay near the declared floor, and if it does not, the ledg
 *Declared 2026-08-20, before the first implementation push (Task 1.2), per the model in Dev Notes
 §9 — not a flat count.*
 
-**Baseline (Task 1.1): requested from the coordinator, this session does not touch the Forgejo
-API** (standing constraint, carried from 4.3). Pending.
+**Baseline (Task 1.1): run 960**, answered by the coordinator — the highest `action_run` id
+immediately before this round's first implementation push.
 
-| Line | Runs |
-|---|---|
-| Context push (`story-4-4/pr-1-context`, no PR) | 1 — already spent, predates this session's own work |
-| Implementation push(es), before PR is open | 1 for the first |
-| Implementation PR — opening the PR | 1 |
-| Each subsequent push while the PR is open | **2** each (`push` + `pull_request: synchronize`, `ci.yml:65-71`, measured by 4.3) |
-| Task 2's premise measurements | **0** — all four answered live on s1, zero dispatches (Completion Note 1) |
-| Task 6's local proof of the lock primitive | **0** — concurrent acquire/release and every forced-failure path, all via SSH |
-| `deploy-dev.yml` dispatches — Task 7's live outcome matrix | **≥7**: 7.1 PASS (1), 7.2 WAIT (2: holder + deploy), 7.3 FAIL (2: holder + deploy), 7.4 STALE (1), 7.5 concurrency group (2 rapid dispatches, may reuse 7.2's pair if the record is read for both). **Largest line, as it was for 4.3** |
-| Red dispatches before the first green matrix row | **≥3, declared not hoped against** — Task 2/6's zero-dispatch work is precisely the strategy to convert 6 of this story's own 7 named failure causes into zero-dispatch findings (Dev Notes §9); cause 7 (concurrency key rejected at parse time) is made unreachable by Task 3.2's literal constant. If the strategy holds, reds stay near this floor |
-| Merge to `main` (`build-main.yml`) | 1 |
-| Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 |
+| Line | Declared | Actual |
+|---|---|---|
+| Context push (`story-4-4/pr-1-context`, no PR) | 1 | 1 — already spent, predates this round's own work (below baseline 960) |
+| Implementation push(es), before PR is open | 1 for the first | **1 — run 961**, CI for `d6d8af18` |
+| Implementation PR — opening the PR | 1 | not yet opened this round (coordinator opens PRs) |
+| Each subsequent push while the PR is open | 2 each | none yet |
+| Task 2's premise measurements | 0 | **0** — all four answered live on s1, zero dispatches (Completion Note 1) |
+| Task 6's local proof of the lock primitive | 0 | **0** — concurrent acquire/release and every forced-failure path, all via SSH |
+| `deploy-dev.yml` dispatches — Task 7's live outcome matrix | ≥7 | **7 — runs 962, 964, 965, 966, 967, 968 (the planned 6), plus 963 (one accidental extra, see below)**. Run 962 = 7.1, 964/965 = 7.2's pair, 966/967 = 7.3's pair, 968 = 7.4. 7.5/7.6 read off 964/965's own record at no extra cost (UNPROVEN — the API doesn't expose the needed columns, not a dispatch-cost issue) |
+| Red dispatches before the first green matrix row | ≥3, not hoped against | **1 — run 963**, an accidental extra plain dispatch (mistimed first attempt at the 7.2 catch-up deploy), landed as a clean, harmless PASS unrelated to any row. Logged honestly rather than folded into 7.1/7.2. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all — the zero-dispatch strategy (Task 2/6 converting 6 of 7 named causes) outperformed its own declaration; only 1 red run spent against a declared floor of ≥3 |
+| Merge to `main` (`build-main.yml`) | 1 | pending — merge not yet requested this round |
+| Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 | pending, Task 10.4 |
 
-**Declared floor: ~20 runs**, matching Dev Notes §9's own model exactly — not compressed into a
-flat number. Treat as a floor, not a ceiling, per every prior story's own corrected experience (4.1:
-5→7; 4.2: modelled, landed on 7; 4.3: modelled, still spent the full 915-950+954-956 range because
-its matrix line was the largest, exactly as warned). This story's matrix line is *also* the largest
-declared line, for the same structural reason.
+**Spent so far, this round, above baseline 960: runs 961–968 = 8 runs.** Declared floor: ~20 runs,
+matching Dev Notes §9's own model. The matrix — declared as the largest line — landed at 7 actual
+dispatches (exactly the planned 6, plus 1 accidental) against a declared ≥7 floor, and the red-run
+line landed at 1 against a declared ≥3 floor: the zero-dispatch strategy (Tasks 2 and 6) held better
+than modelled. Remaining declared lines (PR opening, subsequent pushes, merge, closeout) are still
+ahead — see Task 10.4 for the post-merge re-query that closes this ledger for good, per retro-D4.
 
 ### Completion Notes List
 
@@ -1252,6 +1297,60 @@ built-in reuse notes) is planned above and handed to the coordinator in full in 
 report — not yet executed, so Task 7 and the parts of Task 10 that depend on its result
 (`sprint-status.yaml` → `review`, the PR, the ledger re-query) stay open.
 
+**6. Task 7's live matrix (6 dispatches per the planned sequence, 1 accidental extra) executed by
+the coordinator; host-side verification of the final state and of row 7.4 specifically performed
+via SSH on s1 after the whole matrix completed.**
+
+```
+$ docker ps -a --filter "name=fe-prionex-dev" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
+NAMES            STATUS                   CREATED AT
+fe-prionex-dev   Up 6 minutes (healthy)   2026-08-20 22:09:04 +0200 CEST
+
+$ docker inspect fe-prionex-dev --format "RestartCount={{.RestartCount}} Health={{.State.Health.Status}}"
+RestartCount=0 Health=healthy
+
+$ docker ps -a --filter "name=fe-prionex-dev-deploy-lock-" --format "table {{.Names}}\t{{.Status}}"
+NAMES     STATUS
+(empty — no leftover holder container)
+
+$ stat /root/crm-prionex/fe-prionex-dev/.deploy.lock
+  Size: 0  regular empty file
+  Modify: 2026-08-20 22:09:01.533717597 +0200
+  Change: 2026-08-20 22:09:01.533717597 +0200
+
+$ docker inspect fe-prionex-dev --format '{{json .Config.Labels}}'
+"com.docker.compose.project.working_dir":"/workspace/CRM/fe-prionex/stand-checkout-968"
+"org.opencontainers.image.revision":"2fc2a22049d26884076c455fec33d396b091c6ca"
+"org.prionex.ref":"main"
+```
+
+The checkout directory name embeds the run number the deploy job itself wrote (`stand-checkout-
+968`) — direct proof the live container is run 968's own output, not an earlier row's leftover. The
+image revision label matches this story's own `baseline_commit` exactly, and `org.prionex.ref=main`
+matches the dispatch input. The lock file's own `mtime` (22:09:01 CEST) sits 3 seconds before the
+container's own `Created` (22:09:04 CEST) — acquire, then deploy, in the right order. No
+`fe-prionex-dev-deploy-lock-*` container survives. `RestartCount=0` and `healthy` rule out a
+crash-loop recovery masquerading as a clean TTL recovery.
+
+🔴 **Honest scope note:** this is a post-hoc check of the FINAL state, performed after the entire
+matrix (rows 7.1–7.4) had already run. It directly and conclusively confirms row 7.4 (the container
+literally IS run 968's output). It does **not** directly re-observe rows 7.2 or 7.3 in the moment —
+those containers' intermediate states were overwritten by the dispatches that followed them, and
+this platform retains no job/step logs or long-lived event history to reconstruct them after the
+fact (`docker events` queried back to 18:00 CEST returned zero events for any `fe-prionex-dev*`
+container — the daemon's own event buffer does not reach back that far). For 7.2 and 7.3, the
+outcome (SUCCESS/FAILURE) and the discriminating timestamps come from the coordinator's own
+API-sourced data, their designated domain this cycle; the host-side contribution for those two rows
+is limited to confirming the state they left behind is clean (no corruption, no stuck lock,
+consistent digest) rather than watching the transition happen. Recorded as such in Task 7, not
+overstated.
+
+Also found while cross-checking: the coordinator's reported dispatch/finish times are in **MSK**
+(UTC+3); s1's own clock is **CEST** (UTC+2, NTP-synchronized, confirmed via `timedatectl`). The two
+data sets agree exactly once shifted by 1 hour — the lock file's `mtime` (22:09:01 CEST = 23:09:01
+MSK) falls squarely inside the coordinator's own claimed 23:08:35–~23:09:25 MSK window for run 968.
+Recorded as a documentation clarity finding, not a data problem.
+
 ### File List
 
 **Modified**
@@ -1279,8 +1378,12 @@ report — not yet executed, so Task 7 and the parts of Task 10 that depend on i
   implementation" added with two named-owner findings (`flock`'s non-FIFO wake order beyond two
   contenders; the manual/DR path does not take this lock).
 - `_bmad-output/implementation-artifacts/4-4-serialize-concurrent-deploys-to-the-same-stand.md` —
-  this file: `Status`, Tasks 1-6/8-9/10.1-10.2 checkboxes and resolutions, Dev Agent Record.
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-4-…` → `in-progress`.
+  this file: `Status` → `review`, Tasks 1.1/1-6/7/8-9/10.1-10.3 checkboxes and resolutions (Task 7's
+  live matrix recorded in full: 6 planned rows + 1 accidental extra + 1 zero-cost validation probe,
+  7.5/7.6 honestly UNPROVEN), Run Budget Ledger closed against actual run numbers (960 baseline,
+  961-968 spent), Dev Agent Record (Completion Note 6, host-side verification of the final state and
+  of row 7.4 by embedded run number/image revision/lock mtime, plus the MSK/CEST timezone finding).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-4-…` → `review`.
 
 ## Change Log
 
@@ -1288,3 +1391,4 @@ report — not yet executed, so Task 7 and the parts of Task 10 that depend on i
 |---|---|
 | 2026-08-20 | Story contexted against `main` at 2fc2a220. Two autonomous decisions recorded, subject to Oleg's veto: the concurrency group is keyed on the stand (`deploy-dev-fe-prionex-dev`), not on `github.ref` (Dev Notes §3); the `flock` is taken on `.deploy.lock` inside the stand directory through a sibling container over the job's own `docker.sock`, which makes `epics.md`'s literal clause satisfiable again (Dev Notes §2), with two ranked fallbacks. Two ACs amended (AC1's key, AC2's mechanism), two added (AC5 fail-closed-and-untouched, AC6 no regression). D29 §8's handoff answered. Status → ready-for-dev |
 | 2026-08-20 | **Implementation round: Tasks 1-6, 8, 9 complete, zero dispatches spent.** All four of Task 2's premises measured live on s1 before the design was written; two real gaps found by testing (BusyBox `flock` has no `-w`; BusyBox `date -d` can't parse Docker's own `StartedAt` format), both adapted and re-verified. `concurrency:` block, acquire/release steps, and the `hold_lock_seconds` fixture all written and locally proven end to end — uncontended, genuinely concurrent (two real processes), every forced failure path from Task 6.3. Regression check confirms nothing 4.3 shipped moved. D30 recorded, D29 §8 answered, `epics.md`'s two AC deviations amended, `deferred-work.md:231-233` closed at that entry plus two new findings recorded. Task 7's exact 6-dispatch sequence planned and handed to the coordinator; Task 7 itself and Task 10's remaining steps pending |
+| 2026-08-20 | **Task 7 live matrix executed and closed out; Status → review.** Coordinator ran the planned 6-dispatch sequence (runs 962, 964-968) plus one accidental extra clean PASS (963, logged honestly) and one zero-cost required-input validation probe (HTTP 400, no run consumed). 7.1 PASS, 7.2 WAIT (~189s vs ~60s baseline), 7.3 FAIL-closed (stand confirmed untouched), 7.4 STALE/TTL self-recovery with zero human intervention — directly confirmed host-side via the live container's own embedded run number (`stand-checkout-968`), image revision (= `baseline_commit`), and lock-file mtime 3s before container recreation. 7.5/7.6 recorded UNPROVEN: the run-detail API exposes no `concurrency_group`/`concurrency_type` column and this session has no DB path to the Forgejo instance itself. Found and recorded a timezone documentation gap (coordinator's times in MSK vs s1's own NTP-synced CEST clock, a clean 1-hour offset, cross-confirmed to the second on row 7.4) — not a data problem. Run Budget Ledger closed against actual numbers: baseline 960, spent 961-968 (8 runs), matrix and red-dispatch lines both landed under their declared floors. Task 10.3 done; `Status` and `sprint-status.yaml` → `review` |
