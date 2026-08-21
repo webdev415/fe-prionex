@@ -7,6 +7,10 @@ import { useFileDropzone } from '@/features/imports/hooks/useFileDropzone'
 import type { ContactTagAssignmentMode } from '@/features/imports/types/contactTagAssignment'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB, mirrors MAX_CONTACT_TAG_FILE_SIZE
+// Module scope, not an inline literal at the call site: a fresh array
+// each render makes useFileDropzone's useCallback deps change every
+// time, so the memo it wraps never actually holds.
+const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx']
 
 interface Props {
   mode: ContactTagAssignmentMode
@@ -29,7 +33,7 @@ export function ContactTagAssignmentUpload({
   // Shared with the client-tag upload panel: the accepted extensions and the
   // size limit are one rule, so they live in one place.
   const { dragActive, handleDrag, handleDrop, handleFileChange } = useFileDropzone({
-    accept: ['.csv', '.xlsx'],
+    accept: ACCEPTED_EXTENSIONS,
     maxBytes: MAX_FILE_SIZE,
     onFileSelected,
     errorScope: p,

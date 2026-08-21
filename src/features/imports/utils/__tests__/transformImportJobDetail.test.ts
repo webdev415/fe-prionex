@@ -22,7 +22,7 @@ function backendJob(overrides: Partial<BackendJob> = {}) {
   return {
     id: 1,
     batch_id: 'CTAG-1',
-    file_name: 'tags.csv',
+    filename: 'tags.csv',
     user_id: 1,
     username: 'op',
     created_at: '2026-08-10T00:00:00Z',
@@ -34,10 +34,18 @@ function backendJob(overrides: Partial<BackendJob> = {}) {
     import_type: 'contact_tag_assignment',
     import_options: {},
     ...overrides,
-  } as unknown as BackendJob
+  } as BackendJob
 }
 
 describe('transformImportJobDetail — counter mapping per import type', () => {
+  // The fixture used to supply `file_name` -- the field the transformer
+  // OUTPUTS -- behind a double cast, so `backend.filename` was undefined in
+  // every case here and the rename was never exercised. Asserted directly so
+  // the cast cannot drift back.
+  it('renames the backend filename field', () => {
+    expect(transformImportJobDetail(backendJob()).file_name).toBe('tags.csv')
+  })
+
   describe('contact_tag_assignment', () => {
     it('reports rows applied, not contacts, as successful_clients', () => {
       // successful_records counts FILE ROWS here. Reading updated_records

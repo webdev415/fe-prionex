@@ -44,15 +44,20 @@ export function useFileDropzone({
     (file: File): string | null => {
       const lower = file.name.toLowerCase()
       if (!accept.some((ext) => lower.endsWith(ext))) {
-        return t(
-          `${errorScope}.errors.onlyCsvOrXlsx`,
-          'Only CSV or Excel (.xlsx) files are accepted.'
-        )
+        // Built from `accept` rather than naming the extensions: the fallback
+        // is what a caller sees until a translation exists for its scope, and
+        // hardcoding them made it contradict any caller that accepted a
+        // different set.
+        return t(`${errorScope}.errors.onlyCsvOrXlsx`, {
+          defaultValue: 'Only {{extensions}} files are accepted.',
+          extensions: accept.join(', '),
+        })
       }
       if (file.size > maxBytes) {
         return t(`${errorScope}.errors.fileTooLarge`, {
-          defaultValue: 'File too large ({{size}} MB). Maximum is 10 MB.',
+          defaultValue: 'File too large ({{size}} MB). Maximum is {{limit}} MB.',
           size: (file.size / (1024 * 1024)).toFixed(1),
+          limit: Math.round(maxBytes / (1024 * 1024)),
         })
       }
       return null
