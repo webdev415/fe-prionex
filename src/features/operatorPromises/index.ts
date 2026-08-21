@@ -27,10 +27,16 @@ export type {
   OperatorPromisesReportResponse,
 } from './types'
 export {
-  OPERATOR_PROMISES_TAB_IDS,
+  OPERATOR_PROMISES_FIXED_TAB_IDS,
   DEFAULT_OPERATOR_PROMISES_TAB,
+  collectDynamicDepartmentTabs,
+  dynamicDepartmentTabId,
+  isFixedOperatorPromisesTab,
   resolveOperatorPromisesTab,
   filterRowsByTab,
+  type OperatorPromisesDepartmentTab,
+  type OperatorPromisesDynamicTabId,
+  type OperatorPromisesFixedTabId,
   type OperatorPromisesTabId,
 } from './utils/departmentTabs'
 export { sumOperatorPromisesRows } from './utils/totals'

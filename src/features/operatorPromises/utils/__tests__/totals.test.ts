@@ -7,6 +7,7 @@ function makeRow(overrides: Partial<OperatorPromisesRow> = {}): OperatorPromises
     user_id: 101,
     fio: 'Баженов Олексій Володимирович',
     department: 'Стягнення',
+    department_id: 3,
     group_name: 'Група №2',
     is_active: true,
     interactions_count: 0,

@@ -14,6 +14,7 @@ function makeRow(overrides: Partial<OperatorPromisesRow> = {}): OperatorPromises
     user_id: 101,
     fio: 'Баженов Олексій Володимирович',
     department: 'Стягнення',
+    department_id: 3,
     group_name: 'Група №2',
     is_active: true,
     interactions_count: 314,
@@ -178,7 +179,8 @@ describe('OperatorPromisesTable', () => {
   it('renders "—" for every nullable directory column', () => {
     // A department-less operator keeps their row — the report has no department
     // filter and such rows carry real money.
-    renderTable([makeRow({ fio: null, department: null, group_name: null })])
+    // `department_id` is null alongside the name, as the contract pairs them.
+    renderTable([makeRow({ fio: null, department: null, department_id: null, group_name: null })])
 
     expect(screen.getAllByText('—')).toHaveLength(3)
   })

@@ -21,11 +21,14 @@
  * no page size and no clamp/self-heal; what it borrows from them is the URL
  * date sync and the error ladder.
  *
- * Department sub-tabs («Всі» / ТП / Дайлер / Стягнення) filter the SINGLE
- * response client-side — one request serves all four, as in Techno-Finance.
- * The backend applies no department filter at all, on purpose: the departments
- * Techno-Finance drops on its frontend (Юристи, Аналітики, no department) held
- * ≈ 631 000 ₴ of July 2026 collections, and «Всі» is the tab that shows them.
+ * Department sub-tabs filter the SINGLE response client-side — one request
+ * serves the whole strip, as in Techno-Finance. The backend applies no
+ * department filter at all, on purpose: the departments Techno-Finance drops on
+ * its frontend (Юристи, Аналітики, no department) held ≈ 631 000 ₴ of July 2026
+ * collections. Here «Всі» shows them all, and every department beyond the fixed
+ * triple additionally gets a tab of its own, built from the response and keyed
+ * by `department_id` — see utils/departmentTabs.ts for the two halves of the
+ * strip and for what a renamed department looks like on screen.
  *
  * All tab state the user set lives in the URL (`?opf=`, `?opt=`, `?opd=`) so it
  * survives refresh, bookmarking and switching between the page tabs (panels
@@ -61,7 +64,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOperatorPromisesReport } from '../hooks'
 import {
   DEFAULT_OPERATOR_PROMISES_TAB,
-  OPERATOR_PROMISES_TAB_IDS,
+  OPERATOR_PROMISES_FIXED_TAB_IDS,
+  collectDynamicDepartmentTabs,
   filterRowsByTab,
   resolveOperatorPromisesTab,
   type OperatorPromisesTabId,
@@ -94,7 +98,9 @@ const MAX_RANGE_DAYS = 366
 const MS_PER_DAY = 86_400_000
 
 export function OperatorPromisesTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  // Orders the dynamic department tabs in the reader's own alphabet.
+  const language = i18n.language
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Same project resolution as the Reports dashboard: active project first,
@@ -189,28 +195,52 @@ export function OperatorPromisesTab() {
     enabled: !hasFilterError,
   })
 
-  const activeTab: OperatorPromisesTabId = resolveOperatorPromisesTab(
-    searchParams.get(DEPARTMENT_KEY)
-  )
-
-  const tabItems: SegmentedTabItem<OperatorPromisesTabId>[] = OPERATOR_PROMISES_TAB_IDS.map(
-    (id) => ({
-      id,
-      label: t(`pages.reports.operatorPromises.subtabs.${id}`),
-    })
-  )
-
   // Stable identity for the empty fallback — a fresh `[]` every render would
   // defeat the memos below and OperatorPromisesTable's own.
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
+
+  // The dynamic half of the strip comes from the response itself, so it exists
+  // only once the rows do — which is exactly why `resolveOperatorPromisesTab`
+  // must not write its fallback back into the URL: `?opd=d17` reads as «Всі»
+  // while the request is in flight and snaps to its tab when the rows land.
+  const dynamicTabs = useMemo(() => collectDynamicDepartmentTabs(rows, language), [rows, language])
+
+  const activeTab: OperatorPromisesTabId = resolveOperatorPromisesTab(
+    searchParams.get(DEPARTMENT_KEY),
+    dynamicTabs
+  )
+
+  // Fixed triple first (aggregate → ТП → Дайлер → Стягнення), then one tab per
+  // remaining department of the response, alphabetically. The fixed labels are
+  // TRANSLATED; a dynamic one is the department's own live name, which no
+  // locale file can know.
+  const tabItems: SegmentedTabItem<OperatorPromisesTabId>[] = useMemo(
+    () => [
+      ...OPERATOR_PROMISES_FIXED_TAB_IDS.map((id) => ({
+        id,
+        label: t(`pages.reports.operatorPromises.subtabs.${id}`),
+      })),
+      ...dynamicTabs.map((tab) => ({ id: tab.id, label: tab.label })),
+    ],
+    [dynamicTabs, t]
+  )
+
+  // The heading of the totals block's "visible" column. Falling back to the
+  // default tab's label is unreachable (`activeTab` always names an item) and
+  // is here so the heading can never render as `undefined`.
+  const activeTabLabel =
+    tabItems.find((item) => item.id === activeTab)?.label ??
+    t(`pages.reports.operatorPromises.subtabs.${DEFAULT_OPERATOR_PROMISES_TAB}`)
+
   const visibleRows = useMemo(() => filterRowsByTab(rows, activeTab), [rows, activeTab])
   const visibleTotals = useMemo(() => sumOperatorPromisesRows(visibleRows), [visibleRows])
 
   // "The period produced rows, but none of them belong to this tab" — a
-  // different fact from "the period produced nothing", and the only shape in
-  // which a department renamed in the auth directory can surface (see
-  // utils/departmentTabs.ts). By construction this is never true on «Всі»,
-  // which does not filter.
+  // different fact from "the period produced nothing". In practice this is a
+  // FIXED tab's message: a dynamic tab exists only because a row carries its
+  // `department_id`, and «Всі» does not filter at all. It is what a renamed
+  // department leaves behind on its old fixed tab, next to the new tab that now
+  // holds the rows (see utils/departmentTabs.ts).
   const hasUnmatchedRows = rows.length > 0 && visibleRows.length === 0
 
   // keepPreviousData shows the previous window's rows while a new one loads —
@@ -266,8 +296,9 @@ export function OperatorPromisesTab() {
           then refused by the guard above (`isInverted` → the pair-level alert,
           no request) trades an unexplained dead calendar for a sentence, and
           the guard is needed regardless: manual input bypasses picker bounds
-          anyway. The sibling processing tab still carries the dead calendar —
-          same fix, tracked in TASK-010. */}
+          anyway. The sibling processing tab still keeps the same picker bounds
+          and the dead calendar that comes with them; fixing both together is
+          deferred. */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
         <DateSelect
           label={t('pages.reports.operatorPromises.dateFrom')}
@@ -302,10 +333,11 @@ export function OperatorPromisesTab() {
         )}
       </div>
 
-      {/* Department sub-tabs. Switching is pure client-side filtering of an
-          already-fetched response — cheap, so selection follows focus
-          (`activation` default) per the ARIA APG rule the host page's own
-          expensive strip deliberately opts out of. */}
+      {/* Department sub-tabs: the fixed triple, always present, then one tab
+          per remaining department of the response. Switching is pure
+          client-side filtering of an already-fetched response — cheap, so
+          selection follows focus (`activation` default) per the ARIA APG rule
+          the host page's own expensive strip deliberately opts out of. */}
       <SegmentedTabs<OperatorPromisesTabId>
         items={tabItems}
         value={activeTab}
@@ -356,7 +388,7 @@ export function OperatorPromisesTab() {
             <OperatorPromisesTotals
               visible={visibleTotals}
               overall={query.data.totals}
-              visibleLabel={t(`pages.reports.operatorPromises.subtabs.${activeTab}`)}
+              visibleLabel={activeTabLabel}
               generatedAt={query.data.generated_at}
               // Same profile zone that travelled to the API and cut the window,
               // so the stamp reads in the report's own clock rather than the
@@ -368,10 +400,10 @@ export function OperatorPromisesTab() {
                 "no data for the period". An answer that HAS rows none of which
                 match this tab is a different fact, and saying "no data for the
                 period" there would be false: the period has data, this tab
-                just cannot see it. That is also the only surface on which a
-                department renamed in the auth directory can ever appear (the
-                tabs match a display string — see utils/departmentTabs.ts), so
-                the message points at «Всі», where the rows certainly are. */}
+                just cannot see it. It is also what a renamed department leaves
+                on its fixed tab, which is why the message points at «Всі»,
+                where the rows certainly are — the tab that now HOLDS them is
+                right there in the strip too (utils/departmentTabs.ts). */}
             <OperatorPromisesTable
               rows={visibleRows}
               emptyMessage={t(

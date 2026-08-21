@@ -76,8 +76,9 @@ describe('hasResponseDetail', () => {
 
   it('takes a non-empty array at its word, even when the items are unusable', () => {
     // Pinning today's behaviour, not endorsing it: `getErrorMessage` stringifies
-    // such an item into raw JSON. Tightening this branch is TASK-010 — the
-    // predicate was moved here byte-for-byte on purpose.
+    // such an item into raw JSON. Tightening the non-empty-array branch is a
+    // deferred follow-up — the predicate was moved here byte-for-byte on
+    // purpose.
     const error = makeHttpError(422, { detail: [{}] })
 
     expect(hasResponseDetail(error)).toBe(true)
@@ -91,9 +92,11 @@ describe('hasResponseDetail', () => {
   })
 
   it('does not consult `message` once a `detail` decided the answer', () => {
-    // A blank detail is an answer ("no detail"), not a miss: `getErrorMessage`
-    // would fall through to `message`, but what it returns then is a sentence
-    // the endpoint's own contract never promised.
+    // A blank detail is an answer ("no detail"), not a miss. Note what
+    // `getErrorMessage` does with this body: '  ' is truthy, so it returns the
+    // blank itself and never reaches `message`. The predicate trims and answers
+    // false rather than deferring to a `message` the endpoint's own contract
+    // never promised.
     expect(hasResponseDetail(makeHttpError(400, { detail: '  ', message: 'from the proxy' }))).toBe(
       false
     )

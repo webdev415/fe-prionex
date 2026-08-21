@@ -169,7 +169,8 @@ export function isApiError(error: unknown): error is AxiosError {
  *
  * A NON-empty array is taken at its word: this is a "has something to say"
  * predicate, not a validator of what `getErrorMessage` will make of the items
- * (a `detail: [{}]` therefore still counts — see TASK-010).
+ * (a `detail: [{}]` therefore still counts; tightening that branch is a
+ * deferred follow-up).
  */
 export function hasResponseDetail(error: unknown): boolean {
   if (!isApiError(error)) return false

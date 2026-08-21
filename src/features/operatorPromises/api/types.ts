@@ -57,11 +57,17 @@ export interface OperatorPromisesReportParams {
  * Techno-Finance, which renders both trios). They are NOT derived here: a money
  * metric has one definition, and it lives on the server.
  *
- * `fio`, `department` and `group_name` come from the auth directory and are all
- * nullable: an operator with no role/department membership in the project keeps
- * their row (the report has NO department filter, and those "extra" departments
- * carry real money — Юристи + Аналітики + no-department held ≈ 631 000 ₴ of
- * July 2026 collections, which the Techno-Finance frontend silently drops).
+ * `fio`, `department`, `department_id` and `group_name` come from the auth
+ * directory and are all nullable: an operator with no role/department
+ * membership in the project keeps their row (the report has NO department
+ * filter, and those "extra" departments carry real money — Юристи + Аналітики +
+ * no-department held ≈ 631 000 ₴ of July 2026 collections, which the
+ * Techno-Finance frontend silently drops).
+ *
+ * `department_id` is the STABLE key of the department and `department` is its
+ * display name at request time: the pair is what lets the frontend build a tab
+ * per department that survives a rename (see utils/departmentTabs.ts). Both are
+ * null together for an operator with no department.
  *
  * `is_active` mirrors the directory's employment status at REQUEST time, not at
  * any point inside the window: a dismissed operator KEEPS their row by default
@@ -81,7 +87,10 @@ export interface OperatorPromisesReportParams {
 export interface OperatorPromisesRow {
   user_id: number
   fio: string | null
+  /** Display name of the department AT REQUEST TIME — renameable, never a key. */
   department: string | null
+  /** Stable department key; null for an operator with no department. */
+  department_id: number | null
   group_name: string | null
   is_active: boolean
   /** Chain runs FIRST touched in the window — not interaction rows. */

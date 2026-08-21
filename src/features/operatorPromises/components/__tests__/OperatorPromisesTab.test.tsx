@@ -36,17 +36,27 @@ vi.mock('@/stores/authStore', () => ({
 // aria-invalid/aria-describedby on the field — so field-level error wiring is
 // assertable here. There is deliberately no "×": both bounds are REQUIRED, so
 // the tab passes no `onClear` and the real component renders none either.
+//
+// `min`/`max` are surfaced as `data-min`/`data-max` and ONLY when the tab
+// actually passes them: the real component forwards them to react-datepicker's
+// minDate/maxDate, i.e. they are what greys days out. Mirroring them as
+// attributes makes "neither picker bounds the other" an assertable fact rather
+// than a comment.
 vi.mock('@/components/ui/DateSelect', () => ({
   DateSelect: ({
     value,
     onChange,
     label,
     error,
+    min,
+    max,
   }: {
     value?: string | Date | null
     onChange?: (args: { value: Date | null }) => void
     label?: string
     error?: string
+    min?: Date | string
+    max?: Date | string
   }) => {
     const errorId = `date-select-error-${label ?? ''}`
     return (
@@ -56,6 +66,8 @@ vi.mock('@/components/ui/DateSelect', () => ({
           aria-label={label}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
+          data-min={min == null ? undefined : String(min)}
+          data-max={max == null ? undefined : String(max)}
           value={typeof value === 'string' ? value : ''}
           onChange={(e) =>
             // Noon avoids the parsed UTC date rolling into the previous local day
@@ -79,6 +91,7 @@ function makeRow(overrides: Partial<OperatorPromisesRow> = {}): OperatorPromises
     user_id: 101,
     fio: 'Баженов Олексій Володимирович',
     department: 'Стягнення',
+    department_id: 3,
     group_name: 'Група №2',
     is_active: true,
     interactions_count: 314,
@@ -155,8 +168,25 @@ function renderTab(initialEntries: string[] = ['/']) {
 
 const dateInputs = () => screen.getAllByTestId('date-select') as HTMLInputElement[]
 const search = () => screen.getByTestId('location-search').textContent ?? ''
+/** A FIXED sub-tab, whose label is a translation key (i18next is mocked). */
 const subTab = (id: string) =>
   screen.getByRole('tab', { name: `pages.reports.operatorPromises.subtabs.${id}` })
+/** A DYNAMIC sub-tab, whose label is the department's live name from the rows. */
+const departmentTab = (name: string) => screen.getByRole('tab', { name })
+const tabLabels = () => screen.getAllByRole('tab').map((tab) => tab.textContent)
+/** The totals row for a metric, scoped to the totals block (labels are reused
+ *  by the table's column headers, so they exist twice on screen). */
+const totalsMetricRow = (container: HTMLElement, metric: string) =>
+  within(container.querySelector('section') as HTMLElement)
+    .getByText(`pages.reports.operatorPromises.columns.${metric}`)
+    .closest('tr') as HTMLElement
+
+const FIXED_TAB_LABELS = [
+  'pages.reports.operatorPromises.subtabs.all',
+  'pages.reports.operatorPromises.subtabs.tp',
+  'pages.reports.operatorPromises.subtabs.dialer',
+  'pages.reports.operatorPromises.subtabs.collection',
+]
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -319,23 +349,37 @@ describe('OperatorPromisesTab', () => {
     for (const field of dateInputs()) expect(field).not.toHaveAttribute('aria-invalid')
   })
 
+  it('bounds neither picker by the other — no min/max on either field', async () => {
+    // With the today–today default, a mutual min/max opens BOTH calendars with
+    // exactly one selectable day: whichever field the user reaches for first is
+    // dead, every other day greyed out, and nothing on screen says why. So the
+    // tab passes no bounds at all and lets the pair-level guard refuse in words
+    // (the test below). This is the regression guard for that: reinstating
+    // `min={dateFrom}` on the «по» field fails here.
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?opf=2026-07-10&opt=2026-07-31'])
+    await screen.findByText('Баженов Олексій Володимирович')
+
+    for (const field of dateInputs()) {
+      expect(field).not.toHaveAttribute('data-min')
+      expect(field).not.toHaveAttribute('data-max')
+    }
+  })
+
   it('lets an inverted window be PICKED and answers with the guard, not a dead calendar', async () => {
-    // The pickers deliberately do not bound each other: with the today–today
-    // default a mutual min/max opens both calendars with a single selectable
-    // day, so whichever field the user reaches for first is dead with nothing
-    // on screen explaining why. Picking through is allowed; the pair-level
-    // guard is what refuses, in words, and no request leaves.
+    // The counterpart of the bounds test above: since neither picker refuses an
+    // inverted pair, the pair-level guard is what has to, and it does so in
+    // words with no request leaving. Scope note: this drives the manual-input
+    // path, which bypasses picker bounds anyway — so what is pinned here is the
+    // GUARD's behaviour on an inverted pair, not the absence of `min`/`max`.
     mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab(['/?opf=2026-07-10&opt=2026-07-31'])
     await screen.findByText('Баженов Олексій Володимирович')
     expect(mockGetReport).toHaveBeenCalledTimes(1)
 
-    // «по» set BEFORE «з». Honest scope note: this drives the manual-input
-    // path, which bypassed the picker's `min` even before that bound was
-    // removed — so the test pins the GUARD's behaviour on an inverted pair,
-    // not the removal of `min`/`max` itself (the DateSelect stub ignores
-    // those props, so a real "no disabled days" pin is not expressible here).
+    // «по» set BEFORE «з».
     fireEvent.change(dateInputs()[1], { target: { value: '2026-07-01' } })
 
     expect(
@@ -454,11 +498,16 @@ describe('OperatorPromisesTab', () => {
 
   const populatedResponse = () =>
     makeResponse([
-      makeRow({ user_id: 1, fio: 'Тепенко Тарас', department: 'ТП' }),
-      makeRow({ user_id: 2, fio: 'Дайленко Дмитро', department: 'Дайлер' }),
-      makeRow({ user_id: 3, fio: 'Стягненко Степан', department: 'Стягнення' }),
-      makeRow({ user_id: 4, fio: 'Юристенко Юрій', department: 'Юристи' }),
-      makeRow({ user_id: 5, fio: 'Безвідділенко Богдан', department: null }),
+      makeRow({ user_id: 1, fio: 'Тепенко Тарас', department: 'ТП', department_id: 1 }),
+      makeRow({ user_id: 2, fio: 'Дайленко Дмитро', department: 'Дайлер', department_id: 2 }),
+      makeRow({ user_id: 3, fio: 'Стягненко Степан', department: 'Стягнення', department_id: 3 }),
+      makeRow({ user_id: 4, fio: 'Юристенко Юрій', department: 'Юристи', department_id: 17 }),
+      makeRow({
+        user_id: 5,
+        fio: 'Безвідділенко Богдан',
+        department: null,
+        department_id: null,
+      }),
     ])
 
   it('opens on «Всі» and shows the departments Techno-Finance drops', async () => {
@@ -474,18 +523,204 @@ describe('OperatorPromisesTab', () => {
     expect(screen.getByText('Безвідділенко Богдан')).toBeInTheDocument()
   })
 
-  it('lists the sub-tabs in the Techno-Finance order (aggregate first)', async () => {
+  it('lists the fixed tabs in the Techno-Finance order (aggregate first)', async () => {
     mockGetReport.mockResolvedValue(populatedResponse())
 
     renderTab()
     await screen.findByText('Тепенко Тарас')
 
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'pages.reports.operatorPromises.subtabs.all',
-      'pages.reports.operatorPromises.subtabs.tp',
-      'pages.reports.operatorPromises.subtabs.dialer',
-      'pages.reports.operatorPromises.subtabs.collection',
-    ])
+    // Юристи is in this response too, so the fixed four come FIRST and the
+    // department the card drops rides after them, not among them.
+    expect(tabLabels()).toEqual([...FIXED_TAB_LABELS, 'Юристи'])
+  })
+
+  // --------------------------------------------------------------------------
+  // Dynamic department tabs (keyed by department_id, labelled from the data)
+  // --------------------------------------------------------------------------
+
+  it('gives a department outside the fixed triple a tab of its own', async () => {
+    // Юристи + Аналітики + no-department held ≈ 631 000 ₴ of July 2026
+    // collections. «Всі» always showed them; now each named department is one
+    // click away instead of buried in the aggregate.
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab()
+    await screen.findByText('Тепенко Тарас')
+
+    await userEvent.click(departmentTab('Юристи'))
+
+    expect(await screen.findByText('Юристенко Юрій')).toBeInTheDocument()
+    expect(screen.queryByText('Тепенко Тарас')).not.toBeInTheDocument()
+    // Still one request: the dynamic tabs filter the same response.
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+  })
+
+  it('orders the departments beyond the triple alphabetically, in the reader’s locale', async () => {
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow({ user_id: 1, department: 'Ялинка', department_id: 40 }),
+        makeRow({ user_id: 2, department: 'Юристи', department_id: 17 }),
+        makeRow({ user_id: 3, department: 'Аналітики', department_id: 21 }),
+        // A department the triple already claims earns no second tab...
+        makeRow({ user_id: 4, department: 'ТП', department_id: 1 }),
+        // ...and an operator with no department earns none at all.
+        makeRow({ user_id: 5, department: null, department_id: null }),
+      ])
+    )
+
+    renderTab()
+    await screen.findByRole('tab', { name: 'Аналітики' })
+
+    expect(tabLabels()).toEqual([...FIXED_TAB_LABELS, 'Аналітики', 'Юристи', 'Ялинка'])
+  })
+
+  it('keeps the fixed triple in the strip even when the response is empty', async () => {
+    // The strip must not change shape with the period: "ТП did nothing this
+    // week" and "ТП is gone" are different facts and must not look alike.
+    mockGetReport.mockResolvedValue(makeResponse([]))
+
+    renderTab()
+    await screen.findByText('pages.reports.operatorPromises.empty')
+
+    expect(tabLabels()).toEqual(FIXED_TAB_LABELS)
+  })
+
+  it('gives the operators without a department no tab, so they are read on «Всі»', async () => {
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab()
+    await screen.findByText('Тепенко Тарас')
+
+    // No stable key to tab on — and by contract a null id comes with a null
+    // name, so the triple's name match cannot claim them either.
+    expect(tabLabels()).toEqual([...FIXED_TAB_LABELS, 'Юристи'])
+    expect(screen.getByText('Безвідділенко Богдан')).toBeInTheDocument()
+
+    for (const openTab of [
+      () => userEvent.click(subTab('tp')),
+      () => userEvent.click(subTab('dialer')),
+      () => userEvent.click(subTab('collection')),
+      () => userEvent.click(departmentTab('Юристи')),
+    ]) {
+      await openTab()
+      await waitFor(() =>
+        expect(screen.queryByText('Безвідділенко Богдан')).not.toBeInTheDocument()
+      )
+    }
+
+    await userEvent.click(subTab('all'))
+    expect(await screen.findByText('Безвідділенко Богдан')).toBeInTheDocument()
+  })
+
+  it('writes a picked dynamic sub-tab into ?opd= as d{department_id}', async () => {
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab()
+    await screen.findByText('Тепенко Тарас')
+
+    await userEvent.click(departmentTab('Юристи'))
+
+    // The ID travels, never the name: the link survives the next rename.
+    await waitFor(() => expect(search()).toContain('opd=d17'))
+  })
+
+  it('restores a dynamic sub-tab from ?opd=d17 when the rows arrive', async () => {
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab(['/?opd=d17'])
+
+    expect(await screen.findByText('Юристенко Юрій')).toBeInTheDocument()
+    expect(departmentTab('Юристи')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText('Тепенко Тарас')).not.toBeInTheDocument()
+    // Wired for assistive technology exactly like the fixed tabs.
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'operator-promises-panel-d17')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      'operator-promises-tab-d17'
+    )
+  })
+
+  it('falls back to «Всі» for a dynamic ?opd= this response has no department for', async () => {
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab(['/?opd=d999'])
+    await screen.findByText('Тепенко Тарас')
+
+    expect(subTab('all')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Юристенко Юрій')).toBeInTheDocument()
+    // SILENTLY: the key stays in the URL. It is a view preference, and the
+    // department may well exist in the next period the user picks — rewriting
+    // it would also destroy every deep link during the first render, when no
+    // rows have arrived yet and no dynamic tab exists.
+    expect(search()).toContain('opd=d999')
+  })
+
+  it('moves a renamed department’s money onto a new tab instead of hiding it', async () => {
+    // The scenario the whole design exists for. «ТП» (department_id 1) is
+    // renamed to «Технічна підтримка» in the auth directory: the rows come back
+    // with the SAME id under the NEW name.
+    mockGetReport.mockResolvedValue(
+      makeResponse([
+        makeRow({
+          user_id: 1,
+          fio: 'Тепенко Тарас',
+          department: 'Технічна підтримка',
+          department_id: 1,
+          sum_to: '2000.00',
+          paid_full: '1000.00',
+        }),
+        makeRow({
+          user_id: 2,
+          fio: 'Тищенко Тимур',
+          department: 'Технічна підтримка',
+          department_id: 1,
+          sum_to: '500.00',
+          paid_full: '250.00',
+        }),
+        makeRow({
+          user_id: 3,
+          fio: 'Дайленко Дмитро',
+          department: 'Дайлер',
+          department_id: 2,
+          sum_to: '9000.00',
+          paid_full: '9000.00',
+        }),
+      ])
+    )
+
+    const { container } = renderTab(['/?opd=tp'])
+
+    // The fixed ТП tab is still in the strip and is honest about being empty —
+    // it does NOT claim the period produced nothing.
+    expect(
+      await screen.findByText('pages.reports.operatorPromises.emptyDepartment')
+    ).toBeInTheDocument()
+    expect(subTab('tp')).toHaveAttribute('aria-selected', 'true')
+
+    // …and right beside it, a tab under the department's new name.
+    await userEvent.click(departmentTab('Технічна підтримка'))
+
+    expect(await screen.findByText('Тепенко Тарас')).toBeInTheDocument()
+    expect(screen.getByText('Тищенко Тимур')).toBeInTheDocument()
+    expect(screen.queryByText('Дайленко Дмитро')).not.toBeInTheDocument()
+    await waitFor(() => expect(search()).toContain('opd=d1'))
+
+    // The money is all there: the visible totals are the sum of exactly these
+    // two rows (1 000 + 250), not the period's 10 250.
+    expect(within(totalsMetricRow(container, 'paidFull')).getByText('1,250.00')).toBeInTheDocument()
+    expect(within(totalsMetricRow(container, 'sumTo')).getByText('2,500.00')).toBeInTheDocument()
+    // Conversion is recomputed from the visible sums, never averaged.
+    expect(within(totalsMetricRow(container, 'conversion')).getByText('50.00%')).toBeInTheDocument()
+  })
+
+  it('heads the visible totals column with the department’s live name', async () => {
+    mockGetReport.mockResolvedValue(populatedResponse())
+
+    renderTab(['/?opd=d17'])
+    await screen.findByText('Юристенко Юрій')
+
+    // No locale file can know this string — it is the directory's own.
+    expect(screen.getByRole('columnheader', { name: 'Юристи' })).toBeInTheDocument()
   })
 
   it('filters client-side on a sub-tab switch without refetching', async () => {
@@ -565,10 +800,13 @@ describe('OperatorPromisesTab', () => {
   })
 
   it('does not mask a renamed department as an empty period', async () => {
-    // The rename this cannot detect, acted out: every operator tab goes blank
-    // while «Всі» still holds the row and the money.
+    // The fixed tab's half of the rename: it goes blank and says so, while
+    // «Всі» still holds the row and the money. (The other half — the new tab
+    // that now carries them — is pinned further down.)
     mockGetReport.mockResolvedValue(
-      makeResponse([makeRow({ fio: 'Тепенко Тарас', department: 'Технічна підтримка' })])
+      makeResponse([
+        makeRow({ fio: 'Тепенко Тарас', department: 'Технічна підтримка', department_id: 1 }),
+      ])
     )
 
     renderTab(['/?opd=tp'])
