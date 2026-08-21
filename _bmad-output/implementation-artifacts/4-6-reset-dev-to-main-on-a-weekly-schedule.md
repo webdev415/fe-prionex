@@ -371,16 +371,18 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         repository, and a per-unit Actions-write mapping for it is only *planned* for Forgejo 16
         (codeberg #3571) — so `${{ github.token }}` very probably does **not** satisfy the second
         check. Design the step so this comes back as a clean, named `403`, not as a mystery.
-        🔶 **Design and classifier done, force-tested locally (Completion Note 1); the LIVE test
-        itself is pending the coordinator.** Requested: one manual API dispatch of `dev-reset.yml`
-        with `ref=<implementation branch>` (not `main` — `workflow_dispatch` is not
-        registration-gated to the default branch, unlike `schedule:`, Dev Notes §2's own
-        distinction, so this can run before PR A even exists), armed (not the PR-A disarmed state),
-        testing `${{ github.token }}` against the real dispatch endpoint. Expected: `401`/`403`,
-        named cleanly by the classifier above. If it unexpectedly succeeds, `deploy-dev.yml` itself
-        also runs — harmless, an ordinary redeploy of `main`. This is the ONE dispatch this story's
-        own design spends to settle causes 3/4 before either the probe cron or the real schedule is
-        armed.
+        🔶 **First attempt (run 994) proved nothing — caught after the fact, recorded honestly.**
+        Requested a manual dispatch on the implementation branch; the coordinator ran it (994,
+        SUCCESS, ~2.5 min) and no `deploy-dev.yml` run appeared afterward. Read at first as a
+        clean `401`/`403`-shaped negative — but the request itself never reached the real endpoint:
+        the file dispatched still carried `DISARMED=true` (Task 6.2's own literal, correctly baked
+        in for the eventual PR A window), so run 994 took the simulated branch and exited 0 by
+        design, proving only that the disarm mechanism itself works — which was already covered by
+        local testing (Completion Note 1). Confirmed independently via the same DB read path (not
+        only the coordinator's own run-list check): run 994's own row (`event=workflow_dispatch`,
+        `status=1`, `938:53:09`) and no `deploy-dev.yml` row created after it. **Fixed**:
+        `DISARMED` flipped to `false` for exactly one commit, to be reverted before PR A opens —
+        redispatch requested on the same branch, same ref, this time actually reaching the endpoint.
   - [x] 2.9 🔴 **Record the cron parser's exact shape before writing an expression** (AC7). Forgejo
         v15.0.5 uses `github.com/gdgvda/cron v0.7.0` with
         `cron.Minute|Hour|Dom|Month|Dow|Descriptor` — **five mandatory fields**, **no seconds field**
@@ -1342,6 +1344,20 @@ itself is untested until Task 2.8's live dispatch.
 **All test artifacts cleaned from s1 afterward** — no leftover synthetic containers or images, and
 the REAL `fe-prionex-dev` stand confirmed completely untouched and healthy throughout (`Created`
 timestamp, digest, health all unchanged — still run 973's own container).
+
+**2. Task 2.8's first attempt (run 994) was invalid, caught after the fact, not before — recorded
+honestly.** Requested a manual dispatch of `dev-reset.yml` to test `${{ github.token }}` against
+the real endpoint, without first checking that the file being dispatched still carried the
+`DISARMED=true` literal Task 6.2 requires for the eventual PR A probe window. The coordinator's own
+dispatch (run 994) therefore exercised the simulated branch, not the real one — SUCCESS in ~2.5
+minutes, no `deploy-dev.yml` run created afterward, which is the CORRECT and expected behaviour of
+a disarmed dispatch, not evidence about the token. Confirmed via the same DB read path used
+throughout this story (not only the coordinator's own run-list check, as an independent
+cross-check): run 994's own row (`event=workflow_dispatch`, `status=1`, stopped `08:53:09`) and no
+`action_run` row for `deploy-dev.yml` created after it. Fixed by flipping `DISARMED` to `false` for
+exactly one commit — a redispatch on the same branch will now actually reach the endpoint. The
+gap was in sequencing the request, not in the classifier or the disarm mechanism itself, both of
+which were already correctly force-tested locally (Completion Note 1) before either dispatch.
 
 ### File List
 

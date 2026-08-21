@@ -309,7 +309,12 @@ jobs:
           # — it is idempotent and non-destructive by AC4's own construction (proven locally,
           # Completion Notes), so it runs for real even during the probe window; only the one step
           # capable of touching the stand is held back.
-          DISARMED=true
+          # 🔶🔶🔶 SET TO false FOR ONE COMMIT ONLY — Task 2.8's own token-scope test (run 994 was
+          # disarmed and therefore proved nothing about the token; this value is what run 994 should
+          # have been dispatched against, and was not, catching that gap after the fact rather than
+          # before — recorded honestly rather than quietly reworded). Reverted to `true` in the very
+          # next commit, before PR A is opened. Do not let this value reach PR A armed.
+          DISARMED=false
 
           if [ "$DISARMED" = "true" ]; then
             echo "⚠️⚠️⚠️ PROBE WINDOW (Task 6.2): the dispatch step is DISARMED by a literal"\
