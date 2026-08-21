@@ -93,10 +93,19 @@
   color: #ffffff !important;
 }
 
+/* ``--disabled`` belongs in this exclusion list for the same reason KAN-992
+   put one in the time-slot rules: this selector scores (0,3,0) and the
+   ``--disabled`` rule below only (0,2,0), so without it a day that is both
+   today AND blocked painted itself accent-green and read as available.
+   Unreachable while the browser and the profile shared a timezone — "today"
+   was never a blocked day — and reachable the moment ``min`` started being
+   measured in the profile zone, where the browser's today can already be
+   yesterday. */
 .date-select-calendar
   .react-datepicker__day--today:not(
     .react-datepicker__day--selected,
-    .react-datepicker__day--keyboard-selected
+    .react-datepicker__day--keyboard-selected,
+    .react-datepicker__day--disabled
   ) {
   font-weight: 600;
   color: var(--color-primary-500) !important;
@@ -148,10 +157,12 @@
   color: #ffffff !important;
 }
 
+/* Mirrors the day rule above, same specificity hazard. */
 .date-select-calendar
   .react-datepicker__month-text--today:not(
     .react-datepicker__month-text--selected,
-    .react-datepicker__month-text--keyboard-selected
+    .react-datepicker__month-text--keyboard-selected,
+    .react-datepicker__month-text--disabled
   ) {
   font-weight: 600;
   color: var(--color-primary-500) !important;
