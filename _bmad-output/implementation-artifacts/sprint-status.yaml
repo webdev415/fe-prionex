@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-20
+# last_updated: 2026-08-21
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-20
+last_updated: 2026-08-21
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -290,8 +290,60 @@ development_status:
   # no Actions-run cancel API means "two simultaneous dispatches" is not a runnable test — an
   # input-gated hold hook moves the contention into a container that outlives its own job.
   4-4-serialize-concurrent-deploys-to-the-same-stand: done
+  # 🅿️ PARKED 2026-08-21 by Oleg's decision. The status value stays `backlog` because `parked` is not
+  # one of the STATUS DEFINITIONS above and inventing a sixth value silently would be worse than a
+  # comment — but the story is NOT simply un-started, and the difference matters to whoever picks up
+  # Epic 4 next:
+  #   • A context branch EXISTS and is UNMERGED: `story-4-5/pr-1-context` @ `badbb1ac`
+  #     ("docs(story-4.5): the channel this story announces to has been dead since our own Story 1.13
+  #     — and the backend team never knew why"). It adds the 1001-line story file and flips this key
+  #     to `ready-for-dev` on its own branch only. `main` has neither.
+  #   • 🔴 DO NOT BUILD ON IT. Story 4.6 was contexted 2026-08-21 without reading it, deliberately.
+  #     Nothing on `main` depends on that branch, and nothing should until it is merged or dropped.
+  #   • Reason for the park: the channel does not exist. `SLACK_CD_WEBHOOK_URL` is an ORG-level secret
+  #     that our own Story 1.13 overwrote with `example.invalid` — which also broke `CRM/api-prionex`'s
+  #     notifications, and they never knew why. Restoring it is PENDING ON OLEG and is not something
+  #     this repository may fix in passing: the value is shared with another team's pipeline.
+  #   • The standing rule is unchanged and every deploy story has honoured it: THE DEPLOY MUST WORK
+  #     WITHOUT IT (`epics.md:1814-1818`). 4.3, 4.4 and now 4.6 each defer their Slack clause to this
+  #     story rather than blocking on it, exactly as 5.3 and 6.4 already do.
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
-  4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
+  # Contexted 2026-08-21 against `main` at 22dceedc, on branch `story-4-6/pr-1-context`.
+  # 🔴 THE STORY'S OWN PREMISE WAS FALSIFIED WHILE CONTEXTING IT, and the correction is the finding:
+  # `schedule:`/cron HAS fired on this Forgejo instance. Two `action_run` rows with
+  # `trigger_event='schedule'`, both `CRM/PRIONEX_HUB` → `reset-dev.yml` (in `.github/workflows/`),
+  # 2026-08-05 09:50:44 UTC and 2026-08-10 02:00:44 UTC, both success, 1-second dispatch delay — read
+  # from Forgejo's own Postgres by `CRM/api-prionex`, who then registered a SECOND schedule of their
+  # own (`action_schedule id=36`, `ref=main`, `next = 2026-08-17 02:00 UTC`) and deliberately disarmed
+  # it. What remains true of THIS repository: `schedule` appears nowhere in its 124-run event census,
+  # and `build-buildkit-cni-image.yml`'s `cron: '0 3 * * 1'` lived 71 minutes (added `1d2c3ba4`,
+  # removed `4534b6c6`) and is zero evidence either way. So the probe survives — but narrows from
+  # "does cron work" to four cheap questions, and six instance facts arrive free.
+  # 🔴 The two that are dangerous rather than merely useful: a cron that fails to parse AT TICK TIME
+  # makes Forgejo PERSISTENTLY DISABLE the workflow (a pushed fix does not revive it), and open issue
+  # #12566 against v15 reports an invalid `on.schedule` breaking PUSH-TRIGGERED ACTIONS REPOSITORY-WIDE
+  # — i.e. a typo here can silently take `ci.yml` down for every branch. That is now its own AC (AC7).
+  # 🔴 Also corrected, not inherited: `api-prionex`'s "fact 2" (a scheduled run reports
+  # `github.event_name=push`, do not branch on it) reads the wrong `action_run` column — v15.0.5
+  # populates `github.event_name` from `trigger_event`, so it should read `schedule`. Nobody has ever
+  # echoed it in a live scheduled run; this story does, in one line.
+  # Mechanism decided autonomously, subject to Oleg's veto: `dev-reset.yml` DISPATCHES the live-proven
+  # `deploy-dev.yml` with `ref=main` and duplicates none of it — `deploy-dev.yml` is not modified at
+  # all, and Story 4.8's factoring is not pre-empted. Both sibling projects duplicated their deploy
+  # body instead; that reading is rejected here because 4.8 exists and would have to delete it.
+  # 🔴 One near-certain new dependency, surfaced up front: the v15.0.5 dispatch route requires
+  # `write:repository` AND Actions-unit write, which the automatic job token probably lacks. If so the
+  # fallback (a minted token secret vs. switching to `workflow_call`) is OLEG'S CALL, not a silent
+  # switch — and the token's exit must be planned before it is minted.
+  # Three more autonomous decisions: the manual path takes ZERO inputs (so a reset can only ever be
+  # `main`, and so a manual dispatch becomes valid evidence for the scheduled one); FR23's literal
+  # `docker image prune` is replaced by a TARGETED sweep, because s1 is multi-tenant (185 containers
+  # under `name=crm-`, including the runner the job runs inside) and `docker ps --filter name=` is a
+  # SUBSTRING match; and the holder-debris chore from `deferred-work.md:2930-2949` is ACCEPTED here.
+  # Delivery is TWO implementation PRs by construction: a `schedule:` on a feature branch registers
+  # nothing and errors nothing, no UI or API lists registrations, and protected `main` is the only
+  # place a firing can be observed.
+  4-6-reset-dev-to-main-on-a-weekly-schedule: ready-for-dev
   4-7-validate-dev-deploys-across-five-feature-branches: backlog
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
