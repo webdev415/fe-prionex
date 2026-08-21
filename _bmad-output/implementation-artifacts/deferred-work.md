@@ -231,6 +231,18 @@
   ⚠️ **Still open for Story 4.4:** the `flock` server-side lock was designed against concurrent SSH
   sessions. A runner with `capacity > 1` still permits two simultaneous deploys, so **re-examine
   the lock rather than deleting it**.
+  ✅ **CLOSED, Story 4.4, 2026-08-20 — re-examined, kept, rebuilt for the actual mechanism.** The
+  SSH-session design this note warned about no longer applies (SSH deploy retired 2026-08-11,
+  same as the note above records) — re-examined from scratch against the job-container mechanism
+  that replaced it, not patched. `capacity: 1` on `s1-deploy-dev-preprod` re-measured directly
+  (`/opt/forgejo-runner-deploy/config.yml`, mtime 2026-08-13, current) — the runner-capacity
+  question this note raised is answered: capacity is 1, so two deploy JOBS cannot overlap on this
+  runner today, but the lock does not depend on that staying true (it is a genuine `flock`, not a
+  capacity-derived assumption) — if capacity were ever raised, the lock still serializes correctly.
+  Mechanism: an exclusive `flock` on `.deploy.lock` inside the stand directory, taken by a sibling
+  container launched through the job's own `docker.sock` (the job itself cannot reach that
+  directory directly — `valid_volumes` blocks it — but a sibling container through the socket the
+  job already holds can, confirmed live). Full record: `docs/migration-decisions.md` D30.
   ⚠️ **Label status changed:** `dev`, `preprod`, `deploy`, `deploy-dev-preprod` and
   `s2-prod-deploy` stop being forbidden from Epic 4 onward and become the intended deploy targets.
   They remain forbidden for Story 1.8, which is a smoke test bound to `node-20`/`docker-build`.
@@ -2849,3 +2861,89 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   `up -d` failure with no attribution back to this cause — on a host shared with another team's
   production. Belongs with the reboot-ordering item already recorded above, which has the same owner
   and the same "state of s1 between deploys" character. **Owner: Story 4.9 / platform ops.**
+
+## Deferred from: story-4.4 implementation (2026-08-20)
+
+Two items this story's own Task 9.6 found and did not fix — not routed by a code review (4.4 has
+not been reviewed yet at time of writing), found while designing and locally proving the lock
+(D30, Task 6).
+
+- ⚠️ **`flock`'s wake order is not FIFO.** With exactly two contenders, Story 4.4's AC3 wording
+  holds precisely: "the second waits for the first." With three or more simultaneous waiters, that
+  same clause still holds for the FIRST pair, but the order in which the REMAINING waiters are
+  granted the lock is unspecified by `flock` itself (kernel/BusyBox implementation detail, not
+  something this story's design controls or measured beyond the two-contender case it actually
+  tested — Completion Note 2's Test 6.2). Not a bug in what shipped — AC3 only ever promised
+  ordering for the two-deploy case — but a real gap if a THIRD dispatch ever queues behind two
+  already-contending ones: it will wait its turn, but "whose turn" past the first is not
+  guaranteed. **Owner: whoever next needs more-than-two-way ordering guarantees (no story currently
+  requires it — Stories 5.3/6.4 each inherit the lock for their OWN stand, not a shared queue).**
+- ⚠️ **The manual/DR path does not take this lock.** A human running `docker compose … up -d`
+  directly from `~/crm-prionex/fe-prionex-dev/` (the manual/DR path D28 §4/D29 §1 preserve
+  deliberately) does not acquire `.deploy.lock` at all — nothing makes them, and nothing in this
+  story adds a wrapper that would. A manual redeploy racing an in-flight automated one collides
+  exactly as before this story, with no serialization on that side. This was never in scope for
+  Story 4.4 (which serializes the WORKFLOW's own dispatches, AC1-AC6, not human operators), but is
+  worth naming rather than leaving an implicit assumption that "the lock" now covers every path to
+  the stand — it covers one of the two. **Owner: whoever documents/wraps the manual DR procedure
+  (no story currently owns this; a candidate for Story 4.8's shared definition, or a plain
+  operational note, not necessarily new workflow code).**
+
+## Deferred from: code review of story-4.4 (2026-08-20)
+
+Code review (Opus, three parallel layers) routed 7 high / 15 medium / 10 low findings back to the
+story as action items and 3 to Oleg as decisions — those stay in the story's own
+`### Review Findings` section. The two below are deferred because they cannot be closed from this
+session at all, not because they are minor.
+
+- ⚠️ **AC1 has no evidence of any kind, and the query that would close it needs access this project
+  does not currently have.** Story 4.4's `concurrency:` block is declared, is workflow-level, and is
+  a literal constant — but *which group a run is actually assigned* was never read, so AC1 is the
+  one acceptance criterion of six that ships unverified. The story declares this honestly
+  (Tasks 7.5/7.6, **UNPROVEN**, explicitly not inferred from the ~189 s WAIT timing) rather than
+  asserting it. The run-detail API exposes no `concurrency_group`/`concurrency_type` field —
+  confirmed by the coordinator against run 964, zero matching keys — and this session has SSH to s1
+  (the deploy target) but no path to the Forgejo instance's own host or database. The closing query,
+  recorded and not executed: `SELECT concurrency_group, concurrency_type FROM action_run WHERE id IN
+  (964, 965);` — `concurrency_type = 1` means an explicit group, `0` means the auto-group. Note that
+  the effectiveness half can never be settled here regardless: on a `capacity: 1` runner,
+  group-queueing and capacity-queueing are indistinguishable by timing, which is exactly why NFR10
+  requires the `flock` to be the load-bearing half. **Owner: whoever next has DB access to the
+  Forgejo instance** — a candidate for the Story 4.4 closeout PR if access appears, otherwise for
+  Story 4.8, which re-keys this block by stand and must re-measure it anyway.
+- ⚠️ **Concurrency queue *depth* was never measured, and a third dispatch may silently drop the
+  pending run.** Upstream Actions semantics, with `cancel-in-progress: false`, keep at most one
+  pending run per group: when a third dispatch arrives while one run is in progress and one is
+  pending, the *pending* one is cancelled and the newcomer takes its place. If this Forgejo build
+  follows them, a dispatched deploy can disappear at the run level and never reach the `flock` at
+  all — undetectable here, because this instance has no cancel API to observe (`:94-98`) and no
+  retrievable job logs. D8 measured queueing for **two** runs (probes 6/7) and cancellation for
+  `cancel-in-progress: true` (runs 8/9); depth beyond two was never probed, and D30 does not claim
+  it. This also undercuts the `WAIT=240` rationale written in the file (*"covers three queued
+  deploys"*), a scenario the design makes unreachable in a second, independent way. There is no
+  workflow-level fix — it is a platform behaviour to measure and document. **Owner: Story 4.8**
+  (which parameterizes the group per stand and must re-measure it), or whoever closes the AC1 item
+  above, since both are answered by the same database.
+
+## Deferred from: code review fix-pass of story-4.4 (2026-08-21)
+
+- ⚠️ **Dropping `--rm` from both lock-holder containers (code review M15's own fix, needed to keep
+  `.State.ExitCode` readable for diagnosis) means every holder that reaches a natural or TTL-bounded
+  end now leaves a permanently STOPPED container behind, with nothing in this workflow ever removing
+  it.** Live example: `fe-prionex-dev-deploy-lock-971`, `Exited (0)`, confirmed still present after
+  its own self-expiry during this story's own DN3 re-earn round (Completion Note 8). Only the
+  acquire step's own FAILURE path calls `docker rm -f` on a holder, and only for THIS run's own
+  attempt — a holder that reached the end of its life normally (fixture completing its own
+  `hold_lock_seconds`, or the TTL wrapper firing on an orphan) was never in a failure path to begin
+  with, so nothing ever cleans it up. Harmless functionally: container NAMES are scoped by
+  `$GITHUB_RUN_ID`, so a stopped holder can never collide with or be mistaken for a live one, and it
+  holds no kernel-level lock (that died with the container's own last open file descriptor). The
+  cost is unbounded container-list debris on a shared, multi-tenant runner host — one stopped
+  container per dispatch that ever contended, forever, unless pruned by hand or by an external
+  process (`docker container prune`, a scheduled job, or similar). No current story owns periodic
+  runner hygiene. **Owner: whoever next touches this runner's own operational housekeeping** — a
+  candidate for Story 4.6 (which already resets the DEV stand on a weekly schedule and could add a
+  stopped-container prune alongside it), or a plain host-level cron job outside any story's own
+  scope. Not reversed in this fix-pass: M15's own trade-off (readable exit codes vs. self-cleaning
+  containers) was made deliberately for H6's diagnosability gain, and undoing it here would re-open
+  that gap.

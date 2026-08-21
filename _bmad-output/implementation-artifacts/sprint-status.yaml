@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-15
+# last_updated: 2026-08-20
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -278,7 +278,18 @@ development_status:
   # certifies. DN3: H1's closure is primary-path only; the preserved DR path still pins the tag that
   # expires ~2026-09-02. Ledger still open by D4 — coordinator closes it by query after the merge.
   4-3-deploy-a-feature-branch-to-dev-on-demand: done
-  4-4-serialize-concurrent-deploys-to-the-same-stand: backlog
+  # Contexted 2026-08-20 against `main` at 2fc2a220. Inherits ONE pre-analysed blocker, named twice
+  # by 4.3 (review finding L1 and D29 §8) and deliberately left undecided there: the epic's `flock`
+  # AC points at the stand directory, which 4.3's chosen mechanism (D28 §4 option (e)) makes
+  # invisible to the deploy job. Decided here, autonomously and subject to Oleg's veto: the lock is
+  # taken through a sibling container over the job's own docker.sock, which makes the epic's clause
+  # satisfiable as written; and the concurrency group is keyed on the STAND, not on `github.ref`,
+  # because the contended resource is one stand and per-ref groups would remove the guard entirely.
+  # Two ACs amended, two added (fail-closed-and-untouched; no regression on the uncontended path).
+  # 🔴 Measurement problem named up front, not discovered: `capacity: 1` on the deploy runner plus
+  # no Actions-run cancel API means "two simultaneous dispatches" is not a runnable test — an
+  # input-gated hold hook moves the contention into a container that outlives its own job.
+  4-4-serialize-concurrent-deploys-to-the-same-stand: review
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   4-6-reset-dev-to-main-on-a-weekly-schedule: backlog
   4-7-validate-dev-deploys-across-five-feature-branches: backlog
