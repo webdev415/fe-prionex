@@ -713,7 +713,11 @@ export function AiAssistantBetaPage() {
   // OneX dock (`?embed=dock`): the page runs inside the operators' browser as a
   // ~420px sidebar. See features/onexEmbed/embedContext.ts for the contract.
   const isEmbedded = useIsOnexDockEmbed()
-  const { context: onexContext, clearContext: clearOnexContext } = useOnexPageContext(isEmbedded)
+  const {
+    context: onexContext,
+    clearContext: clearOnexContext,
+    consumeContext: consumeOnexContext,
+  } = useOnexPageContext(isEmbedded)
   useOnexDockReady(isEmbedded)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const userId = useAuthStore((state) => state.user?.id ?? null)
@@ -794,6 +798,14 @@ export function AiAssistantBetaPage() {
    */
   const attachmentCountRef = useRef(0)
   const responseTokenRef = useRef(0)
+  /**
+   * Synchronous twin of `isAssistantResponding`. The state flag is a render
+   * value, so two sends dispatched in the same tick — a double-clicked quick
+   * action, or a host firing `onex:ask` twice — both read `false` and both
+   * start a turn on the same conversation. The ref flips before the first
+   * `await`, so the second one bounces off the same guard.
+   */
+  const respondingRef = useRef(false)
   const hasConversation = chatMessages.length > 0
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
@@ -1265,6 +1277,7 @@ export function AiAssistantBetaPage() {
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setFocusedCitation(null)
+    respondingRef.current = false
     setIsAssistantResponding(false)
   }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingAttachments])
 
@@ -1583,7 +1596,7 @@ export function AiAssistantBetaPage() {
       const prompt = rawPrompt.trim()
       const attachmentList = attachments ?? []
       const hasAudio = attachmentList.some((item) => item.type === 'audio')
-      if (isAssistantResponding) return
+      if (isAssistantResponding || respondingRef.current) return
       if (!prompt && !hasAudio) {
         // Backend rule: an empty message is valid only with a voice note;
         // images alone are a 422 — nudge the user instead of failing silently.
@@ -1593,12 +1606,13 @@ export function AiAssistantBetaPage() {
         return
       }
 
-      // OneX dock: the page the operator is looking at rides along as a short
+      // OneX dock: the page the operator is looking at rides along as a fenced
       // preamble in front of their own text (the chat contract has no field for
-      // host context). It is consumed by this one turn — the chip clears, so a
-      // conversation is not re-stamped with the same page on every message.
-      const outboundMessage = buildContextualMessage(prompt, isEmbedded ? onexContext : null)
-      if (outboundMessage !== prompt) clearOnexContext()
+      // host context). It is consumed by this one turn — but only once the turn
+      // has actually landed, so a 5xx or a dropped connection does not silently
+      // cost the operator their context.
+      const sentContext = isEmbedded ? onexContext : null
+      const outboundMessage = buildContextualMessage(prompt, sentContext)
 
       setMessage('')
       // Only the attachments that went out with this turn leave the composer —
@@ -1621,6 +1635,7 @@ export function AiAssistantBetaPage() {
               }))
             : undefined,
       })
+      respondingRef.current = true
       setIsAssistantResponding(true)
 
       const isThinking = assistantSettings.mode === 'thinking'
@@ -1739,6 +1754,11 @@ export function AiAssistantBetaPage() {
             },
           },
         })
+        // The turn reached the brain, so the page context it carried is spent —
+        // a conversation must not be re-stamped with the same page on every
+        // message. Consumed by identity, so a page the host published while the
+        // answer streamed survives for the next turn.
+        if (sentContext) consumeOnexContext(sentContext)
         if (requestToken !== responseTokenRef.current) {
           return
         }
@@ -1822,6 +1842,7 @@ export function AiAssistantBetaPage() {
         })
       } finally {
         if (requestToken === responseTokenRef.current) {
+          respondingRef.current = false
           setIsAssistantResponding(false)
           window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
         }
@@ -1834,7 +1855,7 @@ export function AiAssistantBetaPage() {
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
       assistantSettings.responseMode,
-      clearOnexContext,
+      consumeOnexContext,
       conversationId,
       isAssistantResponding,
       isEmbedded,

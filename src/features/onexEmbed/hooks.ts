@@ -37,8 +37,16 @@ export function useIsOnexDockEmbed(): boolean {
 export interface OnexPageContextState {
   /** The page the host last published, or null when there is none to show. */
   context: OnexPageContext | null
-  /** Drop the context — the chip's ✕, and the send that consumes it. */
+  /** Drop the context outright — the chip's ✕. */
   clearContext: () => void
+  /**
+   * Drop `consumed` because a turn carrying it reached the brain — but only if
+   * it is still the current context. A send is not instant: the host can
+   * publish a new page while the answer streams, and that one belongs to the
+   * *next* turn. Identity comparison is enough: every payload produces a fresh
+   * object in {@link normalizeOnexPageContext}.
+   */
+  consumeContext: (consumed: OnexPageContext) => void
 }
 
 /**
@@ -69,8 +77,12 @@ export function useOnexPageContext(enabled: boolean): OnexPageContextState {
   }, [enabled])
 
   const clearContext = useCallback(() => setContext(null), [])
+  const consumeContext = useCallback(
+    (consumed: OnexPageContext) => setContext((current) => (current === consumed ? null : current)),
+    []
+  )
 
-  return { context, clearContext }
+  return { context, clearContext, consumeContext }
 }
 
 /**

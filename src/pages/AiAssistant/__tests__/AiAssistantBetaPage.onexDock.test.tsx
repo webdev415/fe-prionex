@@ -228,6 +228,55 @@ describe('AiAssistantBetaPage — OneX dock embedding', () => {
       expect(sentMessage()).toBe('питання без контексту')
     })
 
+    it('keeps the context when the send fails, so it is not silently lost', async () => {
+      // Clearing the chip optimistically means a 5xx / dropped connection costs
+      // the operator the context: nothing on screen says it is gone, and only
+      // the host can publish it again.
+      mockedSendChatMessage.mockRejectedValueOnce(new Error('network down'))
+      renderPage()
+      publishContext({ title: 'Картка Іваненка', clientId: 42 })
+
+      send('питання що впаде')
+
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(screen.getByTestId('onex-context-chip')).toBeInTheDocument())
+
+      // …and the retry still carries it.
+      send('повторне питання')
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
+      expect(sentMessage(1)).toContain('Клієнт ID: 42')
+    })
+
+    it('drops a context the host replaced while the turn was in flight', async () => {
+      let settle: (() => void) | undefined
+      mockedSendChatMessage.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            settle = () =>
+              resolve({
+                conversation_id: 1,
+                message_id: 5,
+                response: 'Готово',
+                coverage_flag: null,
+                tool_calls: [],
+              })
+          })
+      )
+      renderPage()
+      publishContext({ title: 'Стара сторінка', clientId: 1 })
+
+      send('питання')
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+      // The operator moved on in the main pane before the answer came back.
+      publishContext({ title: 'Нова сторінка', clientId: 2 })
+      await act(async () => {
+        settle?.()
+      })
+
+      // Only the context that actually went out is consumed.
+      expect(screen.getByTestId('onex-context-chip')).toHaveTextContent('Нова сторінка')
+    })
+
     it('never prepends context outside the dock', async () => {
       setSearch('')
       window.__onexPageContext = { title: 'Картка Іваненка', clientId: 42 }
@@ -322,6 +371,23 @@ describe('AiAssistantBetaPage — OneX dock embedding', () => {
       await act(async () => {
         settleFirstTurn?.()
       })
+    })
+
+    it('runs one turn for two commands fired in the same tick', async () => {
+      // Both handlers read the same render value of `isAssistantResponding`, so
+      // a host that fires twice (a double click on its own button) would start
+      // two parallel turns on the same conversation.
+      renderPage()
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(ONEX_ASK_EVENT, { detail: { text: 'перше' } }))
+        window.dispatchEvent(new CustomEvent(ONEX_ASK_EVENT, { detail: { text: 'друге' } }))
+      })
+
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+      expect(sentMessage()).toBe('перше')
+      // The one that lost the race waits in the composer instead of vanishing.
+      expect(getTextarea().value).toBe('друге')
     })
 
     it('is inert outside the dock', () => {
