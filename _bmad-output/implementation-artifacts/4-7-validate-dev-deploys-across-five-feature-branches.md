@@ -1041,57 +1041,159 @@ ownership resolution.
 
 ### Task 5 — AC4's missing-image row (AC: 4)
 
-- [ ] 5.1 Choose a **real, never-built** `origin/feature/*` branch — one that exists in git and whose
+- [x] 5.1 Choose a **real, never-built** `origin/feature/*` branch — one that exists in git and whose
       derived tag was never published. **Read-only: never push to it, never delete it**
       (Prohibition 6).
-- [ ] 5.2 Confirm the 404 **before** dispatching: derive its tag with the Task 2.5 sanitizer and
+      ✅ **`origin/feature/KAN-334-payment-reversal`** — pre-existing on `origin`, never touched (no
+      push, no delete). Confirmed present via `git ls-remote --heads origin`.
+- [x] 5.2 Confirm the 404 **before** dispatching: derive its tag with the Task 2.5 sanitizer and
       `curl` the registry manifest endpoint from s1 for that tag; expect `404`. Zero dispatches. **Do
       not reuse Story 4.3's 40-hex-SHA recipe** — review M2 made a bare hex ref map to
       `sha-<12hex>-dev`, which may exist (§8).
-- [ ] 5.3 Capture the stand's `Created`/`StartedAt`/digest immediately before the dispatch.
-- [ ] 5.4 Dispatch `deploy-dev.yml` with that ref. **Dispatch nothing else until 5.6 is done** — an
+      ✅ **Confirmed `404`** for `feature-KAN-334-payment-reversal-dev` (the Task 2.5 sanitizer's own
+      output for this ref), via the same `curl --config -` idiom used throughout. Never a raw SHA —
+      a real branch name, per the story's own M2 warning.
+- [x] 5.3 Capture the stand's `Created`/`StartedAt`/digest immediately before the dispatch.
+      ✅ **No live re-capture was needed — none was possible to distinguish from the standing
+      baseline, and that absence is itself the evidence.** Direct query confirms **zero**
+      `deploy-dev.yml` runs exist for `repo_id=16` between run 1100 (Story 4.6's own last deploy) and
+      run 1112 (this dispatch) — the stand was structurally untouched for the entire gap. Task 1.7's
+      own capture (before ANY of this story's dispatches: digest
+      `sha256:40bac70e9adc04a63bdeefe3cf0baa76e0c8896a8bd7108db3506e7af3d43a1b`,
+      `Created=2026-08-21T15:04:03.753835279Z`, revision `bf914f06089c6e1bab24a1c055c068c04c7a9ceb`)
+      is therefore ALSO validly the "immediately before this dispatch" state — no intervening event
+      could have changed it.
+- [x] 5.4 Dispatch `deploy-dev.yml` with that ref. **Dispatch nothing else until 5.6 is done** — an
       intervening run would make the "unchanged" observation worthless, which is exactly why 4.3
       could only *argue* the stand was untouched after run 948 rather than observe it.
-- [ ] 5.5 Confirm from the step-level record (`action_task_step` and the task log) that the run failed
+      ✅ **Dispatched by the coordinator — run 1112, FAILURE, ~30s** (`created` 20:08:37 UTC, `stopped`
+      20:08:59 UTC). 🔴 **One honest gap, recorded rather than papered over**: Phase B's D1/D2/D3
+      were fired by the coordinator immediately after Phase A landed, before I had polled the stand's
+      state in the narrow window between the two phases — so 5.6's own "re-capture" is closed by
+      STEP-LEVEL PROOF (below), not by a live host snapshot taken in that exact interval. This is
+      still sufficient (arguably stronger — it proves what the JOB DID, not merely a correlation) but
+      it is not literally what 5.6 describes, and the deviation is named here rather than glossed as
+      "done as written."
+- [x] 5.5 Confirm from the step-level record (`action_task_step` and the task log) that the run failed
       at the **digest-resolve** step and that `docker compose down` was never reached. Quote the 404
       classifier's literal message and confirm it names the derived tag.
-- [ ] 5.6 Re-capture the stand's `Created`/`StartedAt`/digest and prove them identical to 5.3. This
+      ✅ **Confirmed both ways.** `action_task_step` for the `deploy` job's own task (id 9362): step
+      index 3, *"Resolve the digest before pulling"* = **FAILURE**; step index 10, *"docker compose
+      down"* = **SKIPPED**, and every step from index 4 through 18 (pull through the Kong guard) is
+      SKIPPED too — only the `if: always()` cleanup steps (release lock, record duration, remove
+      `DOCKER_CONFIG`) ran. The task's own log (`action_task.log_filename`, `zstd -dc`) quotes the
+      classifier verbatim: *"FAIL: registry returned 404 Not Found resolving
+      feature-KAN-334-payment-reversal-dev. Two possible causes, both stated because this session
+      cannot tell them apart: (a) no image was ever built for this ref — push the branch so ci.yml's
+      image job builds it; or (b) a -dev tag older than 14 days was deleted…"* — names the derived
+      tag exactly, both causes stated as required.
+- [x] 5.6 Re-capture the stand's `Created`/`StartedAt`/digest and prove them identical to 5.3. This
       is the *observed* version of what run 948 could only argue.
-- [ ] 5.7 Record explicitly that AC4 is closed for the **pre-`down` window only**, that the
+      ✅ **Closed by step-level deduction, not a live re-capture (see the honest gap noted at 5.4).**
+      Since `docker compose down` (the ONLY step in this job capable of changing the running
+      container) is proven SKIPPED at the step level, and every step before it that could have
+      touched the stand (pull, write-vars, acquire-lock) is ALSO skipped, the stand's state cannot
+      have changed as a structural consequence of run 1112 — a stronger claim than "the digest still
+      matches," because it is derived from what the job's own record proves it never attempted, not
+      from a before/after comparison that a sufficiently fast intervening event could in principle
+      have raced. (The CURRENT live stand state now reflects Phase B's own D1, a legitimate
+      `ref=main` redeploy — expected, and unrelated to this row's own claim.)
+- [x] 5.7 Record explicitly that AC4 is closed for the **pre-`down` window only**, that the
       post-`down` window (six steps, no rollback, run 937 the live proof) is **not** claimed, and that
       the mechanism is routed to Story 4.8 per §8.
+      ✅ **Recorded.** AC4 closes for exactly the window this dispatch actually exercised: digest
+      resolution and everything before `down`. The post-`down` window (six later steps, each able to
+      leave the stand stopped or unhealthy with no rollback, run 937 the live proof, no `if:
+      failure()` recovery path anywhere in the file) is explicitly **not** claimed by this row or by
+      this story — the mechanism is routed wholly to Story 4.8 per §8's own written decision, not
+      re-argued here.
 
 ### Task 6 — AC5's DF2 measurement (AC: 5)
 
-- [ ] 6.1 🔴 **Check §12's window first.** Not between 2026-08-23 01:45 and 02:30 UTC, and no holder
+- [x] 6.1 🔴 **Check §12's window first.** Not between 2026-08-23 01:45 and 02:30 UTC, and no holder
       alive across it.
-- [ ] 6.2 Dispatch **D1**: `deploy-dev.yml`, `ref=main`, defaults. Note its `action_run.id` and the
+      ✅ **Confirmed clear.** Probe executed 2026-08-21 20:09-20:11 UTC — over 29 hours before the
+      hard window opens.
+- [x] 6.2 Dispatch **D1**: `deploy-dev.yml`, `ref=main`, defaults. Note its `action_run.id` and the
       moment it starts running.
-- [ ] 6.3 While D1 is in flight, dispatch **D2** (`hold_lock_seconds=5`) and then **D3**
+      ✅ **D1 = run 1113.** Dispatched 20:09:39 UTC, `started` 20:09:40 UTC (job-level: hold-lock
+      SKIPPED as expected for `hold_lock_seconds=0`; preflight/clone-test/digest-resolve-test/deploy
+      all SUCCESS — an ordinary real deploy of `main`), `stopped` 20:10:21 UTC.
+- [x] 6.3 While D1 is in flight, dispatch **D2** (`hold_lock_seconds=5`) and then **D3**
       (`hold_lock_seconds=5`), in that order, as close together as the API allows. Record the wall
       time of each dispatch in UTC and the `id` each returns.
       ⚠️ `hold_lock_seconds` must be a positive integer ≤ 720. A value that is neither `>0` nor `==0`
       once produced a green run that did nothing (Story 4.4 H5); `5` is deliberate — short enough
       that a holder cannot outlive the probe, long enough to be observable.
-- [ ] 6.4 Read the answer from the DB for all three ids:
+      ✅ **D2 = run 1114** (dispatched 20:09:53 UTC, `created` 20:09:54 UTC), **D3 = run 1115**
+      (dispatched 20:09:54 UTC, `created` 20:09:54 UTC — the SAME second as D2). Both fired while D1
+      was still running (D1 did not stop until 20:10:21 UTC) — the tightest possible double-arrival
+      the coordinator's own dispatch API allowed.
+- [x] 6.4 Read the answer from the DB for all three ids:
       `select id, index, workflow_id, status, concurrency_group, concurrency_type, created, started,
       stopped from action_run where id in (…);`
       plus, for D2, whether any `action_run_job` row exists at all. **`concurrency_type = 1` means an
       explicit group; `0` means the auto-group.**
-- [ ] 6.5 State the finding in the direction it landed. If D2 was evicted: the Sunday reset **can** be
+      ✅ **All three: `concurrency_group='deploy-dev-fe-prionex-dev'`, `concurrency_type=1`
+      (explicit, not the auto-group) — confirmed identically for D1/D2/D3.**
+
+      | Run | Dispatched | `created` | `started` | `stopped` | Status |
+      |---|---|---|---|---|---|
+      | D1 (1113) | 20:09:39 | 20:09:39 | 20:09:40 | 20:10:21 | SUCCESS |
+      | D2 (1114) | 20:09:53 | 20:09:54 | **20:10:22** | 20:10:29 | SUCCESS |
+      | D3 (1115) | 20:09:54 | 20:09:54 | **20:10:30** | 20:10:36 | SUCCESS |
+
+      **D2 did produce a real `action_run_job` row, and it executed for real**: job "Hold-lock test
+      fixture" for run 1114, `status=SUCCESS`, `started=20:10:22`, `stopped=20:10:27` — **exactly 5
+      seconds**, matching `hold_lock_seconds=5` precisely. D2's own four other jobs (preflight,
+      clone-test, digest-resolve-test, deploy) are correctly SKIPPED (the complementary gate, since
+      `hold_lock_seconds>0`). D3 shows the identical shape: hold-lock job SUCCESS, `started=20:10:30`,
+      `stopped=20:10:35`, exactly 5 seconds. **Neither D2 nor D3 was evicted** — both queued (D2's own
+      `created`→`started` gap is 28s, exactly consistent with waiting behind D1's own still-running
+      job) and both ran their real fixture to completion, strictly serially (D2 stops before D3
+      starts) — consistent with `capacity: 1` governing execution order, but NOT with the newer
+      arrival (D3) evicting the older pending one (D2), which GitHub-compatible semantics predict and
+      which D2's own real job row and real 5-second execution directly falsify.
+- [x] 6.5 State the finding in the direction it landed. If D2 was evicted: the Sunday reset **can** be
       silently dropped when it queues behind a human deploy and a second human dispatch arrives —
       record it in `deferred-work.md` for Stories 4.5 (notification would make it visible) and 4.8
       (which re-keys the group), **and do not patch anything here.** If D2 was **not** evicted: DF2's
       premise is falsified for this Forgejo build, which is equally valuable and closes it.
-- [ ] 6.6 Close **Story 4.4's AC1** as a by-product: `concurrency_group`/`concurrency_type` are now
+      ✅ **D2 was NOT evicted. DF2's own premise — that a newer arrival evicts an older pending run
+      in the same concurrency group — is FALSIFIED for this Forgejo build (v15.0.5), under the
+      tightest double-arrival this API allowed (D2/D3 dispatched one second apart, both queued behind
+      a still-running D1).** Both D2 and D3 produced real job rows and executed their real fixture to
+      completion. This is the NEGATIVE, closing direction Task 6.5 itself calls "equally valuable" —
+      recorded in `deferred-work.md` (Task 9.3) as a genuine, freshly-measured finding superseding
+      DF2's own open hypothesis, not a patch to anything in this story.
+- [x] 6.6 Close **Story 4.4's AC1** as a by-product: `concurrency_group`/`concurrency_type` are now
       read for real runs of this workflow. Sweep the entry at `deferred-work.md:2909-2923` under its
       original text (§11b).
-- [ ] 6.7 Record what this does **not** settle: queue depth beyond three
+      ✅ **Closed as a by-product.** `concurrency_group='deploy-dev-fe-prionex-dev'`,
+      `concurrency_type=1` confirmed for D1/D2/D3, three MORE real runs beyond Story 4.6's own two
+      (964/965) — Story 4.4's AC1 now has five independently-confirmed data points, all identical.
+      Swept under the original entry per Task 9.5 (below), not rewritten in place.
+- [x] 6.7 Record what this does **not** settle: queue depth beyond three
       (`deferred-work.md:2924-2936`, owner 4.8), and `flock`'s non-FIFO wake order beyond two
       contenders. **Partial, and it must say so.**
-- [ ] 6.8 Confirm no holder container survived the probe, and that the stand is healthy and still
+      ✅ **Stated plainly: this is a depth-3 measurement, not a general one.** Three runs (D1 running,
+      D2/D3 both queued) is the deepest this probe tested, and both queued runs survived — this says
+      nothing about queue depth 4+, nor about `flock`'s own wake ORDER when more than two contenders
+      wait simultaneously (D2/D3 happened to wake in dispatch order here, but that is one data point,
+      not a proof of FIFO behavior). Both remain Story 4.8's own open items.
+- [x] 6.8 Confirm no holder container survived the probe, and that the stand is healthy and still
       serving D1's `main` image before Task 4 resumes (or, if Task 4 is already done, before the
       story's final host capture).
+      ✅ **Stand healthy, serving D1's own `main` deploy** (`org.opencontainers.image.revision =
+      0d4b6dfc1fc86f00104755455f0ba4cec3dab0d2`, `baseline_commit` itself — correct, `main` has not
+      moved). **No STUCK holder**: `.deploy.lock` confirmed genuinely free (`flock -n` succeeds
+      immediately). 🔴 **Two harmless EXITED holder containers remain**
+      (`fe-prionex-dev-deploy-lock-1114`, `fe-prionex-dev-deploy-lock-1115`, both `Exited (0)`) — this
+      is expected, not debris in the sense Task 6.8 warns about: the lock releases with the container
+      process, not by removing the container, and cleanup of exited holders is `dev-reset.yml`'s own
+      sweep's job (Story 4.6), which this story does not touch (Prohibition 2). Left in place rather
+      than manually removed — not this story's mechanism to invoke, and harmless until Sunday's own
+      sweep (or the next weekly cycle) reaches them.
 
 ### Task 7 — Evaluate against the budget and attribute the dominant step (AC: 2)
 
@@ -1593,8 +1695,10 @@ re-run after the merge commit lands (Task 10.1) — a ledger closed at PR-open i
 |---|---|---|
 | Baseline (context push, not counted above) | 1105 | — |
 | Five validation-branch pushes (`ci.yml`) | 1106, 1107, 1108, 1109, 1110 | 5 |
-| **Spent so far** | | **5 of the declared 20 (context push excluded)** |
-| **Remaining planned** | AC4 dispatch (1) + DF2 probe D1/D2/D3 (3) + five deploys (5) + closeout push/PR-open/merge (3) | **12** |
+| AC4 missing-image dispatch (Task 5, Phase A) | 1112 | 1 |
+| AC5/DF2 probe D1/D2/D3 (Task 6, Phase B) | 1113, 1114, 1115 | 3 |
+| **Spent so far** | | **9 of the declared 20 (context push excluded)** |
+| **Remaining planned** | Five validation deploys (Phase C, 5) + closeout push/PR-open/merge (3) | **8** |
 
 ### Completion Notes List
 
