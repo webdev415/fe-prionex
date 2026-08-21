@@ -218,9 +218,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['trigger_tag_code'],
             })
           }
-          // The backend already rejects both of these (schemas/rule.py and
-          // rule_validation.py), so without a branch here the operator only
-          // learns after submitting, from a 422 phrased for API consumers.
+          // The API rejects both of these too, so without a branch here the
+          // operator only learns after submitting, from a 422 phrased for API
+          // consumers rather than for the person filling in the form.
           if (data.action_type === 'replace_tag' && !data.replace_tag_code) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -953,8 +953,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   )}
                 />
                 {/* Rendered from the current selections, so a rule saved with
-                    the pair swapped can be spotted by opening it. */}
-                {replaceTagCode && targetTagCode && (
+                    the pair swapped can be spotted by opening it. Suppressed
+                    when the two match: the sentence would read "replaces X with
+                    X", contradicting the validation error shown beside it. */}
+                {replaceTagCode && targetTagCode && replaceTagCode !== targetTagCode && (
                   <p className="text-xs text-gray-500">
                     {t('pages.tags.rules.replaceEffect', {
                       defaultValue:
