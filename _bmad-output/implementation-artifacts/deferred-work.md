@@ -2861,6 +2861,16 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   `up -d` failure with no attribution back to this cause — on a host shared with another team's
   production. Belongs with the reboot-ordering item already recorded above, which has the same owner
   and the same "state of s1 between deploys" character. **Owner: Story 4.9 / platform ops.**
+  ✅ **CLOSED 2026-08-21 (Story 4.6, Task 5.7).** 🔴 Ownership conflict resolved in writing: this
+  entry named Story 4.9/platform ops, but FR23 and Story 4.6's own epic AC named Story 4.6 for the
+  same chore — Story 4.6 takes it, per its own AC4. `dev-reset.yml`'s sweep step enumerates
+  `git.crm-prionex.com/crm/fe-prionex` images with no repository tag (the exact accumulation shape
+  this entry describes — every digest pull leaves one), excludes anything referenced by a container
+  or younger than a 7-day threshold, and removes the rest by explicit image id. Confirmed live on
+  s1 against genuine accumulated debris before this story's own first push (a real
+  enumeration bug was found and fixed doing so — see `docs/migration-decisions.md#d31`). Runs
+  weekly, attached to the same schedule as the DEV reset itself, so periodic hygiene has a periodic
+  job to live in rather than needing its own separate trigger.
 
 ## Deferred from: story-4.4 implementation (2026-08-20)
 
@@ -2947,3 +2957,33 @@ session at all, not because they are minor.
   scope. Not reversed in this fix-pass: M15's own trade-off (readable exit codes vs. self-cleaning
   containers) was made deliberately for H6's diagnosability gain, and undoing it here would re-open
   that gap.
+  ✅ **CLOSED 2026-08-21 (Story 4.6, Task 5.7) — taken exactly as this entry's own candidate
+  ownership suggested.** `dev-reset.yml`'s sweep step enumerates stopped containers matching
+  `^fe-prionex-dev-deploy-lock-[0-9]+$` (anchored at both ends — never a substring, the same
+  hazard class AC4's own amendment names for the image half), excludes anything `running` (a live
+  deploy's own lock, never touched — structural, not advisory) and anything that finished more
+  recently than a 24-hour threshold, and removes the rest by explicit container id. Force-tested on
+  s1 against a real holder (`fe-prionex-dev-deploy-lock-971`, this entry's own live example) before
+  this story's first push — see Completion Note 1 for the honest note that testing the removal path
+  removed that exact container, which is the intended, correct behaviour for debris this old. `--rm`
+  itself is NOT reinstated on the two holders in `deploy-dev.yml` — M15's own trade-off stands
+  unchanged; this entry closes by adding periodic cleanup, not by reversing the decision that
+  created the debris.
+
+## Deferred from: story-4.6 implementation (2026-08-21)
+
+- ⚠️ **`docker images REPO --filter dangling=true` does not match a digest-pulled image on s1's own
+  docker daemon (29.4.0, containerd-backed image store).** Found while writing `dev-reset.yml`'s own
+  sweep, before it was ever pushed (`docs/migration-decisions.md#d31`). A digest-pulled image's own
+  `RepoTags` array (readable via `docker inspect`) carries a `repo@sha256:...` pseudo-entry rather
+  than being empty, and the `dangling` filter's own emptiness check does not treat that as untagged
+  — so the filter silently matches ZERO such images, forever, on this specific daemon/image-store
+  combination. The `.Tag` DISPLAY field (`docker images --format '{{.Tag}}'`) is unaffected and
+  correctly renders `<none>` for the same images — the working substitute this story's own sweep
+  uses (list all, filter client-side on `.Tag == "<none>"`). Not confirmed whether this is a
+  containerd-image-store-specific behaviour or a general docker 29.x one — untested against the
+  classic (non-containerd) store. **Owner: whoever next writes a `docker images ... --filter
+  dangling=true` check against a digest-pulled image on this host** — a candidate note for
+  `docs/runners/config.yml`'s own operator documentation, since it is a platform property, not a
+  per-workflow one, and the next person to reach for the obvious filter will hit the same silent
+  no-op this story caught by testing rather than trusting.

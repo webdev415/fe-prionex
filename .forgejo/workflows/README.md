@@ -14,6 +14,11 @@ Story 2.1; stale as of that story, corrected here — this directory was NOT lef
   in this repo to authenticate a `git fetch` with `github.token` and to talk to a job's
   own host docker daemon over a mounted `docker.sock`; see its own header comment and
   `docs/migration-decisions.md#d29`.
+- `dev-reset.yml` — weekly, unattended reset of the DEV stand to `main` (Story 4.6). A
+  trigger, not a deploy: dispatches `deploy-dev.yml` with `ref=main` through the Forgejo
+  API rather than duplicating its steps, and sweeps this project's own stale images and
+  lock-holder debris first. First workflow in this repo carrying `schedule:` — see its
+  own header comment and `docs/migration-decisions.md#d31`.
 
 Note: `probe-deploy-dev-preprod.yml`, a throwaway diagnostic probe used while building
 `deploy-dev.yml`, was deleted at Story 4.3's close (Task 2.7) once its questions were
