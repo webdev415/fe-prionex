@@ -265,7 +265,7 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         independent DB-read closing path (Task 1.1's own method) alongside the coordinator's own
         API query — both may be used to cross-check the final total.
 
-- [ ] **Task 2 — Convert the schedule's unknowns into findings before spending a scheduled run
+- [x] **Task 2 — Convert the schedule's unknowns into findings before spending a scheduled run
       (zero-dispatch strategy; feeds AC2)**
   - [x] 2.1 Re-read, and cite in the story, the **existing live evidence on this instance**
         (Dev Notes §2): `PRIONEX_HUB/.github/workflows/reset-dev.yml:33-40` (its own verification
@@ -356,7 +356,7 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         the FIRST entry written, and the temporary probe cron is ADDED beside it, never replacing
         it. PR B removes only the probe entry — the file's own `schedule:` key carries at least one
         item at every commit in this story's own history.
-  - [ ] 2.8 🔴 Settle **how the reset causes a deploy**, and whether the chosen transport can
+  - [x] 2.8 🔴 Settle **how the reset causes a deploy**, and whether the chosen transport can
         authenticate, before the first scheduled firing. Dev Notes §3 chooses API dispatch with
         `${{ github.token }}`; the endpoint itself is proven on this instance (Story 1.8: *API
         dispatch works on any ref*), the **token's scope for it is not**. Test it on the manual path
@@ -371,18 +371,23 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         repository, and a per-unit Actions-write mapping for it is only *planned* for Forgejo 16
         (codeberg #3571) — so `${{ github.token }}` very probably does **not** satisfy the second
         check. Design the step so this comes back as a clean, named `403`, not as a mystery.
-        🔶 **First attempt (run 994) proved nothing — caught after the fact, recorded honestly.**
-        Requested a manual dispatch on the implementation branch; the coordinator ran it (994,
-        SUCCESS, ~2.5 min) and no `deploy-dev.yml` run appeared afterward. Read at first as a
-        clean `401`/`403`-shaped negative — but the request itself never reached the real endpoint:
-        the file dispatched still carried `DISARMED=true` (Task 6.2's own literal, correctly baked
-        in for the eventual PR A window), so run 994 took the simulated branch and exited 0 by
-        design, proving only that the disarm mechanism itself works — which was already covered by
-        local testing (Completion Note 1). Confirmed independently via the same DB read path (not
-        only the coordinator's own run-list check): run 994's own row (`event=workflow_dispatch`,
-        `status=1`, `938:53:09`) and no `deploy-dev.yml` row created after it. **Fixed**:
-        `DISARMED` flipped to `false` for exactly one commit, to be reverted before PR A opens —
-        redispatch requested on the same branch, same ref, this time actually reaching the endpoint.
+        ✅ **SETTLED POSITIVELY — better outcome than expected, no Oleg escalation needed.** First
+        attempt (run 994) proved nothing: the coordinator's own dispatch reached a file still
+        carrying `DISARMED=true` (Task 6.2's own literal, correctly baked in for the eventual PR A
+        window), so it exercised the simulated branch and exited 0 by design — caught after the
+        fact, confirmed via the same DB read path independently of the coordinator's own run-list
+        check (run 994: `event=workflow_dispatch`, `status=1`, no `deploy-dev.yml` row created
+        after it). Fixed: `DISARMED` flipped to `false` for one commit, redispatched on the same
+        branch. **Run 1004 (armed) — SUCCESS, and it genuinely triggered run 1005
+        (`deploy-dev.yml`, `ref=main`) — SUCCESS in ~1 minute, an ordinary redeploy of `main`.**
+        `${{ github.token }}` CAN dispatch a workflow on this instance, against the read source's
+        own prediction — the automatic job token's write permission on the Actions unit is broader
+        in practice than the "planned for Forgejo 16" documentation suggested, or this instance's
+        own configuration grants it. The full scheduler→deploy chain (dispatch → classify success →
+        trigger `deploy-dev.yml` → real redeploy) is now proven end to end, live, not merely
+        designed. Host-side confirmed (Completion Note 3): `stand-checkout-1005`, image revision
+        matches `baseline_commit`, `ref=main`, lock file mtime 3s before container recreation, no
+        leftover holder debris. `DISARMED` reverted to `true` in this same round, before PR A.
   - [x] 2.9 🔴 **Record the cron parser's exact shape before writing an expression** (AC7). Forgejo
         v15.0.5 uses `github.com/gdgvda/cron v0.7.0` with
         `cron.Minute|Hour|Dom|Month|Dow|Descriptor` — **five mandatory fields**, **no seconds field**
@@ -1195,25 +1200,30 @@ Postgres via SSH on s1 (`docker exec forgejo-postgres psql -U forgejo -d forgejo
 from action_run;"`), the same method `CRM/api-prionex`'s own story documents. Not the coordinator's
 API channel — an independent read path, offered for cross-check.
 
-| Line | Declared | Notes |
+| Line | Declared | Actual |
 |---|---|---|
-| Context push (`story-4-6/pr-1-context`, no PR) | 1 | Already spent, predates this round (below baseline 988) |
-| **PR A** — first push (before PR exists) | 1 | Carries the final weekly cron + the temporary probe cron, dispatch disarmed |
-| **PR A** — opening the PR | 1 | Coordinator opens |
-| Each subsequent push while PR A is open | 2 each | `push` + `pull_request: synchronize` |
-| **PR A** — merge to `main` (`build-main.yml`) | 1 | |
-| 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | Probe cron `5,20,35,50 * * * *` (every 15 min, offset from the weekly cron's own `:00` slot — Task 2.9's staggering rule). Over an expected ~30-90 minute observation window: **2-6 firings**. Each firing is exactly 1 `action_run` row (the dispatch step is disarmed, so a firing never ALSO triggers a `deploy-dev.yml` run) |
-| **PR B** — first push, PR open, subsequent pushes, merge | ~3-5 | Removes the probe cron, arms the dispatch |
-| Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | One manual API dispatch of `dev-reset.yml` **on the implementation branch itself** (`ref=<branch>`, not `main` — `workflow_dispatch` is not registration-gated to the default branch the way `schedule:` is, Dev Notes §2's own distinction), armed, testing `github.token` against the real dispatch endpoint. If it succeeds, `deploy-dev.yml` itself also runs — a second row |
-| Task 7's live matrix | ≥3 | 7.1 happy path (1, + the `deploy-dev.yml` run it triggers = 2), 7.3 credential negative (1), 7.4 missing-image negative (1) |
-| 🔴 Red runs before the first green | ≥2, declared not hoped against | Causes 1/2/5/6/7/8 converted to zero-dispatch findings (below); causes 3/4 are the two this story's own design accepts spending a live dispatch on |
-| Closeout PR (separate branch/PR/merge) | ~3 | |
+| Context push (`story-4-6/pr-1-context`, no PR) | 1 | 1 — already spent, predates this round (below baseline 988) |
+| Implementation push(es), before PR A exists | 1 for the first | **3 so far, no PR open yet — 1 run each: run 993 (CI for `cab35b99`), run 1002 (CI for `67d4622e`, the temporary arm-for-test commit); the third (reverting `DISARMED` back to `true`) about to be pushed** |
+| **PR A** — opening the PR | 1 | pending |
+| Each subsequent push while PR A is open | 2 each | none yet |
+| **PR A** — merge to `main` (`build-main.yml`) | 1 | pending |
+| 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | pending PR A's own merge — probe cron `5,20,35,50 * * * *` (every 15 min), expected 2-6 firings over ~30-90 min |
+| **PR B** — first push, PR open, subsequent pushes, merge | ~3-5 | pending |
+| Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | **2 dispatches, not 1 — run 994 (disarmed, proved nothing, own sequencing gap) + run 1004 (armed, SUCCESS) + run 1005 (`deploy-dev.yml`, triggered by 1004, SUCCESS)** — 3 runs total against a declared 1(+1). The extra run (994) is booked honestly below as a self-inflicted red, not hidden in this line |
+| Task 7's live matrix | ≥3 | pending |
+| 🔴 Red runs before the first green | ≥2, declared not hoped against | **1 — run 994**, an own-process gap (dispatched against a file still carrying `DISARMED=true`), not a platform or design failure. Everything else (schedule registration, UTC, sweep enumeration, parse-time safety, and now the token itself) converted to zero-dispatch findings or settled clean on the first real attempt |
+| Closeout PR (separate branch/PR/merge) | ~3 | pending |
 
-**Declared floor: ~20-24 runs.** Treat as a floor, not a ceiling — 4.1: 5→7; 4.2: modelled,
-landed on 7; 4.3: modelled, still overran (largest line was the live matrix); 4.4: modelled,
-converted its failure causes into zero-dispatch findings first, closed at 16 against a ~20 floor
-with **zero** red dispatches. This story's own largest line (probe-window firings) is priced with
-an explicit period and an explicit expected count, not left as a bare "≥2".
+**Spent so far, above baseline 988: runs 993, 994, 1002, 1004, 1005 = 5 runs.** Declared floor:
+~20-24 runs. Treat as a floor, not a ceiling — 4.1: 5→7; 4.2: modelled, landed on 7; 4.3: modelled,
+still overran (largest line was the live matrix); 4.4: modelled, converted its failure causes into
+zero-dispatch findings first, closed at 16 against a ~20 floor with **zero** red dispatches. This
+story's largest line (probe-window firings) is still ahead, priced with an explicit period and an
+explicit expected count. 🔶 **One honest red so far (run 994)** — this story's own zero-dispatch
+ratio through Task 2.8 is 5 of 6 (not 6 of 6, per the original Task 1.4 declaration), because the
+one dispatch this story's design always intended to spend (Task 2.8) was spent twice due to a
+sequencing gap on this session's own side, not a platform or design failure. Recorded plainly
+rather than folded into the "expected" line to make the ratio look cleaner than it was.
 
 🔴 **Zero-dispatch conversion, declared explicitly (Task 1.4), matching 4.4's own demonstrated
 practice.** Of the eight distinguishable failure causes Dev Notes §9 names:
@@ -1222,7 +1232,7 @@ practice.** Of the eight distinguishable failure causes Dev Notes §9 names:
 |---|---|---|---|
 | 1 | `schedule:` block accepted but registers no row for this repo | Sibling repos' own measured records answer the *shape* for free (Dev Notes §2); this story's own registration is still a live fact PR A's merge produces — not fully zero-dispatch, but the RISK of surprise is zero | 0 extra |
 | 2 | Registers but fires at an unexpected instant (timezone) | UTC evaluation confirmed from source + measured (`time_zone=''`); the cron itself validated against a local 5-field parser before push | 0 |
-| 3 | `${{ github.token }}` cannot call the dispatch endpoint | **Not converted — priced as one live dispatch on purpose** (Task 2.8), expected to fail | 1 (+1 if it unexpectedly succeeds) |
+| 3 | `${{ github.token }}` cannot call the dispatch endpoint | **Not converted — priced as one live dispatch on purpose** (Task 2.8). ✅ **Resolved better than expected: it succeeds** (run 1004). Cost 3 runs, not 1(+1), due to a self-inflicted sequencing gap (run 994) — recorded honestly in the red-dispatch line, not hidden here | 3 (994 red + 1004 + 1005) |
 | 4 | Dispatch endpoint path/body shape wrong for 15.0.5 | Settled by the SAME dispatch as cause 3 — one test exercises both | 0 additional |
 | 5 | Sweep enumeration wrong (silent no-op or over-removal) | **Converted, and a real bug was FOUND doing it**: `docker images --filter dangling=true` does not match a digest-pulled image on this daemon's containerd-backed store at all — confirmed live on s1 against genuine debris, would have shipped as a silent no-op. Fixed (client-side `.Tag == "<none>"` filter) and re-verified against real KEEP/REMOVE cases before this push (Completion Note 1) | 0 |
 | 6 | File rejected at parse time (no jobs, no logs) | YAML validated (`yaml.safe_load` + structural checks), `bash -n` on every extracted `run:` body, before push | 0 |
@@ -1358,6 +1368,62 @@ cross-check): run 994's own row (`event=workflow_dispatch`, `status=1`, stopped 
 exactly one commit — a redispatch on the same branch will now actually reach the endpoint. The
 gap was in sequencing the request, not in the classifier or the disarm mechanism itself, both of
 which were already correctly force-tested locally (Completion Note 1) before either dispatch.
+
+**3. Task 2.8 settled positively: the full scheduler→deploy chain proven live, end to end
+(runs 1004→1005), host-side confirmed.**
+
+```
+$ docker exec forgejo-postgres psql -U forgejo -d forgejo -c \
+    "select id,index,workflow_id,ref,trigger_event,status,to_timestamp(created) \
+     from action_run where repo_id=16 and id>=988 order by id;"
+  id  | index |  workflow_id   |                   ref                    |   trigger_event   | status
+------+-------+----------------+-------------------------------------------+--------------------+--------
+  993 |   337 | ci.yml         | refs/heads/story-4-6/pr-2a-probe-window  | push               |      1
+  994 |   338 | dev-reset.yml  | refs/heads/story-4-6/pr-2a-probe-window  | workflow_dispatch  |      1
+ 1002 |   339 | ci.yml         | refs/heads/story-4-6/pr-2a-probe-window  | push               |      1
+ 1004 |   340 | dev-reset.yml  | refs/heads/story-4-6/pr-2a-probe-window  | workflow_dispatch  |      1
+ 1005 |   341 | deploy-dev.yml | refs/heads/main                          | workflow_dispatch  |      1
+```
+
+Run 1004's own dispatch step (armed) called the real endpoint and got a `2xx` — its own classifier
+printed the "OK: dispatch accepted" branch, and Forgejo created run 1005 for `deploy-dev.yml` as a
+direct consequence, `ref=main` (note: `action_run.ref` for the DISPATCHED run reads
+`refs/heads/main` — the literal ref this story's own dispatch body sends — not the branch
+`dev-reset.yml` itself was read from). Host-side, after 1005 completed:
+
+```
+$ docker inspect fe-prionex-dev --format 'Created={{.Created}} Health={{.State.Health.Status}}'
+Created=2026-08-21T09:12:11.462313087Z Health=healthy
+
+$ docker inspect fe-prionex-dev --format '{{json .Config.Labels}}'
+"com.docker.compose.project.working_dir":"/workspace/CRM/fe-prionex/stand-checkout-1005"
+"org.opencontainers.image.revision":"22dceedc5f850641d088383b064d2345fe29297f"
+"org.prionex.ref":"main"
+
+$ docker inspect fe-prionex-dev --format 'Image={{.Image}}'
+Image=sha256:5d191b7fb1eba5e000c0ffc1bdb843d9c4b548e3a7914c232170d06ae613d563
+
+$ stat /root/crm-prionex/fe-prionex-dev/.deploy.lock   # Modify: 2026-08-21 11:12:08 +0200 (09:12:08 UTC)
+```
+
+`stand-checkout-1005` directly proves this exact container is run 1005's own output (the run number
+is embedded in the checkout directory the deploy itself wrote); the image's own stamped
+`org.opencontainers.image.revision` equals this story's own `baseline_commit`
+(`22dceedc5f850641d088383b064d2345fe29297f`), consistent with `ref=main` at the moment of dispatch;
+the lock file's own `mtime` (09:12:08 UTC) sits 3 seconds before the container's own `Created`
+(09:12:11 UTC) — acquire-then-deploy in the right order, the same signature Story 4.4 established.
+No leftover `fe-prionex-dev-deploy-lock-*` holder container survived either run — the sweep in run
+1004 (not disarmed, ran for real) and the lock's own release in run 1005 both completed cleanly.
+Two now-orphaned-but-still-young untagged images remain (`5d191b7fb1eb`, 1005's own; `2cf266044912`,
+the previous one, now unreferenced) — both correctly under the sweep's own 7-day age threshold, not
+yet eligible for removal, exactly as designed.
+
+**The chain the story set out to prove is now live, not merely designed:** a dispatch of
+`dev-reset.yml` → its own classifier correctly reads a real `2xx` → Forgejo creates a real
+`deploy-dev.yml` run → that run acquires the lock, sweeps nothing it shouldn't, pulls `main-dev`,
+redeploys, and releases the lock → the stand ends on exactly the image `main` resolved to at
+dispatch time. The only piece not yet exercised live is the SCHEDULED half specifically (a firing
+with no human dispatching it) — Task 6's own job, next.
 
 ### File List
 

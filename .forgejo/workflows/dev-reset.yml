@@ -309,12 +309,15 @@ jobs:
           # — it is idempotent and non-destructive by AC4's own construction (proven locally,
           # Completion Notes), so it runs for real even during the probe window; only the one step
           # capable of touching the stand is held back.
-          # 🔶🔶🔶 SET TO false FOR ONE COMMIT ONLY — Task 2.8's own token-scope test (run 994 was
-          # disarmed and therefore proved nothing about the token; this value is what run 994 should
-          # have been dispatched against, and was not, catching that gap after the fact rather than
-          # before — recorded honestly rather than quietly reworded). Reverted to `true` in the very
-          # next commit, before PR A is opened. Do not let this value reach PR A armed.
-          DISARMED=false
+          # ✅ Task 2.8 settled live, 2026-08-21: with this flipped to `false` for exactly one
+          # commit, run 1004 (armed) reached the real endpoint, got a real 2xx, and genuinely
+          # triggered run 1005 (`deploy-dev.yml`, ref=main, SUCCESS) — the full scheduler→deploy
+          # chain proven end to end (Completion Note 3). Reverted to `true` here, for PR A's own
+          # probe window, as planned from the start (Task 6.2) — this is not a response to the
+          # token result, which is a separate question from why the probe window disarms at all
+          # (controlling the BLAST RADIUS of a frequent test cron, not working around a credential
+          # problem that turned out not to exist).
+          DISARMED=true
 
           if [ "$DISARMED" = "true" ]; then
             echo "⚠️⚠️⚠️ PROBE WINDOW (Task 6.2): the dispatch step is DISARMED by a literal"\
