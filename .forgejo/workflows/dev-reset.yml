@@ -252,24 +252,46 @@ jobs:
             fi
             while IFS='|' read -r IMG_ID IMG_CREATED; do
               [ -z "$IMG_ID" ] && continue
-              # `docker images ... CreatedAt` renders as e.g. "2026-08-14 15:34:50 +0200 CEST" —
-              # strip the trailing zone name (date -u -d does not parse a named zone, only a
-              # numeric offset) before parsing, the same class of fix Story 4.4 needed for
-              # Docker's own StartedAt format.
-              # 🔴 Code review L6, named rather than silently assumed: this regex handles docker's
-              # OWN rendering of a *named* zone abbreviation (`+0200 CEST`), verified live to parse
-              # correctly and honour the offset (both BusyBox and GNU `date -u -d`). It does NOT
-              # handle Go's rendering of an *unnamed* zone as a repeated numeric offset
-              # (`+0700 +07`), which this image's own docker build has never produced but a
-              # different daemon configuration theoretically could. Fails CLOSED if that ever
-              # happens (the parse below fails, the image is kept, not guessed at) — a stated
-              # assumption, not a silent one.
-              CLEAN_CREATED="$(printf '%s' "$IMG_CREATED" | sed -E 's/ [A-Z]{3,4}$//')"
-              if ! IMG_EPOCH="$(date -u -d "$CLEAN_CREATED" +%s 2>/dev/null)"; then
+              # `docker images ... CreatedAt` renders as e.g. "2026-08-14 15:34:50 +0200 CEST" or
+              # "2026-08-21 06:58:56 +0000 UTC" — Go's default layout, always
+              # "<date> <time> <±HHMM> <zone-name>".
+              # 🔴 Live-found on the throwaway branch (run 1072, story-4-6 code-review DN2/7.5
+              # dispatch), superseding the previous L6 note: THIS runner's actual `date` binary is
+              # BusyBox v1.37.0 (`deploy-base-dev-preprod:2026-08-07`, confirmed via `date --help`),
+              # whose `-d` TIME grammar has NO offset syntax at all (`hh:mm[:ss]`,
+              # `[YYYY.]MM.DD-hh:mm[:ss]`, `YYYY-MM-DD hh:mm[:ss]`, `@seconds` — nothing with a
+              # trailing `±HHMM`) — it rejects EVERY CreatedAt value unconditionally, regardless of
+              # the offset's sign or magnitude, including the zero-offset `+0000 UTC` case, not only
+              # the previously-flagged unnamed-zone shape. The prior claim that "`+0200` parses and
+              # honours the offset" was verified against a different BusyBox build than the one this
+              # job actually runs on (Completion Note 1 tested `busybox:1.38`/GNU `date` directly on
+              # the host, not inside `deploy-base-dev-preprod`) — every prior sweep run (994 onward)
+              # therefore fell through this parse failure on every image, every time; harmless only
+              # because the failure is fail-closed (KEEP), never a mis-removal, but it meant the
+              # image half of the sweep had never actually removed anything, ever, regardless of
+              # age. Fixed by never asking `date -d` to understand an offset at all: parse the
+              # `±HHMM` token ourselves and apply it by arithmetic against the naive (offset-free)
+              # reading, which `date -u -d` (its `YYYY-MM-DD hh:mm[:ss]` form) parses natively.
+              OFFSET_TOKEN="$(printf '%s' "$IMG_CREATED" | grep -oE '[+-][0-9]{4}' | tail -n1)"
+              NAIVE_CREATED="$(printf '%s' "$IMG_CREATED" | sed -E 's/ [+-][0-9]{4}.*$//')"
+              if ! IMG_EPOCH_NAIVE="$(date -u -d "$NAIVE_CREATED" +%s 2>/dev/null)"; then
                 echo "KEEP  image ${IMG_ID}: could not parse its own CreatedAt ('${IMG_CREATED}') — refusing to guess its age."
                 KEPT_IMAGES=$((KEPT_IMAGES + 1))
                 continue
               fi
+              OFFSET_SECONDS=0
+              if [ -n "$OFFSET_TOKEN" ]; then
+                OFFSET_SIGN="$(printf '%s' "$OFFSET_TOKEN" | cut -c1)"
+                OFFSET_DIGITS="${OFFSET_TOKEN#[+-]}"
+                OFFSET_HH="${OFFSET_DIGITS%??}"
+                OFFSET_MM="${OFFSET_DIGITS#??}"
+                OFFSET_SECONDS=$(( 10#$OFFSET_HH * 3600 + 10#$OFFSET_MM * 60 ))
+                if [ "$OFFSET_SIGN" = "-" ]; then
+                  OFFSET_SECONDS=$(( 0 - OFFSET_SECONDS ))
+                fi
+              fi
+              # local = UTC + offset, so UTC = local(naive, read as if it were already UTC) - offset.
+              IMG_EPOCH=$(( IMG_EPOCH_NAIVE - OFFSET_SECONDS ))
               AGE_HOURS=$(( (NOW_EPOCH - IMG_EPOCH) / 3600 ))
               if [ "$AGE_HOURS" -lt "$MAX_IMAGE_AGE_HOURS" ]; then
                 echo "KEEP  image ${IMG_ID}: ${AGE_HOURS}h old, under the ${MAX_IMAGE_AGE_HOURS}h threshold (Task 5.2's race window; L2's own note on why this is NOT literally 'one cycle')."

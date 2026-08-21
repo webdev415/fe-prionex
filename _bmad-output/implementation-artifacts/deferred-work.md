@@ -2990,6 +2990,38 @@ session at all, not because they are minor.
   config.yml`'s own operator documentation once Story 4.9/platform ops picks it up, since it is a
   platform property, not a per-workflow one.
 
+## Deferred from: story-4.6 code-review fix-pass, live verification of DN2's rows 7.3/7.5 (2026-08-21)
+
+Two new platform findings, both surfaced while dispatching the throwaway branch
+`story-4-6/throwaway-7-3-7-5` (run 1072) to earn Task 7's rows 7.3/7.5 live — see the story's own
+Task 7.5 for the full account. Neither is story-4.6-specific; both are facts about this instance
+and this runner image that future stories writing shell code for `deploy-dev-preprod` should know.
+
+- ⚠️ **Job/step logs ARE retrievable on this instance, contrary to the standing assumption this
+  story (and prior ones) carried.** The "not retrievable" finding was true only for the channels
+  tried so far (the runs API, `$GITHUB_OUTPUT`) — `action_task.log_filename`/`log_in_storage`
+  (columns never queried by this project before this round) point at a zstd-compressed file on
+  local disk: `/opt/forgejo/forgejo/gitea/actions_log/<owner>/<repo>/<shard>/<task_id>.log.zst`,
+  readable directly via SSH + `zstd -d` on s1, no API involved. Confirmed live for run 1072's own
+  task (id 9149) — full stdout, timestamped per line, matched the DB-derived facts exactly. **Owner:
+  whoever next needs to read a job's own literal output on this instance** — worth a line in
+  `docs/runners/config.yml`'s own operator documentation, and worth revisiting whether any PRIOR
+  story's own "logs not retrievable, so X was verified by DB/host-state only" claims would gain
+  stronger evidence from this path — not re-litigated here, out of scope for this fix-pass.
+- ⚠️ **The `deploy-dev-preprod` runner's own `date` (BusyBox v1.37.0, inside
+  `deploy-base-dev-preprod:2026-08-07`) cannot parse ANY numeric timezone offset via `-d`** — its
+  TIME grammar (`hh:mm[:ss]`, `[YYYY.]MM.DD-hh:mm[:ss]`, `YYYY-MM-DD hh:mm[:ss]`, `@seconds`) has no
+  offset syntax at all, rejecting `docker images`' own `CreatedAt` rendering (`<date> <time> ±HHMM
+  <zone>`) unconditionally — confirmed live (`dev-reset.yml`'s image-sweep loop, run 1072) and by
+  direct `date --help`/manual testing against the real image. This silently broke Story 4.6's own
+  image-removal sweep from its first live run onward (always fail-closed KEEP, never a genuine
+  REMOVE) until fixed this round by computing the epoch via shell arithmetic instead of asking
+  `date -d` to parse the offset. **Owner: whoever next writes date-arithmetic shell code for a step
+  on `deploy-dev-preprod`** — do not assume a `busybox:X.Y` test run directly on the host reflects
+  this specific runner image's own BusyBox build; test against the actual image
+  (`docker run --rm deploy-base-dev-preprod:<tag> date --help`) before trusting any `-d`-based
+  parse.
+
 ## Deferred from: code review of story-4.6 (2026-08-21)
 
 Two items only. Everything else the review found is an action item **inside** the story

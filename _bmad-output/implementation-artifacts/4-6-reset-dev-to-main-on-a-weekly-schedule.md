@@ -729,11 +729,15 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         confirm the message names the credential and not the image, and that the stand is untouched.
         If the real credential works, this row is earned the way `deploy-dev.yml` earns its own: a
         deliberate, permanent, clearly-marked simulation hook, or an equivalent that costs one run.
-        🔴 **Resolved per DN2 (code review): earned on a throwaway, never-merged branch, NOT with a
-        permanent hook** — a permanent constant would be exactly the scaffolding PR B removed for
-        good reasons, and AC1's zero-input clause forbids an input-driven one. Branch name, staged
-        objects and dispatch sequence: see "Throwaway branch for 7.3/7.5" below. Result recorded
-        there once the coordinator's dispatch lands.
+        ✅ **Earned live — run 1072 (`story-4-6/throwaway-7-3-7-5`, dispatched by the coordinator).**
+        `POST .../workflows/deploy-dev.yml/dispatches -> HTTP 401`; the classifier's own message:
+        *"FAIL: the DISPATCH ENDPOINT returned 401. This means the TOKEN cannot dispatch ... — NOT
+        that the image is missing and NOT that deploy-dev.yml itself failed. The stand has not been
+        touched."* — names the credential, not the image, exactly as required. Forgejo's own body:
+        `{"message":"access token does not exist [sha: throwaway-story-4-6-deliberately-invalid-
+        token-7-3]", ...}` — unambiguous. Stand confirmed untouched host-side (digest and `Created`
+        timestamp both unchanged from before the dispatch). Full evidence and the retrieval method
+        (a genuinely new capability found while verifying this row) below "Throwaway branch results".
   - [x] 7.4 **Discriminating negative — `main-dev` does not exist.** The real-world cause is `main`
         going 14 days without a merge; the tag is a `-dev` tag and falls outside `keep_pattern`
         (`build.yml:962`). Confirm the failure lands in `deploy-dev.yml`'s own 404 classifier, that
@@ -748,13 +752,20 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         **must not** remove (referenced, too young, or running) alongside one it **must**, in the same
         run, and read the outcome from the host. A sweep observed only removing things proves nothing
         about what it refuses to remove — which is the entire content of AC4.
-        🔴 **Resolved per DN2: earned live, in the same dispatch as 7.3** — since the sweep runs
-        before the dispatch (Task 4.5), a throwaway-branch dispatch with lowered
-        `MAX_IMAGE_AGE_HOURS`/`MAX_HOLDER_AGE_HOURS` proves the sweep's own KEEP/REMOVE discipline
-        regardless of whether the dispatch step's own (deliberately broken) auth then succeeds. See
-        "Throwaway branch for 7.3/7.5" below for the staged must-keep/must-remove pair — chosen to
-        also serve as a live re-exercise of code review M6's fix (a `created`-state holder must
-        survive even under a threshold of 0).
+        ✅ **Earned live — same run 1072, holder pair clean; the image pair uncovered and FIXED a
+        real, previously-unknown bug (not merely a KEEP/REMOVE observation).** Holder side, from the
+        sweep step's own output: `KEEP holder ...999002: status='Created' is not a terminal state
+        (Exited/Dead) — never removed regardless of any computed age. This is the structural form of
+        Task 5.4's rule, closing code review M6.` and `REMOVE holder ...999001: stopped (Exited (0)
+        About a minute ago), finished 0h ago.` — a clean, live, discriminating KEEP/REMOVE pair, and
+        a live re-exercise of M6's own fix (a `created`-state container, the exact prior regression
+        shape, correctly survived even at threshold 0). Host-side confirmed after the run: `999001`
+        gone, `999002` still present in `Created` state, stand's own image digest and `Created`
+        timestamp unchanged. 🔴 **The image side did NOT behave as designed, and the reason is a
+        genuine bug, found and fixed in this same round** — see "Throwaway branch results" below for
+        the full account (a BusyBox version mismatch between what was tested and what the real
+        runner actually ships meant the image-removal path had silently never worked on ANY prior
+        run, always failing safe but never once actually removing an eligible image).
 
 **Throwaway branch for 7.3/7.5 (DN2), plan handed to the coordinator for dispatch:**
 
@@ -799,7 +810,93 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
      survives.
   4. Cleanup: delete any leftover staged objects, delete the throwaway branch (local and origin)
      once results are recorded here.
-  - [x] 7.6 Every verdict is read from the job list, the runs API, and host-side `docker` state.
+
+**Throwaway branch results — run 1072, both rows earned, one real bug found and fixed:**
+
+The coordinator dispatched `story-4-6/throwaway-7-3-7-5` once; it produced run **1072**, FAILURE,
+~2 minutes — the expected shape (sweep succeeds, dispatch fails on the fake token). Verified two
+ways, both independent of the coordinator's own observation:
+
+*Step-level, by query* (`action_task_step`, the same capability H3 used): sweep `status=1`
+(SUCCESS), notice `status=4` (SKIPPED, correctly — sweep did not fail), dispatch `status=2`
+(FAILURE), read-back `status=4` (SKIPPED, correctly — gated on the dispatch's own success, per
+DN1(b)). This is the H4 fix's own **first live exercise on the FAILURE path** (every prior run only
+ever exercised the SUCCESS path) — confirmed working exactly as designed: `if: always()` let the
+dispatch step run regardless of the sweep's own outcome, and the notice/read-back steps' own
+`outcome`-conditioned `if:` clauses evaluated correctly under a real failure, not only under
+success.
+
+🔴 **A genuinely new capability, found while trying to read the failing step's own message text:**
+job/step logs **are** retrievable on this instance after all — the standing "logs not retrievable"
+limitation this whole story (and prior ones) worked around was true only for the channels tried
+so far (API, `$GITHUB_OUTPUT`). `action_task.log_filename`/`log_in_storage` (a table column never
+queried before this round) point at a zstd-compressed file on local disk:
+`/opt/forgejo/forgejo/gitea/actions_log/CRM/fe-prionex/bd/<task_id>.log.zst` — readable directly via
+SSH + `zstd -d`, no API involved. The full log for run 1072's own task (id 9149) confirms everything
+below verbatim, not by inference:
+
+```
+POST .../workflows/deploy-dev.yml/dispatches -> HTTP 401
+FAIL: the DISPATCH ENDPOINT returned 401. This means the TOKEN cannot dispatch (github.token lacks
+write:repository scope and/or write permission on this repo's Actions unit) — NOT that the image is
+missing and NOT that deploy-dev.yml itself failed. The stand has not been touched. Fix: ...
+{"message":"access token does not exist [sha: throwaway-story-4-6-deliberately-invalid-token-7-3]","url":"https://git.crm-prionex.com/api/swagger"}
+```
+
+— **7.3 closed, unambiguous**: the message names the credential, the response body confirms it is
+specifically this branch's own fake token literal being rejected, and the stand was never touched
+(confirmed separately, host-side, below). This new read path is recorded here as a finding, not
+adopted as a new standing practice for this story (out of scope for this fix-pass to re-litigate
+every prior "log not retrievable" claim); a corrected deferred-work.md entry names it for whichever
+story next needs to actually read a job's own stdout.
+
+**7.5's holder pair — clean, from the same log:**
+
+```
+KEEP  holder fe-prionex-dev-deploy-lock-999002: status='Created' is not a terminal state (Exited/Dead)
+  — never removed regardless of any computed age. This is the structural form of Task 5.4's rule,
+  closing code review M6.
+REMOVE holder fe-prionex-dev-deploy-lock-999001: stopped (Exited (0) About a minute ago), finished 0h ago.
+OK: sweep complete. Removed 0 image(s), 1 holder(s). Kept 2 image(s), 1 holder(s) (see reasons above).
+```
+
+Host-side, checked directly after the run: `999001` gone (`docker ps -a` confirms), `999002` still
+present in `Created` state, `fe-prionex-dev`'s own image digest (`5d191b7fb1eb...`) and `Created`
+timestamp (`2026-08-21T09:12:11Z`) both unchanged from before the dispatch — the stand was never
+touched, consistent with the dispatch step failing before any deploy could be requested.
+
+🔴 **The image pair did NOT behave as designed — both images were kept via a parse FAILURE, not via
+the reference/age check — and chasing why surfaced a real bug this round then fixed, not merely
+observed.** The log shows: `KEEP image 5d191b7fb1eb: could not parse its own CreatedAt ('2026-08-21
+06:58:56 +0000 UTC') — refusing to guess its age.` and the same for `2cf266044912`. Investigated
+directly against the real runner image (`deploy-base-dev-preprod:2026-08-07`, via `docker run --rm
+... date --help`): its `date` is **BusyBox v1.37.0**, whose `-d` TIME grammar (`hh:mm[:ss]`,
+`[YYYY.]MM.DD-hh:mm[:ss]`, `YYYY-MM-DD hh:mm[:ss]`, `@seconds`) has **no offset syntax at all** — it
+rejects `docker images`' own `CreatedAt` rendering (`<date> <time> ±HHMM <zone>`) unconditionally,
+regardless of the offset's sign or magnitude, including the zero-offset `+0000 UTC` case. 🔴 **This
+directly contradicts the "Dismissed" finding below** (*"BusyBox 1.38 and GNU date -u -d both parse
+... and apply the offset correctly"*) — that claim was verified against `busybox:1.38` run directly
+on the host, not against the ACTUAL BusyBox baked into `deploy-base-dev-preprod`, which is a
+different, older build (1.37.0) with a materially smaller TIME grammar. Consequence, stated plainly:
+**every sweep run from 994 onward has had its image-removal path permanently, silently inert** —
+not because there was no eligible debris (`2cf266044912` was independently confirmed old and
+unreferenced, per Completion Note 3), but because the date parse has never once succeeded, always
+failing safe (KEEP), never a mis-removal, but never a real REMOVE either. AC4's own image-cleanup
+half has therefore never actually functioned on the real runner until this fix.
+
+**Fixed in this same round** (`dev-reset.yml`'s image loop): stopped asking `date -d` to understand
+an offset at all. The `±HHMM` token is now parsed out of `CreatedAt` and applied by shell arithmetic
+against the naive (offset-stripped) reading, which BusyBox's `YYYY-MM-DD hh:mm[:ss]` form parses
+natively — `UTC = naive_reading_as_if_UTC - offset_seconds`. Verified directly against the real
+runner's own BusyBox via SSH, using the exact `CreatedAt` strings observed live in run 1072's log
+plus a `+0200`-offset case: all three resolved to correct epochs and sensible ages (5h, 167h, 17h
+respectively) — no live re-dispatch spent to prove this, since the arithmetic was validated against
+the identical binary the job actually runs on, not a substitute. Not re-tested via a further
+throwaway dispatch — the coordinator was not asked for a third run over what is, structurally, the
+same class of fix M1/M4/M5/M6 already received (a fail-closed guard corrected and directly verified
+against the real runner, not merely re-asserted).
+
+- [x] 7.6 Every verdict is read from the job list, the runs API, and host-side `docker` state.
         🔴 Job and step logs are **not retrievable** on this instance for any runner; a row whose only
         evidence is a log line is not evidence.
         ✅ **Standing practice throughout this story, not a one-off** — every claim in Tasks 1, 2, 6
@@ -1419,7 +1516,7 @@ API channel — an independent read path, offered for cross-check.
 | 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | 🔴 **Corrected (code review H1): 5, not 3 — runs 1019, 1023, 1032, 1038, 1041**, all `trigger_event='schedule'`, **actor `trigger_user_id=-2` (the system user, no row in `user`) on all five** — 🔴 **M13c: this is the "actor" column AC2 requires in the ledger itself**, previously present only in Task 6.3's own separate table and not here — all SUCCESS, consistent 44s delay. The original ledger closed observation at the first three ticks it happened to catch inside the stated window and never re-queried after PR B's own merge landed (Task 1.6's own rule: the ledger closes only against a **post-merge** query) — PR A merged `09:44:21 UTC` and PR B merged `10:51:10 UTC`, so the `:35` (10:35:44) and `:50` (10:50:44) ticks both landed inside that gap and were missed by the original count. Re-queried this round: exactly 5 rows with `trigger_event='schedule'` for `repo_id=16` in the probe window, none after PR B's merge (the probe spec was correctly deregistered — see below) |
 | **PR B** — push, PR-open, merge | ~3-5 | **3 — run 1036** (CI for the PR B commit), **run 1037** (`pull_request` opening PR B), **run 1042** (`build-main.yml`, PR B's own merge, 10:51:13 UTC) |
 | Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | **3 runs total: 994 (disarmed, proved nothing — a red, see below) + 1004 (armed, SUCCESS) + 1005 (`deploy-dev.yml`, triggered by 1004, SUCCESS)** — against a declared 1(+1) |
-| Task 7's live matrix | ≥3 | **2 rows satisfied by evidence already in hand** (7.1 via 1004→1005, 7.2 via 1019/1023/1032/1038/1041) — 0 additional dispatches for those two. 7.4 closed as covered by Story 4.3's own run 948 (DN2, not re-earned here). 7.3/7.5 earned on a throwaway branch, see below — dispatches for those are the coordinator's, tracked separately from this story's own spend since they run on a disposable ref that never touches `main` |
+| Task 7's live matrix | ≥3 | **2 rows satisfied by evidence already in hand** (7.1 via 1004→1005, 7.2 via 1019/1023/1032/1038/1041) — 0 additional dispatches for those two. 7.4 closed as covered by Story 4.3's own run 948 (DN2, not re-earned here). ✅ **7.3/7.5 earned live: run 1072** (`story-4-6/throwaway-7-3-7-5`, one dispatch, no second needed) — the coordinator's own dispatch, tracked separately from this story's own baseline-988 spend since it runs on a disposable, never-merged ref that never touches `main` and spawns no `deploy-dev.yml` run (the fake token fails before any dispatch succeeds). Not folded into the "16 runs above baseline 988" total below for that reason — recorded here for completeness, not omitted |
 | 🔴 Red runs before the first green | ≥2, declared not hoped against | **1 — run 994**, an own-process sequencing gap, not a platform or design failure |
 | Closeout PR (separate branch/PR/merge, including this fix-pass, PR C) | ~3 | pending — this fix-pass is PR C |
 
@@ -1694,7 +1791,13 @@ three) before this commit.
   dispatch step's own `curl` gained `--retry`/`--max-time`/`-L` (M3/L4) and a whitespace-only-token
   guard (M7); a fourth, new step added — a non-blocking read-back confirming a `deploy-dev.yml` run
   was actually created after a `2xx` (DN1(b)/M2). Re-validated clean (`yaml.safe_load`, stray
-  `${{ }}` scan, `bash -n` on all 4 `run:` bodies) before this push.
+  `${{ }}` scan, `bash -n` on all 4 `run:` bodies) before this push. 🔴 **Second fix, found live
+  while earning 7.5 (run 1072, throwaway branch):** the image-sweep's date parsing (`zone-stripping
+  regex + date -d`) never actually worked on the real runner (BusyBox v1.37.0 has no offset-parsing
+  grammar at all, contradicting the code review's own "dismissed" claim, itself tested against a
+  substitute `busybox:1.38`) — replaced with shell arithmetic against the parsed `±HHMM` offset,
+  verified directly against the real runner's own `date` binary. Full account: Task 7.5's "Throwaway
+  branch results".
 
 **Modified**
 - `.forgejo/workflows/README.md` — `dev-reset.yml` added to the directory's own file list (Task 8.4).
@@ -1718,7 +1821,10 @@ three) before this commit.
 - `_bmad-output/implementation-artifacts/deferred-work.md` — `:2858-2863` and `:2930-2949` closed at
   their own entries; new section "Deferred from: story-4.6 implementation" added with one
   named-owner finding (the `dangling=true` platform quirk). Fix-pass round: that entry's own owner
-  corrected from a trigger condition to **Story 4.9 / platform ops** (M12).
+  corrected from a trigger condition to **Story 4.9 / platform ops** (M12). New section "Deferred
+  from: story-4.6 code-review fix-pass, live verification of DN2's rows 7.3/7.5" added with two more
+  platform findings from run 1072: job/step logs are retrievable via local disk (`action_task.
+  log_filename`), and the real runner's BusyBox v1.37.0 `date -d` has no offset-parsing grammar.
 - `_bmad-output/implementation-artifacts/4-6-reset-dev-to-main-on-a-weekly-schedule.md` — this
   file: `Status` → `review` (frontmatter — corrected an earlier oversight, was still `ready-for-dev`
   through the whole implementation round); Tasks 1-6, 8, 9 complete, Task 7 partially satisfied by
@@ -2191,10 +2297,16 @@ every claim below that needs the live DB is written as a **check to run**, not a
       no-op that prints a plausible *"refusing to guess"* for every image. It fails closed, so the
       cost is a no-op rather than damage; state the assumption, or strip to `YYYY-MM-DD hh:mm:ss` the
       way the holder loop already does 60 lines below.
-      ✅ **Resolved** — the assumption is now stated explicitly in a comment beside the regex
-      (handles docker's own named-zone rendering, verified live; does not handle Go's unnamed-zone
-      repeated-offset rendering, and fails closed — keeps the image, does not guess — if that shape
-      is ever produced by a different daemon configuration).
+      🔴 **Superseded, not merely resolved as originally scoped — the reviewer's own "verified live"
+      premise turned out to be wrong, found while earning row 7.5 live (run 1072).** The
+      regex-plus-`date -d` approach is removed entirely, not patched: real testing against the ACTUAL
+      runner (`deploy-base-dev-preprod:2026-08-07`, BusyBox v1.37.0) showed its `date -d` cannot
+      parse a numeric offset in ANY form, named zone or not, zero or not — the "verified live" claim
+      this finding built on was run against `busybox:1.38` directly on the host, a different build
+      than the one the job actually executes under. Fixed by computing the UTC epoch via shell
+      arithmetic against the parsed `±HHMM` token instead of asking `date -d` to understand an
+      offset at all — verified against the real runner's own binary, not a substitute. Full account:
+      "Throwaway branch results" under Task 7.5, and the corrected "Dismissed" entries below.
 - [x] [Review][Patch] **L7 — the two files carry divergent definitions of the same holder-name
       contract.** [`dev-reset.yml:213` vs `deploy-dev.yml:1305`] The sweep anchors
       (`^fe-prionex-dev-deploy-lock-[0-9]+$`); the deploy's own finder uses the unanchored prefix. If
@@ -2258,13 +2370,32 @@ every claim below that needs the live DB is written as a **check to run**, not a
 
 #### Dismissed (recorded so they are not re-raised)
 
-- **`<<<` (here-string) is a bashism that would break on this runner** — dismissed by execution:
-  `ash -n` inside BusyBox 1.38 parses both `run:` bodies cleanly, and a herestring feeding
-  `while IFS='|' read -r` works there. Both bodies also pass `bash -n` and `shellcheck`.
+- **`<<<` (here-string) is a bashism that would break on this runner** — 🔴 **dismissal CORRECTED
+  this round (found while chasing the CreatedAt bug below), not reaffirmed as originally reasoned.**
+  The original claim (*"`ash -n` inside BusyBox 1.38 parses both `run:` bodies cleanly"*) was tested
+  against `busybox:1.38` run directly on the host, not against `deploy-base-dev-preprod:2026-08-07`
+  (the real runner image) — and re-tested this round, real `ash` (BusyBox v1.37.0, the runner's own)
+  **rejects** the exact `while IFS='|' read -r ... done <<< "$VAR"` construct this file uses, with a
+  hard `syntax error: unexpected redirection`. The dismissal survives anyway, on stronger and
+  definitive grounds, not the original ones: run 1072's own log (`/opt/forgejo/forgejo/gitea/
+  actions_log/...`, the same newly-found retrieval path documented below) shows the runner
+  literally invoking `bash --noprofile --norc -e -o pipefail /var/run/act/workflow/sweep.sh` for
+  every `run:` step — `sh`/`ash` is never in the execution path at all, so whether `ash` itself
+  accepts `<<<` is moot. This is proof by the actual live invocation, not by a substitute
+  interpreter's own syntax check.
 - **The image loop's `CreatedAt` keeps a numeric offset that BusyBox `date -d` cannot parse, making
-  the sweep a silent no-op** — dismissed by execution: BusyBox 1.38 and GNU `date -u -d` both parse
-  `2026-08-14 15:34:50 +0200` **and** apply the offset correctly (verified: exactly 7200s apart from
-  the offset-less form). The related residual risk is kept as L6.
+  the sweep a silent no-op** — 🔴 **this dismissal was WRONG, found live this round (code review
+  DN2/7.5 dispatch, run 1072) and fixed, not merely corrected in documentation.** The original test
+  (`busybox:1.38` / GNU `date -u -d`, run directly on the host) does not reflect the real runner:
+  `deploy-base-dev-preprod:2026-08-07` ships BusyBox **v1.37.0**, whose `date -d` TIME grammar has
+  no offset syntax at all and rejects `docker images`' own `CreatedAt` rendering unconditionally —
+  confirmed live, both images kept via a parse failure on run 1072, not via the reference/age
+  check. Consequence: the image-removal half of the sweep had silently never worked on any run from
+  994 onward — always fail-closed (KEEP), never a mis-removal, but never a genuine REMOVE either.
+  Fixed this round by computing the UTC epoch via shell arithmetic against the `±HHMM` offset
+  instead of asking `date -d` to parse it; verified directly against the real runner's own BusyBox.
+  Full account: "Throwaway branch results" under Task 7.5 above. L6's own residual-risk framing is
+  superseded by this fix, not merely kept.
 - **The anchored `--filter "name=^…$"` may not match because docker stores names with a leading `/`**
   — dismissed by execution on docker 29.6.1: the anchored filter matched
   `fe-prionex-dev-deploy-lock-999999` and excluded a `forgejo-runner-fe-prionex-*` container in the
@@ -2291,3 +2422,4 @@ every claim below that needs the live DB is written as a **check to run**, not a
 | 2026-08-21 | **PR A merged (#63, `6c681da38f9b`); probe window observed and closed at 3 clean ticks; PR B lands the final permanent shape.** "After" half of AC2's discriminating pair banked by query: `action_schedule id=37` registered `09:44:23 UTC` (~19s after PR A's own merge), `action_schedule_spec` carrying exactly the two intended cron strings verbatim, `time_zone=''` confirming UTC live. Three scheduled firings observed (runs 1019/1023/1032, 09:50/10:05/10:20 UTC) — all `trigger_event='schedule'`, system actor `-2`, a consistent **44s delay** (this repository's own measurement, not `PRIONEX_HUB`'s 1s), all SUCCESS, stand confirmed untouched and the sweep confirmed running for real with a legitimate no-op each time (nothing yet old enough to remove). A platform limitation found and recorded: `$GITHUB_OUTPUT` values are not retrievable outside a job's own live execution on this instance, so Task 6.3's own literal `github.event_name` echo could not be read back — substituted the DB's own `trigger_event` column, already proven to carry the same information per the v15.0.5 source reading. Task 7.1/7.2/7.6 satisfied by evidence already in hand (0 additional dispatches); 7.3/7.4/7.5 remain open for a subsequent round. This PR removes the temporary probe cron and the disarm mechanism entirely (not merely toggled — it was always probe-window scaffolding, not a permanent regression hook), leaving a single weekly cron and an always-armed dispatch. One more stray `${{ }}`-in-a-comment caught and fixed before this push (Completion Note 4). Ledger closed at 11 runs above baseline 988, still well under the ~20-24 floor. `Status`/`sprint-status.yaml` → `review`, by the coordinator's own explicit instruction — Task 7's remaining rows stated as open, not folded into the claim |
 | 2026-08-21 | **Code review (Opus, three parallel layers: adversarial, edge-case, acceptance): changes requested.** Reviewed the MERGED range `22dceedc..25384480` — unusually, both implementation PRs were already on `main`, so the review covers the final armed state and checks the record against what actually happened across both phases. **4 high, 13 medium, 11 low, 2 deferred, 6 dismissed, 3 decision-needed** — see `### Review Findings`. Verified clean **by execution, not assertion**: 3 `run:` bodies with zero `${{ }}` (including inside comments), zero `uses:`, `set -euo pipefail` on all three, `bash -n` + BusyBox 1.38 `ash -n` + `shellcheck` all clean, `on:`/`concurrency:`/`runs-on:`/`timeout-minutes:` exactly as specified, `deploy-dev.yml` zero diff, NFR5 untouched, no `prune`/`xargs`/`rm -f`-on-a-holder, and the anchored `--filter name=^…$` re-verified live on docker 29.6.1 (matches a holder, excludes a `forgejo-runner-fe-prionex-*` container). Four platform fears raised by the review layers were **dismissed by execution** rather than argued: the `<<<` here-string, the `+0200` date parse, the leading-slash name filter, and the workflow-level `env` inheritance all behave correctly. 🔴 **H1**: the ledger was never re-queried after the merge (Task 1.6's own rule), so three things are unrecorded — chiefly that nothing confirms the probe spec `id=38` is gone now that the dispatch is ARMED; the probe cron also necessarily fired twice more than the ledger books (PR A merged 09:44:21 UTC, PR B 10:51:10 UTC, so the `:35` and `:50` ticks landed), making "11 runs" an undercount. 🔴 **H2/H3**: the job is unobservable — a failed deploy, a failed sweep, and a tick that never fires all look identical to success, and the sweep's "ran for real, removed nothing" claim is not established by anything, because `continue-on-error` makes a green run compatible with a sweep that died at line 1. 🔴 **H4**: `continue-on-error` and `steps.<id>.outcome` are the only two platform behaviours in the file that were never measured, and the design bets on both. 🔴 **DN1**: AC6, added by this story, is structurally unsatisfiable for two of the four causes it names, and the only mechanism that would satisfy it is the self-deadlock the file's own header forbids. **DN2** rules on Task 7's open rows: 7.4 close as covered by 4.3's run 948; 7.3 and 7.5 earn on a throwaway branch via API dispatch with `ref=<branch>` (proven by runs 994/1004), not with a permanent hook. **DN3**: Sunday 02:00 UTC is the first execution of the armed composition and of the final file in any mode — it needs a named owner, a query-based check, and a disarm procedure |
 | 2026-08-22 | **Fix-pass (PR C) applied, all 31 findings resolved, `Status` → `review`.** Oleg's rulings relayed: DN1 — AC6 narrowed to the dispatch layer plus a non-blocking read-back (both the story's own AC6 and `epics.md`'s twin narrowed; `dev-reset.yml` gained a fourth step confirming a `deploy-dev.yml` run was actually created, without polling it to completion); DN2 — 7.4 closed as covered by Story 4.3's own run 948, 7.3/7.5 to be earned together on a disposable branch (`story-4-6/throwaway-7-3-7-5`, plan and dispatch sequence written into Task 7 above, handed to the coordinator); DN3 — the coordinator named as the owner of Sunday 2026-08-23's own by-query check, the composition bought by one manual post-merge dispatch of the final file from `main`, and the disarm procedure (comment out the entire `schedule:` block, push to `main`) written into the file's own header. `H1`'s ledger recount, run live via direct Postgres query: **16 runs above baseline 988, not 11** — two previously-missed probe ticks (1038, 1041) and PR B's own three structural runs (1036/1037/1042) folded in; post-PR-B schedule state confirmed clean (exactly one `action_schedule`/`action_schedule_spec` row, the probe registration gone). `H3` closed via a new DB capability (`action_task_step`, joined through `action_run_job`/`action_task`): the sweep step's own status read directly for all five probe-window runs plus 994/1004, confirming genuine success (not masked) and that `steps.<id>.outcome` conditionals evaluate correctly on this runner. `H4` resolved: `continue-on-error` removed from the sweep step entirely, replaced with the `if: ${{ always() && steps.sweep.outcome == 'failure' }}` shape already live-proven at `deploy-dev.yml:411`; the dispatch step gained its own `if: always()` so the non-fatal-sweep requirement holds without it. M1-M8 (fail-closed enumeration idioms, the M6 holder-state gate rewritten around Docker's own terminal-state prefixes and the Go zero-value `FinishedAt` trap, stderr capture on both destructive commands, the token whitespace guard, `\|\| true` on diagnostics) and M9-M13 (epics.md's "afterwards"→"first" and its still-unamended third AC, D31's appended §6 with the missing live evidence, `deferred-work.md`'s owner correction, three story-record corrections) all applied. L1-L11 applied in full: the dispatch curl gained `--retry`/`--max-time`/`-L`, a `MAX_CANDIDATES` blast-radius ceiling was added to both enumerations, `IMG_ID` deduplicated, dead `$GITHUB_OUTPUT` writes removed, AC7's two hazards added to the header, `sprint-status.yaml`'s falsified prediction corrected. Full `yaml.safe_load` + `bash -n` + stray-`${{ }}` validation re-run clean on all four `run:` bodies (one new step added by DN1(b)) before this push |
+| 2026-08-21 | **DN2's rows 7.3/7.5 earned live — run 1072 (`story-4-6/throwaway-7-3-7-5`, coordinator's dispatch), and the live verification found and fixed a real bug this story shipped with, undetected across every prior run.** 7.3: `HTTP 401`, classifier message names the credential, Forgejo's own body confirms the deliberately-fake token, stand untouched — clean. 7.5's holder pair: `...999002` (`created`, never started) correctly KEPT at threshold 0 — a live re-exercise of M6's own fix; `...999001` (`Exited`) correctly REMOVED. 🔴 **7.5's image pair did not behave as designed** — both images were kept via a parse FAILURE (`could not parse its own CreatedAt`), not the reference/age check. Investigated by testing directly against the real runner image (`deploy-base-dev-preprod:2026-08-07`): its `date` is BusyBox **v1.37.0**, not the `busybox:1.38` the code review's own "dismissed" finding was tested against — v1.37.0's `-d` grammar has **no offset syntax at all**, rejecting `docker images`' own `CreatedAt` unconditionally. Consequence: the image-removal half of the sweep had been silently inert on every run since 994 — always fail-closed (no mis-removal), never a genuine REMOVE. **Fixed this round**, not merely documented: the zone-stripping regex replaced with shell arithmetic against the parsed `±HHMM` offset, verified directly against the real runner's own `date` binary using the exact strings observed in run 1072's own log. Two "Dismissed" review findings corrected in place (the `<<<` here-string claim and the `+0200` date-parse claim, both originally tested against a substitute environment) rather than left standing. A second, unrelated platform capability found in the same investigation: job/step logs **are** retrievable on this instance after all, via a zstd-compressed file on local disk (`action_task.log_filename`, never queried before) — recorded in `deferred-work.md`, not adopted as a new standing practice for this story. `Status` remains `review`; PR C ready to open |
