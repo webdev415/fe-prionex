@@ -1,13 +1,51 @@
 // Quality service types (KAN-410). Mirror the Pydantic schemas in
 // api-prionex/services/quality/app/schemas/.
 
+/**
+ * The only two scales the API accepts. `binary_critical` from the pipeline's
+ * rubric.json is NOT one of them: it is stored as `binary` plus the separate
+ * `critical` flag on the criterion.
+ */
 export type CriterionScale = 'binary' | '0-5'
+
+export const CRITERION_SCALES: CriterionScale[] = ['binary', '0-5']
+
+/**
+ * Tolerant reader for a stored `scale`. Neither database holds anything but
+ * `binary` / `0-5` today, so this is a guard for data written by something
+ * other than this UI: `binary_critical` degrades to the yes/no control it
+ * really is, and anything unrecognised falls back to the 0..5 band.
+ *
+ * Without it an unknown value would silently miss the `=== 'binary'` branch
+ * and render six buttons where the criterion wants two — a mis-render nobody
+ * would notice.
+ */
+export function normalizeCriterionScale(scale: string | null | undefined): CriterionScale {
+  if (scale === 'binary' || scale === 'binary_critical') return 'binary'
+  return '0-5'
+}
 
 export interface Criterion {
   key: string
   name: string
   scale: CriterionScale
   weight: number
+  /** AI rubrics carry an instruction for the model; manual templates don't. */
+  description?: string | null
+  /**
+   * Fields the AI rubrics carry that this editor does not expose. They must
+   * still survive a round-trip: the template PUT replaces `sections` whole, so
+   * anything dropped here is deleted from the rubric.
+   *
+   * `critical` is the dangerous one — it caps the whole call at 40 when the
+   * criterion fails. Losing it silently turns a blocking rule into an ordinary
+   * one and inflates every later score.
+   */
+  critical?: boolean | null
+  /** Wording from the trainer's checklist; the pipeline feeds it to the model. */
+  examples?: string | null
+  /** The checklist's own points, before weights were normalised to Σ=100. */
+  raw_points?: number | null
 }
 
 export interface Section {
@@ -18,12 +56,20 @@ export interface Section {
 
 export type ScorecardType = 'client' | 'third_party'
 
+/**
+ * What a template is for: the trainer's manual scorecard, or the Call QA
+ * rubric the brain scores calls against. Optional on the wire — templates
+ * created before the split answer without the field and read as 'manual'.
+ */
+export type TemplatePurpose = 'manual' | 'ai'
+
 export interface ScorecardTemplate {
   id: number
   project_id: number
   name: string
   description: string | null
   call_type: 'inbound' | 'outbound' | null
+  purpose?: TemplatePurpose | null
   department_id: number | null
   // KAN-504: 'client' | 'third_party' for the two typed templates; null for
   // the legacy "Default Scorecard".
@@ -33,6 +79,112 @@ export interface ScorecardTemplate {
   created_by: number
   created_at: string
   updated_at: string
+}
+
+/** Body of POST /api/v1/quality/templates. */
+export interface TemplateCreatePayload {
+  name: string
+  description?: string | null
+  call_type?: 'inbound' | 'outbound' | null
+  purpose?: TemplatePurpose
+  department_id?: number | null
+  scorecard_type?: ScorecardType | null
+  sections: Section[]
+}
+
+/** Body of PUT /api/v1/quality/templates/{id} (full replace of the editable set). */
+/**
+ * Body of PUT /api/v1/quality/templates/{id}. `purpose` is immutable after
+ * creation — a value differing from the stored one answers 409, so it is
+ * left out here rather than echoed back.
+ */
+export type TemplateUpdatePayload = Partial<Omit<TemplateCreatePayload, 'purpose'>>
+
+/** Filter set of GET /api/v1/quality/templates. */
+/**
+ * Filter set of GET /api/v1/quality/templates. `purpose` defaults to
+ * 'manual' server-side, which is what keeps AI rubrics out of the trainers'
+ * template picker — always pass it explicitly when you want rubrics.
+ */
+export interface TemplateListFilters {
+  include_archived?: boolean
+  purpose?: TemplatePurpose | 'all'
+}
+
+// ----- Call QA listening rules: the critical-blocker dictionary -----
+
+/**
+ * Blocker categories, verbatim from the pipeline's `red_flags.py`. OPEN set
+ * on read (tolerant reader — an unknown category renders as its raw key);
+ * closed on write, since the editor only offers what the brain understands.
+ */
+export const BLOCKER_CATEGORIES = [
+  'profanity',
+  'threat',
+  'third_party_disclosure',
+  'misleading_legal',
+  'pressure',
+  'insult',
+  'data_violation',
+  'script_critical',
+] as const
+export type BlockerCategory = (typeof BLOCKER_CATEGORIES)[number]
+
+export const BLOCKER_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const
+export type BlockerSeverity = (typeof BLOCKER_SEVERITIES)[number]
+
+export const BLOCKER_LANGS = ['uk', 'ru'] as const
+export type BlockerLang = (typeof BLOCKER_LANGS)[number]
+
+export interface QaBlocker {
+  /** uuid — quality_db.blocker_dictionary.id. */
+  id: string
+  phrase: string
+  category: string
+  severity: string
+  lang: string
+  is_active: boolean
+  // Always present in the response; `updated_at` is not nullable there.
+  created_by: number | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * POST body. No `is_active`: a freshly added phrase is always active.
+ * `phrase` is 2..200 chars; a duplicate within the same language answers 409.
+ */
+export interface QaBlockerCreatePayload {
+  phrase: string
+  category: BlockerCategory
+  severity: BlockerSeverity
+  lang: BlockerLang
+}
+
+/** PUT body — every field optional; this is also how a phrase is reactivated. */
+export interface QaBlockerUpdatePayload {
+  phrase?: string
+  category?: BlockerCategory
+  severity?: BlockerSeverity
+  lang?: BlockerLang
+  is_active?: boolean
+}
+
+/**
+ * Query of GET /api/v1/quality/qa-rules/blockers.
+ *
+ * `is_active` is a tri-state that OVERRIDES the legacy `include_inactive`:
+ * unset + `include_inactive: true` returns both states, `true`/`false`
+ * filters hard. `category`/`severity`/`lang` are validated server-side
+ * against the same literals as the write path — an unknown value answers
+ * 422 rather than an empty list, so only send values from the constants.
+ */
+export interface QaBlockerListFilters {
+  include_inactive?: boolean
+  is_active?: boolean
+  category?: BlockerCategory
+  severity?: BlockerSeverity
+  lang?: BlockerLang
 }
 
 // Filled-in value for a single criterion. `value` is integer 0..5 for the

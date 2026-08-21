@@ -684,6 +684,35 @@
       "historyArchiveEmpty": "The archive is empty.",
       "historyBackToChats": "Back to chats",
       "historyUpdateError": "Failed to update the chat.",
+      "memory": {
+        "title": "Personalization",
+        "helper": "What the assistant remembers about you — it shapes its answers.",
+        "usageTitle": "Facts in memory: {{used}} of {{limit}}",
+        "limitHint": "The memory is full: the oldest and unused facts are evicted automatically. You can also delete extras manually.",
+        "empty": "Memory is empty. Add a fact about your work and the assistant will take it into account.",
+        "loadError": "Failed to load the memory.",
+        "retry": "Retry",
+        "addAria": "New fact for the assistant memory",
+        "addPlaceholder": "For example: I run the Alfa portfolio, amounts without cents",
+        "addAction": "Add fact",
+        "addSuccess": "Fact added to the memory",
+        "deleteAria": "Delete fact from the memory",
+        "deleteError": "Failed to delete the fact.",
+        "tooLong": "Maximum {{max}} characters",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "consolidated": "consolidated",
+          "unknown": "other"
+        },
+        "errors": {
+          "duplicate": "A similar fact is already in the memory.",
+          "validation": "The server rejected the text. Remove personal data and try again.",
+          "forbidden": "You are not allowed to change the assistant memory.",
+          "unknown": "Failed to add the fact. Try again."
+        }
+      },
       "voiceFallback": "Server speech recognition is unavailable — switched to browser recognition.",
       "voiceFinalizing": "Processing speech…",
       "voiceHoldHint": "Click to dictate, hold to record a voice message",
@@ -2219,7 +2248,8 @@
         },
         "detail": {
           "assignTask": "Assign task",
-          "empty": "Select a dialog to review"
+          "empty": "Select a dialog to review",
+          "transcript": "Transcript and AI review"
         },
         "employee": {
           "all": "All employees",
@@ -2254,7 +2284,13 @@
           "evaluation": "Evaluation",
           "notEvaluated": "Not evaluated",
           "loadError": "Failed to load dialogs.",
-          "empty": "No dialogs match the filters."
+          "empty": "No dialogs match the filters.",
+          "noExtensions": "The selected employees have no telephony extensions"
+        },
+        "department": {
+          "empty": "No departments available",
+          "label": "Department",
+          "selected": "{{count}} departments"
         }
       },
       "transcript": {
@@ -3844,6 +3880,34 @@
           "unknown": "Could not save. Try again."
         },
         "overridden": "overridden"
+      },
+      "memory": {
+        "title": "Memory",
+        "helper": "What the assistant remembers about employees and what it takes from the shared reference.",
+        "tableTitle": "Memory scopes",
+        "tableDescription": "Click a row to see its records and delete what should not be there.",
+        "empty": "The memory is empty — no records yet.",
+        "unavailable": "The assistant memory service is unavailable.",
+        "columnScope": "Scope",
+        "columnRecords": "Records",
+        "usageTitle": "Records: {{used}} of {{limit}}",
+        "overLimit": "over limit",
+        "columnLastAt": "Last",
+        "globalScope": "Shared reference",
+        "globalHint": "Applies to every operator",
+        "unknownUser": "Employee #{{id}}",
+        "recordsEmpty": "This scope has no records.",
+        "recordsError": "Failed to load the scope records.",
+        "deleteAria": "Delete memory record",
+        "deleteError": "Failed to delete the record.",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "consolidated": "consolidated",
+          "unknown": "other"
+        },
+        "collapsedHint": "{{count}} scopes · click to show"
       },
       "internals": {
         "title": "Assistant internals",
@@ -7254,7 +7318,6 @@
       "variablesLabel": "Variables",
       "used": "Used",
       "times": "times",
-      "systemTemplatesCannotBeDeleted": "System templates cannot be deleted, only disabled",
       "tableHeaders": {
         "templateName": "Template Name",
         "messageTextExcerpt": "Message Text (Excerpt)",
@@ -7289,8 +7352,6 @@
         "clickToInsert": "Click to insert",
         "availableVariables": "Available Variables",
         "active": "Active",
-        "systemTemplate": "System Template",
-        "systemTemplateDescription": "This is a system template. Some fields may be restricted.",
         "fixErrorsBeforeSubmitting": "Please fix the errors above before submitting.",
         "useVariableFormat": "Use {variable_name} format for variables (e.g., {debt_amount}, {client_name})",
         "placeholders": {
@@ -7322,12 +7383,13 @@
         "delete": {
           "title": "Delete Template",
           "confirmMessage": "Are you sure you want to delete the template",
-          "cannotDeleteSystemTemplate": "Cannot Delete System Template",
-          "systemTemplateCannotBeDeleted": "System templates cannot be deleted. You can only disable them.",
-          "actionCannotBeUndone": "This action cannot be undone",
-          "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
+          "recoverableTitle": "The template will be removed from the active list",
+          "recoverableDescription": "It moves to the deleted list at the bottom of this page, where a supervisor can restore it.",
           "deleting": "Deleting..."
         }
+      },
+      "deleted": {
+        "title": "Deleted templates"
       }
     },
     "contactTypes": {
@@ -9021,13 +9083,16 @@
       "delete": {
         "title": "Delete draft",
         "confirmMessage": "Are you sure you want to delete the draft \"{{name}}\"?",
-        "cannotUndo": "This action cannot be undone",
-        "permanentRemoval": "The draft will be permanently removed."
+        "recoverableTitle": "The draft will be removed from the active list",
+        "recoverableDescription": "It moves to the deleted list at the bottom of this page, where a supervisor can restore it."
       },
       "toasts": {
         "created": "Draft created successfully",
         "updated": "Draft updated successfully",
         "deleted": "Draft deleted successfully"
+      },
+      "deleted": {
+        "title": "Deleted drafts"
       }
     },
     "messagingIntegrations": {
@@ -10324,6 +10389,101 @@
       },
       "loadError": "Could not load the coefficient ranges.",
       "refreshError": "Could not refresh — showing the last loaded ranges."
+    },
+    "qaRules": {
+      "title": "Listening (AI)",
+      "helper": "Stop-phrases that mark a call critical, and the rubrics the AI scores calls against.",
+      "saveError": "Could not save the change",
+      "tabs": {
+        "blockers": "Critical blockers",
+        "rubrics": "AI rubrics"
+      },
+      "category": {
+        "profanity": "Profanity",
+        "threat": "Threat",
+        "third_party_disclosure": "Third-party disclosure",
+        "misleading_legal": "Misleading legal claim",
+        "pressure": "Pressure",
+        "insult": "Insult",
+        "data_violation": "Data handling violation",
+        "script_critical": "Critical script breach"
+      },
+      "severity": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "lang": {
+        "uk": "Ukrainian",
+        "ru": "Russian"
+      },
+      "scale": {
+        "binary": "Yes/No",
+        "0-5": "0–5"
+      },
+      "blockers": {
+        "phrase": "Phrase",
+        "newPhrase": "New phrase",
+        "category": "Category",
+        "categoryFilter": "Category",
+        "allCategories": "All categories",
+        "severity": "Severity",
+        "lang": "Language",
+        "langFilter": "Language",
+        "allLangs": "All languages",
+        "active": "Active",
+        "add": "Add",
+        "total": "Phrases",
+        "empty": "No blockers yet.",
+        "loadError": "Failed to load the blocker dictionary.",
+        "created": "Blocker added",
+        "updated": "Blocker updated",
+        "deleted": "Blocker deactivated",
+        "deleteTitle": "Deactivate blocker?",
+        "deleteMessage": "«{{phrase}}» will stop flagging calls. You can bring it back with the «Active» switch.",
+        "deactivate": "Deactivate",
+        "showInactive": "Show deactivated",
+        "duplicate": "That phrase is already in the dictionary for this language"
+      },
+      "rubrics": {
+        "name": "Rubric name",
+        "description": "Description",
+        "scorecardType": "Interlocutor",
+        "typeClient": "Debtor",
+        "typeThirdParty": "Third party",
+        "allTypes": "All interlocutors",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "universal": "Universal (fallback)",
+        "status": "Status",
+        "statusActive": "Active",
+        "statusArchived": "Archived",
+        "statusAll": "All",
+        "create": "New rubric",
+        "empty": "No AI rubrics for this slice.",
+        "loadError": "Failed to load AI rubrics.",
+        "saved": "Rubric saved",
+        "archive": "Archive",
+        "unarchive": "Restore",
+        "archiveTitle": "Archive rubric?",
+        "unarchiveTitle": "Restore rubric?",
+        "sectionName": "Section name",
+        "addSection": "Add section",
+        "removeSection": "Remove section",
+        "criterionName": "Criterion",
+        "criterionDescription": "AI instruction",
+        "addCriterion": "Add criterion",
+        "removeCriterion": "Remove criterion",
+        "weight": "Weight",
+        "scale": "Scale",
+        "weightTotal": "Weights",
+        "weightError": "Weights must add up to 100",
+        "slice": "Applies to",
+        "sliceTaken": "Another rubric is already active for this slice: {{name}}",
+        "critical": "Critical",
+        "sliceTakenGeneric": "This slice already has a live rubric — archive it first"
+      }
     }
   },
   "contactTypes": {
@@ -10427,5 +10587,22 @@
     "Written off": "Written off",
     "Sold": "Sold",
     "Legal": "Legal"
+  },
+  "softDelete": {
+    "sectionHint": "These were deleted and can still be restored until the date shown.",
+    "columns": {
+      "deletedAt": "Deleted",
+      "expires": "Expires",
+      "actions": "Actions"
+    },
+    "expiry": {
+      "noDeadline": "No deadline",
+      "today": "Removed today",
+      "inDays_one": "{{count}} day left",
+      "inDays_other": "{{count}} days left"
+    },
+    "actions": {
+      "restore": "Restore"
+    }
   }
 }

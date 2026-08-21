@@ -1,19 +1,20 @@
 /**
  * AiSettingsPage — the «AI Settings» admin page (system-settings/ai).
  *
- * Five self-guarded sections: the global assistant kill-switch
+ * Six self-guarded sections: the global assistant kill-switch
  * (manage_ai_settings), the Call QA «AI call analysis» switch moved here
  * from the IP-whitelist page (manage_call_qa), assistant access by role
  * (manage_roles), assistant management — persona, prompt append, skills —
- * and the read-only brain internals (both manage_ai_settings). The route
- * lets in anyone holding at least one of those permissions; each section
- * hides itself for the rest.
+ * the assistant's memory by scope, and the read-only brain internals (all
+ * three manage_ai_settings). The route lets in anyone holding at least one
+ * of those permissions; each section hides itself for the rest.
  */
 import { useTranslation } from 'react-i18next'
 
 import { AssistantAccessSection } from '@/features/aiSettings/components/AssistantAccessSection'
 import { AssistantInternalsSection } from '@/features/aiSettings/components/AssistantInternalsSection'
 import { AssistantManagementSection } from '@/features/aiSettings/components/AssistantManagementSection'
+import { AssistantMemorySection } from '@/features/aiSettings/components/AssistantMemorySection'
 import { AssistantSettingsSection } from '@/features/aiSettings/components/AssistantSettingsSection'
 import { CallQaSettingsSection } from '@/features/quality/components/CallQaSettingsSection'
 
@@ -33,6 +34,7 @@ export function AiSettingsPage() {
       <CallQaSettingsSection />
       <AssistantAccessSection />
       <AssistantManagementSection />
+      <AssistantMemorySection />
       <AssistantInternalsSection />
     </div>
   )
