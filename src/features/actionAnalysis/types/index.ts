@@ -294,6 +294,8 @@ export interface PaymentMonitoringItem {
   debt_contract_number: string | null
   seller_company: string | null
   purchase_date: string | null // YYYY-MM-DD
+  /** EasyPay rows only: which service the payer chose. Null elsewhere. */
+  easypay_method?: 'card' | 'google_pay' | 'apple_pay' | null
   payment_type: PaymentType | null
   payment_comment: string | null
   assigned_user_id: number | null

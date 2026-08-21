@@ -5652,7 +5652,12 @@
         "saveDraftRRSuccess": "Чернетку збережено",
         "connectRRError": "Не вдалося підключити реструктуризацію",
         "email": "Електронна пошта",
-        "dateOfBirthWithAge": "{{date}} ({{age}} років)"
+        "dateOfBirthWithAge": "{{date}} ({{age}} років)",
+        "easypayMethods": {
+          "card": "Картка",
+          "google_pay": "Google Pay",
+          "apple_pay": "Apple Pay"
+        }
       },
       "modals": {
         "addNote": {
@@ -8103,7 +8108,8 @@
         "userAgent": "User Agent",
         "added": "Додано",
         "modified": "Змінено",
-        "removed": "Видалено"
+        "removed": "Видалено",
+        "details": "Деталі"
       },
       "csvExport": {
         "title": "ЕКСПОРТ ЖУРНАЛУ АУДИТУ В CSV",
