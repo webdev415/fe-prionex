@@ -13,9 +13,7 @@
 
 /** Leaf values worth showing; objects and arrays are skipped as too wide. */
 function isScalar(value: unknown): value is string | number | boolean {
-  return (
-    typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
-  )
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
 const MAX_PAIRS = 3
