@@ -8339,7 +8339,8 @@
         "verification": "Third-party verification",
         "low-verification": "Low verifications",
         "searcher-followup": "Unworked searcher finds",
-        "communication-gap": "Communication gap"
+        "communication-gap": "Communication gap",
+        "operator-promises": "Operator promises"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8490,6 +8491,49 @@
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "operatorPromises": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "subtabs": {
+          "all": "All",
+          "tp": "TP",
+          "dialer": "Dialer",
+          "collection": "Collection"
+        },
+        "columns": {
+          "operator": "Operator",
+          "department": "Department",
+          "group": "Group",
+          "interactions": "TA count",
+          "sumFrom": "Promises taken",
+          "sumTo": "Due in period",
+          "paidFull": "Paid",
+          "unpaid": "Unpaid",
+          "conversion": "Conversion",
+          "paidVerified": "Paid (verified)",
+          "unpaidVerified": "Unpaid (verified)",
+          "conversionVerified": "Conversion (verified)"
+        },
+        "inactiveBadge": "dismissed",
+        "totals": {
+          "title": "Totals",
+          "generatedAt": "Data as of {{value}}",
+          "metricAria": "Metric",
+          "operators": "Operators",
+          "overall": "Whole period"
+        },
+        "empty": "No data for the selected period",
+        "emptyDepartment": "No operators in this department for the period — every department is shown on the «All» tab",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
           "retry": "Retry"
         }
       },

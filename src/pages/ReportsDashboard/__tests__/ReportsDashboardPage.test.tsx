@@ -58,6 +58,11 @@ vi.mock('@/features/communicationGap', () => ({
   CommunicationGapFeedTab: () => <div data-testid="communication-gap-feed-tab" />,
 }))
 
+// …and for the operator-promises report (features/operatorPromises).
+vi.mock('@/features/operatorPromises', () => ({
+  OperatorPromisesTab: () => <div data-testid="operator-promises-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -129,6 +134,8 @@ const searcherFollowupTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.searcher-followup' })
 const communicationGapTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.communication-gap' })
+const operatorPromisesTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.operator-promises' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -154,6 +161,7 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('operator-promises-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -298,6 +306,49 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('gm=10')
     expect(search()).toContain('gpg=2')
     expect(search()).toContain('gps=100')
+  })
+
+  it('renders the operator-promises report panel for ?tab=operator-promises', () => {
+    renderPage(['/reports?tab=operator-promises'])
+
+    expect(screen.getByTestId('operator-promises-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(operatorPromisesTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-operator-promises')
+  })
+
+  it('keeps the operator-promises filters when switching tabs', async () => {
+    renderPage(['/reports?tab=operator-promises&opf=2026-07-01&opt=2026-07-31&opd=collection'])
+    expect(screen.getByTestId('operator-promises-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`opf/opt/opd` vs `gf/gt/gm/gpg/gps` vs `if/it/spg/sps` vs
+    // `pf/pt/mv/pg/ps` vs `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('opf=2026-07-01')
+    expect(search()).toContain('opt=2026-07-31')
+    expect(search()).toContain('opd=collection')
+  })
+
+  it('offers all seven report tabs in a fixed order', () => {
+    // The strip is the only place the tab set is visible at a glance; a new
+    // report must be ADDED here rather than replace a sibling.
+    renderPage()
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'pages.reports.tabs.dashboard',
+      'pages.reports.tabs.processing',
+      'pages.reports.tabs.verification',
+      'pages.reports.tabs.low-verification',
+      'pages.reports.tabs.searcher-followup',
+      'pages.reports.tabs.communication-gap',
+      'pages.reports.tabs.operator-promises',
+    ])
   })
 
   it('pushes a history entry so Back returns to the previous tab', async () => {

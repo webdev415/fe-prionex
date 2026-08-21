@@ -43,7 +43,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { isTransientFailure } from '@/lib/api'
 import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, isApiError } from '@/lib/errors'
+import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useCommunicationGapFeed } from '../hooks'
@@ -81,36 +81,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
  */
 const MAX_SKIP = 2_147_483_647
 const MAX_PAGE = Math.floor(MAX_SKIP / Math.max(...PAGE_SIZE_OPTIONS)) + 1
-
-/**
- * True when the failed response actually carries a message of the backend's own.
- *
- * `getErrorMessage` has no such thing as "nothing to say": with an empty or
- * body-less response it degrades to axios' own `error.message` — the
- * untranslated "Request failed with status code 400" — which is exactly what a
- * proxy that strips the body produces, and not a sentence to show an operator.
- * So the 400 branch below passes the detail through only when there IS one and
- * takes the localized generic title otherwise.
- *
- * The shapes checked are the ones `getErrorMessage` reads out of the BODY for a
- * FastAPI endpoint like this one: a bare string body, `detail` (string or the
- * validation array), and `message`. An empty string or an empty array is no
- * detail either: the empty string falls through to `message` and then to the
- * axios text, while an empty array makes `getErrorMessage` return its
- * hardcoded English "Validation error occurred" — both equally unfit to show,
- * so the helper treats both as "no detail".
- */
-function hasResponseDetail(error: unknown): boolean {
-  if (!isApiError(error)) return false
-  const data = error.response?.data
-  if (typeof data === 'string') return data.trim() !== ''
-  if (!data || typeof data !== 'object') return false
-  const record = data as Record<string, unknown>
-  const detail = record.detail
-  if (typeof detail === 'string') return detail.trim() !== ''
-  if (Array.isArray(detail)) return detail.length > 0
-  return typeof record.message === 'string' && record.message.trim() !== ''
-}
 
 /** A positive integer read from the URL (optionally capped), or the fallback. */
 function parsePositiveInt(
