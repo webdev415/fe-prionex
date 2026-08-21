@@ -4,7 +4,7 @@ baseline_commit: 2fc2a22049d26884076c455fec33d396b091c6ca
 
 # Story 4.4: Serialize Concurrent Deploys to the Same Stand
 
-Status: review
+Status: done
 
 <!-- Code review 2026-08-20 (Opus, three parallel layers): **changes requested** — 7 high, 15 medium,
      10 low, 2 deferred, 6 dismissed, plus 3 decision-needed for Oleg. See `### Review Findings`.
@@ -153,7 +153,7 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
+- [x] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
   - [x] 1.0 Flip `sprint-status.yaml` `4-4-serialize-concurrent-deploys-to-the-same-stand` →
         `in-progress` before starting implementation, so the tracker never disagrees with reality
         mid-story.
@@ -191,10 +191,13 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
   - [x] 1.5 The merge to `main` fires **`build-main.yml`**, a different workflow from `ci.yml`
         (which ignores `main`): **+1**. The closeout PR is a second branch/PR/merge cycle: **+3**.
         **Modelled.**
-  - [ ] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A
+  - [x] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A
         ledger closed at PR-open is not closed. If the query cannot be run, close it with the
         literal word **OPEN** — never a self-reported number. Final closure is the coordinator's
         (retro-D4).
+        ✅ **Closed, by the coordinator's query, after the merge landed (PR #61, merge commit
+        `5ffdb8837429`)** — see the Run Budget Ledger's own closure line: runs 961-973 + 974/975
+        (CI of the final push) + 976 (`build-main.yml` of the merge).
 
 - [x] **Task 2 — Measure the four premises this story's design rests on, before writing the design
       (4.3's rule: measure, do not inherit)**
@@ -698,6 +701,9 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         ✅ **Done.** Branched off `origin/main` (@ `2fc2a220`, PR #60's own merge commit — matches
         the coordinator's own base). Context commit `71e7c271` cherry-picked onto it so the story
         file is present to keep updating from the implementation branch itself.
+        ✅ **Landed.** `story-4-4/pr-2-implementation` → PR #61 → merged by Oleg, merge commit
+        `5ffdb8837429`; `build-main.yml` ran (976). This closeout is
+        `story-4-4/pr-3-ledger-closeout`, from fresh `main`, per the 4.1/4.2/4.3 precedent.
   - [x] 10.2 🔴 **Do not touch:** `docker-compose.server.yml`, `.github/workflows/CD.yml`,
         `nginx.conf`, `Dockerfile.prod`, `.env.dev.example`, `docker-compose.stand.yml`,
         `.env.stand.example`, and the four `.forgejo/workflows/*.yml` other than `deploy-dev.yml`.
@@ -716,8 +722,10 @@ digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace path
         (genuine close-race FAIL) and 7.4 (clean recovery 27s after the holder's own death) —
         tighter, more honestly-scoped evidence than the original pair. `Status` and
         `sprint-status.yaml` both flipped to `review` in this commit.
-  - [ ] 10.4 Re-query the ledger after the merge commit lands and close it (Task 1.6). Closeout is a
+  - [x] 10.4 Re-query the ledger after the merge commit lands and close it (Task 1.6). Closeout is a
         second branch/PR/merge cycle: `story-4-4/pr-3-ledger-closeout`.
+        ✅ **Closed** — see Task 1.6 and the Run Budget Ledger's own closure line: runs 961-973
+        (as recorded) + 974/975 (CI of the final push) + 976 (`build-main.yml` of the merge).
 
 ## Dev Notes
 
@@ -1152,17 +1160,39 @@ immediately before this round's first implementation push.
 | `deploy-dev.yml` dispatches — Task 7's live outcome matrix, RE-EARN round (DN3, 2026-08-21) | ~4 declared for the re-earn | **3 — runs 971 (holder, `hold_lock_seconds=480`), 972 (row 7.3, FAIL), 973 (row 7.4, SUCCESS)** — cheaper than the ~4 declared for this round. Superseded 7.3/7.4's original evidence (runs 966-968) with tighter, live-verified discriminating rows (Completion Note 8) |
 | Unplanned extra dispatch, outside the matrix (code review L7, corrected 2026-08-21 — was mis-booked under "red dispatches" below, though its own text already called it a clean PASS) | not declared | **1 — run 963**, an ordinary, uncontended deploy dispatched before any Task 7 holder existed (run-id order corrected: 963 falls between 962 and 964, not "between #2 and #3" as originally narrated). A clean, harmless PASS, unrelated to any matrix row, invalidating no row's preconditions |
 | Red dispatches before the first green matrix row | ≥3, not hoped against | **0.** The zero-dispatch strategy (Tasks 2/6 converting 6 of 7 named causes into zero-dispatch findings) outperformed its own declared floor of ≥3 across BOTH rounds — not a single dispatch this story ever failed for a reason the design didn't already anticipate and handle. Run 972's own FAIL was a designed discriminating row, not a red dispatch. Zero-cost bonus: a dispatch missing the required `ref` input returned HTTP 400 and consumed **no** run row at all |
-| Merge to `main` (`build-main.yml`) | 1 | pending — merge not yet requested |
-| Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 | pending, Task 10.4 |
+| Each subsequent push while the PR was open | 2 each | **1 push after PR #61 opened — runs 974/975** (CI of the final push, `ae80a3b0`, the DN3 re-earn results), both `success` — coordinator's query |
+| Merge to `main` (`build-main.yml`) | 1 | **1 — run 976**, `build-main.yml` for the merge (PR #61, merge commit `5ffdb8837429`). Outcome to be recorded via follow-up — not waited on to close this ledger (retro-D4: the ledger closes against baseline + spend, not against every downstream build's own result) |
+| Closeout PR (`story-4-4/pr-3-ledger-closeout`, separate branch/PR/merge) | ~3 | pending — this closeout's own branch/PR/merge cycle is being incurred by this very push; its own runs are not yet known and are NOT included in the closure total below, per retro-D4 (close against what is confirmed, not a self-reported forecast) |
 
-**Spent so far, above baseline 960: runs 961–973 = 13 runs** (961 + 962-968 [7] + 969-970 [2,
-inferred] + 971-973 [3]). Declared floor: ~20 runs, matching Dev Notes §9's own model. The matrix —
-declared as the largest line — landed at 6 (original) + 3 (re-earn) = 9 actual matrix dispatches
-across both rounds against a declared ≥7 (original) + ~4 (re-earn) ≈ ≥11 combined floor: under
-budget on both counts. The red-run line landed at 0 against a declared ≥3 floor: the zero-dispatch
-strategy (Tasks 2 and 6) held better than modelled through the entire story, not just the first
-round. Remaining declared lines (PR opening, merge, closeout) are still ahead — see Task 10.4 for
-the post-merge re-query that closes this ledger for good, per retro-D4.
+✅ **CLOSED by the coordinator's query (Task 1.6/10.4, retro-D4) — runs 961-973 (implementation +
+re-earn, as recorded above) + 974/975 (CI of the final push) + 976 (the merge build).** Baseline 960
+(Task 1.1). **Total: 16 runs** (961 through 976, inclusive — the full implementation-PR lifecycle,
+one continuous range with no gaps) **against a declared floor of ~20 — under budget**, before the
+closeout PR's own additional ~3 (branch push, PR, merge) are even incurred. Final total once the
+closeout PR itself lands will very likely still land under ~20, but that is a forecast, not a
+closed number — recorded honestly as pending, not asserted.
+
+🔴 **Structural note, per the coordinator's own instruction — this is a confirmation of practice
+for Story 4.5 and beyond, not just a closing tally.** This story spent **zero red dispatches** and
+**16 runs against a declared ~20 floor** — the first story in this whole run of Epic 4 work where
+retro-E5's own "convert failure causes into zero-dispatch findings before spending a single live
+dispatch" lesson paid off in full, not partially. Story 4.3 (the story that WROTE that lesson for
+4.4 to inherit) still spent five red dispatches finding its own causes the hard way, because that
+story was where the discipline was first being built under real pressure. Story 4.4 declared, up
+front, that Tasks 2 and 6 would convert six of its seven named failure causes into zero-dispatch
+findings before any code was written, and delivered on it: every genuine uncertainty (runner
+capacity, sibling-container mount reachability, `flock`'s real BusyBox shape, `date -d`'s real
+parsing behaviour, the full concurrent-acquire/release primitive, every forced-failure path
+including the ones code review later added) was resolved on s1 via SSH, never by spending a
+dispatch to find out the hard way. The one class of dispatch this story DID spend freely — the live
+outcome matrix itself, both rounds — is exactly the class retro-E5 says cannot be replaced by local
+proof (a guard must fail on the real runner at least once to count as proven), and even there the
+actual spend (9 matrix dispatches across both rounds) landed under the combined declared floor
+(≥7 + ~4 ≈ ≥11). **Recommendation for Story 4.5 and every story after it: the zero-dispatch
+conversion strategy (Dev Notes-declared, budgeted up front, executed before the first live
+dispatch) is no longer a hopeful model — it is now a demonstrated practice with two data points
+(4.3's five reds as the cost of skipping it under pressure; 4.4's zero reds as the cost of doing
+it deliberately). Declare it as standard procedure, not as an optional efficiency.**
 
 ### Completion Notes List
 
@@ -1547,6 +1577,20 @@ was made deliberately, and reversing it here would re-open H6's own diagnosabili
 Real stand confirmed untouched by anything in this round except the two legitimate deploys
 themselves (972 never reached `down`; 973 deployed cleanly) — `RestartCount=0`, healthy throughout,
 `working_dir` embeds run 973's own id, image revision matches `baseline_commit`.
+
+**9. Closeout, per the 4.1/4.2/4.3 precedent.** PR #61 (`story-4-4/pr-2-implementation`) merged by
+Oleg, merge commit `5ffdb8837429`; `build-main.yml` ran (976). Run budget ledger **closed by the
+coordinator's query**: runs 961-973 (implementation + DN3 re-earn, as recorded) + 974/975 (CI of
+the final push, `ae80a3b0`, both success) + 976 (the merge build). **Total: 16 runs against baseline
+960, against a declared floor of ~20 — under budget**, before the closeout PR's own additional
+runs. All Task 1-10 checkboxes verified against the recorded evidence and closed — none left open
+on assertion alone. **Structural note recorded explicitly, per the coordinator's own instruction:**
+this story spent zero red dispatches (against a declared floor of ≥3) — the first story in this
+run of Epic 4 work where the zero-dispatch conversion strategy (declared in Dev Notes §9, executed
+via Tasks 2 and 6 before any code was written) paid off in full, converting six of seven named
+failure causes to zero-dispatch findings with no exceptions. Recorded in the Run Budget Ledger's
+own closure section as a confirmed practice for Story 4.5 and beyond, not a hopeful model anymore.
+`Status` → `done`, `sprint-status.yaml` → `done`.
 
 ### File List
 
@@ -2356,3 +2400,4 @@ procedure for AC4's literal **Given**.
 | 2026-08-20 | **Code review (Opus, three parallel layers: adversarial / edge-case / acceptance) — changes requested.** 7 high, 15 medium, 10 low, 2 deferred, 6 dismissed, 3 decision-needed. ✅ **Verified clean by execution, not assertion:** 28 `run:` bodies, zero `${{ }}`; NFR5 confirmed against the diff's own six-file list; the acquire step provably precedes every stand-reading and stand-mutating step (the step before it writes only `${CHECKOUT_DIR}/.env.deploy`), so AC5's "stand untouched" holds structurally; release precedes only workspace-scoped steps; `$GITHUB_RUN_ID` suffixes and the `FRONTEND_PORT` render byte-identical; D30 / D29 §8 / index / Change Log / `deferred-work.md:231` all present and accurate; the MSK↔CEST reconciliation is arithmetically correct; `timeout <WAIT> flock <FD>` is the right BusyBox substitute and the lock survives `flock`'s exit for the right reason (shared open file description). 🔴 **The mechanism is sound; the classifiers are not.** Every new fail-closed message is written for a legitimate second deploy holding the lock — the one case `concurrency` plus `capacity: 1` make least likely — while the cases that will actually occur are each misattributed: an orphan from a timed-out run reads as a docker daemon problem (M4), a holder that crashed at `exec 9>` reads as *"contention may have just cleared. Redispatch."* (H6), a fixture holder's remaining time is computed against a TTL it never had and **the live AC5 row's own message was numerically false when it printed** (H3), and the one command the message offers will break a live deploy if the holder belongs to one (H4). Two new guards cannot print at all — bare `SELF_IMAGE="$(docker inspect …)"` under `set -euo pipefail`, twice — the exact class Task 4.6 forbids and D30 §3 claims was avoided (H2). 🔴 **The arithmetic is correct today by an undocumented margin.** `WAIT=240`/`TTL=720`/`timeout-minutes: 10` must satisfy relationships nobody wrote down, and the comment states the constraint backwards; because acquisition can land ~9 minutes in (300 s bounded pull + 300 s bounded checkout fallback precede it), an orphan can outlive its dead job by nearly the full TTL — longer than any waiter's bound — so the orphan case ends in a failed deploy needing a human, not the automatic recovery assumed (H1, M1). 🔴 **A `hold_lock_seconds` value that is neither `> 0` nor `== 0` skips every job and produces a green run that deploys nothing**, and the validator Completion Note 3 proves works cannot be reached that way (H5) — the file's own `simulate_bad_credential` sets the opposite, safer precedent by evaluating in shell. 🔴 **Rows 7.3 and 7.4 do not discriminate as executed:** 968 met a free lock (its own arithmetic says the holder had already expired), and AC4's literal Given — *a deploy dies while holding the lock* — was never staged live; 967's reported timings do not reconcile with the guard's 255 s bound (H7, M9). AC6's "no measurable wall-clock cost" clause has no evidence and, unlike AC1, was not declared unproven (M8). ⚠️ `epics.md` amendments stop short: 4.4's AC3/AC4 unamended, Epic 4's notes still say *"server-side `flock`"*, and the two ACs this story ADDED are absent — four ACs there against six here, the same defect class that made this story's own AC unsatisfiable (M6). ✅ **Run 963 cleared:** its id precedes the holder 964, so it ran before any holder existed as an ordinary uncontended deploy — it invalidated no row's preconditions; the narrative's *"between #2 and #3"* placement and the ledger's booking of a clean PASS under "red dispatches" are both wrong on their own terms (L7). **Decisions for Oleg:** ratify or veto the two autonomous deviations, still marked pending after `epics.md`/FR30/D30 were amended as if final (DN1); choose among three costed fixes for the orphan-holder window (DN2); decide whether to spend ~4 dispatches re-running 7.3/7.4 as genuine discriminators or to accept the local proofs and demote the live rows to corroboration, against retro-E5 (DN3). Status → `in-progress`; findings left as action items, no patches applied |
 | 2026-08-21 | **Code review fix-pass: DN1-DN3 resolved, all 7 High / 15 Medium / 10 Low findings patched or acknowledged, ten forced-failure tests, zero dispatches.** Oleg ratified both autonomous deviations (DN1) and chose DN2's fix (bound holder total life from its own container start, option (a), no API dependency) and DN3 (re-earn rows 7.3/7.4 live). Force-testing DN2's own fix — before it was ever pushed — found a defect the review itself missed: `timeout` alone does not reliably kill the holder, because a shell's tail-call exec optimization can make the wrapped process become the container's PID1, which silently ignores `timeout`'s SIGTERM (Linux PID1 signal semantics); confirmed live (still running 10s past a 5s TTL bound) and fixed with `--init` on both holders (ExitCode=143, killed on time in 10 repeated trials). All classifier-honesty findings closed: holders now carry `--label` for their real duration and whether they are a test fixture (H3/H4/M5), the acquire step selects the true holder by evidence not name-prefix (M3), crashes are distinguished from ordinary contention with captured stderr (H6), the clearing command now names the run id and warns against force-releasing a live deploy's lock (H4), a `flock`/`timeout` smoke test runs in `preflight` instead of nine minutes into a real deploy (M11), the `hold_lock_seconds` gate-skip bug that could produce a fully silent no-op run is fixed at the expression level (H5), and two re-assertion checks were added immediately before `down`/`up -d` (L10). `epics.md` further amended (AC3/AC4, the two missing ACs, two occurrences of stale "server-side flock" language) and the story's own Task 7 narrative corrected (run 963's true ordering, rows 7.3/7.4's honest scope, the ledger's red-dispatch line corrected to zero). `Status`/`sprint-status.yaml` left at `in-progress` (reset by the review itself) — not re-flipped to `review` until DN3's live re-earn actually lands, per this story's own established discipline |
 | 2026-08-21 | **DN3's live re-earn landed (runs 971-973); Status → review; story ready for PR.** Holder run 971 (`hold_lock_seconds=480`) ran as a genuine orphan — its own `hold-lock` job completed and exited normally well before the holder itself, which then ran on unsupervised for its full life; the host-side kill of the job's own container was attempted but missed its narrow window (job already torn down by the time this session reached the host). Host-side confirmed holder 971's own end: `ExitCode=0, FinishedAt=22:41:52 UTC` — corrected an assumption from the plan that this would be `143`: `hold_lock_seconds=480` was less than the fixed `TTL=720`, so the holder's own inner `sleep` completed naturally rather than being killed by the outer `timeout` safety net (both are legitimate DN2 paths; Completion Note 7's forced tests separately cover the safety-net one). Run 972 (row 7.3) landed in a genuine close race with the holder's own expiry rather than a comfortable margin — read as stronger, more exacting evidence, not a gap. Run 973 (row 7.4) dispatched 27s after the holder's death, SUCCESS in ~87s — tighter than the original round's ~90s+ margin though not a literal mid-wait catch. Judgment call, made per the coordinator's own delegation to decide by the E5 standard and cost: accepted 972+973 as sufficient, declined a further ~2-dispatch round for a canonical mid-wait catch — the pair brackets the expiry moment from both sides and AC4's own literal text is fully satisfied. Rows 7.1/7.2 also restated against a real, same-round, job-level baseline the coordinator supplied (~21-22s uncontended vs ~146s contended, M8, closed by query not import). New finding recorded: dropping `--rm` (M15) leaves a permanent stopped-container debris trail per expired holder — harmless functionally, named in `deferred-work.md` with a candidate owner. Ledger closed at runs 961-973 (13 spent above baseline 960), both matrix rounds under their declared floors, zero red dispatches across the whole story. `Status` and `sprint-status.yaml` → `review`, earned this time |
+| 2026-08-21 | **Closeout, per the 4.1/4.2/4.3 precedent.** PR #61 merged by Oleg (merge commit `5ffdb8837429`); `build-main.yml` ran (976). Run budget ledger closed by the coordinator's query: runs 961-973 (implementation + DN3 re-earn) + 974/975 (final push CI) + 976 (merge build) — **16 runs total against baseline 960, under the declared ~20 floor**, before the closeout PR's own cost. All Task 1-10 checkboxes verified against recorded evidence and closed. Structural note recorded explicitly, per the coordinator's own instruction: this story spent **zero red dispatches** — the first story in this run of Epic 4 work where the zero-dispatch conversion strategy (declared up front, executed before any code was written) paid off in full. Recorded as a confirmed practice for Story 4.5 and beyond. `Status`/`sprint-status.yaml` → `done` |
