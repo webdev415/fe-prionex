@@ -47,6 +47,8 @@ import { formatDate, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
  * (TooltipContent is inline at z-50), so hover popovers stay fully legible.
  */
 
+import { buildPrincipalDebtTooltip } from './principalDebtTooltip'
+
 export type LoanCardLoan = {
   id: number
   loanNumber: string
@@ -60,6 +62,16 @@ export type LoanCardLoan = {
   principalDebt: number | null
   remainingDebtAmount: number
   totalToReturn: number
+  /** KAN-994 — null means no coefficient tooltip for this loan. Amounts are
+   *  whole-hryvnia strings and coefficients one-decimal strings, both computed
+   *  server-side and rendered as-is. */
+  closingCoefficient: {
+    min_coefficient: string
+    max_coefficient: string
+    min_amount: string
+    max_amount: string
+    debt_age_days: number
+  } | null
   creditClosedDate: string | null
   eligibleForReturn: number | null
   creditTermDays: number | null
@@ -216,6 +228,22 @@ export function LoanCard({
   // Only describe the payments split when payments actually moved the number;
   // otherwise the breakdown reads "X (X − ₴ 0.00)", which is noise.
   const hasPayments = loan.totalToReturn !== loan.remainingDebtAmount
+
+  // Only the coefficient line, and only when one applies — AC: hovering
+  // Principal debt with no principal debt or no matching range shows no
+  // tooltip at all. undefined (not an empty node) so AmountCell drops the
+  // tooltip wrapper and its `.has-tip` affordance with it.
+  //
+  // NOTE: this means KAN-993's "principal less repaid less written off"
+  // explanation no longer appears anywhere in the UI.
+  //
+  // nowrap because the requirement specifies a single line; without it the
+  // break lands mid-range ("8 485 -" / "13 114").
+  const principalDebtTooltip = loan.closingCoefficient ? (
+    <span className="block whitespace-nowrap">
+      {buildPrincipalDebtTooltip(loan.closingCoefficient, t)}
+    </span>
+  ) : undefined
 
   return (
     <div
@@ -408,10 +436,7 @@ export function LoanCard({
           <AmountCell
             label={t('pages.clients.detail.tableHeaders.principalDebt')}
             value={money(loan.principalDebt)}
-            valueTooltip={t(
-              'pages.clients.detail.principalDebtTooltip',
-              'Principal amount less principal repaid and principal written off. For loans carried over from the old CRM, the amount issued is shown instead.'
-            )}
+            valueTooltip={principalDebtTooltip}
           />
           <AmountCell
             label={
