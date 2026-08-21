@@ -760,7 +760,6 @@
       "onexContextClientFallback": "Client #{{id}}",
       "onexContextPageFallback": "CRM page",
       "onexContextClear": "Clear page context",
-      "onexAskSummaryPrompt": "Summarise this page briefly and highlight what matters for the conversation with the client.",
       "filePreview": {
         "loading": "Loading…",
         "loadFailed": "Could not load the file",

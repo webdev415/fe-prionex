@@ -767,7 +767,6 @@
       "onexContextClientFallback": "Клієнт #{{id}}",
       "onexContextPageFallback": "Сторінка CRM",
       "onexContextClear": "Прибрати контекст сторінки",
-      "onexAskSummaryPrompt": "Стисло перекажи, про що ця сторінка, і що з неї важливо для розмови з клієнтом.",
       "filePreview": {
         "loading": "Завантаження…",
         "loadFailed": "Не вдалося завантажити файл",

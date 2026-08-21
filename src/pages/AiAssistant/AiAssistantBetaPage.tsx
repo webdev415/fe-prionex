@@ -44,6 +44,8 @@ import {
 import {
   buildContextualMessage,
   contextChipLabel,
+  ONEX_ASK_SUMMARY_PROMPT,
+  stripOnexContextBlock,
   type OnexPageContext,
 } from '@/features/onexEmbed/embedContext'
 import {
@@ -1167,7 +1169,12 @@ export function AiAssistantBetaPage() {
         return {
           id: `server-${item.id}`,
           role: item.role,
-          content: item.content,
+          // A turn sent from the OneX dock carries a machine-facing page-context
+          // envelope in front of what the operator typed, and the backend stores
+          // `message` verbatim. Unconditional (not gated on the dock): the
+          // conversation is just as likely to be reopened in a plain CRM tab,
+          // and that surface must not regress into a wall of machine text.
+          content: isAssistant ? item.content : stripOnexContextBlock(item.content),
           serverMessageId: isAssistant ? item.id : undefined,
           // Слой 5: гидратируем раздумья и источники серверного сообщения, чтобы
           // панель «Активность» и факт-сноски `[[N]]` работали в загруженном из
@@ -1851,9 +1858,10 @@ export function AiAssistantBetaPage() {
    * question they have not asked yet.
    */
   useOnexAsk(isEmbedded, (command) => {
-    const prompt =
-      command.text ||
-      (command.preset === 'summary' ? t('pages.aiAssistant.onexAskSummaryPrompt') : '')
+    // Not i18n: the preamble around it is a fixed Ukrainian machine contract,
+    // and an EN-interface operator firing the preset must not pull the whole
+    // turn into an English analysis (see embedContext.ts).
+    const prompt = command.text || (command.preset === 'summary' ? ONEX_ASK_SUMMARY_PROMPT : '')
     if (!prompt) return
     setMessage(prompt)
     if (isAssistantResponding) return

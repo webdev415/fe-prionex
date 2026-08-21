@@ -7,6 +7,7 @@ import { useAiAssistantStore } from '@/stores/aiAssistantStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { User } from '@/types/api'
 import type { AssistantConversationDetail } from '@/features/aiAssistant/api'
+import { buildContextualMessage } from '@/features/onexEmbed/embedContext'
 
 vi.mock('@/features/aiAssistant/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/aiAssistant/api')>()
@@ -104,6 +105,32 @@ describe('AiAssistantBetaPage conversation hydration', () => {
     await waitFor(() => {
       expect(mockedGetConversation).not.toHaveBeenCalled()
     })
+  })
+
+  it('hides the OneX context preamble stored with a message — on the plain page too', async () => {
+    // The dock sends `<дані-сторінки …>…</дані-сторінки>\n\n<what the operator
+    // typed>` and the backend keeps `message` verbatim, so without stripping
+    // the machine preamble resurfaces inside the operator's own bubble on every
+    // reload — including in a normal CRM tab, which never opted into the dock.
+    const stored = buildContextualMessage('Що йому запропонувати?', {
+      url: 'https://crm/dashboard/clients/42',
+      title: 'Картка Іваненка',
+      clientId: 42,
+      selection: 'борг 12 000',
+      text: 'тіло сторінки клієнта',
+      ts: null,
+    })
+    useAiAssistantStore.getState().setActiveConversation('7', 42)
+    mockedGetConversation.mockResolvedValue({
+      ...CONVERSATION_DETAIL,
+      messages: [{ ...CONVERSATION_DETAIL.messages[0], content: stored }],
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('Що йому запропонувати?')).toBeInTheDocument()
+    expect(screen.queryByText(/дані-сторінки/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Текст сторінки/)).not.toBeInTheDocument()
   })
 
   it('clears the stored pointer when the conversation is gone on the backend', async () => {
