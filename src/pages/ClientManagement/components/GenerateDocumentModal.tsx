@@ -53,11 +53,10 @@ interface GenerateDocumentModalProps {
   clientId: number
   loans: Loan[]
   /**
-   * Called after a successful generation with the server response. When
-   * provided, the modal delegates the post-success UX to the caller (e.g. the
-   * lawyer's reply composer attaches the generated PDF and closes the modal)
-   * and skips its own success screen. Omit it to keep the standalone
-   * client-card behaviour (success screen with a .docx download).
+   * Called after a successful generation with the server response, letting the
+   * caller run its own post-success flow (e.g. the lawyer's reply composer
+   * attaches the generated PDF). The modal always switches to its success
+   * screen with the .docx download; the caller decides when to close it.
    */
   onGenerated?: (result: GenerateDocumentResponse) => void
   /**
@@ -445,12 +444,14 @@ export function GenerateDocumentModal({
       // the next tab open regardless of active filters/pagination.
       queryClient.invalidateQueries({ queryKey: legalRegistryKeys.root() })
       if (onGenerated) {
-        // The caller owns the post-success flow (attach PDF, close, toast).
+        // The caller runs its own post-success flow (attach PDF + toast).
         onGenerated(res)
       } else {
         toast.success(t('status.success'))
-        setGenerated(res)
       }
+      // Always show the success screen so the .docx twin stays downloadable —
+      // lawyers generating from the reply composer need it too (18–20.08).
+      setGenerated(res)
     } catch (err) {
       const axErr = err as AxiosError<{
         detail?: string | { message?: string; reason?: string }

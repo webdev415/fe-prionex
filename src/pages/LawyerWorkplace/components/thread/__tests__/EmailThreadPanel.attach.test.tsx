@@ -277,5 +277,9 @@ describe('EmailThreadPanel — attach client document + generate into reply', ()
     const [, , file] = uploadSpy.mock.calls[0]!
     expect(file).toBeInstanceOf(File)
     expect((file as File).name).toBe('demand.pdf')
+
+    // The panel must NOT close the modal on generate: it stays open on its
+    // success screen so the lawyer can download the .docx twin.
+    expect(screen.getByTestId('generate-stub')).toBeInTheDocument()
   })
 })
