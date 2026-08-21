@@ -579,3 +579,51 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
     expect(winningDeclaration(slot, 'background-color')?.value).toBe('var(--color-primary-500)')
   })
 })
+
+/**
+ * Reported from the UI after "now" started being measured in the profile
+ * timezone: the browser's today can already be yesterday there, so ``--today``
+ * and ``--disabled`` land on the same cell for the first time. ``--today``
+ * scores (0,3,0) against the disabled rule's (0,2,0), so the blocked day
+ * painted itself accent-green and read as available — the KAN-992 defect
+ * again, one grid over.
+ */
+describe('DateSelect (a blocked "today" still reads as blocked)', () => {
+  // A value on another day matters: with none, react-datepicker marks today
+  // ``--keyboard-selected``, which the today rule already excludes — so the
+  // accent case would never be exercised.
+  const openWithMin = async (min: Date, value: Date | null = null) => {
+    render(<DateSelect value={value} min={min} onChange={() => {}} />)
+    await userEvent.click(screen.getByRole('textbox'))
+  }
+
+  it('greys today when today is itself out of range', async () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    await openWithMin(tomorrow)
+
+    const today = document.querySelector('.react-datepicker__day--today') as HTMLElement
+    expect(today).not.toBeNull()
+    expect(today).toHaveAttribute('aria-disabled', 'true')
+
+    const winner = winningDeclaration(today, 'color')
+    expect(winner?.value).toBe('var(--muted-foreground)')
+    expect(winner?.selector).toContain('--disabled')
+  })
+
+  it('still accents today when today is selectable', async () => {
+    // The accent is the point of the rule; the exclusion must not remove it
+    // from the ordinary case.
+    // Both dates stay inside the current month: the calendar follows the
+    // value's month, and today has to be on screen to be asserted about.
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    const otherDayThisMonth = new Date()
+    otherDayThisMonth.setDate(otherDayThisMonth.getDate() === 1 ? 2 : 1)
+    await openWithMin(monthStart, otherDayThisMonth)
+
+    const today = document.querySelector('.react-datepicker__day--today') as HTMLElement
+    expect(today).toHaveAttribute('aria-disabled', 'false')
+    expect(winningDeclaration(today, 'color')?.value).toBe('var(--color-primary-500)')
+  })
+})
