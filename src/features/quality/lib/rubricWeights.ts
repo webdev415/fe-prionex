@@ -27,6 +27,15 @@ export function sumCriteriaWeights(sections: Section[]): number {
   return Math.round(total * 100) / 100
 }
 
+/**
+ * Sum of one section's criterion weights. Shown on the collapsed section
+ * header so a trainer can see how the 100 points are split between sections
+ * without opening each one.
+ */
+export function sumSectionWeights(section: Section): number {
+  return sumCriteriaWeights([section])
+}
+
 export function isRubricWeightValid(sections: Section[]): boolean {
   // An empty rubric sums to 0, which is not "valid but unfinished" — the
   // caller checks for criteria separately; here 0 simply isn't 100.

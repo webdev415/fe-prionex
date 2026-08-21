@@ -33,18 +33,23 @@ export interface Criterion {
   /** AI rubrics carry an instruction for the model; manual templates don't. */
   description?: string | null
   /**
-   * Fields the AI rubrics carry that this editor does not expose. They must
-   * still survive a round-trip: the template PUT replaces `sections` whole, so
-   * anything dropped here is deleted from the rubric.
-   *
-   * `critical` is the dangerous one — it caps the whole call at 40 when the
-   * criterion fails. Losing it silently turns a blocking rule into an ordinary
-   * one and inflates every later score.
+   * Caps the whole call at 40 points when the criterion fails. Losing it on a
+   * round-trip silently turns a blocking rule into an ordinary one and
+   * inflates every later score — the template PUT replaces `sections` whole,
+   * so anything the editor drops is deleted from the rubric.
    */
   critical?: boolean | null
-  /** Wording from the trainer's checklist; the pipeline feeds it to the model. */
+  /**
+   * Wording from the trainer's checklist; the pipeline feeds it to the model.
+   * Free prose, and long — the collections checklist runs past 600 characters
+   * of numbered lines here, so the newlines are content, not formatting.
+   */
   examples?: string | null
-  /** The checklist's own points, before weights were normalised to Σ=100. */
+  /**
+   * The checklist's own points, before weights were normalised to Σ=100. Not
+   * rendered anywhere; carried through saves so the rubric stays reconcilable
+   * against the source sheet.
+   */
   raw_points?: number | null
 }
 
@@ -63,6 +68,32 @@ export type ScorecardType = 'client' | 'third_party'
  */
 export type TemplatePurpose = 'manual' | 'ai'
 
+/**
+ * Which outbound line a rubric is written for. The stored value spells grey
+ * the British way — `grey`, matching `call_records.telephony_type` and every
+ * other telephony surface in this app; `gray` is not a value the data ever
+ * carries.
+ *
+ * NULL on the wire means «any line»: the rubric applies to white and grey
+ * alike. Absent (undefined) means a backend that predates the split — read
+ * identically to NULL, which is what keeps this UI working before the field
+ * is deployed.
+ */
+export type RubricTelephonyType = 'white' | 'grey'
+
+export const RUBRIC_TELEPHONY_TYPES: RubricTelephonyType[] = ['white', 'grey']
+
+/**
+ * Tolerant reader for a stored line. Anything the UI doesn't offer —
+ * `unknown` from the call records' own vocabulary, a future line, or the
+ * field simply missing — reads as «any line» rather than blanking the row.
+ */
+export function normalizeRubricTelephonyType(
+  value: string | null | undefined
+): RubricTelephonyType | null {
+  return value === 'white' || value === 'grey' ? value : null
+}
+
 export interface ScorecardTemplate {
   id: number
   project_id: number
@@ -74,6 +105,18 @@ export interface ScorecardTemplate {
   // KAN-504: 'client' | 'third_party' for the two typed templates; null for
   // the legacy "Default Scorecard".
   scorecard_type: ScorecardType | null
+  /**
+   * The outbound line this rubric grades. Optional on the wire: templates
+   * answered by a backend without the split carry no field at all, and the
+   * UI must read that as «any line» rather than break.
+   */
+  telephony_type?: string | null
+  /**
+   * The unfinished-dialogue grading scale (bands of the final score with the
+   * wording for each). Shape read through `lib/rubricGrading` — the field is
+   * being added server-side as this ships, so nothing else reads it raw.
+   */
+  grading_rules?: unknown
   sections: Section[]
   is_archived: boolean
   created_by: number
@@ -89,6 +132,13 @@ export interface TemplateCreatePayload {
   purpose?: TemplatePurpose
   department_id?: number | null
   scorecard_type?: ScorecardType | null
+  /**
+   * The line. Present only when it should be written: the update route reads
+   * an absent key as «leave it alone» and an explicit null as «clear it».
+   */
+  telephony_type?: RubricTelephonyType | null
+  /** The grading scale, in the shape `lib/rubricGrading` serializes. */
+  grading_rules?: unknown
   sections: Section[]
 }
 

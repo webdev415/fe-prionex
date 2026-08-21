@@ -10482,7 +10482,45 @@
         "slice": "Applies to",
         "sliceTaken": "Another rubric is already active for this slice: {{name}}",
         "critical": "Critical",
-        "sliceTakenGeneric": "This slice already has a live rubric — archive it first"
+        "sliceTakenGeneric": "This slice already has a live rubric — archive it first",
+        "telephonyType": "Telephony type",
+        "telephonyAny": "Any line",
+        "allTelephony": "All lines",
+        "telephony": {
+          "white": "White",
+          "grey": "Grey"
+        },
+        "criteriaCount": "Criteria",
+        "toggleSection": "Fold / unfold section",
+        "expandAll": "Unfold all",
+        "collapseAll": "Fold all",
+        "missingInstruction": "No AI instruction: {{n}}",
+        "instructionHint": "The «AI instruction» is what the model grades the criterion by. Left empty, it goes by the criterion name alone and interprets it however it likes.",
+        "criterionDescriptionPlaceholder": "e.g. count it when the operator names themselves, the company and the reason for the call in the first 15 seconds",
+        "criterionExamples": "Speech examples",
+        "criterionExamplesPlaceholder": "Wording the model should recognise. One example per line.",
+        "grading": {
+          "title": "Unfinished dialogue scale",
+          "levels": "Levels",
+          "hint": "Bands of the final score for a call the client cut short. The wording tells the model which band a call lands in, and the top band must be 100.",
+          "heading": "Scale heading",
+          "line": "Scale telephony type",
+          "source": "Source",
+          "score": "Score",
+          "description": "When it applies",
+          "descriptionPlaceholder": "What puts a call in this band",
+          "add": "Add an unfinished dialogue scale",
+          "remove": "Remove scale",
+          "addLevel": "Add level",
+          "removeLevel": "Remove level",
+          "blocked": "Fix before saving",
+          "issueEmptyScale": "A scale needs at least one level",
+          "issueRange": "A score must be between 0 and 100",
+          "issueDuplicate": "Two levels share a score — keep one",
+          "issueTop": "The top level must be exactly 100, or every cut-short call is marked down",
+          "issueNoWording": "A level with no wording gives the model nothing to tell it by",
+          "issueLineMismatch": "The card is narrowed to one line and the scale points at the other — it would never apply"
+        }
       }
     }
   },
