@@ -634,14 +634,19 @@ jobs:
           # existing. This ONE read GET call closes that gap without polling the spawned run to
           # completion (no wait on the concurrency group, cannot self-deadlock, per this file's
           # own header).
-          # 🔴 Untested against the real API shape as of this push — the closest confirmed
-          # precedent is `1-1-…md:104`'s own working `gh api "repos/.../actions/runs?event=push"
-          # --jq '.workflow_runs[0] | {head_branch, created_at}'` and `1-13-…md:281-282`'s own
-          # swagger-confirmed existence of `GET /repos/{owner}/{repo}/actions/runs` — both point at
-          # a `.workflow_runs[]` array with a `.created_at` field, which this step assumes. If the
-          # real shape differs, this step is designed to FAIL LOUDLY (never silently assume
-          # success) rather than mis-parse into a false positive — the first live dispatch after
-          # this push is this step's own first real exercise (DN2/DN3).
+          # 🔴 Live-corrected (composition dispatch, run 1080, story-4-6 PR C follow-up): the shape
+          # assumed at push time was wrong in one field. Forgejo's own `GET .../actions/runs`
+          # response DOES carry a `.workflow_runs[]` array with `.created_at`, exactly as the
+          # `1-1-…md:104`/`1-13-…md:281-282` precedents suggested — but the run's own DISPLAY NAME
+          # field is `.title` ("Deploy DEV Stand"), not `.name` (GitHub's own field name, which this
+          # step originally assumed by analogy; Forgejo's `.name` is used elsewhere in the same
+          # response, e.g. the repository object's own name, not the run's). Confirmed live: run
+          # 1080's own read-back response carried `{"id":1081,"title":"Deploy DEV Stand",...}` as
+          # `workflow_runs[0]` — genuinely present, but invisible to the original `.name`-based
+          # filter, which is exactly why this step is designed to FAIL LOUDLY on a shape mismatch
+          # (Task 7.6/H1 idiom) rather than silently pass — it did fail loudly, correctly, on the
+          # very first live exercise, and that failure is what surfaced this fix. `.title` is
+          # matched now; `.name` kept as a fallback in case a future Forgejo version restores it.
           FJ_TOKEN_VAL="${FJ_TOKEN:-}"
           RUNS_BODY_FILE="$(mktemp)" || { echo "FAIL: mktemp failed for the read-back response. Dispatch itself already succeeded above; only this confirmation step could not run."; exit 1; }
           trap 'rm -f "$RUNS_BODY_FILE"' EXIT
@@ -665,7 +670,7 @@ jobs:
             exit 1
           fi
 
-          if ! LATEST_CREATED="$(jq -r '.workflow_runs[]? // .[]? | select(.name == "Deploy DEV Stand") | .created_at' "$RUNS_BODY_FILE" 2>/dev/null | head -n1)"; then
+          if ! LATEST_CREATED="$(jq -r '.workflow_runs[]? // .[]? | select(.title == "Deploy DEV Stand" or .name == "Deploy DEV Stand") | .created_at' "$RUNS_BODY_FILE" 2>/dev/null | head -n1)"; then
             LATEST_CREATED=""
           fi
           if [ -z "$LATEST_CREATED" ] || [ "$LATEST_CREATED" = "null" ]; then
@@ -676,12 +681,44 @@ jobs:
             exit 1
           fi
 
-          if ! LATEST_EPOCH="$(date -u -d "$LATEST_CREATED" +%s 2>/dev/null)"; then
+          # 🔴 Live-found in the same round: Forgejo's own `created_at` is RFC3339
+          # (`2026-08-21T13:08:36+02:00` or `...Z`) — `T` separator, colon-delimited offset. This
+          # runner's actual `date -d` (BusyBox v1.37.0, the same limitation the sweep's image loop
+          # hit — code review DN2/7.5) has no offset syntax and no `T`-separator support at all, so
+          # it would have failed this parse unconditionally, exactly like the image loop did before
+          # its own fix. Never actually exercised before this composition run (7.1-7.6/DN2's own
+          # dispatches never reached this line: 7.1/7.3 either predate this step or fail earlier),
+          # so this is a latent bug closed before its own first live trigger, not a second live
+          # failure. Same fix shape as the image loop: parse the offset ourselves, do not ask
+          # `date -d` to understand it.
+          LATEST_CREATED_CLEAN="$(printf '%s' "$LATEST_CREATED" | sed -E 's/\.[0-9]+//')"
+          case "$LATEST_CREATED_CLEAN" in
+            *Z)
+              LATEST_NAIVE="$(printf '%s' "$LATEST_CREATED_CLEAN" | sed -E 's/T/ /; s/Z$//')"
+              LATEST_OFFSET_SECONDS=0
+              ;;
+            *)
+              LATEST_OFFSET_TOKEN="$(printf '%s' "$LATEST_CREATED_CLEAN" | grep -oE '[+-][0-9]{2}:[0-9]{2}$' || true)"
+              LATEST_NAIVE="$(printf '%s' "$LATEST_CREATED_CLEAN" | sed -E 's/T/ /; s/[+-][0-9]{2}:[0-9]{2}$//')"
+              LATEST_OFFSET_SECONDS=0
+              if [ -n "$LATEST_OFFSET_TOKEN" ]; then
+                LATEST_OFFSET_SIGN="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c1)"
+                LATEST_OFFSET_HH="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c2-3)"
+                LATEST_OFFSET_MM="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c5-6)"
+                LATEST_OFFSET_SECONDS=$(( 10#$LATEST_OFFSET_HH * 3600 + 10#$LATEST_OFFSET_MM * 60 ))
+                if [ "$LATEST_OFFSET_SIGN" = "-" ]; then
+                  LATEST_OFFSET_SECONDS=$(( 0 - LATEST_OFFSET_SECONDS ))
+                fi
+              fi
+              ;;
+          esac
+          if ! LATEST_EPOCH_NAIVE="$(date -u -d "$LATEST_NAIVE" +%s 2>/dev/null)"; then
             echo "FAIL: could not parse the latest matching run's own created_at"\
                  "('${LATEST_CREATED}') — refusing to guess whether it is recent enough to be THIS"\
                  "dispatch's own run."
             exit 1
           fi
+          LATEST_EPOCH=$(( LATEST_EPOCH_NAIVE - LATEST_OFFSET_SECONDS ))
           REFERENCE_EPOCH="${DISPATCH_START_EPOCH:-$LATEST_EPOCH}"
           AGE_SECONDS=$(( LATEST_EPOCH - REFERENCE_EPOCH ))
           if [ "$AGE_SECONDS" -lt -60 ] || [ "$AGE_SECONDS" -gt 60 ]; then
