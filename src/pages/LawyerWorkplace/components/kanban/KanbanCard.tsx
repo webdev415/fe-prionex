@@ -1,19 +1,10 @@
-import { useRef, useState, type DragEvent } from 'react'
+import { type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
-import '@/components/ui/DateSelect.theme.css'
 import type { LegalKanbanTaskPatch, LegalLawyer, LegalLetterType } from '@/features/lawyerWorkplace'
-import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
@@ -22,27 +13,14 @@ import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import {
   formatLegalDueDateTime,
   formatLegalDueMonthDay,
-  legalDueDateToIso,
   legalDueDateToPickerDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
-import {
-  CREATE_TASK_PRIORITIES,
-  getAssigneeColour,
-  KANBAN_COLUMN_MOVE_OPTIONS,
-  resolveKanbanTypeBadgeProps,
-  type KanbanTaskPriority,
-} from './constants'
+import { CREATE_TASK_PRIORITIES, resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
-import { KanbanPriorityIcon, KanbanPriorityOption } from './KanbanPriorityOption'
+import { KanbanPriorityIcon } from './KanbanPriorityOption'
+import { KanbanTaskActionsMenuItems, buildKanbanAssigneeOptions } from './KanbanTaskEditMenus'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
-
-const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
-
-function renderLetterTypeOption(letterType: LegalLetterType) {
-  const badge = resolveKanbanTypeBadgeProps(letterType.id, [letterType], 'type_pending')
-  return <KanbanTypeBadge type={badge.type} label={badge.label} colorId={badge.colorId} />
-}
 
 interface KanbanCardProps {
   task: KanbanTask
@@ -58,11 +36,6 @@ interface KanbanCardProps {
   onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart?: (event: DragEvent, task: KanbanTask) => void
   onDragEnd?: () => void
-}
-
-function extractAssigneeName(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/)
-  return parts[parts.length - 1] ?? displayName
 }
 
 export function KanbanCard({
@@ -87,48 +60,13 @@ export function KanbanCard({
 
   const deadline = legalDueDateToPickerDate(task.deadline, timezone)
 
-  // react-datepicker fires onChange twice for one deadline: once when the day
-  // is clicked, again when the time slot is. Saving on each meant two writes
-  // and — once KAN-1000 added the toast — a first one announcing a time nobody
-  // picked. The pick is staged instead and written when the submenu closes.
-  //
-  // The ref is what decides, not the state: dismissing the menu cascades
-  // several onOpenChange(false) calls in one tick, and state set in the first
-  // has not flushed by the third, so all three would save. `undefined` means
-  // untouched, so opening and closing without picking writes nothing. The
-  // state exists only to redraw the calendar around the staged value.
-  const pendingDeadlineRef = useRef<Date | null | undefined>(undefined)
-  const [deadlineMenuOpen, setDeadlineMenuOpen] = useState(false)
-  const [pendingDeadline, setPendingDeadline] = useState<Date | null | undefined>(undefined)
-
-  const stageDeadline = (date: Date | null) => {
-    pendingDeadlineRef.current = date
-    setPendingDeadline(date)
-  }
-
-  const handleDeadlineMenuToggle = (open: boolean) => {
-    setDeadlineMenuOpen(open)
-    const staged = pendingDeadlineRef.current
-    pendingDeadlineRef.current = undefined
-    setPendingDeadline(undefined)
-    if (open || staged === undefined) return
-    onTaskUpdate?.(task.id, {
-      deadline: staged ? legalDueDateToIso(staged, timezone) : null,
-    })
-  }
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
   const priorityConfig =
     CREATE_TASK_PRIORITIES.find((item) => item.id === task.priority) ??
     CREATE_TASK_PRIORITIES.find((item) => item.id === 'medium')
 
-  const assigneeOptions = lawyers.map((lawyer) => ({
-    userId: lawyer.user_id,
-    initials: lawyer.initials,
-    name: extractAssigneeName(lawyer.display_name),
-    label: lawyer.display_name,
-    assignable: canAssignLawyer(lawyer, task.assigneeUserId),
-  }))
+  const assigneeOptions = buildKanbanAssigneeOptions(lawyers, task.assigneeUserId)
 
   const getAssigneeLabel = (initials: string, fallbackName: string) => {
     const option = assigneeOptions.find((item) => item.initials === initials)
@@ -358,206 +296,14 @@ export function KanbanCard({
                 className="min-w-[190px] p-1.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Move to column */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
-                    <span className="flex items-center gap-2">
-                      <Icons.ArrowRight
-                        size={13}
-                        strokeWidth={1.8}
-                        className="text-muted-foreground"
-                      />
-                      {t('pages.lawyerWorkplace.kanban.moveTo', 'Move to')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="min-w-[160px] p-1.5">
-                    {COLUMN_MOVE_OPTIONS.filter((col) => col.id !== task.columnId).map((col) => (
-                      <DropdownMenuItem
-                        key={col.id}
-                        className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5 text-[12px]"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          onMoveTask?.(task.id, col.id)
-                        }}
-                      >
-                        {t(col.labelKey)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                {/* Change type */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
-                    <span className="flex items-center gap-2">
-                      <Icons.Tag01 size={13} strokeWidth={1.8} className="text-muted-foreground" />
-                      {t('pages.lawyerWorkplace.kanban.changeType', 'Change type')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-60 min-w-[190px] overflow-y-auto p-1.5">
-                    {editableLetterTypes.map((letterType) => (
-                      <DropdownMenuItem
-                        key={letterType.id}
-                        className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onTaskUpdate?.(task.id, { letterTypeId: letterType.id })
-                        }}
-                      >
-                        {renderLetterTypeOption(letterType)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                {/* Change assignee */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
-                    <span className="flex items-center gap-2">
-                      <Icons.UserCircle02Icon
-                        size={13}
-                        strokeWidth={1.8}
-                        className="text-muted-foreground"
-                      />
-                      {t('pages.lawyerWorkplace.kanban.changeAssignee', 'Change assignee')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="min-w-[170px] p-1.5">
-                    {assigneeOptions.map((opt) => {
-                      const lawyer = lawyers.find((item) => item.user_id === opt.userId)
-                      return (
-                        <DropdownMenuItem
-                          key={`${opt.initials}-${opt.userId ?? opt.name}`}
-                          disabled={!opt.assignable}
-                          className={cn(
-                            'focus:bg-muted rounded-md px-2 py-1.5 text-[12px]',
-                            opt.assignable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-                            opt.initials === assigneeInitials && 'bg-muted'
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (!opt.assignable || opt.userId == null) return
-                            onTaskUpdate?.(task.id, { assigneeUserId: opt.userId })
-                          }}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold',
-                                getAssigneeColour(opt.userId, opt.initials)
-                              )}
-                            >
-                              {opt.initials}
-                            </span>
-                            <span className="text-foreground flex min-w-0 flex-col">
-                              <span>{opt.label}</span>
-                              {!opt.assignable && lawyer ? (
-                                <span className="text-muted-foreground text-[10px]">
-                                  {t('pages.lawyerWorkplace.lawyers.atCapacity', {
-                                    current: lawyer.current_active,
-                                    max: lawyer.max_in_flight,
-                                    defaultValue: `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`,
-                                  })}
-                                </span>
-                              ) : null}
-                            </span>
-                            {opt.initials === assigneeInitials && (
-                              <Icons.Checkmark
-                                size={12}
-                                className="text-primary-600 ml-auto"
-                                strokeWidth={2}
-                              />
-                            )}
-                          </span>
-                        </DropdownMenuItem>
-                      )
-                    })}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                {/* Change priority */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
-                    <span className="flex items-center gap-2">
-                      <Icons.Flash size={13} strokeWidth={1.8} className="text-muted-foreground" />
-                      {t('pages.lawyerWorkplace.kanban.changePriority', 'Change priority')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="min-w-[160px] p-1.5">
-                    {CREATE_TASK_PRIORITIES.filter((item) =>
-                      (['high', 'medium', 'low'] as KanbanTaskPriority[]).includes(item.id)
-                    ).map((item) => (
-                      <DropdownMenuItem
-                        key={item.id}
-                        className={cn(
-                          'focus:bg-muted cursor-pointer rounded-md px-2 py-1.5',
-                          item.id === task.priority && 'bg-muted'
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onTaskUpdate?.(task.id, { priority: item.id })
-                        }}
-                      >
-                        <KanbanPriorityOption priority={item.id} className="text-[12px]" />
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                {/* Set deadline — inline calendar + time in submenu */}
-                <DropdownMenuSub open={deadlineMenuOpen} onOpenChange={handleDeadlineMenuToggle}>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
-                    <span className="flex items-center gap-2">
-                      <Icons.Calendar
-                        size={13}
-                        strokeWidth={1.8}
-                        className="text-muted-foreground"
-                      />
-                      {t('pages.lawyerWorkplace.kanban.setDeadline', 'Set deadline')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent
-                    className="bg-card p-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="date-select-wrapper">
-                      <DatePicker
-                        inline
-                        selected={pendingDeadline === undefined ? deadline : pendingDeadline}
-                        onChange={stageDeadline}
-                        showTimeSelect
-                        timeFormat="HH:mm"
-                        timeIntervals={15}
-                        dateFormat="dd/MM/yyyy HH:mm"
-                        calendarStartDay={1}
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={10}
-                        calendarClassName="date-select-calendar"
-                      />
-                    </div>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                <DropdownMenuSeparator />
-
-                {/* Copy task key */}
-                <DropdownMenuItem
-                  className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5 text-[12px]"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigator.clipboard.writeText(task.id).catch(() => {})
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    <Icons.Files02Icon
-                      size={13}
-                      strokeWidth={1.8}
-                      className="text-muted-foreground"
-                    />
-                    {t('pages.lawyerWorkplace.kanban.copyKey', 'Copy task key')}
-                  </span>
-                </DropdownMenuItem>
+                <KanbanTaskActionsMenuItems
+                  task={task}
+                  lawyers={lawyers}
+                  editableLetterTypes={editableLetterTypes}
+                  timezone={timezone}
+                  onMoveTask={onMoveTask}
+                  onTaskUpdate={onTaskUpdate}
+                />
               </DropdownMenuContent>
             </DropdownMenu>
           )}

@@ -1076,7 +1076,9 @@
         "transitionSuccess": "Moved to {{state}}",
         "deadlineSaved": "Deadline set to {{deadline}}",
         "deadlineCleared": "Deadline cleared",
-        "deadlineSaveFailed": "Deadline was not saved"
+        "deadlineSaveFailed": "Deadline was not saved",
+        "startWork": "Start work",
+        "statusLabel": "Status"
       },
       "documents": {
         "title": "Documents",
