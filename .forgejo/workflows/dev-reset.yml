@@ -505,6 +505,39 @@ jobs:
             exit 1
           fi
 
+          # 🔴 DN1(b)'s own read-back (the next step) needs a pre-dispatch baseline to compare
+          # against — code review round 4 (composition dispatch run 1094): after `.title`
+          # (round 2) and RFC3339 offsets (round 3) were both fixed and BOTH confirmed correct live
+          # in the exact failing response, a `jq`-based whole-document parse-then-select still
+          # failed a FOURTH time, on a response this repository's own history has made genuinely
+          # large (~90 runs match `event=workflow_dispatch` alone, each carrying a full nested
+          # `repository`/`owner` object) — reproducible complexity a toy-scale fixture could not
+          # replicate, but real enough to fail live, four times, each a NEW cause. Per the standing
+          # instruction after that fourth failure: stop patching this exact mechanism, simplify
+          # radically instead. `jq` is removed from the read-back path entirely — no whole-document
+          # parse of any kind, so there is nothing conditional on response size or shape left to
+          # break. In its place: a plain `grep` for the literal, structurally stable
+          # `"id":NNN,"title":"Deploy DEV Stand"` byte adjacency (observed identically, byte for
+          # byte, across every one of this story's own live responses, both here and inside
+          # `deploy-dev.yml`'s own JSON handling elsewhere) compared against a run id banked HERE,
+          # before the dispatch, as a monotonic floor — `action_run.id` is a single, globally
+          # increasing sequence for this whole Forgejo instance (confirmed by direct query
+          # throughout this story), so "an id greater than whatever was the newest run a moment
+          # ago" is a complete, sufficient proof that something NEW showed up, with no date parsing
+          # and no field-name assumption of any kind left in the comparison.
+          PRE_DISPATCH_MAX_ID="$(printf 'header = "Authorization: token %s"\n' "$FJ_TOKEN_VAL" \
+            | curl -sS --config - --retry 2 --retry-delay 2 --retry-connrefused --max-time 10 \
+                "${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/runs?limit=1" 2>/dev/null \
+            | grep -oE '"id":[0-9]+' | head -n1 | grep -oE '[0-9]+' || true)"
+          if [ -z "$PRE_DISPATCH_MAX_ID" ]; then
+            echo "FAIL: could not bank a pre-dispatch baseline run id (the banking GET itself"\
+                 "failed, or its response carried no recognisable \"id\" field at all) — refusing"\
+                 "to guess a floor for the read-back step that follows. The stand has not been"\
+                 "touched; this dispatch has not even been attempted yet."
+            exit 1
+          fi
+          echo "pre_dispatch_max_id=${PRE_DISPATCH_MAX_ID}" >> "$GITHUB_OUTPUT"
+
           # Task 4.2: credential never on argv. curl's --config (stdin) form, the same pattern
           # `deploy-dev.yml` already uses for the registry credential and the OpenBao token in
           # `build.yml` — never `-H "Authorization: ..."` on the command line, which would put the
@@ -624,7 +657,7 @@ jobs:
           FJ_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPO_SLUG: ${{ github.repository }}
-          DISPATCH_START_EPOCH: ${{ steps.dispatch.outputs.dispatch_start_epoch }}
+          PRE_DISPATCH_MAX_ID: ${{ steps.dispatch.outputs.pre_dispatch_max_id }}
         run: |
           set -euo pipefail
           # AC6, narrowed by Oleg's decision (DN1(a)): this file's own status reports the DISPATCH
@@ -634,49 +667,51 @@ jobs:
           # existing. This ONE read GET call closes that gap without polling the spawned run to
           # completion (no wait on the concurrency group, cannot self-deadlock, per this file's
           # own header).
-          # 🔴 Live-corrected (composition dispatch, run 1080, story-4-6 PR C follow-up): the shape
-          # assumed at push time was wrong in one field. Forgejo's own `GET .../actions/runs`
-          # response DOES carry a `.workflow_runs[]` array with `.created_at`, exactly as the
-          # `1-1-…md:104`/`1-13-…md:281-282` precedents suggested — but the run's own DISPLAY NAME
-          # field is `.title` ("Deploy DEV Stand"), not `.name` (GitHub's own field name, which this
-          # step originally assumed by analogy; Forgejo's `.name` is used elsewhere in the same
-          # response, e.g. the repository object's own name, not the run's). `.title` is matched
-          # now; `.name` kept as a fallback in case a future Forgejo version restores it.
           #
-          # 🔴 Live-corrected AGAIN (composition dispatch, run 1089, story-4-6 PR D's own first
-          # re-exercise — third red orchestrator, third green deploy underneath it). The `.title`
-          # fix above was already live; the response STILL produced no match, and this time it was
-          # not a simple field-name typo. Ruled out live, not assumed: **not** a create-before-list
-          # race — `action_run.created` for the spawned run was the SAME second as the dispatch's
-          # own `204`, a full ~2s before this step's own GET; the run was in Postgres before this
-          # step ever queried. **Not** an encoding mismatch — the exact title bytes, hex-dumped from
-          # the run's own log, are plain ASCII, byte-for-byte "Deploy DEV Stand". The response
-          # itself was never fully recoverable after the fact (the file lived only inside the
-          # now-torn-down job container, and this instance's own actions-log capture truncates a
-          # single stdout line at ~64KB — short of what a `limit=5`, no-`event`-filter response can
-          # reach once `push`/`pull_request`-triggered runs with heavier embedded objects
-          # (`build-main.yml`'s own merge-commit title, `ci.yml`'s own commit titles) are mixed in
-          # with the `workflow_dispatch` one this step actually wants). `jq` parses the WHOLE
-          # document before emitting anything — one malformed byte anywhere in an UNRELATED run's
-          # own embedded structure silently fails the entire parse (`2>/dev/null`), which is
-          # indistinguishable, from this step's own old diagnostics, from "genuinely no match".
-          # Two independent, compounding fixes, neither dependent on knowing the exact byte that
-          # broke: **(1)** narrow the query server-side with `event=workflow_dispatch` — this
-          # step's own target is always dispatch-triggered, so this drops the heavier, irrelevant
-          # `push`/`pull_request` entries and roughly a third of the payload, for free, whether or
-          # not they were ever the actual cause. **(2)** retry the whole GET-and-parse cycle — up
-          # to 5 attempts, 10s apart, a FRESH request each time — so one intermittent parse/shape
-          # hiccup on a single attempt does not fail the whole reset; this also structurally
-          # subsumes the timing-race hypothesis even though it was ruled out this time, since a
-          # fresh attempt some seconds later is strictly safer than one immediate attempt. On every
-          # failed attempt, dump a COMPACT `id|title` list (never the full body — the exact thing
-          # the ~64KB log truncation made useless as a diagnostic here) so a further recurrence is
-          # actually debuggable from the log next time, not another guessing exercise.
+          # 🔴 This mechanism's history, in full, because every one of the first four attempts
+          # taught something the fifth needed: **(1)** the field is `.title`, not `.name`
+          # (composition run 1080). **(2)** Forgejo's `created_at` is RFC3339 and this runner's
+          # BusyBox `date -d` cannot parse an offset at all (also run 1080, a latent bug closed
+          # before its own first trigger). **(3)** an unfiltered, unretried single GET is fragile —
+          # added `event=workflow_dispatch` and a 5-attempt/10s retry loop (run 1089). **(4)** even
+          # with all three fixes live and independently CONFIRMED correct against the exact failing
+          # response (the target run's own `"id":NNN,"title":"Deploy DEV Stand"` was hex-dumped,
+          # byte-for-byte correct, and a SEPARATE, simpler `jq` call parsed the SAME response file
+          # and printed it cleanly), a `jq`-based whole-document parse-then-`select()` STILL failed
+          # a fourth time (run 1094), on a response this repository's own history has made
+          # genuinely large — `event=workflow_dispatch` alone matches ~90 runs going back to this
+          # story's own earliest probes, each carrying a full nested `repository`/`owner` object —
+          # complexity a toy-scale reproduction could not replicate but real enough to fail live,
+          # four times, each a NEW and different cause. **Per the standing instruction after that
+          # fourth failure: stop patching this exact mechanism, simplify radically instead.**
+          #
+          # `jq` is removed from this step ENTIRELY — no whole-document JSON parse of any kind, so
+          # there is nothing conditional on response size, nesting depth or field shape left to
+          # break. In its place: a plain `grep` for the literal, structurally stable
+          # `"id":NNN,"title":"Deploy DEV Stand"` byte adjacency — observed identically, byte for
+          # byte, across every one of this story's own live responses so far — compared against
+          # `PRE_DISPATCH_MAX_ID`, banked by the dispatch step just before the dispatch. Since
+          # `action_run.id` is a single, globally increasing sequence for this whole Forgejo
+          # instance (confirmed by direct query throughout this story), "an id greater than
+          # whatever was newest a moment ago" is complete, sufficient proof that something NEW
+          # showed up — no `created_at` field, no date parsing, no timezone offset, no name/title
+          # ambiguity, and nothing to break if grep never finds a single required field: grep
+          # either finds the pattern or it doesn't, and cannot itself fail on malformed input the
+          # way a parser can. The 5-attempt/10s retry loop (3) is kept — it was never the problem,
+          # it correctly ran all 5 attempts on run 1094 too — as cheap insurance regardless of root
+          # cause. Every failed attempt still dumps compact diagnostics (raw grep matches, not a
+          # jq-rendered list, and never the full body).
+          if [ -z "${PRE_DISPATCH_MAX_ID:-}" ]; then
+            echo "FAIL: no pre-dispatch baseline run id was passed from the dispatch step —"\
+                 "cannot tell a NEW run from an old one without it. The dispatch above DID"\
+                 "succeed; only this confirmation step could not run."
+            exit 1
+          fi
           FJ_TOKEN_VAL="${FJ_TOKEN:-}"
           RUNS_URL="${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/runs?limit=5&event=workflow_dispatch"
           MAX_ATTEMPTS=5
           RETRY_DELAY_SECONDS=10
-          LATEST_CREATED=""
+          FOUND_NEW_RUN_ID=""
           ATTEMPT=1
           while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
             RUNS_BODY_FILE="$(mktemp)" || { echo "FAIL: mktemp failed for the read-back response (attempt ${ATTEMPT}/${MAX_ATTEMPTS}). Dispatch itself already succeeded above; only this confirmation step could not run."; exit 1; }
@@ -684,91 +719,42 @@ jobs:
               | curl -sS --config - --retry 2 --retry-delay 2 --retry-connrefused --max-time 10 \
                   -o "$RUNS_BODY_FILE" -w '%{http_code}' \
                   "$RUNS_URL" 2>/dev/null || echo "000")"
+            MATCHING_IDS=""
             if [ "$RUNS_HTTP_CODE" = "200" ]; then
-              # 🔴 Found force-testing this exact retry loop against a deliberately malformed/
-              # truncated response (reproducing what a genuinely bad attempt would look like, not
-              # only a well-formed-but-empty one): `jq` exits 5 on a JSON parse failure, and under
-              # `set -o pipefail`, `LATEST_CREATED="$(jq ... | head -n1)"` with NO `|| true` lets
-              # that 5 propagate through the pipeline into the ASSIGNMENT itself — which `set -e`
-              # treats as a script-ending failure, aborting the whole step silently, with no
-              # diagnostic at all, on exactly the kind of transient bad response this retry loop
-              # exists to survive. `|| true` here is the correct idiom, not the H1 fail-closed one:
-              # an unparseable attempt should count as "no match yet" and let the loop retry, not
-              # abort the step outright — the loop's own final exhaustion check below is what
-              # fails the step if every attempt comes back empty.
-              LATEST_CREATED="$(jq -r '.workflow_runs[]? // .[]? | select(.title == "Deploy DEV Stand" or .name == "Deploy DEV Stand") | .created_at' "$RUNS_BODY_FILE" 2>/dev/null | head -n1 || true)"
-              if [ -n "$LATEST_CREATED" ] && [ "$LATEST_CREATED" != "null" ]; then
-                rm -f "$RUNS_BODY_FILE"
-                break
+              # No jq. `grep -oE` on the literal byte pattern only — cannot itself throw on
+              # anything ELSE in the document, well-formed or not, because it never attempts to
+              # understand the document as a whole; it only ever looks at the bytes that match.
+              MATCHING_IDS="$(grep -oE '"id":[0-9]+,"title":"Deploy DEV Stand"' "$RUNS_BODY_FILE" 2>/dev/null | grep -oE '[0-9]+' || true)"
+              if [ -n "$MATCHING_IDS" ]; then
+                NEWEST_MATCH_ID="$(printf '%s\n' "$MATCHING_IDS" | sort -rn | head -n1)"
+                if [ "$NEWEST_MATCH_ID" -gt "$PRE_DISPATCH_MAX_ID" ]; then
+                  FOUND_NEW_RUN_ID="$NEWEST_MATCH_ID"
+                  rm -f "$RUNS_BODY_FILE"
+                  break
+                fi
               fi
             fi
-            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no 'Deploy DEV Stand' run found yet (HTTP"\
-                 "${RUNS_HTTP_CODE}). Runs currently visible in this response:"
-            jq -r '.workflow_runs[]? // .[]? | "  \(.id // "?")|\(.title // .name // "no-title-field")"' "$RUNS_BODY_FILE" 2>/dev/null || echo "  (response did not parse as JSON)"
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no 'Deploy DEV Stand' run newer than the"\
+                 "pre-dispatch baseline (id ${PRE_DISPATCH_MAX_ID}) found yet (HTTP"\
+                 "${RUNS_HTTP_CODE}). Matching 'Deploy DEV Stand' ids seen this attempt:"\
+                 "${MATCHING_IDS:-none}."
             rm -f "$RUNS_BODY_FILE"
-            LATEST_CREATED=""
             if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
               sleep "$RETRY_DELAY_SECONDS"
             fi
             ATTEMPT=$((ATTEMPT + 1))
           done
-          if [ -z "$LATEST_CREATED" ] || [ "$LATEST_CREATED" = "null" ]; then
+          if [ -z "$FOUND_NEW_RUN_ID" ]; then
             echo "FAIL: after ${MAX_ATTEMPTS} attempts over ~$(( (MAX_ATTEMPTS - 1) * RETRY_DELAY_SECONDS ))s,"\
-                 "no 'Deploy DEV Stand' run was found in the read-back — the dispatch may have been"\
+                 "no run titled 'Deploy DEV Stand' with an id greater than the pre-dispatch"\
+                 "baseline (${PRE_DISPATCH_MAX_ID}) was found — the dispatch may have been"\
                  "silently swallowed (proxy, a since-disabled workflow, or a response shape this"\
                  "step does not recognise). See the per-attempt diagnostics above for what WAS"\
                  "visible each time."
             exit 1
           fi
-
-          # 🔴 Live-found in the same round: Forgejo's own `created_at` is RFC3339
-          # (`2026-08-21T13:08:36+02:00` or `...Z`) — `T` separator, colon-delimited offset. This
-          # runner's actual `date -d` (BusyBox v1.37.0, the same limitation the sweep's image loop
-          # hit — code review DN2/7.5) has no offset syntax and no `T`-separator support at all, so
-          # it would have failed this parse unconditionally, exactly like the image loop did before
-          # its own fix. Never actually exercised before this composition run (7.1-7.6/DN2's own
-          # dispatches never reached this line: 7.1/7.3 either predate this step or fail earlier),
-          # so this is a latent bug closed before its own first live trigger, not a second live
-          # failure. Same fix shape as the image loop: parse the offset ourselves, do not ask
-          # `date -d` to understand it.
-          LATEST_CREATED_CLEAN="$(printf '%s' "$LATEST_CREATED" | sed -E 's/\.[0-9]+//')"
-          case "$LATEST_CREATED_CLEAN" in
-            *Z)
-              LATEST_NAIVE="$(printf '%s' "$LATEST_CREATED_CLEAN" | sed -E 's/T/ /; s/Z$//')"
-              LATEST_OFFSET_SECONDS=0
-              ;;
-            *)
-              LATEST_OFFSET_TOKEN="$(printf '%s' "$LATEST_CREATED_CLEAN" | grep -oE '[+-][0-9]{2}:[0-9]{2}$' || true)"
-              LATEST_NAIVE="$(printf '%s' "$LATEST_CREATED_CLEAN" | sed -E 's/T/ /; s/[+-][0-9]{2}:[0-9]{2}$//')"
-              LATEST_OFFSET_SECONDS=0
-              if [ -n "$LATEST_OFFSET_TOKEN" ]; then
-                LATEST_OFFSET_SIGN="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c1)"
-                LATEST_OFFSET_HH="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c2-3)"
-                LATEST_OFFSET_MM="$(printf '%s' "$LATEST_OFFSET_TOKEN" | cut -c5-6)"
-                LATEST_OFFSET_SECONDS=$(( 10#$LATEST_OFFSET_HH * 3600 + 10#$LATEST_OFFSET_MM * 60 ))
-                if [ "$LATEST_OFFSET_SIGN" = "-" ]; then
-                  LATEST_OFFSET_SECONDS=$(( 0 - LATEST_OFFSET_SECONDS ))
-                fi
-              fi
-              ;;
-          esac
-          if ! LATEST_EPOCH_NAIVE="$(date -u -d "$LATEST_NAIVE" +%s 2>/dev/null)"; then
-            echo "FAIL: could not parse the latest matching run's own created_at"\
-                 "('${LATEST_CREATED}') — refusing to guess whether it is recent enough to be THIS"\
-                 "dispatch's own run."
-            exit 1
-          fi
-          LATEST_EPOCH=$(( LATEST_EPOCH_NAIVE - LATEST_OFFSET_SECONDS ))
-          REFERENCE_EPOCH="${DISPATCH_START_EPOCH:-$LATEST_EPOCH}"
-          AGE_SECONDS=$(( LATEST_EPOCH - REFERENCE_EPOCH ))
-          if [ "$AGE_SECONDS" -lt -60 ] || [ "$AGE_SECONDS" -gt 60 ]; then
-            echo "FAIL: the most recent 'Deploy DEV Stand' run was created ${AGE_SECONDS}s"\
-                 "relative to this dispatch's own start — too far off to confidently attribute it"\
-                 "to THIS reset rather than an unrelated prior run."
-            exit 1
-          fi
-          echo "OK: confirmed a deploy-dev.yml run was created (created_at=${LATEST_CREATED},"\
-               "${AGE_SECONDS}s from this dispatch's own start) — the dispatch reached a real,"\
-               "queued run, not just a 2xx from a proxy or a disabled-workflow acceptance. This"\
-               "does NOT wait for or report that run's own outcome (AC6 is narrowed to the"\
+          echo "OK: confirmed a NEW deploy-dev.yml run was created (id=${FOUND_NEW_RUN_ID}, above"\
+               "the pre-dispatch baseline id ${PRE_DISPATCH_MAX_ID}) — the dispatch reached a"\
+               "real, queued run, not just a 2xx from a proxy or a disabled-workflow acceptance."\
+               "This does NOT wait for or report that run's own outcome (AC6 is narrowed to the"\
                "dispatch layer, DN1(a) — the residual gap is named and accepted, H2)."
