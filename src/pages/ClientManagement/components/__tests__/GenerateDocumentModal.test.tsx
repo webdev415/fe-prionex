@@ -445,7 +445,7 @@ describe('GenerateDocumentModal', () => {
     expect(screen.getByRole('button', { name: 'Згенерувати' })).toBeEnabled()
   })
 
-  it('delegates to onGenerated and skips the success screen when it is provided', async () => {
+  it('delegates to onGenerated and still shows the success screen with the .docx download', async () => {
     getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
     generateMock.mockResolvedValue({
       document_id: 9,
@@ -478,8 +478,10 @@ describe('GenerateDocumentModal', () => {
 
     await waitFor(() => expect(onGenerated).toHaveBeenCalledTimes(1))
     expect(onGenerated.mock.calls[0]![0]).toMatchObject({ document_id: 9 })
-    // The standalone success screen must NOT appear — the caller owns the flow.
-    expect(screen.queryByText('Документ згенеровано')).not.toBeInTheDocument()
+    // The success screen still appears: the lawyer generating from the reply
+    // composer must be able to grab the .docx twin before closing the modal.
+    expect(await screen.findByText('Документ згенеровано')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Завантажити \.docx/ })).toBeInTheDocument()
   })
 
   it('surfaces the tag-activation reason on a 409 response', async () => {
