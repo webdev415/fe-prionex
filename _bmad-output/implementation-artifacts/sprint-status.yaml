@@ -343,7 +343,7 @@ development_status:
   # Delivery is TWO implementation PRs by construction: a `schedule:` on a feature branch registers
   # nothing and errors nothing, no UI or API lists registrations, and protected `main` is the only
   # place a firing can be observed.
-  4-6-reset-dev-to-main-on-a-weekly-schedule: in-progress
+  4-6-reset-dev-to-main-on-a-weekly-schedule: review
   4-7-validate-dev-deploys-across-five-feature-branches: backlog
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
