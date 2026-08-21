@@ -2982,8 +2982,39 @@ session at all, not because they are minor.
   correctly renders `<none>` for the same images — the working substitute this story's own sweep
   uses (list all, filter client-side on `.Tag == "<none>"`). Not confirmed whether this is a
   containerd-image-store-specific behaviour or a general docker 29.x one — untested against the
-  classic (non-containerd) store. **Owner: whoever next writes a `docker images ... --filter
-  dangling=true` check against a digest-pulled image on this host** — a candidate note for
-  `docs/runners/config.yml`'s own operator documentation, since it is a platform property, not a
-  per-workflow one, and the next person to reach for the obvious filter will hit the same silent
-  no-op this story caught by testing rather than trusting.
+  classic (non-containerd) store. 🔴 **Owner corrected (code review M12): Story 4.9 / platform
+  ops** — matching the sibling entry immediately above (`:2863`), which owns image-cleanup-on-s1
+  findings generally; the entry originally read *"whoever next writes a `docker images … --filter
+  dangling=true` check … on this host"*, a trigger condition rather than a name or a story number,
+  and Task 8.3's own rule requires the latter. Still a candidate note for `docs/runners/
+  config.yml`'s own operator documentation once Story 4.9/platform ops picks it up, since it is a
+  platform property, not a per-workflow one.
+
+## Deferred from: code review of story-4.6 (2026-08-21)
+
+Two items only. Everything else the review found is an action item **inside** the story
+(`4-6-reset-dev-to-main-on-a-weekly-schedule.md` → `### Review Findings`): 4 high, 13 medium, 11 low
+and 3 decision-needed, all of them either fixable in `dev-reset.yml` or answerable by one read-only
+query. These two are the ones that are genuinely somebody else's, and each has an owner.
+
+- ⚠️ **DF1 — the manual/DR path still takes no lock, and the weekly sweep now makes its window
+  recur on a timer.** Pre-existing, already recorded at `:2881-2891`, and correctly named as a
+  non-goal in Story 4.6's Dev Notes §7. A human running `docker compose up -d` from the stand
+  directory takes no lock at all, so the shared `deploy-dev-fe-prionex-dev` concurrency group — which
+  is what protects the sweep from running during a deploy's `pull`→`up -d` window — does not cover
+  that path. Story 4.6's 168-hour image-age threshold is explicitly a partial mitigation for it
+  (Task 5.2), not a fix. Sharpened, not transferred, by this story. **Owner: unchanged (unowned;
+  candidate for Story 4.8's factoring, which is where a wrapper would naturally live).**
+- ⚠️ **DF2 — a shared concurrency group may make the SCHEDULED run the evictable party, and this
+  instance's pending-queue semantics under contention have never been measured separately from
+  `capacity: 1`.** `dev-reset.yml:111-113` deliberately shares `deploy-dev.yml`'s literal group with
+  `cancel-in-progress: false`. Under GitHub-compatible semantics at most one run per group may be
+  *pending*, and a newer arrival evicts the older pending one — so a Sunday 02:00 firing that queues
+  behind an in-flight human deploy could be cancelled by a second human dispatch, silently, with no
+  retry until the following Sunday (and, per the story's own H2 finding, with nobody told).
+  `deploy-dev.yml:180-190` already concedes that this instance's group queueing under real contention
+  has never been distinguished from the runner's own `capacity: 1` serialization, so the premise is
+  unmeasured in both directions. The file's header analyses the *self-deadlock* trap exhaustively and
+  never considers this inverse. Low probability for a job that fires once a week; measuring it
+  properly is a concurrency-semantics question and real contention is already being staged there.
+  **Owner: Story 4.7** (five-branch validation).
