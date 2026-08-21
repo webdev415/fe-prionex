@@ -39,6 +39,16 @@ function alreadyConfirmedError() {
   }
 }
 
+function alreadyConfirmedCodedError() {
+  return {
+    isAxiosError: true,
+    response: {
+      status: 409,
+      data: { detail: 'Letter already confirmed', code: 'letter_already_confirmed' },
+    },
+  }
+}
+
 function setup() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -60,6 +70,18 @@ describe('useConfirmLetter — 409 already confirmed', () => {
 
   it('toasts success instead of an error', async () => {
     legalApiMock.confirmLetter.mockRejectedValue(alreadyConfirmedError())
+    const { result } = setup()
+
+    result.current.mutate({ messageId: 'msg-1', payload })
+
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith('Task already created on kanban')
+    )
+    expect(toastMock.error).not.toHaveBeenCalled()
+  })
+
+  it('treats the coded 409 as success too (new backend format)', async () => {
+    legalApiMock.confirmLetter.mockRejectedValue(alreadyConfirmedCodedError())
     const { result } = setup()
 
     result.current.mutate({ messageId: 'msg-1', payload })
@@ -109,7 +131,32 @@ describe('useConfirmLetter — 409 already confirmed', () => {
 })
 
 describe('isLetterAlreadyConfirmed', () => {
-  it('matches only a 409 with the already-confirmed detail', () => {
+  it('matches the machine-readable code (new backend format)', () => {
+    expect(isLetterAlreadyConfirmed(alreadyConfirmedCodedError())).toBe(true)
+    // The code alone is enough — no reliance on the detail text.
+    expect(
+      isLetterAlreadyConfirmed({
+        isAxiosError: true,
+        response: { status: 409, data: { code: 'letter_already_confirmed' } },
+      })
+    ).toBe(true)
+    // A different code on its own is not a match.
+    expect(
+      isLetterAlreadyConfirmed({
+        isAxiosError: true,
+        response: { status: 409, data: { code: 'lawyer_over_capacity', detail: 'x' } },
+      })
+    ).toBe(false)
+    // The code never overrides the status check.
+    expect(
+      isLetterAlreadyConfirmed({
+        isAxiosError: true,
+        response: { status: 400, data: { code: 'letter_already_confirmed' } },
+      })
+    ).toBe(false)
+  })
+
+  it('falls back to the detail string match (old backend format)', () => {
     expect(isLetterAlreadyConfirmed(alreadyConfirmedError())).toBe(true)
     expect(
       isLetterAlreadyConfirmed({
