@@ -1590,6 +1590,17 @@ constraint 3.1 created and nobody wrote down.
   creates: across all 502 remote branches there are **502 distinct sanitized names case-sensitively
   and 502 case-insensitively** — no collision today. It is a shape a future branch name could break,
   which the case-sensitive reading could not.
+  ✅ **CLOSED LIVE 2026-08-21 (Story 4.7, §11a, Task 3.5) — the literal `docker pull` this entry's
+  own source (`3-2-…md:930-937`) asked someone to spend, finally spent.** `curl`'d the registry
+  manifest endpoint from s1 for BOTH the mixed-case tag `feature-KAN-353-operator-phone-dev-dev`
+  and its fully-folded lowercase spelling — both `HTTP 200`, both returning the IDENTICAL
+  `Docker-Content-Digest`. Confirms live, at the registry's own HTTP surface (not only the
+  `package_version` table this entry's own 2026-08-15 note already checked), that a mixed-case
+  reference resolves to the same manifest as its folded form. Neither `build.yml`'s nor
+  `deploy-dev.yml`'s own sanitizer folds case (Story 4.7 Task 2.5, byte-identical, confirmed by
+  reading both), but this no longer matters functionally — the registry's own write-time folding
+  makes both spellings interchangeable regardless. Story 3.2's own open item is closed on both its
+  DB-level and its registry-level half now.
 - 🔑 **`/root/.fj_token_3_1` is NOT on s1.** This file and Story 3.1's record both describe it as
   live, scoped `write:repository,write:package`, with no deletion route, carried as an open security
   item owned by Oleg. Story 3.2 went looking for it to dispatch with and found only
@@ -2833,6 +2844,18 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   holds for exactly one of the several ways this deploy can fail. The cheap version: capture the
   running container's digest before `down` and restore it on `if: failure()`.
   **Owner: Story 4.7 (the AC that requires it) / Story 4.8 (shared mechanics).**
+  ✅ **JOINT OWNERSHIP RESOLVED 2026-08-21 (Story 4.7, §8, Task 9.4) — in Story 4.8's favour, in
+  writing.** Story 4.7 does NOT implement the rollback. Three reasons: **(1)** a `if: failure()`
+  digest-capture-and-restore path is a new mechanism in an already-hardened file, which Story 4.7's
+  own §1 forbids by name (and Story 4.6 priced what one extra "evidence step" costs — 23 of 39
+  runs). **(2)** Its own live outcome matrix (retro-E5) would require deliberately breaking the
+  stand after `down` and then repairing it — a red dispatch plus a repair dispatch, inside a story
+  whose deliverable is five *green* deploys, whose own §3 rule resets the consecutive-deploy count
+  to zero on any mid-sequence pipeline change. **(3)** The evidence already exists and re-earning it
+  buys nothing new: run 937 (Story 4.3) is the live proof the post-`down` window has no recovery;
+  run 938 is the live proof a human dispatch is what fixes it. AC4 in Story 4.7 is narrowed in
+  writing to the pre-`down` window only (proven live there, Task 5) — the mechanism itself moves
+  wholly to Story 4.8, which owns the shared deploy definition this would naturally live inside.
 
 - ⚠️ **Two sources of truth for the stand's five variables.** The host `.env` in
   `~/crm-prionex/fe-prionex-dev/` (manual/DR path) and `deploy-dev.yml`'s own render into
@@ -2921,6 +2944,12 @@ session at all, not because they are minor.
   requires the `flock` to be the load-bearing half. **Owner: whoever next has DB access to the
   Forgejo instance** — a candidate for the Story 4.4 closeout PR if access appears, otherwise for
   Story 4.8, which re-keys this block by stand and must re-measure it anyway.
+  ✅ **CLOSED 2026-08-21 (Story 4.6 Task 6.6, re-confirmed and extended Story 4.7 Task 6.6).**
+  Story 4.6 first closed this via runs 964/965 (`concurrency_group='deploy-dev-fe-prionex-dev'`,
+  `concurrency_type=1` for both). Story 4.7's own AC5/DF2 probe (D1/D2/D3, runs 1113-1115) read
+  the identical columns for three MORE real runs, all matching — five independently-confirmed data
+  points now, all identical. AC1 is no longer merely "closed once"; it is closed with a
+  reproducibility record.
 - ⚠️ **Concurrency queue *depth* was never measured, and a third dispatch may silently drop the
   pending run.** Upstream Actions semantics, with `cancel-in-progress: false`, keep at most one
   pending run per group: when a third dispatch arrives while one run is in progress and one is
@@ -2934,6 +2963,16 @@ session at all, not because they are minor.
   workflow-level fix — it is a platform behaviour to measure and document. **Owner: Story 4.8**
   (which parameterizes the group per stand and must re-measure it), or whoever closes the AC1 item
   above, since both are answered by the same database.
+  🔴 **PARTIALLY INFORMED 2026-08-21 (Story 4.7, Task 6.7) — depth 3 now measured, NOT closed for
+  general depth.** The AC5/DF2 probe (D1 running, D2/D3 both queued, dispatched one second apart)
+  is the first live test of depth beyond two on this instance. **Result: NO eviction — both D2 and
+  D3 produced real job rows and ran to completion**, directly contradicting the upstream-semantics
+  eviction behavior this entry's own opening paragraph describes as the risk. This is real,
+  positive evidence for THIS Forgejo build at depth 3 specifically — it does **not** generalize to
+  depth 4+ (untested), nor does it settle `flock`'s own wake ORDER under 3+ simultaneous contenders
+  (D2/D3 happened to wake in dispatch order here — one data point, not proof of FIFO behavior).
+  **Owner unchanged: Story 4.8**, now with a positive depth-3 data point to build on rather than a
+  fully open question.
 
 ## Deferred from: code review fix-pass of story-4.4 (2026-08-21)
 
@@ -3050,3 +3089,49 @@ query. These two are the ones that are genuinely somebody else's, and each has a
   never considers this inverse. Low probability for a job that fires once a week; measuring it
   properly is a concurrency-semantics question and real contention is already being staged there.
   **Owner: Story 4.7** (five-branch validation).
+  ✅ **FALSIFIED (for this Forgejo build) 2026-08-21 (Story 4.7, Task 6, AC5).** Three-dispatch
+  D1/D2/D3 probe, read from the database, never from timing: D1 (`ref=main`, a real deploy) put in
+  flight, then D2 and D3 (`hold_lock_seconds=5` each) dispatched ONE SECOND APART while D1 was still
+  running — the tightest double-arrival the API allowed. **Neither D2 nor D3 was evicted.** Both
+  produced real `action_run_job` rows and both executed their real 5-second hold-lock fixture to
+  completion, strictly serially (D2 stops before D3 starts). This directly contradicts the
+  eviction premise this entry's own text describes ("a newer arrival evicts the older pending
+  one") — on `Forgejo v15.0.5`, at this depth, no eviction occurred. **The Sunday reset therefore
+  does NOT silently drop this way, at least not via depth-3, tight-arrival contention** — the
+  concrete fear this DF2 entry named. Not a blanket closure of ALL concurrency-queue risk (queue
+  depth beyond 3 and `flock`'s own wake order under 3+ contenders remain open, see the AC1/queue-
+  depth entry above, owner Story 4.8) — but the SPECIFIC eviction hazard this entry names is
+  measured and falsified, not merely argued.
+
+## Deferred from: story-4.7 validation (2026-08-21)
+
+Two new findings this round, both genuinely somebody else's. Everything else the validation found
+either closed clean (five deploys, AC4's row, DF2, Story 4.4's AC1, the mixed-case tag question —
+all closed above, under their own original entries) or is a story-file-internal deviation already
+argued and recorded in `4-7-…md` itself (the redefinition of "real," AC3's narrowing, AC4's
+narrowing) — not a gap for someone else to act on.
+
+- 🔴 **A read-only registry credential's value was partially exposed in this session's own
+  transcript, twice, while verifying published images.** `/root/.fj_reg_4_2.token`
+  (`REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, bot `robot-deploy`, Story 4.2's own provisioning) —
+  first via a `cut -c1-30` used to inspect the file's own format, then a stray leftover line in a
+  follow-up command that repeated the same fragment. Corrected immediately; every subsequent
+  credential read in this story piped the token directly from the file into `curl --config -` /
+  `docker login --password-stdin`, never through a shell variable that could be echoed. Scope is
+  **read-only registry pull** only — no write, no admin, no path to any other credential — and the
+  transcript itself is not published externally, but this is exactly the class of mistake this
+  project's own standing rule (Prohibition 13, `4-7-…md`) cites Story 4.2's own review finding as
+  precedent for. **Owner: Oleg** — whether `fe_reg_4_2` warrants rotation is his call, not this
+  story's; not blocking, since the exposure is confined to a private working session and a
+  read-only scope.
+- ⚠️ **The `deploy` job's own reported wall-clock and its actual job-level duration disagree by
+  ~4 seconds, consistently, and the exact cause was not pinned down.** Measured on the two runs
+  (C-2, C-5) whose task logs persisted within this story's own working session: job-level 22-23s,
+  workflow-self-reported (`Deploy wall-clock duration:` line) 18-19s — a 4s gap in both, crossing
+  this project's own "more than a second or two" disagreement threshold (Story 4.7 Task 7.5). The
+  workflow's own timer spans "Record start time" (step 0) to "Record wall-clock duration" (step
+  20), excluding the job's pre-step-0 scheduling overhead and the final cleanup step — plausibly
+  most of the gap, but not directly measured this round. Small, not urgent, but worth a real
+  answer before anyone builds a tighter SLA on top of either number. **Owner: Story 4.8**, which
+  inherits the per-step cost profile this same round produced (`4-7-…md` Task 7.4) and is the
+  natural next reader of exactly this class of timing question.
