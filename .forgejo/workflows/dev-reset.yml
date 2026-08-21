@@ -640,44 +640,84 @@ jobs:
           # `1-1-…md:104`/`1-13-…md:281-282` precedents suggested — but the run's own DISPLAY NAME
           # field is `.title` ("Deploy DEV Stand"), not `.name` (GitHub's own field name, which this
           # step originally assumed by analogy; Forgejo's `.name` is used elsewhere in the same
-          # response, e.g. the repository object's own name, not the run's). Confirmed live: run
-          # 1080's own read-back response carried `{"id":1081,"title":"Deploy DEV Stand",...}` as
-          # `workflow_runs[0]` — genuinely present, but invisible to the original `.name`-based
-          # filter, which is exactly why this step is designed to FAIL LOUDLY on a shape mismatch
-          # (Task 7.6/H1 idiom) rather than silently pass — it did fail loudly, correctly, on the
-          # very first live exercise, and that failure is what surfaced this fix. `.title` is
-          # matched now; `.name` kept as a fallback in case a future Forgejo version restores it.
+          # response, e.g. the repository object's own name, not the run's). `.title` is matched
+          # now; `.name` kept as a fallback in case a future Forgejo version restores it.
+          #
+          # 🔴 Live-corrected AGAIN (composition dispatch, run 1089, story-4-6 PR D's own first
+          # re-exercise — third red orchestrator, third green deploy underneath it). The `.title`
+          # fix above was already live; the response STILL produced no match, and this time it was
+          # not a simple field-name typo. Ruled out live, not assumed: **not** a create-before-list
+          # race — `action_run.created` for the spawned run was the SAME second as the dispatch's
+          # own `204`, a full ~2s before this step's own GET; the run was in Postgres before this
+          # step ever queried. **Not** an encoding mismatch — the exact title bytes, hex-dumped from
+          # the run's own log, are plain ASCII, byte-for-byte "Deploy DEV Stand". The response
+          # itself was never fully recoverable after the fact (the file lived only inside the
+          # now-torn-down job container, and this instance's own actions-log capture truncates a
+          # single stdout line at ~64KB — short of what a `limit=5`, no-`event`-filter response can
+          # reach once `push`/`pull_request`-triggered runs with heavier embedded objects
+          # (`build-main.yml`'s own merge-commit title, `ci.yml`'s own commit titles) are mixed in
+          # with the `workflow_dispatch` one this step actually wants). `jq` parses the WHOLE
+          # document before emitting anything — one malformed byte anywhere in an UNRELATED run's
+          # own embedded structure silently fails the entire parse (`2>/dev/null`), which is
+          # indistinguishable, from this step's own old diagnostics, from "genuinely no match".
+          # Two independent, compounding fixes, neither dependent on knowing the exact byte that
+          # broke: **(1)** narrow the query server-side with `event=workflow_dispatch` — this
+          # step's own target is always dispatch-triggered, so this drops the heavier, irrelevant
+          # `push`/`pull_request` entries and roughly a third of the payload, for free, whether or
+          # not they were ever the actual cause. **(2)** retry the whole GET-and-parse cycle — up
+          # to 5 attempts, 10s apart, a FRESH request each time — so one intermittent parse/shape
+          # hiccup on a single attempt does not fail the whole reset; this also structurally
+          # subsumes the timing-race hypothesis even though it was ruled out this time, since a
+          # fresh attempt some seconds later is strictly safer than one immediate attempt. On every
+          # failed attempt, dump a COMPACT `id|title` list (never the full body — the exact thing
+          # the ~64KB log truncation made useless as a diagnostic here) so a further recurrence is
+          # actually debuggable from the log next time, not another guessing exercise.
           FJ_TOKEN_VAL="${FJ_TOKEN:-}"
-          RUNS_BODY_FILE="$(mktemp)" || { echo "FAIL: mktemp failed for the read-back response. Dispatch itself already succeeded above; only this confirmation step could not run."; exit 1; }
-          trap 'rm -f "$RUNS_BODY_FILE"' EXIT
-
-          RUNS_URL="${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/runs?limit=5"
-          if ! RUNS_HTTP_CODE="$(printf 'header = "Authorization: token %s"\n' "$FJ_TOKEN_VAL" \
-            | curl -sS --config - --retry 2 --retry-delay 2 --retry-connrefused --max-time 15 \
-                -o "$RUNS_BODY_FILE" -w '%{http_code}' \
-                "$RUNS_URL")"; then
-            echo "FAIL: the read-back GET .../actions/runs itself failed at the transport level —"\
-                 "could not confirm a run was created. The dispatch above DID return a 2xx; this"\
-                 "is a separate, non-blocking confirmation that failed on its own terms. Per AC6"\
-                 "(narrowed to the dispatch layer): this reset ends red because its own"\
-                 "classifiable layer did not fully succeed, even though the earlier POST did."
-            exit 1
-          fi
-          if [ "$RUNS_HTTP_CODE" != "200" ]; then
-            echo "FAIL: read-back GET .../actions/runs returned HTTP ${RUNS_HTTP_CODE}, not 200 —"\
-                 "could not confirm a run was created."
-            cat "$RUNS_BODY_FILE" 2>/dev/null || true
-            exit 1
-          fi
-
-          if ! LATEST_CREATED="$(jq -r '.workflow_runs[]? // .[]? | select(.title == "Deploy DEV Stand" or .name == "Deploy DEV Stand") | .created_at' "$RUNS_BODY_FILE" 2>/dev/null | head -n1)"; then
+          RUNS_URL="${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/runs?limit=5&event=workflow_dispatch"
+          MAX_ATTEMPTS=5
+          RETRY_DELAY_SECONDS=10
+          LATEST_CREATED=""
+          ATTEMPT=1
+          while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+            RUNS_BODY_FILE="$(mktemp)" || { echo "FAIL: mktemp failed for the read-back response (attempt ${ATTEMPT}/${MAX_ATTEMPTS}). Dispatch itself already succeeded above; only this confirmation step could not run."; exit 1; }
+            RUNS_HTTP_CODE="$(printf 'header = "Authorization: token %s"\n' "$FJ_TOKEN_VAL" \
+              | curl -sS --config - --retry 2 --retry-delay 2 --retry-connrefused --max-time 10 \
+                  -o "$RUNS_BODY_FILE" -w '%{http_code}' \
+                  "$RUNS_URL" 2>/dev/null || echo "000")"
+            if [ "$RUNS_HTTP_CODE" = "200" ]; then
+              # 🔴 Found force-testing this exact retry loop against a deliberately malformed/
+              # truncated response (reproducing what a genuinely bad attempt would look like, not
+              # only a well-formed-but-empty one): `jq` exits 5 on a JSON parse failure, and under
+              # `set -o pipefail`, `LATEST_CREATED="$(jq ... | head -n1)"` with NO `|| true` lets
+              # that 5 propagate through the pipeline into the ASSIGNMENT itself — which `set -e`
+              # treats as a script-ending failure, aborting the whole step silently, with no
+              # diagnostic at all, on exactly the kind of transient bad response this retry loop
+              # exists to survive. `|| true` here is the correct idiom, not the H1 fail-closed one:
+              # an unparseable attempt should count as "no match yet" and let the loop retry, not
+              # abort the step outright — the loop's own final exhaustion check below is what
+              # fails the step if every attempt comes back empty.
+              LATEST_CREATED="$(jq -r '.workflow_runs[]? // .[]? | select(.title == "Deploy DEV Stand" or .name == "Deploy DEV Stand") | .created_at' "$RUNS_BODY_FILE" 2>/dev/null | head -n1 || true)"
+              if [ -n "$LATEST_CREATED" ] && [ "$LATEST_CREATED" != "null" ]; then
+                rm -f "$RUNS_BODY_FILE"
+                break
+              fi
+            fi
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no 'Deploy DEV Stand' run found yet (HTTP"\
+                 "${RUNS_HTTP_CODE}). Runs currently visible in this response:"
+            jq -r '.workflow_runs[]? // .[]? | "  \(.id // "?")|\(.title // .name // "no-title-field")"' "$RUNS_BODY_FILE" 2>/dev/null || echo "  (response did not parse as JSON)"
+            rm -f "$RUNS_BODY_FILE"
             LATEST_CREATED=""
-          fi
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              sleep "$RETRY_DELAY_SECONDS"
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+          done
           if [ -z "$LATEST_CREATED" ] || [ "$LATEST_CREATED" = "null" ]; then
-            echo "FAIL: read-back succeeded (HTTP 200) but no 'Deploy DEV Stand' run was found in"\
-                 "the response — the dispatch may have been silently swallowed (proxy, a since-"\
-                 "disabled workflow, or a response shape this step does not recognise). Raw body:"
-            cat "$RUNS_BODY_FILE" 2>/dev/null || true
+            echo "FAIL: after ${MAX_ATTEMPTS} attempts over ~$(( (MAX_ATTEMPTS - 1) * RETRY_DELAY_SECONDS ))s,"\
+                 "no 'Deploy DEV Stand' run was found in the read-back — the dispatch may have been"\
+                 "silently swallowed (proxy, a since-disabled workflow, or a response shape this"\
+                 "step does not recognise). See the per-attempt diagnostics above for what WAS"\
+                 "visible each time."
             exit 1
           fi
 

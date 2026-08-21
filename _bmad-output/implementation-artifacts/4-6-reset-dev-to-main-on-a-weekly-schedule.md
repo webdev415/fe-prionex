@@ -1805,7 +1805,18 @@ three) before this commit.
   BusyBox v1.37.0 limitation as the image loop — fixed the same way, via shell arithmetic. Both
   force-tested against the real runner binary (three cases) before this push. See DN3's own
   resolution note above for the full diagnosis and the open recommendation (one more composition
-  dispatch after this merges).
+  dispatch after this merges). 🔴 **Fifth and sixth fixes (`story-4-6/pr-5-readback-retry`, off
+  `main` @ `d0b17c83`), found via the recommended re-dispatch (run 1089):** `.title` was already
+  correct and still found nothing, root-caused (not fully recoverable, but the query was too wide
+  and unfiltered) to `jq` failing to parse the WHOLE unfiltered `limit=5` response when an unrelated
+  `push`/`pull_request`-triggered run's own heavier embedded object broke somewhere past this
+  instance's own ~64KB log-truncation boundary — fixed by narrowing the query
+  (`&event=workflow_dispatch`) and wrapping the GET-and-parse cycle in a 5-attempt, 10s-apart retry
+  loop with a compact diagnostic dump per failed attempt. Force-testing that retry loop itself
+  against a genuinely malformed response caught a real bug before it shipped: `jq`'s own exit 5 on
+  parse failure was tripping `set -e` unguarded, crashing the loop silently — fixed with `|| true`
+  on that one assignment. Four cases force-tested against the real runner, including a malformed-
+  response reproduction, not only well-formed synthetics.
 
 **Modified**
 - `.forgejo/workflows/README.md` — `dev-reset.yml` added to the directory's own file list (Task 8.4).
@@ -2041,6 +2052,60 @@ every claim below that needs the live DB is written as a **check to run**, not a
       alone. **One more manual dispatch of `dev-reset.yml` from `main`, after this fix merges, is
       recommended** — cheap (~2 runs, well under the floor), and the only way to see this specific
       new step go green for the first time in the exact shape it will run every Sunday.
+
+      🔴 **PR D merged (`d0b17c83`), the recommended re-dispatch executed — run 1089
+      (`dev-reset.yml`) — and the read-back step failed a THIRD time, again spawning a genuinely
+      successful deploy underneath it (run 1090, `deploy-dev.yml`, SUCCESS). Third red orchestrator,
+      third green deploy — the composition's substantive claim is now proven three times over; the
+      read-back step's own reliability was not, until this round.** Diagnosed the same way: the
+      run's own literal log (`action_task.log_filename` → `9240.log.zst`). Sweep: SUCCESS (real
+      production thresholds again, three images correctly kept — `0h`/`6h`/`18h old`). Dispatch:
+      SUCCESS, `HTTP 204`, genuinely spawned run 1090. Read-back: FAILURE — and this time the
+      `.title` fix from PR D **was already live and correctly matched nothing wrong**: the response
+      body the log captured shows `{"id":1090,"title":"Deploy DEV Stand",...}` sitting in
+      `workflow_runs[0]`, byte-for-byte correct (hex-dumped to rule out a hidden-encoding
+      mismatch), yet the step still reported no match. **Two hypotheses tested and one ruled out
+      live, not assumed:** the coordinator's own race hypothesis ("run 1090 might not have existed
+      in the list yet") does **not** hold — `action_run.created` for 1090 is `13:36:50 UTC`, the
+      SAME second as the dispatch's own `204`, a full ~2s before the read-back's own `GET` at
+      `13:36:52`; the run was already in Postgres, and already in the printed response body, before
+      this step ever queried. The response itself could not be fully recovered after the fact (the
+      file lived only inside the now-torn-down job container, and this instance's own actions-log
+      capture truncates a single stdout line at ~64KB — short of what a `limit=5`, no-`event`-filter
+      response reaches once `push`/`pull_request`-triggered runs with heavier embedded objects
+      (`build-main.yml`'s merge-commit title, `ci.yml`'s own commit titles, both containing em-dashes
+      and single quotes) mix in with the one `workflow_dispatch` entry this step wants) — `jq` parses
+      the WHOLE document before emitting anything, so one malformed byte anywhere in an UNRELATED
+      run's own embedded structure silently fails the entire parse (`2>/dev/null`), indistinguishable
+      from genuine "no match" under the step's own prior diagnostics. **Fixed with two compounding,
+      cause-agnostic changes plus a genuine bug found while force-testing the fix itself:** **(1)**
+      narrow the query server-side with `&event=workflow_dispatch` (this step's own target is always
+      dispatch-triggered; drops the heavier `push`/`pull_request` entries and roughly a third of the
+      payload, whether or not they were ever the actual cause). **(2)** wrap the whole GET-and-parse
+      cycle in a retry loop — 5 attempts, 10s apart, a fresh request each time (per the coordinator's
+      own suggested budget) — plus a COMPACT `id|title` diagnostic dump on every failed attempt
+      (never the full body again — the exact thing the ~64KB truncation made useless last time).
+      **(3) Found force-testing the retry loop itself, against a deliberately malformed/truncated
+      response — the "reproduce the real case, not only synthetic" instruction paid off directly**:
+      `jq` exits status `5` on a JSON parse failure, and under `set -o pipefail`, the assignment
+      `LATEST_CREATED="$(jq ... | head -n1)"` with no `|| true` let that `5` propagate into the
+      assignment itself, which `set -e` treats as script-ending — the retry loop, AS FIRST WRITTEN,
+      would have crashed silently with no diagnostic on exactly the kind of bad response it was built
+      to survive. Caught and fixed (`|| true` on that one assignment, correct here since an
+      unparseable attempt should count as "no match yet" and retry, not abort) before this ever
+      reached a live runner. **Force-tested against the real runner with four cases**, not only the
+      well-formed ones: an immediate match (attempt 1, OK); a retry-then-match using the ACTUAL run
+      titles from the failure window (`build-main.yml`'s merge title, `ci.yml`'s em-dash commit
+      title) on attempts 1-2, matching on attempt 3 — the closest reproduction of the real shape
+      available without the unrecoverable original bytes; a full 5-attempt exhaustion with a correct,
+      diagnostic-bearing FAIL message; and a genuinely malformed/truncated response on attempt 1,
+      recovering on attempt 2 — the case that caught the `|| true` bug above. All four behave
+      correctly on the real runner binary (`deploy-base-dev-preprod:2026-08-07`) after the fix.
+      Pushed to `story-4-6/pr-5-readback-retry`, off `main` @ `d0b17c83` (PR D's own merge commit).
+      Recommendation for the coordinator's own next dispatch: unchanged in spirit — one more manual
+      composition dispatch after this merges is still the only way to see the reset's own run go
+      green for the first time, and this round's own retry loop is specifically designed to make
+      that far more likely to hold on the first try.
 
 #### Patch
 
@@ -2476,3 +2541,4 @@ every claim below that needs the live DB is written as a **check to run**, not a
 | 2026-08-22 | **Fix-pass (PR C) applied, all 31 findings resolved, `Status` → `review`.** Oleg's rulings relayed: DN1 — AC6 narrowed to the dispatch layer plus a non-blocking read-back (both the story's own AC6 and `epics.md`'s twin narrowed; `dev-reset.yml` gained a fourth step confirming a `deploy-dev.yml` run was actually created, without polling it to completion); DN2 — 7.4 closed as covered by Story 4.3's own run 948, 7.3/7.5 to be earned together on a disposable branch (`story-4-6/throwaway-7-3-7-5`, plan and dispatch sequence written into Task 7 above, handed to the coordinator); DN3 — the coordinator named as the owner of Sunday 2026-08-23's own by-query check, the composition bought by one manual post-merge dispatch of the final file from `main`, and the disarm procedure (comment out the entire `schedule:` block, push to `main`) written into the file's own header. `H1`'s ledger recount, run live via direct Postgres query: **16 runs above baseline 988, not 11** — two previously-missed probe ticks (1038, 1041) and PR B's own three structural runs (1036/1037/1042) folded in; post-PR-B schedule state confirmed clean (exactly one `action_schedule`/`action_schedule_spec` row, the probe registration gone). `H3` closed via a new DB capability (`action_task_step`, joined through `action_run_job`/`action_task`): the sweep step's own status read directly for all five probe-window runs plus 994/1004, confirming genuine success (not masked) and that `steps.<id>.outcome` conditionals evaluate correctly on this runner. `H4` resolved: `continue-on-error` removed from the sweep step entirely, replaced with the `if: ${{ always() && steps.sweep.outcome == 'failure' }}` shape already live-proven at `deploy-dev.yml:411`; the dispatch step gained its own `if: always()` so the non-fatal-sweep requirement holds without it. M1-M8 (fail-closed enumeration idioms, the M6 holder-state gate rewritten around Docker's own terminal-state prefixes and the Go zero-value `FinishedAt` trap, stderr capture on both destructive commands, the token whitespace guard, `\|\| true` on diagnostics) and M9-M13 (epics.md's "afterwards"→"first" and its still-unamended third AC, D31's appended §6 with the missing live evidence, `deferred-work.md`'s owner correction, three story-record corrections) all applied. L1-L11 applied in full: the dispatch curl gained `--retry`/`--max-time`/`-L`, a `MAX_CANDIDATES` blast-radius ceiling was added to both enumerations, `IMG_ID` deduplicated, dead `$GITHUB_OUTPUT` writes removed, AC7's two hazards added to the header, `sprint-status.yaml`'s falsified prediction corrected. Full `yaml.safe_load` + `bash -n` + stray-`${{ }}` validation re-run clean on all four `run:` bodies (one new step added by DN1(b)) before this push |
 | 2026-08-21 | **DN2's rows 7.3/7.5 earned live — run 1072 (`story-4-6/throwaway-7-3-7-5`, coordinator's dispatch), and the live verification found and fixed a real bug this story shipped with, undetected across every prior run.** 7.3: `HTTP 401`, classifier message names the credential, Forgejo's own body confirms the deliberately-fake token, stand untouched — clean. 7.5's holder pair: `...999002` (`created`, never started) correctly KEPT at threshold 0 — a live re-exercise of M6's own fix; `...999001` (`Exited`) correctly REMOVED. 🔴 **7.5's image pair did not behave as designed** — both images were kept via a parse FAILURE (`could not parse its own CreatedAt`), not the reference/age check. Investigated by testing directly against the real runner image (`deploy-base-dev-preprod:2026-08-07`): its `date` is BusyBox **v1.37.0**, not the `busybox:1.38` the code review's own "dismissed" finding was tested against — v1.37.0's `-d` grammar has **no offset syntax at all**, rejecting `docker images`' own `CreatedAt` unconditionally. Consequence: the image-removal half of the sweep had been silently inert on every run since 994 — always fail-closed (no mis-removal), never a genuine REMOVE. **Fixed this round**, not merely documented: the zone-stripping regex replaced with shell arithmetic against the parsed `±HHMM` offset, verified directly against the real runner's own `date` binary using the exact strings observed in run 1072's own log. Two "Dismissed" review findings corrected in place (the `<<<` here-string claim and the `+0200` date-parse claim, both originally tested against a substitute environment) rather than left standing. A second, unrelated platform capability found in the same investigation: job/step logs **are** retrievable on this instance after all, via a zstd-compressed file on local disk (`action_task.log_filename`, never queried before) — recorded in `deferred-work.md`, not adopted as a new standing practice for this story. `Status` remains `review`; PR C ready to open |
 | 2026-08-22 | **PR C merged (a0ec3fa4). DN3(i)'s composition dispatch (run 1080, `dev-reset.yml` from `main`) — FAILURE, but its own dispatch step succeeded and genuinely spawned run 1081 (`deploy-dev.yml`), SUCCESS — the substantive composition claim is proven; the reset's own run failed in the brand-new DN1(b) read-back step, its first-ever live exercise.** Diagnosed by reading run 1080's own literal log (`action_task.log_filename`, this story's own newly-found capability, applied for the first time to a real diagnostic question rather than a verification double-check). Sweep: SUCCESS, first live exercise of the date-parsing fix at REAL production thresholds (168h/24h) — `KEEP image ...: 6h old, under the 168h threshold`, confirming DN2/7.5's fix holds beyond the throwaway branch's own lowered-threshold test. Dispatch: SUCCESS, `HTTP 204`, spawned run 1081 correctly. Read-back: FAILURE, two bugs, both found and fixed — **(a)** Forgejo's run object carries `.title` ("Deploy DEV Stand"), not `.name` (the GitHub-analogy field this step's own header had flagged as unverified) — the correct run (1081) was sitting in the response the whole time, invisible only to the wrong field name; **(b)** Forgejo's `created_at` is RFC3339 (`T` separator, colon-delimited offset), which this exact runner's BusyBox v1.37.0 cannot parse — the same root limitation as the image-loop bug, now confirmed to also block RFC3339 timestamps; never reached in run 1080 (bug (a) failed first), so a latent bug closed before its own first live trigger. Both fixed and force-tested against the real runner binary (three cases: `+02:00` offset match, `Z`-suffix match, deliberately-stale rejection — all correct) before any further dispatch was spent. Pushed to `story-4-6/pr-4-composition-fix`, off `main` @ `a0ec3fa4`. Recommendation recorded at DN3 above: the composition's substantive half is proven (1080→1081), but the reset's own run has never once been green in the armed shape and the read-back step's first two live exposures both found real bugs — one more manual dispatch after this fix merges is recommended to retire the risk of a third unknown, decision left to Oleg/the coordinator |
+| 2026-08-22 | **PR D merged (`d0b17c83`). Recommended re-dispatch executed — run 1089 — FAILURE a third time, spawning run 1090 (`deploy-dev.yml`) SUCCESS a third time: the composition's substantive claim is proven three times over, the read-back step's own reliability was not.** `.title` was already correctly matching (confirmed byte-for-byte in the log, hex-dumped); the coordinator's own race hypothesis ruled out live (`action_run.created` for 1090 predates the read-back's own GET by ~2s). Root cause not fully recoverable (the response lived only in the torn-down job container; this instance's own ~64KB actions-log line truncation cut off the reconstruction) but `jq` parses the whole document before emitting anything, so one malformed byte anywhere in an unrelated, heavier `push`/`pull_request`-triggered run's own embedded object (mixed into an unfiltered `limit=5` response) silently fails the whole parse. Fixed with two cause-agnostic, compounding changes: `&event=workflow_dispatch` narrows the query server-side; a 5-attempt, 10s-apart retry loop (the coordinator's own suggested budget) wraps the whole GET-and-parse cycle, with a compact `id\|title` diagnostic dump on every failed attempt instead of a body that truncation makes useless. Force-testing the retry loop itself against a deliberately malformed response caught a genuine bug before it ever shipped: `jq`'s own exit 5 on a parse failure, unguarded by `\|\| true`, was tripping `set -e` and crashing the loop silently on exactly the response shape it was built to survive — fixed. Four cases force-tested against the real runner (immediate match; retry-then-match using the actual failure-window run titles; full exhaustion; malformed-then-recover) all correct. Pushed to `story-4-6/pr-5-readback-retry`, off `main` @ `d0b17c83` |
