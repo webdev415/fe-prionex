@@ -1,28 +1,33 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { ProfilePhotoField } from './ProfilePhotoField'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/Select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
-import { normalizeBackendLanguage } from '@/lib/i18n'
+import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
+
+const TRIGGER_CLASS =
+  'text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between rounded-lg border px-4 py-2 text-sm font-light'
+
+const CONTENT_CLASS =
+  'max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5'
 
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -49,12 +54,19 @@ export function ProfileSettingsPage() {
       language: currentLanguage,
       timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
+      work_format: (user?.work_format ?? 'office') as 'office' | 'remote',
       currentPassword: '',
       newPassword: '',
     }
   }, [user, i18n.language])
 
   const [form, setForm] = useState(initialForm)
+
+  // Whether the user has actually chosen a work format in this session. It
+  // cannot be inferred by comparing values: the field falls back to office for
+  // display, so a user picking office when the server holds remote produces no
+  // difference to compare and the correction would never be sent.
+  const [workFormatTouched, setWorkFormatTouched] = useState(false)
 
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState(() => ({
     email: initialForm.email,
@@ -64,22 +76,111 @@ export function ProfileSettingsPage() {
     phone: initialForm.phone,
     language: initialForm.language,
     timezone: initialForm.timezone,
+    work_format: initialForm.work_format,
+    agent_status: initialForm.agent_status,
   }))
 
+  const workFormatOptions = [
+    { value: 'office' as const, label: t('pages.profileSettings.workFormat.office', 'Office') },
+    { value: 'remote' as const, label: t('pages.profileSettings.workFormat.remote', 'Remote') },
+  ]
+
+  const agentStatusOptions = [
+    {
+      value: 'online',
+      label: t('pages.profile.agentStatus.online') || 'Online',
+      dot: 'bg-green-500',
+    },
+    { value: 'busy', label: t('pages.profile.agentStatus.busy') || 'Busy', dot: 'bg-yellow-500' },
+    {
+      value: 'on-call',
+      label: t('pages.profile.agentStatus.onCall') || 'On Call',
+      dot: 'bg-red-500',
+    },
+    {
+      value: 'offline',
+      label: t('pages.profile.agentStatus.offline') || 'Offline',
+      dot: 'bg-gray-400',
+    },
+  ]
+
+  // Switching the language has to reach i18n as well as the form: the label the
+  // dropdown shows comes from the form, but the rest of the page is translated
+  // live. LanguageSwitcher used to own this; the profile page was its only
+  // caller, so the call moved here with it.
+  const handleLanguageChange = async (lang: (typeof SUPPORTED_LANGUAGES)[number]) => {
+    await i18n.changeLanguage(lang)
+    setForm((prev) => ({ ...prev, language: lang }))
+  }
+
+  // Read inside the re-sync effect below, which must not re-run when they
+  // change - only when the user does.
+  const latest = useRef({ form, savedProfileSnapshot, workFormatTouched })
+  useEffect(() => {
+    latest.current = { form, savedProfileSnapshot, workFormatTouched }
+  }, [form, savedProfileSnapshot, workFormatTouched])
+
   // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
+  //
+  // A refresh can land in the middle of an edit: it runs on mount, and again
+  // after every photo upload or removal. So a server value is taken only for a
+  // field the user has not touched. Overwriting a touched one would discard
+  // what they typed, and because the snapshot moves in step the unsaved-changes
+  // bar would vanish with it - the edit would be gone with nothing to say so.
   useEffect(() => {
     if (!user) return
+
+    const {
+      form: current,
+      savedProfileSnapshot: saved,
+      workFormatTouched: touched,
+    } = latest.current
+    const serverLanguage = user.language
+      ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
+      : undefined
+
+    const edited = {
+      email: current.email !== saved.email,
+      first_name: current.first_name !== saved.first_name,
+      last_name: current.last_name !== saved.last_name,
+      timezone: current.timezone !== saved.timezone,
+      language: current.language !== saved.language,
+      agent_status: current.agent_status !== saved.agent_status,
+      // Picking the value already displayed leaves nothing to compare, which is
+      // what the flag is for. Without it the pick would be silently reverted
+      // here while the flag survived to save the reverted value.
+      work_format: touched || current.work_format !== saved.work_format,
+    }
+
+    const take = <T,>(isEdited: boolean, mine: T, incoming: T | undefined): T =>
+      isEdited || incoming === undefined ? mine : incoming
+
     setForm((prev) => ({
       ...prev,
       username: user.username || prev.username,
+      agent_status: take(edited.agent_status, prev.agent_status, user.agent_status || undefined),
+      email: take(edited.email, prev.email, user.email || undefined),
+      first_name: take(edited.first_name, prev.first_name, user.firstName || undefined),
+      last_name: take(edited.last_name, prev.last_name, user.lastName || undefined),
+      timezone: take(edited.timezone, prev.timezone, user.timezone || undefined),
+      language: take(edited.language, prev.language, serverLanguage),
+      work_format: take(edited.work_format, prev.work_format, user.work_format ?? undefined),
+    }))
+
+    // The snapshot is what the server holds, so it always follows the server -
+    // no edited check here. That is what makes "changed" mean "differs from the
+    // server": an untouched field moves with it and reads as clean, while a
+    // field the form is holding an edit for stays different and keeps offering
+    // to save.
+    setSavedProfileSnapshot((prev) => ({
+      ...prev,
       email: user.email || prev.email,
       first_name: user.firstName || prev.first_name,
       last_name: user.lastName || prev.last_name,
       timezone: user.timezone || prev.timezone,
+      language: serverLanguage ?? prev.language,
+      work_format: user.work_format ?? prev.work_format,
       agent_status: user.agent_status || prev.agent_status,
-      language: user.language
-        ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
-        : prev.language,
     }))
   }, [user])
 
@@ -91,9 +192,15 @@ export function ProfileSettingsPage() {
       form.middle_name !== savedProfileSnapshot.middle_name ||
       form.phone !== savedProfileSnapshot.phone ||
       form.language !== savedProfileSnapshot.language ||
-      form.timezone !== savedProfileSnapshot.timezone
+      form.timezone !== savedProfileSnapshot.timezone ||
+      form.work_format !== savedProfileSnapshot.work_format ||
+      form.agent_status !== savedProfileSnapshot.agent_status ||
+      // Picking the value already on screen is not a value change, but it is
+      // still something to save: the field may be showing its fallback while
+      // the server holds the other one.
+      workFormatTouched
     )
-  }, [form, savedProfileSnapshot])
+  }, [form, savedProfileSnapshot, workFormatTouched])
 
   // Refresh auth user once on mount so profile has full /me data (projects, agent fields, names)
   useEffect(() => {
@@ -155,6 +262,12 @@ export function ProfileSettingsPage() {
       language: form.language || undefined,
       timezone: form.timezone || undefined,
       agent_status: user?.is_agent ? form.agent_status : undefined,
+      // Only when the user actually picked something. The field falls back to
+      // office for display, and when /users/me is unavailable the store builds
+      // the user from the token, which carries no work format at all - sending
+      // the fallback would record a choice nobody made and could overwrite a
+      // remote employee with office on an unrelated save.
+      work_format: workFormatTouched ? form.work_format : undefined,
     }
 
     try {
@@ -169,7 +282,10 @@ export function ProfileSettingsPage() {
         phone: form.phone,
         language: form.language,
         timezone: form.timezone,
+        work_format: form.work_format,
+        agent_status: form.agent_status,
       })
+      setWorkFormatTouched(false)
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)
@@ -186,9 +302,12 @@ export function ProfileSettingsPage() {
       phone: savedProfileSnapshot.phone,
       language: savedProfileSnapshot.language,
       timezone: savedProfileSnapshot.timezone,
+      work_format: savedProfileSnapshot.work_format,
+      agent_status: savedProfileSnapshot.agent_status,
       currentPassword: '',
       newPassword: '',
     }))
+    setWorkFormatTouched(false)
   }
 
   return (
@@ -200,10 +319,13 @@ export function ProfileSettingsPage() {
       <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         <div className="bg-card/50 flex w-full flex-col items-center gap-4 self-stretch rounded-xl px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
-            <div className="bg-muted relative flex flex-col items-center justify-center gap-[10px] rounded-full p-3.5">
-              <div className="border-border absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent" />
-              <Icons.User02 size={40} className="text-muted-foreground" strokeWidth={1} />
-            </div>
+            <ProfilePhotoField
+              userId={user?.id ? Number(user.id) : null}
+              firstName={form.first_name}
+              lastName={form.last_name}
+              fullName={user?.fullName}
+              avatarUrl={user?.avatar_url}
+            />
             <div className="text-foreground text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
               {user?.username}
             </div>
@@ -358,31 +480,108 @@ export function ProfileSettingsPage() {
               <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
-                  <LanguageSwitcher
-                    id="language"
-                    variant="dashboard"
-                    value={form.language}
-                    onValueChange={(v: string) => setForm({ ...form, language: v as 'en' | 'uk' })}
-                  />
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="language" type="button" className={TRIGGER_CLASS}>
+                        <span className="text-left">{LANGUAGE_NAMES[form.language]}</span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <DropdownMenuItem
+                          key={lang}
+                          className="cursor-pointer"
+                          onClick={() => void handleLanguageChange(lang)}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{LANGUAGE_NAMES[lang]}</span>
+                            {form.language === lang ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 self-stretch">
+                  <Label htmlFor="work-format">
+                    {t('pages.profileSettings.workFormat.label', 'Work format')}
+                  </Label>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="work-format" type="button" className={TRIGGER_CLASS}>
+                        <span className="text-left">
+                          {workFormatOptions.find((o) => o.value === form.work_format)?.label}
+                        </span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {workFormatOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setWorkFormatTouched(true)
+                            setForm({ ...form, work_format: option.value })
+                          }}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{option.label}</span>
+                            {form.work_format === option.value ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="timezone">{t('pages.users.forms.timezone')}</Label>
-                  <Select
-                    value={form.timezone}
-                    onValueChange={(v: string) => setForm({ ...form, timezone: v })}
-                  >
-                    <SelectTrigger id="timezone">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timezoneOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button id="timezone" type="button" className={TRIGGER_CLASS}>
+                        <span className="line-clamp-1 text-left">
+                          {timezoneOptions.find((o) => o.value === form.timezone)?.label ??
+                            form.timezone}
+                        </span>
+                        <Icons.ArrowDown
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground shrink-0"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                      {timezoneOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className="cursor-pointer"
+                          onClick={() => setForm({ ...form, timezone: option.value })}
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{option.label}</span>
+                            {form.timezone === option.value ? (
+                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -413,40 +612,54 @@ export function ProfileSettingsPage() {
                       >
                         {t('pages.users.forms.agentStatus') || 'Agent Status'}
                       </label>
-                      <Select
-                        value={form.agent_status}
-                        onValueChange={(v: string) => setForm({ ...form, agent_status: v })}
-                      >
-                        <SelectTrigger id="agent-status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="online">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-green-500" />
-                              <span>{t('pages.profile.agentStatus.online') || 'Online'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="busy">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                              <span>{t('pages.profile.agentStatus.busy') || 'Busy'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="on-call">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-red-500" />
-                              <span>{t('pages.profile.agentStatus.onCall') || 'On Call'}</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="offline">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-gray-400" />
-                              <span>{t('pages.profile.agentStatus.offline') || 'Offline'}</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button id="agent-status" type="button" className={TRIGGER_CLASS}>
+                            <span className="flex items-center gap-2 text-left">
+                              <span
+                                className={`h-2 w-2 rounded-full ${
+                                  agentStatusOptions.find((o) => o.value === form.agent_status)
+                                    ?.dot ?? 'bg-gray-400'
+                                }`}
+                              />
+                              <span>
+                                {
+                                  agentStatusOptions.find((o) => o.value === form.agent_status)
+                                    ?.label
+                                }
+                              </span>
+                            </span>
+                            <Icons.ArrowDown
+                              size={16}
+                              strokeWidth={1.5}
+                              className="text-muted-foreground shrink-0"
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                          {agentStatusOptions.map((option) => (
+                            <DropdownMenuItem
+                              key={option.value}
+                              className="cursor-pointer"
+                              onClick={() => setForm({ ...form, agent_status: option.value })}
+                            >
+                              <span className="flex w-full items-center justify-between gap-2">
+                                <span className="flex items-center gap-2">
+                                  <span className={`h-2 w-2 rounded-full ${option.dot}`} />
+                                  <span>{option.label}</span>
+                                </span>
+                                {form.agent_status === option.value ? (
+                                  <Icons.Tick02
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-primary"
+                                  />
+                                ) : null}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
                 </div>

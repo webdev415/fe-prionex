@@ -53,6 +53,9 @@ export interface CurrentUserResponse {
   theme_base?: string
   /** UI theme accent (teal | cyan | … | amber). */
   theme_accent?: string
+  /** Served path of the uploaded profile photo; absent means show the monogram. */
+  avatar_url?: string | null
+  work_format?: 'office' | 'remote' | null
   phone?: string | null
   role: {
     id: number
@@ -114,6 +117,8 @@ export interface User {
   dialer_extension?: string
   is_agent?: boolean
   agent_status?: string
+  avatar_url?: string | null
+  work_format?: 'office' | 'remote' | null
   timezone?: string
   /** Backend UI language preference (uk | en; legacy `ru` may still appear as string). */
   language?: string
@@ -138,6 +143,7 @@ export interface UpdateMyProfileInput {
   theme_base?: string
   theme_accent?: string
   agent_status?: string
+  work_format?: 'office' | 'remote'
 }
 
 export interface LoginRequest {

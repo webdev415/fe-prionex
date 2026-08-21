@@ -6,6 +6,22 @@ export const API_BASE_URL =
     ? import.meta.env.VITE_API_BASE_URL
     : 'http://localhost:8000'
 
+/**
+ * Turn a server-relative asset path into one the browser can actually fetch.
+ *
+ * The API returns paths like /api/v1/users/avatars/1-abc.png with no host, which
+ * is right - the host belongs to the deployment, not the database row. But an
+ * <img src> is resolved against the page origin, not against this client's
+ * baseURL, so a bare path asks the frontend host for a file only the API has.
+ * Anything already absolute is handed back untouched.
+ */
+export function resolveAssetUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined
+  if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path
+  if (!API_BASE_URL) return path
+  return `${API_BASE_URL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
 // Backend gunicorn timeout is 60s; FE must outlive it so a slow-but-eventually-
 // successful request is not cancelled by axios before the server responds.
 // 75s gives a 15s safety margin past the backend ceiling.
@@ -169,6 +185,21 @@ api.interceptors.request.use(
 // ---------------------------------------------------------------------------
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _transientRetryCount?: number
+  /**
+   * Opt out of the global handling below. Set by requests that fetch one
+   * subresource rather than carrying the page: a profile photo that 401s means
+   * that photo is gone, not that the session is, and ending the session over it
+   * would sign the user out mid-edit. Such a request wants the error returned
+   * to it so it can degrade on its own.
+   */
+  _skipAuthRedirect?: boolean
+  _noTransientRetry?: boolean
+}
+
+/** Per-request escape hatches, for callers outside this module. */
+export interface RequestOverrides {
+  _skipAuthRedirect?: boolean
+  _noTransientRetry?: boolean
 }
 
 /**
@@ -200,6 +231,7 @@ function shouldRetryTransient(
   config: RetryableRequestConfig | undefined
 ): boolean {
   if (!config) return false
+  if (config._noTransientRetry) return false
   const method = (config.method || 'get').toLowerCase()
   // Only safe methods. Mutations may not be idempotent, so we let the React
   // Query mutation-default layer handle them (network-error only, 1 try).
@@ -250,7 +282,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as RetryableRequestConfig | undefined
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
 
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest?._skipAuthRedirect) {
       triggerAuthExpired()
       return Promise.reject(error)
     }

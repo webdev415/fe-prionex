@@ -10357,6 +10357,24 @@
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted"
     },
+    "profileSettings": {
+      "photo": {
+        "upload": "Upload photo",
+        "replace": "Replace photo",
+        "remove": "Remove photo",
+        "wrongType": "Choose a JPEG, PNG or WebP image",
+        "tooLarge": "The photo must be 2 MB or smaller",
+        "uploaded": "Photo updated",
+        "removed": "Photo removed",
+        "confirmRemoveTitle": "Remove your photo?",
+        "confirmRemoveMessage": "Your initials will be shown instead. You can upload a new photo at any time."
+      },
+      "workFormat": {
+        "label": "Work format",
+        "office": "Office",
+        "remote": "Remote"
+      }
+    },
     "coefficientRanges": {
       "title": "Coefficient ranges",
       "description": "Loan closing coefficients by loan age. Ranges are inclusive on both ends and may not overlap.",
