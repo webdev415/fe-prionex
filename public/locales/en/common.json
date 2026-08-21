@@ -8759,7 +8759,8 @@
         "userAgent": "User Agent",
         "added": "Added",
         "modified": "Modified",
-        "removed": "Removed"
+        "removed": "Removed",
+        "details": "Details"
       },
       "csvExport": {
         "title": "Export audit logs to CSV",

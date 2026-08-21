@@ -8108,7 +8108,8 @@
         "userAgent": "User Agent",
         "added": "Додано",
         "modified": "Змінено",
-        "removed": "Видалено"
+        "removed": "Видалено",
+        "details": "Деталі"
       },
       "csvExport": {
         "title": "ЕКСПОРТ ЖУРНАЛУ АУДИТУ В CSV",
