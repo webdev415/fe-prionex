@@ -7,11 +7,16 @@ export const DEFAULT_USER_SORT_ORDER: UserSortOrder = 'desc'
 /** Numeric filter sentinel: 0 means "All" (no filter sent to API). */
 export const ALL_FILTER_VALUE = 0
 
+export type WorkFormatFilter = 'all' | 'office' | 'remote'
+
+export const DEFAULT_WORK_FORMAT_FILTER: WorkFormatFilter = 'all'
+
 export interface UserFilterState {
   roleId: number
   projectId: number
   departmentId: number
   groupId: number
+  workFormat: WorkFormatFilter
   statusFilter: UserStatusFilter
   sortBy: UserSortField
   sortOrder: UserSortOrder
@@ -22,6 +27,7 @@ export const DEFAULT_USER_FILTERS: UserFilterState = {
   projectId: ALL_FILTER_VALUE,
   departmentId: ALL_FILTER_VALUE,
   groupId: ALL_FILTER_VALUE,
+  workFormat: DEFAULT_WORK_FORMAT_FILTER,
   statusFilter: DEFAULT_USER_STATUS_FILTER,
   sortBy: DEFAULT_USER_SORT_BY,
   sortOrder: DEFAULT_USER_SORT_ORDER,
@@ -38,12 +44,21 @@ export function statusFilterToApiStatus(
 export function isUserFilterActive(
   key: keyof Pick<
     UserFilterState,
-    'roleId' | 'projectId' | 'departmentId' | 'groupId' | 'statusFilter'
+    'roleId' | 'projectId' | 'departmentId' | 'groupId' | 'workFormat' | 'statusFilter'
   >,
   value: UserFilterState[keyof UserFilterState]
 ): boolean {
   if (key === 'statusFilter') {
     return value !== DEFAULT_USER_STATUS_FILTER
   }
+  if (key === 'workFormat') {
+    return value !== DEFAULT_WORK_FORMAT_FILTER
+  }
   return value !== ALL_FILTER_VALUE
+}
+
+export function workFormatToApiValue(
+  workFormat: WorkFormatFilter
+): 'office' | 'remote' | undefined {
+  return workFormat === 'all' ? undefined : workFormat
 }

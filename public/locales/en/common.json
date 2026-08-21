@@ -3603,7 +3603,9 @@
           "all": "All",
           "active": "Active",
           "disabled": "Disabled"
-        }
+        },
+        "workFormat": "Work format",
+        "clearAll": "Clear all"
       },
       "tableHeaders": {
         "username": "Username",
@@ -3613,7 +3615,10 @@
         "projectRole": "Project & Role",
         "extension": "Extension / Agent",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "position": "Position",
+        "department": "Department",
+        "workFormat": "Work format"
       },
       "actions": {
         "view": "View",

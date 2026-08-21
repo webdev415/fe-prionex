@@ -57,6 +57,8 @@ export interface ApiUser {
   two_factor_enabled: boolean
   // True when the user has previously enrolled — admin can re-enable without re-enrollment.
   two_factor_has_secret: boolean
+  avatar_url?: string | null
+  work_format?: 'office' | 'remote'
 }
 
 /**
@@ -87,6 +89,7 @@ export interface UserListParams {
   project_id?: number
   department_id?: number
   group_id?: number
+  work_format?: 'office' | 'remote'
   sort_by?: UserSortField
   sort_order?: UserSortOrder
 }

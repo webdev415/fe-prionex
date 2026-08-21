@@ -12,12 +12,14 @@ import { useDepartments } from '@/features/departments'
 import { useGroups } from '@/features/groups'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { Icons } from '@/lib/icons'
 import type { UserStatusFilter } from '@/features/users/types'
 import {
   ALL_FILTER_VALUE,
   DEFAULT_USER_FILTERS,
   isUserFilterActive,
   type UserFilterState,
+  type WorkFormatFilter,
 } from '../lib/userFilterDefaults'
 
 interface UserFiltersBarProps {
@@ -56,6 +58,52 @@ function FilterSelect({
         </SelectTrigger>
         <SelectContent>{children}</SelectContent>
       </Select>
+    </div>
+  )
+}
+
+interface AppliedChip {
+  key: string
+  label: string
+  onClear: () => void
+}
+
+function AppliedFilterChips({
+  chips,
+  clearAllLabel,
+  onReset,
+}: {
+  chips: AppliedChip[]
+  clearAllLabel: string
+  onReset: () => void
+}) {
+  if (chips.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {chips.map((chip) => (
+        <span
+          key={chip.key}
+          className="bg-card text-foreground border-border flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs"
+        >
+          {chip.label}
+          <button
+            type="button"
+            onClick={chip.onClear}
+            aria-label={chip.label}
+            className="text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            <Icons.Cancel01 size={12} strokeWidth={2} />
+          </button>
+        </span>
+      ))}
+      <button
+        type="button"
+        onClick={onReset}
+        className="text-muted-foreground hover:text-foreground cursor-pointer text-xs underline-offset-2 hover:underline"
+      >
+        {clearAllLabel}
+      </button>
     </div>
   )
 }
@@ -112,11 +160,65 @@ export function UserFiltersBar({ filters, onFilterChange, onReset }: UserFilters
     })
   }
 
+  const appliedChips = useMemo(() => {
+    const chips: AppliedChip[] = []
+    if (isUserFilterActive('projectId', filters.projectId)) {
+      chips.push({
+        key: 'project',
+        label: `${t('pages.users.filters.project')}: ${projectNameById.get(filters.projectId) ?? filters.projectId}`,
+        onClear: () =>
+          onFilterChange({
+            projectId: ALL_FILTER_VALUE,
+            departmentId: ALL_FILTER_VALUE,
+            groupId: ALL_FILTER_VALUE,
+          }),
+      })
+    }
+    if (isUserFilterActive('roleId', filters.roleId)) {
+      chips.push({
+        key: 'role',
+        label: `${t('pages.users.filters.role')}: ${roles.find((r) => r.id === filters.roleId)?.name ?? filters.roleId}`,
+        onClear: () => onFilterChange({ roleId: ALL_FILTER_VALUE }),
+      })
+    }
+    if (isUserFilterActive('departmentId', filters.departmentId)) {
+      chips.push({
+        key: 'department',
+        label: `${t('pages.users.filters.department')}: ${departments.find((d) => d.id === filters.departmentId)?.name ?? filters.departmentId}`,
+        onClear: () =>
+          onFilterChange({ departmentId: ALL_FILTER_VALUE, groupId: ALL_FILTER_VALUE }),
+      })
+    }
+    if (isUserFilterActive('groupId', filters.groupId)) {
+      chips.push({
+        key: 'group',
+        label: `${t('pages.users.filters.group')}: ${groups.find((g) => g.id === filters.groupId)?.name ?? filters.groupId}`,
+        onClear: () => onFilterChange({ groupId: ALL_FILTER_VALUE }),
+      })
+    }
+    if (isUserFilterActive('workFormat', filters.workFormat)) {
+      chips.push({
+        key: 'workFormat',
+        label: `${t('pages.users.filters.workFormat')}: ${t(`pages.profileSettings.workFormat.${filters.workFormat}`)}`,
+        onClear: () => onFilterChange({ workFormat: DEFAULT_USER_FILTERS.workFormat }),
+      })
+    }
+    if (isUserFilterActive('statusFilter', filters.statusFilter)) {
+      chips.push({
+        key: 'status',
+        label: `${t('pages.users.filters.status')}: ${t(`pages.users.filters.statusOptions.${filters.statusFilter}`)}`,
+        onClear: () => onFilterChange({ statusFilter: DEFAULT_USER_FILTERS.statusFilter }),
+      })
+    }
+    return chips
+  }, [filters, projectNameById, roles, departments, groups, onFilterChange, t])
+
   const hasNonDefaultFilters =
     isUserFilterActive('roleId', filters.roleId) ||
     isUserFilterActive('projectId', filters.projectId) ||
     isUserFilterActive('departmentId', filters.departmentId) ||
     isUserFilterActive('groupId', filters.groupId) ||
+    isUserFilterActive('workFormat', filters.workFormat) ||
     isUserFilterActive('statusFilter', filters.statusFilter) ||
     filters.sortBy !== DEFAULT_USER_FILTERS.sortBy ||
     filters.sortOrder !== DEFAULT_USER_FILTERS.sortOrder
@@ -202,6 +304,17 @@ export function UserFiltersBar({ filters, onFilterChange, onReset }: UserFilters
         </FilterSelect>
 
         <FilterSelect
+          label={t('pages.users.filters.workFormat')}
+          value={filters.workFormat}
+          onValueChange={(value) => onFilterChange({ workFormat: value as WorkFormatFilter })}
+          isActive={isUserFilterActive('workFormat', filters.workFormat)}
+        >
+          <SelectItem value="all">{t('pages.users.filters.all')}</SelectItem>
+          <SelectItem value="office">{t('pages.profileSettings.workFormat.office')}</SelectItem>
+          <SelectItem value="remote">{t('pages.profileSettings.workFormat.remote')}</SelectItem>
+        </FilterSelect>
+
+        <FilterSelect
           label={t('pages.users.filters.status')}
           value={filters.statusFilter}
           onValueChange={(value) => onFilterChange({ statusFilter: value as UserStatusFilter })}
@@ -223,6 +336,12 @@ export function UserFiltersBar({ filters, onFilterChange, onReset }: UserFilters
           {t('pages.users.filters.resetToDefault')}
         </button>
       </div>
+
+      <AppliedFilterChips
+        chips={appliedChips}
+        clearAllLabel={t('pages.users.filters.clearAll')}
+        onReset={onReset}
+      />
     </div>
   )
 }
