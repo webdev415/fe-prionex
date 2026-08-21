@@ -18,6 +18,11 @@ vi.mock('sonner', () => ({ toast: toastFns }))
 vi.mock('@/features/auth/api/authApi', () => ({
   authApi: { uploadAvatar, deleteAvatar },
 }))
+const forgetAvatar = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/avatarImage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/avatarImage')>()
+  return { ...actual, forgetAvatar, loadAvatarObjectUrl: vi.fn(() => new Promise(() => {})) }
+})
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ refreshUser }),
 }))
@@ -166,5 +171,34 @@ describe('ProfilePhotoField', () => {
 
     await waitFor(() => expect(toastFns.error).toHaveBeenCalled())
     expect(toastFns.success).not.toHaveBeenCalled()
+  })
+
+  it('drops the replaced photo from the cache after an upload', async () => {
+    // Otherwise the old bytes keep being served for as long as the tab lives,
+    // whenever the replacement arrives under a name that has been seen before.
+    const input = renderField('/api/v1/users/avatars/old.png')
+
+    fireEvent.change(input, { target: { files: [file('me.png', 'image/png', 32)] } })
+
+    await waitFor(() => expect(uploadAvatar).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(forgetAvatar).toHaveBeenCalledWith(
+        'https://api.dev.crm-prionex.online/api/v1/users/avatars/old.png'
+      )
+    )
+  })
+
+  it('drops the photo from the cache after a removal', async () => {
+    renderField('/api/v1/users/avatars/old.png')
+
+    fireEvent.click(corner('Remove photo') as HTMLElement)
+    fireEvent.click(await screen.findByRole('button', { name: /^remove photo$/i }))
+
+    await waitFor(() => expect(deleteAvatar).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(forgetAvatar).toHaveBeenCalledWith(
+        'https://api.dev.crm-prionex.online/api/v1/users/avatars/old.png'
+      )
+    )
   })
 })

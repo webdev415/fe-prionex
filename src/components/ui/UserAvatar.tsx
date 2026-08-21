@@ -19,9 +19,15 @@
  * rather than leaving the browser's broken-image icon.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { monogramInitials } from '@/lib/avatarMonogram'
-import { avatarSource, loadAvatarObjectUrl, needsAuthenticatedFetch } from '@/lib/avatarImage'
+import {
+  avatarSource,
+  getAvatarCacheVersion,
+  loadAvatarObjectUrl,
+  needsAuthenticatedFetch,
+  subscribeAvatarCache,
+} from '@/lib/avatarImage'
 import { cn } from '@/lib/utils'
 
 export interface UserAvatarProps {
@@ -47,7 +53,19 @@ export function UserAvatar({
   // render, and a stale photo would flash under the new name until the fetch
   // came back. Deriving it means a source with nothing loaded yet shows the
   // monogram without anyone having to clear anything.
-  const [loaded, setLoaded] = useState<{ source: string; url: string } | null>(null)
+  const [loaded, setLoaded] = useState<{
+    source: string
+    url: string
+    version: number
+  } | null>(null)
+
+  // Replacing a photo can hand back the same URL, so the source alone cannot
+  // say whether what we hold is still current.
+  const cacheVersion = useSyncExternalStore(
+    subscribeAvatarCache,
+    getAvatarCacheVersion,
+    getAvatarCacheVersion
+  )
   // A photo we handed to the tag and the browser could not render. Held with
   // the src it belongs to so a later photo is not tarred by an earlier failure.
   const [brokenSrc, setBrokenSrc] = useState<string | null>(null)
@@ -61,7 +79,7 @@ export function UserAvatar({
     let active = true
     loadAvatarObjectUrl(source)
       .then((url) => {
-        if (active) setLoaded({ source, url })
+        if (active) setLoaded({ source, url, version: cacheVersion })
       })
       .catch((error) => {
         if (!active) return
@@ -74,9 +92,10 @@ export function UserAvatar({
     return () => {
       active = false
     }
-  }, [source, mustFetch])
+  }, [source, mustFetch, cacheVersion])
 
-  const fetched = loaded && loaded.source === source ? loaded.url : null
+  const fetched =
+    loaded && loaded.source === source && loaded.version === cacheVersion ? loaded.url : null
   // A foreign photo is shown straight from its own URL; ours is shown only once
   // the fetch that carried the token has come back.
   const candidate = mustFetch ? fetched : (source ?? null)

@@ -13,8 +13,15 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return { ...actual, default: { get }, api: { get } }
 })
 
-const { avatarSource, clearAvatarCache, loadAvatarObjectUrl, needsAuthenticatedFetch } =
-  await import('../avatarImage')
+const {
+  avatarSource,
+  clearAvatarCache,
+  forgetAvatar,
+  getAvatarCacheVersion,
+  loadAvatarObjectUrl,
+  needsAuthenticatedFetch,
+  subscribeAvatarCache,
+} = await import('../avatarImage')
 
 describe('loadAvatarObjectUrl', () => {
   beforeEach(() => {
@@ -169,5 +176,72 @@ describe('the same-origin deployment, where VITE_API_BASE_URL is "/"', () => {
     const { loadAvatarObjectUrl: load } = await withBase('/')
 
     await expect(load('https://cdn.example.com/1.png')).rejects.toThrow()
+  })
+})
+
+describe('forgetting a photo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    clearAvatarCache()
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:one')
+    globalThis.URL.revokeObjectURL = vi.fn()
+    get.mockResolvedValue({ data: new Blob(['bytes']) })
+  })
+
+  it('fetches again next time, even under the same url', async () => {
+    // The endpoint currently names each upload with a fresh uuid, but nothing
+    // on this side enforces that. If a replacement ever arrives under the same
+    // name, the old bytes must not be served from the cache.
+    await loadAvatarObjectUrl('/api/v1/users/avatars/1.png')
+    expect(get).toHaveBeenCalledTimes(1)
+
+    forgetAvatar('/api/v1/users/avatars/1.png')
+    await loadAvatarObjectUrl('/api/v1/users/avatars/1.png')
+
+    expect(get).toHaveBeenCalledTimes(2)
+  })
+
+  it('releases the bytes it was holding', async () => {
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:released')
+    await loadAvatarObjectUrl('/a.png')
+
+    forgetAvatar('/a.png')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith('blob:released')
+  })
+
+  it('tells subscribers, so a photo already on screen is re-fetched', async () => {
+    // Revoking without this would leave a component rendering a dead object
+    // URL whenever the replacement kept the same name.
+    const listener = vi.fn()
+    const unsubscribe = subscribeAvatarCache(listener)
+    const before = getAvatarCacheVersion()
+
+    forgetAvatar('/a.png')
+
+    expect(listener).toHaveBeenCalled()
+    expect(getAvatarCacheVersion()).toBeGreaterThan(before)
+    unsubscribe()
+  })
+
+  it('stops telling a subscriber that unsubscribed', () => {
+    const listener = vi.fn()
+    subscribeAvatarCache(listener)()
+
+    forgetAvatar('/a.png')
+
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when there is no photo to forget', () => {
+    const before = getAvatarCacheVersion()
+
+    forgetAvatar(null)
+    forgetAvatar(undefined)
+    forgetAvatar('')
+
+    expect(getAvatarCacheVersion()).toBe(before)
   })
 })

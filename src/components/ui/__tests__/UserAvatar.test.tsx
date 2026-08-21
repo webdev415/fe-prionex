@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const loadAvatarObjectUrl = vi.hoisted(() => vi.fn())
 
@@ -14,6 +14,8 @@ vi.mock('@/lib/avatarImage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/avatarImage')>()
   return { ...actual, loadAvatarObjectUrl }
 })
+
+const { forgetAvatar } = await import('@/lib/avatarImage')
 
 const { UserAvatar } = await import('../UserAvatar')
 
@@ -106,6 +108,25 @@ describe('UserAvatar', () => {
 
     await waitFor(() => expect(container.querySelector('img')).not.toBeInTheDocument())
     expect(screen.getByText('OK')).toBeInTheDocument()
+  })
+
+  it('re-fetches a replaced photo that kept the same url', async () => {
+    // The URL alone cannot say whether what is held is still current, so
+    // forgetting has to reach the component or it would keep showing bytes it
+    // was told to drop - or, once revoked, a broken image.
+    const { container } = render(
+      <UserAvatar fullName="Olena Kovalchuk" avatarUrl="/api/v1/users/avatars/1.png" />
+    )
+    await waitFor(() => expect(container.querySelector('img')).toBeInTheDocument())
+    expect(loadAvatarObjectUrl).toHaveBeenCalledTimes(1)
+
+    loadAvatarObjectUrl.mockResolvedValue('blob:the-new-photo')
+    act(() => forgetAvatar('https://api.dev.crm-prionex.online/api/v1/users/avatars/1.png'))
+
+    await waitFor(() =>
+      expect(container.querySelector('img')).toHaveAttribute('src', 'blob:the-new-photo')
+    )
+    expect(loadAvatarObjectUrl).toHaveBeenCalledTimes(2)
   })
 
   it('takes its colours from the theme rather than carrying its own', () => {

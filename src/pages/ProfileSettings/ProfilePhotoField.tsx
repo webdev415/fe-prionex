@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { avatarSource, forgetAvatar } from '@/lib/avatarImage'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { getErrorMessage } from '@/lib/errors'
 import { authApi } from '@/features/auth/api/authApi'
@@ -70,6 +71,10 @@ export function ProfilePhotoField({
     try {
       setIsBusy(true)
       await authApi.uploadAvatar(file)
+      // The photo just replaced must not be served from the cache again. The
+      // new one usually arrives under a new name, but nothing on this side
+      // enforces that, and forgetting is correct either way.
+      forgetAvatar(avatarSource(avatarUrl))
       await refreshUser()
       toast.success(t('pages.profileSettings.photo.uploaded', 'Photo updated'))
     } catch (error) {
@@ -96,6 +101,7 @@ export function ProfilePhotoField({
     try {
       setIsBusy(true)
       await authApi.deleteAvatar()
+      forgetAvatar(avatarSource(avatarUrl))
       await refreshUser()
       toast.success(t('pages.profileSettings.photo.removed', 'Photo removed'))
     } catch (error) {

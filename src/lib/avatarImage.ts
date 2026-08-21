@@ -18,16 +18,61 @@
  * row. The cache holds the in-flight promise, so simultaneous mounts share a
  * single request rather than starting one each.
  *
- * Object URLs are deliberately never revoked. Several components can be showing
- * the same one, and there is no moment at which the last of them is known to be
- * gone; revoking early would blank an avatar still on screen. The cost is
- * bounded - one entry per distinct photo, and a replaced photo gets a new file
- * name rather than piling up under the old one.
+ * An entry is dropped only when the photo it holds is replaced or removed, via
+ * forgetAvatar. Doing that needs two halves: the entry goes and its object URL
+ * is revoked, and subscribers are told so a component showing the old bytes
+ * fetches again. Without the second half a photo whose URL did not change would
+ * keep rendering a revoked object URL - a broken image - which is the very case
+ * the invalidation exists for.
+ *
+ * Nothing else evicts. Several components can be showing the same object URL
+ * and there is no moment at which the last of them is known to be gone, so
+ * revoking on unmount would blank an avatar still on screen.
  */
 
 import api, { API_BASE_URL, resolveAssetUrl } from '@/lib/api'
 
 const cache = new Map<string, Promise<string>>()
+
+// Bumped whenever an entry is dropped. Components read it so that invalidating
+// a photo re-fetches it even when its URL is unchanged.
+let cacheVersion = 0
+const listeners = new Set<() => void>()
+
+export function subscribeAvatarCache(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+export function getAvatarCacheVersion(): number {
+  return cacheVersion
+}
+
+function invalidate(sources: string[]): void {
+  for (const source of sources) {
+    const pending = cache.get(source)
+    cache.delete(source)
+    // The bytes are ours to release once nothing will be handed this entry
+    // again. Swallowed because a rejected fetch has nothing to revoke.
+    pending?.then((url) => URL.revokeObjectURL(url)).catch(() => {})
+  }
+  cacheVersion += 1
+  for (const listener of listeners) listener()
+}
+
+/**
+ * Drop a photo so the next render fetches it again.
+ *
+ * Called after an upload or a removal. The photo being replaced is the one to
+ * forget: whether the new one arrives under a new name or the same one, the old
+ * bytes must not be served from here again.
+ */
+export function forgetAvatar(source: string | null | undefined): void {
+  if (!source) return
+  invalidate([source])
+}
 
 /**
  * Whether this photo has to be fetched with our credentials.
@@ -87,5 +132,5 @@ export function avatarSource(avatarUrl: string | null | undefined): string | und
 
 /** Testing seam: drop everything cached so far. */
 export function clearAvatarCache(): void {
-  cache.clear()
+  invalidate([...cache.keys()])
 }
