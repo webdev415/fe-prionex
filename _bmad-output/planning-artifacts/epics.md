@@ -1888,8 +1888,8 @@ scheduler, identified by query, with its run id, trigger and actor recorded — 
 **Then** it ~~deploys the current `main` image to the DEV stand using the same mechanics as
 Story 4.3~~ causes `deploy-dev.yml` to run with `ref=main` through the Forgejo API, duplicating
 none of its steps
-**And** it runs ~~`docker image prune`~~ a targeted sweep on the host afterwards (see FR23's own
-amendment).
+**And** it runs ~~`docker image prune`~~ a targeted sweep on the host ~~afterwards~~ **first, before
+the dispatch** (see FR23's own amendment).
 
 🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** "Same
 mechanics as Story 4.3" reads naturally as "duplicate its steps," and both sibling repositories on
@@ -1900,10 +1900,30 @@ duplicated deploy body written here is work 4.8 would have to delete. "Same mech
 by *running the same workflow* (`deploy-dev.yml`, live-proven across seven runs and four review
 rounds) through the Forgejo API, not by containing the same steps.
 
-**Given** the prune step
+🔴 **AMENDED 2026-08-22 (Story 4.6 code review M9).** The first amendment above struck the literal
+command (`docker image prune`) but left the ordering word "afterwards" standing, and the shipped
+file does the opposite by explicit decision: `dev-reset.yml` sweeps **first** (step 1) and
+dispatches **last** (step 3), for two stated reasons (Dev Notes §4 of the story) — the previous
+cycle's debris is removed while the current stand's own image is still safely referenced by its
+running container, and sweeping first removes any need to wait on a foreign run before cleaning up.
+"Amend, do not quietly diverge" (Task 8.2's own rule) applies to an ordering word exactly as much as
+to a command name; struck and corrected above rather than left to silently contradict the shipped
+file.
+
+🔴 **AMENDED 2026-08-22 (Story 4.6 code review M10) — this AC never described a real step and is
+now struck.** The clause below was never amended when FR23's `docker image prune` was replaced by a
+targeted sweep in the AC above and in FR23 itself; it kept referring to "the prune step" — a step
+that has never existed in the shipped file, which has a **sweep** step instead. Reproduced,
+struck, and restated to describe what the sweep step actually does and actually enforces (AC4 of
+the story, `dev-reset.yml:127-268`):
+
+**Given** ~~the prune step~~ **the sweep step**
 **When** it runs
 **Then** it does not remove images currently in use by the legacy stand or any other container
-on s1.
+on s1 ~~.~~ **— enforced by excluding anything any container (running or stopped) references, by
+name-pattern anchoring at both ends so it cannot match another tenant's container as a substring,
+and by an explicit age threshold on each of the two object classes it touches (untagged images,
+stopped lock-holder containers).**
 
 **Given** the reset has run
 **When** the stand is inspected
@@ -1919,10 +1939,27 @@ Stories 5.3 and 6.4 recorded theirs.
 
 🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — fail-closed: a
 reset that cannot run leaves the stand exactly as it was.** Given the dispatch cannot authenticate,
-the endpoint refuses, `main-dev` does not exist (14-day `-dev` retention expiry), or the deploy
-itself fails — the run ends red, naming which cause, and the stand keeps serving whatever it was
+the endpoint refuses, `main-dev` does not exist (14-day `-dev` retention expiry), or ~~the deploy
+itself fails~~ — the run ends red, naming which cause, and the stand keeps serving whatever it was
 serving before: no `down` ran, no image the running container needs was removed, and anything the
 sweep already did removed nothing the still-running container references.
+
+🔴 **NARROWED 2026-08-22 (Story 4.6 code review DN1, Oleg's decision).** As first written, this AC
+promised a red, named run for four causes, two of which (`main-dev` missing; the deploy itself
+failing) happen entirely *inside* the `deploy-dev.yml` run this workflow only requests — observing
+them from `dev-reset.yml` requires polling the dispatched run to completion, which is a proven
+self-deadlock against the shared `concurrency:` group both workflows use. Struck above and narrowed
+to the two causes this workflow's own layer can actually classify: the dispatch cannot authenticate,
+or the dispatch endpoint refuses the request. A **non-blocking** read-back after a successful
+dispatch (one `GET .../actions/runs`, not waited on) additionally confirms the request reached a
+real, queued run rather than a proxy or a disabled workflow, without reporting that run's own
+outcome. The two struck causes are covered instead by `deploy-dev.yml`'s own classifiers — Story
+4.3's run 948 already drove the missing-image case through its own 404 path live — which is where
+AC5, two clauses up, already reads the deploy's own result from (the stand's digest), not from this
+run's status. **Accepted residual gap:** a deploy this workflow successfully triggers, that then
+fails downstream, still marks the reset run green; until Story 4.5's notifications land, a named
+human reader checks both runs by query every week as the compensating control (see the story's own
+Dev Notes §H2 and AC6 narrative for the full argument and the removal trigger).
 
 🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — the cron
 expression cannot take the repository down with it.** Forgejo persistently DISABLES a workflow
