@@ -1845,6 +1845,10 @@ export function AiAssistantBetaPage() {
    * preset. The text lands in the composer either way, so a command that
    * arrives mid-answer is not lost — it simply waits for the operator to press
    * send instead of queueing behind the running turn.
+   *
+   * Staged attachments are deliberately left alone (same as a quick action): a
+   * host command must not silently consume a file the operator picked for a
+   * question they have not asked yet.
    */
   useOnexAsk(isEmbedded, (command) => {
     const prompt =
@@ -1853,7 +1857,7 @@ export function AiAssistantBetaPage() {
     if (!prompt) return
     setMessage(prompt)
     if (isAssistantResponding) return
-    void submitPrompt(prompt, pendingAttachments)
+    void submitPrompt(prompt)
   })
 
   // Latest-ref wiring: the recorder hook is declared before submitPrompt.

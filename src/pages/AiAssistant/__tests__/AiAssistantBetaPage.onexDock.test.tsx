@@ -233,6 +233,40 @@ describe('AiAssistantBetaPage — OneX dock embedding', () => {
       )
     })
 
+    it('parks the prompt in the composer while a turn is still streaming', async () => {
+      // A command that arrives mid-answer must not be dropped — it waits for
+      // the operator instead of queueing behind the running turn.
+      let settleFirstTurn: (() => void) | undefined
+      mockedSendChatMessage.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            settleFirstTurn = () =>
+              resolve({
+                conversation_id: 1,
+                message_id: 5,
+                response: 'Готово',
+                coverage_flag: null,
+                tool_calls: [],
+              })
+          })
+      )
+
+      renderPage()
+      send('перше питання')
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(ONEX_ASK_EVENT, { detail: { text: 'а ще ось це' } }))
+      })
+
+      expect(mockedSendChatMessage).toHaveBeenCalledTimes(1)
+      expect(getTextarea().value).toBe('а ще ось це')
+
+      await act(async () => {
+        settleFirstTurn?.()
+      })
+    })
+
     it('is inert outside the dock', () => {
       setSearch('')
       renderPage()
