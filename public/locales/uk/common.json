@@ -1083,7 +1083,9 @@
         "transitionSuccess": "Переміщено до {{state}}",
         "deadlineSaved": "Дедлайн встановлено на {{deadline}}",
         "deadlineCleared": "Дедлайн знято",
-        "deadlineSaveFailed": "Дедлайн не збережено"
+        "deadlineSaveFailed": "Дедлайн не збережено",
+        "startWork": "Передати в роботу",
+        "statusLabel": "Статус"
       },
       "documents": {
         "title": "Документи",
