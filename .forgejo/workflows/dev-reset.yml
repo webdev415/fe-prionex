@@ -87,21 +87,18 @@ on:
     # schedule spec carries no time_zone, which Forgejo evaluates as UTC; the value here IS the UTC
     # instant, not a local one converted at read time. Validated locally against a 5-field-exact
     # parser matching `github.com/gdgvda/cron v0.7.0` (`cron.Minute|Hour|Dom|Month|Dow`, no seconds
-    # field) before this file was ever pushed (AC7; Completion Notes).
+    # field) before this file was ever pushed (AC7; Completion Notes). Registration and recurrence
+    # both confirmed LIVE, not only designed (PR A's own probe window, Task 6.3): three scheduled
+    # firings (runs 1019/1023/1032), `trigger_event='schedule'`, system actor, a consistent 44s
+    # delay this repository's own — not `PRIONEX_HUB`'s 1s, recorded as this repository's own
+    # measurement rather than assumed to generalise.
     - cron: '0 2 * * 0'
-    # 🔴🔴🔴 TEMPORARY — PROBE CRON (Task 6.1). Removed by the SECOND implementation PR
-    # (`story-4-6/pr-2b-arm-schedule` — see that PR's own description for the exact link once
-    # opened). Fires every 15 minutes, offset +5 from the hour so it is NEVER in the same minute as
-    # the weekly cron above (Task 2.9's staggering rule — two crons ticking in the same minute
-    # triggered a permanent-disable deadlock pre-15.0, codeberg #9846; this instance is past the
-    # fix but the advice to stagger stands regardless). Exists ONLY to convert "wait a week for
-    # AC2's evidence" into "wait ~15-30 minutes" — the dispatch step below is DISARMED for as long
-    # as this entry exists (see `DISARMED` below), so a firing here can NEVER touch the stand,
-    # unlike `PRIONEX_HUB`'s own refused `*/5` test cron, which they refused specifically because
-    # their dispatch was NOT disarmed. 🔴 If the PR removing this entry has not merged within 6
-    # hours of this one landing on `main`, REVERT this PR (Task 6.1's own tripwire) — a probe cron
-    # left armed on `main` past its own observation window is a liability, not a convenience.
-    - cron: '5,20,35,50 * * * *'
+    # The temporary probe cron that lived here during PR A's own observation window (a frequent,
+    # staggered entry — never the same minute as the line above, Task 2.9 — paired with a disarmed
+    # dispatch step, Task 6.2) is REMOVED by this PR (`story-4-6/pr-2b-arm-schedule`), per Task 6.5.
+    # It served its purpose: registration and recurrence are now live facts, not projections, and
+    # `schedule:` never sits with a single item removed to zero (Task 2.7's own trap) at any commit
+    # in this file's history.
   workflow_dispatch: {}
     # Zero inputs, deliberately (AC1). The epic's own text only asks for "can also be dispatched
     # manually" — this is stronger, and the strength is the point: with no ref/tag/environment a
@@ -283,59 +280,20 @@ jobs:
           FJ_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPO_SLUG: ${{ github.repository }}
-          # Task 6.3: printed (never branched on — Task 2.3's own rule is about CONDITIONAL LOGIC,
-          # not observation) only while DISARMED below, into $GITHUB_OUTPUT rather than only a log
-          # line, because job/step logs are not reliably retrievable after the fact on this
-          # instance (`api-prionex`'s own Л7). Settles Task 2.2's contested question: the sibling
-          # project's own fact 2 read the DB's `event` column (which stays `push` even for a
-          # scheduled run — confirmed live, this story's own DB read) and concluded
-          # `github.event_name` reads `push` too; the v15.0.5 source says `github.event_name` is
-          # populated from `trigger_event` instead (`context.go:54`), which should read `schedule`
-          # — this is the one live echo that settles which reading is right, for THIS repository.
-          PROBE_EVENT_NAME: ${{ github.event_name }}
-          PROBE_REF: ${{ github.ref }}
-          PROBE_REF_TYPE: ${{ github.ref_type }}
-          PROBE_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
-          # 🔴🔴🔴 TEMPORARY — Task 6.2. A LITERAL constant, not an input and not a secret,
-          # deliberately: an input could be forgotten or misdispatched, a secret could be missed in
-          # review. Flipped to "false" by the SECOND implementation PR, in the SAME commit that
-          # removes the probe cron above (Task 6.5) — the two temporary elements land and leave
-          # together. While true, this step NEVER calls the dispatch endpoint — not on the frequent
-          # probe cron above, and not on a manual dispatch either (AC1 makes the two paths
-          # identical on purpose, so disarming applies to both uniformly rather than trying to
-          # distinguish them, which Task 2.3 forbids anyway). The SWEEP step above is NOT disarmed
-          # — it is idempotent and non-destructive by AC4's own construction (proven locally,
-          # Completion Notes), so it runs for real even during the probe window; only the one step
-          # capable of touching the stand is held back.
-          # ✅ Task 2.8 settled live, 2026-08-21: with this flipped to `false` for exactly one
-          # commit, run 1004 (armed) reached the real endpoint, got a real 2xx, and genuinely
-          # triggered run 1005 (`deploy-dev.yml`, ref=main, SUCCESS) — the full scheduler→deploy
-          # chain proven end to end (Completion Note 3). Reverted to `true` here, for PR A's own
-          # probe window, as planned from the start (Task 6.2) — this is not a response to the
-          # token result, which is a separate question from why the probe window disarms at all
-          # (controlling the BLAST RADIUS of a frequent test cron, not working around a credential
-          # problem that turned out not to exist).
-          DISARMED=true
-
-          if [ "$DISARMED" = "true" ]; then
-            echo "⚠️⚠️⚠️ PROBE WINDOW (Task 6.2): the dispatch step is DISARMED by a literal"\
-                 "constant in this file. This run would have POSTed to"\
-                 "${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/workflows/deploy-dev.yml/dispatches"\
-                 "with body {\"ref\":\"main\",\"inputs\":{\"ref\":\"main\"}} — [SIMULATED, not a"\
-                 "real dispatch]. The stand has not been touched."
-            echo "event_name=${PROBE_EVENT_NAME}" >> "$GITHUB_OUTPUT"
-            echo "ref=${PROBE_REF}" >> "$GITHUB_OUTPUT"
-            echo "ref_type=${PROBE_REF_TYPE}" >> "$GITHUB_OUTPUT"
-            echo "actor=${PROBE_ACTOR}" >> "$GITHUB_OUTPUT"
-            echo "Task 6.3 measurement — event_name='${PROBE_EVENT_NAME}' ref='${PROBE_REF}'"\
-                 "ref_type='${PROBE_REF_TYPE}' actor='${PROBE_ACTOR}' (expected from source:"\
-                 "event_name=schedule, ref=main as a BARE branch name, ref_type EMPTY,"\
-                 "actor=the system user)."
-            exit 0
-          fi
-
+          # PR A's own probe-window disarm mechanism (Task 6.2 — a literal constant, checked before
+          # any real call, printing what it would have dispatched instead of dispatching) lived here
+          # while the temporary frequent cron was armed on `main`, so that a firing every 15 minutes
+          # could never touch the stand. It is REMOVED, not merely flipped, by this PR
+          # (`story-4-6/pr-2b-arm-schedule`, Task 6.5) — the mechanism was always scoped as
+          # probe-window scaffolding, not a permanent regression hook in the
+          # `simulate_bad_credential`/`hold_lock_seconds` shape (Story 4.3/4.4's own precedent for
+          # what DOES stay): the weekly cron below fires at most once a week, so there is no ongoing
+          # "frequent unintended redeploy" scenario left for a disarm switch to guard against.
+          # Task 2.8, settled live before this PR (Completion Note 3, runs 1004→1005): the
+          # automatic job token (below, as $FJ_TOKEN via env:) CAN call this endpoint — no fallback
+          # needed.
           if [ -z "${FJ_TOKEN:-}" ]; then
             echo "FAIL: github.token is empty. This is Forgejo's own automatic per-job token — an"\
                  "empty value here is a runner/instance-level problem, not something this workflow"\

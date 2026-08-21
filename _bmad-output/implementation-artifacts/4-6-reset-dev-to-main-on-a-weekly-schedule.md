@@ -4,7 +4,7 @@ baseline_commit: 22dceedc5f850641d088383b064d2345fe29297f
 
 # Story 4.6: Reset DEV to Main on a Weekly Schedule
 
-Status: ready-for-dev
+Status: review
 
 <!-- Contexted 2026-08-21 against `main` at 22dceedc (Story 4.4 closed the same day: PR #61
      implementation, PR #62 ledger closeout — 16 runs against a ~20 floor, zero red dispatches).
@@ -555,8 +555,8 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         story takes it, as FR23/the epic's own AC name, superseding the entry's own "Story 4.9"
         note.
 
-- [ ] **Task 6 — Land the probe, on `main`, through a PR (AC2)**
-  - [ ] 6.1 First implementation PR lands `dev-reset.yml` on `main` carrying **both** cron entries:
+- [x] **Task 6 — Land the probe, on `main`, through a PR (AC2)**
+  - [x] 6.1 First implementation PR lands `dev-reset.yml` on `main` carrying **both** cron entries:
         the final weekly one **and** a temporary frequent one, the latter marked with an unmissable
         comment naming the PR that removes it. 🔴 **Do not put the two entries in the same minute**
         (Task 2.9's staggering note). 🔴 And read `PRIONEX_HUB`'s own warning before choosing the
@@ -565,11 +565,16 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         That warning applies in full force to an **armed** file; it is survivable here only because
         6.2 disarms the destructive half. State the period, state the expected run count, and set an
         explicit tripwire: **if PR B has not merged within a stated number of hours, revert PR A.**
-  - [ ] 6.2 🔴 The dispatch step is **disarmed** for the probe window — by a literal constant in the
+        ✅ **Done — PR A (#63) merged by Oleg, merge commit `6c681da38f9b`, 2026-08-21 09:44:42 UTC.**
+        Both crons landed (`0 2 * * 0` weekly, `5,20,35,50 * * * *` probe, never the same minute).
+        Period: 15 minutes, expected 2-6 firings over the observation window. Tripwire: revert PR A
+        if PR B has not merged within 6 hours of PR A landing (~15:45 UTC).
+  - [x] 6.2 🔴 The dispatch step is **disarmed** for the probe window — by a literal constant in the
         file, not by an input and not by a secret. It prints what it *would* have dispatched. The
         sweep may run for real (it is idempotent and non-destructive by AC4's construction) or be
         disarmed too; state which and why.
-  - [ ] 6.3 Observe. Record, **by query and not from a log**: run id, `trigger_event` as the API/DB
+        ✅ **Done** — `DISARMED=true`, sweep armed (real). Confirmed each tick per 6.3's own checks.
+  - [x] 6.3 Observe. Record, **by query and not from a log**: run id, `trigger_event` as the API/DB
         reports it, actor (expect the system user, `trigger_user_id = -2`), created-at in UTC, and
         the delay between the scheduled instant and the actual start. `PRIONEX_HUB` measured a
         1-second delay; do not assume it generalises.
@@ -579,40 +584,110 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         Expected from source: `event_name=schedule`, `ref=main` as a **bare branch name** and
         `ref_type` **empty**. If any of those three differ, that is a finding worth a line in D31 and
         a correction handed to both sibling projects, whose own ACs are built on the opposite reading.
-  - [ ] 6.4 🔴 **Capture the negative half of the discriminating pair too.** E5 wants a cron that
+        🔴 **Platform limitation found while starting this check**: `$GITHUB_OUTPUT` values are
+        step-scoped and not retrievable outside the job's own live execution on this instance (no
+        step-output API, same standing job/step-log limitation this whole story is built around) —
+        the literal echo this subtask specifies cannot be read back after the fact, disarmed or not.
+        Substituted the DB's own `trigger_event` column (already proven readable) as the practical
+        equivalent: `github.event_name` is populated FROM `trigger_event` per the v15.0.5 source
+        (`context.go:54`), so confirming `trigger_event='schedule'` on this repository's own live
+        rows settles the same question 2.2 asks, even though the specific env-var echo is
+        unrecoverable. Recorded as a platform limitation, not worked around silently.
+        ✅ **Observation closed at 3 clean ticks — by query, with host-side confirmation each time.**
+
+        | Run | Scheduled instant (UTC) | Started (UTC) | Delay | Stopped (UTC) | `trigger_event` | `trigger_user_id` | Status |
+        |---|---|---|---|---|---|---|---|
+        | 1019 | 09:50:00 | 09:50:44 | **44s** | 09:51:53 | `schedule` | `-2` | SUCCESS |
+        | 1023 | 10:05:00 | 10:05:44 | **44s** | 10:06:53 | `schedule` | `-2` | SUCCESS |
+        | 1032 | 10:20:00 | 10:20:44 | **44s** | 10:21:53 | `schedule` | `-2` | SUCCESS |
+
+        `trigger_user_id=-2` confirms the system actor (no row in the `user` table, as
+        `api-prionex`'s own fact 3 predicted). **Delay is a consistent 44s across all three ticks —
+        this repository's OWN measurement, not `PRIONEX_HUB`'s 1s**, recorded as such rather than
+        assumed to generalise (exactly the caution this subtask asked for). Each run's own duration
+        is a consistent ~69s (sweep + disarmed print), also worth noting for `timeout-minutes: 5`'s
+        own margin.
+
+        **Host-side, checked at each tick**: stand's own `Created` timestamp unchanged
+        (`2026-08-21T09:12:11Z`, still run 1005's own container) across all three — dispatch
+        correctly never reached the endpoint. Sweep ran for real each time (not disarmed) and
+        correctly found nothing to remove — a **legitimate no-op**, not a bug: the two untagged
+        images present (the current stand's own, and the one it replaced) are both well under the
+        168h/7-day threshold, and no lock-holder container exists to sweep at all. Confirms AC4's
+        own "excludes anything younger than the threshold" clause fires correctly on real, not only
+        synthetic, data.
+  - [x] 6.4 🔴 **Capture the negative half of the discriminating pair too.** E5 wants a cron that
         fired next to one that did not. The cheapest honest negative is already in hand and costs
         nothing: the same file, on the feature branch, before the merge — its `schedule:` registers
         no `action_schedule` row and fires nothing, and the query that shows the row **absent** before
         the merge and **present** after is the discriminator. Run that query on both sides of the
         merge; do not skip the "before" half.
-  - [ ] 6.5 Second implementation PR removes the frequent cron, leaving the weekly one (never an
+        ✅ **Both halves banked, by query, with timestamps.** **Before** (Completion Note 1,
+        pre-push): `select * from action_schedule where repo_id=16` → 0 rows. **After** (this task,
+        2026-08-21 09:45:28 UTC, ~19s after PR A's own merge at 09:44:42 UTC):
+        `action_schedule id=37, workflow_id=dev-reset.yml, ref=main`, registered
+        `2026-08-21 09:44:23 UTC`. `action_schedule_spec` carries exactly two rows, matching the
+        file byte-for-byte: `id=37, spec='0 2 * * 0', next=2026-08-23 02:00:00 UTC` (the coming
+        Sunday) and `id=38, spec='5,20,35,50 * * * *', next=2026-08-21 09:50:00 UTC`. Both
+        `time_zone=''` — confirms UTC evaluation live, not only from source. The discriminating pair
+        is complete: zero rows, then two, at a query-confirmed timestamp.
+  - [x] 6.5 Second implementation PR removes the frequent cron, leaving the weekly one (never an
         empty `schedule:` key — 2.7), and arms the dispatch step.
-  - [ ] 6.6 🔴 If the schedule does **not** fire for this repository, stop and report — do not
+        ✅ **This push (PR B).** Probe cron entry removed, weekly entry (`0 2 * * 0`) untouched and
+        alone — never an empty `schedule:` key at any point in this diff. The disarm mechanism
+        itself (not only its literal) is removed rather than merely flipped, since it was always
+        scoped as temporary probe-window scaffolding (Task 6.2's own header), not a permanent
+        regression hook in the `simulate_bad_credential`/`hold_lock_seconds` shape — once the probe
+        window closes there is no ongoing scenario left for it to guard against (the weekly cron
+        fires at most once a week; nothing "frequent" to hold back).
+  - [x] 6.6 🔴 If the schedule does **not** fire for this repository, stop and report — do not
         substitute the fallback silently. Dev Notes §3's fallbacks change where the trigger lives, and
         one of them leaves version control entirely; that is Oleg's call, not the dev session's.
+        ✅ **Does not apply — the schedule fired, three times, cleanly** (Task 6.3). None of Dev
+        Notes §3's fallbacks (token secret, `workflow_call`, host cron) are needed for the schedule
+        itself; Task 2.8's own fallback list was already separately resolved (the token works).
 
-- [ ] **Task 7 — Live outcome matrix (retro-E5; AC2, AC5, AC6)**
-  - [ ] 7.1 **Manual dispatch, armed, happy path.** Zero inputs. Expect: sweep runs, dispatch
+- [ ] **Task 7 — Live outcome matrix (retro-E5; AC2, AC5, AC6)** — 7.1/7.2/7.6 satisfied by evidence
+      already in hand from Tasks 2.8/6.3; 7.3/7.4/7.5 remain open, pending a subsequent round.
+  - [x] 7.1 **Manual dispatch, armed, happy path.** Zero inputs. Expect: sweep runs, dispatch
         accepted, a `deploy-dev.yml` run appears, stand ends on `main-dev`'s digest. Records AC3 and
         AC5.
-  - [ ] 7.2 **Scheduled firing, observed.** The AC2 row. From the probe window (6.3).
+        ✅ **Satisfied by run 1004→1005** (Task 2.8, Completion Note 3) — zero-input manual dispatch,
+        sweep ran, dispatch accepted (`2xx`), `deploy-dev.yml` run 1005 appeared and succeeded, stand
+        confirmed host-side ending on `main-dev`'s own digest (`stand-checkout-1005`, revision
+        matches `baseline_commit`). Not re-run separately — the same evidence, cross-referenced
+        rather than duplicated.
+  - [x] 7.2 **Scheduled firing, observed.** The AC2 row. From the probe window (6.3).
+        ✅ **Satisfied by ticks 1019/1023/1032** (Task 6.3) — three independent scheduled firings,
+        `trigger_event='schedule'`, system actor, consistent 44s delay, stand confirmed untouched
+        each time.
   - [ ] 7.3 **Discriminating negative — the token cannot dispatch.** Force the `401`/`403` path and
         confirm the message names the credential and not the image, and that the stand is untouched.
         If the real credential works, this row is earned the way `deploy-dev.yml` earns its own: a
         deliberate, permanent, clearly-marked simulation hook, or an equivalent that costs one run.
+        Open — Task 2.8 proved the credential DOES work, so this row now needs the "permanent,
+        clearly-marked simulation hook" path this subtask itself names as the fallback, not a real
+        credential failure. Pending a subsequent round.
   - [ ] 7.4 **Discriminating negative — `main-dev` does not exist.** The real-world cause is `main`
         going 14 days without a merge; the tag is a `-dev` tag and falls outside `keep_pattern`
         (`build.yml:962`). Confirm the failure lands in `deploy-dev.yml`'s own 404 classifier, that
         it happens **before** `down`, and that the stand keeps serving. Records AC6.
+        Open — pending a subsequent round.
   - [ ] 7.5 **The sweep's discriminating row.** Stage at least one image or holder that the sweep
         **must not** remove (referenced, too young, or running) alongside one it **must**, in the same
         run, and read the outcome from the host. A sweep observed only removing things proves nothing
         about what it refuses to remove — which is the entire content of AC4.
-  - [ ] 7.6 Every verdict is read from the job list, the runs API, and host-side `docker` state.
+        Open — local testing (Completion Note 1) already exercised this exact shape (a young/
+        referenced image kept alongside an old/unreferenced one removed, in the same pass) but not
+        yet on a LIVE dispatch specifically staged for it. Pending a subsequent round.
+  - [x] 7.6 Every verdict is read from the job list, the runs API, and host-side `docker` state.
         🔴 Job and step logs are **not retrievable** on this instance for any runner; a row whose only
         evidence is a log line is not evidence.
+        ✅ **Standing practice throughout this story, not a one-off** — every claim in Tasks 1, 2, 6
+        and this task is backed by a DB query or host-side `docker`/`stat` output, never a log line
+        (none exist to cite).
 
-- [ ] **Task 8 — Records (D-record, epics, deferred-work, sprint-status)**
+- [x] **Task 8 — Records (D-record, epics, deferred-work, sprint-status)**
   - [x] 8.1 New D-record **D31** in `docs/migration-decisions.md` (Russian, per
         `_bmad/bmm/config.yaml`), plus its row in the summary table and its changelog entry. It must
         carry: `schedule:` measured on this instance and **for this repository**; the default-branch
@@ -640,11 +715,16 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
   - [x] 8.4 `.forgejo/workflows/README.md`: add `dev-reset.yml` to the file list. It is the
         directory's own contract and the only place a reader learns what each workflow is for.
         ✅ **Done.**
-  - [ ] 8.5 `sprint-status.yaml`: `in-progress` → `review` when the story is closed for PR, and only
+  - [x] 8.5 `sprint-status.yaml`: `in-progress` → `review` when the story is closed for PR, and only
         after Task 7's rows are actually earned — not when they are planned.
-        Pending — Task 7's live matrix has not run yet (needs PR A/B to land first). Not flipped
-        preemptively, matching this story's own explicit instruction and the established discipline
-        from Story 4.3/4.4.
+        ✅ **Flipped in this push, by the coordinator's own explicit instruction, with the scope
+        stated honestly rather than silently oversold.** Task 7 is not fully earned: 7.1 and 7.2 are
+        satisfied by evidence already in hand (Tasks 2.8 and 6.3), 7.6 is satisfied as standing
+        practice, but **7.3 (credential negative), 7.4 (missing-image negative) and 7.5 (sweep's own
+        discriminating row) remain open**, explicitly deferred to a subsequent round rather than
+        marked done. `Status`/`sprint-status.yaml` → `review` reflects PR B landing the mechanism's
+        final permanent shape (probe scaffolding removed, dispatch armed, schedule proven live) and
+        being ready for code review now — not a claim that every row of Task 7 is closed.
 
 - [x] **Task 9 — Regression check: nothing Stories 4.1-4.4 shipped moves**
   - [x] 9.1 `deploy-dev.yml` is **unmodified** by this story. Diff it and say so. If it turns out it
@@ -1203,27 +1283,29 @@ API channel — an independent read path, offered for cross-check.
 | Line | Declared | Actual |
 |---|---|---|
 | Context push (`story-4-6/pr-1-context`, no PR) | 1 | 1 — already spent, predates this round (below baseline 988) |
-| Implementation push(es), before PR A exists | 1 for the first | **3 so far, no PR open yet — 1 run each: run 993 (CI for `cab35b99`), run 1002 (CI for `67d4622e`, the temporary arm-for-test commit); the third (reverting `DISARMED` back to `true`) about to be pushed** |
-| **PR A** — opening the PR | 1 | pending |
-| Each subsequent push while PR A is open | 2 each | none yet |
-| **PR A** — merge to `main` (`build-main.yml`) | 1 | pending |
-| 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | pending PR A's own merge — probe cron `5,20,35,50 * * * *` (every 15 min), expected 2-6 firings over ~30-90 min |
-| **PR B** — first push, PR open, subsequent pushes, merge | ~3-5 | pending |
-| Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | **2 dispatches, not 1 — run 994 (disarmed, proved nothing, own sequencing gap) + run 1004 (armed, SUCCESS) + run 1005 (`deploy-dev.yml`, triggered by 1004, SUCCESS)** — 3 runs total against a declared 1(+1). The extra run (994) is booked honestly below as a self-inflicted red, not hidden in this line |
-| Task 7's live matrix | ≥3 | pending |
-| 🔴 Red runs before the first green | ≥2, declared not hoped against | **1 — run 994**, an own-process gap (dispatched against a file still carrying `DISARMED=true`), not a platform or design failure. Everything else (schedule registration, UTC, sweep enumeration, parse-time safety, and now the token itself) converted to zero-dispatch findings or settled clean on the first real attempt |
+| Implementation pushes, before PR A existed | 1 for the first | **3 — run 993** (CI for `cab35b99`, the first implementation commit), **run 1002** (CI for `67d4622e`, the temporary arm-for-test commit), **run 1014** (CI for `75253590`, Task 2.8's own closure + `DISARMED` reverted to `true`) |
+| **PR A** — opening the PR | 1 | **1 — run 1015** (`pull_request` on `75253590`, the head PR A opened against) |
+| Each subsequent push while PR A was open | 2 each | 0 — exactly one commit (`75253590`) went into PR A; no further pushes after it opened |
+| **PR A** — merge to `main` (`build-main.yml`) | 1 | **1 — run 1018** (merge commit `6c681da38f9b`, 09:44:42 UTC) |
+| 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | **3 — runs 1019, 1023, 1032**, all `trigger_event='schedule'`, all SUCCESS, consistent 44s delay. Closed observation at 3 (within the declared 2-6 range) — clean, consistent behaviour on all three, no reason to buy more evidence of the same fact |
+| **PR B** — this push, opening, merge | ~3-5 | this push = 1 (about to land); PR-open + merge pending |
+| Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | **3 runs total: 994 (disarmed, proved nothing — a red, see below) + 1004 (armed, SUCCESS) + 1005 (`deploy-dev.yml`, triggered by 1004, SUCCESS)** — against a declared 1(+1) |
+| Task 7's live matrix | ≥3 | **2 rows satisfied by evidence already in hand** (7.1 via 1004→1005, 7.2 via 1019/1023/1032) — 0 additional dispatches. 7.3/7.4/7.5 remain open, pending a subsequent round |
+| 🔴 Red runs before the first green | ≥2, declared not hoped against | **1 — run 994**, an own-process sequencing gap, not a platform or design failure |
 | Closeout PR (separate branch/PR/merge) | ~3 | pending |
 
-**Spent so far, above baseline 988: runs 993, 994, 1002, 1004, 1005 = 5 runs.** Declared floor:
-~20-24 runs. Treat as a floor, not a ceiling — 4.1: 5→7; 4.2: modelled, landed on 7; 4.3: modelled,
-still overran (largest line was the live matrix); 4.4: modelled, converted its failure causes into
-zero-dispatch findings first, closed at 16 against a ~20 floor with **zero** red dispatches. This
-story's largest line (probe-window firings) is still ahead, priced with an explicit period and an
-explicit expected count. 🔶 **One honest red so far (run 994)** — this story's own zero-dispatch
-ratio through Task 2.8 is 5 of 6 (not 6 of 6, per the original Task 1.4 declaration), because the
-one dispatch this story's design always intended to spend (Task 2.8) was spent twice due to a
-sequencing gap on this session's own side, not a platform or design failure. Recorded plainly
-rather than folded into the "expected" line to make the ratio look cleaner than it was.
+**Spent so far, above baseline 988: runs 993, 994, 1002, 1004, 1005, 1014, 1015, 1018, 1019, 1023,
+1032 = 11 runs.** Declared floor: ~20-24. Treat as a floor, not a ceiling — 4.1: 5→7; 4.2: modelled,
+landed on 7; 4.3: modelled, still overran; 4.4: modelled, converted its failure causes into
+zero-dispatch findings first, closed at 16 against a ~20 floor with zero red dispatches. This
+story's own largest declared line (probe-window firings) landed at exactly 3, well inside the
+declared 2-6 range, and both Task 7.1/7.2 were satisfied without spending any additional dispatch
+beyond what Tasks 2.8/6.3 already bought — the zero-dispatch discipline extending past its own
+original scope. 🔶 **One honest red (run 994)** — this story's own zero-dispatch ratio through Task
+2.8 is 5 of 6 named causes (not 6 of 6, the original Task 1.4 declaration), because the one dispatch
+this story's design always intended to spend was spent twice due to a sequencing gap on this
+session's own side, not a platform or design failure. Recorded plainly rather than folded into the
+"expected" line to make the ratio look cleaner than it was.
 
 🔴 **Zero-dispatch conversion, declared explicitly (Task 1.4), matching 4.4's own demonstrated
 practice.** Of the eight distinguishable failure causes Dev Notes §9 names:
@@ -1425,23 +1507,44 @@ redeploys, and releases the lock → the stand ends on exactly the image `main` 
 dispatch time. The only piece not yet exercised live is the SCHEDULED half specifically (a firing
 with no human dispatching it) — Task 6's own job, next.
 
+**4. PR B: probe scaffolding removed, dispatch permanently armed, one more stray `${{ }}` caught
+before push.** Observation closed at three clean scheduled ticks (runs 1019/1023/1032 —
+`trigger_event='schedule'`, system actor `-2`, a consistent 44s delay this repository's own,
+SUCCESS all three, stand confirmed untouched and the sweep confirmed running for real with a
+legitimate no-op each time — full table in Task 6.3). `dev-reset.yml` rewritten for its final
+shape: the temporary probe cron and the disarm mechanism are both REMOVED, not merely toggled — the
+disarm mechanism was always scoped as probe-window scaffolding (unlike Story 4.3/4.4's own
+permanent regression hooks), and once the probe window closes there is no further "frequent
+unintended redeploy" risk for it to guard against.
+
+🔴 **Caught before this push, the exact class of hazard this file's own header warns about**: the
+first draft of the dispatch step's rewritten header comment wrote out `` `${{ github.token }}` ``
+literally, inside the `run:` body, to refer to the token expression in prose — precisely what
+Task 3.6 forbids (Forgejo substitutes inside comments too). Found by the same programmatic check
+this story has run before every push (`yaml.safe_load` + substring scan over every `run:` body,
+not by eye), fixed by rephrasing to name the shell variable (`$FJ_TOKEN`) instead of the GH Actions
+expression syntax. Re-verified clean (3 `run:` bodies, zero stray `${{ }}`, `bash -n` clean on all
+three) before this commit.
+
 ### File List
 
 **New**
-- `.forgejo/workflows/dev-reset.yml` — the only workflow file this story creates. `on: {schedule:
-  [weekly + temporary probe cron], workflow_dispatch: {}}` (zero inputs); workflow-level
+- `.forgejo/workflows/dev-reset.yml` — the only workflow file this story creates. Final shape (PR B):
+  `on: {schedule: [0 2 * * 0], workflow_dispatch: {}}` (zero inputs, single cron — the temporary
+  probe entry and the disarm mechanism both removed, Task 6.5); workflow-level
   `concurrency: {group: deploy-dev-fe-prionex-dev, cancel-in-progress: false}`, the same literal
   `deploy-dev.yml` carries; `runs-on: deploy-dev-preprod`, `timeout-minutes: 5`. Two steps: a sweep
-  (images + lock-holder debris, targeted/anchored, non-fatal) and a dispatch of `deploy-dev.yml`
-  with `ref=main` through the Forgejo API (currently DISARMED by a literal constant for the PR A
-  probe window — Task 6.2). 3 `run:` bodies, zero stray `${{ }}`.
+  (images + lock-holder debris, targeted/anchored, non-fatal) and an always-armed dispatch of
+  `deploy-dev.yml` with `ref=main` through the Forgejo API. 3 `run:` bodies, zero stray `${{ }}`
+  (including inside comments — one instance caught and fixed in this round, Completion Note 4).
 
 **Modified**
 - `.forgejo/workflows/README.md` — `dev-reset.yml` added to the directory's own file list (Task 8.4).
 - `docs/migration-decisions.md` — new **D31** record (schedule proven for this repository, the
-  `trigger_event`/`event` resolution, the dispatch mechanism and its token uncertainty, the sweep's
-  prohibition list and the `dangling=true` bug found and fixed); index-table row and Change Log row
-  added; anchor-range note corrected to `#d31`.
+  `trigger_event`/`event` resolution, the dispatch mechanism and the token confirmed live, the
+  sweep's prohibition list and the `dangling=true` bug found and fixed); index-table row and two
+  Change Log rows added (initial record, then Task 2.8's live result); anchor-range note corrected
+  to `#d31`.
 - `_bmad-output/planning-artifacts/epics.md` — Story 4.6's four ACs amended in place (zero-input
   clause, "same mechanics" reading, targeted-sweep replacement, Slack deferred) plus two ACs added
   (AC2's retro-E5 requirement, AC6/AC7 combined as fail-closed + cron safety); FR23's text and its
@@ -1450,11 +1553,17 @@ with no human dispatching it) — Task 6's own job, next.
   their own entries; new section "Deferred from: story-4.6 implementation" added with one
   named-owner finding (the `dangling=true` platform quirk).
 - `_bmad-output/implementation-artifacts/4-6-reset-dev-to-main-on-a-weekly-schedule.md` — this
-  file: Tasks 1/3/4/5/9 checkboxes and resolutions, Task 2's citations confirmed (2.8's own live
-  test still pending), Run Budget Ledger declared, Dev Agent Record (Completion Note 1: DB access
-  confirmation, cron validation, sweep force-testing including the real bug found and fixed,
-  dispatch classifier force-testing).
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-6-…` → `in-progress` (Task 1.0).
+  file: `Status` → `review` (frontmatter — corrected an earlier oversight, was still `ready-for-dev`
+  through the whole implementation round); Tasks 1-6, 8, 9 complete, Task 7 partially satisfied by
+  cross-referenced evidence (7.1/7.2/7.6), 7.3/7.4/7.5 explicitly left open; Run Budget Ledger
+  closed against actual run numbers (988 baseline, 11 runs spent: 993/994/1002/1004/1005/1014/1015/
+  1018/1019/1023/1032); Dev Agent Record (Completion Notes 1-4: DB access, cron validation, sweep
+  force-testing with the real bug found and fixed, dispatch classifier force-testing; Task 2.8's own
+  sequencing gap and live resolution; the three probe-tick observations with host-side confirmation
+  each time; the stray `${{ }}`-in-comment catch before this push).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-6-…` → `review` (Task 8.5, per the
+  coordinator's own explicit instruction — Task 7 is not fully earned, stated honestly above, not
+  silently oversold).
 
 ## Change Log
 
@@ -1462,3 +1571,5 @@ with no human dispatching it) — Task 6's own job, next.
 |---|---|
 | 2026-08-21 | Story contexted against `main` at 22dceedc. 🔴 **The story's stated premise was falsified while contexting it.** `schedule:` **has** fired in production on this Forgejo instance: two `action_run` rows with `trigger_event='schedule'`, both `CRM/PRIONEX_HUB` → `reset-dev.yml` (`.github/workflows/`, not `.forgejo/`), at `2026-08-05 09:50:44 UTC` and `2026-08-10 02:00:44 UTC`, both success, dispatch delay 1 second — read read-only from Forgejo's own Postgres by `CRM/api-prionex`, which then registered a **second** schedule of its own (`action_schedule id=36`, `ref=main`, `next = 2026-08-17 02:00 UTC`) and deliberately disarmed it. It has never fired in `CRM/fe-prionex` — the 124-run event census confirms the negative — so AC2 and the probe survive, but narrow from *"does cron work"* to four cheap questions. **Six instance facts arrive free** (default-branch-only registration, confirmed against the v15.0.5 source at two independent gates; UTC evaluation; the `github.sha` snapshot; every default-branch push wiping and re-registering all schedules; **a parse failure at tick time permanently disabling the workflow**; and open issue #12566, where an invalid cron breaks push triggers repository-wide). 🔴 **One sibling conclusion appears to be wrong and is corrected here rather than inherited:** `api-prionex`'s fact 2 reads `event=push` off the wrong `action_run` column and forbids branching on `github.event_name`; the v15.0.5 source populates `github.event_name` from `trigger_event`, so it should read `schedule` — nobody has ever echoed it live, and Task 6.3 does, in one line. Four autonomous decisions recorded, subject to Oleg's veto: the reset **dispatches** the proven `deploy-dev.yml` rather than duplicating it (§3, five alternatives ranked and costed — **both sibling projects took the rejected one**); the manual path takes **zero inputs**, so it cannot be aimed anywhere but `main` and therefore becomes valid evidence for the scheduled path; FR23's literal `docker image prune` is replaced by a **targeted** sweep, because s1 is multi-tenant and `docker ps --filter name=` is a substring match that matches this job's own runner; and the holder-debris chore from `deferred-work.md:2930-2949` is **accepted** into scope. Three ACs amended, three added (AC6 fail-closed-and-untouched, AC7 the cron cannot take the repository down with it, AC8 Slack deferred). 🔴 One near-certain new dependency surfaced up front: the v15.0.5 dispatch route needs `write:repository` **and** Actions-unit write, which the automatic job token probably lacks — Task 2.8 settles it in one run, and the fallback is a decision for Oleg, not a silent switch to `workflow_call`. Story 4.5 is parked; its unmerged branch is not read. Delivery is two implementation PRs by construction, because a `schedule:` on a feature branch registers nothing, no UI or API lists registrations, and protected `main` is the only place a firing can be observed. Status → ready-for-dev |
 | 2026-08-21 | **Implementation round: Tasks 1, 3, 4, 5, 9 complete; Task 2's citations confirmed (2.8's own live test pending); Tasks 6-8 pending the coordinator.** `dev-reset.yml` written end to end and locally validated before push: cron expressions checked against a 5-field-exact local parser overlay (no Go toolchain available, croniter used with Forgejo-specific strictness rules layered on top); sweep logic force-tested on s1 against real and synthetic debris, finding and fixing a real bug — `docker images --filter dangling=true` matches no digest-pulled image at all on this daemon's containerd-backed store, which would have shipped as a silent no-op sweep (this story's own failure cause 5); dispatch classifier force-tested for every HTTP branch; disarm mechanism (Task 6.2) and the `github.event_name`-etc. diagnostic (Task 6.3) both verified locally. Baseline (Task 1.1) and AC2's own "before" half (Task 6.4) both answered by a direct read-only query against Forgejo's own Postgres via SSH on s1 — the same method `CRM/api-prionex`'s own story documents — confirmed live and reusable; also used, at the coordinator's request, to close Story 4.4's own DF1 (`concurrency_group`/`concurrency_type` for runs 964/965, both confirmed correct). D31 recorded, epics.md's four ACs amended plus two added, `deferred-work.md`'s two named entries closed at their own locations plus one new platform-level finding recorded. Regression check: `deploy-dev.yml` has zero diff, exactly six files touched total, none on the do-not-touch list. Requesting from the coordinator: Task 2.8's one live dispatch (armed, on the implementation branch, before PR A), then opening PR A once that's settled |
+| 2026-08-21 | **Task 2.8 closed live: the token can dispatch, chain 1004→1005 proven end to end.** First attempt (run 994) proved nothing — dispatched against a file still carrying `DISARMED=true`, a self-inflicted sequencing gap, not a platform finding, caught via the same DB read path used throughout this story. Fixed (`DISARMED=false` for one commit), redispatched: run 1004 (armed) reached the real endpoint, got a real `2xx`, and genuinely triggered run 1005 (`deploy-dev.yml`, `ref=main`, SUCCESS ~1 min) — against the read source's own prediction that the automatic job token would lack the needed Actions-unit write permission. No Oleg escalation needed. Host-side confirmed: `stand-checkout-1005`, image revision matches `baseline_commit`, lock file mtime 3s before container recreation, no leftover holder debris. `DISARMED` reverted to `true` for PR A's own probe window (a decision independent of the token result — it controls the blast radius of the frequent test cron, not a credential workaround). D31 updated with the live result in place of the prior expectation |
+| 2026-08-21 | **PR A merged (#63, `6c681da38f9b`); probe window observed and closed at 3 clean ticks; PR B lands the final permanent shape.** "After" half of AC2's discriminating pair banked by query: `action_schedule id=37` registered `09:44:23 UTC` (~19s after PR A's own merge), `action_schedule_spec` carrying exactly the two intended cron strings verbatim, `time_zone=''` confirming UTC live. Three scheduled firings observed (runs 1019/1023/1032, 09:50/10:05/10:20 UTC) — all `trigger_event='schedule'`, system actor `-2`, a consistent **44s delay** (this repository's own measurement, not `PRIONEX_HUB`'s 1s), all SUCCESS, stand confirmed untouched and the sweep confirmed running for real with a legitimate no-op each time (nothing yet old enough to remove). A platform limitation found and recorded: `$GITHUB_OUTPUT` values are not retrievable outside a job's own live execution on this instance, so Task 6.3's own literal `github.event_name` echo could not be read back — substituted the DB's own `trigger_event` column, already proven to carry the same information per the v15.0.5 source reading. Task 7.1/7.2/7.6 satisfied by evidence already in hand (0 additional dispatches); 7.3/7.4/7.5 remain open for a subsequent round. This PR removes the temporary probe cron and the disarm mechanism entirely (not merely toggled — it was always probe-window scaffolding, not a permanent regression hook), leaving a single weekly cron and an always-armed dispatch. One more stray `${{ }}`-in-a-comment caught and fixed before this push (Completion Note 4). Ledger closed at 11 runs above baseline 988, still well under the ~20-24 floor. `Status`/`sprint-status.yaml` → `review`, by the coordinator's own explicit instruction — Task 7's remaining rows stated as open, not folded into the claim |
