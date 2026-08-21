@@ -21,6 +21,7 @@ import type { Permission } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { shouldStripDashboardChrome } from '@/features/onexEmbed/embedContext'
 import { cn } from '@/lib/utils'
 import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
@@ -1111,6 +1112,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     location.pathname === '/dashboard/ai-assistant' ||
     location.pathname === '/dashboard/ai-assistant/'
 
+  /**
+   * OneX dock (`/dashboard/ai-assistant?embed=dock`): the page is hosted in a
+   * ~420px sidebar of the operators' browser, which already provides the
+   * navigation. The rail, the header and the header-only surfaces (search,
+   * notifications, call bubble) would eat most of that width, so the layout
+   * collapses to a bare full-bleed shell. Route-gated inside
+   * `shouldStripDashboardChrome` — a stray `?embed=dock` on another screen must
+   * never leave an operator without navigation.
+   */
+  const isOnexDock = shouldStripDashboardChrome(location.pathname, location.search)
+
   const isLawyerWorkplaceRoute =
     location.pathname === '/dashboard/lawyer-workplace' ||
     location.pathname.startsWith('/dashboard/lawyer-workplace/')
@@ -1125,105 +1137,114 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       >
         {/* Sidebar */}
-        <Sidebar items={navItems} bottomItems={bottomNavItems} />
+        {!isOnexDock && <Sidebar items={navItems} bottomItems={bottomNavItems} />}
 
         {/* Main Content Area with left margin for sidebar - no margin below xl */}
         <div
           className={cn(
             'min-w-0 transition-all duration-300',
-            'xl:ml-18', // Desktop: always has margin for collapsed sidebar
-            isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
+            // The dock has no rail to clear — any margin here would be dead
+            // space inside an already narrow sidebar.
+            !isOnexDock && 'xl:ml-18', // Desktop: always has margin for collapsed sidebar
+            !isOnexDock && isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
           )}
         >
           {/* Fixed Header */}
-          <header
-            className={cn(
-              'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
-              isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
-              'left-0 xl:left-18',
-              isOpenSideBar && 'xl:left-60'
-            )}
-          >
-            {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
-            <div
+          {!isOnexDock && (
+            <header
               className={cn(
-                'relative flex gap-2 lg:gap-3',
-                isLawyerWorkplaceRoute
-                  ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
-                  : 'items-center'
+                'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+                isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
+                'left-0 xl:left-18',
+                isOpenSideBar && 'xl:left-60'
               )}
             >
-              {/* Mobile menu button */}
-              <button
-                onClick={toggleSidebar}
+              {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
+              <div
                 className={cn(
-                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
-                  isLawyerWorkplaceRoute && 'self-center'
+                  'relative flex gap-2 lg:gap-3',
+                  isLawyerWorkplaceRoute
+                    ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
+                    : 'items-center'
                 )}
-                aria-label="Toggle menu"
               >
-                <Icons.Menu11
-                  size={20}
-                  className="text-foreground transition-transform duration-200 group-hover:scale-110"
-                  strokeWidth={1.5}
-                />
-              </button>
-
-              {isLawyerWorkplaceRoute ? (
-                <LawyerWorkplaceHeaderNav />
-              ) : (
-                <div className="relative flex items-center gap-2" ref={searchContainerRef}>
-                  <SearchBar
-                    placeholder={t('search.placeholder')}
-                    searchOptions={searchOptions}
-                    defaultSearchType="phone"
-                    onSearch={handleSearch}
-                    onSearchChange={handleSearchChange}
-                    isLoading={isSearching}
-                    value={localSearchQuery}
-                    searchTypeValue={localSearchType}
-                  />
-                  {showSearchDropdown && (
-                    <SearchResults
-                      query={localSearchQuery}
-                      searchType={localSearchType}
-                      results={searchResults}
-                      isLoading={isSearching}
-                      error={searchError}
-                      hint={searchHint}
-                      onViewAll={handleViewAllResults}
-                      onResultClick={handleResultClick}
-                    />
+                {/* Mobile menu button */}
+                <button
+                  onClick={toggleSidebar}
+                  className={cn(
+                    'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
+                    isLawyerWorkplaceRoute && 'self-center'
                   )}
-                </div>
-              )}
-            </div>
+                  aria-label="Toggle menu"
+                >
+                  <Icons.Menu11
+                    size={20}
+                    className="text-foreground transition-transform duration-200 group-hover:scale-110"
+                    strokeWidth={1.5}
+                  />
+                </button>
 
-            {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
-            {/* Desktop: Project Selector, Language Switcher and User Profile */}
-            <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
-              <MinimizedCallBubble />
-              <MinimizedChainExecutorBubble />
-              <NotificationBell />
-              <ThemeModeToggle />
-              <AiAssistantHeaderButton />
-              <UserProfile onLogoutClick={handleLogoutClick} />
-            </div>
+                {isLawyerWorkplaceRoute ? (
+                  <LawyerWorkplaceHeaderNav />
+                ) : (
+                  <div className="relative flex items-center gap-2" ref={searchContainerRef}>
+                    <SearchBar
+                      placeholder={t('search.placeholder')}
+                      searchOptions={searchOptions}
+                      defaultSearchType="phone"
+                      onSearch={handleSearch}
+                      onSearchChange={handleSearchChange}
+                      isLoading={isSearching}
+                      value={localSearchQuery}
+                      searchTypeValue={localSearchType}
+                    />
+                    {showSearchDropdown && (
+                      <SearchResults
+                        query={localSearchQuery}
+                        searchType={localSearchType}
+                        results={searchResults}
+                        isLoading={isSearching}
+                        error={searchError}
+                        hint={searchHint}
+                        onViewAll={handleViewAllResults}
+                        onResultClick={handleResultClick}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
-              <MinimizedCallBubble />
-              <MinimizedChainExecutorBubble />
-              <NotificationBell />
-              <ThemeModeToggle />
-              <AiAssistantHeaderButton />
-              <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
-            </div>
-          </header>
+              {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
+              {/* Desktop: Project Selector, Language Switcher and User Profile */}
+              <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
+                <MinimizedCallBubble />
+                <MinimizedChainExecutorBubble />
+                <NotificationBell />
+                <ThemeModeToggle />
+                <AiAssistantHeaderButton />
+                <UserProfile onLogoutClick={handleLogoutClick} />
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
+                <MinimizedCallBubble />
+                <MinimizedChainExecutorBubble />
+                <NotificationBell />
+                <ThemeModeToggle />
+                <AiAssistantHeaderButton />
+                <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+              </div>
+            </header>
+          )}
 
           {/* Scrollable Page Content with top padding for fixed header */}
           <main
             className={cn(
-              'min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
+              'min-h-screen overflow-y-auto',
+              // Dock: no fixed header above and no room to spare — the chat
+              // fills the sidebar edge to edge and owns its own padding.
+              isOnexDock
+                ? 'overflow-x-hidden p-0'
+                : 'px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
               isLawyerWorkplaceRoute && 'overflow-x-hidden'
             )}
           >
@@ -1251,8 +1272,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isLoading={isLoggingOut}
         />
 
-        {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && canShowIncomingPopup && (
+        {/* Incoming Call Modal — suppressed while another call window is up.
+            Also suppressed in the OneX dock: the operator's CRM window in the
+            main pane raises its own popup, and a second one inside a ~420px
+            sidebar would both duplicate it and be unusable there. */}
+        {incomingCall && canShowIncomingPopup && !isOnexDock && (
           <CallDialogModal
             // A queue can replace one ringing call with another without the
             // popup ever unmounting, and the modal resets its timer and state

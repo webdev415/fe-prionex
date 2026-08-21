@@ -41,6 +41,17 @@ import {
   type AttachmentType,
   type PendingAttachment,
 } from '@/features/aiAssistant/attachments'
+import {
+  buildContextualMessage,
+  contextChipLabel,
+  type OnexPageContext,
+} from '@/features/onexEmbed/embedContext'
+import {
+  useIsOnexDockEmbed,
+  useOnexAsk,
+  useOnexDockReady,
+  useOnexPageContext,
+} from '@/features/onexEmbed/hooks'
 import { useServerDictation } from '@/features/aiAssistant/useServerDictation'
 import {
   useVoiceMessageRecorder,
@@ -322,6 +333,40 @@ function AttachmentIcon({ mime }: { mime: string }) {
     <Icons.Csv02 size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
   ) : (
     <Icons.File size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+  )
+}
+
+/**
+ * OneX dock: the page the operator is looking at in the main pane, shown above
+ * the composer so it is obvious *before* sending what the assistant will be
+ * told about. ✕ drops it; sending a message consumes it.
+ */
+function OnexContextChip({ context, onClear }: { context: OnexPageContext; onClear: () => void }) {
+  const { t } = useTranslation('common')
+  const label =
+    contextChipLabel(context) ??
+    (context.clientId !== null
+      ? t('pages.aiAssistant.onexContextClientFallback', { id: context.clientId })
+      : t('pages.aiAssistant.onexContextPageFallback'))
+
+  return (
+    <div
+      className="border-primary-200 bg-primary-50/60 text-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-2.5 py-1.5 text-xs font-light"
+      data-testid="onex-context-chip"
+    >
+      <Icons.Link01 size={14} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+      <span className="min-w-0 flex-1 truncate" title={context.url ?? undefined}>
+        {t('pages.aiAssistant.onexContextChip', { label })}
+      </span>
+      <button
+        type="button"
+        aria-label={t('pages.aiAssistant.onexContextClear')}
+        onClick={onClear}
+        className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
   )
 }
 
@@ -663,6 +708,11 @@ function ComposerHubMenu({
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
   const { data: aiSettings } = useAiAssistantSettings()
+  // OneX dock (`?embed=dock`): the page runs inside the operators' browser as a
+  // ~420px sidebar. See features/onexEmbed/embedContext.ts for the contract.
+  const isEmbedded = useIsOnexDockEmbed()
+  const { context: onexContext, clearContext: clearOnexContext } = useOnexPageContext(isEmbedded)
+  useOnexDockReady(isEmbedded)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const userId = useAuthStore((state) => state.user?.id ?? null)
   const storedConversationId = useAiAssistantStore((state) => state.conversationIdFor(userId))
@@ -704,7 +754,15 @@ export function AiAssistantBetaPage() {
   // An explicit click in the history panel must load the conversation even
   // when "remember conversation context" is off.
   const [isExplicitSelection, setIsExplicitSelection] = useState(false)
-  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.innerWidth < 1024)
+  /**
+   * Compact layout: every desktop-only surface (inline settings popover, the
+   * reasoning panel reserving its own column, the fixed dock's rail offsets)
+   * falls back to its mobile form. The OneX dock is always compact — it has no
+   * dashboard rail and no history panel to lay out against, whatever width the
+   * host window happens to have.
+   */
+  const isMobileOrTablet = isNarrowViewport || isEmbedded
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [dictationDraft, setDictationDraft] = useState('')
@@ -762,7 +820,7 @@ export function AiAssistantBetaPage() {
   }, [assistantSettings, saveSettings, userId])
 
   useEffect(() => {
-    const onResize = () => setIsMobileOrTablet(window.innerWidth < 1024)
+    const onResize = () => setIsNarrowViewport(window.innerWidth < 1024)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -1528,6 +1586,13 @@ export function AiAssistantBetaPage() {
         return
       }
 
+      // OneX dock: the page the operator is looking at rides along as a short
+      // preamble in front of their own text (the chat contract has no field for
+      // host context). It is consumed by this one turn — the chip clears, so a
+      // conversation is not re-stamped with the same page on every message.
+      const outboundMessage = buildContextualMessage(prompt, isEmbedded ? onexContext : null)
+      if (outboundMessage !== prompt) clearOnexContext()
+
       setMessage('')
       // Only the attachments that went out with this turn leave the composer —
       // a quick action fired while a file is staged must not discard it.
@@ -1595,7 +1660,9 @@ export function AiAssistantBetaPage() {
       try {
         const result = await sendChat({
           payload: {
-            message: prompt,
+            // The feed bubble above shows `prompt`; what goes to the brain may
+            // carry the OneX page-context preamble in front of it.
+            message: outboundMessage,
             conversation_id: assistantSettings.rememberConversationContext
               ? (conversationId ?? undefined)
               : undefined,
@@ -1760,8 +1827,11 @@ export function AiAssistantBetaPage() {
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
       assistantSettings.responseMode,
+      clearOnexContext,
       conversationId,
       isAssistantResponding,
+      isEmbedded,
+      onexContext,
       scrollToConversationBottom,
       sendChat,
       setActiveConversation,
@@ -1769,6 +1839,22 @@ export function AiAssistantBetaPage() {
       userId,
     ]
   )
+
+  /**
+   * OneX «ask this now»: the host either spells the question out or names a
+   * preset. The text lands in the composer either way, so a command that
+   * arrives mid-answer is not lost — it simply waits for the operator to press
+   * send instead of queueing behind the running turn.
+   */
+  useOnexAsk(isEmbedded, (command) => {
+    const prompt =
+      command.text ||
+      (command.preset === 'summary' ? t('pages.aiAssistant.onexAskSummaryPrompt') : '')
+    if (!prompt) return
+    setMessage(prompt)
+    if (isAssistantResponding) return
+    void submitPrompt(prompt, pendingAttachments)
+  })
 
   // Latest-ref wiring: the recorder hook is declared before submitPrompt.
   useEffect(() => {
@@ -2335,8 +2421,14 @@ export function AiAssistantBetaPage() {
         paddingRight:
           !isMobileOrTablet && isReasoningPanelOpen ? `${reasoningPanelWidth}px` : undefined,
       }}
+      data-testid={isEmbedded ? 'assistant-onex-dock' : undefined}
       className={cn(
-        'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
+        'relative flex w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden',
+        // The dashboard header (80px top padding + 20px bottom) is not there in
+        // the dock, so the chat gets the whole host window height.
+        isEmbedded
+          ? 'min-h-screen supports-[height:100dvh]:min-h-[100dvh]'
+          : 'min-h-[calc(100vh-5.5rem)] supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
         // Reserve space for the fixed history panel (its width + a 1rem gap).
         !isMobileOrTablet &&
           'lg:transition-[padding] lg:duration-300 ' +
@@ -2369,13 +2461,20 @@ export function AiAssistantBetaPage() {
 
       {/* Mobile history trigger: fixed below the dashboard header so it stays
           reachable in a scrolled chat (sticky elements never pin here — see
-          the note on the panel above). */}
+          the note on the panel above). In the OneX dock the history panel is
+          gone for good (no width for it) and there is no dashboard header to
+          clear, so the same button sits at the very top and keeps past chats
+          plus "new chat" one tap away through the drawer — at every width,
+          hence no `lg:hidden` there. */}
       {isMobileOrTablet && (
         <button
           type="button"
           aria-label={t('pages.aiAssistant.historyOpenAria')}
           onClick={() => setIsHistoryDrawerOpen(true)}
-          className="border-border text-foreground hover:bg-muted bg-card/95 fixed top-[68px] left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-md transition-colors lg:hidden"
+          className={cn(
+            'border-border text-foreground hover:bg-muted bg-card/95 fixed z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-md transition-colors',
+            isEmbedded ? 'top-2 left-2' : 'top-[68px] left-3 lg:hidden'
+          )}
         >
           <Icons.MessageMultiple01 size={18} strokeWidth={1.5} />
         </button>
@@ -2390,7 +2489,14 @@ export function AiAssistantBetaPage() {
 
       {hasConversation ? (
         <div
-          className="relative min-h-0 flex-1 px-3 pt-3 sm:px-8 sm:pt-5 md:px-10 lg:px-14 lg:pt-6 xl:px-20"
+          className={cn(
+            'relative min-h-0 flex-1',
+            // Dock: no room for the wide desktop gutters — the ribbon runs
+            // nearly edge to edge in a ~420px sidebar.
+            isEmbedded
+              ? 'px-2 pt-2'
+              : 'px-3 pt-3 sm:px-8 sm:pt-5 md:px-10 lg:px-14 lg:pt-6 xl:px-20'
+          )}
           style={{ paddingBottom: `${dockHeight}px` }}
         >
           <div className="mx-auto w-full max-w-5xl 2xl:max-w-6xl">
@@ -2543,7 +2649,10 @@ export function AiAssistantBetaPage() {
         </div>
       ) : (
         <div
-          className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 sm:px-8 md:px-10 lg:px-14 xl:px-20"
+          className={cn(
+            'flex min-h-0 flex-1 flex-col items-center justify-center',
+            isEmbedded ? 'px-2' : 'px-3 sm:px-8 md:px-10 lg:px-14 xl:px-20'
+          )}
           style={{ paddingBottom: `${dockHeight}px` }}
         >
           <div className="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 text-center sm:gap-5">
@@ -2581,8 +2690,11 @@ export function AiAssistantBetaPage() {
           // content area (see dockGeometry.ts), so the input card and the
           // quick actions share one column centre with the message ribbon in
           // every sidebar combination. Mobile keeps the full-width box.
-          'pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
-          getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
+          'pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center transition-[left,right] duration-300',
+          isEmbedded
+            ? 'px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+            : 'px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed, isEmbedded)
         )}
       >
         {hasConversation && showScrollToLatest && (
@@ -2597,7 +2709,10 @@ export function AiAssistantBetaPage() {
         )}
         <div className="pointer-events-auto mx-auto w-full max-w-5xl min-w-0 2xl:max-w-6xl">
           <div
-            className="border-border/60 bg-card/95 shadow-foreground/5 rounded-2xl border p-3 shadow-lg sm:rounded-3xl sm:p-5"
+            className={cn(
+              'border-border/60 bg-card/95 shadow-foreground/5 rounded-2xl border shadow-lg',
+              isEmbedded ? 'p-2' : 'p-3 sm:rounded-3xl sm:p-5'
+            )}
             onDragOver={(e) => {
               if (e.dataTransfer.types.includes('Files')) e.preventDefault()
             }}
@@ -2681,6 +2796,10 @@ export function AiAssistantBetaPage() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {isEmbedded && onexContext && (
+              <OnexContextChip context={onexContext} onClear={clearOnexContext} />
             )}
 
             <div className="relative">
