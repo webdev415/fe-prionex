@@ -375,7 +375,53 @@ development_status:
   # genuinely unmeasured — every dispatch so far had a human or workflow_dispatch-shaped actor — the
   # coordinator is the named owner for that one remaining check, by query, Monday.
   4-6-reset-dev-to-main-on-a-weekly-schedule: done
-  4-7-validate-dev-deploys-across-five-feature-branches: backlog
+  # Contexted 2026-08-21 against `main` at `0d4b6dfc`, on branch `story-4-7/pr-1-context`.
+  # 🔴 THE STORY'S HEADLINE PREMISE IS FALSE AND THE CORRECTION SHAPES THE WHOLE STORY: "five
+  # different REAL feature branches" cannot be satisfied by ANY of the 201 `origin/feature/*`
+  # branches. `docker-compose.stand.yml` arrived with Story 4.1 on 2026-08-19 (`e74e9ded`) and
+  # exists on `main` plus the eleven `story-4-*` branches and NOTHING ELSE — measured across all
+  # 525 remote refs — while `deploy-dev.yml:1057-1062` refuses by name for any ref without it.
+  # Two more walls behind it: the image's `org.opencontainers.image.revision` must equal the
+  # deployed commit exactly (`:1071-1082`), and `-dev` tags expire at 14 days. "Real" is therefore
+  # redefined by five binding clauses (branch cut from `main`, real branch-naming convention with
+  # its uppercase ticket shape, one honest independently-valuable change, image built by the
+  # ordinary push→ci.yml→build.yml path, deployed but NOT merged) — the Story 2.5 precedent, which
+  # met the same wall for the same reason. Deviation STATED, not hidden.
+  # Other autonomous decisions, all subject to Oleg's veto and listed together in Dev Notes §11:
+  #   • AC2's verdict is RUN wall-clock against 600s, not the `deploy` job's — the job carries
+  #     `timeout-minutes: 10`, so a job-level measure makes AC2 an implication of AC1 and it could
+  #     never fail. Dominant-step attribution widened from "any that exceeded" to all five: the
+  #     measured baseline is ~21-22s, so the epic's conditional clause would close vacuously, and
+  #     4.3 already owed this number and never produced it. It is now free.
+  #   • AC3 narrowed and substituted on the Story 4.2 AC5 precedent — the legacy stand is on
+  #     `72.62.17.132`, unreachable, and a calendar week cannot be spanned. Replaced by the check
+  #     that would actually catch the disaster: every one of s1's ~185 neighbouring containers
+  #     proven unmoved across five consecutive deploys. Week-long clause → coordinator (folded into
+  #     the Monday check that already owns the Sunday firing); "developers report no disruption" →
+  #     Oleg. Both recorded PENDING, neither asserted.
+  #   • AC4 narrowed to the pre-`down` window, and the 4.3 review's JOINT 4.7/4.8 ownership of the
+  #     rollback is RESOLVED IN WRITING in 4.8's favour: it would be a new mechanism in a hardened
+  #     file, its E5 matrix needs a deliberate break-and-repair of the stand, and runs 937/938 are
+  #     already the live proof. The 404 row costs ZERO pushes — a real never-built `feature/*`
+  #     branch 404s at digest-resolve, five steps before `down`.
+  #   • AC5 added: DF2 (`deferred-work.md:3040-3052`, owner named as this story). 🔴 Five green
+  #     sequential deploys close NOTHING here — on a `capacity: 1` runner group-queueing and
+  #     capacity-queueing are indistinguishable by timestamps. Measured instead by a 3-dispatch
+  #     D1/D2/D3 probe read from `action_run.concurrency_group`/`concurrency_type`, or closed
+  #     UNPROVEN. Closes Story 4.4's own UNPROVEN AC1 as a free by-product.
+  # 🔴 Constraint that governs everything: THIS STORY ADDS NO NEW MECHANISM. 4.6 overran its floor
+  # by 60-95% on a four-line EVIDENCE step that did not exist when its budget was written. Any gap
+  # found is recorded for 4.8, not patched; correct-course only if a defect blocks the validation.
+  # First adopter of 4.6's two new evidence channels (readable zstd task logs; direct read-only
+  # Postgres) — which is what makes per-step attribution free and makes a red deploy cost a log
+  # read rather than a re-dispatch, unlike 4.3's five reds.
+  # Budget: declared floor 20 runs, itemized, with the PR-open and merge lines every prior ledger
+  # forgot; 8 of 8 red-causes converted to zero-dispatch checks before the first dispatch. Two free
+  # closures: Story 3.2's mixed-case tag question (open since 2026-08-15) and Story 4.4's AC1.
+  # ⚠️ Hard window: NO dispatch 2026-08-23 01:45-02:30 UTC and no lock holder alive across it —
+  # Sunday 02:00 UTC is the scheduler's first AUTONOMOUS firing and the coordinator's own
+  # measurement; this story must not contaminate it.
+  4-7-validate-dev-deploys-across-five-feature-branches: ready-for-dev
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
