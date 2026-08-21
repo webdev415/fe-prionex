@@ -1,0 +1,416 @@
+name: Weekly DEV Reset
+
+# Story 4.6. A TRIGGER, almost nothing else (Dev Notes §1). The deploy already exists and is
+# live-proven (`deploy-dev.yml`, runs 929/938/950/962/965/968/973); the image this file asks for is
+# published on every merge to `main` by `build-main.yml`, written for exactly this reason
+# (`build-main.yml:23-26`). What this file adds: a schedule, a sweep, and a dispatch — nothing that
+# deploys.
+#
+# ── Why a NEW file, not a change to deploy-dev.yml (AC1) ────────────────────────────────────────
+# `4-3-…md:225-228`: "Story 4.6 is the story that adds a schedule, deliberately and separately."
+# `deploy-dev.yml`'s own `on:` block carries `workflow_dispatch` and NOTHING ELSE, is live-proven
+# across four review rounds, and is not touched by this story (Task 9.1) — not even to add a
+# default for `ref`, which would delete deploy-dev.yml's own fail-closed "no ref, no deploy"
+# property. Both sibling repositories on this instance independently wrote the identical rule for
+# themselves (`PRIONEX_HUB/.github/workflows/deploy-dev.yml:4-5`, their AD-4). This file DISPATCHES
+# `deploy-dev.yml` with `ref=main` through the Forgejo API and contains no deploy logic of its own
+# — no `docker login`, no digest resolution, no `docker compose down`/`up -d`, no health check, no
+# Kong guard, no copy of the stand's five variables (AC3). Five alternatives were ranked and
+# rejected — `workflow_call` (pre-empts Story 4.8's own decision and disables `deploy-dev.yml`'s
+# own concurrency block on the call path, D21), a schedule bolted directly onto `deploy-dev.yml`
+# (deletes the fail-closed ref requirement), a host cron on s1 (leaves version control), a
+# by-hand weekly dispatch (the honest name for "unsolved"), and duplicating the deploy body (what
+# BOTH sibling projects did, and exactly the debt Story 4.8 exists to not inherit). Full argument:
+# `docs/migration-decisions.md#d31`.
+#
+# ── s1 is multi-tenant — the sweep's prohibition list (AC4) ─────────────────────────────────────
+# `CRM/api-prionex`'s own census: 185 containers matching `crm-` alone on this host, including the
+# four Forgejo runner containers THIS JOB executes inside, Forgejo's own Postgres, OpenBao, and
+# another team's `techno-finance` stack. None of the following ever appears in this file, each for
+# a specific measured reason, not caution: `docker image prune` (bare or `-a`) — host-wide, no
+# repository filter, deletes another tenant's dangling layers; `docker system|volume|network|
+# builder prune` — `crm-dev-network` is `external:` and belongs to `CRM/api-prionex`, volumes are
+# other tenants' data, the build cache is a registry-and-host asset; any name filter used as a
+# SUBSTRING in a destructive position — `docker ps --filter name=` is a substring match on this
+# host (`deferred-work.md:2650-2653`: an unanchored `name=fe-prionex` filter returns the FOUR
+# `forgejo-runner-fe-prionex*` containers, including the runner this job runs inside); any
+# `xargs`-driven bulk removal — loses per-item failure handling and the ability to say what was
+# kept and why; `docker rm -f` on a RUNNING holder — that is a live deploy's lock
+# (`deploy-dev.yml:1284-1404`'s H4 warns the human path about exactly this; an unattended job must
+# be structurally incapable of it, not merely advised).
+#
+# ── UTC, not local (Task 2.6) ────────────────────────────────────────────────────────────────────
+# `action_schedule_spec.time_zone` is empty on this instance (measured), and empty means UTC
+# (`models/actions/schedule_spec.go:66-82`). s1 runs CEST/CET (+2h summer, +1h winter). The cron
+# below is written in UTC and landed at that value deliberately — see the `- cron:` line's own
+# comment for what that is in s1's local clock, for both halves of the year. `TZ=`/`CRON_TZ=`
+# prefixes and the `timezone:` YAML key are supported by this Forgejo build and are FORBIDDEN here
+# (AC7) — none has ever been exercised on this instance, and a UTC expression has no DST
+# transition at all, sidestepping Forgejo's own documented DST skip/double-fire behaviour entirely.
+#
+# 🚨 ── The concurrency group is SHARED on purpose, and sharing it creates ONE self-deadlock trap
+# (Dev Notes §6) ─────────────────────────────────────────────────────────────────────────────────
+# This file declares the SAME literal group `deploy-dev.yml` does: `deploy-dev-fe-prionex-dev`.
+# What that buys is narrower than it looks: the dispatched deploy is a SEPARATE run that carries
+# the group by itself, so sharing it protects THE SWEEP from running while a human deploy is
+# mid-flight (the sweep and a deploy's pull→up-d window touch the same object class) — it adds no
+# protection to the deploy, which already had it. Because THIS job holds the group while it runs,
+# the run it dispatches CANNOT START until this job's own run leaves the group. **Any future change
+# that makes this job wait for the deploy it triggered — polling the run to completion, "so the
+# weekly run's own status is meaningful", or to sweep AFTER instead of before — is a
+# SELF-DEADLOCK**, resolved only by `timeout-minutes` expiring. This is the single most likely
+# well-intentioned regression on this file. Fire and exit.
+#
+# ── No volumes, no data — why an UNATTENDED, RECURRING job is safe here (AC5, AC6) ─────────────
+# The sibling project's own coordinator disarmed their schedule after a near-miss they called
+# "protection by coincidence" — an unrelated blocker happened to stop their run before the
+# destructive stage, and the moment it lifted, the schedule would have gone destructive with no
+# further human act (`api-prionex_f/.forgejo/workflows/dev-weekly-reset.yml:86-96`). This stand
+# carries no volumes and no database — the worst outcome of a spurious reset here is that DEV
+# serves `main` instead of somebody's feature branch, which is the exact state this story exists
+# to produce on a schedule. That difference is why this file may arm a schedule where theirs could
+# not.
+#
+# ── Every step is plain `run:` (Task 3.5) ───────────────────────────────────────────────────────
+# `uses:` steps do not execute at all on `deploy-base-dev-preprod:2026-08-07` — measured, run 920.
+# No `${{ }}` inside any `run:` body, not even inside a shell comment (Task 3.6) — Forgejo
+# substitutes inside comments too (`build.yml:812-816`; `api-prionex`'s own Л1: one empty token
+# once rejected a whole workflow with no diagnostic). Values arrive through step-level `env:` and
+# are referenced as shell variables. `concurrency:`/`on:` are workflow-level keys, not `run:`
+# bodies. Every fail-closed guard survives its own command substitution to print its message —
+# `deploy-dev.yml:75-88` carries the fixed idiom (4.3's review found seven guards that did not,
+# 4.4's found two more); reused here in shape.
+
+on:
+  schedule:
+    # Every Sunday, 02:00 UTC — 04:00 CEST (summer) / 03:00 CET (winter). Task 2.6: this instance's
+    # schedule spec carries no time_zone, which Forgejo evaluates as UTC; the value here IS the UTC
+    # instant, not a local one converted at read time. Validated locally against a 5-field-exact
+    # parser matching `github.com/gdgvda/cron v0.7.0` (`cron.Minute|Hour|Dom|Month|Dow`, no seconds
+    # field) before this file was ever pushed (AC7; Completion Notes).
+    - cron: '0 2 * * 0'
+    # 🔴🔴🔴 TEMPORARY — PROBE CRON (Task 6.1). Removed by the SECOND implementation PR
+    # (`story-4-6/pr-2b-arm-schedule` — see that PR's own description for the exact link once
+    # opened). Fires every 15 minutes, offset +5 from the hour so it is NEVER in the same minute as
+    # the weekly cron above (Task 2.9's staggering rule — two crons ticking in the same minute
+    # triggered a permanent-disable deadlock pre-15.0, codeberg #9846; this instance is past the
+    # fix but the advice to stagger stands regardless). Exists ONLY to convert "wait a week for
+    # AC2's evidence" into "wait ~15-30 minutes" — the dispatch step below is DISARMED for as long
+    # as this entry exists (see `DISARMED` below), so a firing here can NEVER touch the stand,
+    # unlike `PRIONEX_HUB`'s own refused `*/5` test cron, which they refused specifically because
+    # their dispatch was NOT disarmed. 🔴 If the PR removing this entry has not merged within 6
+    # hours of this one landing on `main`, REVERT this PR (Task 6.1's own tripwire) — a probe cron
+    # left armed on `main` past its own observation window is a liability, not a convenience.
+    - cron: '5,20,35,50 * * * *'
+  workflow_dispatch: {}
+    # Zero inputs, deliberately (AC1). The epic's own text only asks for "can also be dispatched
+    # manually" — this is stronger, and the strength is the point: with no ref/tag/environment a
+    # human can steer it at, a manual dispatch and a scheduled firing execute the IDENTICAL job
+    # over IDENTICAL inputs, so the manual path becomes real evidence for the scheduled one (proves
+    # the body), not a substitute for it (still has to prove the body ran at a moment nobody
+    # chose). Precedent, same instance, same team: `PRIONEX_HUB/.github/workflows/reset-dev.yml:
+    # 22-23`.
+
+concurrency:
+  group: deploy-dev-fe-prionex-dev
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
+
+jobs:
+  reset:
+    name: "Weekly reset — sweep, then dispatch deploy-dev.yml(ref=main)"
+    runs-on: deploy-dev-preprod
+    # Task 3.4: small on purpose. This job dispatches and sweeps; it does not deploy, and it must
+    # not be able to sit inside the shared concurrency group for long (see the self-deadlock note
+    # above) — 5 minutes is generous for a job whose own steps are a handful of docker/curl calls.
+    timeout-minutes: 5
+    steps:
+      - name: Sweep stale images and lock-holder debris (Task 5, AC4)
+        id: sweep
+        env:
+          MAX_IMAGE_AGE_HOURS: "168"   # 7 days — one reset cycle. An image younger than this could
+                                       # still legitimately be "the previous cycle's own pull",
+                                       # mid-transition (Task 5.2's race).
+          MAX_HOLDER_AGE_HOURS: "24"   # A holder that finished over a day ago is not "a deploy that
+                                       # just ended"; it is debris (M15's own tradeoff, Story 4.4).
+        run: |
+          set -euo pipefail
+          echo "=== docker system df, before (borrowed verbatim from api-prionex's own file — costs nothing, answers the obvious review question) ==="
+          docker system df
+
+          REMOVED_IMAGES=0
+          KEPT_IMAGES=0
+          REMOVED_HOLDERS=0
+          KEPT_HOLDERS=0
+
+          echo "--- Images: only ${IMAGE_REPO}, only untagged, only unreferenced, only older than ${MAX_IMAGE_AGE_HOURS}h ---"
+          # Task 5.1: enumerate by REPOSITORY, not a bare `docker images` scan — anchors the sweep
+          # to exactly this project's own repository, never another tenant's.
+          # 🔴 Measured, not assumed, before this file was ever pushed: `docker images --filter
+          # dangling=true` does NOT match a digest-pulled image on this daemon (containerd-backed
+          # image store, docker 29.4.0) — a digest pull's own `RepoTags` array contains a
+          # `repo@sha256:...` pseudo-entry (confirmed via `docker inspect`), which the `dangling`
+          # filter's own emptiness check does not treat as untagged, so it silently matched ZERO
+          # images every time — this story's own budget model names that exact shape as failure
+          # cause 5 ("the sweep's enumeration is wrong in a way that removes nothing... silent
+          # no-op"), and it would have shipped invisibly since a sweep that finds nothing prints a
+          # clean, plausible-looking "no images found" line. The `{{.Tag}}` DISPLAY field, unlike
+          # the `dangling` filter, correctly renders `<none>` for exactly these images (also
+          # measured) — so this lists every image in the repository and filters client-side on
+          # that field instead of trusting the filter. `<none>` is docker's own literal for "no
+          # repository tag" — every deploy pulls by digest (Task 4.2 of Story 4.3), so this
+          # accumulates by design. Code review H1 idiom: `|| true` on a listing command that
+          # legitimately returns nothing is not a failure.
+          IMAGE_LINES="$(docker images "${IMAGE_REPO}" -a --format '{{.Tag}}|{{.ID}}|{{.CreatedAt}}' \
+            | awk -F'|' '$1 == "<none>" { print $2 "|" $3 }' || true)"
+          NOW_EPOCH="$(date -u +%s)"
+          if [ -n "$IMAGE_LINES" ]; then
+            while IFS='|' read -r IMG_ID IMG_CREATED; do
+              [ -z "$IMG_ID" ] && continue
+              # `docker images ... CreatedAt` renders as e.g. "2026-08-14 15:34:50 +0200 CEST" —
+              # strip the trailing zone name (date -u -d does not parse a named zone, only a
+              # numeric offset) before parsing, the same class of fix Story 4.4 needed for
+              # Docker's own StartedAt format.
+              CLEAN_CREATED="$(printf '%s' "$IMG_CREATED" | sed -E 's/ [A-Z]{3,4}$//')"
+              if ! IMG_EPOCH="$(date -u -d "$CLEAN_CREATED" +%s 2>/dev/null)"; then
+                echo "KEEP  image ${IMG_ID}: could not parse its own CreatedAt ('${IMG_CREATED}') — refusing to guess its age."
+                KEPT_IMAGES=$((KEPT_IMAGES + 1))
+                continue
+              fi
+              AGE_HOURS=$(( (NOW_EPOCH - IMG_EPOCH) / 3600 ))
+              if [ "$AGE_HOURS" -lt "$MAX_IMAGE_AGE_HOURS" ]; then
+                echo "KEEP  image ${IMG_ID}: ${AGE_HOURS}h old, younger than the ${MAX_IMAGE_AGE_HOURS}h threshold (Task 5.2's race window)."
+                KEPT_IMAGES=$((KEPT_IMAGES + 1))
+                continue
+              fi
+              # Task 5.1: exclude anything referenced by ANY container, running OR stopped —
+              # `docker ps -a` (not `docker ps`) against the exact image id, not a name filter.
+              REFS="$(docker ps -a --filter "ancestor=${IMG_ID}" --format '{{.Names}}' || true)"
+              if [ -n "$REFS" ]; then
+                echo "KEEP  image ${IMG_ID}: still referenced by container(s): ${REFS}."
+                KEPT_IMAGES=$((KEPT_IMAGES + 1))
+                continue
+              fi
+              # Task 5.1: remove by explicit image id, ONE AT A TIME, tolerate individual failures
+              # (never `xargs`, per AC4's own prohibition list) — a failure on one image must not
+              # abort the sweep for the rest.
+              if docker rmi "$IMG_ID" >/dev/null 2>&1; then
+                echo "REMOVE image ${IMG_ID}: untagged, unreferenced, ${AGE_HOURS}h old."
+                REMOVED_IMAGES=$((REMOVED_IMAGES + 1))
+              else
+                echo "KEEP  image ${IMG_ID}: rmi failed (raced by something else between listing and removal, or still in use) — not fatal to the sweep."
+                KEPT_IMAGES=$((KEPT_IMAGES + 1))
+              fi
+            done <<< "$IMAGE_LINES"
+          else
+            echo "No untagged ${IMAGE_REPO} images found."
+          fi
+
+          echo "--- Lock-holder debris: only ^fe-prionex-dev-deploy-lock-[0-9]+\$, only stopped, only older than ${MAX_HOLDER_AGE_HOURS}h ---"
+          # Task 5.3: ANCHORED at both ends — never a substring filter (AC4's first amendment
+          # reason: `docker ps --filter name=fe-prionex` on this host also matches the four
+          # `forgejo-runner-fe-prionex*` containers, including the one this job runs inside).
+          # `docker ps -a` lists both running and stopped; filtered to NOT running below (5.4).
+          HOLDER_LINES="$(docker ps -a --filter "name=^fe-prionex-dev-deploy-lock-[0-9]+\$" --format '{{.Names}}|{{.State}}' || true)"
+          if [ -n "$HOLDER_LINES" ]; then
+            while IFS='|' read -r HNAME HSTATE; do
+              [ -z "$HNAME" ] && continue
+              # Task 5.4, the one absolute rule: NEVER remove a running holder — a running holder is
+              # an in-flight deploy's own lock; force-removing it releases a lock a live job
+              # believes it holds (`deploy-dev.yml`'s own H4 warning, structural here instead of
+              # advisory).
+              if [ "$HSTATE" = "running" ]; then
+                echo "KEEP  holder ${HNAME}: state=running — this is a live deploy's own lock, never touched."
+                KEPT_HOLDERS=$((KEPT_HOLDERS + 1))
+                continue
+              fi
+              if ! FINISHED_RAW="$(docker inspect -f '{{.State.FinishedAt}}' "$HNAME" 2>/dev/null)"; then
+                echo "KEEP  holder ${HNAME}: could not read its own FinishedAt — refusing to guess its age."
+                KEPT_HOLDERS=$((KEPT_HOLDERS + 1))
+                continue
+              fi
+              CLEAN_FIN="$(printf '%s' "$FINISHED_RAW" | sed -E 's/\.[0-9]+Z$//; s/Z$//; s/T/ /')"
+              if ! FIN_EPOCH="$(date -u -d "$CLEAN_FIN" +%s 2>/dev/null)"; then
+                echo "KEEP  holder ${HNAME}: FinishedAt ('${FINISHED_RAW}') did not parse — refusing to guess its age."
+                KEPT_HOLDERS=$((KEPT_HOLDERS + 1))
+                continue
+              fi
+              AGE_HOURS=$(( (NOW_EPOCH - FIN_EPOCH) / 3600 ))
+              if [ "$AGE_HOURS" -lt "$MAX_HOLDER_AGE_HOURS" ]; then
+                echo "KEEP  holder ${HNAME}: finished ${AGE_HOURS}h ago, younger than the ${MAX_HOLDER_AGE_HOURS}h threshold."
+                KEPT_HOLDERS=$((KEPT_HOLDERS + 1))
+                continue
+              fi
+              if docker rm "$HNAME" >/dev/null 2>&1; then
+                echo "REMOVE holder ${HNAME}: stopped, finished ${AGE_HOURS}h ago."
+                REMOVED_HOLDERS=$((REMOVED_HOLDERS + 1))
+              else
+                echo "KEEP  holder ${HNAME}: rm failed — not fatal to the sweep."
+                KEPT_HOLDERS=$((KEPT_HOLDERS + 1))
+              fi
+            done <<< "$HOLDER_LINES"
+          else
+            echo "No lock-holder containers matching the anchored pattern found."
+          fi
+
+          echo "=== docker system df, after ==="
+          docker system df
+
+          echo "removed_images=${REMOVED_IMAGES}" >> "$GITHUB_OUTPUT"
+          echo "kept_images=${KEPT_IMAGES}" >> "$GITHUB_OUTPUT"
+          echo "removed_holders=${REMOVED_HOLDERS}" >> "$GITHUB_OUTPUT"
+          echo "kept_holders=${KEPT_HOLDERS}" >> "$GITHUB_OUTPUT"
+          echo "OK: sweep complete. Removed ${REMOVED_IMAGES} image(s), ${REMOVED_HOLDERS} holder(s)."\
+               "Kept ${KEPT_IMAGES} image(s), ${KEPT_HOLDERS} holder(s) (see reasons above)."
+        # Task 5.6: the sweep is NON-FATAL to the reset — its purpose is hygiene attached to the
+        # deploy, not a gate on it. A step failure here (the shell itself, not an individual
+        # rm/rmi) must not stop the dispatch below. `continue-on-error` still leaves the failure
+        # VISIBLE in the job's own step list (never silent) — Task 5.6's other half.
+        continue-on-error: true
+
+      - name: Note if the sweep was skipped (Task 5.6)
+        if: steps.sweep.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          echo "⚠️ SWEEP STEP FAILED — hygiene was skipped this cycle. This is NOT fatal to the"\
+               "reset (the dispatch below still runs), but it means stale images/holders were NOT"\
+               "cleaned this time. See the sweep step's own output above for where it broke."
+
+      - name: Dispatch deploy-dev.yml with ref=main (Task 4, AC3, AC6)
+        env:
+          FJ_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO_SLUG: ${{ github.repository }}
+          # Task 6.3: printed (never branched on — Task 2.3's own rule is about CONDITIONAL LOGIC,
+          # not observation) only while DISARMED below, into $GITHUB_OUTPUT rather than only a log
+          # line, because job/step logs are not reliably retrievable after the fact on this
+          # instance (`api-prionex`'s own Л7). Settles Task 2.2's contested question: the sibling
+          # project's own fact 2 read the DB's `event` column (which stays `push` even for a
+          # scheduled run — confirmed live, this story's own DB read) and concluded
+          # `github.event_name` reads `push` too; the v15.0.5 source says `github.event_name` is
+          # populated from `trigger_event` instead (`context.go:54`), which should read `schedule`
+          # — this is the one live echo that settles which reading is right, for THIS repository.
+          PROBE_EVENT_NAME: ${{ github.event_name }}
+          PROBE_REF: ${{ github.ref }}
+          PROBE_REF_TYPE: ${{ github.ref_type }}
+          PROBE_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          # 🔴🔴🔴 TEMPORARY — Task 6.2. A LITERAL constant, not an input and not a secret,
+          # deliberately: an input could be forgotten or misdispatched, a secret could be missed in
+          # review. Flipped to "false" by the SECOND implementation PR, in the SAME commit that
+          # removes the probe cron above (Task 6.5) — the two temporary elements land and leave
+          # together. While true, this step NEVER calls the dispatch endpoint — not on the frequent
+          # probe cron above, and not on a manual dispatch either (AC1 makes the two paths
+          # identical on purpose, so disarming applies to both uniformly rather than trying to
+          # distinguish them, which Task 2.3 forbids anyway). The SWEEP step above is NOT disarmed
+          # — it is idempotent and non-destructive by AC4's own construction (proven locally,
+          # Completion Notes), so it runs for real even during the probe window; only the one step
+          # capable of touching the stand is held back.
+          DISARMED=true
+
+          if [ "$DISARMED" = "true" ]; then
+            echo "⚠️⚠️⚠️ PROBE WINDOW (Task 6.2): the dispatch step is DISARMED by a literal"\
+                 "constant in this file. This run would have POSTed to"\
+                 "${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/workflows/deploy-dev.yml/dispatches"\
+                 "with body {\"ref\":\"main\",\"inputs\":{\"ref\":\"main\"}} — [SIMULATED, not a"\
+                 "real dispatch]. The stand has not been touched."
+            echo "event_name=${PROBE_EVENT_NAME}" >> "$GITHUB_OUTPUT"
+            echo "ref=${PROBE_REF}" >> "$GITHUB_OUTPUT"
+            echo "ref_type=${PROBE_REF_TYPE}" >> "$GITHUB_OUTPUT"
+            echo "actor=${PROBE_ACTOR}" >> "$GITHUB_OUTPUT"
+            echo "Task 6.3 measurement — event_name='${PROBE_EVENT_NAME}' ref='${PROBE_REF}'"\
+                 "ref_type='${PROBE_REF_TYPE}' actor='${PROBE_ACTOR}' (expected from source:"\
+                 "event_name=schedule, ref=main as a BARE branch name, ref_type EMPTY,"\
+                 "actor=the system user)."
+            exit 0
+          fi
+
+          if [ -z "${FJ_TOKEN:-}" ]; then
+            echo "FAIL: github.token is empty. This is Forgejo's own automatic per-job token — an"\
+                 "empty value here is a runner/instance-level problem, not something this workflow"\
+                 "controls. The stand has not been touched."
+            exit 1
+          fi
+
+          # Task 4.2: credential never on argv. curl's --config (stdin) form, the same pattern
+          # `deploy-dev.yml` already uses for the registry credential and the OpenBao token in
+          # `build.yml` — never `-H "Authorization: ..."` on the command line, which would put the
+          # token in this job's own `ps auxww` on this shared, multi-tenant runner.
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+
+          DISPATCH_URL="${SERVER_URL}/api/v1/repos/${REPO_SLUG}/actions/workflows/deploy-dev.yml/dispatches"
+          # Task 4.1: outer "ref" (URL query-free, in the JSON body) is the branch dev-reset.yml
+          # itself reads its own workflow list from (main, always, since this file only ever lives
+          # there once merged); the "inputs.ref" is deploy-dev.yml's own REQUIRED input — its own
+          # fail-closed guard rejects an empty one, so this can never silently deploy nothing.
+          REQUEST_BODY='{"ref":"main","inputs":{"ref":"main"}}'
+
+          # Code review H1 idiom (Task 3.7): `|| true` so a transport-level failure becomes DATA
+          # the `case` below classifies, not a step-aborting failure with no message.
+          HTTP_CODE="$(printf 'header = "Authorization: token %s"\n' "$FJ_TOKEN" \
+            | curl -sS -X POST --config - \
+                -H "Content-Type: application/json" \
+                -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' \
+                -d "$REQUEST_BODY" \
+                "$DISPATCH_URL" || true)"
+          echo "POST .../workflows/deploy-dev.yml/dispatches -> HTTP ${HTTP_CODE}"
+
+          # Task 4.3: classify like deploy-dev.yml classifies the registry's response — a real
+          # cause, not a generic failure.
+          case "$HTTP_CODE" in
+            2??)
+              # A successful dispatch's own response body is empty on this route (v15.0.5,
+              # measured against the endpoint's own live use, Story 1.8) — no run id to extract
+              # from the body itself. Recorded honestly rather than invented.
+              echo "OK: dispatch accepted (HTTP ${HTTP_CODE}). This means the deploy was"\
+                   "successfully REQUESTED — it does NOT mean the deploy itself succeeded"\
+                   "(Task 4.4). deploy-dev.yml's own run reports its own result; AC5 reads the"\
+                   "stand's digest, not this run's status."
+              ;;
+            401|403)
+              echo "FAIL: registry — no, WRONG TARGET — the DISPATCH ENDPOINT returned"\
+                   "${HTTP_CODE}. This means the TOKEN cannot dispatch (github.token likely lacks"\
+                   "write:repository scope and/or write permission on this repo's Actions unit,"\
+                   "Task 2.8's own anticipated finding) — NOT that the image is missing and NOT"\
+                   "that deploy-dev.yml itself failed. The stand has not been touched. Fix: see"\
+                   "Dev Notes §3's fallback order (a repo/org Actions-write token, or re-opening"\
+                   "the workflow_call design) — this is Oleg's decision, not a silent workaround."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+            404)
+              echo "FAIL: HTTP 404 dispatching deploy-dev.yml. This means the WORKFLOW FILE or"\
+                   "the ENDPOINT itself is not where this step expects — the path parameter is"\
+                   "the workflow FILE NAME (Forgejo v13.0.0+), not a numeric id. Check that"\
+                   "deploy-dev.yml still exists at this exact path on main, and that this"\
+                   "instance's API shape has not changed. The stand has not been touched."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+            400)
+              echo "FAIL: HTTP 400 — the dispatch INPUTS were rejected by the API itself (e.g. an"\
+                   "empty ref returns 400 'ref is empty', routers/api/v1/repo/action.go:822)."\
+                   "This request always sends a non-empty ref; a 400 here means the request body"\
+                   "shape itself no longer matches what this instance expects. The stand has not"\
+                   "been touched."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+            000)
+              echo "FAIL: transport-level failure dispatching deploy-dev.yml — not an HTTP"\
+                   "response at all (DNS, TLS, connection refused, or timeout). The stand has not"\
+                   "been touched."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: unexpected HTTP ${HTTP_CODE} dispatching deploy-dev.yml. Raw status"\
+                   "only — not classified as a known cause. The stand has not been touched."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+          esac

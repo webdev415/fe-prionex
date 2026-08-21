@@ -215,7 +215,18 @@ FR22: Slack start / success / failure notifications are sent via `curl` to the i
 webhook, replacing `slackapi/slack-github-action`.
 
 FR23: `dev-reset.yml` runs on a Sunday `schedule`, deploys `main` to DEV, and runs
-`docker image prune`.
+~~`docker image prune`~~ a targeted sweep of this project's own untagged images and lock-holder
+debris.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** Bare
+`docker image prune` is host-wide with no repository filter, and this host is multi-tenant —
+measured, not argued: `docker ps --filter name=` is a substring match here
+(`deferred-work.md:2650-2653`), so even a name-scoped attempt at this class of command risks
+matching another tenant's containers, including the four `forgejo-runner-fe-prionex*` containers
+this very job runs inside. The sweep instead enumerates `git.crm-prionex.com/crm/fe-prionex`
+images with no repository tag and this project's own anchored lock-holder pattern, excludes
+anything referenced or too young, and removes the rest by explicit id — the FR's own intent (host
+hygiene attached to the weekly reset) is met without the literal command's own hazard.
 
 FR24: Rollback is performed by running `deploy-prod.yml` with a previous `image_tag` and
 `rollback: true`.
@@ -428,7 +439,7 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR20 | Epic 4 | Health check parameterized by container name and published port |
 | FR21 | Epic 6 | Post-deploy PROD smoke check incl. log scan for ERROR |
 | FR22 | Epic 4 | Slack start/success/failure via `curl` |
-| FR23 | Epic 4 | Weekly scheduled DEV reset to `main` + image prune |
+| FR23 | Epic 4 | Weekly scheduled DEV reset to `main` + targeted image/holder sweep (amended 21.08, not literal `docker image prune`, [D31](../../docs/migration-decisions.md#d31)) |
 | FR24 | Epic 6 | Rollback via previous `image_tag` with `rollback: true` |
 | FR25 | Epic 4 | `docker-compose.server.yml` parameterized for coexisting stands |
 | FR26 | Epic 4 | Separate stand directories on s1 |
@@ -1854,13 +1865,40 @@ So that a stale feature branch does not sit on the shared stand indefinitely.
 **Given** `.forgejo/workflows/dev-reset.yml`
 **When** its trigger is configured
 **Then** it runs on a `schedule` every Sunday
-**And** it can also be dispatched manually.
+**And** it can also be dispatched manually ~~.~~
+**And** the manual dispatch path takes **zero inputs**, so it cannot be aimed anywhere but `main`.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** The zero-input
+clause is stronger than "can also be dispatched manually" and is what makes the manual path real
+EVIDENCE for the scheduled one: with no ref/tag/environment a human can steer it at, a manual
+dispatch and a scheduled firing execute the identical job over identical inputs, so the manual path
+proves the body while the scheduled firing only has to prove it ran at a moment nobody chose.
+Precedent, same instance, same team: `PRIONEX_HUB/.github/workflows/reset-dev.yml:22-23`.
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — the schedule must
+be proven for THIS repository, not assumed from a sibling.** `schedule:` has never fired for
+`CRM/fe-prionex` (a 124-run event census records none); it HAS fired in production, on this same
+Forgejo build, in two sibling repositories on this instance — a strong prior, not a fact about this
+one. The story closes with at least one `action_run` row for `CRM/fe-prionex` created by the
+scheduler, identified by query, with its run id, trigger and actor recorded — never asserted from
+"the sibling repo does it, so ours will."
 
 **Given** the scheduled run
 **When** it executes
-**Then** it deploys the current `main` image to the DEV stand using the same mechanics as
-Story 4.3
-**And** it runs `docker image prune` on the host afterwards.
+**Then** it ~~deploys the current `main` image to the DEV stand using the same mechanics as
+Story 4.3~~ causes `deploy-dev.yml` to run with `ref=main` through the Forgejo API, duplicating
+none of its steps
+**And** it runs ~~`docker image prune`~~ a targeted sweep on the host afterwards (see FR23's own
+amendment).
+
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** "Same
+mechanics as Story 4.3" reads naturally as "duplicate its steps," and both sibling repositories on
+this instance read it exactly that way, each copying their own deploy body into their reset file
+and booking the duplication as debt for a later factoring story. This story refuses that reading
+because the factoring story already exists and is numbered — Story 4.8, next but one — so a
+duplicated deploy body written here is work 4.8 would have to delete. "Same mechanics" is satisfied
+by *running the same workflow* (`deploy-dev.yml`, live-proven across seven runs and four review
+rounds) through the Forgejo API, not by containing the same steps.
 
 **Given** the prune step
 **When** it runs
@@ -1870,7 +1908,30 @@ on s1.
 **Given** the reset has run
 **When** the stand is inspected
 **Then** it serves the `main` build
-**And** the outcome is announced in Slack.
+**And** ~~the outcome is announced in Slack~~.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6) — Slack deferred, not dropped.** Story 4.5 (Slack
+notifications) is parked by Oleg's own decision (2026-08-21); its context lives on an unmerged
+branch this story does not read. No notification step is written, and no AC here is satisfied only
+when one is sent — the standing rule every deploy story has followed applies here too: *the deploy
+must work without it* (`epics.md:1814-1818`). Recorded as deferred to Story 4.5, the same way
+Stories 5.3 and 6.4 recorded theirs.
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — fail-closed: a
+reset that cannot run leaves the stand exactly as it was.** Given the dispatch cannot authenticate,
+the endpoint refuses, `main-dev` does not exist (14-day `-dev` retention expiry), or the deploy
+itself fails — the run ends red, naming which cause, and the stand keeps serving whatever it was
+serving before: no `down` ran, no image the running container needs was removed, and anything the
+sweep already did removed nothing the still-running container references.
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — the cron
+expression cannot take the repository down with it.** Forgejo persistently DISABLES a workflow
+whose `schedule:` spec fails to parse at tick time (a pushed fix does not revive it — a human must
+re-enable it), and an invalid `on.schedule` cron has been observed, on this exact Forgejo major
+version, to break push-triggered Actions for the WHOLE repository (codeberg #12566) — including
+workflows that carry no schedule at all. The expression is a plain 5-field cron, validated against
+a parser before it is ever pushed, with no seconds field, no `@`-descriptor, and no
+`TZ=`/`CRON_TZ=`/`timezone:` override.
 
 ### Story 4.7: Validate DEV Deploys Across Five Feature Branches
 

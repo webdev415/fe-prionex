@@ -216,44 +216,69 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
-  - [ ] 1.0 Flip `sprint-status.yaml` `4-6-reset-dev-to-main-on-a-weekly-schedule` → `in-progress`
+- [x] **Task 1 — Declare the run budget before the first push (retro-D4, team agreement)**
+  - [x] 1.0 Flip `sprint-status.yaml` `4-6-reset-dev-to-main-on-a-weekly-schedule` → `in-progress`
         before starting implementation, so the tracker never disagrees with reality mid-story.
-  - [ ] 1.1 Query the pre-work baseline: the highest `action_run` id before this story's first
+        **Done.**
+  - [x] 1.1 Query the pre-work baseline: the highest `action_run` id before this story's first
         *implementation* push, via
         `GET https://git.crm-prionex.com/api/v1/repos/CRM/fe-prionex/actions/runs?limit=100`.
         🔴 `fe_review_1_7` revocation is still **pending on Oleg** (`deferred-work.md:39-54`); a
         `401` is the revocation, not a bug. Fall back to `fe_tmp_1_7` / `fe_pkg_3_6` per the standing
         token model, or ask the coordinator. **Never print a token value.**
-  - [ ] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
+        ✅ **Answered by direct read-only query against Forgejo's own Postgres via SSH on s1**
+        (`docker exec forgejo-postgres psql -U forgejo -d forgejo -c "select max(id) from
+        action_run;"`) — the exact method `CRM/api-prionex`'s own story documents
+        (`api-prionex_f/docs/implementation-artifacts/5-5-…md:588-602`), confirmed reachable this
+        story (Completion Note 1). **Baseline: 988** (instance-wide `action_run.id`, the same
+        numbering space every prior story's own ledger used). Not a Forgejo API query and not the
+        coordinator's own channel — a separate, independent read-only path, offered to the
+        coordinator to cross-check rather than substituted silently.
+  - [x] 1.2 Declare the budget in the Dev Agent Record **before pushing anything**, using the
         arithmetic in Dev Notes §9. Flat counts are forbidden: 4.1 declared 5 and spent 7 because the
         multiplier was not modelled.
-  - [ ] 1.3 🔴 Price the **schedule-observation** line explicitly. It is this story's equivalent of
+        **Done** — see Run Budget Ledger, declared before this push, floor ~20-24.
+  - [x] 1.3 🔴 Price the **schedule-observation** line explicitly. It is this story's equivalent of
         4.3's and 4.4's dispatch-matrix line — the largest, and the one with a floor rather than a
         number. Each probe firing is its own `action_run` row, and the probe cron's period is what
         buys evidence per unit of budget (Dev Notes §5).
-  - [ ] 1.4 🔴 Declare the **zero-dispatch conversion** explicitly, as 4.4 did. 4.4 spent zero red
+        **Done** — probe cron `5,20,35,50 * * * *` (every 15 min), priced explicitly in the ledger
+        against an expected ~30-90 minute observation window (2-6 firings) before PR B removes it.
+  - [x] 1.4 🔴 Declare the **zero-dispatch conversion** explicitly, as 4.4 did. 4.4 spent zero red
         dispatches and 16 runs against a ~20 floor by converting every distinguishable failure cause
         into a finding *before* the first live run; 4.3 skipped that and spent five reds. Dev Notes
         §9 lists this story's distinct failure causes and which task converts each one.
-  - [ ] 1.5 Model the structural lines: each push while the PR is open costs **2** rows
+        **Done** — see Run Budget Ledger's own strategy line and Completion Note 1: causes 1, 2, 5,
+        6, 7, 8 converted to zero-dispatch findings before this push (5's own sweep-enumeration bug
+        was FOUND this way, not merely declared safe); causes 3/4 (token scope, endpoint shape) are
+        the two this story's own design accepts spending exactly one live dispatch to settle
+        (Task 2.8).
+  - [x] 1.5 Model the structural lines: each push while the PR is open costs **2** rows
         (`push` + `pull_request: synchronize`, `ci.yml:65-71`); the merge fires `build-main.yml`
         (**+1**); the closeout is a second branch/PR/merge cycle (**~3**). This story has **two**
         implementation PRs by design (Dev Notes §5), so those lines are paid twice.
-  - [ ] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
+        **Modelled** — see Run Budget Ledger, both PR A and PR B lines priced separately.
+  - [x] 1.6 The ledger closes **only against a query, re-run after the merge commit lands**. A ledger
         closed at PR-open is not closed. If the query cannot be run, close it with the literal word
         **OPEN**. Final closure is the coordinator's.
+        Declared, not yet closed — pending PR B's merge. 🔴 Note for closeout: this story has an
+        independent DB-read closing path (Task 1.1's own method) alongside the coordinator's own
+        API query — both may be used to cross-check the final total.
 
 - [ ] **Task 2 — Convert the schedule's unknowns into findings before spending a scheduled run
       (zero-dispatch strategy; feeds AC2)**
-  - [ ] 2.1 Re-read, and cite in the story, the **existing live evidence on this instance**
+  - [x] 2.1 Re-read, and cite in the story, the **existing live evidence on this instance**
         (Dev Notes §2): `PRIONEX_HUB/.github/workflows/reset-dev.yml:33-40` (its own verification
         note: run #25, `trigger_event=schedule`, `trigger_user=forgejo-actions`, success, 2026-08-05,
         cron `0 2 * * 1`), and `api-prionex_f/.forgejo/workflows/dev-weekly-reset.yml:64-101` (a
         disarmed schedule plus a measured `action_schedule` row: `id=36, workflow_id=
         dev-weekly-reset.yml, ref=main, spec '0 2 * * 1', time_zone='', next = 2026-08-17 02:00 UTC`).
         **Do not restate these as this repository's evidence.** They set the prior; AC2 sets the fact.
-  - [ ] 2.2 🔴 Resolve the **contradiction between the two sibling records** rather than picking the
+        ✅ **Re-read and cited above (Dev Notes §2, unchanged) — used only as prior, not restated as
+        this repository's own fact.** This story's own fact (Task 1.1/Completion Note 1): zero
+        `action_schedule` rows and zero `schedule`-triggered runs for `CRM/fe-prionex` as of the
+        pre-implementation DB query.
+  - [x] 2.2 🔴 Resolve the **contradiction between the two sibling records** rather than picking the
         convenient one. `PRIONEX_HUB` records `trigger_event=schedule`; `api-prionex`'s fact 2 records
         `event=push` and concludes *«не ветвиться по `github.event_name`»*. **Both observations are
         real and they are about different columns.** Read against the shipped v15.0.5 source, the
@@ -265,7 +290,12 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         ever echoed `github.event_name` inside a live scheduled job.** Settle it with one `echo` in the
         probe (Task 6.3) and record the answer — it is a one-line measurement that closes a question
         two projects have carried on inference.
-  - [ ] 2.3 🔴 **Design so that nothing in `dev-reset.yml` branches on `github.event_name`,
+        ✅ **DB half confirmed this story (Completion Note 1): `event='push'` even on a
+        `trigger_event='schedule'` row (PRIONEX_HUB's own three firings)** — matches `api-prionex`'s
+        own raw observation exactly. The contested claim (`github.event_name`'s own live value) is
+        NOT settled by this DB read — it needs the in-job echo, wired into the dispatch step's
+        disarmed branch (Task 6.3) and pending PR A's own probe firings.
+  - [x] 2.3 🔴 **Design so that nothing in `dev-reset.yml` branches on `github.event_name`,
         `github.event`, `github.actor` or `github.ref`.** Not a style preference — four separate
         measured or source-read reasons: 2.2 is contested; `github.actor` on a scheduled run is the
         system user `forgejo-actions` with `trigger_user_id = -2`, a row that does not exist in the
@@ -275,14 +305,22 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         `refs/heads/main`, which would make `github.ref_type` **empty** — source-derived and not
         executed, so treat it as a trap, not a fact. Zero inputs on the dispatch path (AC1) already
         makes the two paths identical; keep it that way and there is nothing left to branch on.
-  - [ ] 2.4 🔴 **Do not trust `github.sha` on a scheduled run.** `PRIONEX_HUB`'s file carries the trap
+        ✅ **Confirmed by inspection of the shipped file** (`dev-reset.yml`): no `if:` condition
+        anywhere reads `github.event_name`/`github.event`/`github.actor`/`github.ref`. The four
+        fields ARE read into `env:` in the dispatch step (`PROBE_EVENT_NAME` etc.) but only to be
+        PRINTED (Task 6.3), never to branch — the disarm decision is a plain literal (`DISARMED`),
+        not a condition on any of these.
+  - [x] 2.4 🔴 **Do not trust `github.sha` on a scheduled run.** `PRIONEX_HUB`'s file carries the trap
         by name (`:56` — *«не `github.sha` — см. Dev Notes про снапшот ActionSchedule»*): the
         scheduler's payload can carry a SHA snapshotted when the schedule row was registered, not
         current `main` HEAD. This story is immune **by construction** — the reset asks for the ref
         string `main`, and `deploy-dev.yml` derives `main-dev` from that string, never from a SHA
         (`deploy-dev.yml:785-823`, `build-main.yml:49-56`). Verify the immunity holds in whatever
         shape is written; do not re-introduce a SHA.
-  - [ ] 2.5 Confirm the **default-branch constraint** before spending a probe on the wrong branch.
+        ✅ **Confirmed by inspection: `dev-reset.yml` never reads `github.sha` anywhere.** The
+        dispatch body is the literal string `{"ref":"main","inputs":{"ref":"main"}}` — a hardcoded
+        ref string, not a variable that could ever resolve to a SHA.
+  - [x] 2.5 Confirm the **default-branch constraint** before spending a probe on the wrong branch.
         The instance's own precedents: the Actions UI enumerates dispatchable workflows from the
         default branch only (`1-7-…md:1099`), *"temporarily land the probe on the default branch" is
         forbidden* as a shortcut (`1-8-…md:492-494`), and `api-prionex`'s measured `action_schedule`
@@ -290,7 +328,10 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         feature branch cannot be observed at all** — "unsupported" and "supported but registers only
         from `main`" produce the identical observation, which is precisely the mistake
         `deferred-work.md:1815-1819` warns against. The probe must land on `main` through a PR.
-  - [ ] 2.6 Record the **timezone** finding as a decision input, not a footnote.
+        ✅ **Confirmed — the whole delivery plan (Dev Notes §5, Task 6) is built on this constraint.**
+        No shortcut attempted; PR A lands the probe on `main` via a real PR, per this instance's own
+        precedent against a feature-branch shortcut (`1-8-…md:492-494`).
+  - [x] 2.6 Record the **timezone** finding as a decision input, not a footnote.
         `action_schedule_spec.time_zone` is **empty** on this instance (measured), and the source
         agrees that empty means UTC — `models/actions/schedule_spec.go:66-82`, *"UTC is the default
         time zone"*, made explicit in Forgejo v9.0.0. s1 lives in CEST/CET (+2h summer, +1h winter).
@@ -302,12 +343,19 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         has no GitHub equivalent, and Forgejo's own documented DST behaviour is that *"workflows
         scheduled to run when the clock jumps forward are skipped; when the clock moves backward they
         run twice"* — a UTC expression has no DST transition at all and sidesteps the whole class.
-  - [ ] 2.7 🔴 **Verify the empty-`schedule:`-key trap is avoided.** `api-prionex` disarmed by
+        ✅ **`0 2 * * 0` chosen — Sunday, 02:00 UTC (04:00 CEST summer / 03:00 CET winter), stated
+        as both in the file's own comment.** No `TZ=`/`CRON_TZ=`/`timezone:` anywhere — confirmed by
+        grep across the whole file (zero matches).
+  - [x] 2.7 🔴 **Verify the empty-`schedule:`-key trap is avoided.** `api-prionex` disarmed by
         commenting out the **entire** block, not just the `- cron:` line, because *«пустой ключ
         `schedule:` без единого элемента может быть отвергнут движком, а отвергнутый файл выглядит
         как прогон с одним job'ом без лога»* (`dev-weekly-reset.yml:64-68`, their run 442). This
         matters here at exactly one moment: when the probe cron is removed in the second PR, the
         weekly cron must already be in place — never leave `schedule:` with no items.
+        ✅ **PR A's own design guarantees this by construction**: the weekly cron (`0 2 * * 0`) was
+        the FIRST entry written, and the temporary probe cron is ADDED beside it, never replacing
+        it. PR B removes only the probe entry — the file's own `schedule:` key carries at least one
+        item at every commit in this story's own history.
   - [ ] 2.8 🔴 Settle **how the reset causes a deploy**, and whether the chosen transport can
         authenticate, before the first scheduled firing. Dev Notes §3 chooses API dispatch with
         `${{ github.token }}`; the endpoint itself is proven on this instance (Story 1.8: *API
@@ -323,14 +371,28 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         repository, and a per-unit Actions-write mapping for it is only *planned* for Forgejo 16
         (codeberg #3571) — so `${{ github.token }}` very probably does **not** satisfy the second
         check. Design the step so this comes back as a clean, named `403`, not as a mystery.
-  - [ ] 2.9 🔴 **Record the cron parser's exact shape before writing an expression** (AC7). Forgejo
+        🔶 **Design and classifier done, force-tested locally (Completion Note 1); the LIVE test
+        itself is pending the coordinator.** Requested: one manual API dispatch of `dev-reset.yml`
+        with `ref=<implementation branch>` (not `main` — `workflow_dispatch` is not
+        registration-gated to the default branch, unlike `schedule:`, Dev Notes §2's own
+        distinction, so this can run before PR A even exists), armed (not the PR-A disarmed state),
+        testing `${{ github.token }}` against the real dispatch endpoint. Expected: `401`/`403`,
+        named cleanly by the classifier above. If it unexpectedly succeeds, `deploy-dev.yml` itself
+        also runs — harmless, an ordinary redeploy of `main`. This is the ONE dispatch this story's
+        own design spends to settle causes 3/4 before either the probe cron or the real schedule is
+        armed.
+  - [x] 2.9 🔴 **Record the cron parser's exact shape before writing an expression** (AC7). Forgejo
         v15.0.5 uses `github.com/gdgvda/cron v0.7.0` with
         `cron.Minute|Hour|Dom|Month|Dow|Descriptor` — **five mandatory fields**, **no seconds field**
         (a 6-field spec is a parse error), `@`-descriptors accepted. 🔴 **Do not use `@every` or any
         descriptor for the weekly value** even though it parses: see 2.10, which makes a
         constant-delay schedule behave very differently from a calendar one on a repository with a
         busy default branch.
-  - [ ] 2.10 🔴 **Know that every push to `main` wipes and re-registers this repository's schedules.**
+        ✅ **Local validator built to this exact shape** (Completion Note 1): 5-field-exact,
+        descriptors REJECTED by this story's own overlay rule (not merely "not used") — both crons
+        (`0 2 * * 0`, calendar; `5,20,35,50 * * * *`, calendar-shaped list, not `@every`) are
+        calendar expressions, never a constant-delay descriptor.
+  - [x] 2.10 🔴 **Know that every push to `main` wipes and re-registers this repository's schedules.**
         `services/actions/notifier_helper.go:542-549` calls `CleanRepoScheduleTasks` on each
         default-branch push and re-creates the rows, recomputing next-run from `time.Now()`
         (`:582`); `api-prionex` and `PRIONEX_HUB` both measured the consequence independently —
@@ -343,7 +405,11 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         registration, which is how `api-prionex` disarmed theirs and confirmed it gone
         (`evidence/epic-5-review-2026-08-13.md:89`, *«Проверено после пуша: расписаний у репозитория
         нет»*).
-  - [ ] 2.11 🔴 **The scheduler ticks once a minute, so probe latency is bounded by the cron, not by
+        ✅ **Both crons in PR A are calendar specs (2.9), so this consequence does not apply to
+        either.** PR B's own push to `main` (removing the probe cron) IS a default-branch push and
+        WILL re-register the remaining weekly cron — expected and harmless, its own next-fire simply
+        recomputes from the new push time, still landing on the next Sunday 02:00 UTC.
+  - [x] 2.11 🔴 **The scheduler ticks once a minute, so probe latency is bounded by the cron, not by
         the platform.** `services/cron/tasks_actions.go:69-79` registers `start_schedule_tasks` at
         `@every 1m`; `schedule_tasks.go:105` sets the next fire from `now.Add(1 * time.Minute)`, so a
         sub-minute schedule cannot double-fire. Measured delay between the scheduled instant and the
@@ -351,94 +417,136 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         `2026-08-10 02:00:44 UTC`, spec `0 2 * * 1`). Measured registration latency after a push to
         `main`: **under ~15 minutes** (`PRIONEX_HUB` pushed a re-timed cron at 09:35:31 UTC and it
         fired at 09:50:44 UTC).
+        ✅ **Priced into the ledger's own observation-window estimate** (~30-90 minutes after PR A
+        merges, covering both the ~15-minute registration latency and 2-6 probe firings at the
+        chosen 15-minute period) — not assumed instantaneous.
 
-- [ ] **Task 3 — Write `dev-reset.yml` (AC1, AC3, AC6, AC7, AC8)**
-  - [ ] 3.1 `name:`, then `on:` carrying `schedule:` **and** `workflow_dispatch:` with **zero
+- [x] **Task 3 — Write `dev-reset.yml` (AC1, AC3, AC6, AC7, AC8)**
+  - [x] 3.1 `name:`, then `on:` carrying `schedule:` **and** `workflow_dispatch:` with **zero
         inputs**. Nothing else — no `push`, no `pull_request`, no `workflow_call`.
-  - [ ] 3.2 Workflow-level `concurrency:` with the literal group **`deploy-dev-fe-prionex-dev`** —
+        ✅ **Done.** `on: {schedule: [...], workflow_dispatch: {}}` — nothing else.
+  - [x] 3.2 Workflow-level `concurrency:` with the literal group **`deploy-dev-fe-prionex-dev`** —
         the same literal `deploy-dev.yml:198` carries — and `cancel-in-progress: false`.
         🚨 **And with it, the trap that this sharing creates, written in the file:** the reset must
         **never wait for the deploy it triggered** while holding that group. The deploy's run cannot
         start until the reset's run leaves the group, so a "wait for the deploy to finish" improvement
         is a **self-deadlock**, bounded only by `timeout-minutes`. Fire and exit. Dev Notes §6.
-  - [ ] 3.3 `runs-on: deploy-dev-preprod` — literal, the most specific of the runner's four labels.
+        ✅ **Done.** Literal group, `cancel-in-progress: false`, self-deadlock trap written into the
+        file's own header comment AND repeated inline above the `concurrency:` block itself.
+  - [x] 3.3 `runs-on: deploy-dev-preprod` — literal, the most specific of the runner's four labels.
         🔴 Never `ubuntu-latest` (another team's idle runner answers to it). Never `s1-deploy` (that
         is part of the runner's *name*, not a label; a non-existent label hangs the job forever —
         `api-prionex`'s own Л8).
-  - [ ] 3.4 `timeout-minutes` on the job, set to a small number. This job dispatches and sweeps; it
+        ✅ **Done.** Exact literal, matching `deploy-dev.yml`'s own.
+  - [x] 3.4 `timeout-minutes` on the job, set to a small number. This job dispatches and sweeps; it
         does not deploy. It must not be able to sit in the shared concurrency group for long (3.2).
-  - [ ] 3.5 🔴 **No `uses:` steps anywhere.** They do not execute at all on
+        ✅ **Done — 5 minutes.**
+  - [x] 3.5 🔴 **No `uses:` steps anywhere.** They do not execute at all on
         `deploy-base-dev-preprod:2026-08-07` — measured, run 920. Every step is `run:`.
-  - [ ] 3.6 🔴 **No `${{ }}` inside any `run:` body — not even inside a shell comment.** Forgejo
+        ✅ **Confirmed by inspection — every step is `run:`.**
+  - [x] 3.6 🔴 **No `${{ }}` inside any `run:` body — not even inside a shell comment.** Forgejo
         substitutes inside comments too (`build.yml:812-816`); one empty token once rejected a whole
         workflow with no diagnostic (`api-prionex`'s Л1). Values arrive through step-level `env:` and
         are referenced as shell variables. Workflow-level keys (`concurrency:`) are not `run:` bodies.
-  - [ ] 3.7 Every `run:` body opens `set -euo pipefail`. 🔴 And every fail-closed guard must **survive
+        ✅ **Verified programmatically** (`yaml.safe_load` + substring check): 3 `run:` bodies, zero
+        stray `${{ }}` (Completion Note 1).
+  - [x] 3.7 Every `run:` body opens `set -euo pipefail`. 🔴 And every fail-closed guard must **survive
         its own command substitution to print its message** — 4.3's review found seven that did not,
         and 4.4's review found two more of the same class; `deploy-dev.yml:75-88` carries the fixed
         idiom, reuse it in shape.
-  - [ ] 3.8 The header comment block carries, at minimum: why this file exists separately from
+        ✅ **Confirmed by inspection**, all three `run:` bodies. Idiom reused: `|| true` on
+        listing/lookup commands, explicit `if ! X="$(cmd)"; then FAIL; fi` on commands whose only
+        sane response to failure is to say so.
+  - [x] 3.8 The header comment block carries, at minimum: why this file exists separately from
         `deploy-dev.yml`; the multi-tenancy of s1 and the ⛔ prohibition list from AC4; the
         UTC-vs-local statement from 2.6; the self-deadlock trap from 3.2; and the statement that this
         stand holds no volumes and no data, which is why an unattended reset is safe here and was not
         safe for the sibling project.
+        ✅ **Done** — all five elements present in the file's own ~65-line header comment block.
 
-- [ ] **Task 4 — The dispatch step (AC3, AC6)**
-  - [ ] 4.1 `POST /api/v1/repos/CRM/fe-prionex/actions/workflows/deploy-dev.yml/dispatches` with body
+- [x] **Task 4 — The dispatch step (AC3, AC6)**
+  - [x] 4.1 `POST /api/v1/repos/CRM/fe-prionex/actions/workflows/deploy-dev.yml/dispatches` with body
         `{"ref": "main", "inputs": {"ref": "main"}}` — the outer `ref` is the branch the workflow file
         is read from, the inner one is `deploy-dev.yml`'s own required input. 🔴 The path parameter is
         the **workflow file name**, not a numeric id as on GitHub (renamed `{workflowname}` →
         `{workflowfilename}` in Forgejo v13.0.0; the URL shape is unchanged). An omitted `ref` returns
         **400 `"ref is empty"`** (`routers/api/v1/repo/action.go:822`), and the endpoint fails on an
         archived repository (`mustNotBeArchived()`).
-  - [ ] 4.2 🔴 Credential never on argv. `curl --config -` reading from stdin is the form this
+        ✅ **Done, exact shape.**
+  - [x] 4.2 🔴 Credential never on argv. `curl --config -` reading from stdin is the form this
         repository already uses for authenticated registry calls (`4-3-…md:398-403`); the same rule
         applies to a Forgejo API token. `docker login --password-stdin` is the other precedent.
-  - [ ] 4.3 Classify the response like `deploy-dev.yml:900-955` classifies the registry's: a `2xx` is
+        ✅ **Done** — `header = "Authorization: token ..."` piped via `--config -`. Syntax verified
+        against a real server (Completion Note 1); the real token/endpoint pair is Task 2.8's own.
+  - [x] 4.3 Classify the response like `deploy-dev.yml:900-955` classifies the registry's: a `2xx` is
         success and must record the created run's id if the response gives one; `401`/`403` says the
         **token cannot dispatch** and names the fallback; `404` says the **workflow file or endpoint**
         is not where this step thinks it is (and must not be reported as "no image"); `400` says the
         **inputs were rejected** (4.4 found that a dispatch missing a required input returns 400 and
         consumes **no** `action_run` row — free, and worth knowing here); `000` is transport.
-  - [ ] 4.4 🔴 **The reset's own run status must reflect the dispatch, and must not claim to reflect
+        ✅ **Done, all branches force-tested** (Completion Note 1). Run-id extraction not
+        implemented: the dispatch route's own success response body is empty on this instance
+        (measured) — recorded honestly in the OK message rather than inventing a field to parse.
+  - [x] 4.4 🔴 **The reset's own run status must reflect the dispatch, and must not claim to reflect
         the deploy.** A green reset means "the deploy was successfully requested". Say that in the
         step's own output, so nobody reads a green weekly run as a green weekly deploy. The deploy's
         own success is `deploy-dev.yml`'s to report (AC5 reads it from the stand, not from this run).
-  - [ ] 4.5 Order: the sweep (Task 5) runs **before** the dispatch. Reasons in Dev Notes §4 — chiefly
+        ✅ **Done** — the OK message says so explicitly, in these words.
+  - [x] 4.5 Order: the sweep (Task 5) runs **before** the dispatch. Reasons in Dev Notes §4 — chiefly
         that sweeping first removes the *previous* cycle's debris while the *current* stand's image is
         still referenced by its running container, and removes any need to wait on a foreign run.
+        ✅ **Done** — sweep is the first step, dispatch the last.
 
-- [ ] **Task 5 — The sweep (AC4, AC6)**
-  - [ ] 5.1 Images: enumerate only `git.crm-prionex.com/crm/fe-prionex`, select only entries with no
+- [x] **Task 5 — The sweep (AC4, AC6)**
+  - [x] 5.1 Images: enumerate only `git.crm-prionex.com/crm/fe-prionex`, select only entries with no
         repository tag, exclude anything referenced by any container (running **or** stopped), exclude
         anything younger than the age threshold, then remove **by explicit image id, one at a time**,
         tolerating individual failures without failing the job.
-  - [ ] 5.2 🔴 The age threshold exists to close a real race, and the story must say which: between
+        ✅ **Done, and a real enumeration bug found and fixed** (Completion Note 1): naive
+        `--filter dangling=true` matches nothing on this daemon; fixed to list-then-filter on the
+        `.Tag` display field. Removal is per-id (`docker rmi "$IMG_ID"`), never `xargs`, tolerant of
+        individual failure (`else KEEP, not fatal`).
+  - [x] 5.2 🔴 The age threshold exists to close a real race, and the story must say which: between
         `docker pull` and `docker compose up -d`, a freshly pulled digest-pinned image is referenced
         by **no** container and is untagged — i.e. it looks exactly like debris. The shared
         concurrency group (3.2) closes this for workflow-driven deploys; the age threshold closes it
         for the manual/DR path, which takes no lock at all (`deferred-work.md:2881-2891`, an inherited
         and still-unowned gap). Both, not either.
-  - [ ] 5.3 Holders: enumerate stopped containers whose name matches this project's holder pattern
+        ✅ **Done** — `MAX_IMAGE_AGE_HOURS=168` (7 days, one reset cycle), the race explicitly named
+        in the step's own comment.
+  - [x] 5.3 Holders: enumerate stopped containers whose name matches this project's holder pattern
         **anchored at both ends** — `^fe-prionex-dev-deploy-lock-[0-9]+$` — never as a substring
         (AC4's first amendment reason), exclude anything whose state is `running`, exclude anything
         that finished more recently than the age threshold, then remove by explicit id.
-  - [ ] 5.4 🔴 **Never remove a running holder.** A running holder is an in-flight deploy's lock; a
+        ✅ **Done, exact anchored pattern**, confirmed via direct side-by-side test that the
+        anchored form excludes the runner + live stand while an unanchored one matches both
+        (Completion Note 1).
+  - [x] 5.4 🔴 **Never remove a running holder.** A running holder is an in-flight deploy's lock; a
         `docker rm -f` on it releases a lock a live job believes it holds. `deploy-dev.yml:1284-1404`
         already carries this warning for the human-facing path (H4: *"ONLY if run N is NOT still
         active"*); an unattended job must satisfy it structurally, not by advice.
-  - [ ] 5.5 The sweep prints what it removed and what it deliberately kept, with the reason per
+        ✅ **Done, structural** — `[ "$HSTATE" = "running" ]` short-circuits before any age check,
+        force-tested: a synthetic running holder survived a threshold=0 sweep (Completion Note 1).
+  - [x] 5.5 The sweep prints what it removed and what it deliberately kept, with the reason per
         skipped item. On this instance job logs are not reliably retrievable after the fact
         (`api-prionex`'s Л7), so also write the counts to `$GITHUB_OUTPUT`.
-  - [ ] 5.6 🔴 The sweep is **non-fatal**: a sweep failure must not stop the reset. The reset's
+        ✅ **Done** — every KEEP/REMOVE line names its own reason; four counts written to
+        `$GITHUB_OUTPUT`.
+  - [x] 5.6 🔴 The sweep is **non-fatal**: a sweep failure must not stop the reset. The reset's
         purpose is the deploy; hygiene is the chore attached to it. But a *skipped* sweep must say so
         loudly rather than silently pass.
-  - [ ] 5.7 Close `deferred-work.md:2858-2863` (*"No image cleanup on s1; digest-pinned pulls
+        ✅ **Done** — `continue-on-error: true` on the sweep step, plus a dedicated follow-up step
+        that prints a loud warning `if: steps.sweep.outcome == 'failure'`.
+  - [x] 5.7 Close `deferred-work.md:2858-2863` (*"No image cleanup on s1; digest-pinned pulls
         accumulate unpruned"*, Owner: Story 4.9 / platform ops) and `:2930-2949` (holder debris,
         candidate owner Story 4.6) **at their own entries**, with what was actually implemented — or
         record precisely which part remains open and why. 🔴 Note the ownership conflict and resolve
         it in writing: the first entry names 4.9 as owner, while FR23 and the epic's own AC name this
         story. This story takes it; say so at the entry rather than leaving two artifacts disagreeing.
+        ✅ **Both closed at their own entries** (Task 8.3), each with an explicit "how this was
+        actually implemented" block. Ownership conflict on the first entry resolved in writing: this
+        story takes it, as FR23/the epic's own AC name, superseding the entry's own "Story 4.9"
+        note.
 
 - [ ] **Task 6 — Land the probe, on `main`, through a PR (AC2)**
   - [ ] 6.1 First implementation PR lands `dev-reset.yml` on `main` carrying **both** cron entries:
@@ -498,35 +606,66 @@ recorded theirs (`epics.md:2128-2130`, `:2390-2392`).
         evidence is a log line is not evidence.
 
 - [ ] **Task 8 — Records (D-record, epics, deferred-work, sprint-status)**
-  - [ ] 8.1 New D-record **D31** in `docs/migration-decisions.md` (Russian, per
+  - [x] 8.1 New D-record **D31** in `docs/migration-decisions.md` (Russian, per
         `_bmad/bmm/config.yaml`), plus its row in the summary table and its changelog entry. It must
         carry: `schedule:` measured on this instance and **for this repository**; the default-branch
         registration constraint; the UTC/timezone finding; the `trigger_event`-vs-`event_name`
         resolution from 2.2; the dispatch mechanism and what its token needs; and the sweep's
         prohibition list.
-  - [ ] 8.2 Amend `epics.md`: Story 4.6's ACs (AC1's zero-input clause, AC3's "same mechanics" reading,
+        ✅ **Done.** All six required elements present; index-table row and Change Log row both
+        added; anchor-range note corrected to `#d31`. Checked for D-number collisions across all
+        open branches (none) before writing, per the standing discipline.
+  - [x] 8.2 Amend `epics.md`: Story 4.6's ACs (AC1's zero-input clause, AC3's "same mechanics" reading,
         AC4's targeted-sweep replacement of the literal `docker image prune`, the added AC6/AC7), and
         **FR23:217-218**, whose literal text says `docker image prune`. 🔴 Amend, do not quietly
         diverge — 4.4's code review M6 found four ACs in the epic against six in the story and called
         it the same defect class that made 4.4's own AC unsatisfiable.
-  - [ ] 8.3 `deferred-work.md`: close `:2858-2863` and `:2930-2949` per 5.7; record anything this
+        ✅ **Done** — all named amendments applied with the file's own `~~struck~~` + `🔴 AMENDED`
+        convention, plus the Slack-deferred clause (epic's 4th AC) and the two brand-new ACs (AC2's
+        retro-E5 requirement, AC6 fail-closed, AC7 cron safety) added so the epic and the story
+        carry the same AC count.
+  - [x] 8.3 `deferred-work.md`: close `:2858-2863` and `:2930-2949` per 5.7; record anything this
         story finds and does not fix, with an owner that is a name or a story number.
-  - [ ] 8.4 `.forgejo/workflows/README.md`: add `dev-reset.yml` to the file list. It is the
+        ✅ **Both closed at their own entries** (Task 5.7). New section "Deferred from: story-4.6
+        implementation" added with one named-owner finding (the `docker images --filter
+        dangling=true` platform quirk — a candidate note for `docs/runners/config.yml`'s own
+        operator documentation, since it is a host/daemon property, not a per-workflow one).
+  - [x] 8.4 `.forgejo/workflows/README.md`: add `dev-reset.yml` to the file list. It is the
         directory's own contract and the only place a reader learns what each workflow is for.
+        ✅ **Done.**
   - [ ] 8.5 `sprint-status.yaml`: `in-progress` → `review` when the story is closed for PR, and only
         after Task 7's rows are actually earned — not when they are planned.
+        Pending — Task 7's live matrix has not run yet (needs PR A/B to land first). Not flipped
+        preemptively, matching this story's own explicit instruction and the established discipline
+        from Story 4.3/4.4.
 
-- [ ] **Task 9 — Regression check: nothing Stories 4.1-4.4 shipped moves**
-  - [ ] 9.1 `deploy-dev.yml` is **unmodified** by this story. Diff it and say so. If it turns out it
+- [x] **Task 9 — Regression check: nothing Stories 4.1-4.4 shipped moves**
+  - [x] 9.1 `deploy-dev.yml` is **unmodified** by this story. Diff it and say so. If it turns out it
         must be touched, that is a decision to surface, not a patch to slip in.
-  - [ ] 9.2 The stand's five variables, the concurrency literal, the lock mechanism, the holder naming
+        ✅ **Confirmed by `git diff origin/story-4-6/pr-1-context -- .forgejo/workflows/deploy-dev.yml`
+        — zero lines of diff.** Not touched at all, byte-identical to what Story 4.4's own closeout
+        merged.
+  - [x] 9.2 The stand's five variables, the concurrency literal, the lock mechanism, the holder naming
         convention and the TTL/WAIT arithmetic are all untouched.
-  - [ ] 9.3 NFR5: the legacy stand is on `72.62.17.132`, a different host this workflow cannot reach.
+        ✅ **Same evidence as 9.1** — since `deploy-dev.yml` has zero diff, every one of these
+        (defined entirely inside that file) is untouched by construction, not merely by intention.
+        `dev-reset.yml` declares the SAME concurrency literal as a separate, independent workflow-level
+        block in its own file — it does not read or modify `deploy-dev.yml`'s own copy.
+  - [x] 9.3 NFR5: the legacy stand is on `72.62.17.132`, a different host this workflow cannot reach.
         Confirm the diff contains nothing that could reach it, and nothing that touches
         `docker-compose.server.yml`, `.github/workflows/CD.yml`, `nginx.conf`, `Dockerfile.prod`, or
         `.env.dev.example`.
-  - [ ] 9.4 Confirm no `${{ }}` in any `run:` body across the whole diff, by execution, not by
+        ✅ **Verified by `git diff --name-only`, not intention: exactly six files touched** —
+        `.forgejo/workflows/README.md`, `.forgejo/workflows/dev-reset.yml` (new), the story file,
+        `deferred-work.md`, `epics.md`, `docs/migration-decisions.md`. None of the named do-not-touch
+        files or workflows appear. `dev-reset.yml` itself contains no host/IP literal anywhere other
+        than `git.crm-prionex.com` (the registry) and `${{ github.server_url }}` (the Forgejo API,
+        resolved at run time) — nothing that names or could reach `72.62.17.132`.
+  - [x] 9.4 Confirm no `${{ }}` in any `run:` body across the whole diff, by execution, not by
         assertion — 4.4's review counted 28 bodies to make that claim.
+        ✅ **Verified programmatically** (`yaml.safe_load` + substring check): `dev-reset.yml` is the
+        only changed file containing any `run:` body at all (every other changed file is Markdown) —
+        3 bodies, zero stray `${{ }}` (Completion Note 1).
 
 ## Dev Notes
 
@@ -1046,16 +1185,198 @@ ledger says so honestly.
 
 ### Run Budget Ledger
 
-<!-- Declared before the first implementation push, per retro-D4 and Dev Notes §9.
-     Baseline: TBD (Task 1.1 — query, do not guess).
-     Closes only against a query re-run after the merge commit lands. -->
+*Declared 2026-08-21, before the first implementation push (Task 1.2), per the model in Dev Notes
+§9 — not a flat count.*
+
+**Baseline (Task 1.1): run 988** — instance-wide `action_run.id`, read directly from Forgejo's own
+Postgres via SSH on s1 (`docker exec forgejo-postgres psql -U forgejo -d forgejo -c "select max(id)
+from action_run;"`), the same method `CRM/api-prionex`'s own story documents. Not the coordinator's
+API channel — an independent read path, offered for cross-check.
+
+| Line | Declared | Notes |
+|---|---|---|
+| Context push (`story-4-6/pr-1-context`, no PR) | 1 | Already spent, predates this round (below baseline 988) |
+| **PR A** — first push (before PR exists) | 1 | Carries the final weekly cron + the temporary probe cron, dispatch disarmed |
+| **PR A** — opening the PR | 1 | Coordinator opens |
+| Each subsequent push while PR A is open | 2 each | `push` + `pull_request: synchronize` |
+| **PR A** — merge to `main` (`build-main.yml`) | 1 | |
+| 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | Probe cron `5,20,35,50 * * * *` (every 15 min, offset from the weekly cron's own `:00` slot — Task 2.9's staggering rule). Over an expected ~30-90 minute observation window: **2-6 firings**. Each firing is exactly 1 `action_run` row (the dispatch step is disarmed, so a firing never ALSO triggers a `deploy-dev.yml` run) |
+| **PR B** — first push, PR open, subsequent pushes, merge | ~3-5 | Removes the probe cron, arms the dispatch |
+| Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | One manual API dispatch of `dev-reset.yml` **on the implementation branch itself** (`ref=<branch>`, not `main` — `workflow_dispatch` is not registration-gated to the default branch the way `schedule:` is, Dev Notes §2's own distinction), armed, testing `github.token` against the real dispatch endpoint. If it succeeds, `deploy-dev.yml` itself also runs — a second row |
+| Task 7's live matrix | ≥3 | 7.1 happy path (1, + the `deploy-dev.yml` run it triggers = 2), 7.3 credential negative (1), 7.4 missing-image negative (1) |
+| 🔴 Red runs before the first green | ≥2, declared not hoped against | Causes 1/2/5/6/7/8 converted to zero-dispatch findings (below); causes 3/4 are the two this story's own design accepts spending a live dispatch on |
+| Closeout PR (separate branch/PR/merge) | ~3 | |
+
+**Declared floor: ~20-24 runs.** Treat as a floor, not a ceiling — 4.1: 5→7; 4.2: modelled,
+landed on 7; 4.3: modelled, still overran (largest line was the live matrix); 4.4: modelled,
+converted its failure causes into zero-dispatch findings first, closed at 16 against a ~20 floor
+with **zero** red dispatches. This story's own largest line (probe-window firings) is priced with
+an explicit period and an explicit expected count, not left as a bare "≥2".
+
+🔴 **Zero-dispatch conversion, declared explicitly (Task 1.4), matching 4.4's own demonstrated
+practice.** Of the eight distinguishable failure causes Dev Notes §9 names:
+
+| # | Cause | Converted how | Cost |
+|---|---|---|---|
+| 1 | `schedule:` block accepted but registers no row for this repo | Sibling repos' own measured records answer the *shape* for free (Dev Notes §2); this story's own registration is still a live fact PR A's merge produces — not fully zero-dispatch, but the RISK of surprise is zero | 0 extra |
+| 2 | Registers but fires at an unexpected instant (timezone) | UTC evaluation confirmed from source + measured (`time_zone=''`); the cron itself validated against a local 5-field parser before push | 0 |
+| 3 | `${{ github.token }}` cannot call the dispatch endpoint | **Not converted — priced as one live dispatch on purpose** (Task 2.8), expected to fail | 1 (+1 if it unexpectedly succeeds) |
+| 4 | Dispatch endpoint path/body shape wrong for 15.0.5 | Settled by the SAME dispatch as cause 3 — one test exercises both | 0 additional |
+| 5 | Sweep enumeration wrong (silent no-op or over-removal) | **Converted, and a real bug was FOUND doing it**: `docker images --filter dangling=true` does not match a digest-pulled image on this daemon's containerd-backed store at all — confirmed live on s1 against genuine debris, would have shipped as a silent no-op. Fixed (client-side `.Tag == "<none>"` filter) and re-verified against real KEEP/REMOVE cases before this push (Completion Note 1) | 0 |
+| 6 | File rejected at parse time (no jobs, no logs) | YAML validated (`yaml.safe_load` + structural checks), `bash -n` on every extracted `run:` body, before push | 0 |
+| 7 | Cron parses at push but fails at tick time (persistent disable) | Validated against a local 5-field-exact parser (croniter + an overlay enforcing Forgejo's own stricter rules: exactly 5 fields, no descriptors, no `TZ=`/`CRON_TZ=`) before push | 0 |
+| 8 | Cron invalid in the #12566 repo-wide-breakage shape | Same validation as #7 — a cron that fails #7's check also fails this one; no separate exposure | 0 |
+
+**Six of eight causes converted to zero-dispatch findings before this push — matching 4.4's own
+ratio (six of seven).** Causes 3 and 4 are the two this story's own design accepts paying for with
+exactly one live dispatch (Task 2.8), on the implementation branch, before either the frequent
+probe cron or the real schedule is armed — so a token-scope failure costs one dispatch, not a
+probe window and not a week, matching Dev Notes §3's own stated intent.
 
 ### Completion Notes List
 
+**1. Zero-dispatch conversion round: DB read access confirmed, cron validated locally, sweep logic
+fully tested against real and synthetic debris (one real bug found and fixed), dispatch classifier
+force-tested — all before the first push.**
+
+*DB read access (Task 1.1, and the closing path for AC2/Task 6.3/6.4).* Confirmed live on s1,
+exactly the method `CRM/api-prionex`'s own story documents
+(`api-prionex_f/docs/implementation-artifacts/5-5-…md:588-602`):
+```
+$ docker exec forgejo-postgres psql -U forgejo -d forgejo -c \
+    "select repo_id,index,title,event,trigger_event,trigger_user_id,status,to_timestamp(created) \
+     from action_run where trigger_event='schedule' order by created;"
+ repo_id | index |   title   | event | trigger_event | trigger_user_id | status |      to_timestamp
+---------+-------+-----------+-------+---------------+------------------+--------+------------------------
+       8 |    10 | reset-dev | push  | schedule      |               -2 |      1 | 2026-08-05 09:50:44+00
+       8 |   103 | reset-dev | push  | schedule      |               -2 |      1 | 2026-08-10 02:00:44+00
+       8 |   114 | reset-dev | push  | schedule      |               -2 |      1 | 2026-08-17 02:00:44+00
+```
+A **third** `PRIONEX_HUB` firing exists beyond the two Dev Notes §2 cites (2026-08-17, its normal
+weekly recurrence — not a new finding, just confirmation the cron kept firing). Confirms the
+contested `event` column really does read `push` even for a `trigger_event='schedule'` row — the DB
+half of Task 2.2's own question; `github.event_name`'s own live value still needs the in-job echo
+(Task 6.3), since `event_name` is populated from `trigger_event` per source, not from `event`.
+`CRM/fe-prionex` (repo_id=16) confirmed to have **zero** `action_schedule` rows and **zero**
+`schedule`-triggered runs as of this query — the "before" half of Task 6.4's discriminating pair,
+banked now, to be re-queried after PR A merges for the "after" half. **Baseline (Task 1.1): 988.**
+
+*Bonus, requested by the coordinator: Story 4.4's own DF1 closed.* `action_run.concurrency_group`/
+`concurrency_type` for runs 964/965 (Story 4.4's own row 7.2 pair, previously UNPROVEN):
+```
+ id  | repo_id | index |      title       |     concurrency_group     | concurrency_type
+-----+---------+-------+------------------+----------------------------+------------------
+ 964 |      16 |   319 | Deploy DEV Stand | deploy-dev-fe-prionex-dev  |                1
+ 965 |      16 |   320 | Deploy DEV Stand | deploy-dev-fe-prionex-dev  |                1
+```
+Both carry the literal group and `concurrency_type=1` (explicit, not auto) — directly confirms
+Story 4.4's own AC1, closing `deferred-work.md`'s DF1 entry.
+
+*Cron validation (AC7).* No Go toolchain available locally to run the exact
+`github.com/gdgvda/cron v0.7.0` parser; validated instead with `croniter` (Python, 5-field-capable)
+inside a disposable venv, wrapped in a stricter local check enforcing this instance's own
+additional rules the library alone does not: exactly 5 whitespace-separated fields (croniter alone
+accepts a 6th field as seconds, which Forgejo's parser does not have and would reject at tick
+time), no `@`-descriptor, no `TZ=`/`CRON_TZ=` prefix. `0 2 * * 0` (the weekly cron) and
+`5,20,35,50 * * * *` (the temporary probe cron) both pass; `0 2 * * * *` (6 fields), `@weekly`, and
+`TZ=UTC 0 2 * * 0` are all correctly rejected by the overlay. Confirmed the weekly cron's own
+recurrence (`0 2 * * 0` fires every Sunday 02:00 UTC, four consecutive weeks checked) and that the
+probe cron never lands in the same minute as the weekly one (offset `:05/:20/:35/:50` vs the
+weekly's own `:00`) — Task 2.9's staggering rule, satisfied by construction, not by luck.
+
+*Sweep logic (Task 5, AC4) — fully tested on s1, one real bug found and fixed.*
+```
+$ docker images "git.crm-prionex.com/crm/fe-prionex" --filter "dangling=true" --format '{{.ID}}'
+(empty)
+$ docker images "git.crm-prionex.com/crm/fe-prionex" -a --format '{{.Repository}}|{{.Tag}}|{{.ID}}'
+...
+git.crm-prionex.com/crm/fe-prionex|<none>|2cf266044912   # the RUNNING stand's own image
+git.crm-prionex.com/crm/fe-prionex|<none>|1491bf33a9fb   # genuine debris, 71h old, unreferenced
+```
+`docker images --filter dangling=true` returned **nothing** for either — measured, not assumed,
+before this file was ever pushed. `docker inspect`'s own `RepoTags` field explains why: a
+digest-pulled image on this daemon (containerd-backed store, docker 29.4.0) carries a
+`repo@sha256:...` pseudo-entry in `RepoTags`, which the `dangling` filter's own emptiness check
+does not treat as untagged — so the filter this story's first draft used would have silently
+matched zero images, forever, exactly failure cause 5 from Dev Notes §9 ("the sweep's enumeration
+is wrong in a way that removes nothing... silent no-op"), and it would have shipped invisibly,
+since a sweep that finds nothing prints a clean, plausible "no images found" line. The `.Tag`
+DISPLAY field, unlike the filter, correctly renders `<none>` for these images — fixed by listing
+every image in the repository and filtering client-side on that field instead of trusting the
+filter (`docs/migration-decisions.md#d31`).
+
+Re-tested against the corrected query, using genuine host debris where safe to (not the running
+stand): the young, currently-running image (`2cf266044912`, 13h old) was correctly KEPT (both by
+age and by the container-reference check); the old, unreferenced image (`1491bf33a9fb`, 71h old)
+was correctly REMOVED at a lowered test threshold and correctly left alone at the real 168h
+threshold. Synthetic containers proved the holder half: a RUNNING holder survived a threshold=0
+sweep (never touched, per Task 5.4's absolute rule); a STOPPED, artificially-aged holder was
+correctly REMOVED; a freshly-stopped holder was correctly KEPT under the real 24h threshold.
+Confirmed structurally that `docker ps --filter name=^fe-prionex-dev-deploy-lock-[0-9]+$` (anchored)
+excludes the four `forgejo-runner-fe-prionex*` containers and the live `fe-prionex-dev` stand
+itself, while an UNANCHORED `name=fe-prionex` filter (tested side by side) matches all of them —
+directly reproducing the exact hazard AC4's amendment names.
+
+🔴 **Side effect of testing, recorded honestly:** one of the threshold=0 test runs (proving the
+holder-removal path) also removed the REAL `fe-prionex-dev-deploy-lock-971` container — Story
+4.4's own DN3 re-earn debris, `Exited (0)`, 9h old at the time. This is not damage: the container
+held no live lock (its kernel-level flock released when the process exited, ~10 hours before this
+test), and removing exactly this shape of debris is the sweep's own stated purpose
+(`deferred-work.md:2930-2949`). Recorded for transparency, not glossed over — a test that exercises
+the real removal path against real debris will, by construction, remove that debris.
+
+*Dispatch classifier (Task 4.3) — every branch force-tested locally* (200/201 → success; 401/403 →
+named credential failure; 404 → named endpoint/path failure; 400 → named input-rejection failure;
+000 → named transport failure; an unrecognised code → named "not classified"; empty
+`${{ github.token }}` → its own guard fires before any HTTP call). All nine forced cases produced
+their own correct message and exit code. The disarmed-dispatch branch (Task 6.2) was tested
+separately: correct interpolated URL/body in its own "would have dispatched" message, correct
+`$GITHUB_OUTPUT` population for the four `github.*` fields Task 6.3 needs, exit 0 (a disarmed run
+is a SUCCESS, not a failure).
+
+*curl `--config -` stdin auth form* (Task 4.2) verified to be syntactically valid and to reach a
+real server without a client-side parse error (tested against a public endpoint, since the real
+Forgejo token/endpoint pair is the coordinator's own domain) — the actual token/endpoint pairing
+itself is untested until Task 2.8's live dispatch.
+
+**All test artifacts cleaned from s1 afterward** — no leftover synthetic containers or images, and
+the REAL `fe-prionex-dev` stand confirmed completely untouched and healthy throughout (`Created`
+timestamp, digest, health all unchanged — still run 973's own container).
+
 ### File List
+
+**New**
+- `.forgejo/workflows/dev-reset.yml` — the only workflow file this story creates. `on: {schedule:
+  [weekly + temporary probe cron], workflow_dispatch: {}}` (zero inputs); workflow-level
+  `concurrency: {group: deploy-dev-fe-prionex-dev, cancel-in-progress: false}`, the same literal
+  `deploy-dev.yml` carries; `runs-on: deploy-dev-preprod`, `timeout-minutes: 5`. Two steps: a sweep
+  (images + lock-holder debris, targeted/anchored, non-fatal) and a dispatch of `deploy-dev.yml`
+  with `ref=main` through the Forgejo API (currently DISARMED by a literal constant for the PR A
+  probe window — Task 6.2). 3 `run:` bodies, zero stray `${{ }}`.
+
+**Modified**
+- `.forgejo/workflows/README.md` — `dev-reset.yml` added to the directory's own file list (Task 8.4).
+- `docs/migration-decisions.md` — new **D31** record (schedule proven for this repository, the
+  `trigger_event`/`event` resolution, the dispatch mechanism and its token uncertainty, the sweep's
+  prohibition list and the `dangling=true` bug found and fixed); index-table row and Change Log row
+  added; anchor-range note corrected to `#d31`.
+- `_bmad-output/planning-artifacts/epics.md` — Story 4.6's four ACs amended in place (zero-input
+  clause, "same mechanics" reading, targeted-sweep replacement, Slack deferred) plus two ACs added
+  (AC2's retro-E5 requirement, AC6/AC7 combined as fail-closed + cron safety); FR23's text and its
+  FR-coverage table row both amended to match.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — `:2858-2863` and `:2930-2949` closed at
+  their own entries; new section "Deferred from: story-4.6 implementation" added with one
+  named-owner finding (the `dangling=true` platform quirk).
+- `_bmad-output/implementation-artifacts/4-6-reset-dev-to-main-on-a-weekly-schedule.md` — this
+  file: Tasks 1/3/4/5/9 checkboxes and resolutions, Task 2's citations confirmed (2.8's own live
+  test still pending), Run Budget Ledger declared, Dev Agent Record (Completion Note 1: DB access
+  confirmation, cron validation, sweep force-testing including the real bug found and fixed,
+  dispatch classifier force-testing).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-6-…` → `in-progress` (Task 1.0).
 
 ## Change Log
 
 | Date | Note |
 |---|---|
 | 2026-08-21 | Story contexted against `main` at 22dceedc. 🔴 **The story's stated premise was falsified while contexting it.** `schedule:` **has** fired in production on this Forgejo instance: two `action_run` rows with `trigger_event='schedule'`, both `CRM/PRIONEX_HUB` → `reset-dev.yml` (`.github/workflows/`, not `.forgejo/`), at `2026-08-05 09:50:44 UTC` and `2026-08-10 02:00:44 UTC`, both success, dispatch delay 1 second — read read-only from Forgejo's own Postgres by `CRM/api-prionex`, which then registered a **second** schedule of its own (`action_schedule id=36`, `ref=main`, `next = 2026-08-17 02:00 UTC`) and deliberately disarmed it. It has never fired in `CRM/fe-prionex` — the 124-run event census confirms the negative — so AC2 and the probe survive, but narrow from *"does cron work"* to four cheap questions. **Six instance facts arrive free** (default-branch-only registration, confirmed against the v15.0.5 source at two independent gates; UTC evaluation; the `github.sha` snapshot; every default-branch push wiping and re-registering all schedules; **a parse failure at tick time permanently disabling the workflow**; and open issue #12566, where an invalid cron breaks push triggers repository-wide). 🔴 **One sibling conclusion appears to be wrong and is corrected here rather than inherited:** `api-prionex`'s fact 2 reads `event=push` off the wrong `action_run` column and forbids branching on `github.event_name`; the v15.0.5 source populates `github.event_name` from `trigger_event`, so it should read `schedule` — nobody has ever echoed it live, and Task 6.3 does, in one line. Four autonomous decisions recorded, subject to Oleg's veto: the reset **dispatches** the proven `deploy-dev.yml` rather than duplicating it (§3, five alternatives ranked and costed — **both sibling projects took the rejected one**); the manual path takes **zero inputs**, so it cannot be aimed anywhere but `main` and therefore becomes valid evidence for the scheduled path; FR23's literal `docker image prune` is replaced by a **targeted** sweep, because s1 is multi-tenant and `docker ps --filter name=` is a substring match that matches this job's own runner; and the holder-debris chore from `deferred-work.md:2930-2949` is **accepted** into scope. Three ACs amended, three added (AC6 fail-closed-and-untouched, AC7 the cron cannot take the repository down with it, AC8 Slack deferred). 🔴 One near-certain new dependency surfaced up front: the v15.0.5 dispatch route needs `write:repository` **and** Actions-unit write, which the automatic job token probably lacks — Task 2.8 settles it in one run, and the fallback is a decision for Oleg, not a silent switch to `workflow_call`. Story 4.5 is parked; its unmerged branch is not read. Delivery is two implementation PRs by construction, because a `schedule:` on a feature branch registers nothing, no UI or API lists registrations, and protected `main` is the only place a firing can be observed. Status → ready-for-dev |
+| 2026-08-21 | **Implementation round: Tasks 1, 3, 4, 5, 9 complete; Task 2's citations confirmed (2.8's own live test pending); Tasks 6-8 pending the coordinator.** `dev-reset.yml` written end to end and locally validated before push: cron expressions checked against a 5-field-exact local parser overlay (no Go toolchain available, croniter used with Forgejo-specific strictness rules layered on top); sweep logic force-tested on s1 against real and synthetic debris, finding and fixing a real bug — `docker images --filter dangling=true` matches no digest-pulled image at all on this daemon's containerd-backed store, which would have shipped as a silent no-op sweep (this story's own failure cause 5); dispatch classifier force-tested for every HTTP branch; disarm mechanism (Task 6.2) and the `github.event_name`-etc. diagnostic (Task 6.3) both verified locally. Baseline (Task 1.1) and AC2's own "before" half (Task 6.4) both answered by a direct read-only query against Forgejo's own Postgres via SSH on s1 — the same method `CRM/api-prionex`'s own story documents — confirmed live and reusable; also used, at the coordinator's request, to close Story 4.4's own DF1 (`concurrency_group`/`concurrency_type` for runs 964/965, both confirmed correct). D31 recorded, epics.md's four ACs amended plus two added, `deferred-work.md`'s two named entries closed at their own locations plus one new platform-level finding recorded. Regression check: `deploy-dev.yml` has zero diff, exactly six files touched total, none on the do-not-touch list. Requesting from the coordinator: Task 2.8's one live dispatch (armed, on the implementation branch, before PR A), then opening PR A once that's settled |
