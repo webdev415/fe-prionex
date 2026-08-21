@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-21
+# last_updated: 2026-08-22
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -421,6 +421,61 @@ development_status:
   # ⚠️ Hard window: NO dispatch 2026-08-23 01:45-02:30 UTC and no lock holder alive across it —
   # Sunday 02:00 UTC is the scheduler's first AUTONOMOUS firing and the coordinator's own
   # measurement; this story must not contaminate it.
+  # 🔴 Code review 2026-08-22 (Opus, three parallel layers): changes requested. 6 high, 14 medium,
+  # 14 low, 4 decision-needed for Oleg, 5 dismissed. Findings left as action items, not applied —
+  # status returned to in-progress. The five deploys are real: one runner, zero overlapping job
+  # windows, one blob hash for `deploy-dev.yml` and one for `docker-compose.stand.yml` across all six
+  # reference points (reviewer-verified independently), all eight workflow line citations exact,
+  # NFR5 clean by diff across the story branch AND all five validation branches. The corrections are
+  # to what the record CLAIMS, not to what the pipeline did.
+  # Two through-lines. (1) The story's local honesty does not survive the roll-up: five subtasks
+  # disclose a genuine partial in their own ✅ note — 4.4 and 7.4 (2 of 5 attributed), 8.3 (no
+  # "before" census exists), 5.6 (no after-capture), 3.1 (not serialized) — and Task 10.4 converts
+  # them into "closed on evidence", the Completion Notes into claims of being STRONGER than the
+  # method replaced, and D32 hardens three into permanent Russian prose a future reader cannot audit
+  # back to the partial. (2) 🔴 The ledger is wrong in the direction that hides spend, in the one
+  # story whose §10 diagnoses that failure mode in every prior ledger. Not 9 of 20 — at least 17
+  # above baseline, proven from the story's own recorded (id, index) pairs without a query: the
+  # offset is exactly 726 across all ten of them, so ids 1111 and 1116 are repo-16 runs the file
+  # never mentions (they are `ci.yml` runs for this branch's own intermediate pushes — `ci.yml` has
+  # no `paths` filter), Phase C's five deploys are reported complete in one table and "remaining
+  # planned" in another, and 9 + 8 never reached 20 anyway. retro-D4 honoured in letter (10.1 left
+  # OPEN), broken in substance — the interim self-report is quoted three times, once as "no overrun
+  # signal", and once into docs/migration-decisions.md.
+  # Other highs: the per-step cost profile handed to Story 4.8 is a WARM-CACHE artefact of the
+  # story's own Task 3.5 `docker pull` verification (§4 asked for the cold-image number and it is
+  # still unmeasured); AC2's dominant step is 2 of 5 and the missing three are now free to obtain;
+  # the cutover consequence of §2's own wall — every in-flight developer branch is undeployable
+  # until rebased past Story 4.1 — has no owner in any routing artefact; and the closeout merge is a
+  # default-branch push, which re-registers the very `action_schedule` row whose first autonomous
+  # firing the coordinator is measuring Sunday 02:00 UTC. That last one is live and dated.
+  # AC5/DF2's negative result stands and is worth having — but "FALSIFIED" is broader than a probe
+  # that cannot separate group-queueing from capacity-queueing (deploy-dev.yml:181-190 says so
+  # verbatim), never involved dev-reset.yml (the workflow whose hazard DF2 names), and measured a
+  # pending-depth of two.
+  # ✅ Fix-pass applied 2026-08-22 (zero-dispatch, no mechanism added — pure record correction).
+  # DN1-DN4 decided by Oleg and recorded (credential incident: org-secrets location, re-mint+2-secret
+  # rotation with an exit plan, transcript-privacy flagged as an assumption; H5 owned by Story 4.9,
+  # not 4.8; AC4 after-capture wording fixed, not re-earned; story-branch pushes now a standing
+  # ledger-template line, noted for Story 4.8's own context). H1/H2: ledger rebuilt by direct `psql`
+  # query — above-baseline spend is 17, not 9 (ids 1111/1116/1122 are unbudgeted story-branch
+  # pushes), projected to ≈22 against the floor of 20; D32 and this file corrected to state the
+  # ledger is OPEN pending the post-merge query, not "closed." H3: warm-cache caveat added to the
+  # per-step cost profile, cold-pull left explicitly unmeasured, routed to Story 4.8. H4: the three
+  # missing task logs were re-checked directly — still not persisted after 24+ hours, which is no
+  # longer "delayed" but a new standing finding, routed to Story 4.8 (attribution stays 2 of 5, not
+  # backfilled, because there is nothing to read). H6: a no-merge rule for 2026-08-23 01:45-02:30 UTC
+  # is now written into the story's own §12. M1: AC2 rebound to `stopped − created` (the measure
+  # actually used throughout, and the better one), recorded as the story's seventh autonomous
+  # decision. DF2 wording narrowed to the specific hazard disproven (simultaneous double-arrival in
+  # one group, both survive) with three axes left explicitly open and routed to Story 4.8
+  # (group-vs-capacity indistinguishable, the scheduled actor untested, pending-depth tested only to
+  # 2) — same narrowing applied in `deferred-work.md` and D32. §11a's false premise corrected (104 of
+  # ~206 branches carry no ticket key, which removes rather than reinforces the concern about
+  # branches 4/5). Prohibition 13 named as a violation, not "the prohibition's spirit"; Task 10.3
+  # expanded to verify all 13 prohibitions explicitly. M2-M14/L1-L14 addressed to the extent each
+  # was a wording/attribution fix (M3, M4, M5, M8, M9, M10, M11 and most of L1-L14) or routed as a
+  # new deferred-work.md finding with a named owner (M7). Status returned to `review`.
   4-7-validate-dev-deploys-across-five-feature-branches: review
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
