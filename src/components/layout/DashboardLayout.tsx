@@ -21,7 +21,11 @@ import type { Permission } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { shouldStripDashboardChrome } from '@/features/onexEmbed/embedContext'
+import {
+  isOnexDockSoloSurface,
+  shouldStripDashboardChrome,
+  shouldSuppressIncomingCallPopup,
+} from '@/features/onexEmbed/embedContext'
 import { cn } from '@/lib/utils'
 import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
@@ -1123,6 +1127,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
    */
   const isOnexDock = shouldStripDashboardChrome(location.pathname, location.search)
 
+  /**
+   * The incoming-call popup is the one piece of chrome whose absence can cost a
+   * call, so it is gated separately: suppressed in the dock because the CRM
+   * window in the main pane raises its own, unless the host declares the dock
+   * its only CRM surface (`window.__onexDockSoloSurface`).
+   */
+  const suppressIncomingCallPopup = shouldSuppressIncomingCallPopup(
+    location.pathname,
+    location.search,
+    isOnexDockSoloSurface()
+  )
+
   const isLawyerWorkplaceRoute =
     location.pathname === '/dashboard/lawyer-workplace' ||
     location.pathname.startsWith('/dashboard/lawyer-workplace/')
@@ -1275,8 +1291,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Incoming Call Modal — suppressed while another call window is up.
             Also suppressed in the OneX dock: the operator's CRM window in the
             main pane raises its own popup, and a second one inside a ~420px
-            sidebar would both duplicate it and be unusable there. */}
-        {incomingCall && canShowIncomingPopup && !isOnexDock && (
+            sidebar would both duplicate it and be unusable there. A host that
+            runs the dock as its only CRM surface opts out — see
+            `shouldSuppressIncomingCallPopup`. */}
+        {incomingCall && canShowIncomingPopup && !suppressIncomingCallPopup && (
           <CallDialogModal
             // A queue can replace one ringing call with another without the
             // popup ever unmounting, and the modal resets its timer and state

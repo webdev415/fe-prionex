@@ -63,6 +63,13 @@ declare global {
     __onexPageContext?: unknown
     /** Set by the dock once it has mounted and is listening for host events. */
     __onexDockReady?: boolean
+    /**
+     * Set by the host *before* loading the dock when the dock is the only CRM
+     * surface it keeps open — i.e. there is no CRM window in the main pane to
+     * raise the incoming-call popup. See
+     * {@link shouldSuppressIncomingCallPopup}.
+     */
+    __onexDockSoloSurface?: boolean
   }
 
   interface WindowEventMap {
@@ -166,6 +173,29 @@ export function isDockEmbedSearch(search: string | null | undefined): boolean {
 export function shouldStripDashboardChrome(pathname: string, search: string): boolean {
   const onAssistant = pathname === ASSISTANT_PATH || pathname === `${ASSISTANT_PATH}/`
   return onAssistant && isDockEmbedSearch(search)
+}
+
+/**
+ * True when the dock must not raise the incoming-call popup.
+ *
+ * The popup is suppressed in the dock because a ~420px sidebar is the wrong
+ * place for it *and* the operator's CRM window in the main pane raises its own.
+ * That second half is an assumption about the host's topology: a host that
+ * keeps the dock as its only CRM surface must set
+ * `window.__onexDockSoloSurface = true` before loading it, or its operators
+ * would never see an incoming call.
+ */
+export function shouldSuppressIncomingCallPopup(
+  pathname: string,
+  search: string,
+  soloSurface: boolean
+): boolean {
+  return shouldStripDashboardChrome(pathname, search) && !soloSurface
+}
+
+/** Read the host's `__onexDockSoloSurface` opt-in. Strictly `true` counts. */
+export function isOnexDockSoloSurface(): boolean {
+  return window.__onexDockSoloSurface === true
 }
 
 /** Clip to `max` characters, marking the cut with an ellipsis. */

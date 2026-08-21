@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   buildContextBlock,
   buildContextualMessage,
@@ -9,8 +9,10 @@ import {
   isDockEmbedSearch,
   normalizeOnexAsk,
   normalizeOnexPageContext,
+  isOnexDockSoloSurface,
   ONEX_ASK_SUMMARY_PROMPT,
   shouldStripDashboardChrome,
+  shouldSuppressIncomingCallPopup,
   stripOnexContextBlock,
 } from '../embedContext'
 
@@ -42,6 +44,41 @@ describe('shouldStripDashboardChrome', () => {
     expect(shouldStripDashboardChrome('/dashboard', '?embed=dock')).toBe(false)
     expect(shouldStripDashboardChrome('/dashboard/clients', '?embed=dock')).toBe(false)
     expect(shouldStripDashboardChrome('/dashboard/ai-assistant', '')).toBe(false)
+  })
+})
+
+describe('shouldSuppressIncomingCallPopup', () => {
+  it('suppresses the popup in the dock, because the main pane raises its own', () => {
+    expect(shouldSuppressIncomingCallPopup('/dashboard/ai-assistant', '?embed=dock', false)).toBe(
+      true
+    )
+  })
+
+  it('keeps the popup when the dock is the only CRM surface open', () => {
+    // Suppression assumes a CRM window in the main pane. A host that runs the
+    // dock alone must say so, or the operator would never see an incoming call.
+    expect(shouldSuppressIncomingCallPopup('/dashboard/ai-assistant', '?embed=dock', true)).toBe(
+      false
+    )
+  })
+
+  it('never touches the popup outside the dock', () => {
+    expect(shouldSuppressIncomingCallPopup('/dashboard/clients', '?embed=dock', false)).toBe(false)
+    expect(shouldSuppressIncomingCallPopup('/dashboard/ai-assistant', '', false)).toBe(false)
+  })
+})
+
+describe('isOnexDockSoloSurface', () => {
+  afterEach(() => {
+    delete window.__onexDockSoloSurface
+  })
+
+  it('is opt-in and reads only a literal true', () => {
+    expect(isOnexDockSoloSurface()).toBe(false)
+    window.__onexDockSoloSurface = false
+    expect(isOnexDockSoloSurface()).toBe(false)
+    window.__onexDockSoloSurface = true
+    expect(isOnexDockSoloSurface()).toBe(true)
   })
 })
 
