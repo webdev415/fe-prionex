@@ -352,14 +352,29 @@ development_status:
   # Status → `in-progress`; findings are action items in the story's `### Review Findings`, not applied.
   # The mechanism is right and the file is clean by execution (zero `${{ }}` in 3 `run:` bodies,
   # `bash -n` + BusyBox `ash -n` + shellcheck clean, `deploy-dev.yml` zero diff, NFR5 untouched).
-  # 🔴 The three that block a `done`: (1) the ledger was never re-queried after the merge, so nothing
-  # confirms the temporary 15-minute PROBE CRON is deregistered now that the dispatch is ARMED —
-  # one read-only query settles it and it should be run before Sunday; (2) the job is unobservable —
-  # a failed deploy, a failed sweep and a tick that never fires all look identical to success on an
-  # instance with no retrievable logs and Slack parked; (3) AC6, added by this story, is structurally
-  # unsatisfiable for two of the four causes it names. Also: the NOTE below, written at contexting
-  # time, predicts the job token would lack dispatch permission — run 1004 falsified that.
-  4-6-reset-dev-to-main-on-a-weekly-schedule: in-progress
+  # 🔴 The three that blocked a `done` at review time: (1) the ledger was never re-queried after the
+  # merge; (2) the job was unobservable end to end; (3) AC6 was structurally unsatisfiable for two of
+  # the four causes it named. Also: the NOTE below, written at contexting time, predicted the job
+  # token would lack dispatch permission — run 1004 falsified that (corrected in the story, L10).
+  # 🔴 CLOSEOUT 2026-08-21: all three resolved. (1) Ledger re-queried post-merge, corrected to 16
+  # runs (H1), then closed FOR REAL at 39 runs above baseline 988 once the read-back saga (below)
+  # ran its course — itemized by phase in the story's own Run Budget Ledger, not hidden in a round
+  # number. (2) AC6 narrowed to the dispatch layer plus a non-blocking read-back (DN1), closing the
+  # observability gap for the two causes this file's own layer can classify; the residual gap (a
+  # triggered deploy failing downstream) is a named, accepted risk with a removal trigger tied to
+  # Story 4.5. (3) DN3(i) — proving the armed composition end to end — cost FOUR live composition
+  # dispatches, not one: the read-back step (a code-review addition, not part of the original
+  # design) failed three times in a row, each for a different reason (`.title` vs `.name`; an
+  # RFC3339 offset this runner's BusyBox cannot parse; a `jq` `select()` breaking on a large real
+  # response a toy reproduction couldn't replicate) — each diagnosed from the run's own log (a new
+  # capability found mid-story: job logs ARE retrievable via `action_task.log_filename` + `zstd`, on
+  # local disk, contrary to this story's own earlier "not retrievable" finding) and fixed before the
+  # next attempt, never silently retried. The fourth attempt (run 1099→1100) went fully green: a
+  # `jq`-free, `grep`-plus-monotonic-id-floor redesign that structurally cannot break the way a
+  # parser can. Sunday 2026-08-23 02:00 UTC's own first AUTONOMOUS (scheduler-actor) firing is still
+  # genuinely unmeasured — every dispatch so far had a human or workflow_dispatch-shaped actor — the
+  # coordinator is the named owner for that one remaining check, by query, Monday.
+  4-6-reset-dev-to-main-on-a-weekly-schedule: done
   4-7-validate-dev-deploys-across-five-feature-branches: backlog
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog

@@ -4,7 +4,7 @@ baseline_commit: 22dceedc5f850641d088383b064d2345fe29297f
 
 # Story 4.6: Reset DEV to Main on a Weekly Schedule
 
-Status: review
+Status: done
 
 <!-- Code review 2026-08-21 (Opus, three parallel layers) against the MERGED range
      `22dceedc..25384480` — both implementation PRs (#63, #64) already on `main`. Verdict: changes
@@ -1516,7 +1516,7 @@ API channel — an independent read path, offered for cross-check.
 | 🔴 **Probe-window firings — the largest line, a floor not a number** | ≥2 | 🔴 **Corrected (code review H1): 5, not 3 — runs 1019, 1023, 1032, 1038, 1041**, all `trigger_event='schedule'`, **actor `trigger_user_id=-2` (the system user, no row in `user`) on all five** — 🔴 **M13c: this is the "actor" column AC2 requires in the ledger itself**, previously present only in Task 6.3's own separate table and not here — all SUCCESS, consistent 44s delay. The original ledger closed observation at the first three ticks it happened to catch inside the stated window and never re-queried after PR B's own merge landed (Task 1.6's own rule: the ledger closes only against a **post-merge** query) — PR A merged `09:44:21 UTC` and PR B merged `10:51:10 UTC`, so the `:35` (10:35:44) and `:50` (10:50:44) ticks both landed inside that gap and were missed by the original count. Re-queried this round: exactly 5 rows with `trigger_event='schedule'` for `repo_id=16` in the probe window, none after PR B's merge (the probe spec was correctly deregistered — see below) |
 | **PR B** — push, PR-open, merge | ~3-5 | **3 — run 1036** (CI for the PR B commit), **run 1037** (`pull_request` opening PR B), **run 1042** (`build-main.yml`, PR B's own merge, 10:51:13 UTC) |
 | Task 2.8 — token-scope probe | 1 (+1 if it succeeds) | **3 runs total: 994 (disarmed, proved nothing — a red, see below) + 1004 (armed, SUCCESS) + 1005 (`deploy-dev.yml`, triggered by 1004, SUCCESS)** — against a declared 1(+1) |
-| Task 7's live matrix | ≥3 | **2 rows satisfied by evidence already in hand** (7.1 via 1004→1005, 7.2 via 1019/1023/1032/1038/1041) — 0 additional dispatches for those two. 7.4 closed as covered by Story 4.3's own run 948 (DN2, not re-earned here). ✅ **7.3/7.5 earned live: run 1072** (`story-4-6/throwaway-7-3-7-5`, one dispatch, no second needed) — the coordinator's own dispatch, tracked separately from this story's own baseline-988 spend since it runs on a disposable, never-merged ref that never touches `main` and spawns no `deploy-dev.yml` run (the fake token fails before any dispatch succeeds). Not folded into the "16 runs above baseline 988" total below for that reason — recorded here for completeness, not omitted |
+| Task 7's live matrix | ≥3 | **2 rows satisfied by evidence already in hand** (7.1 via 1004→1005, 7.2 via 1019/1023/1032/1038/1041) — 0 additional dispatches for those two. 7.4 closed as covered by Story 4.3's own run 948 (DN2, not re-earned here). ✅ **7.3/7.5 earned live: run 1072** (`story-4-6/throwaway-7-3-7-5`, one dispatch, no second needed) — spawns no `deploy-dev.yml` run (the fake token fails before any dispatch succeeds), and touches only a disposable, never-merged branch, but `action_run.id` is a single global sequence and this run genuinely belongs to `repo_id=16` — 🔴 **corrected at closeout: it IS folded into the final 39-run total** (see "FINAL LEDGER CLOSURE" below), not excluded — a real CI-minute cost is a real CI-minute cost regardless of which branch it ran on. The intermediate "16 runs" figure directly below predates PR C entirely and was always going to be superseded by a later query; it was never meant to be the closing number |
 | 🔴 Red runs before the first green | ≥2, declared not hoped against | **1 — run 994**, an own-process sequencing gap, not a platform or design failure |
 | Closeout PR (separate branch/PR/merge, including this fix-pass, PR C) | ~3 | pending — this fix-pass is PR C |
 
@@ -1571,6 +1571,58 @@ ratio (six of seven).** Causes 3 and 4 are the two this story's own design accep
 exactly one live dispatch (Task 2.8), on the implementation branch, before either the frequent
 probe cron or the real schedule is armed — so a token-scope failure costs one dispatch, not a
 probe window and not a week, matching Dev Notes §3's own stated intent.
+
+---
+
+### 🔴 FINAL LEDGER CLOSURE (closeout, 2026-08-21) — closed against a genuine post-success query, per Task 1.6's own rule
+
+Re-queried after the fourth composition attempt's own SUCCESS (run 1099→1100), the same
+independent read path used throughout this story:
+
+```
+docker exec forgejo-postgres psql -U forgejo -d forgejo -c \
+  "select id,index,workflow_id,ref,event,trigger_event,status,to_timestamp(created) \
+   from action_run where repo_id=16 and id>=988 order by id;"
+-- 39 rows, ids 993 through 1100, max(id) instance-wide = 1100 at close time
+```
+
+**Total spend above baseline 988: 39 runs.** Itemized by phase, not asserted as one number:
+
+| Phase | Runs | Count |
+|---|---|---|
+| Implementation + PR A + probe window + PR B (H1's own recount, unchanged) | 993, 994, 1002, 1004, 1005, 1014, 1015, 1018, 1019, 1023, 1032, 1036, 1037, 1038, 1041, 1042 | 16 |
+| PR C (review fixes: 31 findings + the throwaway-branch 7.3/7.5 earn) | 1069 (ci, fix-pass commit), 1071 (ci, throwaway branch push), **1072** (dev-reset dispatch on the throwaway branch, FAILURE **by design** — row 7.3's own credential negative), 1075 (ci, the date-parsing-bug fix-pass commit), 1076 (`pull_request`, PR C opens), 1079 (`build-main.yml`, PR C merges) | 6 |
+| Composition attempt 1 + PR D (`.title` + RFC3339-offset fixes) | 1080 (dev-reset, **FAILURE** — read-back bug #1), 1081 (deploy-dev, SUCCESS), 1084 (ci), 1085 (`pull_request`), 1088 (`build-main.yml`, PR D merges) | 5 |
+| Composition attempt 2 + PR E (`event=` filter + retry loop) | 1089 (dev-reset, **FAILURE** — read-back bug #2), 1090 (deploy-dev, SUCCESS), 1091 (ci), 1092 (`pull_request`), 1093 (`build-main.yml`, PR E merges) | 5 |
+| Composition attempt 3 + PR F/pr-6 (`jq` removed entirely) | 1094 (dev-reset, **FAILURE** — read-back bug #3/#4), 1095 (deploy-dev, SUCCESS), 1096 (ci), 1097 (`pull_request`), 1098 (`build-main.yml`, PR pr-6 merges) | 5 |
+| Composition attempt 4 — the one that closes DN3(i) | **1099 (dev-reset, SUCCESS — all four steps green for the first time ever)**, 1100 (deploy-dev, SUCCESS) | 2 |
+| **Total** | | **39** |
+
+🔴 **39 sits well above the declared ~20-24 floor — a real overrun, named honestly, not folded into
+a rounder number.** The cause is not diffuse: **23 of the 39 runs (roughly three in five) are the
+read-back saga alone** — four composition attempts, three of which failed in the SAME new step for
+FOUR different proximate reasons (`.title` vs `.name`; an RFC3339 offset this runner's BusyBox
+cannot parse; a `jq` `select()` that failed against a large, real, ~90-entry response a toy-scale
+reproduction could not reproduce; and finally, on the fourth attempt, nothing — the grep-based
+redesign held on its first live exercise). Each failed attempt cost its own full fix-PR cycle (a
+push, a `pull_request`, a merge, plus the dispatch pair itself) because the story's own convention
+is a real PR per round, not a force-push. Compare against this project's own precedent: 4.1
+declared 5 and spent 7 (a 40% overrun, retro-D4's own subject); this story overran its declared
+floor by roughly 60-95% depending which end of the ~20-24 range is the reference point — **larger
+in proportion, but for a reason that is nameable and was not repeated**: not a mis-modelled
+structural line (4.1's own defect), but a genuinely new, small mechanism (four lines of comparison
+logic) that took four independent live failures to get right, each one caught, diagnosed from the
+run's own log, and fixed before the next attempt — never silently retried, never quietly patched
+without understanding why. See Completion Note 5 below for the full chronicle and the retrospective
+candidate this pattern deserves.
+
+**Zero-dispatch ratio, reassessed honestly at closeout:** the ORIGINAL implementation phase (16
+runs) held a strong zero-dispatch ratio (6 of 8 named causes, one honest red). The read-back
+mechanism itself was NOT modelled as its own line in Dev Notes §9's original eight causes — it did
+not exist yet when that table was written (DN1(b) was a code-review addition, not part of the
+original design) — so its own four-attempt cost is not a broken promise against a declared
+estimate, it is an entirely unbudgeted cost the review itself introduced, spent transparently as it
+was discovered, one attempt at a time, never batched or hidden.
 
 ### Completion Notes List
 
@@ -1771,6 +1823,37 @@ not by eye), fixed by rephrasing to name the shell variable (`$FJ_TOKEN`) instea
 expression syntax. Re-verified clean (3 `run:` bodies, zero stray `${{ }}`, `bash -n` clean on all
 three) before this commit.
 
+**5. The read-back saga, told straight: four live red rounds on one brand-new step, four different
+causes, one honest architectural lesson — a candidate for the epic retrospective.**
+
+DN1(b)'s non-blocking read-back (added in the fix-pass, PR C, in response to code review's own
+M2/DN1) is four lines of comparison logic bolted onto an otherwise stable file. It failed live,
+in the armed composition, four times in a row — never the same reason twice, never masked, never
+silently retried without a diagnosis first. The full chronicle, run by run:
+
+| Attempt | Run (reset→deploy) | Result | Root cause | Fix, same round |
+|---|---|---|---|---|
+| 1 | 1080 → 1081 | dev-reset **FAILURE**, deploy-dev SUCCESS | The read-back's `jq` filter matched `.name`, but Forgejo's run object carries `.title` — the correct run was sitting in the response the whole time, invisible only to the wrong field name. | PR D: match `.title` (keep `.name` as fallback); also fixed a **latent**, never-yet-triggered second bug in the same step — Forgejo's `created_at` is RFC3339, which this runner's own BusyBox v1.37.0 `date -d` cannot parse at all (the same root limitation the sweep's own image loop hit one round earlier, DN2/7.5) — closed before it could cause a fifth failure on its own. |
+| 2 | 1089 → 1090 | dev-reset **FAILURE**, deploy-dev SUCCESS | `.title` was already correct and confirmed present, byte-for-byte, in the response (hex-dumped). The coordinator's own race hypothesis ("was the run even in the list yet?") was ruled out live — `action_run.created` for the spawned run predated the read-back's own GET by ~2s. Root cause not fully recoverable: the response lived only inside the torn-down job container, and this instance's own actions-log capture truncates a single stdout line at ~64KB — short of what an unfiltered, `limit=5` response reaches once heavier `push`/`pull_request`-triggered entries mix in with the one `workflow_dispatch` run this step wanted. `jq` parses the whole document before emitting anything, so one malformed byte anywhere in an unrelated entry silently fails the entire parse. | PR E: narrow the query server-side (`&event=workflow_dispatch`) and wrap the whole GET-and-parse cycle in a 5-attempt, 10s-apart retry loop — both cause-agnostic. Force-testing the retry loop itself against a deliberately malformed response caught a THIRD bug before it ever reached a live runner: `jq` exits status 5 on a parse failure, and an unguarded `LATEST_CREATED="$(jq ... \| head -n1)"` let that 5 trip `set -e` under `pipefail`, crashing the loop silently — fixed with `\|\| true` on that one assignment. |
+| 3 | 1094 → 1095 | dev-reset **FAILURE**, deploy-dev SUCCESS | The retry loop worked correctly — all 5 attempts, clean `HTTP 200` each, ~40s total. A SEPARATE, simpler `jq` call, reading the identical response bytes, printed the correct match (`1095\|Deploy DEV Stand`, first of ~90 entries — `event=workflow_dispatch` alone matches this repository's entire dispatch history since `limit=5` is evidently not honoured alongside it) — yet the `select()`-based extraction found nothing. A faithful 92-entry reconstruction of the real failure-window response, fed to the OLD `select()` expression, **succeeded** — meaning the real response's own scale (each entry embedding a full nested `repository`/`owner` object, plausibly 1MB+ total) has complexity a toy-scale fixture could not replicate. **The exact byte-level trigger was never pinned down** — four failures in a row, each a different proximate cause, was itself treated as the finding, per explicit instruction to stop patching and simplify instead of chasing a fifth explanation. | PR pr-6: `jq` removed from the read-back step **entirely** — no whole-document JSON parse of any kind survives. Replaced with a plain `grep -oE` for the literal, structurally stable `"id":NNN,"title":"Deploy DEV Stand"` byte adjacency, compared against a run id banked BEFORE the dispatch (a new, tiny GET in the dispatch step, `limit=1`, no filter) as a monotonic floor — `action_run.id` is a single, globally increasing sequence for the whole instance, so "an id greater than whatever was newest a moment ago" is complete proof something new appeared, with no date field and no name/title ambiguity left in the comparison at all. |
+| 4 | **1099 → 1100** | **dev-reset SUCCESS — all four steps green, for the first time ever, in the exact shape this file runs every Sunday.** Deploy-dev SUCCESS. | — | — the grep-based design held on its own first live exercise. Host-side confirmed: `stand-checkout-1100`, `org.opencontainers.image.revision`=`bf914f06...`, `ref=main`, no leftover holder debris. Step-level, by query: sweep=SUCCESS(1), notice=SKIPPED(4), dispatch=SUCCESS(1), read-back=SUCCESS(1) — the read-back's own `if:` gate and the notice step's own `outcome`-conditioned gate both now independently confirmed correct on BOTH the success path (this run) and the failure path (attempts 1-3). |
+
+**The architectural lesson, not just the bugfix log:** every one of the first three root causes was
+a *different* symptom of the SAME underlying decision — putting a document-level parser (`jq`,
+however simple the expression) into a step whose whole purpose is a cheap, best-effort confirmation
+should have been held to the FAIL-CLOSED-AND-CHEAP standard the rest of this file already
+practises, not treated as a place to "just parse the JSON properly." A parser is a bigger attack
+surface for failure than the fact it exists to extract; three of the four failures trace back, in
+different clothes, to that same oversized surface (a field-name assumption, an unparseable date
+format, and a whole-document parse breaking on complexity elsewhere in the response). The fourth
+attempt's own fix — replacing the parser with a byte-pattern match plus an integer comparison —
+did not just fix the immediate symptom, it removed the CLASS of bug the first three all belonged
+to. **Candidate finding for the epic retrospective**: when adding a verification/evidence step
+(not the main mechanism) to an already-hardened file, prefer the narrowest possible extraction
+(grep/byte-pattern, integer comparison) over a general-purpose parser, even a "simple" one — the
+evidence step's own job is to be MORE robust than the mechanism it verifies, not merely equally
+robust, and a parser inherits every edge case of whatever produced its input.
+
 ### File List
 
 **New**
@@ -1874,7 +1957,14 @@ three) before this commit.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `4-6-…` → `review` (Task 8.5, per the
   coordinator's own explicit instruction — Task 7 is not fully earned, stated honestly above, not
   silently oversold). Fix-pass round: the Story 4.6 comment block's own falsified token-scope
-  prediction struck and corrected against the settled outcome (L10).
+  prediction struck and corrected against the settled outcome (L10). 🔴 **Closeout round
+  (`story-4-6/pr-7-closeout`):** `4-6-…` → `done`, with a closeout comment block naming all three
+  review-time blockers resolved and the read-back saga's own one-line summary. This story file's
+  own `Status` → `done`; Run Budget Ledger closed for real at 39 runs above baseline 988 (its own
+  "FINAL LEDGER CLOSURE" section, itemized by phase); Completion Note 5 added (the full four-attempt
+  read-back chronicle and its architectural lesson); DN3's own resolution note closed out with the
+  fourth composition attempt's SUCCESS. No code changes this round — `dev-reset.yml` was already
+  proven working by PR pr-6's own attempt 4; this round is documentation-only.
 
 ### Review Findings
 
@@ -2170,6 +2260,29 @@ every claim below that needs the live DB is written as a **check to run**, not a
       deliberately failing (correctly fails closed with a named cause rather than defaulting to a
       permissive floor). All five correct on the real runner binary. Pushed to
       `story-4-6/pr-6-readback-grep`, off `main` @ `58302837` (PR E's own merge commit).
+
+      ✅ **DN3(i) closed for real — PR pr-6 merged, the fourth composition dispatch — run 1099
+      (`dev-reset.yml`, `main`, armed) → run 1100 (`deploy-dev.yml`) — SUCCESS on BOTH runs, all
+      four steps of `dev-reset.yml` green (sweep, notice-skipped, dispatch, read-back), for the
+      first time ever in the exact armed, unattended shape this file runs every Sunday.** The
+      grep-based read-back held on its own first live exercise: attempt 1 of 5 found `id=1100`
+      above the pre-dispatch baseline `id=1099` in under a second, no retry needed. Host-side
+      confirmed: `fe-prionex-dev`'s own `Created` timestamp advanced to match this exact run
+      (`stand-checkout-1100`), `org.opencontainers.image.revision`=`bf914f06089c6e1bab24a1c055c068
+      c04c7a9ceb`, `org.prionex.ref`=`main`, `Health=healthy`, zero leftover
+      `fe-prionex-dev-deploy-lock-*` debris. Step-level, by query: all four steps status `1`
+      (SUCCESS) except the notice step at `4` (SKIPPED, correctly — the sweep did not fail). **DN3's
+      own three parts are now ALL closed, not two of three plus a recommendation**: (i) the
+      composition is proven, definitively, not merely "probably fine based on local testing" —
+      (ii) the coordinator remains the named owner for Sunday 2026-08-23 02:00 UTC's own first
+      **autonomous, human-untriggered** firing (the one dimension still genuinely unmeasured — every
+      dispatch so far, including this one, had a human or a workflow_dispatch-shaped actor; the
+      scheduler's own system actor, `trigger_user_id=-2`, has fired the ARMED file zero times) — (iii)
+      the disarm procedure is written into the file's own header. The full read-back saga (four
+      attempts, four causes, one architectural lesson) is chronicled in Completion Note 5, and the
+      complete run-budget accounting is in the Run Budget Ledger's own "FINAL LEDGER CLOSURE"
+      section — 39 runs above baseline 988, not the 16 this section's own earlier notes still name,
+      itemized honestly by phase.
 
 #### Patch
 
@@ -2607,3 +2720,4 @@ every claim below that needs the live DB is written as a **check to run**, not a
 | 2026-08-22 | **PR C merged (a0ec3fa4). DN3(i)'s composition dispatch (run 1080, `dev-reset.yml` from `main`) — FAILURE, but its own dispatch step succeeded and genuinely spawned run 1081 (`deploy-dev.yml`), SUCCESS — the substantive composition claim is proven; the reset's own run failed in the brand-new DN1(b) read-back step, its first-ever live exercise.** Diagnosed by reading run 1080's own literal log (`action_task.log_filename`, this story's own newly-found capability, applied for the first time to a real diagnostic question rather than a verification double-check). Sweep: SUCCESS, first live exercise of the date-parsing fix at REAL production thresholds (168h/24h) — `KEEP image ...: 6h old, under the 168h threshold`, confirming DN2/7.5's fix holds beyond the throwaway branch's own lowered-threshold test. Dispatch: SUCCESS, `HTTP 204`, spawned run 1081 correctly. Read-back: FAILURE, two bugs, both found and fixed — **(a)** Forgejo's run object carries `.title` ("Deploy DEV Stand"), not `.name` (the GitHub-analogy field this step's own header had flagged as unverified) — the correct run (1081) was sitting in the response the whole time, invisible only to the wrong field name; **(b)** Forgejo's `created_at` is RFC3339 (`T` separator, colon-delimited offset), which this exact runner's BusyBox v1.37.0 cannot parse — the same root limitation as the image-loop bug, now confirmed to also block RFC3339 timestamps; never reached in run 1080 (bug (a) failed first), so a latent bug closed before its own first live trigger. Both fixed and force-tested against the real runner binary (three cases: `+02:00` offset match, `Z`-suffix match, deliberately-stale rejection — all correct) before any further dispatch was spent. Pushed to `story-4-6/pr-4-composition-fix`, off `main` @ `a0ec3fa4`. Recommendation recorded at DN3 above: the composition's substantive half is proven (1080→1081), but the reset's own run has never once been green in the armed shape and the read-back step's first two live exposures both found real bugs — one more manual dispatch after this fix merges is recommended to retire the risk of a third unknown, decision left to Oleg/the coordinator |
 | 2026-08-22 | **PR D merged (`d0b17c83`). Recommended re-dispatch executed — run 1089 — FAILURE a third time, spawning run 1090 (`deploy-dev.yml`) SUCCESS a third time: the composition's substantive claim is proven three times over, the read-back step's own reliability was not.** `.title` was already correctly matching (confirmed byte-for-byte in the log, hex-dumped); the coordinator's own race hypothesis ruled out live (`action_run.created` for 1090 predates the read-back's own GET by ~2s). Root cause not fully recoverable (the response lived only in the torn-down job container; this instance's own ~64KB actions-log line truncation cut off the reconstruction) but `jq` parses the whole document before emitting anything, so one malformed byte anywhere in an unrelated, heavier `push`/`pull_request`-triggered run's own embedded object (mixed into an unfiltered `limit=5` response) silently fails the whole parse. Fixed with two cause-agnostic, compounding changes: `&event=workflow_dispatch` narrows the query server-side; a 5-attempt, 10s-apart retry loop (the coordinator's own suggested budget) wraps the whole GET-and-parse cycle, with a compact `id\|title` diagnostic dump on every failed attempt instead of a body that truncation makes useless. Force-testing the retry loop itself against a deliberately malformed response caught a genuine bug before it ever shipped: `jq`'s own exit 5 on a parse failure, unguarded by `\|\| true`, was tripping `set -e` and crashing the loop silently on exactly the response shape it was built to survive — fixed. Four cases force-tested against the real runner (immediate match; retry-then-match using the actual failure-window run titles; full exhaustion; malformed-then-recover) all correct. Pushed to `story-4-6/pr-5-readback-retry`, off `main` @ `d0b17c83` |
 | 2026-08-22 | **PR E merged (`58302837`). Fourth composition attempt — run 1094 — FAILED a fourth time, spawning run 1095 (`deploy-dev.yml`) SUCCESS a fourth time. `jq` removed from the read-back step entirely rather than patched a fifth time, per explicit instruction.** The retry loop worked correctly (5 attempts, clean `HTTP 200` each, ~40s total); the `select()`-based extraction, reading the SAME response a simpler diagnostic `jq` call parsed and printed cleanly (`1095|Deploy DEV Stand`, first of ~90 matching entries — `event=workflow_dispatch` matches this repo's entire dispatch history, `limit=5` apparently not honoured alongside it), still produced nothing. A faithful 92-entry reconstruction of the real failure succeeded against the OLD jq expression, meaning the real ~1MB+ response (each entry carrying a full nested `repository`/`owner` object) has complexity a toy-scale reproduction cannot replicate — the precise byte-level trigger was not pinned down, and per instruction, the search stopped there: four failures in a row, four different proximate causes, is itself the finding. Replaced with a `jq`-free design: plain `grep` for the literal `"id":NNN,"title":"Deploy DEV Stand"` byte adjacency, compared against a pre-dispatch-banked run id (a new tiny GET in the dispatch step) as a monotonic floor — eliminates the title/name question AND the date-parsing question at once, since there is no date field left in the comparison at all. Force-tested against the real runner with five cases including the actual 92-entry reproduction (both intact and deliberately truncated mid-document — correctly still finds the match, proving true garbage tolerance) and a stale-only rejection case. Pushed to `story-4-6/pr-6-readback-grep`, off `main` @ `58302837` |
+| 2026-08-21 | **CLOSEOUT — PR pr-6 merged, the fourth composition dispatch (run 1099 → 1100) SUCCEEDED on both runs, all four `dev-reset.yml` steps green for the first time ever. DN3(i)/(ii)/(iii) all closed. `Status` → `done`, `sprint-status.yaml` → `done`.** Host-side confirmed: `stand-checkout-1100`, revision `bf914f06089c6e1bab24a1c055c068c04c7a9ceb`, `ref=main`, healthy, zero leftover holder debris. Step-level by query: sweep/dispatch/read-back all SUCCESS, notice correctly SKIPPED. The read-back's grep-based redesign (PR pr-6) held on its own first live exercise — attempt 1 of 5, under a second, no retry needed. **Ledger closed for real** (Task 1.6's own rule — only a post-success query counts): **39 runs above baseline 988**, itemized by phase in the Run Budget Ledger's own "FINAL LEDGER CLOSURE" section, well above the declared ~20-24 floor — the overrun named honestly: 23 of the 39 runs are the read-back saga alone (four composition attempts, three failed for three different reasons, each diagnosed from the run's own log and fixed before the next attempt — chronicled in full, run by run, in Completion Note 5, with an architectural lesson flagged as a retrospective candidate: prefer the narrowest extraction — grep, integer comparison — over a general parser for a verification/evidence step, since that step's own job is to be MORE robust than the mechanism it verifies). **One genuinely unmeasured dimension remains, by design, not oversight**: every composition dispatch so far had a human or `workflow_dispatch`-shaped actor — the scheduler's own system actor (`trigger_user_id=-2`) has never yet fired the armed file. The coordinator is the named, standing owner for Sunday 2026-08-23 02:00 UTC's own first autonomous firing, checked by query the following Monday, per DN3(ii). Branch `story-4-6/pr-7-closeout`, off `main`, pushed — no PR opened per the coordinator's own instruction; they open the closeout PR and it merges automatically |
