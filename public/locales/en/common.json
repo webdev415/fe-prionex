@@ -971,6 +971,7 @@
         "confirmAndCreate": "Confirm & create task",
         "confirming": "Confirming…",
         "confirmSuccess": "Task created on kanban board",
+        "alreadyConfirmed": "Task already created on kanban",
         "contractLoading": "Loading contracts…",
         "lawyerAssigned": "Assigned on kanban",
         "noContracts": "No contracts",

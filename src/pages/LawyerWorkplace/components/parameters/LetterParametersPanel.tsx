@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import {
   canAssignLawyer,
+  isLetterAlreadyConfirmed,
   useConfirmLetter,
   useLegalClientContracts,
   useLegalClientSearch,
@@ -366,6 +367,11 @@ function LetterParametersPanelContent({
   const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items])
   const storedContract = p.contractLabel?.trim() ?? ''
   // Auto-select when the client has exactly one contract; otherwise the lawyer picks.
+  // Display-only: the single contract is NEVER persisted in the background. The
+  // backend auto-resolves it on confirm anyway (contract_resolver), and a
+  // render-driven PATCH here used to loop into 409/400 storms after confirm or
+  // before a client was linked (~22K requests in 7 days on prod). Only an
+  // explicit pick by the lawyer (handleContractSelect) writes through.
   const effectiveContract = noClientLink
     ? ''
     : (contractOverride ??
@@ -375,32 +381,6 @@ function LetterParametersPanelContent({
   const contractIsValid = !contractRequired || Boolean(effectiveContract.trim())
 
   const isReadOnly = isLetterParametersReadOnly(letter)
-
-  useEffect(() => {
-    if (isReadOnly || contractsLoading || contractsClientId == null) return
-    if (contracts.length !== 1) return
-    const autoContract = contracts[0]?.contract_number?.trim()
-    if (!autoContract || autoContract === storedContract) return
-    if (contractOverride != null) return
-
-    void patchContractMutation
-      .mutateAsync({
-        messageId: letter.id,
-        payload: { contract_number: autoContract },
-      })
-      .catch(() => {
-        // Local selection still works if persistence fails.
-      })
-  }, [
-    contractOverride,
-    contracts,
-    contractsClientId,
-    contractsLoading,
-    isReadOnly,
-    letter.id,
-    patchContractMutation,
-    storedContract,
-  ])
 
   const defaultLawyerUserId = useMemo(() => {
     const resolved = resolveLawyerUserId(lawyers, p.lawyerId)
@@ -798,6 +778,13 @@ function LetterParametersPanelContent({
             t('pages.lawyerWorkplace.parameters.confirmSuccess', 'Task created on kanban board')
           )
           onConfirm?.(letter.id)
+        },
+        onError: (error) => {
+          // The hook already toasts success and refreshes the letter for this
+          // case; close the panel the same way a real confirm does.
+          if (isLetterAlreadyConfirmed(error)) {
+            onConfirm?.(letter.id)
+          }
         },
       }
     )

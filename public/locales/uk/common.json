@@ -975,6 +975,7 @@
         "confirmAndCreate": "Підтвердити та створити задачу",
         "confirming": "Підтвердження…",
         "confirmSuccess": "Задачу створено на канбан-дошці",
+        "alreadyConfirmed": "Задачу вже створено",
         "contractLoading": "Завантаження договорів…",
         "lawyerAssigned": "Призначено на канбані",
         "noContracts": "Немає договорів",
