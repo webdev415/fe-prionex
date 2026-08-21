@@ -421,7 +421,7 @@ development_status:
   # ⚠️ Hard window: NO dispatch 2026-08-23 01:45-02:30 UTC and no lock holder alive across it —
   # Sunday 02:00 UTC is the scheduler's first AUTONOMOUS firing and the coordinator's own
   # measurement; this story must not contaminate it.
-  4-7-validate-dev-deploys-across-five-feature-branches: ready-for-dev
+  4-7-validate-dev-deploys-across-five-feature-branches: in-progress
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional

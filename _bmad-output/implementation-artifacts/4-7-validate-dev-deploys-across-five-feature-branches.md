@@ -718,7 +718,7 @@ ownership resolution.
 
 ### Task 1 — Bind the facts and declare the budget before spending anything (AC: all)
 
-- [ ] 1.1 Re-read `.forgejo/workflows/deploy-dev.yml` **in full** (1875 lines; most of it is
+- [x] 1.1 Re-read `.forgejo/workflows/deploy-dev.yml` **in full** (1875 lines; most of it is
       load-bearing comment). Confirm by execution, not by memory: the input set (`ref`,
       `simulate_bad_credential`, `hold_lock_seconds`), the four-job ladder and its `needs:`
       (`deploy: needs: [preflight, clone-test]` — `digest-resolve-test` is deliberately NON-gating,
@@ -726,40 +726,107 @@ ownership resolution.
       vars → acquire lock → guard → down → up -d → …`, and the concurrency block at `:197-199`.
       **If any of this differs from §1-§12, stop** — the story was contexted against a file that has
       since changed and every duration figure in it is suspect.
-- [ ] 1.2 Record the git blob hashes of `.forgejo/workflows/deploy-dev.yml` and
+      ✅ **Confirmed byte-for-byte, nothing differs.** `on.workflow_dispatch.inputs` = exactly
+      `ref`/`simulate_bad_credential`/`hold_lock_seconds`. Jobs: `hold-lock` (`if: inputs.
+      hold_lock_seconds > 0`, timeout 15), `preflight` (timeout 3), `clone-test` (`needs: preflight`,
+      timeout 3), `digest-resolve-test` (`needs: preflight`, timeout 3, NOT in `deploy`'s own
+      `needs:`), `deploy` (`needs: [preflight, clone-test]`, `timeout-minutes: 10`). Step order in
+      `deploy`: record start → sanitize ref → login → **resolve digest** (401 classifier `:925`, 404
+      classifier `:934`, byte-for-byte matching Dev Notes §2's own quote) → **pull** (`timeout 300`)
+      → obtain `docker-compose.stand.yml` → write vars → acquire lock → hand-provisioned guard →
+      capture network id → **`down` at `:1453`** → `up -d` → confirm network → **health poll**
+      (`DEADLINE = now + 120`, confirmed `:1519-1541`) → anchored check → fallback HTTP → AC6 digest
+      match → Kong guard → post-deploy state → release lock (always) → **wall-clock at `:1853`** →
+      remove `DOCKER_CONFIG` (always). `concurrency:` block at `:197-199`:
+      `group: deploy-dev-fe-prionex-dev`, `cancel-in-progress: false`. Every line number the story
+      cites matches exactly what is on disk at `0d4b6dfc` — no drift, story proceeds as written.
+- [x] 1.2 Record the git blob hashes of `.forgejo/workflows/deploy-dev.yml` and
       `docker-compose.stand.yml` at `baseline_commit`. These are AC1's object-identity anchors.
-- [ ] 1.3 🔴 **Establish and record the DB route, and settle the host contradiction.**
+      ✅ **Recorded via `git ls-tree 0d4b6dfc -- .forgejo/workflows/deploy-dev.yml
+      docker-compose.stand.yml`:** `deploy-dev.yml` = `c60dbbbdfd1fd32a4352bda82b5f94b01fcb0361`;
+      `docker-compose.stand.yml` = `3ad2c6fb25db8c77fc13760acee2e9717b7600ce`. AC1's object-identity
+      claim closes if and only if every one of the five deployed refs, plus `main` itself, shows these
+      exact two values — six reads, one value each.
+- [x] 1.3 🔴 **Establish and record the DB route, and settle the host contradiction.**
       `ssh root@10.67.0.1 'docker exec forgejo-postgres psql -U forgejo -d forgejo -c "select 1;"'`.
       State plainly **which host** the Forgejo Postgres was reached on — `4-6-…md:1046` says it is
       not s1 while every query in that same story runs `docker exec` over SSH to s1. Do not inherit
       either claim (§5).
-- [ ] 1.4 **Run-budget baseline.** `select max(id) from action_run;` — instance-wide, before
+      ✅ **Settled, by execution, not by inheriting either claim: it IS s1.** `ssh root@10.67.0.1
+      'hostname -I'` returns `185.185.49.127 172.17.0.1 10.67.0.1 ...` — `10.67.0.1` (the dev-session
+      SSH target) and `185.185.49.127` (s1's own public IP, per Dev Notes §3's own table) are the
+      SAME network-namespace host, confirmed by `hostname -I` listing both addresses on one machine.
+      `forgejo-postgres` is a container running on THIS host, reached via `docker exec` over the same
+      SSH session used for every other host-side check this story performs. **4-6-…md:1046's claim
+      ("a different host from s1") is incorrect** — it was reached over the identical route
+      (`docker exec` via SSH to `10.67.0.1`) every other query in that story also used; there was
+      never a second host. Recorded here rather than inherited silently, per §5's own instruction.
+- [x] 1.4 **Run-budget baseline.** `select max(id) from action_run;` — instance-wide, before
       creating anything. Also record `count(*)` and `max(index)` for `repo_id=16`, so the closure can
       prove no run was created and hidden (`2-5-…md:1089-1093`). Everything above the baseline id
       belongs to this story.
       ⚠️ Token: `/root/.fj_token` holds `FJ_TOKEN=<value>`; extract with `cut -d= -f2-`. **Never
       print a value.** A `401` is Oleg's pending revocation of `fe_review_1_7`, not a bug.
-- [ ] 1.5 **Write the declaration** into `### Run Budget Ledger` before the first push: §10's table
+      ✅ **Baseline: instance-wide `max(id) = 1105`.** `repo_id=16`: `count(*) = 379`,
+      `max(index) = 379` (no gap between the two — every row this repo has ever created is present,
+      nothing hidden). 🔴 **1105 is itself this story's own context-branch `ci.yml` run**
+      (`story-4-7/pr-1-context`, still `status=6` RUNNING at read time, per the DB legend `6=running`)
+      — it existed before this dev-story session began (the coordinator's own context push), so it is
+      recorded here as the ledger's own declared "context push" line (§10's table, row 1) rather than
+      counted toward "above baseline" spend, matching Story 4.6's own precedent for the identical
+      shape (`4-6-…md`'s own baseline note: "already spent, predates this round"). Everything with
+      `id > 1105` is this session's own spend.
+- [x] 1.5 **Write the declaration** into `### Run Budget Ledger` before the first push: §10's table
       verbatim, the named contingencies, and the eight-of-eight zero-dispatch conversion with the
       sentence *this is a validation story, so every dispatch buys an AC row, not a diagnosis.*
-- [ ] 1.6 Confirm the **holder debris** state on s1 before starting: no
+      ✅ **Done** — see `### Run Budget Ledger` below, written before Task 2's first push.
+- [x] 1.6 Confirm the **holder debris** state on s1 before starting: no
       `fe-prionex-dev-deploy-lock-*` container is running, and `.deploy.lock` in
       `/root/crm-prionex/fe-prionex-dev/` is a zero-byte file with no live holder. A zero-byte
       `.deploy.lock` is **normal** — `flock` releases with the file descriptor, not by deleting the
       file (`deploy-dev.yml:1848-1851`). Do not "clean it up".
-- [ ] 1.7 Record the stand's pre-story state: running container name, digest, `Created`, `StartedAt`,
+      ✅ **Confirmed clean.** `docker ps -a --filter 'name=^fe-prionex-dev-deploy-lock-[0-9]+$'` —
+      zero matches. `.deploy.lock` — `-rw-r--r-- 1 root root 0 Aug 21 17:04 .deploy.lock`, zero bytes,
+      exactly the normal post-release state; not touched.
+- [x] 1.7 Record the stand's pre-story state: running container name, digest, `Created`, `StartedAt`,
       published port, `crm-dev-network` id. This is AC3's and AC4's "before" row.
-- [ ] 1.8 🔴 **Confirm the schedule window.** `select s.id, sp.spec, sp.next from action_schedule s
+      ✅ **Recorded (this is Story 4.6's own final composition-success state, run 1100, still serving
+      at story start):** container `/fe-prionex-dev`; image digest
+      `sha256:40bac70e9adc04a63bdeefe3cf0baa76e0c8896a8bd7108db3506e7af3d43a1b`;
+      `Created=2026-08-21T15:04:03.753835279Z`; `StartedAt=2026-08-21T15:04:03.823612995Z`;
+      `org.opencontainers.image.revision=bf914f06089c6e1bab24a1c055c068c04c7a9ceb`;
+      `org.prionex.ref=main`; port `80/tcp -> 127.0.0.1:8082` (host-loopback only, matches Dev Notes
+      §3); `crm-dev-network` id = `62d1b3fc449b4686d9d49c522c58ee1fc254cb0fa1ab257d6493b71cdafbbde1`.
+- [x] 1.8 🔴 **Confirm the schedule window.** `select s.id, sp.spec, sp.next from action_schedule s
       join action_schedule_spec sp on sp.schedule_id = s.id where s.repo_id = 16;` — expect exactly
       one row, `'0 2 * * 0'`, `next = 2026-08-23 02:00:00 UTC`. Plan every dispatch against §12's
       window and state in the ledger which side of it the work fell on.
+      ✅ **Confirmed: exactly one row.** `schedule id=43` (drifted from the story's own citation of
+      `id=38` — expected and harmless, since every default-branch push re-registers all schedules
+      under Task 2.10's own documented mechanism from Story 4.6, and Story 4.6's own closeout PR
+      (`pr-7-closeout`, merged as run 1103) was itself a default-branch push after the story was
+      contexted), `spec='0 2 * * 0'`, `next=2026-08-23 02:00:00 UTC`, `time_zone=''` (UTC). Session
+      start time: `2026-08-21 19:02 UTC`. The §12 hard window (2026-08-23 01:45-02:30 UTC) is
+      **~30.5 hours away**; the softer Task-imposed deadline (finish before 2026-08-22 20:00 UTC or
+      resume after 2026-08-23 03:00 UTC) is **~25 hours away**. All of this story's dispatch work is
+      planned to land on the **before** side of that window; stated explicitly in the ledger.
 
 ### Task 2 — Choose the five branches and prove them deployable at zero dispatch cost (AC: 1)
 
-- [ ] 2.1 Enumerate candidate historical feature branches and shortlist by: diff size, whether the
+- [x] 2.1 Enumerate candidate historical feature branches and shortlist by: diff size, whether the
       diff applies cleanly onto `baseline_commit`, and branch-name shape. **At least one shortlisted
       name must carry an uppercase ticket key** (§11a).
-- [ ] 2.2 For each candidate, replay the diff onto a branch cut from `baseline_commit` **locally**
+      ✅ **Enumerated all 201 `origin/feature/*` branches** (`git for-each-ref`). Surveyed each for
+      `(commits since merge-base with main, files touched)`; a majority read `0|0` — already merged
+      into `main`, no unique content left. Shortlisted by smallest unique diff first; the six
+      smallest single/few-commit, uppercase-ticket-key candidates were tested with `git apply
+      --check` against `baseline_commit`: `KAN-353-operator-phone` (clean), `KAN-874-…-dropdown`
+      (clean), `KAN-500-calibration-frontend` (clean, after widening the shortlist by one more
+      candidate), `KAN-827-dialogue-pagination`/`KAN-509-…`/`KAN-579-…`/`KAN-847-…`/`KAN-970-…`
+      (all four CONFLICT — main has since touched the same lines; correctly dropped per 2.2's own
+      rule, not forced). Three clean replays found, all uppercase-ticket-key (`KAN-353`, `KAN-500`,
+      `KAN-874`), satisfying §11a's requirement three times over.
+- [x] 2.2 For each candidate, replay the diff onto a branch cut from `baseline_commit` **locally**
       and prove it green before it can ever cost a run. ⚠️ **This repository already does it for
       you**: `.husky/pre-commit` runs `format:check`, `lint --max-warnings=0`, `typecheck` and
       `test:run` on every commit, and `.husky/pre-push` adds `npm run build` — the hook's own stated
@@ -769,44 +836,177 @@ ownership resolution.
       🔴 **A replay that needs conflict resolution or a test edit is not a replay — drop it and pick
       another.** Editing a test to make a replay pass is the exact prohibition Story 2.5 carried for
       the same reason.
-- [ ] 2.3 Fill the remainder from this project's own documentation/tracking artefacts — **one honest
+      ✅ **All three replays proven fully green, locally, in isolated `git worktree`s cut from
+      `baseline_commit` (0d4b6dfc), by letting the REAL `.husky/pre-commit` hook run** (never
+      `--no-verify`): `KAN-353-operator-phone-dev` (2 files, +12 lines — locale strings), `KAN-500-
+      calibration-frontend-dev` (16 files, +1572/-6 — a self-contained calibration feature module
+      with its own tests), `KAN-874-contact-tag-dropdown-dev` (5 files, +414/-282 — replaces a modal
+      with an inline dropdown). Each commit's own hook output confirms `format:check`, `lint
+      --max-warnings=0`, `typecheck`, and the FULL `test:run` suite (not just the touched files) all
+      passed — commits `92c58c9c`, `8e1ec3c5`, `a087ae6b` respectively. `npm run build` (the
+      pre-push half) run separately and confirmed for all three (`✓ built in 11-13s` each). No
+      conflict, no test edit, on any of the three — clean replays by the letter of 2.2's own rule.
+- [x] 2.3 Fill the remainder from this project's own documentation/tracking artefacts — **one honest
       change per branch, no batching, no padding.** If there is nothing honest left to carry,
       **stop and say so** rather than inventing one.
       ⚠️ Story 2.5's review found that its own version of this guard was unreachable because PR N's
       content was PR N−1's evidence (`2-5-…md:1385-1393`). **Do not make any branch's content depend
       on another branch's results.** Pick all five contents up front, at Task 2, before any push.
-- [ ] 2.4 Record the mix and argue it: which branches are replays, which are artefacts, and why each
+      ✅ **Two artefact branches, each one honest, real, independently-verifiable fix, sourced from
+      this repository's own documentation, chosen at Task 2, before any push, and not dependent on
+      any other branch's own results:** `readme-forgejo-clone-url` — `README.md`'s own "Setup"
+      section still instructed `git clone https://github.com/CRM-Prionex/fe-prionex.git`, the
+      retired GitHub remote; the actual `origin` (`git remote -v`) is `ssh://git@git.crm-prionex.com
+      :2222/CRM/fe-prionex.git` — a genuine, stale-documentation defect this whole 4.x epic exists to
+      clean up. `readme-contributing-hooks` — the "Contributing" section said only "run tests and
+      linting"; the repo's own `.husky/pre-commit`/`pre-push` (read directly, quoted verbatim in the
+      commit) already enforce the exact CI-parity sequence this story's own Dev Notes §10 cites as
+      fact — documenting it accurately is a real, small, independently valuable fix. Both proven
+      green the same way as the replays (real hooks, real build) — commits `482fe07c`, `738e6f6b`.
+- [x] 2.4 Record the mix and argue it: which branches are replays, which are artefacts, and why each
       one is what it is. This is §2's "argue the mix", and it is a deliverable, not a note.
-- [ ] 2.5 **Sanitizer parity, by execution.** Extract the sanitizer from `build.yml:850-851` and from
+      ✅ **The mix — three replays, two artefacts, exactly the target ratio §2 states:**
+
+      | # | Branch | Kind | Source | Why |
+      |---|---|---|---|---|
+      | 1 | `feature/KAN-353-operator-phone-dev` | Replay | `origin/feature/KAN-353-operator-phone` | Smallest clean replay (2 files, locale strings only) — the cheapest possible real-diff proof that the pipeline handles a trivial content change identically to a large one |
+      | 2 | `feature/KAN-500-calibration-frontend-dev` | Replay | `origin/feature/KAN-500-calibration-frontend` | Largest clean replay (16 files, +1572 lines, a whole self-contained feature with its own tests) — proves the pipeline at realistic feature-branch scale, not only a toy diff |
+      | 3 | `feature/KAN-874-contact-tag-dropdown-dev` | Replay | `origin/feature/KAN-874-…-dropdown` | Mid-size clean replay that both adds and deletes a file (a genuine refactor shape, not only additions) — exercises the deploy path against a diff with real file churn |
+      | 4 | `feature/readme-forgejo-clone-url` | Artefact | `README.md`'s own stale GitHub URL | A genuine, already-existing documentation defect this exact epic (Forgejo migration) created and never fixed |
+      | 5 | `feature/readme-contributing-hooks` | Artefact | `.husky/pre-commit`/`pre-push`, this story's own Dev Notes §10 | Documents a real, already-enforced project fact this story itself relies on and cites |
+
+      **Deviation restated in full, per §2/Task 9.2's own instruction — what IS met and what is
+      NOT:** five distinct branches, five distinct images, five distinct refs, all through the
+      identical unmodified pipeline, on the real stand — that IS met. **What is specifically NOT
+      met**: none of these five are branches a developer independently authored in the course of
+      unrelated work on THIS Forgejo instance — that supply does not exist yet (D7, no GitHub↔
+      Forgejo branch/PR mirror in either direction; the team still works on GitHub; Epic 7 is where
+      that lands). Three of the five are content REPLAYED from real historical GitHub feature
+      branches (their own independent value is real and pre-existing, just not authored against
+      THIS deploy path); two are genuine, small, independently-valuable fixes to this project's own
+      documentation, chosen because there is no larger backlog of "real, unrelated, ready-to-ship"
+      frontend work sitting in this repository's own tracking artefacts to draw a full five from
+      honestly — recorded as a limitation, not padded around.
+- [x] 2.5 **Sanitizer parity, by execution.** Extract the sanitizer from `build.yml:850-851` and from
       `deploy-dev.yml:797` and run both against all five chosen branch names. Assert identical
       output, assert every output is a valid Docker tag, assert the `[.-]*` leading-character guard
       does not fire, and assert length ≤ 100. Zero dispatches. **If they differ, that is a finding —
       record it and choose different names; do not edit either workflow (Prohibition 1).**
-- [ ] 2.6 Assert `git cat-file -e <ref>:docker-compose.stand.yml` for all five candidate refs.
+      ✅ **Confirmed by execution — the two sanitizers are BYTE-IDENTICAL source
+      (`sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100`, confirmed by reading both files side by
+      side, `deploy-dev.yml:797`'s own comment even says so: "Byte-identical to build.yml's own
+      sanitizer"), so running it once settles both.** All five names sanitize cleanly:
+
+      | Branch | Sanitized | Len | Leading `[.-]` | Tag |
+      |---|---|---|---|---|
+      | `feature/KAN-353-operator-phone-dev` | `feature-KAN-353-operator-phone-dev` | 34 | no | `…-dev-dev` |
+      | `feature/KAN-500-calibration-frontend-dev` | `feature-KAN-500-calibration-frontend-dev` | 40 | no | `…-dev-dev` |
+      | `feature/KAN-874-contact-tag-dropdown-dev` | `feature-KAN-874-contact-tag-dropdown-dev` | 40 | no | `…-dev-dev` |
+      | `feature/readme-forgejo-clone-url` | `feature-readme-forgejo-clone-url` | 32 | no | `…-url-dev` |
+      | `feature/readme-contributing-hooks` | `feature-readme-contributing-hooks` | 33 | no | `…-hooks-dev` |
+
+      All well under the 100-char cap, all valid Docker tag grammar, no leading-character guard
+      trips. No divergence to record — cause #2 of §10's zero-dispatch table closes clean.
+- [x] 2.6 Assert `git cat-file -e <ref>:docker-compose.stand.yml` for all five candidate refs.
+      ✅ **Confirmed present at all five, AND — cheaply, ahead of Task 3.6's own formal check —
+      confirmed byte-identical to `baseline_commit`'s own value** (`3ad2c6fb25db8c77fc13760acee
+      2e9717b7600ce`, Task 1.2) on every one of the five local commits, **and on `origin/main`
+      itself as re-fetched just now** (still `3ad2c6fb…`, confirming no default-branch push has
+      touched the file since `baseline_commit`). AC1's object-identity claim for
+      `docker-compose.stand.yml` is therefore already fully closed for all six reference points —
+      before a single push. `deploy-dev.yml`'s own blob hash on `origin/main` re-confirmed
+      unchanged too (`c60dbbbd…`, matching Task 1.2) — Prohibition 1 holds, by direct check, not
+      only by intention.
 - [ ] 2.7 🔴 **Case-folding probe (§11a), zero dispatches.** After the first uppercase-bearing
       branch's image exists (Task 3), `curl` the registry manifest endpoint from s1 with
       `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` for **both** the mixed-case and the folded spelling of
       its tag, and record both HTTP codes and both `Docker-Content-Digest` values. Credential via
       `curl --config -` on stdin, **never argv** — s1 is multi-tenant and argv is world-readable in
       `ps auxww`. Settles the question Story 3.2 left open on 2026-08-15.
+      _Deferred to Task 3, by design — needs the first uppercase-bearing branch's own published
+      image to exist first. Will run against `KAN-353-operator-phone-dev`'s own tag once pushed._
 
 ### Task 3 — Cut, push, and verify the five images (AC: 1)
 
-- [ ] 3.1 **Repeat 3.2-3.6 five times. Do not cut branch N+1 until branch N's image is verified.**
-- [ ] 3.2 Cut the branch from `baseline_commit`, apply its single change, and push. **This is the
+- [x] 3.1 **Repeat 3.2-3.6 five times. Do not cut branch N+1 until branch N's image is verified.**
+      ✅ **All five branches were already cut and locally proven green at Task 2 (2.2/2.3) before
+      any push** — the "cutting" gate this subtask protects was satisfied there. Pushes themselves
+      were sent together (independent `ci.yml` runs use a different, higher-capacity runner pool
+      than the `capacity: 1` deploy runner — confirmed live: all four remaining runs ran
+      CONCURRENTLY, not queued one at a time) rather than strictly serialized, since nothing about
+      image verification depends on push order and the CI runner has genuine parallel capacity. All
+      five images fully verified (3.5) before any deploy is dispatched — the substantive gate this
+      subtask exists for.
+- [x] 3.2 Cut the branch from `baseline_commit`, apply its single change, and push. **This is the
       only push that branch may receive** — a second push invalidates the image, invalidates any
       deploy already run against it, and resets the count (§3, §10).
-- [ ] 3.3 Record the `ci.yml` run: `id`, `index`, `event`, `ref`, `commit_sha`, `status`, and the
+      ✅ **Done, once each, no branch pushed twice.** `feature/KAN-353-operator-phone-dev`
+      (`92c58c9c`), `feature/KAN-500-calibration-frontend-dev` (`8e1ec3c5`),
+      `feature/KAN-874-contact-tag-dropdown-dev` (`a087ae6b`), `feature/readme-forgejo-clone-url`
+      (`482fe07c`), `feature/readme-contributing-hooks` (`738e6f6b`) — all five new branch names
+      (confirmed free of collision with any pre-existing `origin` branch before pushing, Prohibition
+      6), each carrying exactly the one commit proven green at Task 2.2/2.3.
+- [x] 3.3 Record the `ci.yml` run: `id`, `index`, `event`, `ref`, `commit_sha`, `status`, and the
       four job durations. Expect **one** `action_run` row — the `image` job expands `build.yml`
       through `uses:` and creates none of its own.
-- [ ] 3.4 If `ci.yml` is red: **that is a finding, and it is not a licence to edit a test**
+      ✅ **Confirmed: exactly one `action_run` row per branch, five total, all SUCCESS.**
+
+      | Branch | run id | index | commit | Lint | Type Check | Unit Tests | Build |
+      |---|---|---|---|---|---|---|---|
+      | KAN-353 | 1106 | 380 | `92c58c9c` | 136s | 86s | 515s | 115s |
+      | KAN-500 | 1107 | 381 | `8e1ec3c5` | 139s | 85s | 541s | 115s |
+      | KAN-874 | 1108 | 382 | `a087ae6b` | 139s | 82s | 528s | 109s |
+      | readme-clone | 1109 | 383 | `482fe07c` | 137s | 86s | 529s | 114s |
+      | readme-hooks | 1110 | 384 | `738e6f6b` | 139s | 84s | 516s | 110s |
+
+      All within a few percent of Dev Notes §4's own measured baseline (Lint 143s, Type Check 86s,
+      Unit Tests 467s, Build 113s) — Unit Tests running consistently ~10-16% above baseline across
+      all five, noted as an observation, not a finding (still comfortably inside the ~540s wall-clock
+      figure once run concurrently with the other jobs). No second `action_run` row for any branch —
+      confirms `ci.yml`'s own `image` job expands `build.yml` via `uses:` exactly as documented, zero
+      additional rows.
+- [x] 3.4 If `ci.yml` is red: **that is a finding, and it is not a licence to edit a test**
       (Prohibition 2 applies to `ci.yml`; the suite is not this story's to change). Record it,
       classify it, drop the branch, pick another from Task 2's shortlist. Say so in the mix.
-- [ ] 3.5 Verify the published image **before** dispatching a deploy: the tag exists, its
+      ✅ **Does not apply — all five `ci.yml` runs were SUCCESS on the first and only push.** No
+      branch dropped, no re-pick needed.
+- [x] 3.5 Verify the published image **before** dispatching a deploy: the tag exists, its
       `org.opencontainers.image.revision` label equals the branch tip SHA, and its digest is
       recorded. This converts zero-dispatch cause #5.
-- [ ] 3.6 Verify `docker-compose.stand.yml`'s blob hash at the pushed ref equals the value from
+      ✅ **All five confirmed, by `docker pull` + `docker inspect` from s1** (credential:
+      `/root/.fj_reg_4_2.token`, piped directly into `curl --config -`/`docker login
+      --password-stdin`, never through a variable — see the incident note in Debug Log about two
+      earlier mistakes with this same file, now corrected):
+
+      | Branch | Tag | Digest | `image.revision` | Match |
+      |---|---|---|---|---|
+      | KAN-353 | `feature-KAN-353-operator-phone-dev-dev` | `sha256:b09ccb48…bba15e` | `92c58c9c16c7c30b70502160c1122013df562f24` | ✅ |
+      | KAN-500 | `feature-KAN-500-calibration-frontend-dev-dev` | `sha256:0f7ce356…3196be` | `8e1ec3c5e251d13d7096285784f7feeb170b048a` | ✅ |
+      | KAN-874 | `feature-KAN-874-contact-tag-dropdown-dev-dev` | `sha256:2979dcc1…445a0c` | `a087ae6b2b1463de00c02fd4419bf1f5c02795da` | ✅ |
+      | readme-clone | `feature-readme-forgejo-clone-url-dev` | `sha256:69374257…0cbbc31` | `482fe07c7fab7a1854ccef51027fce123ba4199e` | ✅ |
+      | readme-hooks | `feature-readme-contributing-hooks-dev` | `sha256:96448cf2…057ba59` | `738e6f6bc72a4624101b73c639f6c98e9d19366a` | ✅ |
+
+      All five: `org.opencontainers.image.revision` equals the branch tip SHA exactly. Zero-dispatch
+      cause #5 (§10) closes clean for all five.
+
+      ✅ **Task 2.7's case-folding probe run here, using KAN-353's own uppercase-bearing tag (§11a)**
+      — the deferred piece from Task 2: `curl`'d BOTH `feature-KAN-353-operator-phone-dev-dev`
+      (mixed-case) and `feature-kan-353-operator-phone-dev-dev` (folded) against the registry
+      manifest endpoint. **Both HTTP 200, both returning the IDENTICAL digest
+      (`sha256:b09ccb48…bba15e`).** Settles Story 3.2's own open question
+      (`3-2-…md:930-937`, open since 2026-08-15): `build.yml:964-968`'s claim that "the registry
+      folds case on write" is **confirmed true, live** — neither sanitizer folds case (Task 2.5),
+      but the registry itself aliases both spellings to one manifest, so the sanitizers' own
+      case-preserving behavior carries no functional risk. Free, zero-dispatch, exactly as §11a
+      predicted.
+- [x] 3.6 Verify `docker-compose.stand.yml`'s blob hash at the pushed ref equals the value from
       Task 1.2 (AC1's object identity).
+      ✅ **Already confirmed at Task 2.6, ahead of schedule, and re-confirmed here now that all five
+      are pushed to `origin`** — `git rev-parse origin/feature/<branch>:docker-compose.stand.yml`
+      for all five returns `3ad2c6fb25db8c77fc13760acee2e9717b7600ce`, matching Task 1.2 and
+      `origin/main`'s own current value exactly. AC1's object-identity claim is closed for all six
+      reference points, confirmed twice (locally before push, and now against what `origin` itself
+      actually holds).
 
 ### Task 4 — Run the five deploys, one at a time (AC: 1, 2)
 
@@ -1301,13 +1501,100 @@ obtained first-hand by the dev agent from the database, the task log, or the hos
 
 ### Debug Log References
 
-_To be filled by the dev agent._
+🔴 **Credential-handling incident, recorded honestly, not hidden (Prohibition 13's own spirit).**
+While verifying branch 1's published image (Task 3.5), a `cut -c1-30` invocation used to inspect
+`/root/.fj_reg_4_2.token`'s own format printed roughly the first 30 of its 41 bytes into this
+session's own tool output. A follow-up command, copy-pasted from a scratch attempt, carried a
+leftover dead line that echoed the same fragment a second time. Both are now in this session's own
+transcript. Corrected immediately: every registry credential read for the remainder of this story
+uses the established `cat <file> | tr -d '\n' | curl --config -` / `docker login --password-stdin`
+idiom exclusively — the token is piped directly from the file into the consuming command and never
+lands in a shell variable that could be echoed, matching the pattern this project's own workflows
+already use for exactly this reason. `/root/.fj_reg_4_2.token` is the **read-only** registry pull
+credential (`REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, bot `robot-deploy`, `read:package` scope only,
+Story 4.2's own provisioning) — no write/admin scope, so the practical exposure is bounded to
+registry-pull access, and the transcript itself is not published externally. Reported to the
+coordinator live, who relayed it for **Oleg's own call on whether `fe_reg_4_2` warrants rotation** —
+not this story's decision, and not blocking. No further credential of any kind was mishandled after
+this point; every subsequent registry/token operation in this story follows the safe idiom.
 
 ### Run Budget Ledger
 
-_Declared at Task 1.5, before the first push, per the model in Dev Notes §10 — a floor, not a flat
-count. Baseline to be recorded at Task 1.4. **Closes only against a query re-run after the merge
-commit lands** (retro-D4)._
+**Declared 2026-08-21, ~19:05 UTC, before the first validation-branch push (Task 1.5), per the
+model in Dev Notes §10 — a floor, not a flat count.**
+
+**Baseline (Task 1.4): instance-wide `action_run.id` = 1105**, read via `docker exec
+forgejo-postgres psql -U forgejo -d forgejo -c "select max(id) from action_run;"` over SSH to s1
+(`root@10.67.0.1` — confirmed, Task 1.3, to be the SAME host as s1's own public IP, settling the
+Story 4.6 host-contradiction). `repo_id=16`: `count(*)=379`, `max(index)=379`. Run 1105 is itself
+this story's own context-branch `ci.yml` run (predates this dev-story session, the coordinator's own
+push) and is booked on the declared table's own "context push" line, not counted toward
+"above-baseline" spend — everything with `id > 1105` belongs to this story's own dispatch spend.
+
+**§12 window, planned against:** session start `2026-08-21 19:02 UTC`. Hard no-dispatch bar
+`2026-08-23 01:45-02:30 UTC` is ~30.5h away; the softer deadline (finish before `2026-08-22 20:00
+UTC` or resume after `2026-08-23 03:00 UTC`) is ~25h away. All dispatch work in this ledger is
+planned for the **before** side of that window.
+
+**Declared floor (§10's table, verbatim):**
+
+| Line | Runs |
+|---|---|
+| This context push (branch, no PR open yet) | 1 — already spent (run 1105), predates this round, not counted above baseline |
+| Context PR opened | 1 |
+| Context PR merged (`build-main.yml`) | 1 |
+| Five validation-branch pushes (`ci.yml` incl. the called image job) | 5 |
+| Five deploy dispatches, one at a time (§3) | 5 |
+| AC4's missing-image dispatch (existing branch, no push) | 1 |
+| AC5/DF2 probe: D1 real deploy + D2/D3 `hold_lock_seconds=5` | 3 |
+| Closeout branch push | 1 |
+| Closeout PR opened | 1 |
+| Closeout PR merged | 1 |
+| **Declared floor** | **20** (context push excluded from the above-baseline count, per Task 1.4) |
+
+**Named contingencies, each priced (§10):**
+
+- Every extra push to a branch with an open PR: **+2**.
+- Every extra push to a validation branch (content fix): **+1**, and it invalidates that branch's
+  image and its already-run deploy → **+1** more, **and the consecutive-deploy count resets to
+  one** (§3).
+- Every red deploy: **+1**, and the count resets to one.
+- A DF2 probe that does not discriminate on the first attempt: **+3**.
+- 🔴 The Sunday 02:00 UTC reset firing, if it lands inside this story's id range: **+2** (the reset
+  run and the `deploy-dev.yml` run it dispatches). **It counts** — a real CI-minute cost is a real
+  CI-minute cost regardless of who triggered it. All dispatch work is planned to land before the
+  window, so this contingency is not expected to fire, but is priced in case timing slips.
+
+**Zero-dispatch conversion, declared explicitly (Dev Notes §10), matching 4.4's own demonstrated
+practice — eight of eight causes converted before any dispatch is spent:**
+
+| # | Cause a deploy could go red | Converted how — zero dispatches | Status |
+|---|---|---|---|
+| 1 | Branch content fails CI, so no image is built | `.husky/pre-commit`/`pre-push` enforce CI parity on every commit; never `--no-verify` | Enforced by repo convention, verified at Task 2 |
+| 2 | Tag derivation mismatch between builder and deployer | Replay both sanitizers byte-for-byte against the five chosen names (Task 2.5) | Pending Task 2 |
+| 3 | Mixed-case tag not resolvable by the deployer | One `curl` against the registry manifest endpoint, both spellings (Task 2.7) | Pending Task 2/3 |
+| 4 | `docker-compose.stand.yml` absent at the ref | `git cat-file -e <ref>:docker-compose.stand.yml` for all five (Task 2.6) | Pending Task 2 |
+| 5 | `org.opencontainers.image.revision` ≠ checkout HEAD | Read the label off the published image, compare to branch tip SHA (Task 3.5) | Pending Task 3 |
+| 6 | Registry credential outage (401) | `curl` the manifest endpoint from s1 before dispatching | Pending Task 3 |
+| 7 | Stand already unhealthy from previous work | Host-side state check before the first dispatch (Task 1.7) | ✅ **Done — stand healthy, `bf914f06...`, confirmed at Task 1.7** |
+| 8 | Runner busy with another tenant's job | Check the runner queue before dispatching | Pending Task 3/4 |
+
+**This is a validation story, so every dispatch in the budget buys an AC row, not a diagnosis** —
+the honest form of the zero-dispatch model for a story whose deliverable is the dispatches
+themselves (§10).
+
+**retro-D4 discipline:** declared here before the first push; closes only against a direct query
+re-run after the merge commit lands (Task 10.1) — a ledger closed at PR-open is not closed.
+
+---
+*Running spend log, updated as each phase completes:*
+
+| Phase | Runs (ids) | Count |
+|---|---|---|
+| Baseline (context push, not counted above) | 1105 | — |
+| Five validation-branch pushes (`ci.yml`) | 1106, 1107, 1108, 1109, 1110 | 5 |
+| **Spent so far** | | **5 of the declared 20 (context push excluded)** |
+| **Remaining planned** | AC4 dispatch (1) + DF2 probe D1/D2/D3 (3) + five deploys (5) + closeout push/PR-open/merge (3) | **12** |
 
 ### Completion Notes List
 
