@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const loadAvatarObjectUrl = vi.hoisted(() => vi.fn())
 
@@ -91,6 +91,21 @@ describe('UserAvatar', () => {
     // The first photo must not linger under the second name while it loads.
     expect(screen.getByText('PI')).toBeInTheDocument()
     expect(container.querySelector('img')).not.toBeInTheDocument()
+  })
+
+  it('falls back to initials when the browser cannot render the photo', async () => {
+    // A foreign photo is handed to the tag directly, so it can still fail after
+    // we let go of it. Without an onError the browser draws its own
+    // broken-image icon, which says less than the initials do.
+    const { container } = render(
+      <UserAvatar fullName="Olena Kovalchuk" avatarUrl="https://cdn.example.com/gone.png" />
+    )
+    const img = container.querySelector('img') as HTMLImageElement
+
+    fireEvent.error(img)
+
+    await waitFor(() => expect(container.querySelector('img')).not.toBeInTheDocument())
+    expect(screen.getByText('OK')).toBeInTheDocument()
   })
 
   it('takes its colours from the theme rather than carrying its own', () => {

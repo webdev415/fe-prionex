@@ -14,7 +14,9 @@
  *
  * A photo on any other host is used as src directly. Fetching it through the
  * API client would send our session token and cookies to that host, and it
- * needs none of them.
+ * needs none of them. That one is loaded by the browser, so it can fail after
+ * we have handed it over - hence the onError, which puts the initials back
+ * rather than leaving the browser's broken-image icon.
  */
 
 import { useEffect, useState } from 'react'
@@ -46,6 +48,9 @@ export function UserAvatar({
   // came back. Deriving it means a source with nothing loaded yet shows the
   // monogram without anyone having to clear anything.
   const [loaded, setLoaded] = useState<{ source: string; url: string } | null>(null)
+  // A photo we handed to the tag and the browser could not render. Held with
+  // the src it belongs to so a later photo is not tarred by an earlier failure.
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null)
 
   const source = avatarSource(avatarUrl)
   const mustFetch = source !== undefined && needsAuthenticatedFetch(source)
@@ -74,7 +79,8 @@ export function UserAvatar({
   const fetched = loaded && loaded.source === source ? loaded.url : null
   // A foreign photo is shown straight from its own URL; ours is shown only once
   // the fetch that carried the token has come back.
-  const displaySrc = mustFetch ? fetched : (source ?? null)
+  const candidate = mustFetch ? fetched : (source ?? null)
+  const displaySrc = candidate && candidate !== brokenSrc ? candidate : null
 
   const initials = monogramInitials(firstName, lastName, fullName)
   const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
@@ -87,6 +93,12 @@ export function UserAvatar({
         alt={label ?? ''}
         style={dimensions}
         className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
+        onError={() => {
+          // Without this the browser draws its own broken-image icon, which is
+          // worse than the initials and says nothing about why.
+          console.error(`Avatar failed to render: ${displaySrc}`)
+          setBrokenSrc(displaySrc)
+        }}
       />
     )
   }

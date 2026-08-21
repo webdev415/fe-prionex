@@ -37,8 +37,13 @@ const cache = new Map<string, Promise<string>>()
  */
 export function needsAuthenticatedFetch(source: string): boolean {
   try {
-    const base = API_BASE_URL || window.location.origin
-    return new URL(source, base).origin === new URL(base, window.location.origin).origin
+    // The base is resolved against the page first. In the same-origin
+    // deployment VITE_API_BASE_URL is "/", and a WHATWG base must be absolute -
+    // `new URL(path, '/')` throws, which would send every one of our own
+    // avatars down the foreign path and straight into a 401.
+    const pageOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
+    const base = new URL(API_BASE_URL || '/', pageOrigin)
+    return new URL(source, base).origin === base.origin
   } catch {
     // An unparseable source is not somewhere to send credentials.
     return false
