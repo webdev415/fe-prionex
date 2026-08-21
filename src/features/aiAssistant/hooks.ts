@@ -181,6 +181,9 @@ export function useDeleteAssistantMemory() {
       if (previous) {
         const items = previous.items.filter((item) => item.id !== id)
         queryClient.setQueryData<AssistantMemoryList>(aiAssistantKeys.memory, {
+          // Потолок приходит от сервера и удалением не меняется — сохраняем его,
+          // иначе счётчик «N / потолок» мигает на каждое оптимистичное удаление.
+          ...previous,
           items,
           total: Math.max(0, previous.total - (previous.items.length - items.length)),
         })

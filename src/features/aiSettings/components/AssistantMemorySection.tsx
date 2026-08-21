@@ -10,6 +10,11 @@
  * Записи скоупа грузятся только при раскрытии: скоупов столько же, сколько
  * операторов, и тянуть их все ради свёрнутой таблицы незачем.
  *
+ * У памяти есть потолок активных записей на скоуп, поэтому в строке стоит
+ * «записей / потолок», а упёршийся скоуп помечен бейджем. Потолок присылает
+ * сервер: у `global` его нет, а старый бэкенд не присылает поля вовсе — тогда
+ * строка выглядит как раньше, голым числом.
+ *
  * Имена сотрудников подтягиваются справочником `useUserDirectory` — он гейтится
  * `view_users`, поэтому админ без этого права видит «Співробітник #6951», а не
  * пустую ячейку и не 403 в консоли.
@@ -27,10 +32,11 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
   formatMemoryDate,
+  memoryUsageLabel,
   MEMORY_SOURCE_BADGE_CLASS,
   memorySourceKey,
 } from '@/features/aiAssistant/memoryPresentation'
-import type { AssistantMemoryItem } from '@/features/aiAssistant/api'
+import { normalizeMemoryLimit, type AssistantMemoryItem } from '@/features/aiAssistant/api'
 
 import {
   GLOBAL_MEMORY_SCOPE,
@@ -161,6 +167,14 @@ function ScopeRow({
 }) {
   const { t, i18n } = useTranslation('common')
 
+  // Потолок есть не у всех: `global` не вытесняется вовсе, а бэкенд без потолка
+  // поля не присылает. В обоих случаях остаётся голое число записей.
+  const limit = normalizeMemoryLimit(summary.limit)
+  const usage = memoryUsageLabel(summary.records, limit)
+  // Переполнение объявляет сервер: у него правило вытеснения, фронт не должен
+  // выводить его из чисел и расходиться с мозгом на границе.
+  const overLimit = summary.over_limit === true
+
   return (
     <div data-testid={`assistant-memory-scope-${summary.scope}`} className="py-1">
       <button
@@ -180,7 +194,24 @@ function ScopeRow({
             {isGlobal ? t('pages.aiSettings.memory.globalHint') : summary.scope}
           </span>
         </span>
-        <span className="text-foreground shrink-0 text-sm tabular-nums">{summary.records}</span>
+        {overLimit && (
+          <span
+            data-testid={`assistant-memory-over-limit-${summary.scope}`}
+            className="bg-warning-50 text-warning-700 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+          >
+            {t('pages.aiSettings.memory.overLimit')}
+          </span>
+        )}
+        <span
+          className="text-foreground shrink-0 text-sm tabular-nums"
+          title={
+            usage
+              ? t('pages.aiSettings.memory.usageTitle', { used: summary.records, limit })
+              : undefined
+          }
+        >
+          {usage ?? summary.records}
+        </span>
         <span className="text-muted-foreground w-20 shrink-0 text-right text-xs">
           {formatMemoryDate(summary.last_at, i18n.language) || '—'}
         </span>

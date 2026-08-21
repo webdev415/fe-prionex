@@ -6,12 +6,15 @@ import { useConfirm } from '@/components/ui/useConfirm'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
+import { useDepartments } from '@/features/departments'
+import { PERMISSIONS } from '@/constants/permissions'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem, ScorecardCategory, TelephonyType } from '@/features/training'
 import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching/hooks'
 import { useClientNames } from '@/features/clients/hooks/useClients'
 import { useScopedUserIds } from '../../lib/scope'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
+import { DepartmentMultiSelect } from './DepartmentMultiSelect'
 import { EmployeeAvatar } from './EmployeeAvatar'
 import { CallReviewPanel } from './CallReviewPanel'
 import {
@@ -88,13 +91,15 @@ interface Selected {
 export function DialogsListTab() {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
 
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
   const [nameQuery, setNameQuery] = useState('')
   const debouncedName = useDebounce(nameQuery, 300)
-  const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
+  // Empty = every department, matching the backend's omitted `department_ids`.
+  const [departmentIds, setDepartmentIds] = useState<number[]>([])
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [category, setCategory] = useState<CategoryFilter>('')
   const [callFrom, setCallFrom] = useState('')
@@ -135,24 +140,50 @@ export function DialogsListTab() {
     return map
   }, [operatorTrainers])
 
+  // The departments directory is `manage_roles`-gated server-side, so a plain
+  // trainer would only ever get a 403 from it: ask for it under the permission
+  // and otherwise fall back to the departments the project roster names. The
+  // directory adds the departments that currently have no operator in the
+  // roster; the roster keeps the picker usable without the permission.
+  const canReadDepartments = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_ROLES)
+  const departmentsQuery = useDepartments(
+    {
+      project_id: activeProjectId ? Number(activeProjectId) : undefined,
+      is_active: true,
+      page_size: 200,
+    },
+    canReadDepartments
+  )
+
   const departmentOptions = useMemo(() => {
     const map = new Map<number, string>()
+    for (const d of departmentsQuery.data?.departments ?? []) {
+      map.set(d.id, d.name?.trim() || `ID ${d.id}`)
+    }
     for (const o of operators) {
       if (o.department_id != null && !map.has(o.department_id)) {
         map.set(o.department_id, o.department_name?.trim() || `ID ${o.department_id}`)
       }
     }
-    return Array.from(map, ([id, label]) => ({ id, label })).sort((a, b) =>
-      a.label.localeCompare(b.label)
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
     )
-  }, [operators])
+  }, [departmentsQuery.data, operators])
 
   // Scope ∩ employee picker ∩ department → the operators whose calls we list.
+  // The department narrowing is kept client-side on top of the server-side
+  // `department_ids` below: the roster is the only department source the UI
+  // has, and it keeps the list correct while the backend param is still being
+  // rolled out (an unknown query param is simply ignored). Both directions
+  // narrow, so the result is the same intersection either way.
   const operatorIds = useMemo<number[] | undefined>(() => {
     let ids = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
-    if (departmentId !== 'all') {
+    if (departmentIds.length > 0) {
+      const wanted = new Set(departmentIds)
       const inDept = new Set(
-        operators.filter((o) => o.department_id === departmentId).map((o) => o.id)
+        operators
+          .filter((o) => o.department_id != null && wanted.has(o.department_id))
+          .map((o) => o.id)
       )
       ids = (ids ?? operators.map((o) => o.id)).filter((id) => inDept.has(id))
     }
@@ -164,7 +195,7 @@ export function DialogsListTab() {
       ids = (ids ?? operators.map((o) => o.id)).filter((id) => named.has(id))
     }
     return ids
-  }, [selectedEmployeeIds, scoped.userIds, departmentId, operators, debouncedName])
+  }, [selectedEmployeeIds, scoped.userIds, departmentIds, operators, debouncedName])
 
   const { extensions, operatorByExtension } = useMemo(() => {
     const base = operatorIds ?? operators.map((o) => o.id)
@@ -185,6 +216,7 @@ export function DialogsListTab() {
   const filters = useMemo(
     () => ({
       agent_extensions: extensions,
+      department_ids: departmentIds.length > 0 ? departmentIds : undefined,
       period: useCustomRange ? undefined : ('last_30d' as const),
       from_datetime: dayStartIso(debouncedCallFrom),
       to_datetime: dayEndIso(debouncedCallTo),
@@ -197,6 +229,7 @@ export function DialogsListTab() {
     }),
     [
       extensions,
+      departmentIds,
       useCustomRange,
       debouncedCallFrom,
       debouncedCallTo,
@@ -212,6 +245,7 @@ export function DialogsListTab() {
     () =>
       JSON.stringify([
         extensions,
+        departmentIds,
         telephonyType,
         category,
         debouncedCallFrom,
@@ -221,6 +255,7 @@ export function DialogsListTab() {
       ]),
     [
       extensions,
+      departmentIds,
       telephonyType,
       category,
       debouncedCallFrom,
@@ -297,7 +332,7 @@ export function DialogsListTab() {
   const clearFilters = () => {
     setSelectedEmployeeIds([])
     setNameQuery('')
-    setDepartmentId('all')
+    setDepartmentIds([])
     setTelephonyType('')
     setCategory('')
     setCallFrom('')
@@ -306,7 +341,7 @@ export function DialogsListTab() {
   }
   const hasAnyFilter =
     selectedEmployeeIds.length > 0 ||
-    departmentId !== 'all' ||
+    departmentIds.length > 0 ||
     !!(nameQuery || telephonyType || category || callFrom || callTo || minDuration)
 
   const inputCls =
@@ -333,22 +368,13 @@ export function DialogsListTab() {
             hint: myEmployeesHint,
           }}
         />
-        <select
-          value={departmentId}
-          onChange={(e) =>
-            setDepartmentId(e.target.value === 'all' ? 'all' : Number(e.target.value))
-          }
-          className={inputCls}
-        >
-          <option value="all">
-            {t('pages.training.dialogue.dialogs.allDepartments', 'All departments')}
-          </option>
-          {departmentOptions.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.label}
-            </option>
-          ))}
-        </select>
+        <DepartmentMultiSelect
+          value={departmentIds}
+          onChange={setDepartmentIds}
+          options={departmentOptions}
+          disabled={scoped.departmentPickerDisabled}
+          disabledHint={t(scoped.disabledLabelKey, scoped.scope)}
+        />
         <select
           value={telephonyType}
           onChange={(e) => setTelephonyType(e.target.value as TelephonyFilter)}

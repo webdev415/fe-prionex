@@ -1,17 +1,28 @@
 // Quality service types (KAN-410). Mirror the Pydantic schemas in
 // api-prionex/services/quality/app/schemas/.
 
-// 'binary_critical' is the AI-rubric scale (purpose='ai' templates): a
-// yes/no criterion whose "no" is a critical miss. Scored like 'binary'
-// everywhere on the manual path — the criticality lives in the AI pipeline.
-export type CriterionScale = 'binary' | '0-5' | 'binary_critical'
+/**
+ * The only two scales the API accepts. `binary_critical` from the pipeline's
+ * rubric.json is NOT one of them: it is stored as `binary` plus the separate
+ * `critical` flag on the criterion.
+ */
+export type CriterionScale = 'binary' | '0-5'
 
-/** Scales a criterion may take on the manual trainer scorecard. */
-export const CRITERION_SCALES: CriterionScale[] = ['binary', '0-5', 'binary_critical']
+export const CRITERION_SCALES: CriterionScale[] = ['binary', '0-5']
 
-/** True for both yes/no scales — the 0..1 valued ones. */
-export function isBinaryScale(scale: CriterionScale): boolean {
-  return scale === 'binary' || scale === 'binary_critical'
+/**
+ * Tolerant reader for a stored `scale`. Neither database holds anything but
+ * `binary` / `0-5` today, so this is a guard for data written by something
+ * other than this UI: `binary_critical` degrades to the yes/no control it
+ * really is, and anything unrecognised falls back to the 0..5 band.
+ *
+ * Without it an unknown value would silently miss the `=== 'binary'` branch
+ * and render six buttons where the criterion wants two — a mis-render nobody
+ * would notice.
+ */
+export function normalizeCriterionScale(scale: string | null | undefined): CriterionScale {
+  if (scale === 'binary' || scale === 'binary_critical') return 'binary'
+  return '0-5'
 }
 
 export interface Criterion {
@@ -21,6 +32,20 @@ export interface Criterion {
   weight: number
   /** AI rubrics carry an instruction for the model; manual templates don't. */
   description?: string | null
+  /**
+   * Fields the AI rubrics carry that this editor does not expose. They must
+   * still survive a round-trip: the template PUT replaces `sections` whole, so
+   * anything dropped here is deleted from the rubric.
+   *
+   * `critical` is the dangerous one — it caps the whole call at 40 when the
+   * criterion fails. Losing it silently turns a blocking rule into an ordinary
+   * one and inflates every later score.
+   */
+  critical?: boolean | null
+  /** Wording from the trainer's checklist; the pipeline feeds it to the model. */
+  examples?: string | null
+  /** The checklist's own points, before weights were normalised to Σ=100. */
+  raw_points?: number | null
 }
 
 export interface Section {
@@ -68,12 +93,22 @@ export interface TemplateCreatePayload {
 }
 
 /** Body of PUT /api/v1/quality/templates/{id} (full replace of the editable set). */
-export type TemplateUpdatePayload = Partial<TemplateCreatePayload>
+/**
+ * Body of PUT /api/v1/quality/templates/{id}. `purpose` is immutable after
+ * creation — a value differing from the stored one answers 409, so it is
+ * left out here rather than echoed back.
+ */
+export type TemplateUpdatePayload = Partial<Omit<TemplateCreatePayload, 'purpose'>>
 
 /** Filter set of GET /api/v1/quality/templates. */
+/**
+ * Filter set of GET /api/v1/quality/templates. `purpose` defaults to
+ * 'manual' server-side, which is what keeps AI rubrics out of the trainers'
+ * template picker — always pass it explicitly when you want rubrics.
+ */
 export interface TemplateListFilters {
   include_archived?: boolean
-  purpose?: TemplatePurpose
+  purpose?: TemplatePurpose | 'all'
 }
 
 // ----- Call QA listening rules: the critical-blocker dictionary -----
@@ -109,23 +144,47 @@ export interface QaBlocker {
   severity: string
   lang: string
   is_active: boolean
-  created_at?: string
-  updated_at?: string | null
+  // Always present in the response; `updated_at` is not nullable there.
+  created_by: number | null
+  created_at: string
+  updated_at: string
 }
 
-export interface QaBlockerPayload {
+/**
+ * POST body. No `is_active`: a freshly added phrase is always active.
+ * `phrase` is 2..200 chars; a duplicate within the same language answers 409.
+ */
+export interface QaBlockerCreatePayload {
   phrase: string
   category: BlockerCategory
   severity: BlockerSeverity
   lang: BlockerLang
-  is_active: boolean
 }
 
-export interface QaBlockerListFilters {
+/** PUT body — every field optional; this is also how a phrase is reactivated. */
+export interface QaBlockerUpdatePayload {
+  phrase?: string
+  category?: BlockerCategory
+  severity?: BlockerSeverity
+  lang?: BlockerLang
   is_active?: boolean
-  category?: string
-  severity?: string
-  lang?: string
+}
+
+/**
+ * Query of GET /api/v1/quality/qa-rules/blockers.
+ *
+ * `is_active` is a tri-state that OVERRIDES the legacy `include_inactive`:
+ * unset + `include_inactive: true` returns both states, `true`/`false`
+ * filters hard. `category`/`severity`/`lang` are validated server-side
+ * against the same literals as the write path — an unknown value answers
+ * 422 rather than an empty list, so only send values from the constants.
+ */
+export interface QaBlockerListFilters {
+  include_inactive?: boolean
+  is_active?: boolean
+  category?: BlockerCategory
+  severity?: BlockerSeverity
+  lang?: BlockerLang
 }
 
 // Filled-in value for a single criterion. `value` is integer 0..5 for the

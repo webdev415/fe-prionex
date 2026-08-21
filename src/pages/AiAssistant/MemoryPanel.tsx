@@ -9,6 +9,11 @@
  * оператор должен видеть её целиком: у каждой записи показано происхождение
  * (сам добавил / ассистент вывел / наблюдение) и дата.
  *
+ * Память живёт с потолком активных записей на скоуп: в шапке показан счётчик
+ * «занято / потолок», а на границе — строка о том, что старые и неиспользуемые
+ * факты вытесняются сами. Потолок может не прийти (он выключен на мозге либо
+ * бэкенд ещё старый) — тогда шапка выглядит ровно как до потолка.
+ *
  * Удаление оптимистично (useDeleteAssistantMemory) — строка исчезает сразу,
  * упавший DELETE возвращает её обратно и объясняет причину тостом. Добавление,
  * наоборот, ждёт сервер: `title`/`kind`/`source` проставляет он, а 409 (похожий
@@ -30,7 +35,9 @@ import {
 import { classifyMemoryError, type AssistantMemoryItem } from '@/features/aiAssistant/api'
 import {
   formatMemoryDate,
+  isMemoryFull,
   makeMemoryTitle,
+  memoryUsageLabel,
   shouldShowMemoryTitle,
   MEMORY_CONTENT_MAX_LENGTH,
   MEMORY_SOURCE_BADGE_CLASS,
@@ -110,6 +117,12 @@ export function MemoryPanel({ className }: MemoryPanelProps) {
   const [formError, setFormError] = useState<string | null>(null)
 
   const items = memoryQuery.data?.items ?? []
+  // Счётчик и подсказка живут на серверных `total`/`limit`: `items.length` — это
+  // то, что уместилось в ответ, а не объём памяти.
+  const total = memoryQuery.data?.total ?? items.length
+  const limit = memoryQuery.data?.limit ?? null
+  const usage = memoryUsageLabel(total, limit)
+  const full = isMemoryFull(total, limit)
   const trimmed = draft.trim()
   const tooLong = trimmed.length > MEMORY_CONTENT_MAX_LENGTH
   const canSubmit = trimmed.length > 0 && !tooLong && !createMutation.isPending
@@ -140,9 +153,34 @@ export function MemoryPanel({ className }: MemoryPanelProps) {
     // flex-1/min-h-0, а не h-full: панель — колонка внутри колонки сайдбара,
     // высота приходит от родителя, а собственный скролл живёт в списке.
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      <p className="text-muted-foreground px-3 pt-1 pb-2 text-[11px] leading-snug font-light">
-        {t('pages.aiAssistant.memory.helper')}
-      </p>
+      <div className="px-3 pt-1 pb-2">
+        <div className="flex items-start gap-2">
+          <p className="text-muted-foreground min-w-0 flex-1 text-[11px] leading-snug font-light">
+            {t('pages.aiAssistant.memory.helper')}
+          </p>
+          {/* Потолка может не быть (старый бэкенд либо он выключен) — тогда
+              счётчика просто нет, а список работает как раньше. */}
+          {usage && (
+            <span
+              data-testid="memory-usage"
+              title={t('pages.aiAssistant.memory.usageTitle', { used: total, limit })}
+              className="text-muted-foreground shrink-0 text-[11px] font-light tabular-nums"
+            >
+              {usage}
+            </span>
+          )}
+        </div>
+        {/* Заполненная память — норма работы, а не ошибка: спокойный тон, без
+            красного, и объяснение, что будет дальше. */}
+        {full && (
+          <p
+            data-testid="memory-limit-hint"
+            className="text-muted-foreground pt-1 text-[11px] leading-snug font-light"
+          >
+            {t('pages.aiAssistant.memory.limitHint')}
+          </p>
+        )}
+      </div>
 
       <div className="ai-chat-input-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {memoryQuery.isPending && (

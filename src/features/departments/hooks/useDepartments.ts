@@ -20,12 +20,17 @@ export const departmentsKeys = {
 }
 
 /**
- * Hook to fetch departments list
+ * Hook to fetch departments list.
+ *
+ * `GET /api/v1/admin/departments` is gated by `manage_roles` server-side, so
+ * callers that render for non-admins (e.g. a trainer's filter bar) must pass
+ * `enabled=false` instead of firing a request that can only 403.
  */
-export function useDepartments(filters: DepartmentFilters = {}) {
+export function useDepartments(filters: DepartmentFilters = {}, enabled = true) {
   return useQuery({
     queryKey: departmentsKeys.list(filters),
     queryFn: () => departmentsApi.getDepartments(filters),
+    enabled,
   })
 }
 

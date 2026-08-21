@@ -8,10 +8,12 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { classifyMemoryError, normalizeMemoryList } from '../api'
+import { classifyMemoryError, normalizeMemoryLimit, normalizeMemoryList } from '../api'
 import {
+  isMemoryFull,
   makeMemoryTitle,
   memorySourceKey,
+  memoryUsageLabel,
   shouldShowMemoryTitle,
   MEMORY_TITLE_LENGTH,
   formatMemoryDate,
@@ -81,6 +83,8 @@ describe('memorySourceKey', () => {
     expect(memorySourceKey('seed')).toBe('observation')
     expect(memorySourceKey('profile')).toBe('observation')
     expect(memorySourceKey('profiler')).toBe('observation')
+    // Сводный факт после вытеснения по потолку — не «вивчено» и не «інше».
+    expect(memorySourceKey('consolidated')).toBe('consolidated')
   })
 
   it('falls back to a neutral badge for a source the brain invented later', () => {
@@ -102,21 +106,65 @@ describe('normalizeMemoryList', () => {
   }
 
   it('reads the documented envelope', () => {
-    expect(normalizeMemoryList({ items: [item], total: 7 })).toEqual({ items: [item], total: 7 })
+    expect(normalizeMemoryList({ items: [item], total: 7, limit: 50 })).toEqual({
+      items: [item],
+      total: 7,
+      limit: 50,
+    })
   })
 
   it('accepts a bare array and counts it', () => {
-    expect(normalizeMemoryList([item])).toEqual({ items: [item], total: 1 })
+    expect(normalizeMemoryList([item])).toEqual({ items: [item], total: 1, limit: null })
   })
 
   it('never yields a non-array items field', () => {
-    expect(normalizeMemoryList(null)).toEqual({ items: [], total: 0 })
-    expect(normalizeMemoryList({})).toEqual({ items: [], total: 0 })
-    expect(normalizeMemoryList({ items: 'nope' })).toEqual({ items: [], total: 0 })
+    expect(normalizeMemoryList(null)).toEqual({ items: [], total: 0, limit: null })
+    expect(normalizeMemoryList({})).toEqual({ items: [], total: 0, limit: null })
+    expect(normalizeMemoryList({ items: 'nope' })).toEqual({ items: [], total: 0, limit: null })
   })
 
   it('derives total when the server omits it', () => {
-    expect(normalizeMemoryList({ items: [item] })).toEqual({ items: [item], total: 1 })
+    expect(normalizeMemoryList({ items: [item] })).toEqual({ items: [item], total: 1, limit: null })
+  })
+
+  it('treats a missing or null limit as "no cap"', () => {
+    // Бэкенд без потолка (фронт выкатывается раньше) и выключенный потолок
+    // обязаны дать одно и то же — иначе экран ждёт число, которого нет.
+    expect(normalizeMemoryList({ items: [item], total: 1 }).limit).toBeNull()
+    expect(normalizeMemoryList({ items: [item], total: 1, limit: null }).limit).toBeNull()
+  })
+})
+
+describe('normalizeMemoryLimit', () => {
+  it('accepts a positive cap and rejects everything else', () => {
+    expect(normalizeMemoryLimit(50)).toBe(50)
+    expect(normalizeMemoryLimit(null)).toBeNull()
+    expect(normalizeMemoryLimit(undefined)).toBeNull()
+    expect(normalizeMemoryLimit(0)).toBeNull()
+    expect(normalizeMemoryLimit(-5)).toBeNull()
+    expect(normalizeMemoryLimit('50')).toBeNull()
+    expect(normalizeMemoryLimit(Number.NaN)).toBeNull()
+  })
+})
+
+describe('memoryUsageLabel', () => {
+  it('shows "used / cap" only when there is a cap', () => {
+    expect(memoryUsageLabel(42, 50)).toBe('42 / 50')
+    // Переполнение показывается как есть: вытеснение асинхронное, и 65/50 —
+    // честное состояние скоупа, а не ошибка отрисовки.
+    expect(memoryUsageLabel(65, 50)).toBe('65 / 50')
+    expect(memoryUsageLabel(42, null)).toBeNull()
+    expect(memoryUsageLabel(42, undefined)).toBeNull()
+  })
+})
+
+describe('isMemoryFull', () => {
+  it('counts the boundary as full and stays quiet without a cap', () => {
+    expect(isMemoryFull(49, 50)).toBe(false)
+    expect(isMemoryFull(50, 50)).toBe(true)
+    expect(isMemoryFull(65, 50)).toBe(true)
+    expect(isMemoryFull(999, null)).toBe(false)
+    expect(isMemoryFull(999, undefined)).toBe(false)
   })
 })
 

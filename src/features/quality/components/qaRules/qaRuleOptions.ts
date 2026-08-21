@@ -11,7 +11,13 @@ import { BLOCKER_CATEGORIES, BLOCKER_LANGS, BLOCKER_SEVERITIES } from '../../typ
 export const BLOCKER_CATEGORY_OPTIONS: BlockerCategory[] = [...BLOCKER_CATEGORIES]
 export const BLOCKER_SEVERITY_OPTIONS: BlockerSeverity[] = [...BLOCKER_SEVERITIES]
 export const BLOCKER_LANG_OPTIONS: BlockerLang[] = [...BLOCKER_LANGS]
-export const CRITERION_SCALE_OPTIONS: CriterionScale[] = ['binary', '0-5', 'binary_critical']
+/**
+ * Scales a trainer may pick. `binary_critical` is deliberately absent: the API
+ * accepts only `binary` and `0-5`, and expresses "failing this caps the call"
+ * through the separate `critical` flag. Offering it here produced a 422 on
+ * save — the one scale a trainer would reach for to mark a blocking rule.
+ */
+export const CRITERION_SCALE_OPTIONS: CriterionScale[] = ['binary', '0-5']
 
 export const SEVERITY_TONE: Record<string, string> = {
   low: 'bg-[#F3F4F6] text-[#374151]',

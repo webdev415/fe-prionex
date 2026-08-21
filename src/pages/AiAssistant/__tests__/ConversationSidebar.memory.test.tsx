@@ -77,7 +77,7 @@ function renderSidebar() {
 beforeEach(() => {
   vi.clearAllMocks()
   mockedGetConversations.mockResolvedValue([CONVERSATION])
-  mockedGetMemoryItems.mockResolvedValue({ items: [MEMORY_ITEM], total: 1 })
+  mockedGetMemoryItems.mockResolvedValue({ items: [MEMORY_ITEM], total: 1, limit: null })
 })
 
 describe('ConversationSidebar — «Персоналізація»', () => {

@@ -37,6 +37,7 @@ const baseLoan: LoanCardLoan = {
   status: 'active',
   sentToCreditBureau: false,
   creditBureauSentDate: null,
+  closingCoefficient: null,
   needsManualClosureReview: false,
 }
 

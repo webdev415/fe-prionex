@@ -184,8 +184,9 @@ export type {
   BlockerLang,
   BlockerSeverity,
   QaBlocker,
+  QaBlockerCreatePayload,
   QaBlockerListFilters,
-  QaBlockerPayload,
+  QaBlockerUpdatePayload,
   TemplateCreatePayload,
   TemplateListFilters,
   TemplatePurpose,
@@ -198,10 +199,11 @@ export {
   BLOCKER_LANGS,
   BLOCKER_SEVERITIES,
   CRITERION_SCALES,
-  isBinaryScale,
+  normalizeCriterionScale,
 } from './types'
 export {
   RUBRIC_TOTAL_WEIGHT,
+  RUBRIC_WEIGHT_TOLERANCE,
   isRubricWeightValid,
   makeUniqueKey,
   sumCriteriaWeights,

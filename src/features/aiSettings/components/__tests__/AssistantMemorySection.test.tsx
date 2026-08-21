@@ -58,10 +58,24 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 const mockUseHasPermission = vi.mocked(useHasPermission)
 
+/** Сводка старого бэкенда — без полей потолка (фронт выкатывается раньше). */
 const SUMMARY: AssistantMemoryScopeSummary[] = [
   { scope: 'user:6951', records: 65, last_at: '2026-08-10T08:30:00Z' },
   { scope: 'global', records: 12, last_at: '2026-07-01T12:00:00Z' },
   { scope: 'user:7002', records: 3, last_at: null },
+]
+
+/** Сводка бэкенда с потолком: у `global` потолка нет, один скоуп переполнен. */
+const SUMMARY_WITH_LIMITS: AssistantMemoryScopeSummary[] = [
+  {
+    scope: 'user:6951',
+    records: 65,
+    last_at: '2026-08-10T08:30:00Z',
+    limit: 50,
+    over_limit: true,
+  },
+  { scope: 'global', records: 12, last_at: '2026-07-01T12:00:00Z', limit: null, over_limit: false },
+  { scope: 'user:7002', records: 3, last_at: null, limit: 50, over_limit: false },
 ]
 
 function record(id: number, extra: Partial<AssistantMemoryItem> = {}): AssistantMemoryItem {
@@ -220,6 +234,61 @@ describe('AssistantMemorySection', () => {
     expect(screen.getByTestId('assistant-memory-record-12')).toBeInTheDocument()
     // Счётчик записей в сводке обязан пересчитаться, а не разъехаться со списком.
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows records against the cap and marks an overflowing scope', async () => {
+    mockGetSummary.mockResolvedValue(SUMMARY_WITH_LIMITS)
+    const user = userEvent.setup()
+    renderSection()
+
+    await openScopeList(user)
+
+    // Переполненный скоуп: счётчик «занято / потолок» плюс спокойный бейдж.
+    expect(screen.getByText('65 / 50')).toBeInTheDocument()
+    expect(screen.getByTestId('assistant-memory-over-limit-user:6951')).toHaveTextContent(
+      'pages.aiSettings.memory.overLimit'
+    )
+
+    // Скоуп в пределах потолка — счётчик есть, бейджа нет.
+    expect(screen.getByText('3 / 50')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-memory-over-limit-user:7002')).not.toBeInTheDocument()
+
+    // Общий справочник не вытесняется: голое число и никакого бейджа.
+    expect(screen.getByText('12')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-memory-over-limit-global')).not.toBeInTheDocument()
+
+    // Порядок строк от потолка не зависит.
+    expect(
+      screen.getAllByTestId(/^assistant-memory-scope-/).map((row) => row.dataset.testid)
+    ).toEqual([
+      'assistant-memory-scope-global',
+      'assistant-memory-scope-user:6951',
+      'assistant-memory-scope-user:7002',
+    ])
+  })
+
+  it('keeps the plain record count when the backend knows no cap', async () => {
+    const user = userEvent.setup()
+    renderSection()
+
+    await openScopeList(user)
+
+    // SUMMARY без limit/over_limit — строка выглядит ровно как до потолка.
+    expect(screen.getByText('65')).toBeInTheDocument()
+    expect(screen.queryByText('65 / 50')).not.toBeInTheDocument()
+    expect(screen.queryAllByTestId(/^assistant-memory-over-limit-/)).toHaveLength(0)
+  })
+
+  it('labels a consolidated record with its own origin', async () => {
+    scopeStore['user:6951'] = [record(13, { source: 'consolidated' })]
+    const user = userEvent.setup()
+    renderSection()
+
+    await openScopeList(user)
+    await user.click(expandScope('user:6951'))
+
+    expect(await screen.findByTestId('assistant-memory-record-13')).toBeInTheDocument()
+    expect(screen.getByText('pages.aiSettings.memory.sources.consolidated')).toBeInTheDocument()
   })
 
   it('shows the unavailable card when the memory service is down', async () => {

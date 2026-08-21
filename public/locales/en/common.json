@@ -687,6 +687,8 @@
       "memory": {
         "title": "Personalization",
         "helper": "What the assistant remembers about you — it shapes its answers.",
+        "usageTitle": "Facts in memory: {{used}} of {{limit}}",
+        "limitHint": "The memory is full: the oldest and unused facts are evicted automatically. You can also delete extras manually.",
         "empty": "Memory is empty. Add a fact about your work and the assistant will take it into account.",
         "loadError": "Failed to load the memory.",
         "retry": "Retry",
@@ -701,6 +703,7 @@
           "user": "added manually",
           "agent": "learned",
           "observation": "observation",
+          "consolidated": "consolidated",
           "unknown": "other"
         },
         "errors": {
@@ -2283,6 +2286,11 @@
           "loadError": "Failed to load dialogs.",
           "empty": "No dialogs match the filters.",
           "noExtensions": "The selected employees have no telephony extensions"
+        },
+        "department": {
+          "empty": "No departments available",
+          "label": "Department",
+          "selected": "{{count}} departments"
         }
       },
       "transcript": {
@@ -3882,6 +3890,8 @@
         "unavailable": "The assistant memory service is unavailable.",
         "columnScope": "Scope",
         "columnRecords": "Records",
+        "usageTitle": "Records: {{used}} of {{limit}}",
+        "overLimit": "over limit",
         "columnLastAt": "Last",
         "globalScope": "Shared reference",
         "globalHint": "Applies to every operator",
@@ -3894,6 +3904,7 @@
           "user": "added manually",
           "agent": "learned",
           "observation": "observation",
+          "consolidated": "consolidated",
           "unknown": "other"
         },
         "collapsedHint": "{{count}} scopes · click to show"
@@ -5995,7 +6006,6 @@
         "openLoans": "Open loans",
         "includingPayments": "Including payments: {{amount}}",
         "remainingDebtTooltip": "Remaining debt including payments: {{total}} ({{remaining}} − {{payments}})",
-        "principalDebtTooltip": "Principal amount less principal repaid and principal written off. For loans carried over from the old CRM, the amount issued is shown instead.",
         "remainingDebtPlain": "Remaining debt: {{amount}}",
         "closedInline": "Closed: {{date}}",
         "primaryCreditor": "Primary creditor",
@@ -6360,7 +6370,8 @@
           "card": "Card"
         },
         "email": "E-mail",
-        "dateOfBirthWithAge": "{{date}} ({{age}} years)"
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)",
+        "closingCoefficientLabel": "Loan closing coefficient"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -10364,6 +10375,39 @@
         "remote": "Remote"
       }
     },
+    "coefficientRanges": {
+      "title": "Coefficient ranges",
+      "description": "Loan closing coefficients by loan age. Ranges are inclusive on both ends and may not overlap.",
+      "add": "Add range",
+      "addTitle": "Add range",
+      "editTitle": "Edit range",
+      "empty": "No ranges configured. The coefficient tooltip stays hidden until one matches.",
+      "daysColumn": "Loan age (days)",
+      "coefficientColumn": "Coefficient",
+      "updatedByColumn": "Updated by",
+      "minDays": "Min days",
+      "maxDays": "Max days",
+      "minCoefficient": "Min coefficient",
+      "maxCoefficient": "Max coefficient",
+      "hint": "Both day boundaries are inclusive. Coefficients take one decimal place, 1.0 to 10.0.",
+      "readOnly": "Editing coefficient ranges requires the Manage settings permission. The rest of this page follows its own permission.",
+      "created": "Range added",
+      "updated": "Range updated",
+      "deleted": "Range deleted",
+      "deleteTitle": "Delete range",
+      "deleteConfirm": "Delete the range {{range}}?",
+      "saveError": "Could not save the range",
+      "deleteError": "Could not delete",
+      "errors": {
+        "days": "Days must be whole numbers of 0 or more",
+        "dayOrder": "Min days must not exceed max days",
+        "coefficientFormat": "Coefficients allow at most one decimal place (e.g. 1.5)",
+        "coefficientRange": "Coefficients must be 1.0–10.0",
+        "coefficientOrder": "Min coefficient must not exceed max coefficient"
+      },
+      "loadError": "Could not load the coefficient ranges.",
+      "refreshError": "Could not refresh — showing the last loaded ranges."
+    },
     "qaRules": {
       "title": "Listening (AI)",
       "helper": "Stop-phrases that mark a call critical, and the rubrics the AI scores calls against.",
@@ -10394,8 +10438,7 @@
       },
       "scale": {
         "binary": "Yes/No",
-        "0-5": "0–5",
-        "binary_critical": "Yes/No (critical)"
+        "0-5": "0–5"
       },
       "blockers": {
         "phrase": "Phrase",
@@ -10408,15 +10451,18 @@
         "langFilter": "Language",
         "allLangs": "All languages",
         "active": "Active",
-        "newActive": "New blocker is active",
         "add": "Add",
         "total": "Phrases",
         "empty": "No blockers yet.",
         "loadError": "Failed to load the blocker dictionary.",
         "created": "Blocker added",
         "updated": "Blocker updated",
-        "deleted": "Blocker deleted",
-        "deleteTitle": "Delete blocker?"
+        "deleted": "Blocker deactivated",
+        "deleteTitle": "Deactivate blocker?",
+        "deleteMessage": "«{{phrase}}» will stop flagging calls. You can bring it back with the «Active» switch.",
+        "deactivate": "Deactivate",
+        "showInactive": "Show deactivated",
+        "duplicate": "That phrase is already in the dictionary for this language"
       },
       "rubrics": {
         "name": "Rubric name",
@@ -10450,7 +10496,11 @@
         "weight": "Weight",
         "scale": "Scale",
         "weightTotal": "Weights",
-        "weightError": "Weights must add up to 100"
+        "weightError": "Weights must add up to 100",
+        "slice": "Applies to",
+        "sliceTaken": "Another rubric is already active for this slice: {{name}}",
+        "critical": "Critical",
+        "sliceTakenGeneric": "This slice already has a live rubric — archive it first"
       }
     }
   },

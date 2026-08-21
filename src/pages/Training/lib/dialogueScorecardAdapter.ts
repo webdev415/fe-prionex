@@ -14,7 +14,7 @@
  * the components — see KAN-737-Plan §Discrepancy 3.
  */
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import { isBinaryScale } from '@/features/quality'
+import { normalizeCriterionScale } from '@/features/quality'
 import type { Scorecard, ScorecardStatus } from '@/features/quality'
 import i18n from '@/lib/i18n'
 import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
@@ -123,7 +123,7 @@ export function deriveCategory(score100: number | null): DialogueScorecardCatego
 /** Map a stored criterion value onto the 4-button rating band (read-only). */
 function ratingForValue(value: number | boolean | null, scale: string): DialogueCriterionRating {
   if (value == null) return 'not_done'
-  if (scale === 'binary' || scale === 'binary_critical' || typeof value === 'boolean') {
+  if (normalizeCriterionScale(scale) === 'binary' || typeof value === 'boolean') {
     return value ? 'excellent' : 'not_done'
   }
   // '0-5' scale.
@@ -152,7 +152,7 @@ export function buildCriteria(scorecard: Scorecard): DialogueScorecardCriterion[
     for (const criterion of section.criteria ?? []) {
       const entry = scorecard.scores?.[criterion.key]
       const rawValue = entry?.value ?? null
-      const isBinary = isBinaryScale(criterion.scale)
+      const isBinary = normalizeCriterionScale(criterion.scale) === 'binary'
       const maxScore = isBinary ? 1 : 5
       const numericScore =
         rawValue == null ? 0 : typeof rawValue === 'boolean' ? (rawValue ? 1 : 0) : rawValue

@@ -107,6 +107,19 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
   }
 })
 
+// The page renders <CoefficientRangesSection/>, whose hooks would otherwise
+// issue a real axios GET from this test: useQuery is the genuine one above, so
+// nothing intercepts it. A 401 then runs triggerAuthExpired() -> jsdom
+// navigation (lib/api.ts:253), and transient failures retry with backoff
+// (:258-263). Stub the hooks so this test stays offline and deterministic; the
+// section's own behaviour is covered in CoefficientRangesSection.test.tsx.
+vi.mock('@/features/loanCoefficientRanges/hooks/useLoanCoefficientRanges', () => ({
+  useLoanCoefficientRanges: () => ({ data: [], isLoading: false, isError: false }),
+  useCreateCoefficientRange: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateCoefficientRange: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteCoefficientRange: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 // @/features/repaymentConfig
 vi.mock('@/features/repaymentConfig', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/repaymentConfig')>()
@@ -304,7 +317,9 @@ describe('RepaymentConfigurationPage', () => {
       expect(sw).toBeDisabled()
     })
 
-    // Read-only notice banner must be visible
-    expect(screen.getByText(/view-only access/i)).toBeInTheDocument()
+    // Read-only notice banner must be visible. Asserted on the page's own
+    // sentence: the Coefficient ranges section renders its own banner, and a
+    // looser pattern would silently depend on that section's wording.
+    expect(screen.getByText(/view-only access to this configuration/i)).toBeInTheDocument()
   })
 })

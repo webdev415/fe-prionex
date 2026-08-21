@@ -1192,6 +1192,11 @@ export function ClientDetailPage() {
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // KAN-994 — closing-coefficient band, or null when no tooltip is due
+        // (no principal debt, no matching age range, no purchase date). The
+        // backend does the arithmetic and the date comparison so every viewer
+        // sees the same figures; the card renders the strings verbatim.
+        closingCoefficient: d.closing_coefficient ?? null,
         // KAN-784 AC2: fully-returned loan that fell short of the principal
         // guard — auto-close was blocked, so it needs operator-driven closure.
         needsManualClosureReview: d.needs_manual_closure_review ?? false,

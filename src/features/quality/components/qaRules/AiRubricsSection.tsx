@@ -25,8 +25,14 @@ import {
   useUnarchiveQaRubric,
   useUpdateQaRubric,
 } from '../../hooks/useQaRules'
+import { conflictDetail, isConflict } from '../../lib/qaRuleErrors'
 import { sumCriteriaWeights } from '../../lib/rubricWeights'
-import type { ScorecardTemplate, ScorecardType, TemplateCreatePayload } from '../../types'
+import type {
+  ScorecardTemplate,
+  ScorecardType,
+  TemplateCreatePayload,
+  TemplateUpdatePayload,
+} from '../../types'
 import { AiRubricEditor, type DepartmentOption } from './AiRubricEditor'
 import { QA_INPUT_CLS } from './qaRuleOptions'
 
@@ -88,14 +94,47 @@ export function AiRubricsSection() {
   const editingRubric: ScorecardTemplate | undefined =
     editing?.mode === 'edit' ? rubrics.find((r) => r.id === editing.id) : undefined
 
-  const handleSave = async (payload: TemplateCreatePayload) => {
-    if (editing?.mode === 'edit') {
-      await updateMutation.mutateAsync({ id: editing.id, payload })
-    } else {
-      await createMutation.mutateAsync(payload)
+  /**
+   * quality-service keeps at most one live rubric per
+   * (department, interlocutor) slice and answers 409 naming the conflict —
+   * relayed verbatim, since "archive that one first" is only actionable if
+   * the trainer knows which one.
+   */
+  const reportError = (error: unknown) => {
+    if (isConflict(error)) {
+      // NB: `sliceTaken` interpolates {{name}} and belongs to the editor's
+      // warning, which knows the owner. Here the name only exists inside the
+      // server's detail, so the nameless variant is the fallback.
+      toast.error(
+        conflictDetail(error) ??
+          t('pages.qaRules.rubrics.sliceTakenGeneric', 'This slice already has a live rubric')
+      )
+      return
     }
-    setEditing(null)
-    toast.success(t('pages.qaRules.rubrics.saved', 'Rubric saved'))
+    toast.error(t('pages.qaRules.saveError', 'Could not save the change'))
+  }
+
+  const handleSave = async (payload: TemplateCreatePayload) => {
+    try {
+      if (editing?.mode === 'edit') {
+        // `purpose` is immutable server-side; echoing it back is pointless
+        // and answers 409 the moment it ever disagrees with the stored value.
+        const updatable: TemplateUpdatePayload = {
+          name: payload.name,
+          description: payload.description,
+          scorecard_type: payload.scorecard_type,
+          department_id: payload.department_id,
+          sections: payload.sections,
+        }
+        await updateMutation.mutateAsync({ id: editing.id, payload: updatable })
+      } else {
+        await createMutation.mutateAsync(payload)
+      }
+      setEditing(null)
+      toast.success(t('pages.qaRules.rubrics.saved', 'Rubric saved'))
+    } catch (error) {
+      reportError(error)
+    }
   }
 
   const handleArchiveToggle = async (rubric: ScorecardTemplate) => {
@@ -115,8 +154,8 @@ export function AiRubricsSection() {
       if (archiving) await archiveMutation.mutateAsync(rubric.id)
       else await unarchiveMutation.mutateAsync(rubric.id)
       if (editing?.mode === 'edit' && editing.id === rubric.id) setEditing(null)
-    } catch {
-      toast.error(t('pages.qaRules.saveError', 'Could not save the change'))
+    } catch (error) {
+      reportError(error)
     }
   }
 
@@ -269,6 +308,7 @@ export function AiRubricsSection() {
           key={editing.mode === 'edit' ? editing.id : 'new'}
           rubric={editingRubric}
           departments={departments}
+          siblings={rubrics}
           saving={saving}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
