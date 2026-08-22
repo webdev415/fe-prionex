@@ -231,7 +231,10 @@ export function ConversationSidebar({
     // open — Radix never reports the close, so drop the state by hand.
     setMenuId(null)
     setRenamingId(item.id)
-    setRenameDraft(item.title ?? '')
+    // Seed the input with the title as shown, not as stored: a chat auto-titled
+    // from a dock turn carries the page-context block, and handing the operator
+    // a machine string to edit would be a worse start than the bare question.
+    setRenameDraft(stripOnexContextFromTitle(item.title ?? ''))
   }
 
   const cancelRename = () => {
