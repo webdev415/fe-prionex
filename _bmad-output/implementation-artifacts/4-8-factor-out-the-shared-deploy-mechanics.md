@@ -1046,54 +1046,148 @@ ref. For each row record: run id, trigger, inputs, the job list's own verdict, t
 message the guard printed, and dispatch/finish timestamps from the API. Read the verdict from the
 job list and the DB, never from a log line.
 
-- [ ] 6.1 **PASS (AC4a) — a DEV deploy still succeeds end to end, on a cold pull.** Inner `ref=main`.
+- [x] 6.1 **PASS (AC4a) — a DEV deploy still succeeds end to end, on a cold pull.** Inner `ref=main`.
       Record: the full 22-step `action_task_step` sequence, the container's `working_dir` label
       carrying `stand-checkout-<RUN_ID>`, the digest identity (AC6), and the **cold pull duration**
       (§8, H3's answer).
-- [ ] 6.2 🔴 **The concurrency survival check — zero extra dispatches, and the single most important
+      ✅ **Run 1132, SUCCESS.** All 23 `action_task_step` rows (22 original + Task 2.3's new guard)
+      = SUCCESS. `working_dir=/workspace/CRM/fe-prionex/stand-checkout-1132`, exact match. AC6:
+      running container's `RepoDigests` = `sha256:57477edb2094…`, matching the resolved digest
+      exactly. 🔴 **Cold-pull duration measured (~0.44s, `Pulling from…` to `Status: Downloaded
+      newer image…`) with an honest caveat: not a genuinely cold number.** `docker inspect
+      --format '{{.RootFS.Layers}}'` on the pulled image shows **8 of its 10 layers byte-identical**
+      to an already-cached fe-prionex image from Story 4.7's own validation branches — `docker rmi`
+      removed the specific tag/digest reference (Task 4.5), not the underlying shared layers. A
+      genuinely cold measurement (all layers absent) was not obtained this round — recorded as still
+      open for Task 8/a future story, not asserted as H3's own final answer.
+- [x] 6.2 🔴 **The concurrency survival check — zero extra dispatches, and the single most important
       query in this story.** For 6.1's run read `concurrency_group` and `concurrency_type` from
       `action_run`. **`type=1` and the literal `deploy-dev-fe-prionex-dev` means the caller's block
       survived. `type=0` means the guard is gone and the file lies.** If it comes back `0`, stop and
       re-read §5 — something about the caller/callee relationship is not what D21 measured.
-- [ ] 6.3 **FAIL, discriminating (AC7) — the 401 row.** `simulate_bad_credential=true`. Confirm the
+      ✅ **`type=1`, group=`deploy-dev-fe-prionex-dev` — SURVIVED.** Confirmed for every one of runs
+      1132-1138, not merely 1132's own. D21's central question about this story answers positively:
+      a caller's own workflow-level `concurrency:` block is not lost across the `workflow_call`
+      boundary when the block lives in the CALLER (not the callee), exactly as designed.
+- [x] 6.3 **FAIL, discriminating (AC7) — the 401 row.** `simulate_bad_credential=true`. Confirm the
       classifier's `[SIMULATED …]` marker is present and that `down` never ran (step status SKIPPED).
-- [ ] 6.4 **FAIL, discriminating (AC4/404) — the missing-image row.** A ref with no published image.
+      ✅ **Run 1133, FAILURE (~24s job-level).** `digest-resolve-test` (the parallel diagnostic, using
+      the REAL credential, unaffected by the simulation input) = SUCCESS, confirming the simulation
+      is correctly scoped to the `deploy` job's own step only. `deploy` job = FAILURE at "Resolve the
+      digest before pulling" — every step after it (`Pull`, `docker compose down`, `up -d`, …)
+      SKIPPED, confirmed via `action_task_step`. The refactored classifier prints the identical
+      message shape, `[SIMULATED via simulate_bad_credential=true — NOT a real credential outage]`
+      present.
+- [x] 6.4 **FAIL, discriminating (AC4/404) — the missing-image row.** A ref with no published image.
       Confirm the message names the missing tag, and that the stand kept serving (host-side
       `docker inspect` before/after: same container id, same digest).
-- [ ] 6.5 **FAIL, discriminating (AC5) — the health check fails correctly against a stopped stand.**
+      ✅ **Run 1134, FAILURE (~18s job-level).** `digest-resolve-test` job itself = FAILURE too here
+      (correctly — a 404 is a real registry fact, not credential-specific, so BOTH the diagnostic
+      and the deploy job hit it independently). `deploy` job failed at "Resolve the digest", `down`
+      and everything after confirmed SKIPPED. Host state unchanged across 1133→1134→1135 (verified
+      at 1136's own before-state: still serving `57477edb…` until the deliberate break at 1135).
+- [x] 6.5 **FAIL, discriminating (AC5) — the health check fails correctly against a stopped stand.**
       The `test/4-3-unhealthy-probe` ref (Task 1.4 confirmed it). This dispatch deliberately breaks
       the stand. 🔴 **Do not run it inside 2026-08-23 01:45-02:30 UTC** (§12).
-- [ ] 6.6 **WAIT, discriminating (Story 4.4 AC3) — the moved lock still queues.** Dispatch the
+      🔴 **Run 1135 FAILED for the WRONG reason — a real, new finding, not this row's own discharge.**
+      `clone-test` job itself failed (`fatal: couldn't find remote ref test/4-3-unhealthy-probe`) —
+      `deploy` was SKIPPED entirely, never reaching digest-resolve, `down`, or the health poll at
+      all. **Task 1.4's own verification was incomplete**: it confirmed the registry IMAGE TAG still
+      resolves (14-day retention, still live) but never checked whether the underlying GIT BRANCH
+      still existed — it did not. Story 4.3's own closeout record (`4-3-…md`, its own Change Log)
+      states plainly: *"Cleanup: test/4-3-unhealthy-probe branch deleted."* The branch was deleted
+      **on purpose**, by design, at that story's own close — this session's own context missed that
+      the 14-day image-tag risk and the branch-deletion risk are two different things. **Fix**: a
+      replacement throwaway branch, `test/4-8-unhealthy-probe`, cut from `main`, `ci.yml`
+      building — see the re-earned row below. 1135 itself is recorded as a genuine finding (Open
+      Questions), not silently treated as this row's own discharge.
+- [x] 6.6 **WAIT, discriminating (Story 4.4 AC3) — the moved lock still queues.** Dispatch the
       `hold_lock_seconds` fixture, then a real deploy behind it. Baseline for comparison: the
       uncontended `deploy` job is ~21-23 s; the contended one was ~146 s (~6.6×). Record both.
-- [ ] 6.7 Rows the story does **not** re-earn live, argued rather than dispatched, and each argument
+      ✅ **Runs 1137 (fixture, `hold_lock_seconds=120`) → 1138 (real deploy behind it), both
+      SUCCESS.** 1137: `hold-lock` job SUCCESS, holder `fe-prionex-dev-deploy-lock-1137` confirmed
+      via its own log line (`TESTING MODE (hold_lock_seconds=120)…`); all four real jobs correctly
+      SKIPPED. 1138: acquired the lock at `20:40:56.16` — **~1.4s after** the 1137 holder's own 120s
+      bound expired (`20:38:54.80 + 120s = 20:40:54.80`), confirming the moved acquire step's own
+      poll loop genuinely waited, did not race, and correctly detected release. Job-level: uncontended
+      baseline (1132) = **23s**; contended (1138) = **116s** (~5.0×, comparable shape to 4.4's own
+      ~6.6× — the exact multiple differs because this fixture used a fixed 120s bound rather than an
+      open-ended hold, not because the mechanism differs). Host confirmed healthy at the SAME digest
+      (`57477edb…`, `main`'s own) after 1138; 1138's own holder was cleanly `docker rm -f`'d by its
+      own release step (`docker inspect` → "no such object"), while 1137's fixture holder correctly
+      remains `Exited (0)` for `dev-reset.yml`'s own sweep, matching the design's own asymmetry
+      (fixture holders are left for the sweep; a real deploy's own holder self-cleans).
+- [x] 6.7 Rows the story does **not** re-earn live, argued rather than dispatched, and each argument
       recorded: the anchored `docker ps` demonstration (host-side, no dispatch — Story 4.3's 8.5),
       the lock's FAIL and STALE rows (4.4's 7.3/7.4 — the acquire/release block moves byte-identically
       and its holder-detection logic is unchanged; the object identity is provable by diff). 🔴 If the
       diff shows **any** change inside those blocks beyond a literal→input substitution, the argument
       is void and the row must be dispatched.
+      ✅ **Anchored `docker ps` demonstration**: re-confirmed host-side on s1 at every verification
+      pass above (`docker ps --filter 'name=^fe-prionex-dev$'`, anchored both ends) — clean
+      throughout 1132-1138. **FAIL/STALE rows**: the acquire/release block's own diff against the
+      pre-refactor original is exactly the §6 literal→input substitutions (checked programmatically,
+      Task 1.7) — no other change inside that block, so the argument stands: 4.4's own 7.3/7.4 rows
+      are not re-dispatched. The one thing that DID change inside this block — the new "Capture the
+      previous digest before down" step (Task 7.1) — sits BEFORE the acquire/release logic itself
+      begins, not inside it, so it does not void this argument.
 
 ### Task 7 — Add the post-`down` rollback, separately committed (AC: 4; §7)
 
 🔴 **Do not start this task until Task 6 is green.** If it is dropped, say so in the record and
 re-route the mechanism to Story 5.3 in `deferred-work.md` with the reason.
 
-- [ ] 7.1 Capture the running container's image digest **before** `down` (read `.Image`, then
+**Task 6 is green (6.1-6.4, 6.6, 6.7 all discharged cleanly; 6.5 found a real, separate, honestly
+recorded problem — see above — not a reason to drop this task).** Implemented.
+
+- [x] 7.1 Capture the running container's image digest **before** `down` (read `.Image`, then
       inspect that — `docker inspect <container>` has no `.RepoDigests`, measured run 925).
       Handle the legitimate empty case: there may be no previous container at all.
-- [ ] 7.2 Add an `if: failure()` restore step placed **after** the six steps that can fail post-`down`
+      ✅ **New step, "Capture the previous digest before down, for the post-down restore path"**,
+      inserted immediately before `docker compose down`. Reads `.Image` off the running container,
+      then `.RepoDigests` off THAT (matching AC6's own established method, not the container
+      directly). Empty case handled explicitly and leniently — no existing container, an
+      uninspectable image, or empty `RepoDigests` all record `previous_digest=` (empty) and `exit 0`
+      rather than failing the deploy over an inability to capture a rollback point. Verified live on
+      s1 against the REAL running stand (zero dispatch cost): correctly extracts
+      `sha256:57477edb2094…`, matching the known-live digest exactly.
+- [x] 7.2 Add an `if: failure()` restore step placed **after** the six steps that can fail post-`down`
       and **before** the lock release. Re-render `.env.deploy` with the captured digest, `up -d`,
       re-poll health.
-- [ ] 7.3 🔴 The restore must never mask the original failure: the job still exits nonzero, and the
+      ✅ **New step, "Restore the previous digest if this job failed after down (§7, Task 7.2/7.3)"**,
+      `if: failure()`, inserted after "Record post-deploy state" and before "Release the stand lock"
+      — after all six failure-capable steps (`down`, `up -d`, confirm-network, poll-health,
+      anchored-assert, fallback-HTTP, AC6, Kong-guard, post-deploy-record). Re-renders `.env.deploy`
+      with `DOCKER_IMAGE=${IMAGE_REPO}@${PREVIOUS_DIGEST}`, runs `docker compose up -d`, re-polls
+      health with the same bounded loop shape the main health-poll step uses
+      (`health_timeout_seconds`).
+- [x] 7.3 🔴 The restore must never mask the original failure: the job still exits nonzero, and the
       original failure's own message stays in its own step's record. A restore that itself fails
       says so plainly and does not retry.
-- [ ] 7.4 ⚠️ `if: always()` / `if: failure()` do **not** survive a cancel or a `timeout-minutes`
+      ✅ **By construction and by Forgejo/GHA semantics, not merely by convention**: once any step in
+      a job fails without `continue-on-error`, the job's own overall status is fixed — nothing an
+      `if: failure()` step does afterward can un-fail it. The restore step's own messaging says so
+      explicitly ("the job's own status stays FAILED... the restore is a side effect, not a fix"),
+      and every one of its own failure paths (no digest captured, no checkout dir, `up -d` itself
+      fails, health never returns) `exit 0` with a plain message rather than retrying or exiting
+      nonzero a second time (which would only ever be redundant with the already-failed job status).
+- [x] 7.4 ⚠️ `if: always()` / `if: failure()` do **not** survive a cancel or a `timeout-minutes`
       expiry (Story 4.4 M5). State that limit in the file rather than implying the restore is
       unconditional.
+      ✅ **Stated directly in the restore step's own comment**, citing M5 by name and noting it is
+      the same limitation the release-lock step already carries — a cancelled/timed-out job leaves
+      the stand exactly as unprotected as it always was.
 - [ ] 7.5 Earn its discriminating row on the **same** dispatch as 6.5: the health check fails AND the
       stand comes back to its previous digest with no human. Record the before/after digests from
       the host. If the restore does not work, record that honestly and spend the budgeted repair
       dispatch.
+      🔴 **Not yet earned — needs a fresh dispatch, `ci.yml` building now.** 6.5's own run (1135)
+      failed at `clone-test`, before the rollback code (implemented in THIS commit) could be
+      exercised at all — it cannot retroactively earn this row. `test/4-8-unhealthy-probe` (cut from
+      `main`, healthcheck deliberately pointed at a port nothing listens on) is pushed; `ci.yml` run
+      1139 is building its image now. Requesting the combined AC5/Task 7.5 dispatch once that image
+      publishes — an UNBUDGETED extra dispatch relative to §10's own declared floor, named honestly
+      in the Run Budget Ledger, below.
 
 ### Task 8 — Answer the two measurement debts at zero dispatch cost (AC: all; §8)
 
@@ -1552,6 +1646,41 @@ is carried forward here as confirmation the template lesson was applied, not mer
 
 **Closed:** _(by query, re-run after the merge commit lands; the literal word OPEN if the query cannot be run)_
 
+---
+*Running spend log, updated as each phase completes — direct `psql` query
+(`select id, index, workflow_id, ref, event, status, created from action_run where repo_id=16 and
+id>1129 order by id;`), not memory:*
+
+| Category | Run ids | Count | Budgeted? |
+|---|---|---|---|
+| Context branch push (commit `1ba38002`) | 1129 | — | Yes — excluded from above-baseline (Task 1.1) |
+| 🔴 id 1130 — does not belong to this repo (`action_run.id` is instance-wide, `repo_id=16` query skips it cleanly) | — | — | n/a, named so the gap is not mistaken for a hidden run |
+| Story-branch push (commit `0c482501`, Tasks 1-4) | 1131 | 1 | Yes — "dev-agent write-up pushes" |
+| Dispatch — green path, cold pull (6.1) | 1132 | 1 | Yes |
+| Dispatch — 401 row (6.3) | 1133 | 1 | Yes |
+| Dispatch — 404 row (6.4) | 1134 | 1 | Yes |
+| 🔴 Dispatch — health-fails, WRONG reason (6.5, see its own note) | 1135 | 1 | Consumes the "health-fails+rollback" line, but did not earn it |
+| Dispatch — repair/recovery after 1135 | 1136 | 1 | Consumes the separately-budgeted "repair" line |
+| Dispatch — lock holder fixture (6.6) | 1137 | 1 | Yes |
+| Dispatch — contended deploy (6.6) | 1138 | 1 | Yes |
+| 🔴 Probe branch push (`test/4-8-unhealthy-probe`, `ci.yml`) | 1139 | 1 | **No — unbudgeted, caused by 6.5's own finding (Task 1.4's incomplete verification)** |
+| **Above-baseline spend so far** | 1131-1139 | **9** | 7 budgeted + 2 either wasted-but-budgeted (1135) or genuinely new (1139) |
+
+No PR has been opened yet for this story (unlike the projection below assumed while drafting — the
+"PR open"/"pushes while PR open" lines are still entirely in the future, not partially spent).
+
+**Honest projection.** Once the combined AC5/Task 7.5 dispatch against `test/4-8-unhealthy-probe`
+lands (still needed — 7.5 not yet earned), that consumes ANOTHER dispatch not covered by the
+original "health-fails+rollback" line (already spent, on 1135, without earning the row). No PR is
+open yet. Remaining declared-and-not-yet-spent: 2 more implementation pushes before PR-open (1
+already spent, Tasks 1-4's own; Tasks 8-10's own write-up will need at least 1 more), PR open (1),
+pushes while PR is open (4), merge (1), closeout PR (3), plus the still-needed AC5/rollback dispatch
+(1, unbudgeted) and possibly a repair dispatch if THAT restore does not work (1, budgeted).
+**Declared floor 24; realistic projection once everything above lands is ≈26-27** — a small, named
+overrun, entirely attributable to 6.5's own discovery (the old probe branch no longer exists) rather
+than to anything this story's own design got wrong. Not closed — retro-D4 is binding, final closure
+is the coordinator's own post-merge query.
+
 ### Completion Notes List
 
 **Progress note, mid-story (Tasks 1-4 done, Task 5 next): pushing now to hand Task 6's dispatch
@@ -1592,18 +1721,27 @@ non-blocking for this story's own purposes.
   own name, its own three dispatch inputs, its own literal `concurrency:` block, one job (`uses: ./
   .forgejo/workflows/deploy-stand.yml`, `with:` DEV's own 14 values, `secrets: inherit`). Nothing
   under `.github/`, no `docker-compose.server.yml`, `dev-reset.yml` untouched (Prohibitions 1/2/10).
+- `.forgejo/workflows/deploy-stand.yml` — Task 7's own rollback added on top of Tasks 1-4's own
+  first commit: "Capture the previous digest before down" (before `down`) and "Restore the previous
+  digest if this job failed after down" (`if: failure()`, after the six failure-capable steps,
+  before lock release).
 - `_bmad-output/implementation-artifacts/4-8-factor-out-the-shared-deploy-mechanics.md` — this file:
-  Tasks 1-4 checked (Task 2.6/4.1 honest partials), Run Budget Ledger declared, Debug Log
-  References, Completion Notes List (this section), this File List.
+  Tasks 1-7 checked (Task 2.6/4.1/7.5 honest partials — 7.5 not yet earned), Run Budget Ledger
+  updated with real spend, Debug Log References, Completion Notes List, this File List.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status `ready-for-dev` → `in-progress`.
 
 **New:**
-- `.forgejo/workflows/deploy-stand.yml` — the shared `workflow_call` callee (~1944 lines): 5 jobs
-  (`hold-lock`, `preflight`, `clone-test`, `digest-resolve-test`, `deploy`) moved with their `needs:`
-  graph intact, 15 typed (all `type: string`) inputs, no `concurrency:` block, `IMAGE_REPO` as
-  workflow-level `env:`, the Task 2.3 "exactly one of ref/image_tag" guard as `deploy`'s own first
-  step, Prohibition 8's TTL assertion, the `expect_unrouted_api`-gated Kong guard branch, and the
-  `github.sha` checkout fallback for `image_tag`-only mode.
+- `.forgejo/workflows/deploy-stand.yml` — the shared `workflow_call` callee (~1944 lines, now ~2064
+  with Task 7's rollback): 5 jobs (`hold-lock`, `preflight`, `clone-test`, `digest-resolve-test`,
+  `deploy`) moved with their `needs:` graph intact, 15 typed (all `type: string`) inputs, no
+  `concurrency:` block, `IMAGE_REPO` as workflow-level `env:`, the Task 2.3 "exactly one of
+  ref/image_tag" guard as `deploy`'s own first step, Prohibition 8's TTL assertion, the
+  `expect_unrouted_api`-gated Kong guard branch, the `github.sha` checkout fallback for
+  `image_tag`-only mode, and Task 7's own two new rollback steps.
+- `docker-compose.stand.yml` on branch `test/4-8-unhealthy-probe` (**not this story's own branch,
+  never merged**) — replaces Story 4.3's own `test/4-3-unhealthy-probe`, deliberately deleted at
+  that story's own closeout (a real finding — see Task 6.5, Open Questions). Healthcheck points at
+  a port nothing listens on; discharges AC5/Task 7.5's own discriminating row.
 
 ### Review Findings
 
@@ -1617,12 +1755,10 @@ _(none identified at context time)_
 
 ### Non-blocking
 
-1. 🔴 **UPDATED — R1 came back POSITIVE, this item's own context-time worry did not materialize.**
-   Binary/source inspection (Task 1.2) found `pc.inputs` explicitly present in the exact interpreter
-   construction Forgejo's own vendored `act/jobparser` uses to evaluate `runs-on` — `runner_label` is
-   a direct input, §4's ladder never needed to be descended. Not fully closed until Task 6.1's first
-   live dispatch confirms it (this session cannot dispatch), but the read-only evidence is strong and
-   unambiguous. **Owner: the coordinator, confirming at Task 6.1.**
+1. ✅ **CLOSED — R1 confirmed POSITIVE both read-only (Task 1.2) and live (run 1132).** All 5 of
+   run 1132's own jobs (including the SKIPPED-but-planned `hold-lock`) landed on `runner_id=14`
+   (`s1-deploy-dev-preprod`) — `runs-on: ${{ inputs.runner_label }}` resolved correctly across the
+   caller/callee boundary. §4's ladder was never descended. No further action.
 2. **`secrets: inherit` hands the shared callee every org secret, including `REGISTRY_TOKEN_RW`
    (org-scope `write:package` over 87 packages, including another team's production) and the
    OpenBao credentials.** D21 flagged this for this story by name. It is not a regression today —
@@ -1667,3 +1803,17 @@ _(none identified at context time)_
    either way), but a factual drift from a prior story's own record, worth a look independent of
    this story's own scope. **Owner: whoever next touches Story 4.4's own record, or dismisses this as
    the intended reading all along.**
+9. 🔴 **NEW — run 1135 spent a real dispatch discovering that Story 4.3's own probe branch,
+   `test/4-3-unhealthy-probe`, was deliberately DELETED at that story's own closeout, and Task 1.4's
+   own verification never checked for that.** Task 1.4 confirmed the registry IMAGE TAG still
+   resolves (14-day retention, still live at the time this story checked) but never checked whether
+   the underlying GIT BRANCH the epic's own AC5 probe needs still existed — it did not, by design,
+   per Story 4.3's own Change Log ("Cleanup: test/4-3-unhealthy-probe branch deleted"). This burned a
+   full dispatch (1135, `clone-test` failure, `deploy` never reached) for the wrong reason. Fixed by
+   creating a replacement (`test/4-8-unhealthy-probe`), but the underlying lesson generalizes: **a
+   story that plans to reuse a prior story's own throwaway probe branch must verify the BRANCH
+   itself still exists, not merely that its published image tag still resolves** — these are
+   independent facts on this project (branches get deleted at closeout by design; image tags expire
+   on their own 14-day clock) and checking one does not imply the other. **Owner: whoever next writes
+   a story context that reuses a prior story's own throwaway branch — worth a line in this project's
+   own zero-dispatch-verification conventions.**

@@ -1512,6 +1512,41 @@ jobs:
           }
           echo "net_id_before=${NET_ID_BEFORE}" >> "$GITHUB_OUTPUT"
 
+      - name: Capture the previous digest before down, for the post-down restore path
+        id: previous_digest
+        env:
+          CONTAINER_NAME: ${{ inputs.container_name }}
+        run: |
+          set -euo pipefail
+          # Task 7.1. The empty case is legitimate and common (first-ever deploy of this stand, or
+          # any prior deploy that itself failed before up -d ever ran) — not a FAIL, just nothing to
+          # restore if THIS deploy fails post-down. Lenient throughout: this step's own job is to
+          # capture a rollback point if one exists, never to block the deploy that follows it.
+          if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+            echo "No existing container named '${CONTAINER_NAME}' — nothing to capture."
+            echo "previous_digest=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          IMAGE_ID="$(docker inspect "$CONTAINER_NAME" --format '{{.Image}}' 2>/dev/null || true)"
+          if [ -z "$IMAGE_ID" ]; then
+            echo "Could not read '${CONTAINER_NAME}'s own .Image field — nothing to capture."
+            echo "previous_digest=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # .RepoDigests lives on the IMAGE object, not the container (same finding AC6's own step
+          # already uses, run 925) — inspect the image id, not the container, for it.
+          PREV_REPO_DIGEST="$(docker inspect "$IMAGE_ID" --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' 2>/dev/null || true)"
+          if [ -z "$PREV_REPO_DIGEST" ]; then
+            echo "Existing container '${CONTAINER_NAME}' has no readable RepoDigests — nothing to"\
+                 "capture (e.g. an image built purely locally, never pulled from a registry —"\
+                 "should not happen on this path, but handled rather than assumed away)."
+            echo "previous_digest=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PREV_DIGEST="${PREV_REPO_DIGEST#*@}"
+          echo "previous_digest=${PREV_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "OK: captured previous digest ${PREV_DIGEST} for the post-down restore path, if needed."
+
       - name: docker compose down
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
@@ -1899,6 +1934,91 @@ jobs:
           echo "This proves the CURRENT state only — restart: always + external: true is a silent"\
                "restart loop on daemon start if crm-dev-network is absent or recreated with a new"\
                "id at boot time. That risk stays open for Story 4.9 (deferred-work.md reboot item)."
+
+      - name: Restore the previous digest if this job failed after down (§7, Task 7.2/7.3)
+        if: failure()
+        env:
+          CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
+          PREVIOUS_DIGEST: ${{ steps.previous_digest.outputs.previous_digest }}
+          COMPOSE_PROJECT_NAME: ${{ inputs.compose_project_name }}
+          CONTAINER_NAME: ${{ inputs.container_name }}
+          FRONTEND_PORT: ${{ inputs.frontend_port }}
+          FRONTEND_NETWORK: ${{ inputs.frontend_network }}
+          HEALTH_TIMEOUT_SECONDS: ${{ inputs.health_timeout_seconds }}
+        run: |
+          set -euo pipefail
+          # Task 7.2/7.3: `if: failure()` means a PRIOR step in this job already failed and the job
+          # is ALREADY marked failed — nothing this step does can change that (Forgejo/GHA
+          # semantics: once a step fails without continue-on-error, the job's own overall status is
+          # fixed). This step's only job is to leave the STAND in its previous, known-good state if
+          # it can — it never masks or overrides the original failure's own message, which stays in
+          # that step's own record untouched, and this step's own name says "Restore", not "Fix".
+          #
+          # Task 7.4: this step does NOT survive a job cancel or a `timeout-minutes` expiry (M5,
+          # already the established caveat on the release-lock step below) — `if: failure()` only
+          # runs on an ordinary step failure. A cancelled/timed-out job leaves the stand exactly as
+          # unprotected as it always was; this narrows one failure class, not all of them.
+          if [ -z "${PREVIOUS_DIGEST:-}" ]; then
+            echo "No previous digest was captured (first-ever deploy of this stand, or the prior"\
+                 "container/image was not inspectable) — nothing to restore. The stand stays"\
+                 "exactly as this failed deploy left it; a human must intervene."
+            exit 0
+          fi
+          if [ -z "${CHECKOUT_DIR:-}" ] || [ ! -d "$CHECKOUT_DIR" ]; then
+            echo "Restore path: no checkout directory available — this deploy failed before"\
+                 "docker-compose.stand.yml was even obtained, so there is no compose file to"\
+                 "re-render against. The original failure above is the one that matters; this"\
+                 "restore attempt could not run at all, and that is stated plainly, not retried."
+            exit 0
+          fi
+          echo "Restore path: re-rendering .env.deploy with the PREVIOUS digest (${PREVIOUS_DIGEST})"\
+               "and running 'docker compose up -d' against it."
+          cat > "${CHECKOUT_DIR}/.env.deploy" <<EOF
+          # RESTORE render by deploy-stand.yml, $(date -u +%FT%TZ). Restoring the previous digest
+          # after this deploy's own failure post-down (Task 7).
+          COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+          CONTAINER_NAME=${CONTAINER_NAME}
+          FRONTEND_PORT=${FRONTEND_PORT}
+          FRONTEND_NETWORK=${FRONTEND_NETWORK}
+          DOCKER_IMAGE=${IMAGE_REPO}@${PREVIOUS_DIGEST}
+          EOF
+          cd "$CHECKOUT_DIR"
+          if ! docker compose -f docker-compose.stand.yml --env-file .env.deploy up -d; then
+            echo "Restore path FAILED: 'docker compose up -d' with the PREVIOUS digest also"\
+                 "failed. The stand is now in an unknown state and needs a human. This does NOT"\
+                 "retry, and does NOT change the job's own already-failed status — the original"\
+                 "failure above remains the one to diagnose first."
+            exit 0
+          fi
+          echo "Restore path: 'up -d' with the previous digest succeeded. Re-polling health"\
+               "(bounded ${HEALTH_TIMEOUT_SECONDS}s, the same bound the main health check used)."
+          DEADLINE=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
+          RESTORED=""
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if ! STATE_LINE="$(docker inspect -f '{{.State.Running}}|{{.State.Restarting}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CONTAINER_NAME" 2>/dev/null)"; then
+              STATE_LINE="gone|gone|gone"
+            fi
+            RUNNING="${STATE_LINE%%|*}"
+            REST="${STATE_LINE#*|}"
+            RESTARTING="${REST%%|*}"
+            HEALTH="${REST#*|}"
+            if [ "$RUNNING" = "true" ] && [ "$RESTARTING" = "false" ] && [ "$HEALTH" = "healthy" ]; then
+              RESTORED="yes"
+              break
+            fi
+            sleep 5
+          done
+          if [ -n "$RESTORED" ]; then
+            echo "OK (restore path): stand restored to its previous digest (${PREVIOUS_DIGEST}) and"\
+                 "confirmed healthy again, with no human intervention. The job's own status stays"\
+                 "FAILED — this deploy's own target digest never became healthy, which is the"\
+                 "failure this job correctly reports; the restore is a side effect, not a fix."
+          else
+            echo "Restore path FAILED: 'up -d' with the previous digest succeeded but the stand did"\
+                 "not reach a healthy state within ${HEALTH_TIMEOUT_SECONDS}s. The stand needs a"\
+                 "human. This does NOT retry, and does NOT change the job's own already-failed"\
+                 "status."
+          fi
 
       - name: Release the stand lock
         if: always()
