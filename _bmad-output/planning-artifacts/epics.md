@@ -2014,12 +2014,28 @@ So that a fix applied for one environment cannot silently miss the other two.
 > it. Continue reading the clause below with the Slack element deferred.
 steps live in a single reusable definition
 **And** the mechanism used is the one Story 1.3 proved works on this instance.
+> 🔴 **AMENDED 2026-08-22 — "the mechanism Story 1.3 proved" is the wrong citation.** Story 1.3's
+> own Probe C declared no inputs, no secrets, no outputs, no `concurrency` block and one trigger —
+> its own table listed `secrets: inherit` under *"expectations to test against, not findings"*
+> (`deferred-work.md:1860-1875`). It did not settle `workflow_call`. The mechanism actually proven
+> on this instance is **D21**'s (Story 3.4, probe runs 617-631, live twice in this repository
+> since `ci.yml`→`build.yml` and `build-main.yml`→`build.yml`, before Story 4.8 added a third).
+> Satisfied in substance (the mechanism was established by test on this instance); the citation was
+> wrong and is corrected here so the next reader does not chase Story 1.3's own file for it.
 
 **Given** neither `workflow_call` nor composite actions are supported by this Forgejo version
 **When** the fallback is chosen
 **Then** the shared logic is extracted into a version-controlled shell script that the
 workflows invoke
 **And** the triplication is confined to a thin invocation rather than the whole procedure.
+> 🔴 **AMENDED 2026-08-22 — this Given is FALSE, and the fallback was never taken.** Composite
+> actions (`uses:` at step level) are dead on the deploy runner's own job image (run 920, no error,
+> silent non-execution). `workflow_call` (`uses:` at job level) works and is expanded
+> SERVER-SIDE — the runner never sees a `uses:` at all, so run 920's finding does not reach it. The
+> shell-script fallback was rejected on a SECOND, independent ground even where it would have been
+> available: Story 4.7 found (H4) that the `deploy` job's own task log does not persist reliably —
+> `action_task_step` rows are the only surviving per-step evidence for that job, and a monolithic
+> script would collapse 22 of them into 1, destroying it. See [D33](../../docs/migration-decisions.md#d33).
 
 **Given** the shared definition
 **When** it is parameterized
@@ -2028,15 +2044,38 @@ image tag are all inputs
 **And** no target host is passed, because the runner label determines the host (amended
 2026-08-11; was ~~target host~~)
 **And** no environment-specific value is embedded in it.
+> ⚠️ **AMENDED 2026-08-22 — four real parameters this list never named, plus one deliberate
+> non-input.** `compose_project_name` and `frontend_network` (two of the five variables
+> `docker-compose.stand.yml` requires; neither is covered by "container name" or "port");
+> `lock_wait_seconds`/`lock_ttl_seconds`/`health_timeout_seconds` (the tuning constants, now
+> configurable per stand, with Story 4.4's own TTL-exceeds-timeout invariant asserted in the file);
+> and **`expect_unrouted_api`** — the Kong guard's `no Route matched` signature check encodes DEV's
+> own Kong configuration as an invariant; PRE-PROD's Kong runs real services and would fail every
+> deploy without this input. **The `concurrency:` group is deliberately NOT an input** — a callee's
+> own `concurrency:` block is silently void (D21), so the group lives in each caller as a literal,
+> one per stand; an input here would read as load-bearing and do nothing.
 
 **Given** `deploy-dev.yml` from Story 4.3
 **When** it is refactored onto the shared definition
 **Then** a DEV deploy still succeeds end to end
 **And** the health check still fails correctly against a stopped stand.
+> ✅ **Confirmed live, 2026-08-22/23.** DEV deploy: run 1132, all 23 `action_task_step` rows
+> SUCCESS (22 original + one new fail-closed guard). Health check fails correctly against a stopped
+> stand AND the post-`down` rollback restores it with no human: run 1143, the third dispatch
+> attempt against a replacement throwaway probe (the original probe branch this AC's own test
+> depended on, `test/4-3-unhealthy-probe`, was found deleted by design at Story 4.3's own closeout —
+> the first two replacement attempts used a probe construction incompatible with the rollback
+> mechanism by design, both recorded honestly rather than smoothed over — see `4-8-…md` Task 6.5).
 
 **Given** the shared definition exists
 **When** the remaining deploy workflows are written in Epics 5 and 6
 **Then** they consume it rather than copying it.
+> 🔴 **NARROWED 2026-08-22 — this AC cannot be closed by Story 4.8 itself.** `deploy-preprod.yml`
+> and `deploy-prod.yml` do not exist yet; Stories 5.3 and 6.4 write them. What Story 4.8 discharges
+> in their place: the callee's own input surface walked line-by-line against both stories' own ACs
+> (no gaps found); a fully commented caller skeleton committed in `deploy-stand.yml`'s own header
+> (not a fourth workflow file); this amendment; and [D33](../../docs/migration-decisions.md#d33),
+> which records the contract for whoever writes 5.3/6.4 without needing to open the story file.
 
 ### Story 4.9: Cut DEV Over to the New Stand
 
@@ -2214,6 +2253,12 @@ steps — compose placement, `down`, fail-fast pull, `up -d`, parameterized heal
 running on the deploy runner located on s1 (amended 2026-08-11; was ~~native `ssh`/`scp`,
 compose copy~~)
 **And** it acquires the Story 4.4 lock on the PRE-PROD stand directory.
+> ⚠️ **AMENDED 2026-08-22 (Story 4.8) — one parameter this story must set that no prior story
+> named.** The shared callee's Kong guard defaults to `expect_unrouted_api: true` (DEV's own
+> behaviour). PRE-PROD's Kong routes real services — this caller must set
+> `expect_unrouted_api: "false"` in its own `with:` block, or every deploy fails the Kong guard for
+> a reason that has nothing to do with the deploy itself. See the caller skeleton in
+> `deploy-stand.yml`'s own header and [D33](../../docs/migration-decisions.md#d33).
 
 **Given** an `image_tag` that does not exist in the registry
 **When** the deploy runs

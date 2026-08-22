@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-22
+# last_updated: 2026-08-23
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -535,7 +535,29 @@ development_status:
   # is what keeps the floor at 24 rather than doubling it.
   # 🚨 No main merge and no DEV dispatch between 2026-08-23 01:45 and 02:30 UTC: one row deliberately
   # leaves the stand broken, and the first autonomous reset has never been observed.
-  4-8-factor-out-the-shared-deploy-mechanics: in-progress
+  # ✅ Closeout 2026-08-23: all 10 Tasks done. R1 confirmed positive read-only AND live (run 1132,
+  # all jobs on runner_id=14) — no fallback rung needed. concurrency: block survives workflow_call
+  # expansion for every run 1132-1143 (type=1, group intact) — D21's own central question answered
+  # positively. Rollback implemented and earned live (run 1143) after two honestly-recorded false
+  # starts: run 1135 used Story 4.3's own throwaway probe branch, deleted by design at that story's
+  # closeout (Task 1.4 checked the image tag's own registry status, not the branch's existence —
+  # two independent facts); run 1141's replacement broke the compose file's own healthcheck, which
+  # the restore mechanism cannot fix by design (it restores the image only); run 1143's own v2 broke
+  # the image instead (nginx listening on the wrong port) and closed the row cleanly. H4: task-log
+  # persistence for the deploy job went from ~43% (Story 4.7's own direct-dispatch measurement) to
+  # 7/7 under workflow_call — a real correlation, mechanism not fully traced. The 4s job/workflow gap
+  # confirmed identical across called and dispatched jobs and across simple/complex runs — container
+  # scheduling overhead, not the workflow_call expansion. Cold-pull still unmeasured (Docker's own
+  # cross-image layer cache defeated the one dispatch that tried). Task 2.6 (collapse the duplicated
+  # holder-launch block into one definition) genuinely partial — hold-lock's own deliberate
+  # zero-checkout design blocks a shared external script; named honestly, not forced. D33 written;
+  # epics.md Story 4.8/5.3 amended in place; deferred-work.md routed (rollback closed, both
+  # measurement debts closed, group-vs-capacity closed negatively by construction, DF2's scheduled-
+  # actor axis re-routed to the coordinator with an explicit no-08-23-staging recommendation, three
+  # new findings routed). Ledger OPEN (retro-D4) — above-baseline spend 13 as of this write-up,
+  # against a floor of 24, six unbudgeted dispatches all tracing to the one probe-branch root cause.
+  # Status review.
+  4-8-factor-out-the-shared-deploy-mechanics: review
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
 

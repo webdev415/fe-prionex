@@ -2856,6 +2856,22 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   run 938 is the live proof a human dispatch is what fixes it. AC4 in Story 4.7 is narrowed in
   writing to the pre-`down` window only (proven live there, Task 5) — the mechanism itself moves
   wholly to Story 4.8, which owns the shared deploy definition this would naturally live inside.
+  ✅ **IMPLEMENTED AND EARNED LIVE, 2026-08-23 (Story 4.8, Task 7).** Two new steps in
+  `deploy-stand.yml`: "Capture the previous digest before down" (reads `.Image` then that image's
+  own `RepoDigests` — not the container directly, matching AC6's own established method) and
+  "Restore the previous digest if this job failed after down" (`if: failure()`, after all six
+  post-`down` failure-capable steps, before lock release). Discriminating row earned on the THIRD
+  dispatch attempt against a replacement throwaway probe branch (the original,
+  `test/4-3-unhealthy-probe`, was found deleted by design at Story 4.3's own closeout — a real
+  finding, recorded in Story 4.8's own Task 6.5, not smoothed over): the first two attempts used a
+  probe construction that broke `docker-compose.stand.yml`'s own healthcheck, which the restore
+  mechanism cannot fix by design (it restores the image digest only, never the compose file check ed
+  out with it) — the third attempt broke the image instead (`nginx.conf` listening on the wrong
+  port, compose file byte-identical to `main`), and the restore worked cleanly: health-poll failed
+  correctly, the stand was returned to `main`'s own digest and confirmed `healthy`, with no human
+  intervention, host-side confirmed independently of the run's own log. Run 937/938's own historical
+  proof (no rollback, manual repair needed) is now superseded by a live counter-example on the same
+  class of failure.
 
 - ⚠️ **Two sources of truth for the stand's five variables.** The host `.env` in
   `~/crm-prionex/fe-prionex-dev/` (manual/DR path) and `deploy-dev.yml`'s own render into
@@ -2866,6 +2882,17 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   container name and port are hardcoded in the verification steps instead of read back from the
   `.env.deploy` the job just wrote) — that half is a patch in the story, not deferred.
   **Owner: Story 4.8 (shared definition) / Story 4.9 (cutover).**
+  🟡 **ONE AXIS CLOSED, 2026-08-22 (Story 4.8, §8/Task 10.2) — the render side, not the host DR
+  side.** After this story's own factoring, the `.env.deploy` render is a SINGLE definition
+  (`deploy-stand.yml`'s own "Write the stand's five required variables" step) and the per-stand
+  values live in exactly one place per stand — each caller's own `with:` block — rather than
+  potentially drifting per-environment copies of the same render logic. **The remaining axis is
+  unchanged and still fully open**: the host `.env` in `~/crm-prionex/fe-prionex-<stand>/` (the
+  manual/DR path) cannot be reconciled from a workflow — writing into the stand directory is
+  unreachable except through a sibling container, and doing so would put THIS workflow onto the
+  manual path's own tree, and adding a drift-check guard is a new mechanism this story's own §1
+  forbids. **Re-routed unchanged to Story 4.9**, which touches the stand directory at cutover
+  anyway.
 
 - ⚠️ **The ref→tag scheme is lossy: two different refs can share one image tag.** `build.yml`'s
   sanitizer maps every run of characters outside `[a-zA-Z0-9._-]` to a single `-`, so `feature/foo`
@@ -2976,6 +3003,19 @@ session at all, not because they are minor.
   say anything about the SCHEDULED actor (`dev-reset.yml`) specifically, since all three probe runs
   were `workflow_dispatch`. **Owner unchanged: Story 4.8**, now with a positive pending-depth-2 data
   point to build on rather than a fully open question.
+  🟡 **RE-ROUTED, narrowed by construction, 2026-08-22 (Story 4.8, §8/Task 10.2).** Not measured
+  further — re-routed on structural grounds instead. After this story's own factoring, each stand
+  (DEV, PRE-PROD, PROD) carries its OWN `concurrency:` group and its OWN `flock` on its OWN
+  `stand_dir` — 5.3/6.4 never share a queue with DEV or with each other, so cross-stand contention
+  at depth 3+ is unexpressible by this design, not merely untested. **The group-vs-capacity axis is
+  closed NEGATIVELY, not left open**: every deploy runner in this plan (s1 today, s10 by Story
+  6.10's own design) is `capacity: 1`, so group-queueing and capacity-queueing remain
+  indistinguishable by any observation available on any of them — exactly why NFR10 requires the
+  `flock` to be the load-bearing half, not the `concurrency:` block. **Depth beyond 2 pending and
+  `flock`'s own wake order beyond two contenders remain genuinely open** (this story did not
+  re-measure them, only narrowed their blast radius) — **owner: whoever next needs
+  more-than-two-way ordering guarantees on ONE stand** (no story currently requires it; Stories
+  5.3/6.4 each inherit the lock for their own, now-isolated stand, not a shared queue).
 
 ## Deferred from: code review fix-pass of story-4.4 (2026-08-21)
 
@@ -3114,6 +3154,17 @@ query. These two are the ones that are genuinely somebody else's, and each has a
   entry above). **The Sunday reset therefore does NOT silently drop this way, at least not via the
   specific tight-arrival, human-dispatch shape this probe tested** — real and worth having, but not
   a blanket closure of ALL concurrency-queue risk. All three open axes routed to **Story 4.8**.
+  🟡 **Story 4.8's own disposition of the three axes, 2026-08-22 (Task 10.2):** **(i) group-vs-
+  capacity** closed NEGATIVELY by construction, not measured further — every deploy runner in this
+  plan is `capacity: 1`, so the two remain permanently indistinguishable by observation on any of
+  them; NFR10's own reliance on `flock` as the load-bearing half is the correct response, not a gap
+  to close. **(ii) the scheduled actor** — re-routed to **the coordinator**, unchanged, with an
+  explicit recommendation attached during Story 4.8's own execution: **do not deliberately stage a
+  `dev-reset.yml` contention probe on 2026-08-23** — doing so would confound the reset's own first
+  genuinely autonomous firing (the coordinator's own measured event) with an artificial contention
+  test, compounding two unknowns instead of resolving one. **(iii) pending-depth beyond 2** — still
+  genuinely open, owner unchanged (whoever next needs it, no story currently does, per the
+  AC1/queue-depth entry's own updated disposition above).
 
 ## Deferred from: story-4.7 validation (2026-08-21, expanded by the 2026-08-22 code-review fix-pass)
 
@@ -3168,6 +3219,24 @@ story-file-internal deviation already argued and recorded in `4-7-…md` itself 
   story asked *"which one wins on a cold image"*; that number is still unmeasured. **Owner:
   Story 4.8** — needs the cold-pull number before committing to which step dominates once these
   steps move into a shared definition.
+  ✅ **Both CLOSED, 2026-08-22 (Story 4.8, Task 8.1/8.2) — one positively-explained correlation, one
+  confirmed-unchanged constant, neither a guess.** **The 4s gap**: measured on THREE runs this
+  round, not one — 1132 (clean green path, job-level 23s vs. workflow-reported 19s), 1141 (health
+  fail + failed restore, job-level 208s vs. reported 204s), 1143 (health fail + successful restore,
+  job-level 98s vs. reported 94s) — **exactly 4s in all three**, regardless of total run complexity
+  and regardless of whether the job was CALLED (`workflow_call`, this story) or DISPATCHED directly
+  (Story 4.7's own C-2/C-5, also 4s). Per this project's own closing logic for exactly this
+  question — same gap on both means container/scheduling startup, not the mechanism — **closed:
+  container-level overhead before "Record start time" fires, confirmed identical across the
+  refactor, not a `workflow_call`-specific tax.** **The cold-pull number**: still not obtained by
+  THIS story either — 4.8's own green-path dispatch (Task 6.1, run 1132) removed the target image
+  from s1 first (Task 4.5), but the image shares 8 of its 10 layers with images already cached from
+  Story 4.7's own validation branches, so the measured ~0.44s pull is a "digest uncached, 80% of
+  layers warm" number, not a genuinely cold one either. **Still open — re-routed forward again,
+  owner: whoever next needs the real number**, with the precise blocker named this time (Docker's
+  own cross-image layer cache on this host, not merely "warmed by an earlier step" as Story 4.7's
+  own version of this same debt read) so a future attempt knows it needs to clear ALL related
+  images/layers, not just one tag/digest.
 - 🔴 **NEW (H5, code review of story-4.7, 2026-08-22) — every in-flight developer branch on this
   repository will be undeployable to DEV on day one of cutover, and nothing routes the fact.** The
   story's own headline finding is that `deploy-dev.yml:1057-1062` refuses any ref lacking
@@ -3221,3 +3290,50 @@ story-file-internal deviation already argued and recorded in `4-7-…md` itself 
   the two explicitly, or the later subtask will silently assume a baseline the earlier one never
   produced — exactly what happened here (see Story 4.7's own Task 8.3, and its M3 narrowing in the
   same review round).
+
+## Deferred from: story-4.8 implementation (2026-08-22/23)
+
+Three genuinely new findings this round. Everything else this story found either closed clean
+(rollback, R1, D21's concurrency-survival question, both measurement debts — all closed above,
+under their own original entries) or is a story-file-internal deviation already argued and
+recorded in `4-8-…md` itself (the `image_tag`-only checkout fallback, the AC5/Task 7.5 probe
+chronicle) — not a gap for someone else to act on.
+
+- ⚠️ **A story that reuses a prior story's own throwaway probe branch must verify the BRANCH
+  itself still exists, not merely that its published image tag still resolves — these are two
+  independent facts on this project.** Story 4.8's own Task 1.4 confirmed `test/4-3-unhealthy-
+  probe`'s own image tag still resolved in the registry (14-day retention, still live) and treated
+  that as sufficient — it never checked whether the underlying git branch still existed. It did
+  not: Story 4.3's own closeout deleted it BY DESIGN (`git branch delete`, its own Change Log
+  states so plainly). This cost a full wasted dispatch (run 1135, `clone-test` failure, `deploy`
+  never reached at all) before the gap was noticed. **No single owner — a template lesson**, same
+  class as DN4/M7 above: whoever authors a future story's context that plans to reuse a named
+  throwaway branch from a prior, already-closed story should verify the branch's own existence
+  (`git ls-remote --heads origin | grep <name>`), not only its image's own registry status, before
+  budgeting a dispatch against it.
+- ⚠️ **A probe branch that deliberately breaks `docker-compose.stand.yml`'s own healthcheck cannot
+  be used to earn a post-`down` rollback's discriminating row — the two mechanisms are structurally
+  incompatible, not merely a bad pick.** Story 4.8's own first replacement probe
+  (`test/4-8-unhealthy-probe` v1) copied Story 4.3's own probe SHAPE (break the healthcheck
+  definition itself) without noticing that Story 4.3's own record already named the consequence:
+  *"this does not... protect against a present-but-unhealthy replacement"* — because the rollback
+  mechanism restores the IMAGE digest only, using the SAME checked-out compose file the failing
+  dispatch itself obtained, a broken healthcheck IN that compose file cannot be un-broken by
+  restoring a different image. Cost a second wasted dispatch (run 1141) before the construction was
+  corrected (v2: break the image itself — `nginx.conf`'s own listen port — leaving
+  `docker-compose.stand.yml` byte-identical to `main`). **Owner: whoever next needs an
+  unhealthy-stand probe on ANY stand this shared definition serves (5.3/6.4 included)** — the
+  correct construction is "break the image, never the compose file," worth stating once here rather
+  than re-discovering per environment.
+- ⚠️ **The duplicated lock-holder-launch block (`docker run -d --init … flock …`, `hold-lock`'s
+  fixture and `deploy`'s own acquire step) was only partially collapsed — Task 2.6's own "one
+  definition" was not fully achieved, and the reason is structural, not a shortcut.** Both call
+  sites now reference identical shell variable names (`$STAND_DIR`, `$SELF_IMAGE`, `$HOLDER`,
+  `$TTL`), making future drift easy to catch in review, but the YAML source itself still carries
+  two separate copies of the launch construction. A genuine "one definition" needs either a shared
+  external script (blocked: neither job does a git checkout before launching a holder, and
+  `hold-lock` is deliberately kept checkout-free to stay "cheap and fast") or a mechanism this
+  project's own Prohibition 6 already rules out (`uses:` steps do not execute on this runner's job
+  image). **Owner: Oleg's own call, or whoever next revisits `hold-lock`'s own cost/timing budget**
+  — accept the partial (drift risk lowered, not eliminated), or accept a small checkout cost on
+  `hold-lock` to reach a genuinely single definition.

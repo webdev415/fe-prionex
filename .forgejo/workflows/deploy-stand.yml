@@ -186,6 +186,51 @@ env:
 # its own, with a literal group naming the stand it protects. A block here would be silently void
 # (D21) and would read as protection that does not exist.
 
+# ── Caller skeleton, Story 4.8 Task 9.3 — NOT a fourth workflow file, a template for Story 5.3's
+# own deploy-preprod.yml and Story 6.4's own deploy-prod.yml. Copy the shape, not this comment. ────
+#
+# name: Deploy PRE-PROD Stand   # or "Deploy PROD Stand" for 6.4 — literal, permanent, whatever
+#                                 # dev-reset.yml-equivalent read-backs will grep for (verify per-
+#                                 # environment before shipping — §9's three invariants are DEV's
+#                                 # own file's, re-derive them for each new caller, do not assume).
+#
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       image_tag:                       # Story 5.3 AC2: required, rejected if absent.
+#         required: true
+#         type: string
+#       rollback:                        # Story 6.4 only — a CALLER concern (Task 9.2): true means
+#         required: false                # "pull the existing tag, no build step runs on this path"
+#         type: boolean                  # — decided and executed entirely BEFORE this workflow
+#         default: false                 # calls the shared definition; the callee never sees it.
+#
+# concurrency:                           # LITERAL, own group per stand (§5, D21) — never omit,
+#   group: deploy-preprod-fe-prionex-preprod   # never copy DEV's own group, never an expression.
+#   cancel-in-progress: false
+#
+# jobs:
+#   deploy:
+#     uses: ./.forgejo/workflows/deploy-stand.yml
+#     with:
+#       runner_label: deploy-preprod-preprod   # or 6.4's own s10 label, from Story 6.10 — R1 (§4)
+#                                                # is where a wrong/missing label actually bites.
+#       compose_project_name: fe-prionex-preprod
+#       container_name: fe-prionex-preprod
+#       frontend_port: 127.0.0.1:8083           # PRE-PROD's own port (`.env.stand.example:58-67`)
+#       frontend_network: crm-preprod-network   # NEVER crm-dev-network — a different stand
+#       stand_dir: /root/crm-prionex/fe-prionex-preprod
+#       image_env: preprod                      # or "prod" — build.yml's own discriminator
+#       image_tag: ${{ inputs.image_tag }}      # NOT ref — Story 5.3/6.4 both dispatch by tag
+#       expect_unrouted_api: "false"             # PRE-PROD's Kong routes real services (§6) —
+#                                                 # DEV's own "true" default would fail every deploy
+#       # lock_wait_seconds / lock_ttl_seconds / health_timeout_seconds: omit to inherit the
+#       # callee's own DEV-shaped defaults, or override per-stand if the timing differs.
+#     secrets: inherit   # ⚠️ Task 3.3/Open Question 2: hands this caller EVERY org secret this
+#                          # repo holds, including production-scoped ones for a PRODUCTION caller —
+#                          # named for Oleg before Story 6.4 ships, not re-litigated here.
+# ──────────────────────────────────────────────────────────────────────────────────────────────
+
 jobs:
   # ── hold-lock: Story 4.4's contention fixture — a SEPARATE job, not a branch inside `deploy`
   # (Task 5, AC3/AC4/AC5's permanent regression hook, same shape and safety argument as
@@ -1988,7 +2033,13 @@ jobs:
                  "failed. The stand is now in an unknown state and needs a human. This does NOT"\
                  "retry, and does NOT change the job's own already-failed status — the original"\
                  "failure above remains the one to diagnose first."
-            exit 0
+            # This step's OWN exit code is deliberately non-zero here — the job's overall status
+            # was already fixed to FAILED by the earlier step (Forgejo/GHA semantics, Task 7.3),
+            # so this cannot mask or double-count anything; it only makes THIS step's own
+            # action_task_step.status distinguish "restore genuinely failed" from "nothing to
+            # restore" (exit 0, below) or "restore succeeded" (implicit exit 0, falls through) —
+            # a real reader querying the DB can now tell the three apart without parsing log text.
+            exit 1
           fi
           echo "Restore path: 'up -d' with the previous digest succeeded. Re-polling health"\
                "(bounded ${HEALTH_TIMEOUT_SECONDS}s, the same bound the main health check used)."
@@ -2018,6 +2069,9 @@ jobs:
                  "not reach a healthy state within ${HEALTH_TIMEOUT_SECONDS}s. The stand needs a"\
                  "human. This does NOT retry, and does NOT change the job's own already-failed"\
                  "status."
+            # Same reasoning as the up -d failure branch above: non-zero here is a reporting
+            # signal (this step's own status), never a masking risk (the job is already FAILED).
+            exit 1
           fi
 
       - name: Release the stand lock
