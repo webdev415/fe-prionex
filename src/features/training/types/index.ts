@@ -41,6 +41,8 @@ export interface CallMonitoringFilters {
   campaign_id?: string
   telephony_types?: TelephonyType[]
   category?: ScorecardCategory
+  /** Narrow to calls whose scorecard disputes the AI. Backend-gated. */
+  disputed?: boolean
   sort?: CallMonitoringSort
   limit?: number
   offset?: number
@@ -71,6 +73,14 @@ export interface CallMonitoringItem {
   scorecard_weighted_score: number | null
   scorecard_category: ScorecardCategory | null
   scorecard_comment: string | null
+  /**
+   * True when the call's scorecard carries a `dispute_reason` — the trainer
+   * scored it themselves and said why they disagree with the AI. Denormalized
+   * onto `call_records` by quality's summary push, so the list can flag and
+   * filter disputes without a per-row lookup. Optional: absent until the
+   * backend field ships, and never backfilled for calls scored before it.
+   */
+  scorecard_is_disputed?: boolean | null
 }
 
 export interface CallMonitoringSummary {

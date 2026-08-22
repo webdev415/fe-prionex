@@ -278,6 +278,31 @@ export interface Scorecard {
   call_started_at: string | null
   call_talk_duration: number | null
   call_telephony_type: string | null
+  /**
+   * The AI's weighted score **as it stood when this scorecard was created**
+   * (0-100 axis, mirroring `call_ai_reviews.weighted_score`). A snapshot, not
+   * a live reference: re-running the AI must not retroactively change what the
+   * trainer was objecting to. Null when the call had no AI review.
+   */
+  ai_weighted_score?: number | null
+  /**
+   * `weighted_score` converted to the 0-100 axis, served ready-made so the
+   * ×20 is never done by hand at a call site. The editor still previews the
+   * unsaved draft locally — this is the persisted number.
+   */
+  trainer_score_100?: number | null
+  /** `trainer_score_100 - ai_weighted_score`, 0-100 axis. Null if either is. */
+  score_delta?: number | null
+  /** Whether this scorecard carries an objection (`dispute_reason != null`). */
+  is_disputed?: boolean
+  /** Why the trainer disagrees with the AI. Null = an ordinary scorecard. */
+  dispute_reason?: string | null
+  /**
+   * Points of divergence at which the UI asks for a reason. Served by the
+   * backend so the number is configurable; read it through
+   * `resolveDisputeThreshold`, never inline.
+   */
+  dispute_threshold?: number | null
 }
 
 export interface ScorecardHistoryItem {
@@ -328,6 +353,12 @@ export interface ScorecardUpdatePayload {
   scores?: ScoresPayload
   overall_comment?: string | null
   status?: ScorecardStatus
+  /**
+   * Explicit `null` clears the objection; omitting the key leaves the stored
+   * reason untouched. The distinction matters — the editor's autosave sends
+   * scores on every keystroke pause and must not wipe the reason with it.
+   */
+  dispute_reason?: string | null
 }
 
 // ---- Score aggregation by period (KAN-504) ----

@@ -49,8 +49,12 @@ vi.mock('../EmployeeMultiSelect', () => ({
 vi.mock('../CallReviewPanel', () => ({
   CallReviewPanel: ({ callId }: { callId?: string }) => <div>panel:{callId ?? 'none'}</div>,
 }))
+// Mutable so a test can grant `manage_qa_rules` and check what the head of
+// training sees that an ordinary trainer does not.
+const permissions: string[] = []
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
+  useAuthStore: (selector: (s: unknown) => unknown) =>
+    selector({ user: { active_project_id: 3, permissions } }),
 }))
 
 const mockUseCallMonitoring = vi.mocked(useCallMonitoring)
@@ -114,6 +118,7 @@ function setCalls(result: Partial<ReturnType<typeof useCallMonitoring>>) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  permissions.length = 0
   mockUseMyOperators.mockReturnValue({ data: [41], isLoading: false } as ReturnType<
     typeof useMyOperators
   >)
@@ -344,5 +349,71 @@ describe('DialogsListTab — department filter', () => {
     })
     render(<DialogsListTab />)
     expect(screen.getByLabelText('pages.training.dialogue.department.label')).toBeDisabled()
+  })
+})
+
+describe('DialogsListTab — disputes', () => {
+  it('marks a row whose trainer disagreed with the AI', () => {
+    setCalls({
+      data: {
+        calls: [call({ scorecard_is_disputed: true })],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    // The marker sits with the rating, where the disagreement is about.
+    expect(screen.getByTestId('dispute-marker')).toBeInTheDocument()
+  })
+
+  it('leaves an ordinary scored row unmarked', () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.queryByTestId('dispute-marker')).not.toBeInTheDocument()
+  })
+
+  it('marks the row for a trainer without the disputes permission', () => {
+    // The marker is about their own work, so it is not permission-gated —
+    // only the cross-project "all disputes" view is.
+    setCalls({
+      data: {
+        calls: [call({ scorecard_is_disputed: true })],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByTestId('dispute-marker')).toBeInTheDocument()
+    expect(screen.queryByTestId('disputes-only-chip')).not.toBeInTheDocument()
+  })
+
+  it('hides the disputes filter without `manage_qa_rules`', () => {
+    // The backend answers that filter with a 403 for everyone else; offering
+    // the control would only produce a dead end.
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    expect(screen.queryByTestId('disputes-only-chip')).not.toBeInTheDocument()
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.disputed).toBeUndefined()
+  })
+
+  it('offers the disputes filter to the head of training and narrows the query', () => {
+    permissions.push('manage_qa_rules')
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+
+    // Off by default — the tab still opens on every dialog.
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.disputed).toBeUndefined()
+
+    fireEvent.click(screen.getByTestId('disputes-only-chip'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.disputed).toBe(true)
+
+    fireEvent.click(screen.getByTestId('disputes-only-chip'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.disputed).toBeUndefined()
   })
 })

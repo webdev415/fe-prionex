@@ -32,6 +32,9 @@ function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
     if (t) params.append('telephony_types', t)
   })
   if (filters.category) params.set('category', filters.category)
+  // Only sent when narrowing to disputes: `disputed=false` and an omitted
+  // param mean the same thing (every call), and the backend gates the param.
+  if (filters.disputed) params.set('disputed', 'true')
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))

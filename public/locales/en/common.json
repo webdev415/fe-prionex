@@ -2168,14 +2168,19 @@
           "reached": "Reached"
         },
         "commentOptional": "Comment (optional)",
-        "pts": "pts"
+        "pts": "pts",
+        "disputeReason": "Why you disagree with the AI",
+        "disputeReasonHint": "Optional. Your score stands either way — filling this in records it as an objection to the AI review.",
+        "divergenceAi": "AI",
+        "divergenceTrainer": "Trainer"
       },
       "dialogue": {
         "chips": {
           "all": "All calls",
           "low": "Low",
           "average": "Average",
-          "high": "High"
+          "high": "High",
+          "disputesOnly": "Disputes only"
         },
         "ratings": {
           "notDone": "Not done",
@@ -2201,7 +2206,9 @@
           "deleted": "Assessment deleted",
           "deleteFailed": "Could not delete assessment",
           "callType": "Call type",
-          "duration": "Duration"
+          "duration": "Duration",
+          "dispute": "dispute",
+          "disputeHint": "The trainer disagreed with the AI review"
         },
         "view": {
           "list": "Scorecards",

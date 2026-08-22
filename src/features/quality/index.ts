@@ -110,6 +110,7 @@ export {
 } from './hooks/useQaRules'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
+export { ScoreDivergenceBadge } from './components/ScoreDivergenceBadge'
 export { MarkerOverlay } from './components/MarkerOverlay'
 export { AddMarkerButton } from './components/AddMarkerButton'
 export { LeaveFeedbackButton } from './components/LeaveFeedbackButton'
@@ -210,3 +211,11 @@ export {
 } from './lib/rubricWeights'
 
 export { computeWeightedScorePreview } from './lib/scoringPreview'
+
+export {
+  DEFAULT_DISPUTE_THRESHOLD,
+  isDisputeReasonRequested,
+  resolveDisputeThreshold,
+  scoreDivergence,
+  trainerScoreTo100,
+} from './lib/dispute'

@@ -102,6 +102,11 @@ export function DialogsListTab() {
   const [departmentIds, setDepartmentIds] = useState<number[]>([])
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [category, setCategory] = useState<CategoryFilter>('')
+  // Disputes-only view. Gated on `manage_qa_rules` (the head of training):
+  // the backend refuses the param to everyone else, and a control that can
+  // only ever return 403 is worse than no control. Ordinary trainers still
+  // see the marker on their own rows.
+  const [disputedOnly, setDisputedOnly] = useState(false)
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
@@ -145,6 +150,7 @@ export function DialogsListTab() {
   // and otherwise fall back to the departments the project roster names. The
   // directory adds the departments that currently have no operator in the
   // roster; the roster keeps the picker usable without the permission.
+  const canFilterDisputes = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_QA_RULES)
   const canReadDepartments = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_ROLES)
   const departmentsQuery = useDepartments(
     {
@@ -222,6 +228,7 @@ export function DialogsListTab() {
       to_datetime: dayEndIso(debouncedCallTo),
       telephony_types: telephonyType ? [telephonyType] : undefined,
       category: category || undefined,
+      disputed: canFilterDisputes && disputedOnly ? true : undefined,
       min_duration: parsePositiveInt(debouncedMinDuration),
       sort: 'date_desc' as const,
       limit: pageSize,
@@ -235,6 +242,8 @@ export function DialogsListTab() {
       debouncedCallTo,
       telephonyType,
       category,
+      canFilterDisputes,
+      disputedOnly,
       debouncedMinDuration,
       page,
       pageSize,
@@ -248,6 +257,7 @@ export function DialogsListTab() {
         departmentIds,
         telephonyType,
         category,
+        disputedOnly,
         debouncedCallFrom,
         debouncedCallTo,
         debouncedMinDuration,
@@ -258,6 +268,7 @@ export function DialogsListTab() {
       departmentIds,
       telephonyType,
       category,
+      disputedOnly,
       debouncedCallFrom,
       debouncedCallTo,
       debouncedMinDuration,
@@ -335,6 +346,7 @@ export function DialogsListTab() {
     setDepartmentIds([])
     setTelephonyType('')
     setCategory('')
+    setDisputedOnly(false)
     setCallFrom('')
     setCallTo('')
     setMinDuration('')
@@ -342,6 +354,7 @@ export function DialogsListTab() {
   const hasAnyFilter =
     selectedEmployeeIds.length > 0 ||
     departmentIds.length > 0 ||
+    disputedOnly ||
     !!(nameQuery || telephonyType || category || callFrom || callTo || minDuration)
 
   const inputCls =
@@ -450,6 +463,21 @@ export function DialogsListTab() {
             {t(`pages.training.dialogue.category.${c}`, c)}
           </button>
         ))}
+        {canFilterDisputes ? (
+          <button
+            type="button"
+            data-testid="disputes-only-chip"
+            aria-pressed={disputedOnly}
+            onClick={() => setDisputedOnly((on) => !on)}
+            className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+              disputedOnly
+                ? 'bg-[#204E4D] text-white'
+                : 'bg-white text-[#545454] hover:bg-[#F7F7F7]'
+            }`}
+          >
+            {t('pages.training.dialogue.chips.disputesOnly', 'Disputes only')}
+          </button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
@@ -626,7 +654,23 @@ function DialogsTable({
                   {t(`pages.training.dialogue.category.${cat}`, cat)}
                 </span>
               </td>
-              <td className={`${ANALYTICS_TABLE_TD} tabular-nums`}>{rating ?? '—'}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                <span className="flex items-center gap-1.5">
+                  <span className="tabular-nums">{rating ?? '—'}</span>
+                  {call.scorecard_is_disputed ? (
+                    <span
+                      data-testid="dispute-marker"
+                      title={t(
+                        'pages.training.dialogue.list.disputeHint',
+                        'The trainer disagreed with the AI review'
+                      )}
+                      className="rounded-full border border-[#204E4D] px-1.5 py-0.5 text-[10px] font-medium text-[#204E4D]"
+                    >
+                      {t('pages.training.dialogue.list.dispute', 'dispute')}
+                    </span>
+                  ) : null}
+                </span>
+              </td>
               <td
                 className={`${ANALYTICS_TABLE_TD} max-w-[220px] truncate`}
                 title={call.scorecard_comment ?? undefined}

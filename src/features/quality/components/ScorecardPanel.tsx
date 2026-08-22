@@ -22,9 +22,11 @@ import {
   useUpdateScorecard,
 } from '../hooks/useScorecards'
 import { useTemplates } from '../hooks/useTemplates'
+import { isDisputeReasonRequested, resolveDisputeThreshold } from '../lib/dispute'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import { normalizeCriterionScale } from '../types'
 import type { Criterion, Section } from '../types'
+import { ScoreDivergenceBadge } from './ScoreDivergenceBadge'
 
 const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
 
@@ -91,6 +93,7 @@ export function ScorecardPanel({
     return {
       scores: activeScorecard.scores,
       overall_comment: activeScorecard.overall_comment ?? '',
+      dispute_reason: activeScorecard.dispute_reason ?? '',
     }
   }, [activeScorecard])
 
@@ -109,6 +112,21 @@ export function ScorecardPanel({
     () => computeWeightedScorePreview(sections, draft.scores),
     [sections, draft.scores]
   )
+
+  // Both scores on the 0-100 display axis. The trainer's side prefers the live
+  // preview over the API's `trainer_score_100` so the comparison tracks what
+  // they are typing; the served number is the fallback for when the template
+  // sections haven't loaded and nothing can be previewed yet.
+  const trainerScore100 =
+    livePreview != null ? livePreview * 20 : (activeScorecard?.trainer_score_100 ?? null)
+  const aiScore100 = activeScorecard?.ai_weighted_score ?? null
+  const disputeThreshold = resolveDisputeThreshold(activeScorecard)
+  // Below the threshold this is two readers rounding the same checklist
+  // differently — not worth a field. Kept visible once written, whatever the
+  // current gap, so an existing objection can never be stranded off-screen.
+  const showDisputeReason =
+    isDisputeReasonRequested(aiScore100, trainerScore100, disputeThreshold) ||
+    draft.disputeReason.trim().length > 0
 
   const { requiredCount, scoredCount } = useMemo(() => {
     let req = 0
@@ -157,6 +175,7 @@ export function ScorecardPanel({
     draft.reset({
       scores: activeScorecard.scores,
       overall_comment: activeScorecard.overall_comment ?? '',
+      dispute_reason: activeScorecard.dispute_reason ?? '',
     })
   }
 
@@ -374,7 +393,12 @@ export function ScorecardPanel({
             {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
           </span>
         </span>
-        <span className="flex flex-shrink-0 items-center gap-2 text-xs font-medium">
+        <span className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-xs font-medium">
+          <ScoreDivergenceBadge
+            aiScore100={aiScore100}
+            trainerScore100={trainerScore100}
+            threshold={disputeThreshold}
+          />
           {canEdit ? (
             <span className={isComplete ? 'text-primary-600' : 'text-amber-600'}>
               {t('pages.training.scorecard.scoredCount', '{{scored}}/{{total}} scored', {
@@ -403,16 +427,45 @@ export function ScorecardPanel({
           />
         ))}
 
-        <label className="text-foreground mt-3 block text-sm font-medium">
+        <label
+          htmlFor="scorecard-overall-comment"
+          className="text-foreground mt-3 block text-sm font-medium"
+        >
           {t('pages.training.scorecard.perCallComment', 'Overall comment')}
         </label>
         <textarea
+          id="scorecard-overall-comment"
           className="border-border w-full rounded-lg border px-3 py-2 text-sm"
           rows={3}
           value={draft.overallComment}
           onChange={(e) => draft.setOverallComment(e.target.value)}
           disabled={!canEdit}
         />
+
+        {showDisputeReason ? (
+          <div data-testid="dispute-reason-field" className="mt-3">
+            <label
+              htmlFor="scorecard-dispute-reason"
+              className="text-foreground block text-sm font-medium"
+            >
+              {t('pages.training.scorecard.disputeReason', 'Why you disagree with the AI')}
+            </label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {t('pages.training.scorecard.disputeReasonHint', {
+                defaultValue:
+                  'Optional. Your score stands either way — filling this in records it as an objection to the AI review.',
+              })}
+            </p>
+            <textarea
+              id="scorecard-dispute-reason"
+              className="border-border mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              rows={3}
+              value={draft.disputeReason}
+              onChange={(e) => draft.setDisputeReason(e.target.value)}
+              disabled={!canEdit}
+            />
+          </div>
+        ) : null}
       </div>
 
       <footer className="flex flex-wrap gap-2">
