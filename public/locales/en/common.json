@@ -756,6 +756,10 @@
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",
+      "onexContextChip": "Context: {{label}}",
+      "onexContextClientFallback": "Client #{{id}}",
+      "onexContextPageFallback": "CRM page",
+      "onexContextClear": "Clear page context",
       "filePreview": {
         "loading": "Loading…",
         "loadFailed": "Could not load the file",

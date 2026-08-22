@@ -111,6 +111,15 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
         return `${key}:${String(vars?.value)}`
       }
+      // Same shape, same reason: the OneX dock's context chip exists to tell
+      // the operator WHICH page will be sent along, so the label has to be
+      // assertable and not just the key it rides on.
+      if (key === 'pages.aiAssistant.onexContextChip') {
+        return `${key}:${String(vars?.label)}`
+      }
+      if (key === 'pages.aiAssistant.onexContextClientFallback') {
+        return `${key}:${String(vars?.id)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
