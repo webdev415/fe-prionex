@@ -2,8 +2,8 @@
  * OneX «dock» embedding contract for `/dashboard/ai-assistant`.
  *
  * OneX — the operators' Electron browser (repo `CRM-Prionex/OneX`) — hosts this
- * page in a narrow sidebar (~420px) next to the CRM it
- * shows in the main pane. It opens
+ * page in a narrow sidebar (~420px) next to the CRM it shows in the main pane.
+ * It opens
  *
  *     /dashboard/ai-assistant?embed=dock
  *
