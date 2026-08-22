@@ -1182,7 +1182,7 @@ export function AiAssistantBetaPage() {
           id: `server-${item.id}`,
           role: item.role,
           // A turn sent from the OneX dock carries a machine-facing page-context
-          // envelope in front of what the operator typed, and the backend stores
+          // envelope alongside what the operator typed, and the backend stores
           // `message` verbatim. Unconditional (not gated on the dock): the
           // conversation is just as likely to be reopened in a plain CRM tab,
           // and that surface must not regress into a wall of machine text.
@@ -1607,8 +1607,9 @@ export function AiAssistantBetaPage() {
       }
 
       // OneX dock: the page the operator is looking at rides along as a fenced
-      // preamble in front of their own text (the chat contract has no field for
-      // host context). It is consumed by this one turn — but only once the turn
+      // block after their own text (the chat contract has no field for host
+      // context; the text leads so the backend's auto-title names the chat after
+      // the question). It is consumed by this one turn — but only once the turn
       // has actually landed, so a 5xx or a dropped connection does not silently
       // cost the operator their context.
       const sentContext = isEmbedded ? onexContext : null
@@ -1683,7 +1684,7 @@ export function AiAssistantBetaPage() {
         const result = await sendChat({
           payload: {
             // The feed bubble above shows `prompt`; what goes to the brain may
-            // carry the OneX page-context preamble in front of it.
+            // carry the fenced OneX page-context block after it.
             message: outboundMessage,
             conversation_id: assistantSettings.rememberConversationContext
               ? (conversationId ?? undefined)
@@ -1879,7 +1880,7 @@ export function AiAssistantBetaPage() {
    * question they have not asked yet.
    */
   useOnexAsk(isEmbedded, (command) => {
-    // Not i18n: the preamble around it is a fixed Ukrainian machine contract,
+    // Not i18n: the context block around it is a fixed Ukrainian machine contract,
     // and an EN-interface operator firing the preset must not pull the whole
     // turn into an English analysis (see embedContext.ts).
     const prompt = command.text || (command.preset === 'summary' ? ONEX_ASK_SUMMARY_PROMPT : '')

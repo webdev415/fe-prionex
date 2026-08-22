@@ -33,6 +33,7 @@ import {
   useUpdateAssistantConversation,
 } from '@/features/aiAssistant/hooks'
 import type { AssistantConversationSummary } from '@/features/aiAssistant/api'
+import { stripOnexContextFromTitle } from '@/features/onexEmbed/embedContext'
 import { MemoryPanel } from './MemoryPanel'
 
 const ACTIVE_FILTERS = { limit: 100, archived: false } as const
@@ -157,8 +158,14 @@ export function ConversationSidebar({
 
   const language = i18n.language
 
+  // A chat started from the OneX dock carries the page-context block in its
+  // first message, and the backend auto-titles from the head of that message
+  // (`conversation_service.make_title`) — so the envelope can trail into the
+  // title, and titles written before the block moved behind the operator's text
+  // are machine text end to end. Cut at the tag; what is left of the operator's
+  // question labels the chat, and an empty result falls back to «Чат #id».
   const conversationLabel = (item: AssistantConversationSummary): string => {
-    const title = item.title?.trim()
+    const title = stripOnexContextFromTitle(item.title?.trim() ?? '')
     return title || t('pages.aiAssistant.historyConversationTitle', { id: item.id })
   }
 
@@ -169,8 +176,10 @@ export function ConversationSidebar({
     const query = search.trim().toLowerCase()
     const filtered = query
       ? items.filter((item) => {
-          // Search by the user-given title (case-insensitive) and by "#id".
-          const haystack = `${item.title ?? ''} #${item.id}`.toLowerCase()
+          // Search over the title the operator actually sees (the context block
+          // is cut off it, same as in the label) and by "#id".
+          const haystack =
+            `${stripOnexContextFromTitle(item.title ?? '')} #${item.id}`.toLowerCase()
           return haystack.includes(query)
         })
       : items
