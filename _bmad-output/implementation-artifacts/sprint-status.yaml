@@ -535,7 +535,7 @@ development_status:
   # is what keeps the floor at 24 rather than doubling it.
   # 🚨 No main merge and no DEV dispatch between 2026-08-23 01:45 and 02:30 UTC: one row deliberately
   # leaves the stand broken, and the first autonomous reset has never been observed.
-  4-8-factor-out-the-shared-deploy-mechanics: ready-for-dev
+  4-8-factor-out-the-shared-deploy-mechanics: in-progress
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
 

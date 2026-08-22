@@ -4,7 +4,7 @@ baseline_commit: 06224481d72a08bf38083f1b4997f6066e5f8785
 
 # Story 4.8: Factor Out the Shared Deploy Mechanics
 
-Status: ready-for-dev
+Status: in-progress
 
 <!--
 Contexted 2026-08-22 against `main` at `06224481` (merge of PR #71, Story 4.7 closeout), on branch
@@ -653,42 +653,139 @@ tag are all inputs
 
 ### Task 1 — Settle R1 and bind the facts before writing a line (AC: 3, all)
 
-- [ ] 1.1 Record the baseline: highest `action_run.id` for `repo_id=16` **by query**, before the
+- [x] 1.1 Record the baseline: highest `action_run.id` for `repo_id=16` **by query**, before the
       first implementation push. Record it in the Run Budget Ledger. Do not estimate it.
-- [ ] 1.2 🔴 **R1: does this Forgejo build interpolate `${{ }}` in `runs-on`?** Settle it read-only
+      ✅ **Baseline = 1129** (`select max(id) from action_run where repo_id=16;`), read before any
+      implementation push. Run 1129 is itself the context-branch push (`ci.yml`, commit `1ba38002`),
+      excluded from above-baseline spend by the same convention Story 4.7 used for its own context
+      push. Recorded in the Run Budget Ledger below.
+- [x] 1.2 🔴 **R1: does this Forgejo build interpolate `${{ }}` in `runs-on`?** Settle it read-only
       on s1 first — the source/binary, the same way Story 4.6 settled the schedule and dispatch
       questions. Record the file and line you read, or record honestly that the code could not be
       located. Then record which rung of §4's ladder the design takes and why. **Do not spend a
       dispatch on this before the callee exists** — the first real dispatch confirms it for free.
-- [ ] 1.3 Confirm `workflow_call` expansion has never targeted `deploy-dev-preprod` (it has not)
+      ✅ **POSITIVE — the direct form is taken, no fallback rung needed.** Method: copied the real
+      Forgejo binary off the `forgejo` container on s1 (`docker cp forgejo:/app/gitea/gitea`, 113MB,
+      the wrapper script at `/usr/local/bin/gitea` just execs this), extracted printable strings, and
+      searched for `runs-on`-adjacent symbols. Found the vendored job-planning package
+      `code.forgejo.org/forgejo/runner/v12/act/jobparser` compiled into the SERVER binary itself
+      (confirming `workflow_call` expansion — including `runs-on` resolution — genuinely happens
+      server-side, matching §2's own claim) — symbols include
+      `forgejo.org/services/actions.(*Workflow).Dispatch.SupportIncompleteRunsOn.func4`,
+      `forgejo.org/models/actions.(*ActionRunJob).HasIncompleteRunsOn`, and i18n keys
+      `actions.workflow.incomplete_runson_missing_job/output/matrix_dimension` — a first-class,
+      named feature for `runs-on` EXPRESSIONS that can't resolve yet (referencing `needs.*.outputs`
+      or unset `matrix` dimensions), invoked at exactly the dispatch/schedule/handle-workflow code
+      paths a `workflow_call` expansion goes through. Cross-referenced against the matching public
+      source (`code.forgejo.org/forgejo/runner`, tags `v12.13.0`/`v12.13.1` — the runner releases
+      bracketing this binary's own 2026-07-15 build date) to read the actual evaluator construction
+      in `act/jobparser/jobparser.go`'s own `Parse` function: the interpreter built specifically for
+      `runs-on` evaluation is constructed as `newInterpreter(id, workflowJob, matrix, pc.gitContext,
+      results, pc.vars, pc.inputs, …, jobNeeds, nil)` — **`pc.inputs` (workflow inputs) is
+      explicitly the 7th argument**, present in BOTH tags checked, identically. `inputs.*` resolves
+      immediately at expansion time (unlike `needs.*.outputs`/`matrix`, which the "incomplete"
+      machinery exists specifically to defer) — so `runs-on: ${{ inputs.runner_label }}` is
+      evaluated by the ordinary path, not the deferred one. **Design: §4's rung (a) is not needed —
+      `runner_label` is declared and used as a direct input**, confirmed live at Task 6.1's first
+      dispatch per this subtask's own instruction (no dispatch spent settling it here).
+- [x] 1.3 Confirm `workflow_call` expansion has never targeted `deploy-dev-preprod` (it has not)
       and state the residual risk in one sentence. Expansion is server-side; the risk is that the
       *label* resolution for an expanded job differs from a dispatched one. Nothing to do but name
       it and watch the first dispatch.
-- [ ] 1.4 Verify the probe image for AC4's failing row still exists: resolve `test/4-3-unhealthy-probe`'s
+      ✅ **Confirmed by direct query, not by memory.** `select distinct j.name, t.runner_id, r.name
+      from action_run_job j join action_task t on t.job_id=j.id join action_runner r on
+      r.id=t.runner_id where j.run_id between 617 and 631;` (D21's own probe range) — all 13 job
+      rows landed on runner id 19/20 (`s1-fe-prionex-1`/`-2`), including the probe's own `call.probe`
+      (the `workflow_call` callee job) on runner id 20. Zero rows on runner id 14
+      (`s1-deploy-dev-preprod`). **Residual risk, stated in one sentence:** label resolution for an
+      EXPANDED job has never been observed on THIS SPECIFIC runner/label pair, so a difference
+      between expanded-job and dispatched-job label resolution — if one exists — would only surface
+      at Task 6.1's own first dispatch, not before.
+- [x] 1.4 Verify the probe image for AC4's failing row still exists: resolve `test/4-3-unhealthy-probe`'s
       `-dev` tag against the registry with the read-only credential. If expired (14-day rule),
       decide and record the replacement plan and its extra cost **before** Task 6 depends on it.
-- [ ] 1.5 Verify the two org secrets still reach this repo (`REGISTRY_USER_RO`, `REGISTRY_TOKEN_RO`)
+      ✅ **Still exists.** `curl` (credential piped via `--config -`, never argv) against
+      `https://git.crm-prionex.com/v2/crm/fe-prionex/manifests/test-4-3-unhealthy-probe-dev` →
+      **HTTP 200**, `Docker-Content-Digest: sha256:7cf8f08c1100772b6e7a1e1168aa0957291718986d6fa83ec352ffe0a7313153`.
+      No replacement plan needed; Task 6.5/7.5 can use it as-is.
+- [x] 1.5 Verify the two org secrets still reach this repo (`REGISTRY_USER_RO`, `REGISTRY_TOKEN_RO`)
       and note the `fe_review_1_7` revocation state — if a ledger query returns `401`, **that is the
       revocation, not a bug**; fall back to `fe_tmp_1_7`, record it, never print a value.
-- [ ] 1.6 Confirm the deploy runner is still `capacity: 1` and that its four labels are unchanged.
+      ✅ **Verified statically; live confirmation is Task 6.1's own `preflight` job (its first step
+      exists for exactly this check).** `git grep` confirms `deploy-dev.yml`'s own (now moved into
+      `deploy-stand.yml`) preflight step still references `secrets.REGISTRY_USER_RO`/
+      `secrets.REGISTRY_TOKEN_RO` unchanged — moved byte-for-byte, not re-derived. `fe_review_1_7`'s
+      own revocation state: **not directly observable from this session** — every DB query this
+      story (and 4.7) uses goes through direct root SSH + `docker exec forgejo-postgres psql`, which
+      never touches any Forgejo API token at all; `fe_review_1_7` is a Forgejo REST-API bearer token
+      this session does not hold or use. No `401` was seen on any of this session's own psql/SSH/curl
+      calls — recorded honestly as "not applicable to this session's own channel" rather than
+      asserting a status for a credential this session cannot check.
+- [x] 1.6 Confirm the deploy runner is still `capacity: 1` and that its four labels are unchanged.
       The lock's whole argument rests on the first; §4's ladder rests on the second.
-- [ ] 1.7 Read `deploy-dev.yml` end to end **before editing it**. Produce the step inventory:
+      ✅ **`capacity: 1` confirmed unchanged** (`/opt/forgejo-runner-deploy/config.yml` on s1, comment
+      and value both present, "ОБЯЗАТЕЛЬНО... на s1 будут жить боевые стеки DEV и PRE-PROD"). 🔴
+      **"Four labels" is NOT confirmed — direct query shows exactly ONE.** `select id, name,
+      agent_labels from action_runner where name='s1-deploy-dev-preprod';` → `agent_labels =
+      ["deploy-dev-preprod"]`, one value, matching the runner's own `config.yml` (`labels:` section
+      lists exactly one entry, `deploy-dev-preprod:docker://…`). Story 4.4's own text
+      (`4-4-…md:748,986`) says *"a four-label multi-tenant runner"* / *"The deploy runner has four
+      labels; use the most specific, deploy-dev-preprod"* — this reads as a claim about THIS SPECIFIC
+      runner (id 14) carrying four labels, which the DB does not support today, either because the
+      configuration genuinely changed since 2026-08-20 or because Story 4.4's own claim conflated
+      "four runner registrations on s1 sharing a naming pattern" (a real, separately-confirmed fact —
+      `action_runner` rows 14/16/17/23 all match `%deploy%`/`%dev-preprod%`) with "one runner with
+      four labels." **Not blocking §4's ladder** — `deploy-dev-preprod` is present and unchanged
+      either way, which is the only fact the ladder actually depends on — but named here rather than
+      silently repeated as if re-confirmed.
+- [x] 1.7 Read `deploy-dev.yml` end to end **before editing it**. Produce the step inventory:
       22 `deploy` steps + 5 jobs, each tagged `MOVES` / `MOVES WITH A LITERAL REPLACED` /
       `STAYS IN THE CALLER`. This inventory is the diff review's own checklist and the story's proof
       that nothing was dropped in transit.
-- [ ] 1.8 Declare the run budget (§10's table) in the Dev Agent Record before the first push.
+      ✅ **Read whole (1875 lines, three passes), transformed programmatically from the exact source
+      bytes (not hand-retyped) to eliminate transcription risk, and verified by execution
+      afterward — not merely reviewed by eye.** Step inventory: all 5 jobs / 30 steps `MOVE` (22 in
+      `deploy`, 3 preflight, 2 clone-test, 1 digest-resolve-test, 2 hold-lock); of those, 19 sites
+      across 12 distinct steps `MOVE WITH A LITERAL REPLACED` (the full §6 surface: `runs-on`×5,
+      `stand_dir`×4, holder-prefix×6 (not ×3 as §6's own table estimated — every real occurrence
+      found and fixed, see Completion Notes), `image_env`×4, the five `.env.deploy` literals,
+      `frontend_network`×6 including messages, `WAIT`/`TTL`×3, health-poll bound×1); `name:`/
+      `concurrency:`/the three dispatch inputs `STAY IN THE CALLER` unchanged. Verified by execution
+      (Task 3.6, run early rather than only at the end): `yaml.safe_load` parses both files;
+      **31 `run:` bodies in the callee (30 original + exactly 1 new, the Task 2.3 guard) vs. 30 in
+      the pre-refactor original** — matches exactly; zero `${{` inside any `run:` body (Prohibition
+      5); all 31 pass `bash -n`; per-job step **identity and order**, compared programmatically after
+      stripping only the Task 2.10 history parentheses, **match 100%** except the one deliberate,
+      documented rename (`"Capture crm-dev-network id…"` → `"Capture the frontend network
+      id…"`) — proof that nothing was dropped in transit, not an assertion of it.
+- [x] 1.8 Declare the run budget (§10's table) in the Dev Agent Record before the first push.
+      ✅ **Declared below, before this story's first implementation push** (this commit is that
+      push). Floor: 24, per §10's own table, unchanged.
 
 ### Task 2 — Write the shared definition (AC: 1, 3)
 
-- [ ] 2.1 Create `.forgejo/workflows/deploy-stand.yml`. `on: workflow_call:` and **nothing else** —
+- [x] 2.1 Create `.forgejo/workflows/deploy-stand.yml`. `on: workflow_call:` and **nothing else** —
       no `workflow_dispatch` (that would make it independently dispatchable with no concurrency
       group at all), no `push`, no `schedule`.
-- [ ] 2.2 Declare the typed inputs from §6's table. Every one **required with no default** except
+      ✅ **Done.** `on: workflow_call:` only, confirmed by `yaml.safe_load` (`data[True]` — the
+      well-known PyYAML `on:` → boolean-`True`-key quirk, present identically on the ORIGINAL
+      `deploy-dev.yml` too, so this is a pre-existing parse artefact, not a defect).
+- [x] 2.2 Declare the typed inputs from §6's table. Every one **required with no default** except
       the tuning constants (`lock_wait_seconds` 240, `lock_ttl_seconds` 720,
       `health_timeout_seconds` 120) and `expect_unrouted_api` (default `true`, DEV's behaviour
       today). A missing stand identity must fail closed, exactly as `docker-compose.stand.yml`'s own
       five `${VAR:?…}` guards do.
-- [ ] 2.2a 🚨 **Input TYPES on the `workflow_call` half are a live trap with a catastrophic,
+      ✅ **Done — 15 inputs total** (7 stand-identity, required/no-default: `runner_label`,
+      `compose_project_name`, `container_name`, `frontend_port`, `frontend_network`, `stand_dir`,
+      `image_env`; 2 mutually-exclusive optionals: `ref`, `image_tag`; 3 tuning constants with DEV's
+      own defaults: `lock_wait_seconds`/`lock_ttl_seconds`/`health_timeout_seconds`;
+      `expect_unrouted_api` default `"true"`; plus `simulate_bad_credential`/`hold_lock_seconds`,
+      forwarded unchanged per Prohibition 9 — not in §6's own table, since §6 enumerates the DEV
+      literals that become inputs, not the two regression hooks that already were). A required
+      stand-identity input left empty is Forgejo's own fail-closed (a required `workflow_call` input
+      with no default and nothing supplied is rejected before the job runs), matching the
+      `${VAR:?…}` shape by effect, not by literal syntax reuse.
+- [x] 2.2a 🚨 **Input TYPES on the `workflow_call` half are a live trap with a catastrophic,
       invisible failure mode.** `build.yml:44-51` records it from measurement: `type: choice` is not
       a legal `workflow_call` input type, and declaring it **makes Forgejo reject the whole FILE at
       pre-execution** — no job, no log, the error visible only in
@@ -701,46 +798,122 @@ tag are all inputs
       downgrade `build.yml` already made for `environment` (`choice` → `string`, validated by a
       fail-closed `case` default), it costs nothing, and it removes a whole-file rejection from the
       risk surface. The caller keeps its richer dispatch types unchanged, exactly as `build.yml` does.
-- [ ] 2.11 Map epic AC1's named elements onto the shipped steps and assert coverage explicitly in the
+      ✅ **Applied to all 15 inputs, verified programmatically**: `for k,v in inputs.items(): assert
+      v['type']=='string'` — passes for all 15. `deploy-dev.yml`'s own dispatch-half types
+      (`ref: string`, `simulate_bad_credential: boolean`, `hold_lock_seconds: number`) are unchanged
+      and forwarded as expressions in the caller's own `with:` block, exactly as decided.
+- [x] 2.11 Map epic AC1's named elements onto the shipped steps and assert coverage explicitly in the
       record — *the copy* (obtain `docker-compose.stand.yml` at the deployed ref + write the five
       variables), *`down`*, *fail-fast pull* (resolve digest → pull, nothing torn down until it
       succeeds), *`up -d`*, *parameterized health check* (bounded poll + anchored assert + fallback
       HTTP, all reading identity back from `.env.deploy`), *lock* (acquire/release). ~~Slack~~ is
       excluded by the epic's own 2026-08-14 amendment. An element that cannot be pointed at a step is
       a gap, not a naming difference.
-- [ ] 2.3 🔴 **Fail-closed "exactly one of `ref` / `image_tag`" as the first step of the deploy job.**
+      ✅ **Every element maps to a real step, none missing.** *The copy*: "Obtain
+      docker-compose.stand.yml at the deployed ref" + "Write the stand's five required variables".
+      *Fail-fast pull*: "Resolve the digest before pulling" → "Pull the resolved image — nothing is
+      torn down until this succeeds". *`down`*: "docker compose down" (only after the pull, and only
+      after the acquire step re-confirms the lock). *`up -d`*: "docker compose up -d — the real gate,
+      not docker compose config". *Parameterized health check*: "Poll health status, bounded timeout"
+      (now reads `HEALTH_TIMEOUT_SECONDS` from `inputs.health_timeout_seconds`, was a literal `120`)
+      + "Assert the healthy container is THIS project's, anchored" + "Fallback HTTP check". *Lock*:
+      "Acquire the stand lock" / "Release the stand lock", both now parameterized
+      (`stand_dir`/`compose_project_name`/`lock_wait_seconds`/`lock_ttl_seconds`). No Slack step
+      exists anywhere in either file — confirmed by `git grep -i slack` returning nothing in
+      `deploy-stand.yml`/`deploy-dev.yml`.
+- [x] 2.3 🔴 **Fail-closed "exactly one of `ref` / `image_tag`" as the first step of the deploy job.**
       §6. Both supplied, or neither, is a hard stop with a message naming which caller sent what.
       This is the seam 5.3 needs and the one place a wrong answer is silent.
-- [ ] 2.4 Move the five jobs (`hold-lock`, `preflight`, `clone-test`, `digest-resolve-test`,
+      ✅ **Done, as the deploy job's literal first step** ("Confirm exactly one of ref or image_tag
+      was supplied") — checked via `bash -n`, no `${{` inside. Names which of the two (or both, or
+      neither) was actually supplied in the FAIL message. `digest-resolve-test` (a parallel,
+      non-gating diagnostic that does not `need:` the deploy job) repeats a narrower version of the
+      same check independently, since it cannot rely on the deploy job's own guard having run first.
+- [x] 2.4 Move the five jobs (`hold-lock`, `preflight`, `clone-test`, `digest-resolve-test`,
       `deploy`) with their `needs:` graph intact. 🔴 `deploy` needs `[preflight, clone-test]` and
       **not** `digest-resolve-test` — that was Oleg's decision (DN1, Story 4.3): the diagnostic
       issues the same request with the same credential and re-adding it to `needs:` masks AC4's 404
       and AC7's 401 classifiers behind a sibling job's generic failure.
-- [ ] 2.5 Preserve the canonical step order, which Story 4.4 Task 8.3 fixed by name:
+      ✅ **Confirmed programmatically**: `deploy.needs == ['preflight', 'clone-test']`, unchanged;
+      `clone-test.needs == 'preflight'`; `digest-resolve-test.needs == 'preflight'`; `hold-lock`
+      carries no `needs:` (its own `if:` is the only gate). Byte-identical to the pre-refactor graph.
+- [x] 2.5 Preserve the canonical step order, which Story 4.4 Task 8.3 fixed by name:
       resolve → pull → checkout → write-env → **acquire** → hand-provisioned-guard →
       capture-network → `down` → `up -d` → health → anchored → fallback-HTTP → AC6 → Kong-guard →
       post-deploy-record → **release** → duration → cleanup.
+      ✅ **Confirmed programmatically** (Task 1.7's own per-job step-identity/order comparison,
+      stripping only Task 2.10's history parentheses): every job's own step SEQUENCE matches the
+      pre-refactor original 100%, except the one new step (Task 2.3, inserted at the front of
+      `deploy`, before this canonical sequence begins) and the one deliberate rename ("Capture …
+      network id"). The canonical order itself was never touched.
 - [ ] 2.6 Collapse the **duplicated holder-launch block**: the `docker run -d --init … flock …`
       construction exists twice today (`:295-350` in the fixture, `:1188-1227` in the acquire step)
       with the same constants and the same BusyBox workarounds. One definition. 🔴 Keep `--init`
       (PID 1 swallows `timeout`'s SIGTERM without it — measured) and keep the absence of `--rm`
       (M15: `.State.ExitCode` must survive for diagnosis).
-- [ ] 2.7 Assert Prohibition 8's invariant **in the file**: `lock_ttl_seconds` must exceed the
+      🔴 **PARTIAL, with a real blocker found while implementing it — flagged for Oleg's veto, not
+      silently downgraded.** Attempted a shared external script
+      (`.forgejo/scripts/deploy/launch-lock-holder.sh`, both call sites invoking it) — this is the
+      clean way to get to "one definition" for YAML `run:` bodies. **Blocked**: neither job that
+      launches a holder does ANY git checkout before doing so — `hold-lock` has zero git operations
+      at all (deliberately, so a hold-lock dispatch stays "cheap and fast", its own header comment's
+      own words), and `deploy`'s own checkout (which happens earlier in ITS sequence) fetches the
+      **deployed ref's** own tree, not necessarily the tree the WORKFLOW FILE itself is running from
+      — using it to source a script would read a possibly-different commit's version of the launch
+      logic than the workflow that dispatched it. Adding a checkout to `hold-lock` purely to fetch
+      one script file is a new dependency and a new step on the one job this story's own §1
+      explicitly protects from "tidying," and changes the fixture's own timing/cost profile — a
+      structural change beyond "collapse a duplicated block." A YAML anchor/alias (block-scalar
+      reuse purely at the YAML-parse level, no checkout needed) was considered and does not apply
+      here either: `run: |` bodies are opaque block scalars once written, and YAML anchors cannot
+      splice a fragment into the MIDDLE of a larger block scalar — only whole nodes are shareable.
+      **What was done instead**: both launch blocks now reference the IDENTICAL shell variable names
+      (`$STAND_DIR`, `$SELF_IMAGE`, `$HOLDER`, `$TTL`) drawn from each site's own `env:`, so the two
+      blocks' own YAML source is now maximally parallel and any future edit to one is easy to mirror
+      onto the other by inspection — this does not eliminate the duplication, it makes the drift risk
+      the checkbox is really worried about (the two copies silently diverging) much easier to catch
+      in review, which is a real but partial answer. `--init` and no-`--rm` preserved verbatim at
+      both sites. **Recorded as a genuine open item, not closed**: full collapse to one definition
+      needs either a checkout `hold-lock` does not otherwise want, or a different mechanism this
+      story's own Prohibition 6 (`uses:` does not execute) already rules out. Routed to Story 4.9's
+      own review or a future story that revisits `hold-lock`'s own cost/timing budget.
+- [x] 2.7 Assert Prohibition 8's invariant **in the file**: `lock_ttl_seconds` must exceed the
       deploy job's own timeout. Today that is `720 > 600` and it holds only because nobody asserted
       it. Now that both are configurable, assert it and fail closed.
-- [ ] 2.8 🔴 **No `concurrency:` block in the callee**, with a comment block explaining that one
+      ✅ **Done**, in the acquire step, before the holder launches: `if [ "$TTL" -le 600 ]; then FAIL
+      naming both values and Prohibition 8's own reasoning; exit 1; fi`. `timeout-minutes: 10` on the
+      `deploy` job itself stays a literal (not parameterized — §6 does not list it as an input), so
+      `600` is a correct fixed bound to assert against. Verified live on s1 (zero dispatch cost):
+      simulated `TTL="720"` → assertion passes; `TTL="500"` → assertion correctly fails.
+- [x] 2.8 🔴 **No `concurrency:` block in the callee**, with a comment block explaining that one
       would be silently void (D21) and that the group lives in every caller.
-- [ ] 2.9 Keep `IMAGE_REPO` as the callee's workflow-level `env:` (§6). One registry, all stands.
-- [ ] 2.10 Header comment block: the mechanism, the D21 caller-owns-concurrency rule, the
+      ✅ **Confirmed**: `deploy-stand.yml` has no top-level `concurrency:` key at all (checked via
+      `'concurrency' not in data`); the header comment block explains why (D21, the caller-owns-
+      concurrency rule) immediately above `jobs:`.
+- [x] 2.9 Keep `IMAGE_REPO` as the callee's workflow-level `env:` (§6). One registry, all stands.
+      ✅ **Unchanged**: `env: {IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex}` at the callee's own
+      workflow level, identical value to the pre-refactor file. Not an input.
+- [x] 2.10 Header comment block: the mechanism, the D21 caller-owns-concurrency rule, the
       `uses:`-does-not-execute rule, the `${{ }}` rule, the M1 TTL invariant, and §5's
       dispatch-chain rejection. ⚠️ **History belongs in comments, not in job names** — Story 4.3's
       L12 warned that 4.8 would inherit job names carrying run numbers and story tasks. Strip
       story/run references from `name:` fields as they move; keep them in comments. This is the one
       "tidying" §1 explicitly permits, because the names become permanent across three environments.
+      ✅ **Header written**, covering all six named topics plus the two-shapes-of-what-to-deploy
+      contract and the input-type decision. **25 step `name:` fields + 2 job `name:` fields** had
+      their `(Task X.Y…)`/`(code review …)`/`(AC…)`/`(Story 4…)`/`(DN…)` parenthetical history
+      stripped (regex-driven, applied uniformly, not by hand per-line — auditable list in Debug Log
+      References); the history itself was never deleted, only moved to where it already lived
+      alongside the step (every stripped step already carries its own explanatory comment in the
+      `run:` body). Two names also needed a FUNCTIONAL rename, not just history-stripping, since they
+      named DEV specifically: the `deploy` job's own `name:` ("Deploy a ref to the DEV stand" →
+      "Deploy a ref or image tag to the stand") and one step ("Capture crm-dev-network id…" →
+      "Capture the frontend network id…") — both would have been actively misleading for a
+      PRE-PROD/PROD caller otherwise.
 
 ### Task 3 — Refactor `deploy-dev.yml` into a thin caller (AC: 3, 4)
 
-- [ ] 3.1 Reduce it to: `name: Deploy DEV Stand` (unchanged), its three `workflow_dispatch` inputs
+- [x] 3.1 Reduce it to: `name: Deploy DEV Stand` (unchanged), its three `workflow_dispatch` inputs
       (unchanged names and types), its literal `concurrency:` block (unchanged), and one job with
       `uses: ./.forgejo/workflows/deploy-stand.yml`, `with:` the DEV values, `secrets: inherit`.
       🔴 **All three dispatch inputs are forwarded**, not just `ref`: `simulate_bad_credential` and
@@ -750,44 +923,113 @@ tag are all inputs
       value is what the callee's own validator expects, because `hold_lock_seconds`'s gate is
       `> 0` and Story 4.6's H5 finding was precisely that *"a value falling between two gates
       produces a green run that deploys nothing."*
-- [ ] 3.2 🔴 Verify §9's three invariants by inspection and say so in the record: file name,
+      ✅ **Done.** `name: Deploy DEV Stand` unchanged; all three dispatch inputs (`ref`,
+      `simulate_bad_credential` type boolean, `hold_lock_seconds` type number) unchanged
+      byte-for-byte; `concurrency:` block unchanged (`deploy-dev-fe-prionex-dev`, `cancel-in-progress:
+      false`); one job, `uses: ./.forgejo/workflows/deploy-stand.yml`, `with:` all 14 DEV values
+      (7 stand-identity + `ref` + 3 tuning constants at DEV's own defaults, explicit not implicit +
+      `expect_unrouted_api: "true"` + both forwarded regression hooks), `secrets: inherit`. The
+      `hold_lock_seconds`/`simulate_bad_credential` rendered-value question (H5's own precedent) is
+      **not yet closed** — it needs a live dispatch (Task 6.1/6.3), named here as still open rather
+      than assumed safe because the forwarding pattern is structurally sound.
+- [x] 3.2 🔴 Verify §9's three invariants by inspection and say so in the record: file name,
       workflow `name:`, and the `ref` input's name/type/required-ness. The weekly reset depends on
       all three and would fail silently.
-- [ ] 3.3 ⚠️ `secrets: inherit` is all-or-nothing (`on.workflow_call.secrets` is rejected by the
+      ✅ **All three hold, verified by direct inspection of the file as committed.** (1) File name:
+      `.forgejo/workflows/deploy-dev.yml`, unchanged path. (2) Workflow `name:`: `Deploy DEV Stand`,
+      unchanged string. (3) `ref` input: name `ref`, `type: string`, `required: true` — unchanged.
+      `dev-reset.yml` itself was never opened for this story (Prohibition 2) — verified from
+      `deploy-dev.yml`'s own side only, matching the subtask's own "by inspection" instruction.
+- [x] 3.3 ⚠️ `secrets: inherit` is all-or-nothing (`on.workflow_call.secrets` is rejected by the
       parser and repo secrets are not ambient in a callee — D21). The callee therefore receives
       every org secret including `REGISTRY_TOKEN_RW` and the OpenBao credentials. It references
       only `REGISTRY_USER_RO` / `REGISTRY_TOKEN_RO`. **State this explicitly in the header, and flag
       it for Story 6.4**, where a production caller inherits production credentials on every DEV-shaped
       code path.
-- [ ] 3.4 ⚠️ D21: a `uses:` job's `if:` is copied DOWN into the expanded callee and re-evaluated
+      ✅ **Stated in `deploy-stand.yml`'s own header** ("Registry auth, credential handling" section)
+      and flagged explicitly for Story 6.4, plus recorded as Open Question 2 for Oleg — a production
+      caller inheriting production credentials into a definition that also serves DEV is a different
+      posture question than the one already accepted for DEV/PRE-PROD's own read-only registry pull.
+- [x] 3.4 ⚠️ D21: a `uses:` job's `if:` is copied DOWN into the expanded callee and re-evaluated
       there, where `github.event_name` is `workflow_call`. **Do not put an `if:` on the caller's
       `uses:` job.** The `hold_lock_seconds` gating lives inside the callee, on the callee's own
       jobs, where `inputs` are in scope.
-- [ ] 3.5 ⚠️ `${{ github.ref_name }}` in a caller's `with:` reaches the callee **empty** (D21, run
+      ✅ **Confirmed by direct inspection**: `'if' not in data['jobs']['deploy']` — the caller's own
+      `deploy` job carries no `if:` key at all. `hold_lock_seconds` gating lives entirely inside the
+      callee's own `hold-lock`/`preflight` jobs (`if: ${{ inputs.hold_lock_seconds > 0 }}` and its
+      complement), unchanged from the pre-refactor file, now referring to the CALLEE's own declared
+      input.
+- [x] 3.5 ⚠️ `${{ github.ref_name }}` in a caller's `with:` reaches the callee **empty** (D21, run
       632). If the caller needs to pass a branch, derive it in bash from `GITHUB_REF` — never
       through `with:`.
-- [ ] 3.6 Verify by execution before pushing: `yaml.safe_load` both files, extract every `run:`
+      ✅ **Does not apply — `deploy-dev.yml`'s own `with:` block never references `github.ref_name`
+      anywhere.** `ref` is forwarded as `${{ inputs.ref }}` (the DISPATCH input, not a `github.*`
+      context value) — the exact class of expression D21 measured as working. Named here as verified
+      rather than silently assumed safe because it happens not to apply.
+- [x] 3.6 Verify by execution before pushing: `yaml.safe_load` both files, extract every `run:`
       body, scan for `${{`, `bash -n` each one. Report the counts (`deploy-dev.yml` had 30 clean
       bodies at baseline).
-- [ ] 3.7 `git diff origin/main --name-only` — confirm nothing under `.github/`,
+      ✅ **Both files parse clean.** `deploy-stand.yml`: 31 `run:` bodies (30 moved + 1 new, Task
+      2.3), zero `${{` inside any, all 31 pass `bash -n`. `deploy-dev.yml` (the reduced caller): 0
+      `run:` bodies (it is now purely declarative — `on:`/`concurrency:`/one `uses:` job), so there
+      is nothing left to scan for `${{`-in-`run:` — the entire class of risk Prohibition 5 names is
+      structurally absent from the caller now, not merely checked and found clean.
+- [x] 3.7 `git diff origin/main --name-only` — confirm nothing under `.github/`,
       `docker-compose.server.yml` or `dev-reset.yml` is touched (NFR5/D7, Prohibitions 2 and 10).
+      ✅ **Confirmed.** `git diff origin/main --name-only` returns exactly four paths:
+      `.forgejo/workflows/deploy-dev.yml` (modified), `.forgejo/workflows/deploy-stand.yml` (new),
+      this story file, `sprint-status.yaml`. Nothing under `.github/`, no
+      `docker-compose.server.yml`, no `dev-reset.yml`, no `ci.yml`/`build.yml`/`build-main.yml`.
 
 ### Task 4 — Prove the primitive locally, at zero dispatch cost (AC: 4)
 
 - [ ] 4.1 On s1, re-run Story 4.4's lock primitive tests against the **moved** holder block: acquire,
       release, two genuinely simultaneous processes, the TTL-bounded orphan, and the forced-failure
       paths. Same tests, new code location.
-- [ ] 4.2 Render the callee's `.env.deploy` writer with DEV's inputs by hand and diff it byte-for-byte
+      🔴 **PARTIAL, honestly — the load-bearing NEW logic tested directly on s1, the full Story 4.4
+      suite (two genuinely simultaneous processes, the TTL-bounded orphan, the forced-failure paths)
+      not re-run.** What changed in this refactor, specifically, is what got tested: HOLDER
+      derivation now reads `${COMPOSE_PROJECT_NAME}-deploy-lock-${GITHUB_RUN_ID}` instead of a
+      literal — confirmed on s1 with DEV's own value, produces the byte-identical string the
+      pre-refactor literal always did (`fe-prionex-dev-deploy-lock-999999`). The new Prohibition 8
+      TTL assertion — confirmed on s1: `TTL="720"` passes, `TTL="500"` correctly fails. The
+      `stand_dir` mount now reads `-v "${STAND_DIR}:/lockdir"` from an input instead of a literal —
+      confirmed live against the REAL stand directory on s1, correctly finds
+      `docker-compose.stand.yml` through the parameterized mount. **Not re-tested**: two genuinely
+      simultaneous holder processes, a TTL-bounded orphan actually expiring, and the forced-failure
+      paths (unwritable lockdir, missing `flock`/`timeout`) — these exercise the acquire/poll LOOP
+      logic, which this refactor did not touch (only the launch invocation's own variable sources
+      changed, per Task 2.6's own honest partial). Routed to Task 6.6's own live dispatch (the WAIT
+      row) as the actual re-earning of the full primitive, matching this story's own retro-E5
+      posture — a refactor ships the same guards on a new path, and the path is what needs exercising.
+- [x] 4.2 Render the callee's `.env.deploy` writer with DEV's inputs by hand and diff it byte-for-byte
       against `deploy-dev.yml`'s baseline output. Any difference is a defect, not a style choice.
-- [ ] 4.3 🔴 Do not use `docker compose config` as a proof of anything. It renders exit 0 against a
+      ✅ **Byte-identical.** Rendered the new template
+      (`COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}` etc.) with DEV's own four `with:` values
+      (`fe-prionex-dev` / `fe-prionex-dev` / `127.0.0.1:8082` / `crm-dev-network`) and diffed against
+      the pre-refactor literal heredoc — identical, character for character.
+- [x] 4.3 🔴 Do not use `docker compose config` as a proof of anything. It renders exit 0 against a
       network that does not exist; only `up` refuses (Story 4.1, matrix row 7 —
       `deferred-work.md:2409-2422`, which names this story as an owner precisely so it is not
       reached for here).
-- [ ] 4.4 Verify the ref→tag sanitizer moved byte-identically: `sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100`,
+      ✅ **Not used anywhere in this story's own verification** — every check above used either a
+      direct `psql`/DB read, a real `docker network inspect`/`docker run` against s1, or static
+      YAML/shell analysis (`yaml.safe_load`, `bash -n`). `docker compose config` was never invoked.
+- [x] 4.4 Verify the ref→tag sanitizer moved byte-identically: `sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100`,
       plus the bare-SHA → `sha-<12hex>-<env>` branch. `build.yml` exposes no `outputs:`, so a drift
       here produces a tag that does not exist and a 404 that blames the registry.
+      ✅ **Confirmed identical**: the exact pattern `sed -E 's/[^a-zA-Z0-9._-]+/-/g' | cut -c1-100`
+      is present in `deploy-stand.yml`'s own `tag` step (both the `deploy` job's copy and
+      `digest-resolve-test`'s own independent copy) and in `build.yml`, byte-for-byte, checked by
+      substring match after `yaml.safe_load`. The bare-SHA branch (`sha-<12hex>-${IMAGE_ENV}`,
+      formerly `sha-<12hex>-dev`) moved unchanged in shape, generalized only in its env suffix.
 - [ ] 4.5 Remove the target image from s1 by digest before Task 6.1's dispatch, so that dispatch
       measures a **cold** pull (H3, §8). `docker rmi` by explicit id. **Never** `docker image prune`.
+      **Not yet done — deliberately sequenced immediately before Task 6.1's own dispatch**, not
+      before this push, so the image stays absent for the minimum time (an image absent on s1 for
+      longer than necessary is itself a small, avoidable risk if anything else on this
+      multi-tenant host needed it in between). Handed to the coordinator's own dispatch sequence
+      as the first action, ahead of the Task 6.1 dispatch itself.
 
 ### Task 5 — Push, open the PR, and land the factoring (AC: 1, 3)
 
@@ -1236,11 +1478,59 @@ anything under `.github/` · anything on `story-4-5/pr-1-context`.
 
 ### Agent Model Used
 
+Claude Sonnet 5, dev-story cycle, per Oleg's standing model split (create-story Opus, dev-story
+Sonnet, code-review Opus). Division of labor per the coordinator's own standing instruction: DB
+queries (direct read-only Postgres via SSH to s1), SSH, git, docker-simulations, and the YAML
+authoring are this session's own; Forgejo API dispatches, PR open/merge, and closing the run ledger
+by post-merge query are the coordinator's.
+
 ### Debug Log References
+
+**R1 investigated by binary/source inspection, zero dispatch cost (Task 1.2).** Full method and
+citations recorded at Task 1.2's own checkbox, above — copied the real Forgejo binary off the
+`forgejo` container on s1 (`docker cp forgejo:/app/gitea/gitea`, the `/usr/local/bin/gitea` entry is
+a 581-byte bash wrapper, not the binary itself), extracted printable strings, found the vendored
+`code.forgejo.org/forgejo/runner/v12/act/jobparser` package compiled into the server, then
+cross-referenced the exact `newInterpreter(...)` call used for `runs-on` evaluation against the
+matching public source (`code.forgejo.org/forgejo/runner`, tags `v12.13.0`/`v12.13.1`) — `pc.inputs`
+is explicitly the interpreter's 7th argument in both. Positive: `runs-on: ${{ inputs.runner_label }}`
+is expected to work, confirmed live at Task 6.1.
+
+**Task 2.6 (holder-launch collapse) found a real structural blocker mid-implementation, recorded
+honestly as a partial rather than forced to a false "done."** See the checkbox itself for the full
+reasoning: neither job that launches a holder does a git checkout before doing so, and adding one
+purely to source a shared script would be a new dependency on the one job (`hold-lock`) this story's
+own §1 explicitly protects from tidying. Not silently downgraded — flagged for Oleg's veto, routed
+onward.
+
+**§6's own table undercounted the holder-prefix literal's real occurrence count.** Table says
+"×3 sites"; direct `grep` before editing found 6 `HOLDER="fe-prionex-dev-deploy-lock-…"` assignment
+sites plus 1 scan-filter site (7 total). All 7 found and fixed — Task 1.7's own step inventory is
+what caught the undercount, exactly the role that subtask exists to play.
+
+**A genuine new finding, not anticipated by this story's own context: the compose-file checkout
+needs SOME ref even in `image_tag`-only mode.** Neither the epic nor this story's own §6 discussion
+of "two shapes of what to deploy" addresses what ref `docker-compose.stand.yml` is obtained from
+when a caller supplies `image_tag` instead of `ref` (Story 5.3's own shape). Resolved autonomously,
+flagged for Oleg's veto: fall back to `github.sha` (the CALLING workflow's own commit) in that mode
+only — the `ref`-based path (DEV's own, unchanged) is untouched. Needs live verification at Task 6,
+same posture as R1. See the "Obtain docker-compose.stand.yml" step's own comment in
+`deploy-stand.yml` and Open Questions, below.
 
 ### Run Budget Ledger
 
-**Declared before work (§10). Baseline: to be obtained by query in Task 1.1 — do not estimate it.**
+**Declared 2026-08-22, before the first implementation push (this commit is that push), per §10's
+own table — a floor, not a ceiling.**
+
+**Baseline (Task 1.1): instance-wide `action_run.id` = 1129**, read via `docker exec
+forgejo-postgres psql -U forgejo -d forgejo -c "select max(id) from action_run where repo_id=16;"`
+over SSH to `root@10.67.0.1` (confirmed, Story 4.7 Task 1.3, to be s1 itself). Run 1129 is this
+story's own context-branch `ci.yml` run (commit `1ba38002`, predates this dev-story session) and is
+booked on the declared table's own "Context branch push" line, not counted toward above-baseline
+spend — everything with `id > 1129` belongs to this story's own dispatch/push spend. Per DN4 (Story
+4.7's own review finding), this declaration explicitly separates "dev-agent write-up pushes on the
+work branch" as its own repeating line (§10's own table already does this, priced at 4) — the note
+is carried forward here as confirmation the template lesson was applied, not merely cited.
 
 | Line | Runs |
 |---|---|
@@ -1264,7 +1554,56 @@ anything under `.github/` · anything on `story-4-5/pr-1-context`.
 
 ### Completion Notes List
 
+**Progress note, mid-story (Tasks 1-4 done, Task 5 next): pushing now to hand Task 6's dispatch
+sequence to the coordinator, per this project's own established division of labor.** Tasks 7-10
+(rollback, the two measurement debts, the forward contract, D33/deferred-work/epics amendments) are
+sequenced explicitly AFTER Task 6 is green (§7's own instruction — do not start the rollback until
+the factoring itself is proven) and will follow in a subsequent round once the coordinator's own
+dispatches land.
+
+**1. R1 (§4) answered positively at zero dispatch cost — `runner_label` is a direct input, no
+fallback rung needed.** Binary inspection + matching public source cross-reference (Task 1.2, full
+method in Debug Log References); confirmation deferred to Task 6.1's first real dispatch, exactly as
+the story's own instruction asks ("the first real dispatch confirms it for free").
+
+**2. The refactor is mechanically verified, not merely reviewed by eye.** `yaml.safe_load` parses
+both files; the callee's 31 `run:` bodies (30 moved + 1 new) all pass `bash -n` and carry zero `${{`
+(Prohibition 5); per-job step identity and order match the pre-refactor original 100% except two
+deliberate, documented renames — proven programmatically (Task 1.7/3.6), not asserted.
+
+**3. Two genuine new findings surfaced by trying to implement the story's own instructions exactly,
+both flagged for Oleg's veto rather than silently resolved:** (a) Task 2.6's holder-launch collapse
+is blocked by `hold-lock`'s own deliberate zero-checkout design — partial closure, full reasoning at
+the checkbox; (b) the compose-file checkout needs a fallback ref in `image_tag`-only mode, not
+anticipated by §6's own "two shapes" discussion — resolved via `github.sha`, needs live verification.
+
+**4. §6's own parameterization table undercounted the holder-prefix literal (said ×3, actual ×7
+sites) — found and fixed by the same step-inventory discipline Task 1.7 exists to enforce**, not
+missed. Recorded so a future reader trusts the fix, not the estimate.
+
+**5. Task 1.6 found a live discrepancy with Story 4.4's own record** (a claimed "four labels" on the
+deploy runner; the DB shows one) — named honestly, not silently re-asserted, and confirmed
+non-blocking for this story's own purposes.
+
 ### File List
+
+**Modified:**
+- `.forgejo/workflows/deploy-dev.yml` — reduced from 1875 lines to a thin caller (~100 lines): its
+  own name, its own three dispatch inputs, its own literal `concurrency:` block, one job (`uses: ./
+  .forgejo/workflows/deploy-stand.yml`, `with:` DEV's own 14 values, `secrets: inherit`). Nothing
+  under `.github/`, no `docker-compose.server.yml`, `dev-reset.yml` untouched (Prohibitions 1/2/10).
+- `_bmad-output/implementation-artifacts/4-8-factor-out-the-shared-deploy-mechanics.md` — this file:
+  Tasks 1-4 checked (Task 2.6/4.1 honest partials), Run Budget Ledger declared, Debug Log
+  References, Completion Notes List (this section), this File List.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status `ready-for-dev` → `in-progress`.
+
+**New:**
+- `.forgejo/workflows/deploy-stand.yml` — the shared `workflow_call` callee (~1944 lines): 5 jobs
+  (`hold-lock`, `preflight`, `clone-test`, `digest-resolve-test`, `deploy`) moved with their `needs:`
+  graph intact, 15 typed (all `type: string`) inputs, no `concurrency:` block, `IMAGE_REPO` as
+  workflow-level `env:`, the Task 2.3 "exactly one of ref/image_tag" guard as `deploy`'s own first
+  step, Prohibition 8's TTL assertion, the `expect_unrouted_api`-gated Kong guard branch, and the
+  `github.sha` checkout fallback for `image_tag`-only mode.
 
 ### Review Findings
 
@@ -1278,12 +1617,12 @@ _(none identified at context time)_
 
 ### Non-blocking
 
-1. **R1 may make epic AC3's "deploy-runner label is an input" literally unsatisfiable, and the
-   fallback that preserves the AC's *intent* is uglier than the one that preserves its letter.**
-   §4's rungs (b) and (c) both satisfy "no environment-specific value is embedded" while making the
-   label something other than a plain input. If R1 is negative, whoever reviews should decide
-   whether to amend AC3's wording or accept a rung that reads as a workaround. **Owner: Oleg, on
-   Task 1.2's answer.**
+1. 🔴 **UPDATED — R1 came back POSITIVE, this item's own context-time worry did not materialize.**
+   Binary/source inspection (Task 1.2) found `pc.inputs` explicitly present in the exact interpreter
+   construction Forgejo's own vendored `act/jobparser` uses to evaluate `runs-on` — `runner_label` is
+   a direct input, §4's ladder never needed to be descended. Not fully closed until Task 6.1's first
+   live dispatch confirms it (this session cannot dispatch), but the read-only evidence is strong and
+   unambiguous. **Owner: the coordinator, confirming at Task 6.1.**
 2. **`secrets: inherit` hands the shared callee every org secret, including `REGISTRY_TOKEN_RW`
    (org-scope `write:package` over 87 packages, including another team's production) and the
    OpenBao credentials.** D21 flagged this for this story by name. It is not a regression today —
@@ -1304,3 +1643,27 @@ _(none identified at context time)_
    If anyone disagrees with closing it rather than leaving it open, the only way to settle it is a
    disposable capacity-≥2 probe runner — which is exactly what Story 1.3 did (D8) and is a
    provisioning task, not a workflow one. **Owner: Oleg, if the negative closure is unacceptable.**
+6. 🔴 **NEW — Task 2.6's holder-launch collapse is only partial, and a real blocker, not a
+   convenience, is why.** Neither job that launches a lock holder does a git checkout before doing
+   so; `hold-lock` deliberately has none at all (kept cheap and fast, its own header's own words).
+   Collapsing the two `docker run -d --init … flock …` constructions into one shared definition needs
+   either a checkout `hold-lock` does not otherwise want, or a mechanism (a composite action) this
+   story's own Prohibition 6 already rules out (`uses:` steps do not execute on this runner's job
+   image). What was done instead: both sites now reference identical shell variable names, making
+   drift easy to catch in review but not eliminating it. **Owner: Oleg — accept the partial, or name
+   a different resolution** (e.g. accept a small checkout cost on `hold-lock` too, revisiting its own
+   "cheap and fast" framing).
+7. 🔴 **NEW — the compose-file checkout needs a ref even in `image_tag`-only mode, and this story's
+   own resolution is unverified.** Neither the epic nor this story's own §6 anticipated that
+   `docker-compose.stand.yml` still needs SOME commit to check out when a caller supplies `image_tag`
+   instead of `ref` (Story 5.3's own required shape). Resolved autonomously: fall back to
+   `github.sha` (the calling workflow's own commit) in that mode only. This cannot be verified from
+   this session — DEV's own caller always supplies `ref`, never `image_tag`, so this path is
+   genuinely untested until Story 5.3's own caller exists and dispatches. **Owner: Oleg now (does the
+   resolution make sense), Story 5.3 later (first live exercise of this exact path).**
+8. **Story 4.4's own record claims "the deploy runner has four labels"; direct query shows one**
+   (`action_runner.agent_labels = ["deploy-dev-preprod"]`, id 14, matching `config.yml`'s own single
+   `labels:` entry). Not blocking this story (`deploy-dev-preprod` itself is present and unchanged
+   either way), but a factual drift from a prior story's own record, worth a look independent of
+   this story's own scope. **Owner: whoever next touches Story 4.4's own record, or dismisses this as
+   the intended reading all along.**
