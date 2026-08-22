@@ -476,7 +476,20 @@ development_status:
   # expanded to verify all 13 prohibitions explicitly. M2-M14/L1-L14 addressed to the extent each
   # was a wording/attribution fix (M3, M4, M5, M8, M9, M10, M11 and most of L1-L14) or routed as a
   # new deferred-work.md finding with a named owner (M7). Status returned to `review`.
-  4-7-validate-dev-deploys-across-five-feature-branches: review
+  # ✅ Closeout 2026-08-22: PR #70 merged (fe2891e0, build-main run 1125, SUCCESS) — the same merge
+  # re-registered action_schedule (id 44/spec 45, next=2026-08-23 02:00 UTC unchanged, prev=epoch,
+  # not yet fired — H6's window still targets the right value). Task 10.1's ledger CLOSED against
+  # the post-merge query, per retro-D4, not self-reported: pr-1-context's own above-baseline spend
+  # is 20 (ids 1106-1125), +4 over its own 16-line scope, entirely the unbudgeted story-branch-push
+  # category (DN4) — every other declared line landed exactly as budgeted. Grand total across both
+  # branches (pr-1-context + this pr-2-ledger-closeout, once its own PR opens/merges) projects to
+  # ≈23 against the declared floor of 20. Five validation branches re-confirmed present, unmerged,
+  # untouched on origin — deletion stays Story 4.9's cutover chore, per the story's own Task 10.5,
+  # not touched here. A separate same-day event: the coordinator's own "Sunday 02:00 UTC tick
+  # silently failed" alarm was investigated and found to be a calendar error (still Saturday,
+  # 06:56 UTC, confirmed via `date -u` on s1) — nothing broken, no amendment to D31/4.6 needed, real
+  # check is tomorrow after 02:00:44 UTC. Status done.
+  4-7-validate-dev-deploys-across-five-feature-branches: done
   4-8-factor-out-the-shared-deploy-mechanics: backlog
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional

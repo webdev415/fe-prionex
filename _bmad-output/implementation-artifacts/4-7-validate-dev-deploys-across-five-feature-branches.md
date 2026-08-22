@@ -4,7 +4,7 @@ baseline_commit: 0d4b6dfc1fc86f00104755455f0ba4cec3dab0d2
 
 # Story 4.7: Validate DEV Deploys Across Five Feature Branches
 
-Status: review
+Status: done
 
 <!--
 Contexted 2026-08-21 against `main` at `0d4b6dfc` (merge of PR #69, Story 4.6 closeout), on branch
@@ -1649,30 +1649,60 @@ ownership resolution.
 
 ### Task 10 — Close (AC: all)
 
-- [ ] 10.1 Re-run the ledger query **after the merge commit lands** and reconcile: declared floor 20
+- [x] 10.1 Re-run the ledger query **after the merge commit lands** and reconcile: declared floor 20
       vs. actual, itemized **by phase**, plus `count(*)` and `max(index)` moving by exactly the same
       amount so no hidden run is possible. Name any overrun and its cause; do not round it away.
       **A ledger closed at PR-open is not closed.** If the query cannot be run, close it with the
       literal word **OPEN**.
-      🔴 **OPEN, by the story's own literal rule — cannot close before the merge commit lands.**
-      🟡 **Corrected post-review (H1/H2, 2026-08-22): the interim count is 17 above baseline, not 9,
-      and this row was previously written in a way that read as settled rather than open** (the
-      *"Spent so far: 9 of the declared 20"* language, and the sprint-status/D32 echoes of it, all
-      dropped runs 1111/1116 and treated Phase C as still-future after it had already completed).
-      **Full itemization by category, run ids, and the projected overrun are in the Run Budget
-      Ledger above, rebuilt by direct `psql` query.** This row remains genuinely OPEN — the
-      projection (≈22 against a floor of 20) is this session's own arithmetic, not a query re-run
-      after merge, and retro-D4 is explicit that a self-reported number does not close a ledger. The
-      coordinator's own explicit commitment stands: the final query, re-run after merge (and, per
-      H6, after re-reading `action_schedule`/`action_schedule_spec` for any re-registration the
-      merge itself causes), is theirs to close this row with.
+      ✅ **CLOSED 2026-08-22 — PR #70 merged as `fe2891e0` (`build-main.yml` run 1125, SUCCESS),
+      query re-run after the merge commit landed, per the coordinator's own commitment.**
+      `select id, index, workflow_id, ref, event, commit_sha, status, created from action_run where
+      repo_id=16 and id>=1105 order by id;` returns 21 rows, `id` 1105-1125 with zero gaps;
+      `count(*)=399=max(index)` for `repo_id=16`, confirmed both move together — no hidden run is
+      possible. **Above-baseline spend (1106-1125, `id > 1105`): 20**, exactly matching the
+      pre-closeout projection's lower bound, itemized by phase:
+
+      | Phase | Run ids | Count | Budgeted? |
+      |---|---|---|---|
+      | Five validation-branch pushes (Task 3) | 1106-1110 | 5 | Yes |
+      | 🔴 Story-branch push #1 (after Phase A/B write-up, `5566dab5`) | 1111 | 1 | No — DN4 |
+      | AC4 missing-image dispatch (Task 5) | 1112 | 1 | Yes |
+      | AC5/DF2 probe D1/D2/D3 (Task 6) | 1113-1115 | 3 | Yes |
+      | 🔴 Story-branch push #2 (after Phase C write-up, `f3f992e8`) | 1116 | 1 | No — DN4 |
+      | Five deploy dispatches (Task 4) | 1117-1121 | 5 | Yes |
+      | 🔴 Story-branch push #3 ("ready for review", `4813a232`) | 1122 | 1 | No — DN4 |
+      | 🔴 Story-branch push #4 (code-review fix-pass, `bb98b839`) | 1123 | 1 | No — DN4 |
+      | Context PR opened (`pull_request` trigger, PR #70) | 1124 | 1 | Yes |
+      | Context PR merged (`build-main.yml`, `fe2891e0`) | 1125 | 1 | Yes |
+      | **Total, `pr-1-context` branch** | | **20** | 14 budgeted + **6 unbudgeted** |
+
+      **Overrun, named plainly, not rounded away: 20 actual vs. 19 declared above-baseline for the
+      `pr-1-context` branch alone** (the declared floor's 9 non-context lines sum to 19: context
+      PR-open 1 + context PR-merge 1 + five validation pushes 5 + five deploys 5 + AC4 1 + probe 3 +
+      closeout-branch-push 1 + closeout-PR-open 1 + closeout-PR-merge 1 — but the LAST three of
+      those nine belong to the SEPARATE `pr-2-ledger-closeout` branch this same story is closing out
+      on, not to `pr-1-context`, so the true like-for-like comparison is 20 actual against 16
+      declared for `pr-1-context`'s own scope: **+4 overrun, entirely the story-branch-push
+      category** (4 actual pushes — 1111/1116/1122/1123 — against zero dedicated budget line; the
+      single "closeout branch push" line was written for a DIFFERENT, later branch, per DN4). This
+      branch's own closeout (`pr-2-ledger-closeout`) adds one more push (this commit) plus, later,
+      one PR-open and one PR-merge — see the Run Budget Ledger's own final total, below, for the
+      story's grand total across both branches. 🟢 **`action_schedule`/`action_schedule_spec`
+      re-read after the merge, per H6's own instruction**: the SAME merge that closed this ledger
+      (`fe2891e0`, run 1125) also re-registered the schedule — `action_schedule.id` advanced to
+      **44**, `action_schedule_spec.id` to **45**, `next` recomputed to **2026-08-23 02:00:00 UTC**
+      (unchanged target — the cron itself, `0 2 * * 0`, was never touched), `prev` still epoch
+      (never yet fired under this row). No drift beyond the expected re-registration; H6's own
+      no-touch window (2026-08-23 01:45-02:30 UTC) still targets the correct, currently-armed value.
 - [x] 10.2 List the Sunday-reset runs separately if they fell inside the id range — counted, but on
       their own labelled line (§12 rule 4).
-      ✅ **Does not apply — the Sunday 2026-08-23 02:00 UTC window has not occurred yet** (this
-      story's own work finished well before Saturday 20:00 UTC, per §12 rule 3). No reset-generated
-      run exists inside this story's own id range as of this writing. If the window is later found to
-      have landed inside this story's own id range for any reason, this line will need revisiting at
-      closeout — noted here so it is not silently missed.
+      ✅ **Confirmed still not applicable at closeout (2026-08-22, before the window).** Re-checked
+      against the same query that closed Task 10.1: `action_run` for `repo_id=16` contains no row
+      with `trigger_event='schedule'` after Friday's five Story-4.6 probe firings — the Sunday
+      2026-08-23 02:00 UTC window has genuinely not occurred yet (independently confirmed via `date
+      -u` on s1 during the coordinator's own premature Sunday-check investigation, see Debug Log
+      References). No reset-generated run exists inside this story's own id range. This line closes
+      clean, not merely "not yet observed."
 - [x] 10.3 🟡 **Expanded post-review (M6, 2026-08-22) from Prohibitions 1-5 to all 13.** Confirm every
       numbered Prohibition held by execution, not by intention.
       ✅ **Re-run at closeout, against the CURRENT diff (M8's own correction below), all 13 checked
@@ -1732,6 +1762,10 @@ ownership resolution.
       `origin`, none merged (Epic 4's own premise). Deletion handed to Story 4.9's cutover as a
       one-line chore; their `-dev` image tags expire on their own at 14 days (not in
       `keep_pattern`) — no registry cleanup needed or permitted by this story.
+      🟢 **Re-confirmed at closeout (2026-08-22) — no change.** All five branches still present on
+      `origin` (`git ls-remote --heads origin` re-checked from `pr-2-ledger-closeout`), still
+      unmerged, still untouched. Disposition unchanged: deletion stays Story 4.9's cutover chore,
+      not this closeout's.
 - [x] 10.6 Fill `### Open Questions for Review`, split **Blocking** / **Non-blocking**, each item
       opening with a bold claim sentence and naming its owner inline.
       ✅ **Filled below**, replacing the pre-written placeholder text.
@@ -2096,6 +2130,19 @@ point; every subsequent registry/token operation in this story follows the safe 
 Reported to the coordinator live, who relayed it for **Oleg's own call on whether `fe_reg_4_2`
 warrants rotation** — not this story's decision, and not blocking (accepted in writing per DN1).
 
+🟢 **A premature "Sunday check," investigated and resolved at zero dispatch cost (2026-08-22,
+during closeout).** The coordinator reported the Sunday 02:00 UTC scheduler tick as silently
+failed — "H2's scenario" — checked at what was believed to be "06:55 UTC Sunday." Investigated via
+`action_schedule`/`action_schedule_spec` (repo 16: `next=2026-08-23 02:00:00 UTC`, `prev=epoch`,
+freshly re-registered by run 1125's own merge), `action_run` (no `trigger_event='schedule'` row
+since Friday's five probe firings), and — the fact that actually settled it — `date -u` on s1
+itself: **06:56:45 UTC on Saturday 2026-08-22**, not Sunday. The check ran roughly 19 hours before
+the event it was checking for; nothing was broken, no amendment to D31/Story 4.6 was warranted, and
+the coordinator confirmed the calendar error was theirs. Recorded here because a story's own Debug
+Log is where this project keeps its honest mistakes, including ones made by other roles — and this
+one is a useful precedent: **cross-check `date -u` on the host before trusting any "the scheduled
+event should already have happened" claim.**
+
 ### Run Budget Ledger
 
 **Declared 2026-08-21, ~19:05 UTC, before the first validation-branch push (Task 1.5), per the
@@ -2168,49 +2215,58 @@ themselves (§10).
 re-run after the merge commit lands (Task 10.1) — a ledger closed at PR-open is not closed.
 
 ---
-*Running spend log — 🔴 REBUILT post-review (H1/H2, 2026-08-22) by a direct `psql` query
-(`select id, index, workflow_id, ref, event, status, created from action_run where repo_id=16 and
-id>=1105 order by id;`), not by memory. The prior version of this table stopped updating after
-Phase B, silently omitted two runs, and stated "Spent so far: 9 of 20, no overrun signal" while the
-story's OWN Task 4.3/Task 7.1 tables, a few hundred lines below it in the same file, already
-recorded Phase C as complete. That contradiction is exactly the failure mode retro-D4 exists to
-catch, and it is the one this ledger itself was supposed to guard against. Corrected below, in
-full, with the overrun named rather than rounded away:*
+*Running spend log — 🟢 CLOSED 2026-08-22, after PR #70 merged (`fe2891e0`), by a direct `psql`
+query (`select id, index, workflow_id, ref, event, commit_sha, status, created from action_run
+where repo_id=16 and id>=1105 order by id;`), not by memory. `count(*)=399=max(index)` for
+`repo_id=16` at close — moved together, confirming no hidden run. The interim version of this table
+(written pre-fix-pass) stopped updating after Phase B, silently omitted two runs, and stated "Spent
+so far: 9 of 20, no overrun signal" while the story's OWN Task 4.3/Task 7.1 tables, a few hundred
+lines below it in the same file, already recorded Phase C as complete — exactly the failure mode
+retro-D4 exists to catch, and the one this ledger itself was supposed to guard against. This is the
+FINAL table, closed against the post-merge query per Task 10.1 and retro-D4:*
 
 | Category | Run ids | Count | Budgeted? |
 |---|---|---|---|
 | Baseline (context push, predates this round) | 1105 | — | Yes — excluded from above-baseline by design (Task 1.4) |
 | Five validation-branch pushes (`ci.yml`, Task 3) | 1106, 1107, 1108, 1109, 1110 | 5 | Yes |
-| 🔴 Story branch's own push (`ci.yml`, after Phase A/B work) | 1111 | 1 | **No — no line in the declared floor table** |
+| 🔴 Story branch's own push #1 (`ci.yml`, after Phase A/B work, `5566dab5`) | 1111 | 1 | **No — DN4** |
 | AC4 missing-image dispatch (Task 5, Phase A) | 1112 | 1 | Yes |
 | AC5/DF2 probe D1/D2/D3 (Task 6, Phase B) | 1113, 1114, 1115 | 3 | Yes |
-| 🔴 Story branch's own push (`ci.yml`, after Phase C work) | 1116 | 1 | **No — no line in the declared floor table** |
+| 🔴 Story branch's own push #2 (`ci.yml`, after Phase C work, `f3f992e8`) | 1116 | 1 | **No — DN4** |
 | Five deploy dispatches (Task 4, Phase C) | 1117, 1118, 1119, 1120, 1121 | 5 | Yes |
-| 🔴 Story branch's own push (`ci.yml`, commit `4813a232`, Tasks 4/7-10 closeout write-up) | 1122 | 1 | **No — no line in the declared floor table** |
-| **Above-baseline spend as of this fix-pass, before its own push** | 1106-1122 | **17** | 14 budgeted + **3 unbudgeted** |
+| 🔴 Story branch's own push #3 (`ci.yml`, "ready for review", `4813a232`) | 1122 | 1 | **No — DN4** |
+| 🔴 Story branch's own push #4 (`ci.yml`, code-review fix-pass, `bb98b839`) | 1123 | 1 | **No — DN4** |
+| Context PR opened (`pull_request` trigger, PR #70) | 1124 | 1 | Yes |
+| Context PR merged (`build-main.yml`, `fe2891e0`) | 1125 | 1 | Yes |
+| **`pr-1-context` branch total** | 1106-1125 | **20** | 14 budgeted + **4 unbudgeted** |
+| Ledger-closeout branch push (this commit, `pr-2-ledger-closeout`) | *booked below* | 1 | Partially — see note |
+| Closeout PR opened / merged | *not yet — coordinator's own action, after H6's window* | 2 (projected) | Yes |
+| **Grand total once closeout PR opens and merges** | | **≈23** | vs. declared floor **20** |
 
-**The three unbudgeted rows (1111, 1116, 1122) are the concrete instance of DN4 (2026-08-22):** the
-declared floor table (§10) carries exactly ONE line for pushes to this story's own context/work
-branch — "Closeout branch push (1)" — written when the plan was a single wrap-up push at the very
-end. In practice this story needed a push after each phase of its own write-up landed (Phase A/B,
-Phase C, then Tasks 4/7-10), and this fix-pass itself needs a fourth. **Going forward, "pushes to
-the story's own context/work branch" is a standing, repeating ledger line, priced per push, not a
-single flat line** — an addendum to retro-D4's own rule, alongside the PR-open/merge lines every
-prior ledger forgot (`deferred-work.md:2513-2519`). This story's own §10 is pre-AC context and is
-not rewritten after the fact (Dev Notes' own arbitration rule); the correction lives here, in the
-Run Budget Ledger, and is carried forward explicitly as a note for whoever authors Story 4.8's own
-context file — see Completion Notes List, item 11.
+**The four unbudgeted story-branch-push rows (1111, 1116, 1122, 1123) are the concrete instance of
+DN4 (2026-08-22):** the declared floor table (§10) carried exactly ONE line for pushes to this
+story's own context/work branch — "Closeout branch push (1)" — written when the plan was a single
+wrap-up push at the very end. In practice this story needed a push after each phase of its own
+write-up landed (Phase A/B, Phase C, Tasks 4/7-10) plus one more for the code-review fix-pass — four
+total, against one budgeted. This closeout's own push (booked on the SEPARATE
+`pr-2-ledger-closeout` branch, not `pr-1-context`) is the one that most closely matches what
+"closeout branch push" originally meant, so it is not counted as a FIFTH unbudgeted row — but the
+four on `pr-1-context` are real, named, and were never going to be absorbed by that single
+downstream line regardless. **Going forward, "pushes to the story's own context/work branch" is a
+standing, repeating ledger line, priced per push, not a single flat line** — an addendum to
+retro-D4's own rule, alongside the PR-open/merge lines every prior ledger forgot
+(`deferred-work.md:2513-2519`). Carried forward explicitly as a note for whoever authors Story 4.8's
+own context file — see Completion Notes List, item 11.
 
-**Projection, stated honestly rather than rounded to the floor.** Remaining declared-and-not-yet-
-spent lines: context PR opened (1) + context PR merged (1) + closeout PR opened (1) + closeout PR
-merged (1) = 4. This fix-pass's own upcoming push adds a **fourth** unbudgeted story-branch-push
-(+1). Projected total once the PR opens and merges: **17 (current) + 1 (this push) + 4 (remaining
-declared) = 22**, against a declared floor of **20** — a projected overrun of **≈2**, driven
-entirely by the story-branch-push category (4 actual vs. 1 budgeted = +3 raw, partially absorbed
-because the single "closeout branch push" line is treated as already spent by this category rather
-than double-counted separately). **This is a projection, not a close.** retro-D4 is binding: the row
-closes only against the query specified in Task 10.1, re-run after the merge commit lands — not
-against this session's own arithmetic, however carefully rebuilt.
+**Final reconciliation, named plainly, not rounded away.** `pr-1-context` alone: **20 actual vs. 16
+declared for its own scope** (the floor's nine non-context lines minus the three that belong to the
+LATER closeout branch — context-PR-open 1 + context-PR-merge 1 + five validation pushes 5 + five
+deploys 5 + AC4 1 + probe 3 = 16) — **+4 overrun, entirely the story-branch-push category.** Once
+this closeout branch's own push, PR-open and PR-merge land, the story's grand total across BOTH
+branches is **≈23 against a declared floor of 20 — a final overrun of ≈3**, all four unbudgeted
+story-branch pushes being the sole cause; every OTHER declared line landed exactly as budgeted, zero
+red dispatches, zero wasted diagnosis spend (Completion Note 9). retro-D4 is satisfied: this is not
+a self-report — it is the query specified in Task 10.1, re-run after the merge commit landed.
 
 ### Completion Notes List
 
@@ -2335,21 +2391,20 @@ consult.
 
 ### File List
 
-**Modified (this story's own branch, `story-4-7/pr-1-context`):**
+**Modified on `story-4-7/pr-1-context` (PR #70, merged 2026-08-22 as `fe2891e0`):**
 - `_bmad-output/implementation-artifacts/4-7-validate-dev-deploys-across-five-feature-branches.md`
-  — this file: Tasks 1-10 (10.1 OPEN, pending post-merge query), Run Budget Ledger, Debug Log
-  References, Completion Notes List, this File List, Open Questions for Review, `### Review
-  Findings` (added by the 2026-08-22 code review), and this fix-pass's own corrections throughout
-  (AC2/§4/§11a text, Task 5.6/6.4/6.5/6.7/7.1/7.4/8.3/10.3, Dev Notes §11, the Run Budget Ledger).
+  — this file: Tasks 1-10, Run Budget Ledger, Debug Log References, Completion Notes List, this
+  File List, Open Questions for Review, `### Review Findings` (added by the 2026-08-22 code
+  review), and the fix-pass's own corrections throughout (AC2/§4/§11a text, Task
+  5.6/6.4/6.5/6.7/7.1/7.4/8.3/10.3, Dev Notes §11, the Run Budget Ledger).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions (`review` →
-  `in-progress` for the code review, back to `review` after this fix-pass) and the review-summary
-  comment.
+  `in-progress` for the code review → `review` after the fix-pass) and the review-summary comment.
 - `_bmad-output/implementation-artifacts/deferred-work.md` — Task 9.3/9.4/9.5: rollback entry
   resolved (append, under original); Story 4.4's AC1 closed (append, under original); the
   mixed-case tag question closed (append, under original); DF2's specific hazard falsified, narrowed
   post-review to three open axes (append, under original); queue-depth entry partially informed,
   corrected to pending-depth 2 (append, under original); "Deferred from: story-4.7 validation"
-  section expanded from two to six items by this fix-pass (H5's cutover-rebase finding, owner
+  section expanded from two to six items by the fix-pass (H5's cutover-rebase finding, owner
   Story 4.9; H4's standing log-persistence finding, owner Story 4.8; DN4's ledger-template lesson;
   M7's create-story cross-reference lesson) and the credential entry amended per DN1's three
   amendments.
@@ -2360,6 +2415,14 @@ consult.
   record this same story just wrote (D32 has never been merged to `main`), not a later story
   revisiting an already-shipped one, so the append-only rule this file otherwise follows for
   *closing out an established record* does not yet apply to its own first draft.
+
+**Modified on `story-4-7/pr-2-ledger-closeout` (this branch, from fresh `main` at `fe2891e0`):**
+- `_bmad-output/implementation-artifacts/4-7-validate-dev-deploys-across-five-feature-branches.md`
+  — Task 10.1 CLOSED against the post-merge query (retro-D4), the Run Budget Ledger's own final
+  reconciliation, Task 10.2/10.5 re-confirmed at closeout, a Debug Log entry for the coordinator's
+  premature Sunday-check investigation, `Status: done`.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status `review` → `done`, closeout
+  summary comment.
 
 **New (five validation branches, none merged, none part of this story's own diff against `main`):**
 - `feature/KAN-353-operator-phone-dev` — replayed from `origin/feature/KAN-353-operator-phone`;
