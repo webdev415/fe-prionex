@@ -1590,6 +1590,17 @@ constraint 3.1 created and nobody wrote down.
   creates: across all 502 remote branches there are **502 distinct sanitized names case-sensitively
   and 502 case-insensitively** — no collision today. It is a shape a future branch name could break,
   which the case-sensitive reading could not.
+  ✅ **CLOSED LIVE 2026-08-21 (Story 4.7, §11a, Task 3.5) — the literal `docker pull` this entry's
+  own source (`3-2-…md:930-937`) asked someone to spend, finally spent.** `curl`'d the registry
+  manifest endpoint from s1 for BOTH the mixed-case tag `feature-KAN-353-operator-phone-dev-dev`
+  and its fully-folded lowercase spelling — both `HTTP 200`, both returning the IDENTICAL
+  `Docker-Content-Digest`. Confirms live, at the registry's own HTTP surface (not only the
+  `package_version` table this entry's own 2026-08-15 note already checked), that a mixed-case
+  reference resolves to the same manifest as its folded form. Neither `build.yml`'s nor
+  `deploy-dev.yml`'s own sanitizer folds case (Story 4.7 Task 2.5, byte-identical, confirmed by
+  reading both), but this no longer matters functionally — the registry's own write-time folding
+  makes both spellings interchangeable regardless. Story 3.2's own open item is closed on both its
+  DB-level and its registry-level half now.
 - 🔑 **`/root/.fj_token_3_1` is NOT on s1.** This file and Story 3.1's record both describe it as
   live, scoped `write:repository,write:package`, with no deletion route, carried as an open security
   item owned by Oleg. Story 3.2 went looking for it to dispatch with and found only
@@ -2833,6 +2844,18 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   holds for exactly one of the several ways this deploy can fail. The cheap version: capture the
   running container's digest before `down` and restore it on `if: failure()`.
   **Owner: Story 4.7 (the AC that requires it) / Story 4.8 (shared mechanics).**
+  ✅ **JOINT OWNERSHIP RESOLVED 2026-08-21 (Story 4.7, §8, Task 9.4) — in Story 4.8's favour, in
+  writing.** Story 4.7 does NOT implement the rollback. Three reasons: **(1)** a `if: failure()`
+  digest-capture-and-restore path is a new mechanism in an already-hardened file, which Story 4.7's
+  own §1 forbids by name (and Story 4.6 priced what one extra "evidence step" costs — 23 of 39
+  runs). **(2)** Its own live outcome matrix (retro-E5) would require deliberately breaking the
+  stand after `down` and then repairing it — a red dispatch plus a repair dispatch, inside a story
+  whose deliverable is five *green* deploys, whose own §3 rule resets the consecutive-deploy count
+  to zero on any mid-sequence pipeline change. **(3)** The evidence already exists and re-earning it
+  buys nothing new: run 937 (Story 4.3) is the live proof the post-`down` window has no recovery;
+  run 938 is the live proof a human dispatch is what fixes it. AC4 in Story 4.7 is narrowed in
+  writing to the pre-`down` window only (proven live there, Task 5) — the mechanism itself moves
+  wholly to Story 4.8, which owns the shared deploy definition this would naturally live inside.
 
 - ⚠️ **Two sources of truth for the stand's five variables.** The host `.env` in
   `~/crm-prionex/fe-prionex-dev/` (manual/DR path) and `deploy-dev.yml`'s own render into
@@ -2921,6 +2944,12 @@ session at all, not because they are minor.
   requires the `flock` to be the load-bearing half. **Owner: whoever next has DB access to the
   Forgejo instance** — a candidate for the Story 4.4 closeout PR if access appears, otherwise for
   Story 4.8, which re-keys this block by stand and must re-measure it anyway.
+  ✅ **CLOSED 2026-08-21 (Story 4.6 Task 6.6, re-confirmed and extended Story 4.7 Task 6.6).**
+  Story 4.6 first closed this via runs 964/965 (`concurrency_group='deploy-dev-fe-prionex-dev'`,
+  `concurrency_type=1` for both). Story 4.7's own AC5/DF2 probe (D1/D2/D3, runs 1113-1115) read
+  the identical columns for three MORE real runs, all matching — five independently-confirmed data
+  points now, all identical. AC1 is no longer merely "closed once"; it is closed with a
+  reproducibility record.
 - ⚠️ **Concurrency queue *depth* was never measured, and a third dispatch may silently drop the
   pending run.** Upstream Actions semantics, with `cancel-in-progress: false`, keep at most one
   pending run per group: when a third dispatch arrives while one run is in progress and one is
@@ -2934,6 +2963,19 @@ session at all, not because they are minor.
   workflow-level fix — it is a platform behaviour to measure and document. **Owner: Story 4.8**
   (which parameterizes the group per stand and must re-measure it), or whoever closes the AC1 item
   above, since both are answered by the same database.
+  🔴 **PARTIALLY INFORMED 2026-08-21 (Story 4.7, Task 6.7) — pending-depth 2 now measured, NOT
+  closed for general depth (corrected post-review, L10/M2, 2026-08-22: "depth 3" overstated it — D1
+  was running, not pending, so the deepest simultaneous-PENDING state reached is 2).** The AC5/DF2
+  probe (D1 running, D2/D3 both pending, dispatched one second apart) is the first live test of
+  pending-depth beyond one on this instance. **Result: NO eviction — both D2 and D3 produced real
+  job rows and ran to completion**, directly contradicting the upstream-semantics eviction behavior
+  this entry's own opening paragraph describes as the risk. This is real, positive evidence for THIS
+  Forgejo build at pending-depth 2 specifically — it does **not** generalize to pending-depth 3+
+  (untested), nor does it settle `flock`'s own wake ORDER under 3+ simultaneous contenders (D2/D3
+  happened to wake in dispatch order here — one data point, not proof of FIFO behavior), nor does it
+  say anything about the SCHEDULED actor (`dev-reset.yml`) specifically, since all three probe runs
+  were `workflow_dispatch`. **Owner unchanged: Story 4.8**, now with a positive pending-depth-2 data
+  point to build on rather than a fully open question.
 
 ## Deferred from: code review fix-pass of story-4.4 (2026-08-21)
 
@@ -3050,3 +3092,132 @@ query. These two are the ones that are genuinely somebody else's, and each has a
   never considers this inverse. Low probability for a job that fires once a week; measuring it
   properly is a concurrency-semantics question and real contention is already being staged there.
   **Owner: Story 4.7** (five-branch validation).
+  ✅ **The specific double-arrival eviction hazard FALSIFIED 2026-08-21 (Story 4.7, Task 6, AC5) —
+  narrowed post-review (M2, 2026-08-22): not a general closure of DF2.** Three-dispatch D1/D2/D3
+  probe, read from the database, never from timing: D1 (`ref=main`, a real deploy) put in flight,
+  then D2 and D3 (`hold_lock_seconds=5` each) dispatched ONE SECOND APART while D1 was still
+  running — the tightest double-arrival the API allowed. **Neither D2 nor D3 was evicted.** Both
+  produced real `action_run_job` rows and both executed their real 5-second hold-lock fixture to
+  completion, strictly serially (D2 stops before D3 starts). This directly contradicts the specific
+  hazard this probe targeted — a genuinely-simultaneous double-arrival within the same concurrency
+  group, both surviving — on `Forgejo v15.0.5`, at pending-depth 2 (D1 running, D2/D3 both pending,
+  not "depth 3": D1 was not itself pending). 🟡 **Three axes DF2's own broader shape touches remain
+  explicitly open, not settled by this probe:** **(i)** the probe cannot separate group-queueing
+  from capacity-queueing — `deploy-dev.yml:181-190` says this instance's group-queueing-under-
+  contention has never been distinguished from the runner's own `capacity: 1` serialization, and
+  this probe ran on that same single-capacity runner, so "the group does not evict" and "the group
+  did nothing and `capacity: 1` did all the serializing" remain indistinguishable readings of the
+  identical result; **(ii)** DF2's own hazard names the **scheduled** run (`dev-reset.yml`,
+  `trigger_user_id = -2`) as the evictable party, and this probe used three `workflow_dispatch` runs
+  of `deploy-dev.yml` — `dev-reset.yml` itself was never dispatched, so the scheduled-actor side of
+  DF2 was not tested; **(iii)** pending-depth tested was 2, not deeper (see the AC1/queue-depth
+  entry above). **The Sunday reset therefore does NOT silently drop this way, at least not via the
+  specific tight-arrival, human-dispatch shape this probe tested** — real and worth having, but not
+  a blanket closure of ALL concurrency-queue risk. All three open axes routed to **Story 4.8**.
+
+## Deferred from: story-4.7 validation (2026-08-21, expanded by the 2026-08-22 code-review fix-pass)
+
+🔴 **Expanded post-review, 2026-08-22.** The original round recorded two findings; the review found
+one more genuinely unowned fact (H5), the fix-pass itself surfaced a fourth (H4 — the log-persistence
+delay hardened from "not yet" into a standing platform characteristic), and two process/template
+lessons with no single story owner (DN4, M7). Six items now, all genuinely somebody else's (or
+nobody's in particular, for the two template lessons). Everything else the validation found either
+closed clean (five deploys,
+AC4's row, DF2's specific hazard — narrowed, see its own entry above — Story 4.4's AC1, the
+mixed-case tag question — all closed above, under their own original entries) or is a
+story-file-internal deviation already argued and recorded in `4-7-…md` itself (the redefinition of
+"real," AC3's narrowing, AC4's narrowing) — not a gap for someone else to act on.
+
+- 🔴 **A read-only registry credential's value was partially exposed in this session's own
+  transcript, twice, while verifying published images — a VIOLATION of Prohibition 13, not merely
+  its spirit (corrected post-review, M6/Oleg's ruling DN1, 2026-08-22).**
+  `/root/.fj_reg_4_2.token` (bot `robot-deploy`, `read:package` scope only, Story 4.2's own
+  provisioning) — first via a `cut -c1-30` used to inspect the file's own format, then a stray
+  leftover line in a follow-up command that repeated the same fragment. Corrected immediately;
+  every subsequent credential read in this story piped the token directly from the file into
+  `curl --config -` / `docker login --password-stdin`, never through a shell variable that could be
+  echoed. **Three amendments to the risk record, per Oleg's ruling (DN1):** **(1)** this is not a
+  host-local file only — the identical value backs the Forgejo **org secrets**
+  `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, which `deploy-dev.yml` and `build.yml` both read on every
+  run, so rotation means re-minting the credential on the bot account **and** updating both org
+  secrets, not deleting a file. **(2)** this instance has a standing, separately-recorded finding
+  that an admin cannot revoke another account's token (`forgejo-token-revocation-is-a-dead-end`) —
+  the exit path has to be planned **before** the re-mint, since a clean revoke may not exist at all.
+  **(3)** "the transcript itself is not published externally" is an **assumption** about session
+  storage, not a measured fact — stated as such, with an explicit revisit trigger: if this project
+  ever adds a channel where session transcripts are read by parties outside the working session
+  (shared logging, an external review tool), this assumption needs re-examination. Scope is
+  **read-only registry pull** only — no write, no admin, no path to any other credential. **Owner:
+  Oleg** — whether `fe_reg_4_2` warrants rotation is his call, not this story's; accepted in writing
+  as not blocking (DN1), given the read-only scope and the private working session.
+- ⚠️ **The `deploy` job's own reported wall-clock and its actual job-level duration disagree by
+  ~4 seconds, consistently, and the exact cause was not pinned down.** Measured on the two runs
+  (C-2, C-5) whose task logs persisted within this story's own working session: job-level 22-23s,
+  workflow-self-reported (`Deploy wall-clock duration:` line) 18-19s — a 4s gap in both, crossing
+  this project's own "more than a second or two" disagreement threshold (Story 4.7 Task 7.5). The
+  workflow's own timer spans "Record start time" (step 0) to "Record wall-clock duration" (step
+  20), excluding the job's pre-step-0 scheduling overhead and the final cleanup step — plausibly
+  most of the gap, but not directly measured this round. Small, not urgent, but worth a real
+  answer before anyone builds a tighter SLA on top of either number. **Owner: Story 4.8**, which
+  inherits the per-step cost profile this same round produced (`4-7-…md` Task 7.4) and is the
+  natural next reader of exactly this class of timing question. 🟡 **That same per-step cost
+  profile is a warm-cache artefact, added post-review (H3, 2026-08-22).** Task 3.5's own published-
+  image verification `docker pull`s every one of the five images to s1 before any of the five timed
+  deploys runs — so the `timeout 300` pull step measured in that profile never had anything to
+  fetch, and the health-poll-dominant conclusion describes a warm cache, not a cold one. §4 of the
+  story asked *"which one wins on a cold image"*; that number is still unmeasured. **Owner:
+  Story 4.8** — needs the cold-pull number before committing to which step dominates once these
+  steps move into a shared definition.
+- 🔴 **NEW (H5, code review of story-4.7, 2026-08-22) — every in-flight developer branch on this
+  repository will be undeployable to DEV on day one of cutover, and nothing routes the fact.** The
+  story's own headline finding is that `deploy-dev.yml:1057-1062` refuses any ref lacking
+  `docker-compose.stand.yml`, and that zero of the 201 live `feature/*` branches carry it — all of
+  them predate Story 4.1. The operational consequence was never stated anywhere in the story's own
+  routing: on the day Story 4.9 cuts DEV over, **every real, currently-live developer branch is
+  undeployable until it is rebased past Story 4.1's own commit** (`e74e9ded`, 2026-08-19) — and
+  unlike this story's five manufactured validation branches (each cut fresh from `baseline_commit`
+  specifically so they carry the file), a real developer's branch is cut from whatever `main` they
+  happened to have at the time, so it will not carry the file unless rebased. **Owner: Story 4.9.**
+  Its cutover checklist must include a rebase plan for the team's own live/in-flight branches —
+  either a required-rebase step communicated before cutover, or an explicit tolerance window during
+  which un-rebased branches are known-undeployable and that is communicated, not discovered.
+- 🔴 **NEW (H4, code-review fix-pass of story-4.7, 2026-08-22) — the `deploy` job's own task log did
+  not persist for 3 of 5 runs even after 24+ hours, which is no longer explainable as the platform's
+  documented "delayed, not immediate" persistence characteristic.** Re-checked directly against the
+  DB and against disk more than a day after the runs completed: `action_task.log_in_storage`
+  remains `false` for task ids 9383 (run 1117), 9394 (run 1119), 9399 (run 1120), and the file is
+  confirmed absent at the path `log_filename` names
+  (`/opt/forgejo/forgejo/gitea/actions_log/CRM/fe-prionex/…`). Notably, **sibling job logs for the
+  SAME three runs (preflight, clone-test — smaller, simpler jobs) DID persist** within minutes; only
+  the `deploy` job's own log (by far the largest at 22 steps) and the `digest-resolve-test`
+  diagnostic's own log did not, for all three runs — narrowing the candidate cause toward something
+  size- or job-name-correlated rather than a uniformly random delay. Cost: dominant-step attribution
+  and workflow-reported wall-clock remain directly measured for only 2 of 5 deploys in Story 4.7's
+  own evidence table (Task 7.1). **Owner: Story 4.8** — worth a real explanation (queue backlog by
+  size? a specific job-name pattern excluded from some indexer?) before any story plans around
+  guaranteed log availability within a working session.
+- 🟡 **NEW (DN4, code review of story-4.7, 2026-08-22) — a permanent ledger-template gap: pushes to
+  a story's own context/work branch were never budgeted as a repeating cost.** This story's own
+  declared floor (§10) carried exactly one line for pushes to its own branch ("Closeout branch push,
+  1"), on the assumption of a single final wrap-up push. It actually needed four across its own
+  working lifetime (three during the original round, one more for this fix-pass), none budgeted
+  individually — each one a real four-job `ci.yml` run (~9 minutes), and each one invisible to the
+  ledger until a post-hoc `psql` reconciliation (H1/H2) surfaced it. **No single owner — this is a
+  template lesson, not a defect in any one story.** Recorded here so it is visible from the
+  deferred-work index; **whoever authors Story 4.8's own context file should budget "pushes to the
+  story's own context/work branch" as a repeating, per-push line, sized against the expected number
+  of dev-agent write-up rounds** — the same way retro-D4's own declared-floor tables already budget
+  "extra pushes to a validation branch" per-push rather than as a flat single line.
+- ⚠️ **NEW (M7, code review of story-4.7, 2026-08-22) — a genuine specification inconsistency between
+  two subtasks of the same story went unrouted.** Story 4.7's own Task 8.3 references a full
+  "before" neighbour census from Task 1.7 that Task 1.7's own subtask text never actually asked
+  for — Task 1.7 only ever specified capturing the STAND's own facts (digest, `Created`, revision),
+  matching AC4's "before" row convention, not a census of all ~185 host containers. The story's own
+  Task 8.3 names this honestly as "a genuine inconsistency between the two subtasks' own text," but
+  the naming stayed inside the story file and was never routed anywhere a future create-story
+  session would read it. **No single owner — a template lesson**, same class as the item above:
+  whoever authors a future story's context and specifies a multi-part "before/after" measurement
+  split across two different subtasks (a narrow one early, a broad one late) should cross-reference
+  the two explicitly, or the later subtask will silently assume a baseline the earlier one never
+  produced — exactly what happened here (see Story 4.7's own Task 8.3, and its M3 narrowing in the
+  same review round).
