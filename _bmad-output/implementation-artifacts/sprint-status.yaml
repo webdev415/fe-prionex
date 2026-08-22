@@ -490,7 +490,52 @@ development_status:
   # 06:56 UTC, confirmed via `date -u` on s1) — nothing broken, no amendment to D31/4.6 needed, real
   # check is tomorrow after 02:00:44 UTC. Status done.
   4-7-validate-dev-deploys-across-five-feature-branches: done
-  4-8-factor-out-the-shared-deploy-mechanics: backlog
+  # Contexted 2026-08-22 against main at 06224481, branch story-4-8/pr-1-context.
+  # 🔴 The epic's AC2 is FALSE AS WRITTEN and it decides the mechanism: its Given is "neither
+  # workflow_call nor composite actions are supported". Both halves are now measured and they
+  # disagree — composite actions are dead on the deploy runner (uses: steps do not execute at all,
+  # run 920), workflow_call works and is live in this repo twice (D21). The shell-script fallback
+  # therefore does NOT fire; it is held in reserve for one specific risk, not adopted.
+  # 🔴 The decisive argument against the shell-script shape is not taste, it is 4.7's H4: the deploy
+  # job's own task log did not persist for 3 of 5 runs and still had not 24h later, so
+  # action_task_step rows are the ONLY surviving per-step evidence for that job. A monolithic script
+  # collapses 22 rows into 1 — it would remove the last evidence channel from the one job that needs
+  # it most. Held in reserve: per-step scripts, which keep the rows.
+  # 🔴 ONE UNMEASURED RISK DECIDES THE SHAPE (R1): epic AC3 requires the deploy-runner label to be an
+  # INPUT, i.e. `runs-on: ${{ inputs.runner_label }}` in a callee — never tested, read or recorded in
+  # this project, and upstream Gitea evaluates runs-on at job-planning time with `matrix` as the
+  # documented exception. Task 1.2 settles it read-only off s1 BEFORE the callee is written. Four-rung
+  # fallback ladder, bottom rung escalates to Oleg rather than shipping a copy. Note R1 does not block
+  # this story or 5.3 — DEV and PRE-PROD share one runner and one label; only 6.4 (s10) differs.
+  # 🔴 D21's silent hazard is the story's headline trap: a called workflow's run carries the CALLER's
+  # auto-group; the callee's own concurrency: block produces no group AND no error. The block stays in
+  # each caller as a per-stand literal and the callee declares none. Verified by DB query on the first
+  # refactored run (concurrency_type=1 survived, 0 = the guard is gone and the file lies).
+  # 🔴 dev-reset.yml dispatches BY FILE NAME and confirms by grepping the literal
+  # "title":"Deploy DEV Stand" — so deploy-dev.yml must keep its file name, its workflow name and its
+  # required `ref` input, or the weekly reset breaks with no error (its dispatch step is deliberately
+  # non-blocking). Prohibitions 1-3.
+  # Found while contexting, named by no prior story: the Kong alias guard hard-requires /api/ to stay
+  # UNROUTED (Story 4.3's L3). DEV's Kong has no route; PRE-PROD's runs 69 containers of real
+  # services. Unparameterized, that guard fails EVERY PRE-PROD deploy — in Story 5.3, not here.
+  # `expect_unrouted_api` added to the parameter surface.
+  # Six inherited debts routed here: rollback-after-down RESOLVED (sequenced last, own commit, drops
+  # cleanly to 5.3 — its discriminating row is the health-fails dispatch epic AC4 requires anyway, so
+  # one dispatch earns two rows); cold-pull (H3) RESOLVED at zero cost by removing the image from s1
+  # before the green dispatch; task-log non-persistence (H4) and the 4s timing gap RESOLVED by DB/disk
+  # investigation, zero dispatches; queue-depth>2 / flock wake order>2 / DF2's group-vs-capacity
+  # RE-ROUTED (per-stand groups and locks make cross-stand contention unexpressible, and
+  # group-vs-capacity is unmeasurable on any capacity-1 runner in this plan — closed negative);
+  # DF2's scheduled-actor axis RE-ROUTED to the coordinator with an explicit recommendation NOT to
+  # stage it on 08-23, because confounding it with the first autonomous firing is worse than leaving
+  # it open; D31's two-sources-of-truth RE-ROUTED to 4.9 with the render axis closed here.
+  # KONG_PORT does NOT block this story and Task 9.5 says so: the Kong guard uses no port literal.
+  # Declared floor 24 runs, honouring 4.7/DN4's new permanent per-push ledger line (ci.yml has no
+  # paths filter). Matrix is earned from the STORY BRANCH before merge (run 917's precedent) — that
+  # is what keeps the floor at 24 rather than doubling it.
+  # 🚨 No main merge and no DEV dispatch between 2026-08-23 01:45 and 02:30 UTC: one row deliberately
+  # leaves the stand broken, and the first autonomous reset has never been observed.
+  4-8-factor-out-the-shared-deploy-mechanics: ready-for-dev
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
 
