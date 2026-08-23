@@ -698,8 +698,10 @@ development_status:
   # /workspace/.../stand-checkout-1150/ — live proof of D28 option (e) — while its host .env has
   # DRIFTED (says 8082 + sha-62e2ff8dc215-dev; live is 127.0.0.1:8082 + digest 57477edb…). (e) 🔴 BUT
   # the host stand dir is NOT merely a record: deploy-stand.yml asserts <stand_dir>/docker-compose
-  # .stand.yml exists TWICE (:334-342, :1473-1481) before taking the lock — it is 5.3's hard
-  # precondition. (f) 🔴 deploy-stand.yml:216's caller skeleton names runner_label
+  # .stand.yml exists (:1473-1481, the assertion that actually fires on the real deploy path — 🔴
+  # corrected fix-pass, M17: an earlier version of this line said "TWICE", but :334-342 only fires
+  # inside the hold-lock TEST path; on the real path exactly ONE assertion fires, per the story's own
+  # §3) before taking the lock — it is 5.3's hard precondition. (f) 🔴 deploy-stand.yml:216's caller skeleton names runner_label
   # deploy-preprod-preprod, which does NOT exist; the runner registers deploy-dev-preprod/dev/preprod/
   # deploy. Routed to 5.3, NOT fixed — deploy-stand.yml is 4.8's shipped artifact and in 4.9's blast
   # radius. (g) crm-preprod-network 69 containers, Kong 61eb0eaa9f64 healthy on 10.70.0.1:8320->8000.
@@ -712,11 +714,13 @@ development_status:
   # D34 §3's revision trigger names 5.2 and this exact form) and AC6 (the PRE-PROD Kong static-CORS
   # boundary measured from the real origin and recorded with an owner, NOT fixed — browser API calls
   # WILL fail until CRM/api-prionex fixes it, and the story says so rather than closing silently).
-  # Four designated failing runs (retro-E5): push->401, bridge->exit 2, external :8083 refused, a
-  # vhost-less sibling name -> default CN. Decision number is D36, NOT D35 — 4.9 already holds D35 on
+  # Four designated failing runs (retro-E5): push->401, bridge->exit 2, external :8083 timeout
+  # (corrected fix-pass, M4 — ufw drops it identically at any bind; the discriminating half is ss's
+  # 127.0.0.1:8083 output, not the external probe), a vhost-less sibling name -> default CN. Decision
+  # number is D36, NOT D35 — 4.9 already holds D35 on
   # its branch (commit 11017adc), verified 2026-08-24. Story 4.9 in flight: 5.2 must not touch
   # deploy-stand.yml, deploy-dev.yml, dev-reset.yml, README.md or the DEV stand (story §12).
-  5-2-provision-the-pre-prod-stand-on-s1: in-progress
+  5-2-provision-the-pre-prod-stand-on-s1: review
   # dev-story complete 2026-08-24: SSH rung 1 live throughout. Stand up on s1
   # (fe-prionex-preprod, crm-preprod-network, 127.0.0.1:8083 permanent loopback),
   # image sha-00ef3be4743d-preprod (run 680, main), bundle verified real (no
@@ -740,8 +744,9 @@ development_status:
   # D36 written (D35 is story-4-9's, not merged here); D28 and D34 amended.
   # deferred-work.md: vhost/cert item CLOSED, CORS item RESTATED (still open),
   # runner_label / registry-removed-again / missing sha-f8f358f43ced-preprod
-  # tag / renewal-hook-now-5-certs all recorded. Story 4.2's M1 closed (no
-  # second plaintext token copy exists). Ledger: host-side work cost zero
+  # tag / renewal-hook-now-5-certs all recorded. Story 4.3's M1 RE-CONFIRMED
+  # (corrected fix-pass -- it was already closed 2026-08-20, this session
+  # re-checked it, not a new closure). Ledger: host-side work cost zero
   # runs by design; awaiting Opus code-review and coordinator PR-open.
   # CODE REVIEW 2026-08-24 (Opus): CHANGES REQUESTED. 3 decisions / 6 high /
   # 22 medium / 14 low, 1 deferred. Status returned to in-progress; no patches
@@ -767,7 +772,34 @@ development_status:
   # has a gap; do not open a coordinator round-trip on it.
   # ⚠️ This block's own "asserts TWICE (:334-342, :1473-1481)" line above
   # contradicts the story's §3, which says exactly ONE assertion fires on the
-  # real deploy path -- see finding M17; 5.3 reads this file first.
+  # real deploy path -- see finding M17; 5.3 reads this file first. [fixed
+  # in place above, fix-pass 2026-08-24]
+  # 🔴 FIX-PASS COMPLETE 2026-08-24 (post code-review, commit 5a17770c):
+  # /root/.fj_reg_4_2.token deleted from s1 (coordinator decision, transcript
+  # scrubbing recorded as the only remaining mitigation -- not yet done, owner
+  # Oleg); AC5's DEV-side re-measured in the real .Containers[]-map form (not
+  # named-container .Id) -- same probe supplies the missing wrong-network E5
+  # row; build.yml comment reworded to describe the BUNDLE, not the secret's
+  # live content, and the orphaned "Story 3.3's own code review" line restored
+  # explicitly. 🔴 SECOND token exposure found mid-fix-pass: `cat
+  # /root/.docker/config.json` printed base64(user:token) for fe_reg_5_2_ro --
+  # same class of leak. A THIRD token (fe_reg_5_2b_ro) is now live; both prior
+  # tokens' files deleted from s1, both treated as compromised (cannot be
+  # revoked). Manifest-401 claim corrected to blob-upload-401 (no blob write
+  # was attempted; the same credential's successful pull minutes earlier is
+  # the real discriminator). Port probe reframed: ss's 127.0.0.1:8083 output
+  # is the discriminating evidence, not the external timeout (ufw drops
+  # either way). Healthcheck's blindness to backend state demonstrated live
+  # (throwaway container on bridge, healthy with no Kong resolvable). D36
+  # gained its two missing Task 9.1 topics and its own incident subheading
+  # (§3a). deferred-work.md: the missing "permanent" tag finding rewritten as
+  # a CLOSURE (Oleg's own 2026-08-16 deletion, on record three times); M1
+  # re-confirmation moved under its real original entry, not filed as a new
+  # EOF closure; owner fixed from a trigger condition to a name. Ledger
+  # recomputed: the one row above the prior 1170 baseline is attributed to
+  # this story's own context push (bed0c366); Task 1.4's rule applied
+  # (push-while-PR-open costs two rows); honest floor is 5, not 4. Status:
+  # review.
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog

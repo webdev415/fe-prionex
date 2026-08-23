@@ -594,17 +594,23 @@ jobs:
           #
           # 🔴 The placeholder test is a SCHEME test, not a string match.
           # `secret/fe/pre-prod/app` held
-          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys until
-          # 2026-08-15 (version 2 holds the real PRE-PROD URLs since; corrected
-          # here by Story 5.2, which is the first story to actually consume this
-          # secret's bundle output). The check stays a scheme test regardless —
-          # a non-empty check would have passed the placeholder happily, baking
-          # the literal word PLACEHOLDER into a bundle and satisfying AC2 with
-          # exactly the failure AC2 exists to prevent. Requiring a scheme rejects
-          # it on a property rather than on its spelling, so the check still
-          # works for whatever the next placeholder happens to say.
-          # 🔴 Rewritten by this story's own code review, which showed the first
-          # version did not do what the comment claimed. It accepted a bare
+          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys as of
+          # this comment's original writing. 🔴 Corrected by Story 5.2
+          # (2026-08-24): the secret's OWN content has not been re-read since
+          # it was written (D34 §5) -- what Story 5.2 actually verified is the
+          # BUNDLE of a `-preprod` image (run 680, extracted 2026-08-24), which
+          # carries the real PRE-PROD URLs and not this placeholder. That is a
+          # narrower, later-dated, and stronger claim than "the secret holds
+          # X" -- it tests the artifact the build produces, not the input it
+          # was fed. Do not read this as evidence about the secret's current
+          # value. The check stays a scheme test regardless of any of the
+          # above -- a non-empty check would have passed the placeholder
+          # happily, baking the literal word PLACEHOLDER into a bundle and
+          # satisfying AC2 with exactly the failure AC2 exists to prevent.
+          # Requiring a scheme rejects it on a property rather than on its
+          # spelling, so the check still works for whatever the next
+          # placeholder happens to say.
+          # 🔴 Rewritten by Story 3.3's own code review, which showed the first
           # `https://` with no host; it accepted `https://PLACEHOLDER-...`; it
           # accepted a `ws://` value as the REST API base because the
           # `http://*|ws://*` arm never consulted which variable it was checking;
