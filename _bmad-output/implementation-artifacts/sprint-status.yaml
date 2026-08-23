@@ -615,8 +615,62 @@ development_status:
   # sprint-change-proposal-2026-08-15-preprod-reality.md.
   # What genuinely remains: an nginx vhost + certificate for the FRONTEND name
   # crm.preprod.crm-prionex.online (ours, story 5.2), and the Kong CORS origin.
-  epic-5: backlog
-  5-1-stand-up-the-isolated-pre-prod-backend-network: backlog
+  # Contexted 2026-08-23 (story 5.1, branch story-5-1/pr-1-context, main at fc6bfe82). Story shaped
+  # as VERIFICATION, not construction — AC1/AC2 satisfied by the other side; AC3 amended
+  # crm-network -> crm-dev-network (crm-network is the LEGACY stand's network, and the legacy stand
+  # is on 72.62.17.132, not s1); AC4 narrowed to the network layer because the browser path needs
+  # story 5.2's stand + vhost (that clause is NOT CLAIMED, not UNPROVEN); AC5 added to record the
+  # three known defects with owners without fixing any of them.
+  # Measured fresh 2026-08-23 ~18:16 UTC from the context session, no host access needed:
+  # api.crm.preprod / crm.preprod / api.crm.dev all resolve to 185.185.49.127; preprod.crm-prionex
+  # .online still NXDOMAIN; both API hosts answer 404 'no Route matched' with X-Kong-Response-
+  # Latency; CORS is STATIC and DIFFERENT per contour — preprod http://localhost:8320 vs dev
+  # http://localhost:8310, unchanged under a supplied Origin and on OPTIONS preflight. That
+  # difference is the cheapest proof the two Kongs are distinct and it needs no SSH (retro-E5).
+  # crm.preprod.crm-prionex.online still falls through to s1's default vhost (CN=admin.techno-
+  # finance.online) — story 5.2's vhost+cert work confirmed still outstanding.
+  # 🔴 Two inherited "facts" falsified while contexting: (1) secret/fe/pre-prod/app has NOT held a
+  # placeholder since 2026-08-15 — Oleg wrote version 2 (https://api.crm.preprod.crm-prionex.online
+  # / wss://...), confirmed by run 593 and again by bundle extraction on run 680; epics.md:2169-2171,
+  # build.yml:596-597 and deferred-work.md:1794-1798 all still carry the stale placeholder text.
+  # (2) the Dockerfile.prod:34 citation repeated by five artifacts is stale — the COPY nginx.conf
+  # line is at Dockerfile.prod:55-56 at fc6bfe82.
+  # SSH to s1 unavailable to this session (blocked before a packet left). Host-side rows are shaped
+  # as a cost-ordered ladder: ssh root@10.67.0.1 (the PRIVATE address; the external one times out by
+  # ufw design) -> Oleg runs a read-only probe script -> a new dispatch-only workflow, last because
+  # it is the only rung that costs runs. Cheapest path through the story: 7 runs above baseline.
+  # Story 4.9 is in flight in parallel: 5.1 must not touch deploy-stand.yml, deploy-dev.yml,
+  # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
+  # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
+  epic-5: in-progress
+  5-1-stand-up-the-isolated-pre-prod-backend-network: review
+  # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — three
+  # discriminators (N1, N4, N5; N2 is a standing DNS falsification, N3 a negative control, neither
+  # is itself a PRE-PROD-vs-DEV discriminator) closed on live evidence, ledger baseline via psql
+  # (max(action_run.id)=1160, ledger itself OPEN). N4 rescoped pre-work per coordinator's citation
+  # audit (epic's "different addresses" was unfalsifiable). D34 recorded. Three known defects routed,
+  # not fixed (AC5). Awaiting Opus code-review and coordinator PR-open (Dev Notes §7).
+  # 🔴 Code review (Opus) 2026-08-23: CHANGES REQUESTED — 4 decisions / 5 high / 27 medium / 21 low,
+  # 1 deferred. Status returned to in-progress for a fix pass. Blast radius is clean (5 files, none
+  # in story §12; nothing created on s1; D34 free of 4.9) and the disjoint-set diagnosis is right.
+  # The high findings are all evidential, not infrastructural: N4 as run compared IDs of two
+  # containers already distinguished by NAME (guaranteed to differ — the vacuity the rescope was
+  # meant to remove); AC4's "absent from DEV's Kong log" has no readability control, so every failure
+  # mode returns the expected answer; the deferred-work.md:934-937 closure is both misplaced (Proh. 12
+  # says closures go under the original, struck — this one went to EOF) and unearned (the open item is
+  # whether a NON-DEFAULT KONG_PORT moves the in-network listener; PRE-PROD does not set it); and a
+  # CORS "reproduced in-network" claim has no command behind it (the nc probes send no Origin header).
+  # Full accounting in the story's own ### Review Findings. NOTE: the "five artifacts" count above
+  # was itself one of the findings — corrected to nine (also fixed in the story's own §7(b)).
+  # 🔴 Fix-pass complete 2026-08-23: N4 re-measured via each network's own .Containers[] address map
+  # (not named-container lookup); N5 re-run with a DEV-side positive control before any cross-check;
+  # deferred-work.md:934-937 reopened, closure note relocated under the original entry per Prohibition
+  # 12; CORS in-network re-measured with an Origin header; expect_unrouted_api re-measured with the
+  # Host nginx.conf:41 actually forwards; Story 4.8 backfill items 1-2 completed while SSH was live
+  # (actor_id=-2 confirmed, run 1150 measured at 49s vs relayed ~70s); Task 8.1 restored "не
+  # направлено" unstruck; nine-artifact citation count fixed at §7(b); alpine precedent re-cited to
+  # 4-2-provision-the-new-dev-stand-on-s1.md:600. Ledger +1 contingency line for this pass, still
+  # OPEN. Status back to review.
   5-2-provision-the-pre-prod-stand-on-s1: backlog
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog

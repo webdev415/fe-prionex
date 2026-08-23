@@ -936,6 +936,15 @@ with the live production on s2. That is presumably the *published host* port whi
 listens on 8000 inside the network — but our nginx hardcodes the **port** as well as the name, so
 **this must be confirmed, not assumed.**
 
+> **Not closed by Story 5.1 (2026-08-23; corrected fix-pass, was briefly asserted closed — code
+> review caught it).** Story 5.1 measured `crm-kong-gateway:8000` answering from inside
+> `crm-preprod-network` — but PRE-PROD never sets a non-default `KONG_PORT`, so that measurement is
+> consistent with *both* "the in-network listener is always 8000 regardless of `KONG_PORT`" and "the
+> in-network listener follows `KONG_PORT`, and 8000 is just what an unset variable happens to give" —
+> it discriminates neither, which is exactly the shape of check this project's own evidence rule
+> warns against. **Still open, still: Owner — whoever next sets a non-default `KONG_PORT` on any
+> stand and can watch the in-network listener move or not (plausibly Story 6.4, PROD's `8330`).**
+
 **Consequence for Story 1.6's requirement document.** It is currently written as "please build us
 X". It should be rewritten as a **reconciliation**: their plan already provides a separate network
 and Kong per stand, so the ask is no longer "create it" but "name it so our image can reach it".
@@ -3397,3 +3406,139 @@ else the review found is an action item inside the story file's own `### Review 
   read-and-paste task, not new investigation. Until then, `docs/migration-decisions.md#d31` §7 and
   the story's own Review Findings/Run Budget Ledger carry explicit 🔴 "relayed, not independently
   verified" flags — do not read their current wording as a completed measurement.
+
+## Deferred from: story-5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-23)
+
+🔴 **Fix-pass 2026-08-23 (post code-review, commit `7bbb92b2`): this whole section is corrected in
+place, findings 1/5/6/8 rewritten and owners added to 4/5/6/7, per the review's High/Medium findings.
+Superseded text struck (`~~…~~`), not deleted.**
+
+~~Nine findings this round. Three are routed to somebody else's ownership by design~~ **Corrected
+count: nine findings, six of which are routed to somebody else's ownership** (1→`CRM/api-prionex`,
+2→Story 5.2, 3→coordinator, 4→coordinator, 8→Story 5.3, 9→coordinator) — the rest (5, 6, 7) are this
+story's own methodology notes with no external owner action required. All measurements below are
+first-hand, from this session's own SSH channel (`root@10.67.0.1`) and sandbox network probes,
+UTC-timestamped at the point of measurement.
+
+1. **PRE-PROD Kong's CORS is static and wrong.** `Access-Control-Allow-Origin: http://localhost:8320`
+   on `api.crm.preprod.crm-prionex.online`, unchanged under any supplied `Origin` (tested with
+   `https://crm.preprod.crm-prionex.online`), `Access-Control-Allow-Credentials: true`, `vary: Origin`
+   present but the value never varies. Measured 2026-08-23T18:57Z, from the sandbox (no host access
+   needed). ~~and reproduced identically via direct in-network request to `crm-kong-gateway:8000` at
+   2026-08-23T19:01:09Z~~ 🔴 **Corrected, fix-pass:** that 19:01:09Z request carried no `Origin`
+   header and its response was never inspected for CORS headers — it could not have corroborated
+   anything. **Actually reproduced in-network, fix-pass, `2026-08-23T19:36:05Z`:** a request to
+   `crm-kong-gateway:8000` from inside `crm-preprod-network` **with** `Origin:
+   https://crm.preprod.crm-prionex.online` supplied returns the same static
+   `Access-Control-Allow-Origin: http://localhost:8320`, unchanged. Kong's CORS headers are present
+   even on this route-miss `404`, meaning the plugin is applied ahead of routing (global-scope), not
+   per-route. A browser at the real frontend origin will be refused. **Configured wrong is worse than
+   unconfigured** — this looks done and fails only in a browser. **Owner: `CRM/api-prionex` (external
+   ask, extended 2026-08-23). Consumer: Story 5.2.**
+2. **No nginx vhost or certificate for `crm.preprod.crm-prionex.online`.** The name resolves
+   (`185.185.49.127`) but TLS falls through to s1's default vhost: `CN=admin.techno-finance.online`,
+   issued `2026-08-15T20:01:59Z`. Measured 2026-08-23T18:57Z. **Owner: ours, Story 5.2.**
+3. **`README.md:136` mislabels the legacy DEV stand.** Verbatim (Task 7.3 requires the quote, not a
+   paraphrase): `| Pre-production | 72.62.17.132 | 8080 | dev.crm-prionex.online |`. Was harmless
+   before a real PRE-PROD existed; is actively misleading now. **Not fixed here** — `README.md` is
+   inside Story 4.9's blast radius. **Owner: coordinator, after Story 4.9 merges.**
+4. **`secret/fe/pre-prod/app` OpenBao value: not re-verified this session.** The written record
+   (`3-3-build-per-environment-images-with-explicit-variables.md:112,725-731`, independently confirmed
+   2026-08-17 by run 680's bundle extraction) says version 2 holds the real PRE-PROD URLs, not the
+   placeholder still repeated by `epics.md:2169-2171`, `build.yml:596-597` and this file's own
+   `:1794-1798`. This session had SSH/psql to s1 but no OpenBao token, and Prohibition 8 forbids
+   `/usr/local/bin/bao`; the claim above is the *record's* claim, not a fresh read. ~~Owner: whoever
+   next has an explicit X-Vault-Token and five minutes~~ 🔴 **Owner corrected, fix-pass (was a trigger
+   condition, not a name — Prohibition 12): Owner: coordinator**, to obtain or delegate Vault access.
+5. **`Dockerfile.prod:34` citation is stale by 22 lines; the real line is `:55-56`.** Nine artifacts
+   repeat the stale citation as of this measurement: the epic (`epics.md:259,2129,2165`),
+   `sprint-change-proposal-2026-08-13-kong-naming.md:36`, `4-1-parameterize-the-compose-file-for-coexisting-stands.md:224,656,675`
+   (which itself already flags the drift), `4-8-factor-out-the-shared-deploy-mechanics.md:300`, this
+   file's own `:918`, `sprint-status.yaml:636`, `1-6-secure-the-pre-prod-infrastructure-commitment.md`
+   (five lines), `docs/preprod-infrastructure-requirement.md` (three lines), and
+   `docs/migration-decisions.md`'s D28 entry (line number shifts with each edit to that file — verify
+   against the current file, not a cached number; a fixed number here would itself become a stale
+   citation). ~~Not corrected in place anywhere except this story's own text and
+   `docs/preprod-infrastructure-requirement.md`'s header amendment (Task 8.1)~~ 🔴 **Corrected,
+   fix-pass: this is false as originally stated.** Task 8.1 amended only the requirement doc's
+   *header* (status/blocked claims); Task 8.2 explicitly forbids touching that document's body, so its
+   three `:34` citations (`:36,74,182`) are **untouched**, correctly, not corrected. The only place the
+   citation is actually fixed is this story's own text (§4, §7(b), Task 7.5) and this finding's own
+   line above. Everything else — `epics.md`, closed-story history, `docs/preprod-infrastructure-requirement.md`'s
+   body — is out of this story's writable scope and remains stale. **Owner: coordinator**, next time
+   any of these files is opened for an unrelated edit.
+6. **N4 as epic-inherited was unfalsifiable, and the first correction attempt repeated the same
+   shape of error one level up.** "Different addresses in two different networks" is guaranteed by
+   subnetting alone. The coordinator's citation audit (2026-08-23) rescoped it to container
+   **identity** before work started — but the first execution asked two containers already
+   *selected by name* (`crm-preprod-kong-gateway`, `crm-dev-kong-gateway`) for their own `.Id`, which
+   is *also* guaranteed to differ regardless of isolation — the same vacuity one level up, caught by
+   code review. **Corrected, fix-pass, `2026-08-23T19:35:41Z`–`19:35:42Z`:** resolve the alias inside
+   each network, then find the *owning container* from that network's own `docker network inspect`
+   `.Containers[]` address map — not by asking a pre-selected container. `crm-preprod-network`'s own
+   map assigns `172.21.0.24` to full ID `61eb0eaa9f640e23bfe0b653effa21da637c104edf63a4f09ffd6b40437ac612`
+   (`crm-preprod-kong-gateway`); `crm-dev-network`'s own map assigns `172.22.0.53` to full ID
+   `6c1b4ac96e8d7acfae670b9913619f67840f4b7942a3b48ede3831884baeeb2e` (`crm-dev-kong-gateway`).
+   Different containers, discovered by each network's own bookkeeping, not asserted by name-lookup.
+   **This is the correct N4 shape — worth carrying forward as-is to Story 5.2/6.4's own isolation
+   checks; the first, named-lookup version should not be.** **Owner: Story 5.2, Story 6.4**
+   (methodology reference for their own isolation checks — no action owed on this story).
+7. **Measurement-script gotcha: a naive container-ID-set diff over `docker network inspect
+   --format` output produces a false non-empty intersection.** Go's `{{range}}…{{end}}` template
+   emits a trailing blank line after the last entry; two independently-sorted ID lists both carry
+   that blank line, and `comm -12` reports it as a shared "ID". Observed once at 2026-08-23T18:59:19Z
+   (reported intersection=1, counts 70/71 against a true 69/70); the diagnostic was the *empty*
+   "shared IDs" list once inspected, not the repeated re-runs that preceded finding it (repeating a
+   deterministic command adds no discriminating information on its own). Filtering blank lines
+   (`grep -v '^$'`) before the diff, plus cross-checking `{{len .Containers}}` against the filtered
+   set size on **both** networks (fix-pass — the first pass only cross-checked one side), gives a
+   result that is visibly computed, not assumed. **Not an infrastructure defect** — a warning for any
+   future script that diffs `docker network inspect` container-ID sets. **Owner: coordinator**
+   (methodology note for whoever writes the next such script — no action owed on this story).
+8. **§11's `expect_unrouted_api` question, answered on the actual guard path this time.** PRE-PROD's
+   Kong, requested directly in-network at `crm-kong-gateway:8000/api/`, returns `404
+   {"message":"no Route matched with those values"}` — measured twice: first pass
+   (`2026-08-23T18:58:33Z`) with `Host: crm-kong-gateway` (an internal alias no route could ever match
+   on Host grounds — confounded, per code review), and again fix-pass (`2026-08-23T19:36:04Z`) with
+   `Host: crm.preprod.crm-prionex.online`, matching what `nginx.conf:41`'s `proxy_set_header Host
+   $host` actually forwards on the real browser→nginx→Kong path. Same result both times, but only the
+   second measurement is on the path the guard takes. ~~`KONG_PORT`/`8000` is confirmed as the
+   working in-network listener by the same request (closes `deferred-work.md:934-937` for
+   PRE-PROD)~~ 🔴 **Corrected, fix-pass: this does NOT close `:934-937`.** See the note added directly
+   under that entry (line 934 above) — PRE-PROD never sets a non-default `KONG_PORT`, so this
+   measurement can't discriminate the actual open question. D33's stated rationale for
+   `expect_unrouted_api: "false"` on PRE-PROD ("PRE-PROD's Kong routes real services") is not
+   contradicted by the `/api/` result — `/api/` specifically may simply have no route configured on
+   either stand — but the datum (now on the correct Host) did not exist before this story and Story
+   5.3 should read it before relying on the rationale as written. **Owner: Story 5.3** (Task 5.4/§11
+   of this story).
+9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
+   raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
+   (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
+   unchanged/complete; item 1 (run 1150) now includes the actual query text and its 33-row step log,
+   plus the finding the backfill existed to surface — **measured duration 49s against the coordinator-
+   relayed "~70s"**, a real discrepancy, not a rounding; item 2 (runs 1146/1147) now includes
+   `trigger_user_id=-2` (verbatim, matching D31 §7's predicted actor) and run 1146's own 4-row step
+   log — the one remaining gap is that "1147 left the stand on `main`'s digest, healthy" is not
+   directly traceable to 1147 alone (the stand has redeployed since; the current image matches D33's
+   own recorded restore digest, which confirms D33's claim, not 1147's isolated effect — named as a
+   gap, not papered over). **Not edited here or in D31 §7** — Story 5.1's Dev Notes §5 is explicit
+   that applying the backfill is somebody else's edit; only the capture is free. **Owner: coordinator**,
+   to fold into `docs/migration-decisions.md#d31` §7, including the 49s-vs-70s discrepancy.
+
+## Deferred from: code review of story-5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-23)
+
+One finding deferred. Everything else the review raised (4 decisions, 5 high, 27 medium, 21 low) is
+an action item inside the story file's own `### Review Findings`, not deferred work.
+
+- ⚠️ **The run-ledger baseline query is instance-wide and its no-hidden-run check is weaker than it
+  reads.** `select max(id), count(*) from action_run;` (the method `docs/migration-decisions.md#d31`
+  §7 documents, inherited unchanged by every story since 4.6) carries no `repo_id` filter, so any run
+  from a sibling repository between the baseline and the post-merge re-query inflates the delta —
+  which is then compared against a floor counting only this story's own runs. An overrun, or its
+  absence, is therefore not attributable to the story that declared it. Separately, `max(id)` and
+  `count(*)` moving by the same amount is cited as proof that no run is hidden; that identity holds
+  only if no `action_run` row has ever been deleted, which is assumed rather than established.
+  **Pre-existing** — not caused by Story 5.1, which applied the documented method correctly and got a
+  real number (`1160|1160`, 2026-08-23T19:02:49Z). **Owner: coordinator**, at whichever story next
+  revises D31 §7's protocol.
