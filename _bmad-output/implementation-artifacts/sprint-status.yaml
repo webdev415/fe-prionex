@@ -643,12 +643,24 @@ development_status:
   # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
   # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
   epic-5: in-progress
-  5-1-stand-up-the-isolated-pre-prod-backend-network: review
+  5-1-stand-up-the-isolated-pre-prod-backend-network: in-progress
   # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — all five
   # discriminators (N1-N5) closed on live evidence, ledger baseline via psql (max(action_run.id)=1160).
   # N4 rescoped pre-work per coordinator's citation audit (epic's "different addresses" was
   # unfalsifiable). D34 recorded. Three known defects routed, not fixed (AC5). Awaiting Opus
   # code-review and coordinator PR-open (Dev Notes §7).
+  # 🔴 Code review (Opus) 2026-08-23: CHANGES REQUESTED — 4 decisions / 5 high / 27 medium / 21 low,
+  # 1 deferred. Status returned to in-progress for a fix pass. Blast radius is clean (5 files, none
+  # in story §12; nothing created on s1; D34 free of 4.9) and the disjoint-set diagnosis is right.
+  # The high findings are all evidential, not infrastructural: N4 as run compared IDs of two
+  # containers already distinguished by NAME (guaranteed to differ — the vacuity the rescope was
+  # meant to remove); AC4's "absent from DEV's Kong log" has no readability control, so every failure
+  # mode returns the expected answer; the deferred-work.md:934-937 closure is both misplaced (Proh. 12
+  # says closures go under the original, struck — this one went to EOF) and unearned (the open item is
+  # whether a NON-DEFAULT KONG_PORT moves the in-network listener; PRE-PROD does not set it); and a
+  # CORS "reproduced in-network" claim has no command behind it (the nc probes send no Origin header).
+  # Full accounting in the story's own ### Review Findings. NOTE: the "five artifacts" count in the
+  # context block above is itself one of the findings — the corrected count is nine.
   5-2-provision-the-pre-prod-stand-on-s1: backlog
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog

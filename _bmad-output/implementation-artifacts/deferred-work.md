@@ -3467,3 +3467,20 @@ channel (`root@10.67.0.1`) and sandbox network probes, UTC-timestamped at the po
    this session had the SSH/psql access that entry was waiting on. **Not edited here or there** —
    Story 5.1's Dev Notes §5 is explicit that applying the backfill is somebody else's edit, only the
    capture is free. **Owner: coordinator**, to fold into `docs/migration-decisions.md#d31` §7.
+
+## Deferred from: code review of story-5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-23)
+
+One finding deferred. Everything else the review raised (4 decisions, 5 high, 27 medium, 21 low) is
+an action item inside the story file's own `### Review Findings`, not deferred work.
+
+- ⚠️ **The run-ledger baseline query is instance-wide and its no-hidden-run check is weaker than it
+  reads.** `select max(id), count(*) from action_run;` (the method `docs/migration-decisions.md#d31`
+  §7 documents, inherited unchanged by every story since 4.6) carries no `repo_id` filter, so any run
+  from a sibling repository between the baseline and the post-merge re-query inflates the delta —
+  which is then compared against a floor counting only this story's own runs. An overrun, or its
+  absence, is therefore not attributable to the story that declared it. Separately, `max(id)` and
+  `count(*)` moving by the same amount is cited as proof that no run is hidden; that identity holds
+  only if no `action_run` row has ever been deleted, which is assumed rather than established.
+  **Pre-existing** — not caused by Story 5.1, which applied the documented method correctly and got a
+  real number (`1160|1160`, 2026-08-23T19:02:49Z). **Owner: coordinator**, at whichever story next
+  revises D31 §7's protocol.
