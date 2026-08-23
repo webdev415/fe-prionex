@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-22
+# last_updated: 2026-08-23
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -490,7 +490,108 @@ development_status:
   # 06:56 UTC, confirmed via `date -u` on s1) — nothing broken, no amendment to D31/4.6 needed, real
   # check is tomorrow after 02:00:44 UTC. Status done.
   4-7-validate-dev-deploys-across-five-feature-branches: done
-  4-8-factor-out-the-shared-deploy-mechanics: backlog
+  # Contexted 2026-08-22 against main at 06224481, branch story-4-8/pr-1-context.
+  # 🔴 The epic's AC2 is FALSE AS WRITTEN and it decides the mechanism: its Given is "neither
+  # workflow_call nor composite actions are supported". Both halves are now measured and they
+  # disagree — composite actions are dead on the deploy runner (uses: steps do not execute at all,
+  # run 920), workflow_call works and is live in this repo twice (D21). The shell-script fallback
+  # therefore does NOT fire; it is held in reserve for one specific risk, not adopted.
+  # 🔴 The decisive argument against the shell-script shape is not taste, it is 4.7's H4: the deploy
+  # job's own task log did not persist for 3 of 5 runs and still had not 24h later, so
+  # action_task_step rows are the ONLY surviving per-step evidence for that job. A monolithic script
+  # collapses 22 rows into 1 — it would remove the last evidence channel from the one job that needs
+  # it most. Held in reserve: per-step scripts, which keep the rows.
+  # 🔴 ONE UNMEASURED RISK DECIDES THE SHAPE (R1): epic AC3 requires the deploy-runner label to be an
+  # INPUT, i.e. `runs-on: ${{ inputs.runner_label }}` in a callee — never tested, read or recorded in
+  # this project, and upstream Gitea evaluates runs-on at job-planning time with `matrix` as the
+  # documented exception. Task 1.2 settles it read-only off s1 BEFORE the callee is written. Four-rung
+  # fallback ladder, bottom rung escalates to Oleg rather than shipping a copy. Note R1 does not block
+  # this story or 5.3 — DEV and PRE-PROD share one runner and one label; only 6.4 (s10) differs.
+  # 🔴 D21's silent hazard is the story's headline trap: a called workflow's run carries the CALLER's
+  # auto-group; the callee's own concurrency: block produces no group AND no error. The block stays in
+  # each caller as a per-stand literal and the callee declares none. Verified by DB query on the first
+  # refactored run (concurrency_type=1 survived, 0 = the guard is gone and the file lies).
+  # 🔴 dev-reset.yml dispatches BY FILE NAME and confirms by grepping the literal
+  # "title":"Deploy DEV Stand" — so deploy-dev.yml must keep its file name, its workflow name and its
+  # required `ref` input, or the weekly reset breaks with no error (its dispatch step is deliberately
+  # non-blocking). Prohibitions 1-3.
+  # Found while contexting, named by no prior story: the Kong alias guard hard-requires /api/ to stay
+  # UNROUTED (Story 4.3's L3). DEV's Kong has no route; PRE-PROD's runs 69 containers of real
+  # services. Unparameterized, that guard fails EVERY PRE-PROD deploy — in Story 5.3, not here.
+  # `expect_unrouted_api` added to the parameter surface.
+  # Six inherited debts routed here: rollback-after-down RESOLVED (sequenced last, own commit, drops
+  # cleanly to 5.3 — its discriminating row is the health-fails dispatch epic AC4 requires anyway, so
+  # one dispatch earns two rows); cold-pull (H3) RESOLVED at zero cost by removing the image from s1
+  # before the green dispatch; task-log non-persistence (H4) and the 4s timing gap RESOLVED by DB/disk
+  # investigation, zero dispatches; queue-depth>2 / flock wake order>2 / DF2's group-vs-capacity
+  # RE-ROUTED (per-stand groups and locks make cross-stand contention unexpressible, and
+  # group-vs-capacity is unmeasurable on any capacity-1 runner in this plan — closed negative);
+  # DF2's scheduled-actor axis RE-ROUTED to the coordinator with an explicit recommendation NOT to
+  # stage it on 08-23, because confounding it with the first autonomous firing is worse than leaving
+  # it open; D31's two-sources-of-truth RE-ROUTED to 4.9 with the render axis closed here.
+  # KONG_PORT does NOT block this story and Task 9.5 says so: the Kong guard uses no port literal.
+  # Declared floor 24 runs, honouring 4.7/DN4's new permanent per-push ledger line (ci.yml has no
+  # paths filter). Matrix is earned from the STORY BRANCH before merge (run 917's precedent) — that
+  # is what keeps the floor at 24 rather than doubling it.
+  # 🚨 No main merge and no DEV dispatch between 2026-08-23 01:45 and 02:30 UTC: one row deliberately
+  # leaves the stand broken, and the first autonomous reset has never been observed.
+  # ✅ Closeout 2026-08-23: all 10 Tasks done. R1 confirmed positive read-only AND live (run 1132,
+  # all jobs on runner_id=14) — no fallback rung needed. concurrency: block survives workflow_call
+  # expansion for every run 1132-1143 (type=1, group intact) — D21's own central question answered
+  # positively. Rollback implemented and earned live (run 1143) after two honestly-recorded false
+  # starts: run 1135 used Story 4.3's own throwaway probe branch, deleted by design at that story's
+  # closeout (Task 1.4 checked the image tag's own registry status, not the branch's existence —
+  # two independent facts); run 1141's replacement broke the compose file's own healthcheck, which
+  # the restore mechanism cannot fix by design (it restores the image only); run 1143's own v2 broke
+  # the image instead (nginx listening on the wrong port) and closed the row cleanly. H4: task-log
+  # persistence for the deploy job went from ~43% (Story 4.7's own direct-dispatch measurement) to
+  # 7/7 under workflow_call — a real correlation, mechanism not fully traced. The 4s job/workflow gap
+  # confirmed identical across called and dispatched jobs and across simple/complex runs — container
+  # scheduling overhead, not the workflow_call expansion. Cold-pull still unmeasured (Docker's own
+  # cross-image layer cache defeated the one dispatch that tried). Task 2.6 (collapse the duplicated
+  # holder-launch block into one definition) genuinely partial — hold-lock's own deliberate
+  # zero-checkout design blocks a shared external script; named honestly, not forced. D33 written;
+  # epics.md Story 4.8/5.3 amended in place; deferred-work.md routed (rollback closed, both
+  # measurement debts closed, group-vs-capacity closed negatively by construction, DF2's scheduled-
+  # actor axis re-routed to the coordinator with an explicit no-08-23-staging recommendation, three
+  # new findings routed). Ledger OPEN (retro-D4) — above-baseline spend 13 as of this write-up,
+  # against a floor of 24, six unbudgeted dispatches all tracing to the one probe-branch root cause.
+  # Status review.
+  # 🔴 Code review 2026-08-23 (`d5e5fa65` vs main `06224481`): CHANGES REQUESTED, reset review ->
+  # in-progress. The MOVE is clean and verified mechanically (every changed step-body line is a
+  # literal->input substitution; 0 of 33 run: bodies contain `${{`; all bash -n clean; Prohibition
+  # 1/§9 holds BYTE-LEVEL and dev-reset.yml's dispatch + title grep still match; runs-on input on
+  # all five jobs). Four intolerable findings, all in what is NOT a move: (1) image_tag-only mode is
+  # structurally dead — clone-test hard-fails on an empty ref and deploy needs it, so Story 5.3
+  # cannot consume this file, and the github.sha fallback is unreachable rather than merely
+  # untested (Open Question 7 understates it); (2) the new restore step runs `up -d` with no lock
+  # re-assertion, and its likeliest trigger is the holder-is-gone refusal it then overrides; (3)
+  # both compose-project-label guards compare against container_name, right on DEV only because the
+  # caller passes one value for both; (4) the shipped commit has never been dispatched — 174 lines
+  # landed after the 1132-1138 matrix and 55 after run 1143, including the two exit-code changes
+  # inside the restore step that Task 7.3 claims to have fixed. E5 accounting: 8 of 10 inherited
+  # rows re-earned live; 4.4's FAIL/STALE argued not dispatched, and Task 6.7's own void-clause
+  # fires (Task 2.7 added an 8-line control-flow branch inside the acquire step). Ledger arithmetic
+  # verified correct (13 above 1129, floor 24, closed OPEN); only its narration contradicts itself.
+  # 4 decisions for Oleg + 27 action items + 2 deferred, in the story file's Review Findings.
+  # 🟢 Fix-pass 2026-08-23, zero dispatch: DN1-DN4 resolved by Oleg (secrets:inherit is a
+  # structural pre-6.4 decision, not patched here; 6.7's void-clause amended with a textual diff
+  # proof instead of a dispatch; restore trigger narrowed to steps.compose_down.outcome=='success';
+  # one green dispatch from the shipped commit left to the coordinator, timed around the 01:45-02:30
+  # UTC window). All 4 High findings fixed in code: image_tag mode's two blockers (clone-test's
+  # empty-ref fallback, the revision cross-check's explicit skip in that mode); restore now
+  # re-confirms the lock holder before up -d; both compose-project-label guards compare against
+  # compose_project_name, not container_name. 18 of 20 Medium/Low findings fixed (numeric input
+  # validation incl. the dangerous TTL-bypass-under-set-e case; fail-closed booleans; image_tag shape
+  # validation; RepoDigests format check; run-id-suffixed clone-test checkout; IMAGE_REPO-derived
+  # diagnostic URLs; guarded diagnostic step; four DEV-literal messages generalized; stale identity
+  # strings renamed; stale concurrency comment fixed; ledger prose and run:-body counts corrected;
+  # D33's concurrency-survival range narrowed to 1132-1138; File List path and D33 cosmetics fixed).
+  # Left open by design: the restore's weaker verification bar (named in code, not re-engineered),
+  # crm-kong-gateway staying hardcoded (Oleg's own chosen alternative over adding an input), Task
+  # 6.2's SQL text pasted but this session had no live DB connectivity to paste raw rows, and the
+  # TTL-600 literal still not structurally coupled to timeout-minutes. Status back to review.
+  4-8-factor-out-the-shared-deploy-mechanics: review
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
 
