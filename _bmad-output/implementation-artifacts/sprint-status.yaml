@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-23
+# last_updated: 2026-08-24
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,7 +43,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-07
-last_updated: 2026-08-23
+last_updated: 2026-08-24
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -681,7 +681,42 @@ development_status:
   # (1165-1166, its own branch pushes, not this story's spend). Declared floor 8: 6 spent and
   # accounted for by commit, 2 (closeout PR open/merge) not yet spent — coordinator's to incur per the
   # standing PR-open convention, not an overrun. Status: done.
-  5-2-provision-the-pre-prod-stand-on-s1: backlog
+  # Contexted 2026-08-24 (story 5.2, branch story-5-2/pr-1-context). Started at main 90836b99 (PR #74),
+  # rebased onto 08803a17 when PR #75 merged mid-session — 5.1's ledger-attribution method arrived
+  # with #75 and the story cites it (Dev Notes §5). This is the FIRST Epic 5 story that BUILDS
+  # anything: stand directory + container on crm-preprod-network, nginx vhost + LE cert for
+  # crm.preprod.crm-prionex.online, and a read:package login on the host. Zero runs for the host-side
+  # work; the only run-costing item is a contingency (Task 5.4) if no usable -preprod image exists.
+  # Measured first-hand on s1 2026-08-23 20:52-21:10 UTC (SSH root@10.67.0.1 worked this session):
+  # (a) /root/crm-prionex/fe-prionex-preprod does NOT exist; 8083 FREE; 8081 still docker-proxy
+  # (vm-cadvisor), 8082 the DEV stand — both 127.0.0.1. (b) 🔴 /root/.docker/config.json auths is
+  # EMPTY again — D28 §3 recorded a live login after 4.2; it is gone, same as 1.10's was. AC4 is real
+  # work, not a confirmation step. (c) 🔴 crm.preprod.crm-prionex.online still serves
+  # CN=admin.techno-finance.online (s1's default vhost) — 5.2's vhost+cert work confirmed outstanding;
+  # nginx is a HOST process, /etc/nginx/sites-available/crm-stands + crm-stands-acme are the files to
+  # extend, certbot 2.9.0 with webroot /var/www/acme. (d) 🔴 the DEV stand's compose project points at
+  # /workspace/.../stand-checkout-1150/ — live proof of D28 option (e) — while its host .env has
+  # DRIFTED (says 8082 + sha-62e2ff8dc215-dev; live is 127.0.0.1:8082 + digest 57477edb…). (e) 🔴 BUT
+  # the host stand dir is NOT merely a record: deploy-stand.yml asserts <stand_dir>/docker-compose
+  # .stand.yml exists TWICE (:334-342, :1473-1481) before taking the lock — it is 5.3's hard
+  # precondition. (f) 🔴 deploy-stand.yml:216's caller skeleton names runner_label
+  # deploy-preprod-preprod, which does NOT exist; the runner registers deploy-dev-preprod/dev/preprod/
+  # deploy. Routed to 5.3, NOT fixed — deploy-stand.yml is 4.8's shipped artifact and in 4.9's blast
+  # radius. (g) crm-preprod-network 69 containers, Kong 61eb0eaa9f64 healthy on 10.70.0.1:8320->8000.
+  # (h) no -preprod image cached locally; sha-00ef3be4743d-preprod (run 680, bundle verified to carry
+  # the REAL preprod URLs) is the leading first-image candidate — prefer it over minting a new
+  # PERMANENT tag. Ledger baseline 1170|1170 at 2026-08-23T21:02:08Z, OPEN.
+  # Story shaped with SIX ACs: the epic's four (AC1 read as five variables and 127.0.0.1:8083, AC2's
+  # "three stands" read as two per FR25's amendment, AC3 restated as real work, AC4 reopened on
+  # measurement) plus AC5 (Kong reachability by CONTAINER IDENTITY from inside the running container —
+  # D34 §3's revision trigger names 5.2 and this exact form) and AC6 (the PRE-PROD Kong static-CORS
+  # boundary measured from the real origin and recorded with an owner, NOT fixed — browser API calls
+  # WILL fail until CRM/api-prionex fixes it, and the story says so rather than closing silently).
+  # Four designated failing runs (retro-E5): push->401, bridge->exit 2, external :8083 refused, a
+  # vhost-less sibling name -> default CN. Decision number is D36, NOT D35 — 4.9 already holds D35 on
+  # its branch (commit 11017adc), verified 2026-08-24. Story 4.9 in flight: 5.2 must not touch
+  # deploy-stand.yml, deploy-dev.yml, dev-reset.yml, README.md or the DEV stand (story §12).
+  5-2-provision-the-pre-prod-stand-on-s1: ready-for-dev
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
