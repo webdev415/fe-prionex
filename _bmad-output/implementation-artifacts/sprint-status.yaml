@@ -643,12 +643,13 @@ development_status:
   # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
   # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
   epic-5: in-progress
-  5-1-stand-up-the-isolated-pre-prod-backend-network: in-progress
-  # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — all five
-  # discriminators (N1-N5) closed on live evidence, ledger baseline via psql (max(action_run.id)=1160).
-  # N4 rescoped pre-work per coordinator's citation audit (epic's "different addresses" was
-  # unfalsifiable). D34 recorded. Three known defects routed, not fixed (AC5). Awaiting Opus
-  # code-review and coordinator PR-open (Dev Notes §7).
+  5-1-stand-up-the-isolated-pre-prod-backend-network: review
+  # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — three
+  # discriminators (N1, N4, N5; N2 is a standing DNS falsification, N3 a negative control, neither
+  # is itself a PRE-PROD-vs-DEV discriminator) closed on live evidence, ledger baseline via psql
+  # (max(action_run.id)=1160, ledger itself OPEN). N4 rescoped pre-work per coordinator's citation
+  # audit (epic's "different addresses" was unfalsifiable). D34 recorded. Three known defects routed,
+  # not fixed (AC5). Awaiting Opus code-review and coordinator PR-open (Dev Notes §7).
   # 🔴 Code review (Opus) 2026-08-23: CHANGES REQUESTED — 4 decisions / 5 high / 27 medium / 21 low,
   # 1 deferred. Status returned to in-progress for a fix pass. Blast radius is clean (5 files, none
   # in story §12; nothing created on s1; D34 free of 4.9) and the disjoint-set diagnosis is right.
@@ -659,8 +660,17 @@ development_status:
   # says closures go under the original, struck — this one went to EOF) and unearned (the open item is
   # whether a NON-DEFAULT KONG_PORT moves the in-network listener; PRE-PROD does not set it); and a
   # CORS "reproduced in-network" claim has no command behind it (the nc probes send no Origin header).
-  # Full accounting in the story's own ### Review Findings. NOTE: the "five artifacts" count in the
-  # context block above is itself one of the findings — the corrected count is nine.
+  # Full accounting in the story's own ### Review Findings. NOTE: the "five artifacts" count above
+  # was itself one of the findings — corrected to nine (also fixed in the story's own §7(b)).
+  # 🔴 Fix-pass complete 2026-08-23: N4 re-measured via each network's own .Containers[] address map
+  # (not named-container lookup); N5 re-run with a DEV-side positive control before any cross-check;
+  # deferred-work.md:934-937 reopened, closure note relocated under the original entry per Prohibition
+  # 12; CORS in-network re-measured with an Origin header; expect_unrouted_api re-measured with the
+  # Host nginx.conf:41 actually forwards; Story 4.8 backfill items 1-2 completed while SSH was live
+  # (actor_id=-2 confirmed, run 1150 measured at 49s vs relayed ~70s); Task 8.1 restored "не
+  # направлено" unstruck; nine-artifact citation count fixed at §7(b); alpine precedent re-cited to
+  # 4-2-provision-the-new-dev-stand-on-s1.md:600. Ledger +1 contingency line for this pass, still
+  # OPEN. Status back to review.
   5-2-provision-the-pre-prod-stand-on-s1: backlog
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog

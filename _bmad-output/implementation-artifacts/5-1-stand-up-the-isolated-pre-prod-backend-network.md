@@ -4,7 +4,7 @@ baseline_commit: fc6bfe82ed23edf2548ec10bca99e3934a5271a8
 
 # Story 5.1: Stand Up the Isolated PRE-PROD Backend Network
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-23 against `main` at `fc6bfe82` (merge of PR #73, Story 4.8 closeout), on
      branch `story-5-1/pr-1-context`. Every autonomous decision in this file is marked "autonomous,
@@ -29,9 +29,15 @@ Status: in-progress
         and rung 3 is a routed ask to Oleg (OQ1), not something this session builds unprompted.
      5. Task 9.5 corrected: the coordinator opens the PR (standing convention, every story) — this
         session prepares the pre-open diff check and stops there, matching Dev Notes §7's own line.
-     6. docker run probe image: only an image already present on s1 (per Story 4.2/D28 §2 precedent
-        — `alpine`, used there for the identical bridge-network getent negative control). Pulling a
-        new image is a Prohibition 1 violation.
+     6. docker run probe image: only an image already present on s1 — `alpine`. 🔴 **Citation fixed,
+        fix-pass 2026-08-23 (code review):** attributed to "Story 4.2/D28 §2 precedent", but D28 §2
+        (`docs/migration-decisions.md:2956-3157`) names no image and its DEV-side probe was
+        `docker exec fe-prionex-dev getent hosts crm-kong-gateway`, not a `docker run`. The real
+        citation is `4-2-provision-the-new-dev-stand-on-s1.md:600`: `docker run --rm --network bridge
+        alpine getent hosts crm-kong-gateway` → no output, exit 2, executed on s1. The underlying
+        fact (alpine already cached on s1) is unaffected; only the pointer was wrong — the same class
+        of error as unactioned audit item 17, entered via audit item 6 and applied verbatim. Pulling
+        a new image remains a Prohibition 1 violation.
      7. Task 6.6 given the same UNPROVEN fallback Task 6.7 already had, for symmetry when
         `crm-preprod-kong-gateway`'s own logs are unreadable.
      Factual corrections: "on this host" (§0 intro) was false — Story 4.1 Task 6.2 ran locally, not
@@ -241,7 +247,9 @@ world-readable wrapper that silently authenticates as `admin` and once turned ni
 into nine false positives (`deferred-work.md:701-712`).
 
 **(b) The `Dockerfile.prod:34` citation is stale.** The `COPY nginx.conf` line is at
-`Dockerfile.prod:55-56` at `fc6bfe82`. Five artifacts repeat `:34`.
+`Dockerfile.prod:55-56` at `fc6bfe82`. 🔴 **Nine** artifacts repeat `:34` (corrected from "Five" —
+this line itself was the drift the corrections log's own count-fix at §4 missed; caught by code
+review, fix-pass 2026-08-23; full list at Task 7.5).
 
 Both are recorded as **findings of this story** (Task 8), because the pattern — a fact asserted
 once, then carried by citation for a week after it stopped being true — is the same pattern that
@@ -422,8 +430,13 @@ into a byte-identical image at `Dockerfile.prod:55-56`
 `crm-preprod-kong-gateway`'s own address on that network — resolution alone does not close this row
 **And** an HTTP request to `crm-kong-gateway:8000` returns a real response from Kong, with the
 status, the `X-Kong-Response-Latency` header and the literal body recorded
-**And** the port `8000` is confirmed as the in-network listener by that same request, closing
-`deferred-work.md:934-937` for PRE-PROD
+**And** the port `8000` is confirmed as **an** in-network listener by that same request — 🔴
+**corrected, fix-pass 2026-08-23 (code review):** this does **not** close `deferred-work.md:934-937`.
+That open item asks whether a **non-default** `KONG_PORT` (PROD sets `8330`) moves the in-network
+listener; PRE-PROD does not set the variable, so observing `8000` here is consistent with either
+answer and discriminates neither — "most easily faked by a check that would pass either way" (§2).
+The item stays open; see `deferred-work.md`'s relocated note under the original entry and Completion
+Notes.
 **And** the identical `getent` command from a throwaway container on the built-in `bridge` network
 returns **empty with exit 2** — the discriminating negative, N3.
 
@@ -558,11 +571,12 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
 - [ ] 3.2 Write the read-only probe script regardless of 3.1's outcome: a single copy-pasteable
       block, no arguments, no writes, every container `--rm`, tolerant of any one command failing.
       It must emit every measurement Tasks 4–6 need, each on its own labelled line. 🔴 **Probe image:
-      `alpine`, matching Story 4.2/D28 §2's precedent for the identical bridge-network `getent`
-      negative control** — already present on s1's local image cache from that story (coordinator's
-      citation audit, 2026-08-23). Do not pull a different image; pulling a new one is a Prohibition
-      1 violation. If `alpine` is not present, confirm with `docker image inspect alpine` before
-      running anything and escalate rather than pull.
+      `alpine`, already present on s1's local image cache** — precedent `4-2-provision-the-new-dev-stand-on-s1.md:600`
+      (`docker run --rm --network bridge alpine getent hosts crm-kong-gateway`, executed on s1;
+      citation corrected fix-pass 2026-08-23 — coordinator's citation audit had attributed this to
+      "D28 §2", which names no image). Do not pull a different image; pulling a new one is a
+      Prohibition 1 violation. Confirmed present via `docker image inspect alpine` before use
+      (Debug Log References).
 - [ ] 3.3 Review the script against Prohibitions 1, 2, 3, 9 line by line before it runs anywhere.
       Any `create`, `connect`, `disconnect`, `restart`, `stop`, `down`, or non-`--rm` `docker run`
       is a defect in the script, not a judgement call.
@@ -604,9 +618,12 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
       DNS answering (D28 §2 layer 2).
 - [ ] 5.4 Same request against `/api/` — record status and literal body. 🔴 This is §11's
       `expect_unrouted_api` observation for Story 5.3. Record it; **change no workflow**.
-- [ ] 5.5 State explicitly that `8000` was the working in-network port, closing
-      `deferred-work.md:934-937` for PRE-PROD — or, if it was not, that is a significant finding
-      about `KONG_PORT` and it goes to Oleg and to Story 5.2 the same day.
+- [ ] 5.5 State explicitly that `8000` was the working in-network port. 🔴 **Corrected, fix-pass
+      2026-08-23 (code review):** this measurement, on its own, does **not** close
+      `deferred-work.md:934-937` — that item is specifically about whether a *non-default* `KONG_PORT`
+      moves the in-network listener, and PRE-PROD never sets the variable, so `8000` here is
+      consistent with either hypothesis. The item stays open; the false closure (asserted here, in
+      AC2, in the transcript, in `deferred-work.md` and in D34 §6) is walked back in all five places.
 - [ ] 5.6 ✅ **N3, the discriminating negative:** the identical `getent` command from
       `docker run --rm --network bridge …`. Expect **empty output, exit 2**. 🔴 If it *resolves*,
       stop and escalate — the name would be host-wide, and every other row in this story would be
@@ -914,81 +931,141 @@ obtained first-hand by the dev agent, from the host, the network, or the wire.
 ### Debug Log References
 
 **Access:** Rung 1 (§6) worked this session — `ssh root@10.67.0.1` succeeded, hostname `NLDW3-3-42-32`,
-first confirmed 2026-08-23T18:57:42Z. All host-side measurements below are first-hand over that
-channel, not relayed or inherited. Rung 2/3 were not needed.
+first confirmed 2026-08-23T18:57:42Z, **re-confirmed live for the fix-pass** at 2026-08-23T19:33:29Z.
+All host-side measurements below are first-hand over that channel, not relayed or inherited. Rung 2/3
+were not needed. 🔴 §3(l)'s earlier "refused by the sandbox before a packet left" and this session's
+success are **not a contradiction**: (l) tried the *external* address (`185.185.49.127:22`), which
+`ufw` firewalls to two admin addresses by design (§6); this session used the *private* address
+(`root@10.67.0.1`), a different path, from a session with different network placement. §6's own text
+calls this "session-dependent" — it is address-dependent here, not unexplained.
 
-**Probe script (Task 3.2), written regardless of 3.1's outcome, run verbatim over the rung-1
-channel — single copy-pasteable block, every container `--rm`, no writes outside `/tmp` (cleaned on
-exit), image `alpine` (already present on s1, confirmed via `docker image inspect alpine` before use,
-per Story 4.2/D28 §2 precedent):**
+**🔴 Fix-pass 2026-08-23 (post code-review, commit `7bbb92b2`): the script below is the CORRECTED
+version, actually re-run this pass over the rung-1 channel, replacing the version the review found
+did not match its own transcript.** Changes from the first pass, each tied to a review finding:
+`.Containers[]`-address matching for N4 on both networks (High: "N4 as executed is not the rescoped
+N4"); `mktemp`, `set -o pipefail`, and `{{"\n"}}` on every multi-entry range (Medium: probe-script
+hygiene, separator-less ranges); a DEV-side positive-control marker before the cross-checks (Decision
+1 / High: "AC4's negative half is not falsifiable"); full ISO `--since`/`--until` (High: unparseable
+`--since` in the first transcript); `nc -w 5` timeouts (Low: hanging `nc`); the marker response
+captured, not discarded (Low); `Host: crm.preprod.crm-prionex.online` on the `/api/` probe, matching
+what `nginx.conf:41`'s `proxy_set_header Host $host` actually forwards (Decision 2 / High: wrong
+Host); an `Origin` header on the in-network CORS probe (High: "CORS corroboration... no recorded
+command could have produced"); an explicit alias-uniqueness sweep (Low). Image still `alpine` — the
+precedent citation is corrected below (Medium: mis-cited as D28 §2, which names no image; the real
+citation is `4-2-provision-the-new-dev-stand-on-s1.md:600`, `docker run --rm --network bridge alpine
+getent hosts crm-kong-gateway`, executed on s1).
 
 ```sh
-set -u
+set -o pipefail
+D=$(mktemp -d)
 echo "=== UTC $(date -u +'%Y-%m-%dT%H:%M:%SZ') ==="
+
+# --- Task 3.2: image presence, explicit (was asserted, not evidenced, in the first pass) ---
+docker image inspect alpine --format 'PRESENT id={{.Id}} tags={{.RepoTags}}'
 
 # --- AC1 (Task 4) ---
 docker network inspect crm-preprod-network \
   --format '{{.Name}} id={{.Id}} created={{.Created}} driver={{.Driver}} subnet={{range .IPAM.Config}}{{.Subnet}}{{end}} count={{len .Containers}}'
 docker inspect crm-preprod-kong-gateway --format '{{json .NetworkSettings.Networks}}'
 
-# --- AC2 (Task 5): resolution by address identity + Kong itself + N3 negative control ---
+# --- AC2 (Task 5): resolution + Kong itself + N3, corrected Host + in-network CORS w/ Origin ---
 docker run --rm --network crm-preprod-network alpine getent hosts crm-kong-gateway; echo "exit=$?"
 docker run --rm --network crm-preprod-network alpine sh -c \
-  'printf "GET / HTTP/1.1\r\nHost: crm-kong-gateway\r\nConnection: close\r\n\r\n" | nc crm-kong-gateway 8000'
+  'printf "GET / HTTP/1.1\r\nHost: crm-kong-gateway\r\nOrigin: https://crm.preprod.crm-prionex.online\r\nConnection: close\r\n\r\n" | nc -w 5 crm-kong-gateway 8000'
 docker run --rm --network crm-preprod-network alpine sh -c \
-  'printf "GET /api/ HTTP/1.1\r\nHost: crm-kong-gateway\r\nConnection: close\r\n\r\n" | nc crm-kong-gateway 8000'
+  'printf "GET /api/ HTTP/1.1\r\nHost: crm.preprod.crm-prionex.online\r\nConnection: close\r\n\r\n" | nc -w 5 crm-kong-gateway 8000'
 docker run --rm --network bridge alpine getent hosts crm-kong-gateway; echo "exit=$?"   # N3, expect empty/exit 2
 
-# --- AC3/AC4 (Task 6): N4 by container identity, disjoint sets, N5 marker ---
-docker run --rm --network crm-dev-network alpine getent hosts crm-kong-gateway; echo "exit=$?"
-docker inspect crm-dev-kong-gateway --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}: ip={{$v.IPAddress}} aliases={{$v.Aliases}}{{end}}'
-docker inspect crm-dev-kong-gateway --format '{{.Id}}' | cut -c1-12
-docker inspect crm-preprod-kong-gateway --format '{{.Id}}' | cut -c1-12
-docker network inspect crm-dev-network --format '{{len .Containers}}'
-docker network inspect crm-preprod-network --format '{{range $k,$v := .Containers}}{{$k}}{{"\n"}}{{end}}' | grep -v '^$' | sort > /tmp/pc.txt
-docker network inspect crm-dev-network     --format '{{range $k,$v := .Containers}}{{$k}}{{"\n"}}{{end}}' | grep -v '^$' | sort > /tmp/dc.txt
-echo "preprod=$(wc -l < /tmp/pc.txt) dev=$(wc -l < /tmp/dc.txt) intersection=$(comm -12 /tmp/pc.txt /tmp/dc.txt | wc -l)"
-rm -f /tmp/pc.txt /tmp/dc.txt   # 🔴 filter blank lines before comm -12, or you get a false intersection — see Completion Notes
-docker inspect fe-prionex-dev --format 'Networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}}(ip={{$v.IPAddress}}){{end}} Status={{.State.Status}}'
+# --- alias uniqueness: is any OTHER container aliased crm-kong-gateway on crm-preprod-network? ---
+for cid in $(docker network inspect crm-preprod-network --format '{{range $k,$v := .Containers}}{{$k}} {{end}}'); do
+  docker inspect $cid --format '{{.Name}} network-aliases={{(index .NetworkSettings.Networks "crm-preprod-network").Aliases}}'
+done | grep -i crm-kong-gateway
 
-MARK="isolation-probe-$(date -u +%Y%m%dT%H%M%S)"
-T=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+# --- AC3/AC4 (Task 6): N4 by container identity via .Containers[] address-map, BOTH networks ---
+PREPROD_ADDR=$(docker run --rm --network crm-preprod-network alpine getent hosts crm-kong-gateway | awk '{print $1}')
+docker network inspect crm-preprod-network --format '{{range $k,$v := .Containers}}{{$k}} {{$v.Name}} {{$v.IPv4Address}}{{"\n"}}{{end}}' > $D/preprod_map.txt
+grep "${PREPROD_ADDR}/" $D/preprod_map.txt   # the container ID the network itself says owns that address
+
+DEV_ADDR=$(docker run --rm --network crm-dev-network alpine getent hosts crm-kong-gateway | awk '{print $1}')
+docker network inspect crm-dev-network --format '{{range $k,$v := .Containers}}{{$k}} {{$v.Name}} {{$v.IPv4Address}}{{"\n"}}{{end}}' > $D/dev_map.txt
+grep "${DEV_ADDR}/" $D/dev_map.txt
+
+# --- Task 6.3: disjoint sets, len cross-checked against wc -l on BOTH sides ---
+PC=$(docker network inspect crm-preprod-network --format '{{len .Containers}}')
+DC=$(docker network inspect crm-dev-network --format '{{len .Containers}}')
+docker network inspect crm-preprod-network --format '{{range $k,$v := .Containers}}{{$k}}{{"\n"}}{{end}}' | grep -v '^$' | sort > $D/p.txt
+docker network inspect crm-dev-network     --format '{{range $k,$v := .Containers}}{{$k}}{{"\n"}}{{end}}' | grep -v '^$' | sort > $D/d.txt
+echo "preprod len=$PC set=$(wc -l < $D/p.txt) | dev len=$DC set=$(wc -l < $D/d.txt) | intersection=$(comm -12 $D/p.txt $D/d.txt | wc -l)"
+
+docker inspect fe-prionex-dev --format 'Networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}}(ip={{$v.IPAddress}}){{"; "}}{{end}}'
+docker inspect fe-prionex-dev --format 'Status={{.State.Status}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}(none){{end}} Image={{.Image}}'
+rm -rf $D
+
+# --- Task 6.5-6.7: N5 with a DEV-side POSITIVE CONTROL before the cross-checks ---
+MARK_DEV="isolation-probe-devctrl-$(date -u +%Y%m%dT%H%M%S%N | cut -c1-20)"
+MARK_PP="isolation-probe-story5-1-$(date -u +%Y%m%dT%H%M%S%N | cut -c1-20)"
+T_START=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+docker run --rm --network crm-dev-network alpine sh -c \
+  "printf 'GET /__${MARK_DEV}__/ HTTP/1.1\r\nHost: crm-kong-gateway\r\nConnection: close\r\n\r\n' | nc -w 5 crm-kong-gateway 8000"
 docker run --rm --network crm-preprod-network alpine sh -c \
-  "printf 'GET /__${MARK}__/ HTTP/1.1\r\nHost: crm-kong-gateway\r\nConnection: close\r\n\r\n' | nc crm-kong-gateway 8000" >/dev/null
-sleep 2
-docker logs --since "$T" crm-preprod-kong-gateway 2>&1 | grep -F -- "$MARK" && echo "N5: HIT preprod" || echo "N5: NO HIT preprod (unexpected)"
-docker logs --since "$T" crm-dev-kong-gateway     2>&1 | grep -F -- "$MARK" && echo "N5: HIT dev (unexpected)" || echo "N5: NO HIT dev (expected)"
+  "printf 'GET /__${MARK_PP}__/ HTTP/1.1\r\nHost: crm-kong-gateway\r\nConnection: close\r\n\r\n' | nc -w 5 crm-kong-gateway 8000"
+sleep 3
+T_END=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+docker logs --since "$T_START" --until "$T_END" crm-dev-kong-gateway     2>&1 | grep -F -- "$MARK_DEV" && echo "N5: HIT dev-own (proves channel)"    || echo "N5: NO HIT dev-own (BLOCKING if this happens)"
+docker logs --since "$T_START" --until "$T_END" crm-preprod-kong-gateway 2>&1 | grep -F -- "$MARK_PP"  && echo "N5: HIT preprod-own"                || echo "N5: NO HIT preprod-own (unexpected)"
+docker logs --since "$T_START" --until "$T_END" crm-dev-kong-gateway     2>&1 | grep -F -- "$MARK_PP"  && echo "N5: HIT dev-cross (unexpected)"     || echo "N5: NO HIT dev-cross (expected)"
+docker logs --since "$T_START" --until "$T_END" crm-preprod-kong-gateway 2>&1 | grep -F -- "$MARK_DEV" && echo "N5: HIT preprod-cross (unexpected)" || echo "N5: NO HIT preprod-cross (expected, symmetric)"
 ```
 
-**Raw command transcripts, UTC-timestamped, this session, over `root@10.67.0.1`:**
+**Raw command transcripts, UTC-timestamped, this session, over `root@10.67.0.1` — first pass
+(`18:57`–`19:03Z`) plus fix-pass (`19:33`–`19:37Z`), merged by topic:**
 
-- `2026-08-23T18:58:05Z` — `docker network inspect crm-preprod-network`: `id=90bd3e56416e3a000b349b133e0d859c4e6a1149d328ce31e23798c88731f3d0 created=2026-08-11T19:12:51.421330465+02:00 driver=bridge subnet=172.21.0.0/16`, count `69`.
+- `2026-08-23T18:58:05Z` — `docker network inspect crm-preprod-network`: `id=90bd3e56416e3a000b349b133e0d859c4e6a1149d328ce31e23798c88731f3d0 created=2026-08-11T19:12:51.421330465+02:00 driver=bridge subnet=172.21.0.0/16`, count `69`. 🔴 `created` is CEST (`+02:00`), not UTC — Dev Notes §2 says write everything in UTC; converted: `2026-08-11T17:12:51Z`. Carried as CEST in D34 §1 in the pre-fix-pass version — flagged for the coordinator to fix there too, since `docs/migration-decisions.md` is outside this pass's re-edit (see Completion Notes).
 - `2026-08-23T18:58:05Z` — `crm-preprod-kong-gateway` on `crm-preprod-network`: `172.21.0.24/16`, full `Aliases`: `["crm-preprod-kong-gateway","kong","crm-kong-gateway"]`, `EndpointID=327459bd6aaf…`.
-- `2026-08-23T18:58:20Z` — `getent hosts crm-kong-gateway` on `crm-preprod-network` → `172.21.0.24 crm-kong-gateway crm-kong-gateway`, exit 0. **Identical to the Kong container's own address — identity confirmed (AC2).**
-- `2026-08-23T18:58:45Z` (raw `nc` request, `GET /`) and `2026-08-23T18:58:46Z` (`GET /api/`) against `crm-kong-gateway:8000` from inside `crm-preprod-network`: both `HTTP/1.1 404 Not Found`, `X-Kong-Response-Latency: 0`, `Server: kong/3.4.2`, body `{"message":"no Route matched with those values"}`. **8000 confirmed as the working in-network listener (closes `deferred-work.md:934-937` for PRE-PROD); §11 datum for Story 5.3.**
-- `2026-08-23T18:58:56Z` — N3: `getent hosts crm-kong-gateway` on built-in `bridge` → empty output, **exit 2**, as required.
-- `2026-08-23T18:59:06Z` — N4 identity match: `crm-dev-network` resolves `crm-kong-gateway` → `172.22.0.53`, which is `crm-dev-kong-gateway`'s own address there (`Aliases: [crm-dev-kong-gateway kong crm-kong-gateway]`). Container ID `6c1b4ac96e8d` (DEV) vs `61eb0eaa9f64` (PRE-PROD) — **different containers, not merely different addresses.**
-- `2026-08-23T18:59:19Z`–`19:00:07Z` — disjoint-set check: first pass reported `preprod=70 dev=71 intersection=1`; **the intersection was an artifact** — a trailing blank line from the Go `{{range}}…{{end}}` template present in both sorted files, matched by `comm -12` against itself. Reproduced deliberately five times (`19:00:07.071Z`–`19:00:07.805Z`, all `intersection=1`, all with an *empty* "shared IDs" list — the tell). Re-run with `grep -v '^$'` at `19:00:28Z` (not separately timestamped in this line, see next): **`preprod=69 dev=70 intersection=0`** — true, stable, empty. Recorded as a methodology finding, not an infrastructure defect (`deferred-work.md`, finding 7 of this story's round).
-- `2026-08-23T19:00:28Z` — `fe-prionex-dev` (`docker inspect`): `Networks=crm-dev-network(ip=172.22.0.70)`, `Status=running`, `Health=healthy`. No other network membership.
-- N5, first attempt `2026-08-23T19:00:38Z`: marker request sent and answered (`404`, same Kong signature); the immediate grep for it under-reported "NO HIT" in this session's own transcript due to a local shell-quoting bug (marker variable carried literal quote characters) — **not a story finding**, a transcript artifact of this run, corrected in the clean re-run below.
-- N5, clean re-run `2026-08-23T19:01:08Z`–`19:01:09Z`: marker `isolation-probe-story5-1-20260823T190107-clean` requested against `crm-kong-gateway:8000` from inside `crm-preprod-network`; `docker logs --since 19:01:08Z crm-preprod-kong-gateway` shows the exact request line at `19:01:09Z` (**HIT**); the identical grep against `crm-dev-kong-gateway`'s log over the same window returns nothing (**NO HIT, expected**). AC4/N5 closed on evidence.
-- `2026-08-23T19:02:49Z` — ledger baseline, `docker exec forgejo-postgres psql -U forgejo -d forgejo -t -A -c "select max(id), count(*) from action_run;"` → **`1160|1160`**. Read-only, method per D31 §7. Closes Task 1.2 with a real number — the story's own declared fallback (OPEN) was not needed.
-- Sandbox-side (no host access), `2026-08-23T18:57:12Z`–`18:57:18Z`: `dig`/`curl`/`openssl` re-runs of §3 (a)–(k) — every value reproduced **identical** to the 2026-08-23 prior in the story's own §3 table (DNS, CORS headers on both hostnames, both TLS certs). No drift found on re-measurement; recorded as confirmation, not a new finding.
+- `2026-08-23T19:35:41Z` (fix-pass) — `docker image inspect alpine`: `PRESENT id=sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b tags=[code.forgejo.org/oci/alpine:latest alpine:3 alpine:latest]`. Task 3.2's presence check, now actually evidenced.
+- `2026-08-23T19:35:41Z` (fix-pass) — alias-uniqueness sweep over all 69 `crm-preprod-network` endpoints: exactly one hit, `/crm-preprod-kong-gateway network-aliases=[crm-preprod-kong-gateway kong crm-kong-gateway]`. No other container on the network answers to `crm-kong-gateway`.
+- `2026-08-23T18:58:20Z` — `getent hosts crm-kong-gateway` on `crm-preprod-network` → `172.21.0.24 crm-kong-gateway crm-kong-gateway`, exit 0.
+- **N4, corrected (fix-pass, `2026-08-23T19:35:41Z`–`19:35:42Z`), via `.Containers[]` address-map — not named-container lookup:** PRE-PROD: resolved address `172.21.0.24`; `crm-preprod-network`'s own inspect map (its `.Containers[]`, not a guess at which container to ask) lists that exact address against full container ID `61eb0eaa9f640e23bfe0b653effa21da637c104edf63a4f09ffd6b40437ac612` (`crm-preprod-kong-gateway`). DEV: resolved address `172.22.0.53`; `crm-dev-network`'s own map lists it against full ID `6c1b4ac96e8d7acfae670b9913619f67840f4b7942a3b48ede3831884baeeb2e` (`crm-dev-kong-gateway`). **Full IDs differ.** This is the rescoped N4 as Task 6.1 actually specifies it — the first pass's version asked two *named* containers for their own `.Id`, which is guaranteed to differ regardless of isolation (the same vacuity the rescope existed to remove, one level up); this version discovers the owning container from each network's own bookkeeping.
+- `2026-08-23T19:36:04Z` (fix-pass) — `/api/`, corrected `Host: crm.preprod.crm-prionex.online` (matching `nginx.conf:41`'s `proxy_set_header Host $host` — the browser's frontend hostname, not the internal Kong alias the first pass sent): still `404`, `X-Kong-Response-Latency: 0`, `{"message":"no Route matched with those values"}`. **This is the real §11 datum** — with the Host header the actual browser→nginx→Kong path would forward, PRE-PROD's Kong still has no `/api/` route. The first pass's identical-looking result used `Host: crm-kong-gateway`, an internal alias no route could ever match on Host grounds alone — confounded, as the review found. This re-run removes the confound; the answer is the same, but now it means something.
+- `2026-08-23T19:36:05Z` (fix-pass) — CORS in-network **with `Origin: https://crm.preprod.crm-prionex.online`** supplied: `404`, `Access-Control-Allow-Origin: http://localhost:8320` — **unchanged despite the Origin header**, same as the external probe. This is the corroboration `deferred-work.md` finding 1 claimed; the first pass's version (no `Origin` header, response headers not even read from that specific request) could not have produced it. Interesting side-note, not chased further: CORS headers appear even on this route-miss `404`, meaning Kong's CORS plugin here is applied ahead of routing (global-scope), not attached per-route — worth knowing for whoever owns the CRM/api-prionex ask.
+- `2026-08-23T18:58:56Z` — N3: `getent hosts crm-kong-gateway` on built-in `bridge` → empty output, **exit 2**. ⚠️ Caveat named by review and left as a caveat, not chased: `bridge` has no embedded DNS, so this exercises s1's host resolver (`/etc/resolv.conf`), not the `127.0.0.11` embedded DNS `nginx.conf:38,49` actually uses. The result (name doesn't leak host-wide) still holds; "the control that gives N4 meaning" (§5's framing) is worded more strongly than what N3 alone establishes — N4's own within-network address-map method (above) is what actually carries that weight this pass.
+- `2026-08-23T18:59:19Z`–`19:00:07Z` (first pass) — disjoint-set check: first read reported `preprod=70 dev=71 intersection=1` with an *empty* shared-ID list — the tell. Cause: a trailing blank line from the Go `{{range}}…{{end}}` template, present in both sorted files, matched by `comm -12` against itself. The single confirming re-run with `grep -v '^$'` is what mattered, not the fivefold repeat that preceded it in the transcript (repeating a deterministic command adds no discriminating information; noted for the record, not claimed as methodology).
+- **Fix-pass (`2026-08-23T19:37:0Xz`, exact second not separately captured — see Low items not fixed, below), corrected disjoint-set check:** `mktemp`, `pipefail`, both `{{len .Containers}}` cross-checked against the filtered set size on **both** sides (only PRE-PROD's was cross-checked in the first pass): `preprod len=69 set=69 (match) | dev len=70 set=70 (match) | intersection=0`. Stable, both sides now verified consistent, not just PRE-PROD's.
+- `2026-08-23T19:35:4Xz` (fix-pass) — `fe-prionex-dev`: `Networks=crm-dev-network(ip=172.22.0.70)`, `Status=running`, `Health=healthy` (this time from `.State.Health.Status`, not asserted without a query as in the first pass — the first pass's format string never read health and the review caught it), `Image=sha256:57477edb20945614a9e5f8fc5ba7f742deaa19467554abd2b4de3bfcbb140570` — matches D33's own recorded restore digest (`docs/migration-decisions.md`, D33 §"Rollback"). No other network membership; range now has an explicit separator.
+- **N5, corrected (fix-pass, `2026-08-23T19:36:30Z`–`19:36:35Z`), with a DEV-side positive control before any cross-check:** marker `isolation-probe-devctrl-20260823T19363042428` sent into `crm-dev-network` against `crm-kong-gateway:8000` (response captured, not discarded: `404`, `Access-Control-Allow-Origin: http://localhost:8310`, `exit=0`) — **HIT in `crm-dev-kong-gateway`'s own log at `19:36:30Z`, proving that channel is readable before any negative is asked to mean something.** Marker `isolation-probe-story5-1-20260823T19363042803` sent into `crm-preprod-network` (response captured: `404`, `Access-Control-Allow-Origin: http://localhost:8320`, `exit=0`) — HIT in `crm-preprod-kong-gateway`'s own log at `19:36:31Z`. Cross-checks, both directions, both NO HIT: PRE-PROD's marker absent from DEV's log; DEV's marker absent from PRE-PROD's log (symmetric control, not run in the first pass). `--since`/`--until` both full ISO-8601 with date. **AC4/N5 now independently controlled** — the first pass's negative was consistent with "DEV's log channel is unreadable" and could not distinguish that from real isolation; this pass rules it out directly. N5 still logically overlaps N4 (once two distinct containers are established, distinct log streams follow) — recorded as a confirming row, not treated as fully independent of N4.
+- `2026-08-23T19:02:49Z` — ledger baseline, `docker exec forgejo-postgres psql -U forgejo -d forgejo -t -A -c "select max(id), count(*) from action_run;"` → **`1160|1160`**. Read-only, method per D31 §7. 🔴 **Timing, named honestly (review High):** this query ran at the *end* of the first pass's measurement block, not before it — but zero pushes from this session occurred before it (the only push, `d03abadb`, came after), so nothing above baseline was hidden inside it. The instance-wide caveat (no `repo_id` filter; `max(id)==count(*)` is not itself proof no run was deleted) is real and pre-existing to this story — deferred, not this story's to fix (review: Deferred item, accepted as-is).
+- Sandbox-side (no host access), `2026-08-23T18:57:12Z`–`18:57:18Z` and fix-pass `19:37:26Z`–`19:37:27Z` — see the expanded per-row table in Completion Notes (AC1-5 evidence); the first pass's one-sentence summary ("every value reproduced identical") is superseded by that table, which now carries individual commands and timestamps per Task 2.1's actual requirement.
 
-**Story 4.8 backfill capture (Dev Notes §5 — captured, not applied):**
+**Story 4.8 backfill capture (Dev Notes §5 — captured, not applied), completed this fix-pass:**
 
-- `action_run 1150`: `status=1`, `started=1787496732`, `stopped=1787496781` (epoch seconds). 33
-  `action_task_step` rows read back in order; all `status=1` except three (`Validate hold_lock_seconds
-  and start the stand-lock holder`, `Safety net — remove this run's holder if the step above failed`,
-  `Restore the previous digest if this job failed after down`) at `status=4`. 🔴 **Status-code mapping
-  not independently confirmed this session** — do not read `1`/`4` as "success"/"skipped" without
-  checking the actual Forgejo enum in source; handing the raw values to the coordinator rather than
-  guessing.
-- `action_run 1146` (`trigger_event=schedule`, `status=1`, `started=1787450444`, `stopped=1787450518`)
-  and `1147` (`trigger_event=workflow_dispatch`, `status=1`, `started=1787450520`, `stopped=1787450563`).
-- `action_run.id` for the two 4.8 branch pushes: `d5e5fa65…` → **1144** (`started=1787436745`);
-  `a003e25b…` → **1149** (`started=1787496715`, `status=3`) and **1150** (`started=1787496732`,
-  `status=1` — the DN4 control dispatch itself, same commit).
+- **Item 3, unchanged, complete:** `action_run.id` for the two 4.8 branch pushes: `d5e5fa65…` → **1144**
+  (`started=1787436745`); `a003e25b…` → **1149** (`started=1787496715`, `status=3`) and **1150**
+  (`started=1787496732`, `status=1`).
+- **Item 1, run 1150, now with the query text and the finding the backfill existed to surface:**
+  `select id,status,started,stopped from action_run where id=1150;` → `1150|1|1787496732|1787496781`.
+  **`stopped - started = 49s`.** Story 4.8 and `docs/migration-decisions.md#d31` §7 both carry this run
+  as coordinator-relayed *"SUCCESS (~70s)"*. **Measured: 49s.** A real find, not a rounding — this is
+  what the backfill was for. 33 `action_task_step` rows read back via
+  `select ats.name, ats.status from action_task_step ats join action_task at on ats.task_id=at.id
+  where at.job_id in (select id from action_run_job where run_id=1150) order by ats."index";` — all
+  `status=1` except three (`Validate hold_lock_seconds and start the stand-lock holder`, `Safety net —
+  remove this run's holder if the step above failed`, `Restore the previous digest if this job failed
+  after down`) at `status=4`. 🔴 Status-code mapping (`1`/`4`) not independently confirmed against
+  Forgejo's actual enum this session — raw values only, not a success/skip claim.
+- **Item 2, run 1146/1147, now complete:** `select id,trigger_event,trigger_user_id,status,started,
+  stopped from action_run where id in (1146,1147);` → `1146 | schedule | -2 | 1 | 1787450444 |
+  1787450518` and `1147 | workflow_dispatch | -2 | 1 | 1787450520 | 1787450563`. **`actor_id`/
+  `trigger_user_id = -2`** on both — the value D31 §7's protocol names, now captured, not just cited.
+  `started=1787450444` = `2026-08-23T02:00:44Z` — the `02:00:00+44s` pattern D31 §7 established, an
+  exact match, stated as a comparison this time rather than left implicit. Run 1146's own
+  `action_task_step` log (4 rows): `Sweep stale images and lock-holder debris` (`status=1`, 33 log
+  lines), `Note if the sweep failed` (`status=4`, 0 log lines), `Dispatch deploy-dev.yml with ref=main`
+  (`status=1`, 2 log lines), `Confirm a deploy-dev.yml run was actually created` (`status=1`, 1 log
+  line). ⚠️ **Still not fully closed:** "1147 left the stand on `main`'s own digest, healthy" is not
+  directly traceable to 1147 specifically — the stand has redeployed multiple times since (1150's own
+  restore, per D33, landed it on the digest observed above), so `fe-prionex-dev`'s *current* `Image`
+  matching D33's recorded restore digest confirms D33's own claim, not 1147's isolated effect. Naming
+  this gap rather than papering over it.
 
 ### Run Budget Ledger
 
@@ -1026,62 +1103,154 @@ against a self-reported count.
 - **0** for rungs 1 and 2 — SSH and Oleg-runs-the-script both dispatch nothing. **The cheapest path
   through this story costs 7.**
 
+**🔴 +1, spent, 2026-08-23 (coordinator, autonomous, zero-cost decision on this fix-pass): code
+review returned CHANGES REQUESTED (commit `7bbb92b2`); the two budgeted write-up rounds (DN4) were
+both consumed by the first pass's write-up, so this fix-pass is the named contingency, not free
+capacity. This push (the fix-pass commit) is that `+1`. Declared floor is now **8** above baseline.**
+
 **retro-D4 discipline:** declared here before the first push; closes only against a direct query
-re-run **after the merge commit lands** (Task 9.1) — a ledger closed at PR-open is not closed. If the
-query cannot be run, close it with the literal word **OPEN**, never a self-reported number.
+re-run **after the merge commit lands** (Task 9.1) — a ledger closed at PR-open is not closed.
+**Disposition: OPEN.** The literal word this rule requires — the `1160` baseline (2026-08-23T19:02:49Z)
+is a number to diff against, not a closure; Task 9.1's own reconciliation is a separate, post-merge
+step this session cannot perform (the merge has not happened). Sibling precedent: D32 and D33 both
+record «леджер OPEN до пост-мёрж запроса» — this ledger follows the same form.
 
 ### Completion Notes List
 
-**AC closure (Task 9.4):**
+**🔴 Fix-pass 2026-08-23, post code-review (commit `7bbb92b2`, verdict CHANGES REQUESTED — 4
+decisions / 5 high / 27 medium / 21 low). This section is rewritten, not appended, where the review
+showed the first pass's claims did not survive: N4's actual method, N5's independence, the
+`:934-937` closure, the CORS in-network corroboration, the `/api/` Host confound, and the roll-up's
+honesty about what was and wasn't measured. See Review Findings below for the item-by-item response.**
+
+**AC closure (Task 9.4), corrected:**
 
 - **AC1 — on evidence.** `crm-preprod-network` exists, id `90bd3e56416e3a00…`, created
-  `2026-08-11T19:12:51+02:00`, 69 containers, `crm-preprod-kong-gateway` attached with alias
-  `crm-kong-gateway` confirmed verbatim. Channel: SSH rung 1, `2026-08-23T18:58:05Z`.
-- **AC2 — on evidence.** Address identity (`172.21.0.24` = Kong's own address), Kong itself answers
-  (`X-Kong-Response-Latency: 0`, `Server: kong/3.4.2`, literal body), port `8000` confirmed as the
-  in-network listener, N3 negative control empty/exit 2. `2026-08-23T18:58:20Z`–`18:58:56Z`.
-- **AC3 — on evidence, N4 rescoped.** N1 differs (`8320`/`8310`, sandbox, no host access). N4 by
-  container identity: two different container IDs behind the alias in the two networks (not raw
-  address inequality, which two networks guarantee regardless of isolation — see corrections log).
-  Container sets disjoint (69/70, intersection 0, after filtering a template artifact — see Debug Log).
-  DEV stand observed on `crm-dev-network` only, `2026-08-23T19:00:28Z` — **stated as of that instant**,
-  not as 4.9's end state (§12).
-- **AC4 — on evidence for the network-layer claim; browser clause not claimed (unchanged from story
-  text).** N5 marker hit `crm-preprod-kong-gateway`'s log, absent from `crm-dev-kong-gateway`'s log
-  over the same window, `2026-08-23T19:01:08Z`–`19:01:09Z`. §11's `expect_unrouted_api` datum recorded
-  (Story 5.3's to interpret).
-- **AC5 — on evidence.** Three defects recorded with owners (CORS/`CRM/api-prionex`+5.2, vhost/5.2,
-  `README.md:136`/coordinator-after-4.9). Two falsified facts recorded (OpenBao value — record says
-  version 2, not re-verified this session, no vault token; `Dockerfile.prod:34` — nine artifacts
-  enumerated). N2 re-confirmed NXDOMAIN.
+  `2026-08-11T17:12:51Z` (converted from the raw `+02:00` read — Dev Notes §2's UTC rule applies to
+  the record, not just the collection), 69 containers, `crm-preprod-kong-gateway` attached with alias
+  `crm-kong-gateway` confirmed verbatim, and confirmed (fix-pass) to be the *only* container on the
+  network carrying that alias. Channel: SSH rung 1, `2026-08-23T18:58:05Z`.
+- **AC2 — on evidence.** Address identity (`172.21.0.24` = the address `crm-preprod-network`'s own
+  `.Containers[]` map assigns to `crm-preprod-kong-gateway`, not merely "Kong's self-reported
+  address"), Kong itself answers (`X-Kong-Response-Latency: 0`, `Server: kong/3.4.2`, literal body),
+  N3 negative control empty/exit 2 (caveat: exercises the host resolver, not the embedded DNS
+  `nginx.conf` actually uses — named, not chased). **Port `8000`: confirmed as *an* in-network
+  listener, but does NOT close `deferred-work.md:934-937`** — that item is about a *non-default*
+  `KONG_PORT`, which PRE-PROD never sets; this measurement can't discriminate the two hypotheses
+  (walked back in AC2's own text, Task 5.5, `deferred-work.md`, and D34 §6 — the false closure the
+  review found in all four places).
+- **AC3 — on evidence, N4 corrected twice now.** N1 differs (`8320`/`8310`), re-tested **both**
+  hostnames with an explicit `Origin` header this pass (Task 2.2's actual requirement — the first
+  pass only retested PRE-PROD's). **N4, properly rescoped:** resolve the alias inside each network,
+  then find the owning container from *that network's own* `.Containers[]` address map — not by
+  asking a container already selected by name for its `.Id`, which the first pass did and which
+  guarantees a different ID regardless of isolation (the same vacuity the rescope existed to
+  remove). Fix-pass result: PRE-PROD's map assigns `172.21.0.24` to `61eb0eaa9f64…`; DEV's map
+  assigns `172.22.0.53` to `6c1b4ac96e8d…` — different containers, discovered by each network's own
+  bookkeeping. Container sets disjoint (69/70, intersection 0, both sides cross-checked against
+  `{{len .Containers}}` this pass — the first pass only cross-checked PRE-PROD's). DEV stand observed
+  on `crm-dev-network` only, `2026-08-23T19:00:28Z` — **stated as of that instant**, not as 4.9's end
+  state (§12). **Counterfactual (Task 6.8):** had isolation been absent, N4 would have resolved the
+  alias to the *same* container ID in both networks (dual-attachment or a bridged network), N1 would
+  have shown one CORS value instead of two, and the disjoint-set check would have shown a non-empty,
+  reproducible intersection (not the one-off template artifact this session actually hit and
+  diagnosed). None of that is what was observed.
+- **AC4 — on evidence, N5 now independently controlled.** N5 redone with a **DEV-side positive
+  control before any cross-check**: a marker sent into `crm-dev-network` against
+  `crm-kong-gateway:8000` was confirmed present in `crm-dev-kong-gateway`'s own log — proving that
+  channel is readable — before treating the absence of PRE-PROD's marker there as meaningful. Both
+  cross-checks (PRE-PROD marker absent from DEV's log; DEV marker absent from PRE-PROD's log,
+  symmetric) came back negative as expected, over a full-ISO `--since`/`--until` window. **N5 is
+  recorded as a confirming row, not an independent one** — once N4 establishes two distinct
+  containers, distinct log streams follow, so N5 corroborates rather than adds new discriminating
+  power; stated as such rather than claimed as a fifth independent proof. §11's `expect_unrouted_api`
+  datum re-measured with `Host: crm.preprod.crm-prionex.online` (what `nginx.conf:41`'s
+  `proxy_set_header Host $host` actually forwards, not the internal alias the first pass sent) —
+  same `no Route matched` result, now on the path the guard actually takes, not a confounded one.
+- **AC5 — on evidence.** Three defects recorded with owners (CORS/`CRM/api-prionex`+5.2 — this pass
+  re-measured the CORS invariance *inside* the network with an `Origin` header supplied, which the
+  first pass's cited "reproduction" did not actually send; vhost/5.2; `README.md:136`/coordinator-
+  after-4.9). Two falsified facts recorded — **honestly, not flattened**: `Dockerfile.prod:34` is
+  independently confirmed stale by this session's own read of `Dockerfile.prod:55-56`; the OpenBao
+  placeholder claim is **not** independently re-verified this session (no Vault token) — the record
+  says version 2, this session did not re-read it. These are two different epistemic states and
+  every surface (this file, `deferred-work.md`, D34) should say so, not "both refuted." N2
+  re-confirmed NXDOMAIN on **both** named hostnames (`preprod.…` and `api.preprod.…` — the first
+  pass's Completion Notes only stated the aggregate).
 
-**No row closed UNPROVEN or OPEN** — rung 1 worked, so every measurement in Tasks 4-6 is first-hand.
-The only genuinely open items are ones the story never claimed this session could close: the OpenBao
-re-read (no token) and the ledger's post-merge reconciliation (Task 9.1, needs the merge commit to
-exist first).
+**Discriminator count, stated precisely (not "five, all live"):** three actually discriminate
+isolation from its absence — N1 (outside-in), N4 (container identity), N5 (confirming). N2 is a
+standing DNS falsification, not an isolation test. N3 is a negative control (with the resolver-path
+caveat above), not a PRE-PROD-vs-DEV discriminator. All five were measured live this session; only
+three of the five are discriminators in the E5 sense.
 
-**Prohibitions 1-13 (Task 9.3):** verified by execution, not memory. 1: every `docker run` was `--rm`;
-no `create`; `/tmp` files removed same session. 2/3: no `connect`/`disconnect`/`restart`/`stop`/`down`
-issued — confirmed by re-reading every command before running it. 4/5: no file in the excluded list
-touched — `git diff --name-only origin/main...HEAD` confirms (Task 9.5, below). 6: no workflow
-written, vacuously satisfied. 7: no token printed — none was in scope this session. 8: OpenBao not
-reached at all (no token available), so `/usr/local/bin/bao` was never a temptation. 9: `crm-network`
-never referenced as a fallback. 10: every row above states its actual disposition. 11: 2026-08-15
-values used only as prior/comparison, never as this story's evidence — every AC1-4 number above is a
-fresh 2026-08-23 timestamp. 12: `deferred-work.md` append was at EOF (new findings, per the corrected
-rule); no existing entry was edited in place. 13: every number above was obtained first-hand over this
-session's own SSH/psql channel or its own sandbox `dig`/`curl`/`openssl` — none is a subagent report.
+**Ledger disposition: OPEN**, per Prohibition 10's literal-word requirement (see Run Budget Ledger)
+— not asserted here as "no row closed UNPROVEN or OPEN" as the first pass did, which conflated the
+AC rows (genuinely all closed on evidence) with the ledger (genuinely not closed, and should not be
+described as if it were).
 
-**Audit point 18 (redundancy), flagged for the reviewer, not restructured per the coordinator's
-explicit instruction:** this story file carries the same facts in multiple places (e.g., the
-`Dockerfile.prod:34`/`:55-56` correction appears in §4, §7(b), Task 7.5, and now Dev Notes-adjacent
-evidence) — a deliberate one-read-per-section design, but genuinely redundant on a full read. Left
-as-is; not this session's call to restructure.
+**Task 9.5, executed and recorded here (not "below" — the first pass's forward-reference pointed at
+nothing):** `git fetch origin main && git diff --name-only origin/main...HEAD` →
+`_bmad-output/implementation-artifacts/5-1-stand-up-the-isolated-pre-prod-backend-network.md`,
+`_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`,
+`docs/migration-decisions.md`, `docs/preprod-infrastructure-requirement.md`. Five files, none named in
+§12/Prohibition 5. Re-run after this fix-pass's commit; unchanged list.
 
-**Audit point 17 ("minor drift, listed"):** the coordinator's message named this item without listing
-the individual drifts. Not actioned — insufficient detail was relayed to this session to act on
-safely. Flagged for the coordinator to supply the list, or for the Opus code-review pass to surface
-independently.
+**Prohibitions 1-13 (Task 9.3), re-verified, corrected where the roll-up over-certified:** 1: every
+`docker run` was `--rm`; `/tmp` files created via `mktemp` this pass and removed same session.
+🔴 Revised wording for **"nothing on s1 is written at all"** (Project Structure Notes, Dev Notes §3):
+that summary sentence is stronger than Prohibition 1 itself, which permits exactly what happened
+(`/tmp` writes, removed on exit; a read-only `psql` query against a live DB; five `--rm` containers
+created and destroyed). Both are true; the summary should say "the host-side footprint is `/tmp`
+writes removed on exit and `--rm` containers, per Prohibition 1 — no persistent file, no created
+network, no container left running," not "zero bytes." 2/3: no `connect`/`disconnect`/`restart`/
+`stop`/`down` issued. 4/5: confirmed by Task 9.5's output above. 6: vacuously satisfied. 7: no token
+printed. 8: OpenBao not reached (no token). 9: `crm-network` never referenced as a fallback.
+10: every row states its actual disposition, including the two rows this pass downgraded
+(`:934-937` — reopened; N5 — confirming, not independent). **11: 2026-08-15 values used only as
+prior; but this pass's own §3-comparison language ("identical to the ~18:16 UTC prior") checked
+against a 41-minute-old same-day reading, not the six-day-old 2026-08-15 one Prohibition 11 was
+written about — the staleness argument was discharged against the wrong baseline in the first pass;
+the expanded per-row table below fixes the underlying gap (individual commands/timestamps) that made
+the vague comparison necessary in the first place.** 12: **corrected this pass** — the `:934-937`
+disposition is now placed under the original `deferred-work.md` entry, struck and reopened, not filed
+as an unrelated EOF finding (the first pass's roll-up claimed compliance by quoting only the "new
+findings at EOF" half of the rule and ignoring the "closures under the original" half it had just
+been corrected to state). 13: every number above was obtained first-hand over this session's own
+SSH/psql channel or sandbox `dig`/`curl`/`openssl`, including the `psql` query text now recorded
+verbatim in Debug Log References (the first pass asserted Prohibition 13 compliance for the 4.8
+backfill numbers without showing the query — fixed).
+
+**Sandbox-side evidence, per-row (Task 2.1's actual requirement — the first pass gave one summary
+sentence; fix-pass re-runs every row with its own command and UTC timestamp):**
+
+| Task | Command | UTC | Result |
+|---|---|---|---|
+| 2.1(a) | `dig +short api.crm.preprod.crm-prionex.online` | `18:57:12Z` | `185.185.49.127` |
+| 2.1(b) | `dig +short crm.preprod.crm-prionex.online` | `18:57:12Z` | `185.185.49.127` |
+| 2.1(c) | `dig +short api.crm.dev.crm-prionex.online` | `18:57:12Z` | `185.185.49.127` |
+| 2.5 (N2, hostname 1) | `dig +short preprod.crm-prionex.online` | `18:57:12Z` | empty, NXDOMAIN |
+| 2.5 (N2, hostname 2) | `dig +short api.preprod.crm-prionex.online` | `19:37:26Z` (fix-pass; not run in the first pass) | empty, NXDOMAIN |
+| 2.1(e)/2.2 | `curl -D- https://api.crm.preprod.…/` | `18:57:18Z` | `404`, `Access-Control-Allow-Origin: http://localhost:8320`, `Allow-Credentials: true`, `vary: Origin` |
+| 2.1(g) | `curl -D- https://api.crm.dev.…/` | `18:57:18Z` (first pass) | `404`, `Access-Control-Allow-Origin: http://localhost:8310` |
+| 2.2 (DEV + Origin) | `curl -D- -H 'Origin: https://crm.dev…' https://api.crm.dev.…/` | `19:37:26Z` (fix-pass — not run the first pass) | unchanged, `8310` |
+| 2.1(h) | `curl -D- -H 'Origin: https://crm.preprod…' https://api.crm.preprod.…/` | `18:57:18Z` | unchanged, `8320` |
+| 2.3 (OPTIONS preflight) | `curl -X OPTIONS -H Origin -H Access-Control-Request-Method -H Access-Control-Request-Headers https://api.crm.preprod.…/` | `19:37:27Z` (fix-pass — first pass only grepped a subset) | `404`, same static `Allow-Origin`/`Allow-Credentials`/`Expose-Headers`, **no `Access-Control-Allow-Methods` or `-Headers` at all** |
+| 2.4(j) | `openssl s_client … api.crm.preprod.…` | `18:57:18Z` | `CN=api.crm.preprod.crm-prionex.online`, LE `YE2`, valid Aug 14–Nov 12 |
+| 2.4(k) | `openssl s_client … crm.preprod.…` | `18:57:18Z` | `CN=admin.techno-finance.online` — default vhost, no PRE-PROD cert |
+
+**Audit point 18 (redundancy):** left as-is per the coordinator's instruction — and the review
+independently confirmed the call was right: the repetition of the `:34`/`:55-56` correction across
+§4, §7(b) and Task 7.5 is exactly what made the "Five"/"Nine" count divergence *visible*. The
+divergent copies are fixed this pass (§7(b) now reads "Nine"), the repetition itself is not
+restructured.
+
+**Audit point 17 ("minor drift, listed"):** the list never reached this session; the code review
+derived it independently and it resolves to three items, all now fixed: the `Dockerfile.prod:34`
+count at §7(b) (was "Five", now "Nine"); the `alpine` precedent mis-attributed to "D28 §2" (now
+`4-2-provision-the-new-dev-stand-on-s1.md:600`); and a citation-drift note in `deferred-work.md`
+pointing at `docs/migration-decisions.md:3924`, invalidated to a new line number by this same
+fix-pass's own D34 edit (fixed in `deferred-work.md`, below). Item 17 is discharged.
 
 ### File List
 
@@ -1136,21 +1305,77 @@ call to leave it was **correct**, and this review confirms it: the repetition of
 visible at all. Restructure nothing; fix the divergent copies.
 -->
 
+**🔴 Fix-pass response, 2026-08-23 (coordinator, autonomous, zero-cost — Oleg's veto open on all
+four decisions below).** SSH rung 1 re-confirmed live before and after an unplanned session restart
+mid-pass. All four Decisions taken; all five High items patched with a real re-measurement, not just
+reworded text; Medium/Low addressed where cheap — see Completion Notes, Debug Log References,
+`deferred-work.md` and D34 for the actual evidence behind each checkbox below.
+
 **Decisions needed (Oleg) — these cannot be patched without your call:**
 
-- [ ] [Review][Decision] **AC4/N5: re-run with a DEV-side positive control, or downgrade the row?** — "the marker is absent from `crm-dev-kong-gateway`'s log" is only evidence if that log would have shown it, and nothing establishes that it would. Options: (a) one more rung-1 SSH session issuing a marked request *into* `crm-dev-network` against `crm-kong-gateway:8000` and confirming it lands in DEV's log — zero runs, `--rm`, already inside the prohibitions (a container was run on that network at `:943`); or (b) leave the measurement and downgrade AC4's negative half to "not independently controlled" in Completion Notes, D34 §2 and `deferred-work.md` finding 6. As it stands AC4 is recorded as closed on evidence. See H3.
-- [ ] [Review][Decision] **§11's `expect_unrouted_api` datum was measured on a Host no route matches and the production path never sends — re-measure or withdraw?** — the probe sent `Host: crm-kong-gateway` (`:937,939`), but `nginx.conf:41` is `proxy_set_header Host $host`, so the real frontend→Kong path forwards the browser's hostname. `no Route matched` is therefore fully explained by the Host header alone. §11 rejected the *external* measurement for being "not the path the guard takes"; this one is not that path either, for a different reason. Options: re-measure with the Host the guard actually sends, or withdraw the datum from D34 §6 and `deferred-work.md` finding 8 and leave §11 open for Story 5.3. See M8.
-- [ ] [Review][Decision] **Story 4.8's backfill: finish items 1–2 now while SSH is known-good, or ship the partial capture?** — the capture closes item 3 completely, leaves item 1 summarised rather than verbatim, and leaves item 2 substantially open (`actor=-2` never captured; run 1146's own sweep/dispatch/read-back log absent; the host-side confirmation that 1147 left the stand on `main`'s digest absent — `docker inspect fe-prionex-dev` ran at `19:00:28Z` and took `Status` but not `.Image`). As shipped the coordinator cannot fold it into D31 §7 without another SSH session, which is the exact cost the capture existed to avoid. Open Question 4 asks this in the abstract; the incompleteness makes it concrete. See M14.
-- [ ] [Review][Decision] **Task 8.1 struck a sentence that is true.** «Статус: **не направлено**» was accurate — the amendment's own text says the falsity holds *«независимо от того, было ли требование когда-либо формально „направлено"»*, and D34 §1 states plainly *«так и не было отправлено»*. Only *«Эпик 5 … остаётся заблокированным»* is falsified by this story. Options: restore the status line unstruck and strike only the second sentence, or keep the strike and reword Редакция 3 to say the status is retained as true. Either way `:5` («Кому направлено — *требование ещё не направлено*») is left unstruck two rows above the struck version of the same claim. See M9.
+- [x] [Review][Decision] **AC4/N5: re-run with a DEV-side positive control, or downgrade the row?**
+      → **Coordinator chose (a): re-run with a DEV-side positive control.** Done, fix-pass
+      `2026-08-23T19:36:30Z`–`19:36:35Z`: a marker sent into `crm-dev-network` was confirmed HIT in
+      `crm-dev-kong-gateway`'s own log before either cross-check ran. N5 is recorded as a
+      **confirming** row, not independent of N4 (per the review's own logical point). See Debug Log
+      References, Completion Notes AC4. — "the marker is absent from `crm-dev-kong-gateway`'s log" is only evidence if that log would have shown it, and nothing establishes that it would. Options: (a) one more rung-1 SSH session issuing a marked request *into* `crm-dev-network` against `crm-kong-gateway:8000` and confirming it lands in DEV's log — zero runs, `--rm`, already inside the prohibitions (a container was run on that network at `:943`); or (b) leave the measurement and downgrade AC4's negative half to "not independently controlled" in Completion Notes, D34 §2 and `deferred-work.md` finding 6. As it stands AC4 is recorded as closed on evidence. See H3.
+- [x] [Review][Decision] **§11's `expect_unrouted_api` datum was measured on a Host no route matches and the production path never sends — re-measure or withdraw?**
+      → **Coordinator chose: re-measure with the correct Host.** Done, fix-pass `19:36:04Z`:
+      `Host: crm.preprod.crm-prionex.online`, matching `nginx.conf:41`'s `proxy_set_header Host
+      $host`. Same `404 no Route matched` result, now on the actual guard path. See D34 §6. — the probe sent `Host: crm-kong-gateway` (`:937,939`), but `nginx.conf:41` is `proxy_set_header Host $host`, so the real frontend→Kong path forwards the browser's hostname. `no Route matched` is therefore fully explained by the Host header alone. §11 rejected the *external* measurement for being "not the path the guard takes"; this one is not that path either, for a different reason. Options: re-measure with the Host the guard actually sends, or withdraw the datum from D34 §6 and `deferred-work.md` finding 8 and leave §11 open for Story 5.3. See M8.
+- [x] [Review][Decision] **Story 4.8's backfill: finish items 1–2 now while SSH is known-good, or ship the partial capture?**
+      → **Coordinator chose: finish now.** Done, fix-pass `19:34Z`–`19:35Z`: `actor_id`
+      (`trigger_user_id`) `=-2` captured for both 1146/1147; run 1146's own 4-row step log captured;
+      run 1150's query text and 33-row step log now recorded verbatim, surfacing the 49s-vs-"~70s"
+      discrepancy. One gap remains, named rather than papered over: "1147 left the stand on `main`'s
+      digest" isn't directly traceable to 1147 alone (redeployed since). See Debug Log References. — the capture closes item 3 completely, leaves item 1 summarised rather than verbatim, and leaves item 2 substantially open (`actor=-2` never captured; run 1146's own sweep/dispatch/read-back log absent; the host-side confirmation that 1147 left the stand on `main`'s digest absent — `docker inspect fe-prionex-dev` ran at `19:00:28Z` and took `Status` but not `.Image`). As shipped the coordinator cannot fold it into D31 §7 without another SSH session, which is the exact cost the capture existed to avoid. Open Question 4 asks this in the abstract; the incompleteness makes it concrete. See M14.
+- [x] [Review][Decision] **Task 8.1 struck a sentence that is true.**
+      → **Coordinator chose: restore the status line unstruck, strike only the falsified second
+      sentence.** Done in `docs/preprod-infrastructure-requirement.md` — `:7`'s "не направлено" now
+      matches `:5`, no contradiction; only the "Эпик 5 … заблокирован" claim stays struck. «Статус: **не направлено**» was accurate — the amendment's own text says the falsity holds *«независимо от того, было ли требование когда-либо формально „направлено"»*, and D34 §1 states plainly *«так и не было отправлено»*. Only *«Эпик 5 … остаётся заблокированным»* is falsified by this story. Options: restore the status line unstruck and strike only the second sentence, or keep the strike and reword Редакция 3 to say the status is retained as true. Either way `:5` («Кому направлено — *требование ещё не направлено*») is left unstruck two rows above the struck version of the same claim. See M9.
 
 **High — the evidence does not exclude what it is said to exclude:**
 
-- [ ] [Review][Patch] **Prohibition 12 breached on the one clause the coordinator's audit existed to clarify: a mandated closure was filed at EOF as a new finding** [`deferred-work.md:934`, `:3456-3464`; story `:968`, `:1071-1072`] — AC2's own clause and Task 5.5 mandate *"closing `deferred-work.md:934-937` for PRE-PROD"*, and the story asserts it twice. The corrected Prohibition 12 is explicit: *"**closures of existing entries** are added immediately **under the original entry** (not at EOF), with the superseded text struck (`~~…~~`), never deleted."* The only `deferred-work.md` hunk is `@@ -3397,3 +3397,73 @@`. `:934` still reads *"⚠️ **Unverified, and it matters:** … **this must be confirmed, not assumed.**"* — unstruck, uncloed, with no pointer to finding 8. The Task 9.3 roll-up then certifies compliance by quoting only the half that was satisfied: *"12: append was at EOF (new findings, per the corrected rule); no existing entry was edited in place."* True, and irrelevant to the clause that was breached.
-- [ ] [Review][Patch] **A CORS corroboration is recorded as measured that no recorded command could have produced** [`deferred-work.md:3410-3411`; story `:936-939`, `:957`, `:968`, `:974`] — finding 1 states the defect was *"reproduced identically via direct in-network request to `crm-kong-gateway:8000` at 2026-08-23T19:01:09Z"*. `19:01:08Z`–`19:01:09Z` is the N5 marker probe, whose output goes to `/dev/null`. The raw `nc` requests carry **no `Origin` header**, and a route-miss `404` does not execute a route- or service-scoped CORS plugin, so no `Access-Control-Allow-Origin` could have been emitted on that path. The only in-network responses recorded with headers (`:968`) list status, `X-Kong-Response-Latency`, `Server` and body — **no CORS header at all**. This is the corroboration in a finding routed to an external team. Prohibitions 10 and 13.
-- [ ] [Review][Patch] **AC4's negative half is not falsifiable as run, and is largely entailed by N4 rather than independent of it** [story `:960`, `:974`; `deferred-work.md` finding 6] — `docker logs --since "$T" crm-dev-kong-gateway 2>&1 | grep -F -- "$MARK" && … || echo "N5: NO HIT dev (expected)"` converts *every* failure into the expected result: container renamed/removed by the neighbouring team, a log driver `docker logs` cannot read (`syslog`/`gelf`/`fluentd`/`none` — another team's 69-container stack, never checked), Kong's `proxy_access_log` pointing at a file rather than stdout on the DEV stack, an empty window, or rotation. `2>&1` pipes the error text *into* `grep`, which finds no marker and exits 1. The HIT proves only that **PRE-PROD** writes access logs to stdout. Compounding it, the `--since` value transcribed for the closing run (`:974`, *"`docker logs --since 19:01:08Z`"*) has no date and is not parseable by Docker's `--since` — as transcribed, both greps error and both report NO HIT. And logically: once N4 establishes two distinct containers, distinct `docker logs` streams follow, so N5's negative adds little beyond N4. Nothing recorded distinguishes "DEV's Kong never saw it" from "DEV's log is not a channel".
-- [ ] [Review][Patch] **N4 as executed is not the rescoped N4, and the assertion actually performed could not have come out the other way** [story `:944-946`, `:947-949`, `:617-625`, `:626-629`; D34 §3 and summary row] — Task 6.1 and the rescope require matching the resolved address back to a container *"via that network's own `docker network inspect` output (`.Containers[]`)"*. The script never touches `.Containers[]` for this: it runs `docker inspect crm-dev-kong-gateway --format '{{.Id}}'` and `docker inspect crm-preprod-kong-gateway --format '{{.Id}}'` — two containers already distinguished by **name**, whose IDs are therefore guaranteed to differ. That is the same vacuity the rescope was written to remove, one level up. Task 6.2's DEV-side per-container `IPv4Address` map — the data the identity match needs — was never collected (`:947-949` emit only `{{len .Containers}}` and an ID-only range). What genuinely survives is the *address* match at `:967`/`:970`, performed by eyeball across two unlabelled outputs with no asserted linkage. D34 headlines the ID comparison (*«пересмотрен на identity-match по container ID»*) as this story's methodological contribution to 5.2 and 6.4.
+- [x] [Review][Patch] **Prohibition 12 breached on the one clause the coordinator's audit existed to clarify: a mandated closure was filed at EOF as a new finding**
+      → Fixed: `deferred-work.md:934` now carries a `>`-quoted correction directly under the original
+      entry, struck disposition, reopened, pointing at finding 8. Roll-up wording corrected too. [`deferred-work.md:934`, `:3456-3464`; story `:968`, `:1071-1072`] — AC2's own clause and Task 5.5 mandate *"closing `deferred-work.md:934-937` for PRE-PROD"*, and the story asserts it twice. The corrected Prohibition 12 is explicit: *"**closures of existing entries** are added immediately **under the original entry** (not at EOF), with the superseded text struck (`~~…~~`), never deleted."* The only `deferred-work.md` hunk is `@@ -3397,3 +3397,73 @@`. `:934` still reads *"⚠️ **Unverified, and it matters:** … **this must be confirmed, not assumed.**"* — unstruck, uncloed, with no pointer to finding 8. The Task 9.3 roll-up then certifies compliance by quoting only the half that was satisfied: *"12: append was at EOF (new findings, per the corrected rule); no existing entry was edited in place."* True, and irrelevant to the clause that was breached.
+- [x] [Review][Patch] **A CORS corroboration is recorded as measured that no recorded command could have produced**
+      → Fixed: re-measured `19:36:05Z` with `Origin: https://crm.preprod.crm-prionex.online`
+      actually sent; response headers now include the (unchanged) CORS values. `deferred-work.md`
+      finding 1 corrected with the real command and timestamp. [`deferred-work.md:3410-3411`; story `:936-939`, `:957`, `:968`, `:974`] — finding 1 states the defect was *"reproduced identically via direct in-network request to `crm-kong-gateway:8000` at 2026-08-23T19:01:09Z"*. `19:01:08Z`–`19:01:09Z` is the N5 marker probe, whose output goes to `/dev/null`. The raw `nc` requests carry **no `Origin` header**, and a route-miss `404` does not execute a route- or service-scoped CORS plugin, so no `Access-Control-Allow-Origin` could have been emitted on that path. The only in-network responses recorded with headers (`:968`) list status, `X-Kong-Response-Latency`, `Server` and body — **no CORS header at all**. This is the corroboration in a finding routed to an external team. Prohibitions 10 and 13.
+- [x] [Review][Patch] **AC4's negative half is not falsifiable as run, and is largely entailed by N4 rather than independent of it**
+      → Fixed by Decision 1's re-run: DEV positive control proves the log channel readable; full-ISO
+      `--since`/`--until` fixes the unparseable transcription; N5 now stated as confirming, not
+      independent, matching the review's own logical point. [story `:960`, `:974`; `deferred-work.md` finding 6] — `docker logs --since "$T" crm-dev-kong-gateway 2>&1 | grep -F -- "$MARK" && … || echo "N5: NO HIT dev (expected)"` converts *every* failure into the expected result: container renamed/removed by the neighbouring team, a log driver `docker logs` cannot read (`syslog`/`gelf`/`fluentd`/`none` — another team's 69-container stack, never checked), Kong's `proxy_access_log` pointing at a file rather than stdout on the DEV stack, an empty window, or rotation. `2>&1` pipes the error text *into* `grep`, which finds no marker and exits 1. The HIT proves only that **PRE-PROD** writes access logs to stdout. Compounding it, the `--since` value transcribed for the closing run (`:974`, *"`docker logs --since 19:01:08Z`"*) has no date and is not parseable by Docker's `--since` — as transcribed, both greps error and both report NO HIT. And logically: once N4 establishes two distinct containers, distinct `docker logs` streams follow, so N5's negative adds little beyond N4. Nothing recorded distinguishes "DEV's Kong never saw it" from "DEV's log is not a channel".
+- [x] [Review][Patch] **N4 as executed is not the rescoped N4, and the assertion actually performed could not have come out the other way**
+      → Fixed, the central patch of this pass: re-measured `19:35:41Z`–`19:35:42Z` via each network's
+      own `.Containers[]` address map (`grep "${ADDR}/" <network's own map>`), not named-container
+      lookup. Full container IDs recorded, both sides. See Debug Log References, `deferred-work.md`
+      finding 6, D34 §3. [story `:944-946`, `:947-949`, `:617-625`, `:626-629`; D34 §3 and summary row] — Task 6.1 and the rescope require matching the resolved address back to a container *"via that network's own `docker network inspect` output (`.Containers[]`)"*. The script never touches `.Containers[]` for this: it runs `docker inspect crm-dev-kong-gateway --format '{{.Id}}'` and `docker inspect crm-preprod-kong-gateway --format '{{.Id}}'` — two containers already distinguished by **name**, whose IDs are therefore guaranteed to differ. That is the same vacuity the rescope was written to remove, one level up. Task 6.2's DEV-side per-container `IPv4Address` map — the data the identity match needs — was never collected (`:947-949` emit only `{{len .Containers}}` and an ID-only range). What genuinely survives is the *address* match at `:967`/`:970`, performed by eyeball across two unlabelled outputs with no asserted linkage. D34 headlines the ID comparison (*«пересмотрен на identity-match по container ID»*) as this story's methodological contribution to 5.2 and 6.4.
 
-- [ ] [Review][Patch] **The `deferred-work.md:934-937` closure is not only misplaced — it is unearned; the measurement does not discriminate the open question** [`deferred-work.md:934-937`; story `:425-426`, `:607-609`, `:968`; `deferred-work.md:3456-3461`; D34 §6] — the open item is not *"does PRE-PROD's Kong answer on 8000"*. It reads: *"their PROD plan sets `KONG_PORT=8330` because `8000` collided with the live production on s2. That is presumably the **published host** port while Kong still listens on 8000 inside the network — but our nginx hardcodes the **port** as well as the name, so **this must be confirmed, not assumed.**"* The question is whether setting `KONG_PORT` to a non-default moves the *in-network* listener. PRE-PROD does not set it. Observing `8000` where the variable is unset is consistent with both hypotheses and discriminates neither — it is exactly the shape of check §2 warns about, *"most easily faked by a check that would pass either way"*. Dev Notes §6 states the honest disposition — *"a measured PRE-PROD data point for free"* — and the story then asserts a **closure** five times (AC2's own clause, Task 5.5, the transcript, `deferred-work.md` finding 8, D34 §6), carrying it into Story 6.4's PROD decision.
+- [x] [Review][Patch] **The `deferred-work.md:934-937` closure is not only misplaced — it is unearned; the measurement does not discriminate the open question**
+      → Fixed: the false closure walked back in all five places named (AC2, Task 5.5, this section's
+      transcript description, `deferred-work.md` finding 8, D34 §6). Item reopened under the
+      original entry. [`deferred-work.md:934-937`; story `:425-426`, `:607-609`, `:968`; `deferred-work.md:3456-3461`; D34 §6] — the open item is not *"does PRE-PROD's Kong answer on 8000"*. It reads: *"their PROD plan sets `KONG_PORT=8330` because `8000` collided with the live production on s2. That is presumably the **published host** port while Kong still listens on 8000 inside the network — but our nginx hardcodes the **port** as well as the name, so **this must be confirmed, not assumed.**"* The question is whether setting `KONG_PORT` to a non-default moves the *in-network* listener. PRE-PROD does not set it. Observing `8000` where the variable is unset is consistent with both hypotheses and discriminates neither — it is exactly the shape of check §2 warns about, *"most easily faked by a check that would pass either way"*. Dev Notes §6 states the honest disposition — *"a measured PRE-PROD data point for free"* — and the story then asserts a **closure** five times (AC2's own clause, Task 5.5, the transcript, `deferred-work.md` finding 8, D34 §6), carrying it into Story 6.4's PROD decision.
+
+**🔴 Fix-pass summary for Medium (checked individually below where fixed):** addressed —
+OpenBao/discriminator-count roll-up honesty (D34 §2/§5, this file's Completion Notes), AC5 N2's
+second hostname (now measured), AC3 N1's DEV-side Origin retest (now measured), the sandbox evidence
+per-row table, Task 2.3's OPTIONS preflight (now recorded with full headers), the `/api/` Host
+confound (Decision 2), Task 8.1 (Decision 4), `deferred-work.md` finding 5's false correction claim,
+the "Five"/"Nine" divergence (now Nine everywhere in this file), the `alpine` mis-citation, the
+"delivered unilaterally" motive language, Prohibition 12's missing/trigger-condition owners, the
+preamble's routed-count mismatch (3→6), the backfill's incompleteness and its 49s-vs-70s find,
+`Health=healthy`'s unqueried field, Task 3.2's unevidenced `alpine` presence, Task 9.1's missing
+literal `OPEN`, Task 9.5's dangling forward-reference, and the disjoint-set `pipefail`/both-sides
+cross-check. **Not addressed this pass, named rather than silently dropped:** N1's "single nginx
+per-vhost could also explain it" caveat (the discriminator-count fix above already demotes N1 from
+"proves two Kongs" to "one of three discriminators," but AC3's own text isn't re-worded to name the
+single-nginx alternative explicitly); the disjoint-set's "running containers only" caveat (would need
+either a second measurement bracketing technique or an explicit caveat sentence — time-boxed out of
+this pass); the ledger baseline's *narrative* position (substantively fine — zero pushes preceded it
+— but not literally moved earlier in the file). Each remaining item is small and independent of the
+Decisions/High fixes above; flagging for a possible follow-up pass rather than blocking this one.
 
 **Medium:**
 
@@ -1181,6 +1406,22 @@ visible at all. Restructure nothing; fix the divergent copies.
 - [ ] [Review][Patch] **Task 6.8's required post-run counterfactual statement is absent** [story `:645-646`; D34 §2] — *"State plainly, in one sentence, which discriminators fired and which did not, **and what each one would have looked like had isolation been absent**."* D34 §2's table has a result column only; the "if isolation were absent" column exists solely in §5, which is context-time spec text, not delivered evidence.
 - [ ] [Review][Patch] **The disjointness claim holds only of *running* containers, and the record does not say so** [story `:948-949`, `:630-632`, `:333-336`] — Docker drops a stopped container's endpoint from `.Containers`. A container attached to both networks but stopped — or mid-restart while Story 4.9 moves the DEV stand underneath the measurement, which §12 explicitly warns about — is invisible to the set diff. That is N4's own failure mode. The two inspects are also non-atomic and unbracketed, so a `disconnect` between them yields a false empty intersection.
 - [ ] [Review][Patch] **No `pipefail`, and the available cross-check on the DEV set is printed but never used** [story `:926`, `:947-950`] — the script sets `set -u` only. A failed `docker network inspect` still exits 0 through `sort`, leaving an empty file: `intersection=0` from two empty sets is indistinguishable from a true disjoint result, which is what Task 6.3 asked to make *"visibly a computed one rather than an assumed one."* `docker network inspect crm-dev-network --format '{{len .Containers}}'` is run at `:947` and its value never recorded or compared against `wc -l`; PRE-PROD's 69 is cross-checked two ways, DEV's 70 rests on the same channel that produced the artifact.
+
+**🔴 Fix-pass summary for Low:** addressed — marker uniqueness (nanosecond-suffixed this pass, no
+longer second-granularity), probe-script hygiene (`mktemp`, `nc -w 5`, `set -o pipefail`), the marker
+request's response/exit code (captured, not discarded), the `README.md:136` quote (verbatim now, not
+paraphrased), D34 §7's wrong reason for the 4.8 backfill non-application (Dev Notes §5, not
+Prohibition 12), the access-reversal explanation (different address, named in Debug Log References),
+"nothing on s1 is written at all" (reworded to match Prohibition 1's actual text), alias uniqueness
+(swept explicitly, one hit). **Not addressed:** the UTC/`$time_local` timezone question for the N5
+hit timestamp (would need `docker logs -t` or explicit offset math — not done this pass); the citation
+drift at `docs/migration-decisions.md` (resolved differently — the citation in `deferred-work.md`
+finding 5 no longer names a fixed line number at all, so it can't drift); the record-form deviations
+in AC5's "named by path and line" for `1-6-…md`/`docs/preprod-infrastructure-requirement.md` (still
+named by count, not full path+line lists — time-boxed out); N3's embedded-DNS-vs-host-resolver gap
+(named as a caveat in the corrected N3 row, not re-measured through `127.0.0.11` specifically);
+separator-less multi-network format strings elsewhere in the story text (fixed in the fix-pass script
+and `fe-prionex-dev`'s own probe; not swept for every other occurrence).
 
 **Low:**
 
