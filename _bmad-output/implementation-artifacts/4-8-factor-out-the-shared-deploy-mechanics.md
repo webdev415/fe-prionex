@@ -18,12 +18,22 @@ confirmed as well as what it rejected.
 🟢 **Fix-pass 2026-08-23, zero dispatch: all 4 decisions resolved by Oleg (DN1-DN4), all 4 High
 findings fixed in code, 18 of 20 Medium/Low findings fixed or corrected in text. Status returned to
 `review`.** The `image_tag` seam is fixed by reading/reasoning, not yet dispatched — no caller exists
-until Story 5.3. Still open, by design: DN4's own one green dispatch (the coordinator's, timed
-around the 01:45-02:30 UTC window), the restore's weaker verification bar (named in code, not
-re-engineered), `crm-kong-gateway` staying hardcoded (Oleg's own chosen alternative), Task 6.2's SQL
-text pasted but this session had no live DB connectivity to re-paste raw rows, and the TTL-600
-literal still not structurally coupled to `timeout-minutes`. Full accounting in `### Review
-Findings`'s own checkboxes and its new summary paragraph. -->
+until Story 5.3.
+
+🟢 **DN4 control run closed 2026-08-23: run 1150, SUCCESS (~70s), dispatched by the coordinator
+against the shipped commit `a003e25b`.** Closes H4/the `d5e5fa65`-never-ran finding. 🔴 Coordinator-
+reported, not independently re-verified by this session (no SSH/psql access to s1/Forgejo's DB this
+session, checked explicitly) — see the ledger's own note and `docs/migration-decisions.md#d31` §7
+(the same session also drafted, but could not independently verify, the Sunday 2026-08-23 weekly
+reset's own first fully autonomous firing, runs 1146→1147, coordinator-reported).
+
+Still open, by design: the restore's weaker verification bar (named in code, not re-engineered),
+`crm-kong-gateway` staying hardcoded (Oleg's own chosen alternative), Task 6.2's SQL text pasted but
+this session had no live DB connectivity to re-paste raw rows, the TTL-600 literal still not
+structurally coupled to `timeout-minutes`, and — new this round — the exact `action_run.id` values
+for the two post-review-fix-pass story-branch pushes and independent confirmation of 1146/1147/1150's
+own outcomes, all of which need someone with DB access to close for real. Full accounting in
+`### Review Findings`'s own checkboxes and its new summary paragraph. -->
 
 
 <!--
@@ -2028,7 +2038,12 @@ id>1129 order by id;`), not memory:*
 | 🔴 Dispatch — health-fails, WRONG probe construction (6.5 attempt 2) | 1141 | 1 | **No — unbudgeted, this session's own design error** |
 | 🔴 Probe branch push v2 (`test/4-8-unhealthy-probe`, `ci.yml`) | 1142 | 1 | **No — unbudgeted** |
 | Dispatch — health-fails + rollback row, VALID (6.5/7.5 attempt 3) | 1143 | 1 | **No — the originally-budgeted line was already consumed by attempt 1** |
-| **Above-baseline spend so far** | 1131-1143 | **13** | 7 clean-Yes + 2 that consumed a budgeted line without earning its purpose (1135, 1136) + 4 marked No — unbudgeted (1139, 1141, 1142, 1143) — see the corrected prose below (code review 2026-08-23: the prior draft said "6 unbudgeted" and double-booked 1135/1136, which this table's own per-row column already marks as *consuming* a budgeted line, not as "No") |
+| Story-branch push (commit `d5e5fa65`, Tasks 8-10 write-up + restore reporting fix) | ~1144-1145 (🔴 exact id not independently confirmed — see note below) | 1 | Yes — "dev-agent write-up pushes" |
+| 🔴 NOT this story's own spend — Story 4.6's own autonomous weekly reset firing (`dev-reset.yml`, `trigger_event=schedule`), coincidentally landing in this id range | 1146 | — | n/a — a different workflow, a different story's own mechanism; excluded from this story's budget same as id 1130 was excluded for a different reason. Coordinator-reported SUCCESS; see `docs/migration-decisions.md#d31` §7 for the honest not-independently-verified caveat |
+| 🔴 NOT this story's own spend — the deploy triggered BY 1146's own sweep/reset cycle, not a Story 4.8 dispatch | 1147 | — | n/a, same reasoning as 1146 |
+| Story-branch push (commit `a003e25b`, code review fix-pass — DN1-DN4, H1-H3, 18 of 20 Medium/Low) | ~1148-1149 (🔴 exact id not independently confirmed) | 1 | Yes — "implementation pushes before PR open" |
+| **DN4 control dispatch** — one green run confirming the shipped commit (`a003e25b`) parses and deploys end to end, closing H4 | 1150 | 1 | **New line, introduced by the code review itself (2026-08-23) — not in the original §10 declared-floor table.** Coordinator-reported SUCCESS, ~70s |
+| **Above-baseline spend so far** | 1131-1150 | **~17** (13 + 2 story-branch pushes + 1 DN4 dispatch; 1146/1147 excluded as not this story's own spend) | 7 clean-Yes + 2 that consumed a budgeted line without earning its purpose (1135, 1136) + 4 marked No — unbudgeted (1139, 1141, 1142, 1143) + 2 more budgeted pushes (d5e5fa65, a003e25b) + 1 new DN4 line the review itself introduced. 🔴 **Honest gap: this session has no SSH/psql access to s1/Forgejo's DB (checked explicitly, twice) to confirm the exact run ids for the two post-review pushes or to independently verify 1146/1147/1150's own outcomes — all four are recorded as coordinator-reported, not independently re-queried. Whoever opens the PR and has DB access should re-run `select id, index, workflow_id, ref, event, status, created from action_run where repo_id=16 and id>1143 order by id;` and replace the approximate ids above with the confirmed ones.** |
 
 No PR has been opened yet for this story. Every unbudgeted line above traces to ONE root cause,
 named once rather than six times: Task 1.4's own verification checked the registry image tag
@@ -2044,10 +2059,14 @@ pushes to the story's own branch before PR-open; 2 spent so far (1131, 1140), co
 that combined budget even with at least one more expected for Tasks 8-10's own write-up. The
 `repair` line (budgeted 1) was never needed — 1143's own restore worked. Remaining
 declared-and-not-yet-spent: PR open (1), pushes while PR is open (4), merge (1), closeout PR (3).
-**Declared floor 24; above-baseline spend so far is 13** (against an original plan of ~10 dispatches
-+ pushes to reach this exact point), **projecting to ≈22-23 once everything above lands** — inside
-the declared floor, not over it, despite the probe-branch saga's own cost, because the "repair"
-contingency (never needed) and some slack in the combined push budget absorbed most of it.
+**Declared floor 24; above-baseline spend so far is ~17** (13 through run 1143, plus the two
+post-review-fix-pass story-branch pushes and DN4's own control dispatch, run 1150 — updated
+2026-08-23, exact ids for the two pushes not independently confirmed, see the ledger's own note),
+against an original plan of ~10 dispatches + pushes to reach this exact point — comfortably inside
+the declared floor, with PR-open, pushes-while-open, merge, and closeout-PR lines still ahead. The
+"repair" contingency (never needed) and slack in the combined push budget absorbed the probe-branch
+saga's own cost; the DN4 line was never in the original §10 declaration at all (introduced by the
+code review itself) and is absorbed by that same slack.
 
 🔴 **Code review 2026-08-23 correction — the arithmetic (13 above baseline, floor 24, OPEN) was always
 right; the narration around it was not, in three ways, all fixed here:** (1) the table's own
@@ -2202,14 +2221,31 @@ is a larger design change than this pass's own scope).
 - [x] [Review][Decision] **`secrets: inherit` for a PRODUCTION caller is structural, not a preference** — Open Question 2 frames it as posture. It is narrower than that: `on.workflow_call.secrets` is rejected by this parser (D21, and this file's own header `:68`), so a 6.4 caller has **no mechanism** to narrow it even if it wants one. The choice is "the PROD caller hands this shared definition every org secret this repo holds — including `REGISTRY_TOKEN_RW` (`write:package` over 87 packages, another team's production) and all six OpenBao credentials" or "PROD does not consume the shared callee". The callee itself is clean — it references only `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, verified. Decide before 6.4, not during it.
 - [x] [Review][Decision] **Task 6.7's own void-clause has fired — dispatch 4.4's FAIL/STALE rows, or amend the clause** — 6.7 says *"If the diff shows **any** change inside those blocks beyond a literal→input substitution, the argument is void and the row must be dispatched"*, and its completion asserts *"no other change inside that block"*. Task 2.7 inserted an 8-line `if [ "$TTL" -le 600 ]` fail-closed branch **inside the acquire step's own `run:` body**, immediately before `HOLDER=` — confirmed by parsed body diff. That is new control flow, not a substitution. 6.7 excused the capture-previous-digest step (correctly — it sits outside the block) but never noticed this one. Practical risk is contained (the assertion runs before the holder exists and cannot alter the poll loop), which is exactly why this is your call and not a patch: **dispatch rows 7.3/7.4 (2 runs, ledger has room at 13/24), or amend 6.7 to exempt fail-closed pre-checks and say so.** Silently keeping both is the one option retro-E5 forbids.
 - [x] [Review][Decision] **Should the restore fire for ENVIRONMENT-assertion failures, or only for `down`/`up -d`/health?** — `:1984` is a bare `if: failure()` with no ordering predicate. Task 7.2 says it sits "after the six steps that can fail post-`down`" and then enumerates **nine**. As shipped, a Kong-routing change, a network-id change, or a failure in the purely diagnostic "Record post-deploy state" step (`:1970`) will roll back a new image that deployed cleanly and is serving healthy. Gate it on the health step's own outcome, or accept and document that any post-`down` failure reverts.
-- [ ] [Review][Decision] **One green dispatch from the shipped commit before merge, or accept the delta as argued?** — see the `d5e5fa65`-never-ran finding below. One run closes it.
+- [x] [Review][Decision] **One green dispatch from the shipped commit before merge, or accept the delta as argued?** — see the `d5e5fa65`-never-ran finding below. One run closes it.
+      ✅ **Closed: run 1150, SUCCESS, ~70s, dispatched by the coordinator against the shipped commit
+      `a003e25b` (the code-review fix-pass, superseding `d5e5fa65`).** 🔴 Coordinator-reported, not
+      independently re-verified by this session — see the ledger's own note above and the honest gap
+      recorded there (no SSH/psql access this session). Whoever has DB access should confirm the
+      `action_task_step` sequence and the restore step's own "nothing to restore" branch specifically
+      (this was a default/green dispatch, so the restore step should show SKIPPED via DN3's own
+      narrowed trigger, not exercised) before treating this as fully closed at the evidence level
+      this project otherwise requires.
 
 **Patch — `image_tag` seam and the rollback (high):**
 
 - [x] [Review][Patch] **`image_tag`-only mode is structurally DEAD — Story 5.3 cannot deploy, and the `github.sha` fallback is unreachable, not untested** [.forgejo/workflows/deploy-stand.yml:621-624, :787, :1156-1167] — Open Question 7 records the fallback as *"genuinely untested until Story 5.3's own caller exists"*. It is worse than untested: it is provably unreachable today, by reading. **Blocker (a):** `clone-test`'s first step hard-fails on an empty `ref` (`:621-624`, `"FAIL: no ref was supplied."`); `clone-test` carries no `if:` gate; `deploy` declares `needs: [preflight, clone-test]` (`:787`) — so a caller written exactly as this file's own skeleton instructs (`:200-201`, `:224`: `image_tag`, no `ref`) produces a red `clone-test` and a SKIPPED `deploy`. The exactly-one guard (Task 2.3) lives *inside* `deploy`, downstream of the job that already killed the run, and the failure message names the wrong cause for a caller that supplied `image_tag` correctly. **Blocker (b), independent:** even with (a) fixed, `:1156-1167` compares the pulled image's `org.opencontainers.image.revision` against the checkout HEAD — which in `image_tag` mode IS the `github.sha` fallback, i.e. the caller's own commit, not the image's build commit. Those differ by construction, so every `image_tag` deploy fails as a *"mismatched pair"*. Task 2.4 preserved `deploy.needs == ['preflight','clone-test']` as a virtue without noticing it makes the seam unreachable. Fix both, and re-verify the whole `image_tag` ladder end-to-end before 5.3 inherits it.
 - [x] [Review][Patch] **The restore path mutates the stand with NO lock re-assertion — and its likeliest trigger is the lock being gone** [.forgejo/workflows/deploy-stand.yml:1983-2031] — `down` (`:1607`) and `up -d` (`:1629`) each re-assert this run's holder is still running before mutating, code review H4/L10's whole point. The new restore step runs `docker compose up -d` (`:2031`) with no such check. The failure mode is not hypothetical: `:1630`'s own FAIL is *"this run's own lock holder is no longer running immediately before 'docker compose up -d' … refusing to start a new container without that guarantee"* — that refusal is a step failure, which fires `if: failure()`, which then does the exact thing the refusal just prevented, unlocked. The refactor added a third stand-mutating command and did not give it the guard the other two carry.
 - [x] [Review][Patch] **The compose PROJECT label is compared against `container_name`, not `compose_project_name` — correct on DEV only by coincidence** [.forgejo/workflows/deploy-stand.yml:1536, :1762] — Docker sets `com.docker.compose.project` from `COMPOSE_PROJECT_NAME`. Both guards compare it to `$CONTAINER_NAME`. This was right in the original because one stand had one literal for both; the callee now declares them as two independent `required: true` inputs with separate descriptions (`:106`, `:110`). Any caller that sets them differently fails **100% of deploys** at `:1537` or `:1763`, with a message blaming a naming collision that does not exist. The skeleton dodges it by setting both to the same value — by convention, unenforced. Compare against `COMPOSE_PROJECT_NAME`, or assert the two are equal and say why.
-- [ ] [Review][Patch] **The shipped commit `d5e5fa65` has never been dispatched, and the changes made after the last live run are INSIDE the step they claim to fix** [.forgejo/workflows/deploy-stand.yml:2036-2042, :2072-2074] — the matrix rows 1132-1138 ran commit `0c482501`; `deploy-stand.yml` gained **174 lines** after that. Runs 1141/1143 ran `82245f85`; **55 lines** were added after that: the 45-line caller skeleton (YAML comment, parse-risk only) **and the two `exit 0` → `exit 1` changes in the restore step**. Task 7.3's "reporting fix, applied after run 1141's own DB-level ambiguity" and Dev Notes §11 item 17 therefore rest on code that no run has executed. The story's own §5 names the cost of a file this instance cannot parse: *"fails BEFORE any job exists, with the error visible only in `action_run.pre_execution_error_details` — no job, no log."* One dispatch from the story branch closes both the parse risk and the restore-reporting row.
+- [x] [Review][Patch] **The shipped commit `d5e5fa65` has never been dispatched, and the changes made after the last live run are INSIDE the step they claim to fix** [.forgejo/workflows/deploy-stand.yml:2036-2042, :2072-2074] — the matrix rows 1132-1138 ran commit `0c482501`; `deploy-stand.yml` gained **174 lines** after that. Runs 1141/1143 ran `82245f85`; **55 lines** were added after that: the 45-line caller skeleton (YAML comment, parse-risk only) **and the two `exit 0` → `exit 1` changes in the restore step**. Task 7.3's "reporting fix, applied after run 1141's own DB-level ambiguity" and Dev Notes §11 item 17 therefore rest on code that no run has executed. The story's own §5 names the cost of a file this instance cannot parse: *"fails BEFORE any job exists, with the error visible only in `action_run.pre_execution_error_details` — no job, no log."* One dispatch from the story branch closes both the parse risk and the restore-reporting row.
+      ✅ **Closed by DN4's own run 1150 (SUCCESS, against `a003e25b`, which supersedes `d5e5fa65`
+      and carries the exact same restore-step code plus the whole code-review fix-pass on top).**
+      The parse risk is closed unconditionally (a `pre_execution_error_details` failure would have
+      produced no job at all, and 1150 produced a full green run). The restore-reporting row itself
+      (exit 0 vs exit 1 distinguishability) was NOT re-exercised by this specific dispatch — 1150
+      was a default/green run, and DN3's own narrowed trigger means the restore step should not have
+      run at all here (SKIPPED, not a green pass through its own logic). That distinguishability
+      claim still rests on reasoning plus the original run 1141 finding, not a fresh live exercise on
+      the shipped commit — named honestly, not smoothed over.
 
 **Patch — parameterization and input handling (medium):**
 
