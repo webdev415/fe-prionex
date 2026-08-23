@@ -2818,6 +2818,10 @@ inside 4.2.
   forever, and the healthcheck never runs because the container never runs. Nothing reports it. No
   boot-ordering statement and no post-reboot verification exists anywhere. **Owner: Story 4.3
   (post-deploy check) / Story 4.9 (cutover readiness).**
+  > **Attached, Story 5.2, 2026-08-24 — now applies to a second stand.**
+  > `fe-prionex-preprod` carries the same `restart: always` + `external: true` combination on
+  > `crm-preprod-network`. Post-deploy state recorded, not solved here — this story provisions the
+  > stand, it does not add reboot-ordering machinery. Owner unchanged.
 - ⚠️ **The stand's endpoint now blocks the network owner's teardown, and they were not told.** Docker
   refuses `network rm` while an endpoint is attached, so `CRM/api-prionex`'s `docker compose down` on
   `crm-dev` now trips over a container in a compose project they cannot see from their tree. If they
@@ -2832,6 +2836,13 @@ inside 4.2.
   this stand, the NEXT deploy's own guard fails loudly instead of silently serving a dead `/api/` as
   healthy. **Still open: the heads-up to the backend team itself** — this story had no channel to
   deliver it; owner remains whoever next talks to `CRM/api-prionex`.
+  > 🔴 **ESCALATED, Story 5.2, 2026-08-24 — doubled onto a 69-container network.** `fe-prionex-preprod`
+  > is now a second endpoint of ours on a network `CRM/api-prionex` owns, this time their **PRE-PROD**
+  > stack — 69 containers, their release-candidate environment, not DEV's. `docker network rm` on
+  > their side will now trip over both our stands, on two of their three environments. The heads-up
+  > **still has no owner and has still not been sent.** Route it into the same message that carries
+  > the CORS ask (§1/D36 §5) — that remains the cheapest moment it will ever have, and it is now two
+  > stories old.
 
 ---
 
@@ -2902,6 +2913,11 @@ actionable inside 4.3's scope. The review's `decision`/`patch` findings stay in 
   manual path's own tree, and adding a drift-check guard is a new mechanism this story's own §1
   forbids. **Re-routed unchanged to Story 4.9**, which touches the stand directory at cutover
   anyway.
+  > **Attached, Story 5.2, 2026-08-24 — same class, second stand.**
+  > `~/crm-prionex/fe-prionex-preprod/.env` is written with an explicit header this time labelling it
+  > record/DR only and citing this exact item — but the underlying drift risk is identical and
+  > unaddressed: nothing keeps it in step with what `deploy-stand.yml` will actually render per
+  > deploy once Story 5.3 exists. Not a new axis; attached here so a reader lands on one item, not two.
 
 - ⚠️ **The ref→tag scheme is lossy: two different refs can share one image tag.** `build.yml`'s
   sanitizer maps every run of characters outside `[a-zA-Z0-9._-]` to a single `-`, so `feature/foo`
@@ -3435,9 +3451,24 @@ UTC-timestamped at the point of measurement.
    per-route. A browser at the real frontend origin will be refused. **Configured wrong is worse than
    unconfigured** — this looks done and fails only in a browser. **Owner: `CRM/api-prionex` (external
    ask, extended 2026-08-23). Consumer: Story 5.2.**
-2. **No nginx vhost or certificate for `crm.preprod.crm-prionex.online`.** The name resolves
+   > **RESTATED, not closed — Story 5.2, 2026-08-24, `2026-08-23T21:39:39Z`.** Re-measured against
+   > `https://api.crm.preprod.crm-prionex.online` with the actual real frontend origin now live
+   > (`Origin: https://crm.preprod.crm-prionex.online`, the vhost this story just stood up) — simple
+   > `GET` and `OPTIONS` preflight both still return the static `Access-Control-Allow-Origin:
+   > http://localhost:8320`, unchanged; preflight still carries no `Access-Control-Allow-Methods` or
+   > `-Headers`. The defect is unchanged and confirmed reachable exactly the way a browser would hit
+   > it now that the frontend origin is real, not hypothetical. **Still open, still `CRM/api-prionex`,
+   > still Story 5.2 as the AC6 consumer that measured it.** Nothing on their side has changed.
+2. ~~**No nginx vhost or certificate for `crm.preprod.crm-prionex.online`.** The name resolves
    (`185.185.49.127`) but TLS falls through to s1's default vhost: `CN=admin.techno-finance.online`,
-   issued `2026-08-15T20:01:59Z`. Measured 2026-08-23T18:57Z. **Owner: ours, Story 5.2.**
+   issued `2026-08-15T20:01:59Z`. Measured 2026-08-23T18:57Z. **Owner: ours, Story 5.2.**~~
+   ✅ **CLOSED, Story 5.2, 2026-08-24.** `crm-stands-acme`'s `server_name` extended, `crm-stands` got
+   its own `server` block (`location /` → `http://127.0.0.1:8083`), certificate issued via
+   `certbot certonly --webroot`. Discriminating pair confirmed from outside s1: the real name now
+   serves `200`/`CN=crm.preprod.crm-prionex.online`; a sibling name with no vhost still falls through
+   to the default `CN=admin.techno-finance.online`. `nginx -t` carried no new diff at either reload;
+   neighbours (`admin.techno-finance.online`, both API hostnames) confirmed still serving their own
+   certificates unchanged. See D36 §4.
 3. **`README.md:136` mislabels the legacy DEV stand.** Verbatim (Task 7.3 requires the quote, not a
    paraphrase): `| Pre-production | 72.62.17.132 | 8080 | dev.crm-prionex.online |`. Was harmless
    before a real PRE-PROD existed; is actively misleading now. **Not fixed here** — `README.md` is
@@ -3542,3 +3573,60 @@ an action item inside the story file's own `### Review Findings`, not deferred w
   **Pre-existing** — not caused by Story 5.1, which applied the documented method correctly and got a
   real number (`1160|1160`, 2026-08-23T19:02:49Z). **Owner: coordinator**, at whichever story next
   revises D31 §7's protocol.
+
+## Deferred from: story-5-2-provision-the-pre-prod-stand-on-s1 (2026-08-24)
+
+Six new findings this round (two closures and two attached/escalated notes are recorded under their
+original entries above, not here — Prohibition 14). All measurements first-hand, this session's own
+SSH channel (`root@10.67.0.1`), UTC-timestamped.
+
+1. 🔴 **`deploy-stand.yml:216`'s PRE-PROD caller skeleton names a `runner_label` that does not
+   exist.** The commented skeleton suggests `runner_label: deploy-preprod-preprod`. Measured on the
+   runner's own `.runner` file: `s1-deploy-dev-preprod` registers exactly four labels —
+   `deploy-dev-preprod`, `dev`, `preprod`, `deploy`. The correct value is **`preprod`** (or
+   `deploy-dev-preprod`, which DEV already uses live — same runner, same job image either way). **Not
+   fixed here** — `deploy-stand.yml` is Story 4.8's shipped artifact and inside Story 4.9's blast
+   radius (§12 of this story). **Owner: Story 5.3.**
+2. ⚠️ **The s1 registry login has now been removed a third time.** Story 1.10's login vanished before
+   Story 4.2 measured it; Story 4.2's own `fe_reg_4_2_ro` login vanished again before this story
+   measured it (`/root/.docker/config.json` `auths: {}`, 2026-08-23T21:32:24Z). No attribution
+   guessed either time, and none is guessed now — recorded as a repeating pattern across three
+   stories. **Owner: whoever next has s1 access and can check whether anything on the host
+   (a scheduled sweep, a reboot, a manual `docker logout`) is actually removing it.**
+3. 🔴 **Registry token `fe_reg_4_2_ro`, exposed in this session's own transcript, is compromised —
+   record fresh, not a repeat of Story 4.2's finding.** While inspecting `/root/.fj_reg_4_2.token`'s
+   structure (checking whether it was `KEY=VALUE` or bare, per Prohibition 10's own distinction), a
+   `sed`-based redaction assumed a `=` that the file does not contain; the command redacted nothing
+   and the bare token value was printed into this session's transcript. Handled immediately: the
+   token was **not** reused — a fresh `read:package`-only token (`fe_reg_4_2_ro`'s replacement,
+   `fe_reg_5_2_ro`) was minted instead, its value redirected straight to a host file and never
+   echoed, and the old token was logged out of Docker on this host. Forgejo tokens cannot be revoked
+   by an admin (standing project fact, `docs/migration-decisions.md#d14`), so `fe_reg_4_2_ro` remains
+   technically valid and its exposure cannot be undone by this session. Scope is `read:package` only
+   (confirmed by the push-refusal test that had already been run against it, 4.2's own Task 5.4
+   method), which bounds the damage to registry reads. **Owner: Oleg** — decide whether the
+   `robot-registry` account or `fe_reg_4_2_ro` specifically needs any further action (e.g. an account
+   password rotation, if the token mechanism itself is tied to one) given a formal revoke is not
+   available.
+4. **Story 4.2's finding M1 (a forgotten second plaintext token copy) is closed, not merely
+   inherited.** `/root/.fj_reg_4_2.raw` does not exist on s1 today (measured twice, before and after
+   the token-rotation work above). No second copy was created for `fe_reg_5_2_ro` either — the
+   verbose `gitea admin user generate-access-token` output was redirected straight to a file, the
+   bare value extracted into a second file, and the verbose one deleted, leaving exactly one
+   plaintext copy. **Owner: none — closed.**
+5. 🔴 **`sha-f8f358f43ced-preprod`, recorded as a permanent tag in Story 5.1/D34, is absent from the
+   registry.** `-preprod` tags match `keep_pattern` and are described as never expiring; removing one
+   needs an authorised `DELETE` plus a `write:package` token, "which has twice required Oleg in
+   person" (`build.yml:1073-1076`). The full tag list (`GET /v2/crm/fe-prionex/tags/list`, pasted
+   verbatim in this story's Debug Log References) does not contain it — only `sha-00ef3be4743d-preprod`
+   (the one this story used), `main-preprod` and `probe-3-3-preprod-preprod` remain from the PRE-PROD
+   family. Not chased — the preferred candidate was unaffected — but a "permanent" tag disappearing
+   is itself the finding. **Owner: coordinator**, to ask whether an authorised deletion happened and
+   was not recorded, or whether the permanence guarantee has a gap.
+6. **The certbot renewal-hook gap now covers a fifth certificate.**
+   `/etc/letsencrypt/renewal-hooks/{deploy,post}/` re-measured 2026-08-23/24: both
+   still empty, no renewal config declares `renew_hook`. `crm.preprod.crm-prionex.online`'s new
+   certificate joins the same gap as the other four — nothing reloads nginx on any of their
+   renewals, including the neighbour's. **Owner: Oleg / host administrator** — a
+   `renewal-hooks/deploy/` script is host-wide, not story-local, and needs a decision above any one
+   story's scope.

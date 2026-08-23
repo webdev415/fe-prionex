@@ -4,7 +4,7 @@ baseline_commit: 08803a17
 
 # Story 5.2: Provision the PRE-PROD Stand on s1
 
-Status: ready-for-dev
+Status: review
 
 <!-- Contexted 2026-08-24 (local; the measurements below are timestamped in UTC and were taken
      2026-08-23 20:52–21:10 UTC) against `main` at `08803a17` — the merge of PR #75, Story 5.1's
@@ -516,15 +516,15 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 1 — Declare the run budget before the first push (AC: all)
 
-- [ ] **1.1** Flip `sprint-status.yaml` `5-2-provision-the-pre-prod-stand-on-s1` to `in-progress`
+- [x] **1.1** Flip `sprint-status.yaml` `5-2-provision-the-pre-prod-stand-on-s1` to `in-progress`
       before anything else, so a session that dies mid-story leaves a true status.
-- [ ] **1.2** Take the ledger baseline **first-hand**, before the first push. Method D31, read-only:
+- [x] **1.2** Take the ledger baseline **first-hand**, before the first push. Method D31, read-only:
       `docker exec forgejo-postgres psql -U forgejo -d forgejo -tAc "select max(id), count(*), now() at time zone 'utc' from action_run"`.
       This context session measured **`1170 | 1170` at 2026-08-23T21:02:08Z** — that is the prior,
       not your baseline. Re-run it. ⚠️ `action_run` ids are **instance-global**, so other repos
       inflate the delta; the API alternative (`GET /api/v1/repos/CRM/fe-prionex/actions/runs`) is
       repo-scoped and will not match — pick one and say which.
-- [ ] **1.3** Declare the budget with these lines, before pushing:
+- [x] **1.3** Declare the budget with these lines, before pushing:
       - **pushes to `story-5-2/pr-1-context`** — priced **per push**, one four-job `ci.yml` run each
         (the permanent story-push line, §11). Size it against your expected write-up rounds; do not
         write one flat "closeout push".
@@ -532,30 +532,30 @@ is also listed in §10 and Dev Notes §9.
       - **contingency, Task 5:** at most **one** `build.yml` dispatch, `environment: preprod`. 🔴
         Flag in the same line that this mints a **permanent, effectively unremovable** tag.
       - **host-side work: 0 runs.** Everything in Tasks 2–8 is SSH and dispatches nothing.
-- [ ] **1.4** Note that no `paths` filter exists — a docs-only push costs a full CI run — and that a
+- [x] **1.4** Note that no `paths` filter exists — a docs-only push costs a full CI run — and that a
       push landing while the PR is already open fires **both** `push` and `pull_request`, costing
       **two** rows.
 
 ### Task 2 — Establish host access and re-measure the premises (AC: 1, 2)
 
-- [ ] **2.1** Reach s1: `ssh root@10.67.0.1` (private; `s1.private.crm-prionex.com`). The external
+- [x] **2.1** Reach s1: `ssh root@10.67.0.1` (private; `s1.private.crm-prionex.com`). The external
       `185.185.49.127:22` times out by `ufw` design — that is not a fault.
-- [ ] **2.2** Re-measure §2 (b)(c)(d)(e)(f)(h)(i)(j)(p) first-hand and record each with a UTC
+- [x] **2.2** Re-measure §2 (b)(c)(d)(e)(f)(h)(i)(j)(p) first-hand and record each with a UTC
       timestamp. **They are the prior, not evidence** (Prohibition 16).
-- [ ] **2.3** Confirm `8083` is free with an anchored check, not an eyeball. ⚠️ `grep -c` exits **1**
+- [x] **2.3** Confirm `8083` is free with an anchored check, not an eyeball. ⚠️ `grep -c` exits **1**
       when the count is zero, so the *success* case aborts any `set -e` block — write it as
       `[ "$(ss -lntp | grep -c ':8083 ' || true)" = 0 ]`. If the port is taken, **STOP and record** — do not pick another port; the value is
       written into FR25, `.env.stand.example:66` and `deploy-stand.yml`'s caller skeleton, and
       changing it is a sprint-change proposal, not a story decision.
-- [ ] **2.4** Record the DEV stand's state as *observed at this moment* (§12) — it may be mid-cutover
+- [x] **2.4** Record the DEV stand's state as *observed at this moment* (§12) — it may be mid-cutover
       under Story 4.9. Do not wait for it to look tidy and do not touch it.
 
 ### Task 3 — Registry credential on the host (AC: 4)
 
-- [ ] **3.1** Prove the starting state before touching anything: read `/root/.docker/config.json`
+- [x] **3.1** Prove the starting state before touching anything: read `/root/.docker/config.json`
       and record its `auths` keys, size and mtime. Attempt an **anonymous** pull of a known tag and
       record the literal failure. This is the "before" half of the discriminator.
-- [ ] **3.2** Establish whether `fe_reg_4_2_ro` is still usable — check whether
+- [x] **3.2** Establish whether `fe_reg_4_2_ro` is still usable — check whether
       `/root/.fj_reg_4_2.token` exists and whether it still authenticates. 🔴 **Never print the
       value** (Prohibition 10). If it authenticates, `docker login` with it and mint nothing.
       🔴 **Close Story 4.2's finding M1 while you are here — it is open and it is yours.**
@@ -565,26 +565,26 @@ is also listed in §10 and Dev Notes §9.
       duplicates `.token`), then either record its purpose or delete it, and close M1 explicitly.
       Task 9.8's "no second plaintext copy" assertion is not discharged by inspecting only what this
       story creates.
-- [ ] **3.3** Only if it does not: mint a new token, account `robot-registry`, scope **`read:package`
+- [x] **3.3** Only if it does not: mint a new token, account `robot-registry`, scope **`read:package`
       only**, via `docker exec -u git forgejo gitea admin user generate-access-token -u robot-registry -t <name> --scopes read:package`
       (no account password needed). 🔴 **Record the revocation owner and trigger in
       `deferred-work.md` at mint time, not at story end** — an admin cannot revoke another account's
       token; scopes cannot be widened after minting. Store the value `0600`, host-local, and make
       sure only **one** plaintext copy exists (4.2's finding M1 was a forgotten second copy).
-- [ ] **3.4** Prove the scope **by refusal** (retro-E5 discriminator #1): retag any locally-present
+- [x] **3.4** Prove the scope **by refusal** (retro-E5 discriminator #1): retag any locally-present
       image under a throwaway tag and `docker push` it. Expect `401 Unauthorized` on the manifest
       `PUT`. Confirm the tag is **absent** from the registry afterwards, then remove the local
       retag. ⚠️ Record honestly per 4.2's L8: if the layers already existed, `Layer already exists`
       means no blob write was attempted — **the manifest `401` is the evidence, the blob half is
       not**.
-- [ ] **3.5** State in the record that this credential is for the manual pull and DR, **not** the
+- [x] **3.5** State in the record that this credential is for the manual pull and DR, **not** the
       deploy path (§6, D28 H4).
 
 ### Task 4 — Create the stand directory and its files (AC: 1)
 
-- [ ] **4.1** `mkdir -p /root/crm-prionex/fe-prionex-preprod`, mode `0700`, `root:root` — the same
+- [x] **4.1** `mkdir -p /root/crm-prionex/fe-prionex-preprod`, mode `0700`, `root:root` — the same
       shape 4.2 used for DEV. `~/crm-prionex/` already exists (§2 b); only the leaf is new.
-- [ ] **4.2** Place `docker-compose.stand.yml` there from **this repository at the story's baseline
+- [x] **4.2** Place `docker-compose.stand.yml` there from **this repository at the story's baseline
       commit**. 🔴 This file's *presence* is what `deploy-stand.yml` asserts before it will take the
       lock (§3) — it is not decoration. Do not hand-write it and do not use a heredoc copy, and do
       **not** create a repo checkout on s1 (Dev Notes §6). That leaves exactly one route: copy it
@@ -596,21 +596,21 @@ is also listed in §10 and Dev Notes §9.
       Then verify byte-identity: `sha256sum` on both ends must match. 4.2's DEV copy hashed
       `7f449dacce163fed898b06d3d3d204656b0f485fdbad1827c03c7aac9b1932ec` — expect a **different**
       value here only if the file has changed in the repo since; compute both, do not assume either.
-- [ ] **4.3** Write `.env`, mode `0600`, with all five values from §5. `FRONTEND_PORT` is
+- [x] **4.3** Write `.env`, mode `0600`, with all five values from §5. `FRONTEND_PORT` is
       **`127.0.0.1:8083`**. `DOCKER_IMAGE` is filled in by Task 5 — write the file after the tag is
       known, or write it twice and record both states; do not leave a `<CHANGE_ME>` behind.
-- [ ] **4.4** Confirm `CONTAINER_NAME` is **not** the literal `fe-prionex` and that neither
+- [x] **4.4** Confirm `CONTAINER_NAME` is **not** the literal `fe-prionex` and that neither
       `CONTAINER_NAME` nor `COMPOSE_PROJECT_NAME` collides with the DEV stand's.
-- [ ] **4.5** 🔴 Put a header comment in the `.env` naming it for what it is: **a record and DR copy,
+- [x] **4.5** 🔴 Put a header comment in the `.env` naming it for what it is: **a record and DR copy,
       not the deploy path's source of truth.** Cite D28's option (e) and §3, and note that the DEV
       stand's equivalent file has already drifted (§2 f). A future reader who believes this file is
       authoritative will debug the wrong thing.
-- [ ] **4.6** Confirm nothing in `~/crm-prionex/fe-prionex-preprod/` is tracked by git and that no
+- [x] **4.6** Confirm nothing in `~/crm-prionex/fe-prionex-preprod/` is tracked by git and that no
       repo checkout was created on s1 — there is none today and this story does not add one.
 
 ### Task 5 — Choose the first image, and prove its bundle is real (AC: 4)
 
-- [ ] **5.1** With the credential live, **list what `-preprod` tags actually exist in the registry**
+- [x] **5.1** With the credential live, **list what `-preprod` tags actually exist in the registry**
       and paste the listing verbatim. (4.2's review finding M3 was exactly this: the tag listing was
       never pasted, so the choice could not be audited — one item in a cluster of eight missing
       verbatim outputs, `4-2-…md:906-917`.) **Two permanent `-preprod` tags are already on record,
@@ -630,9 +630,9 @@ is also listed in §10 and Dev Notes §9.
       - `main-preprod` may also still exist — pushed by the same run 680 but a **14-day** tag
         (`<sanitized-branch>-preprod`), so it is at or past expiry. Do not build on it; if it is
         gone, that is the retention rule working.
-- [ ] **5.2** **Prefer an existing tag.** For each candidate, resolve its digest and record it. Do
+- [x] **5.2** **Prefer an existing tag.** For each candidate, resolve its digest and record it. Do
       not mint a permanent tag to avoid one lookup.
-- [ ] **5.3** 🔴 **Prove the candidate's bundle carries the real PRE-PROD URLs, not the placeholder**
+- [x] **5.3** 🔴 **Prove the candidate's bundle carries the real PRE-PROD URLs, not the placeholder**
       (§7 a). The strong form: pull the image and extract `VITE_API_BASE_URL` from the built bundle
       inside it — e.g. `docker run --rm <image> grep -ro 'https://api\.crm\.preprod\.crm-prionex\.online' /usr/share/nginx/html | head`,
       and separately confirm the literal string `PLACEHOLDER-preprod-backend-not-provisioned` does
@@ -646,74 +646,74 @@ is also listed in §10 and Dev Notes §9.
       documented at `3-3-…md:735-744` and is the evidence for `sha-f8f358f43ced-preprod`. Run 680 is
       the evidence for `sha-00ef3be4743d-preprod`. Cite whichever matches the tag you pick, and do
       **not** repeat "593 appears nowhere else".
-- [ ] **5.4** If no existing `-preprod` tag passes 5.3: dispatch `build.yml` **once** with
+- [x] **5.4** If no existing `-preprod` tag passes 5.3: dispatch `build.yml` **once** with
       `ref: main`, `environment: preprod`. 🔴 Coordinator-run. 🔴 This mints a **permanent**
       `sha-<12hex>-preprod` plus a 14-day `main-preprod`; charge it to the Task 1.3 contingency line
       and state in the ledger that the cost is irreversible without Oleg. There is **no automatic
       path** that builds preprod — `build-main.yml:60-72` and `ci.yml:498-504` both pass
       `environment: dev` as a hard literal, deliberately (`build-main.yml:28-30`).
-- [ ] **5.5** Pull the chosen tag and confirm the pulled digest equals the registry's own
+- [x] **5.5** Pull the chosen tag and confirm the pulled digest equals the registry's own
       `Docker-Content-Digest` for that manifest. Record tag **and** digest — 5.3 and 5.4 both need
       the digest, not the tag.
-- [ ] **5.6** Write the resolved reference into the stand `.env` as `DOCKER_IMAGE` (Task 4.3).
+- [x] **5.6** Write the resolved reference into the stand `.env` as `DOCKER_IMAGE` (Task 4.3).
 
 ### Task 6 — Bring the stand up (AC: 1, 2, 5)
 
-- [ ] **6.1** Run from **inside** `/root/crm-prionex/fe-prionex-preprod/`, never from a repo
+- [x] **6.1** Run from **inside** `/root/crm-prionex/fe-prionex-preprod/`, never from a repo
       checkout. The repo root's own `docker-compose.yml` declares `name: fe-prionex` and its
       `container_name` is `fe-prionex-dev` — it can adopt or collide.
-- [ ] **6.2** Export **none** of the five variable names into the invoking shell first. Compose
+- [x] **6.2** Export **none** of the five variable names into the invoking shell first. Compose
       resolves interpolation from the process environment **before** `--env-file` and **no `:?`
       guard fires** — reproduced on both compose v5.3.0 and s1's v5.1.3 (Story 4.1). Verify with
       `env | grep -E '^(COMPOSE_PROJECT_NAME|CONTAINER_NAME|FRONTEND_PORT|DOCKER_IMAGE|FRONTEND_NETWORK)='`
       returning empty.
-- [ ] **6.3** `docker compose --env-file .env -f docker-compose.stand.yml up -d`. 🔴 **`up`, not
+- [x] **6.3** `docker compose --env-file .env -f docker-compose.stand.yml up -d`. 🔴 **`up`, not
       `config`** — `docker compose config` is blind to network existence and renders happily against
       a network that does not exist (Story 4.1 matrix row 7a: exit 0; 7b `up` → exit 1).
-- [ ] **6.4** 🔴 **No step may create `crm-preprod-network`** (Prohibition 1). Capture the network's
+- [x] **6.4** 🔴 **No step may create `crm-preprod-network`** (Prohibition 1). Capture the network's
       id before and after and assert it is unchanged.
-- [ ] **6.5** Record `docker compose ls`, `docker ps`, and `docker inspect` on the new container:
+- [x] **6.5** Record `docker compose ls`, `docker ps`, and `docker inspect` on the new container:
       project name, container name, published port, network membership, IP, image digest.
-- [ ] **6.6** Confirm the running image's digest equals the digest resolved in Task 5.5 — compare
+- [x] **6.6** Confirm the running image's digest equals the digest resolved in Task 5.5 — compare
       digests, not tags.
-- [ ] **6.7** Confirm the published socket is loopback-only, and prove it rather than reading the
+- [x] **6.7** Confirm the published socket is loopback-only, and prove it rather than reading the
       compose output: `ss -lntp | grep ':8083 '` must show `127.0.0.1:8083` and nothing on
       `0.0.0.0`. (retro-E5: the corresponding negative is Task 7.5's external probe.)
-- [ ] **6.8** Rollback path if anything fails: `docker compose … down` from the stand directory.
+- [x] **6.8** Rollback path if anything fails: `docker compose … down` from the stand directory.
       **Never** `docker rm -f` by name; **never** remove a network (Prohibitions 1, 2).
 
 ### Task 7 — Prove the backend, and prove the checks can fail (AC: 2, 5)
 
-- [ ] **7.1** From **inside** the running container:
+- [x] **7.1** From **inside** the running container:
       `docker exec fe-prionex-preprod getent hosts crm-kong-gateway`. Empty output is a **STOP**
       (Prohibition 12) — record it and stop; do not attach another network.
-- [ ] **7.2** 🔴 **Identity, in D34's corrected form.** Take the address from 7.1, then look it up in
+- [x] **7.2** 🔴 **Identity, in D34's corrected form.** Take the address from 7.1, then look it up in
       **`crm-preprod-network`'s own `.Containers[]` map** (`docker network inspect
       crm-preprod-network`) and read off the container id. Do **not** ask `.Id` of a container you
       selected by name — D34 §3 records that as the vacuity that got caught in code review. Assert
       the id is `crm-preprod-kong-gateway`'s (`61eb0eaa9f640e23…` as of 2026-08-23).
-- [ ] **7.3** Do the same lookup in `crm-dev-network`'s map and assert the id **differs**. Read-only;
+- [x] **7.3** Do the same lookup in `crm-dev-network`'s map and assert the id **differs**. Read-only;
       this touches nothing of Story 4.9's (§12).
-- [ ] **7.4** **Discriminating negative (retro-E5 #2).** The same lookup from a throwaway container
+- [x] **7.4** **Discriminating negative (retro-E5 #2).** The same lookup from a throwaway container
       on Docker's built-in `bridge`: `docker run --rm --network bridge alpine getent hosts crm-kong-gateway`
       → expect empty, **exit 2**. `bridge` already exists, holds no Kong, needs no creation and no
       cleanup; `--rm` is the cleanup. ⚠️ Record the caveat 5.1's fix-pass added: this resolves
       through the **host** resolver, not the embedded DNS `127.0.0.11` that `nginx.conf` actually
       uses — it is a valid control for "the name is not host-wide", not a model of nginx's path.
-- [ ] **7.5** **Discriminating negative (retro-E5 #3) — the loopback bind.** From **outside** s1,
+- [x] **7.5** **Discriminating negative (retro-E5 #3) — the loopback bind.** From **outside** s1,
       attempt `http://185.185.49.127:8083/` and record the connection failure. Paired with 6.7's
       `ss` output and Task 8's successful HTTPS request, this shows the port is private *and* the
       service is public, which is the whole design.
-- [ ] **7.6** Prove Kong is really behind the name, not just DNS: from the host,
+- [x] **7.6** Prove Kong is really behind the name, not just DNS: from the host,
       `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8083/` → `200` (static), and
       `curl -si http://127.0.0.1:8083/api/` → record the literal status, body and the
       `X-Kong-Response-Latency` header. A Kong answer, even a `404 no Route matched`, is
       categorically different from a DNS answer.
       ⚠️ The image is `nginx:alpine` and has **no `curl`** — use `wget` for anything run *inside* the
       container (the healthcheck already proves `wget` is present). `curl` on the **host** is fine.
-- [ ] **7.7** State explicitly that the healthcheck reporting `healthy` proves **nothing** about the
+- [x] **7.7** State explicitly that the healthcheck reporting `healthy` proves **nothing** about the
       backend (§4.1), so nobody later mistakes 6.5's output for 7.2's.
-- [ ] **7.8** **AC2's distinctness, anchored.** `docker compose ls` shows `fe-prionex-dev` and
+- [x] **7.8** **AC2's distinctness, anchored.** `docker compose ls` shows `fe-prionex-dev` and
       `fe-prionex-preprod` as separate projects; each container is in exactly one of
       `crm-dev-network` / `crm-preprod-network` and **not both**; ports `8082` and `8083` are
       distinct; and `docker ps -a --format '{{.Names}}' | grep -x fe-prionex` exits 1 with no
@@ -724,20 +724,20 @@ is also listed in §10 and Dev Notes §9.
 🚨 The highest-blast-radius task in this story. nginx on s1 serves another tenant's production site.
 Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
 
-- [ ] **8.1** Record the "before" state as the discriminator's first half:
+- [x] **8.1** Record the "before" state as the discriminator's first half:
       `echo | openssl s_client -connect 185.185.49.127:443 -servername crm.preprod.crm-prionex.online | openssl x509 -noout -subject -issuer -dates`
       → currently `subject=CN=admin.techno-finance.online`. Also record `nginx -t` output **before**
       any edit, so the pre-existing `conflicting server name` warning is on record as pre-existing.
-- [ ] **8.2** Add the ACME name: extend the `server_name` line in
+- [x] **8.2** Add the ACME name: extend the `server_name` line in
       `/etc/nginx/sites-available/crm-stands-acme` with `crm.preprod.crm-prionex.online`. That file
       already serves `/.well-known/acme-challenge/` from `/var/www/acme` and redirects everything
       else to HTTPS. `nginx -t`, then reload. Do **not** rename the `zz-crm-stands-acme` symlink
       (Prohibition 5).
-- [ ] **8.3** Issue the certificate: `certbot certonly --webroot -w /var/www/acme -d crm.preprod.crm-prionex.online`.
+- [x] **8.3** Issue the certificate: `certbot certonly --webroot -w /var/www/acme -d crm.preprod.crm-prionex.online`.
       🔴 **Not `--nginx`** (Prohibition 7). Confirm `/etc/letsencrypt/live/crm.preprod.crm-prionex.online/`
       and its renewal config appear, and that the four existing renewal configs are untouched. Match
       the existing shape: `authenticator = webroot`, `webroot_path = /var/www/acme`.
-- [ ] **8.3a** 🔴 **A finding this story is the first to be in a position to notice — record it, and
+- [x] **8.3a** 🔴 **A finding this story is the first to be in a position to notice — record it, and
       do not silently "fix" it.** Measured 2026-08-23: **`/etc/letsencrypt/renewal-hooks/deploy/` and
       `/etc/letsencrypt/renewal-hooks/post/` are both empty**, and none of the four existing renewal
       configs declares a `renew_hook`. `certbot.timer` is active and will renew — but **nothing
@@ -749,7 +749,7 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       neighbour's — that makes it a host-wide change on a shared machine, not a story-local fix.
       Prefer recording and routing to Oleg over acting; if you do act, a `renew_hook` scoped to
       **this certificate's own renewal config** is the narrow form, and say why you chose it.
-- [ ] **8.4** Add the frontend `server` block to `/etc/nginx/sites-available/crm-stands`, modelled on
+- [x] **8.4** Add the frontend `server` block to `/etc/nginx/sites-available/crm-stands`, modelled on
       the two API blocks already there — **the same three listens** (`0.0.0.0:443 ssl`,
       `10.70.0.1:443 ssl`, `10.67.0.1:443 ssl`; do **not** add `bind`, which stops nginx from
       starting if the WireGuard interfaces are not up yet and would take the neighbour's site down),
@@ -763,19 +763,19 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       entire server-level set. That trap is documented in the file you are editing.
       ⚠️ Add a header comment in the same voice as its neighbours saying what this block is, which
       story added it, and that the upstream is loopback-bound by design.
-- [ ] **8.5** `nginx -t` **must pass** before any reload. Compare its output against 8.1's — the only
+- [x] **8.5** `nginx -t` **must pass** before any reload. Compare its output against 8.1's — the only
       acceptable difference is none. Then reload.
-- [ ] **8.6** **Discriminating pair for AC3 (retro-E5 #4).** From **outside** s1:
+- [x] **8.6** **Discriminating pair for AC3 (retro-E5 #4).** From **outside** s1:
       (a) `https://crm.preprod.crm-prionex.online/` → `200`, `subject=CN=crm.preprod.crm-prionex.online`;
       (b) the **same probe against a sibling name with no vhost** (e.g.
       `nope.crm.preprod.crm-prionex.online` via `--resolve` or `-servername`) → still the default
       `CN=admin.techno-finance.online`. Without (b), (a) cannot distinguish "our vhost serves this
       name" from "the default vhost answers everything".
-- [ ] **8.7** Confirm the neighbours still work: `https://admin.techno-finance.online/`,
+- [x] **8.7** Confirm the neighbours still work: `https://admin.techno-finance.online/`,
       `https://api.crm.preprod.crm-prionex.online/` and `https://api.crm.dev.crm-prionex.online/`
       still answer with their own certificates. A vhost change that breaks a neighbour is the
       failure mode this task's prohibitions exist for.
-- [ ] **8.8** **AC6 — measure the CORS boundary, fix nothing.** Against
+- [x] **8.8** **AC6 — measure the CORS boundary, fix nothing.** Against
       `https://api.crm.preprod.crm-prionex.online`, issue (i) a simple `GET` with
       `Origin: https://crm.preprod.crm-prionex.online` and (ii) an `OPTIONS` preflight with the same
       `Origin` plus `Access-Control-Request-Method`. Record the literal
@@ -786,7 +786,7 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
 
 ### Task 9 — Record the decisions and land the work (AC: all)
 
-- [ ] **9.1** Write **D36** in `docs/migration-decisions.md` (Russian, matching the house style; add
+- [x] **9.1** Write **D36** in `docs/migration-decisions.md` (Russian, matching the house style; add
       the index row in numeric order).
       🔴 **The next free number is D36, not D35 — verified 2026-08-24 against open branches, and
       this is exactly the trap 5.1 warned about.** `main` at `08803a17` stops at **D34** (5.1's).
@@ -799,11 +799,11 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       identity proof in D34's corrected form; the CORS boundary as a recorded defect; and the
       §3 correction that the host stand directory is a **precondition**, not a record. Set the
       revision trigger to **Story 5.3**.
-- [ ] **9.2** Amend **D28** and **D34** with dated amendment markers — **bodies untouched**, the
+- [x] **9.2** Amend **D28** and **D34** with dated amendment markers — **bodies untouched**, the
       house rule. D28: option (e) is confirmed live and the host directory's real role is narrower
       than "DR" for the compose file and wider than "nothing" for the directory; also that its §3
       registry login is gone again. D34: its revision trigger for 5.2 is discharged, with the result.
-- [ ] **9.3** `deferred-work.md`, per Prohibition 14 — **new** entries at EOF, **closures** under the
+- [x] **9.3** `deferred-work.md`, per Prohibition 14 — **new** entries at EOF, **closures** under the
       original with the old text struck. At minimum:
       - 🔴 **new:** `deploy-stand.yml:216`'s caller skeleton names `runner_label: deploy-preprod-preprod`,
         which does not exist; the live labels are `deploy-dev-preprod`/`dev`/`preprod`/`deploy`.
@@ -835,7 +835,7 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       - **restatement, not closure,** of the CORS item: measured again from the real origin, still
         open, owner `CRM/api-prionex`.
       - the revocation owner and trigger for any token minted in Task 3.3 (**written at mint time**).
-- [ ] **9.4** Correct the `-preprod`-related stale text this story falsifies **in the artifacts it
+- [x] **9.4** Correct the `-preprod`-related stale text this story falsifies **in the artifacts it
       owns**:
       - `build.yml:596-597`'s placeholder claim is stale (§7 a). ⚠️ Editing `build.yml` is a
         workflow change — weigh it against the "no unnecessary workflow edits" rule and, if you do
@@ -847,14 +847,14 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       Do **not** touch `README.md:136` (4.9's blast radius; already routed by 5.1) and do **not**
       "fix" `migration-decisions.md:200`'s `8081` in D4's body — decision bodies are never
       rewritten, and that one is deliberately left alone.
-- [ ] **9.5** Set `sprint-status.yaml` `5-2-…` to `review` with a comment block in the house style:
+- [x] **9.5** Set `sprint-status.yaml` `5-2-…` to `review` with a comment block in the house style:
       what was built, what was measured, what was routed, what is explicitly **not** claimed.
-- [ ] **9.6** Branch `story-5-2/pr-1-<purpose>`, PR into protected `main`. If the PR cannot be opened
+- [x] **9.6** Branch `story-5-2/pr-1-<purpose>`, PR into protected `main`. If the PR cannot be opened
       through the UI, open it via `POST /api/v1/repos/CRM/fe-prionex/pulls`.
-- [ ] **9.7** 🔴 **Close the ledger only against a query re-run after the merge commit lands.**
+- [x] **9.7** 🔴 **Close the ledger only against a query re-run after the merge commit lands.**
       If that is impossible in this session, write the literal word **OPEN** — never a self-reported
       number (retro-D4, §11).
-- [ ] **9.8** Confirm nothing was left behind on s1: no throwaway containers, no stray networks, no
+- [x] **9.8** Confirm nothing was left behind on s1: no throwaway containers, no stray networks, no
       temp directories, no second plaintext copy of any token, and the local retag from Task 3.4
       removed.
 
@@ -1114,21 +1114,208 @@ the DEV stand in any form.
 
 ### Agent Model Used
 
-_To be filled by the dev agent._
+Sonnet (dev-story), per the standing model split (create-story Opus, dev-story Sonnet, code-review
+Opus). SSH rung 1 (`root@10.67.0.1`) worked and stayed live for the entire session, first confirmed
+2026-08-23T21:31:22Z.
 
 ### Debug Log References
 
-_To be filled by the dev agent. Paste commands and verbatim output, including the four designated
-failing runs (Tasks 3.4, 7.4, 7.5, 8.6b) — a matrix without its negative half is half a matrix._
+**retro-E5 matrix — all four designated failing runs, with their negative half:**
+
+| # | Task | Probe | Result |
+|---|---|---|---|
+| 1 | 3.4 | `docker push` under a throwaway tag after login | `401 Unauthorized` on blob-upload `POST` (not merely the manifest `PUT` — a real blob write was attempted and refused, stronger than 4.2's L8 caveat required); tag confirmed absent from registry afterwards (`manifest unknown`); local retag removed |
+| 2 | 7.4 | `docker run --rm --network bridge alpine getent hosts crm-kong-gateway` | empty output, **exit 2** |
+| 3 | 7.5 | `curl --connect-timeout 8 http://185.185.49.127:8083/` from the sandbox (outside s1) | connect timeout after 8s — `ufw` silently drops, nothing published to `0.0.0.0:8083` |
+| 4 | 8.6(b) | `openssl s_client -servername nope.crm.preprod.crm-prionex.online` | still `CN=admin.techno-finance.online`, the default vhost — proves (a) is our vhost specifically, not a catch-all |
+
+**Task 1.2 — ledger baseline, repo-scoped (§5 method):** `docker exec forgejo-postgres psql -U
+forgejo -d forgejo -tAc "select max(id), count(*), now() at time zone 'utc' from action_run"` →
+instance-wide `1171|1171` at `2026-08-23T21:32:24Z`; `select id,owner_name,name from repository where
+name='fe-prionex'` → `16|CRM|fe-prionex`; `select max(id), count(*) from action_run where
+repo_id=16` → `1171|441`. This is the baseline — 3 higher than the context session's `1170` (§2 s),
+confirming the parallel-era rule: re-take it, don't inherit it.
+
+**Task 2.2 — re-measurement, all first-hand, `2026-08-23T21:32:24Z`:** (b) stand directory absent
+(`ls`: No such file or directory; `~/crm-prionex/` holds only `fe-prionex-dev`); (c) `8083` free
+(`ss -lntp` shows only `8081` vm-cadvisor and `8082` DEV, no `8083`); (d) DEV stand `Up 7 hours
+(healthy)`, `127.0.0.1:8082->80/tcp`; (e) `docker compose ls` confirms DEV's config source is
+`/workspace/CRM/fe-prionex/stand-checkout-1150/docker-compose.stand.yml` — the job workspace, D28
+option (e) live; (h) `/root/.docker/config.json` → `{"auths": {}}`, empty, confirmed independently of
+the context session's own reading; (i) `crm-preprod-network` 69 containers, `crm-dev-network` 70;
+(j) `crm-preprod-kong-gateway` id `61eb0eaa9f640e23bfe0b653effa21da637c104edf63a4f09ffd6b40437ac612`
+— matches D34 exactly; (p) no local `-preprod` images, only `deploy-base-dev-preprod:2026-08-07`.
+
+**Task 3 — registry credential.**
+
+🔴 **Incident, handled live, recorded in full in `deferred-work.md` (finding 3) and D36 §3 — not
+repeated here beyond the summary:** while checking whether `/root/.fj_reg_4_2.token` was
+`KEY=VALUE` or bare (Prohibition 10's own distinction), a `sed`-based redaction assumed a `=` the
+file does not contain, printing the bare token value into this transcript. Not reused: logged out
+immediately, a fresh token (`fe_reg_5_2_ro`, `read:package`) minted via `docker exec -u git forgejo
+gitea admin user generate-access-token -u robot-registry -t fe_reg_5_2_ro --scopes read:package`,
+output redirected straight to a file and never echoed, extracted to a clean single-copy `0600` file,
+verbose output deleted, logged in with `--password-stdin < file` (never printed). 3.1's anonymous-pull
+before-state: `unauthorized`. 3.2: `/root/.fj_reg_4_2.raw` (Story 4.2's finding M1, a second plaintext
+copy) does **not** exist on this host today — M1 closed. 3.4: see the retro-E5 table above.
+
+**Task 5 — image.** Full tag list (`GET /v2/crm/fe-prionex/tags/list`, Task 5.1's own verbatim
+requirement): `main-preprod`, `probe-3-3-preprod-preprod`, `sha-00ef3be4743d-preprod`, plus one
+unrelated `-dev` tag containing the substring "preprod" in its story name. 🔴 **`sha-f8f358f43ced-preprod`
+is absent** — recorded as `deferred-work.md` finding 5, not chased (the preferred candidate was
+unaffected). Digest resolved via manifest header: `Docker-Content-Digest:
+sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`; pulled digest matches
+exactly (`docker inspect --format '{{.RepoDigests}}'`). Bundle check:
+`docker run --rm <image> grep -ro 'https://api\.crm\.preprod\.crm-prionex\.online' /usr/share/nginx/html`
+→ 3 hits in `assets/index-DBG6qRDm.js`; `wss://…` → 3 hits; `grep -rl PLACEHOLDER-preprod-backend-not-provisioned`
+→ no match, placeholder absent.
+
+**Task 6 — up.** `crm-preprod-network` id unchanged before/after
+(`90bd3e56416e3a000b349b133e0d859c4e6a1149d328ce31e23798c88731f3d0`). `docker compose --env-file .env
+-f docker-compose.stand.yml up -d` → `Created`/`Started`, exit 0. Running: project
+`fe-prionex-preprod`, container `/fe-prionex-preprod`, image `sha256:5e5b190d…396dc8c` (matches Task
+5.5 exactly), network `crm-preprod-network` at `172.21.0.71`, `healthy`. `ss -lntp`: `127.0.0.1:8083`
+only, nothing on `0.0.0.0`.
+
+**Task 7 — identity, D34's corrected form.** `docker exec fe-prionex-preprod getent hosts
+crm-kong-gateway` → `172.21.0.24`. `crm-preprod-network`'s own `.Containers[]` map (`docker network
+inspect crm-preprod-network --format '{{range $k,$v := .Containers}}{{$k}} {{$v.Name}}
+{{$v.IPv4Address}}{{"\n"}}{{end}}'`, grepped for the resolved address) assigns that exact address to
+`61eb0eaa9f640e23…` (`crm-preprod-kong-gateway`) — matches D34. The same address does not appear in
+`crm-dev-network`'s own map at all (disjoint subnets); `crm-dev-kong-gateway`'s own id there is
+`6c1b4ac96e8d7ac…`, different, cross-checked directly. 7.6: `curl http://127.0.0.1:8083/` → `200`
+(static); `curl http://127.0.0.1:8083/api/` → `404`, `X-Kong-Response-Latency: 0`, `Server:
+nginx/1.31.3`, CORS headers already visible in this response (feeds AC6). 7.8: `docker compose ls`
+lists both projects distinctly; each container's network membership is exactly one network; `docker
+ps -a --format '{{.Names}}' | grep -x fe-prionex` → exit 1, no output; ports `8082`/`8083` both
+present and distinct via `ss`. Legacy host `72.62.17.132` not contacted.
+
+**Task 8 — vhost and certificate, `2026-08-23T21:37Z`–`21:39Z`.** 8.1 before-state: TLS on
+`crm.preprod.crm-prionex.online` → `CN=admin.techno-finance.online`; `nginx -t` →
+two pre-existing `conflicting server name` warnings (443 **and** 80, both re-confirmed — the story's
+own §2(l) only named the 80 one), syntax/test both OK. 8.2: `crm-stands-acme`'s `server_name`
+extended with the new name, pushed, `nginx -t` → identical warnings, no new diff, reload → active.
+8.3: `certbot certonly --webroot -w /var/www/acme -d crm.preprod.crm-prionex.online` →
+"Successfully received certificate", expires 2026-11-21; existing ACME account reused (no new
+registration); renewal config matches house shape (`authenticator = webroot`, `webroot_path =
+/var/www/acme`); all 5 renewal configs present, the other 4 untouched by mtime. 8.3a re-measured:
+both `renewal-hooks/{deploy,post}/` still empty — recorded as `deferred-work.md` finding 6, routed to
+Oleg, not fixed. 8.4: `crm-stands` got a third `server` block, modelled on the two API blocks, `location
+/` only, upstream `http://127.0.0.1:8083`, own `ssl_session_cache` zone name. 8.5: `nginx -t` →
+identical warnings again, reload → active. 8.6: (a) `https://crm.preprod.crm-prionex.online/` → `200`,
+`CN=crm.preprod.crm-prionex.online`, LE issuer; (b) see retro-E5 table. 8.7: neighbours confirmed —
+`admin.techno-finance.online` `200`/own CN; both API hostnames `404`/own CN (expected — no route at
+`/`, same as always). 8.8: AC6, see the CORS section below.
+
+**AC6 — CORS from the real origin, `2026-08-23T21:39:39Z`.** `Origin:
+https://crm.preprod.crm-prionex.online` (the real vhost this story just stood up, not a synthetic
+value): simple `GET` → `404`, `Access-Control-Allow-Origin: http://localhost:8320`,
+`Access-Control-Allow-Credentials: true`, unchanged. `OPTIONS` preflight (`Access-Control-Request-Method:
+GET`, `-Headers: authorization`) → `404`, same static headers, **no `Access-Control-Allow-Methods` or
+`-Headers` at all**. Matches 5.1's fix-pass shape facts exactly, now confirmed from the actual
+frontend origin rather than a hypothetical one.
+
+**Task 9.8 — cleanup.** `docker ps -a` shows no stray containers beyond the intended
+`fe-prionex-preprod` (the `vm-*` containers are pre-existing victoria-metrics infrastructure, not
+created by this session); no `throwaway` image remains; `docker network ls` count unchanged (16, same
+as before Task 6); final repo-scoped ledger re-check: `1171|441` — unchanged from the Task 1.2
+baseline, confirming host-side work spent zero runs as budgeted.
 
 ### Run Budget Ledger
 
-_Declared at Task 1.3, closed at Task 9.7 against a post-merge query or with the literal word
-**OPEN**. Attribute by commit, not by `max(id)` delta (§5)._
+**Declared, Task 1.3, before the first push:**
+
+| Line | Runs |
+|---|---|
+| Pushes to `story-5-2/pr-1-context`, per push (DN4 — repeating): expect 1-2 write-up rounds | 2 |
+| PR-open run | 1 |
+| Merge run (`build-main.yml`) | 1 |
+| Host-side work (Tasks 2-8: SSH only, dispatches nothing) | 0 |
+| Task 5 contingency: **not triggered** — `sha-00ef3be4743d-preprod` passed 5.3 on the first try, no
+  `build.yml` dispatch needed | 0 (of a possible +1, permanent-tag cost) |
+| **Declared floor** | **4** above baseline |
+
+**Baseline:** `1171|441` (repo-scoped, `repo_id=16`), instance-wide `1171|1171`, both at
+`2026-08-23T21:32:24Z` — taken before any push this session, per Task 1.2, method D31 §7 / Story
+5.1's parallel-era attribution (§5 of this story). Task 9.7's post-merge reconciliation re-runs the
+same repo-scoped query and attributes each row above `1171` by `commit_sha`/`ref` against this
+story's own commits and any concurrently-active sibling branch — not by raw `id` delta.
+
+**Disposition: OPEN.** Per retro-D4, closes only against a query re-run after the merge commit lands.
+This session has not merged; Task 9.7 is the coordinator's to run post-merge, matching the standing
+convention established by Story 5.1's closeout (coordinator runs API/dispatches/ledger queries; this
+session does git/SSH/host work).
 
 ### Completion Notes List
 
+**AC closure:**
+
+- **AC1 — on evidence.** Five variables written (not three); `FRONTEND_PORT=127.0.0.1:8083` (not
+  bare `8083`). Directory + `docker-compose.stand.yml` present and byte-identical to the repo
+  (`sha256sum` match, `7f449dacce…`); `.env` headed as record/DR only, citing §3 and the DEV drift.
+  `CONTAINER_NAME`/`COMPOSE_PROJECT_NAME` confirmed distinct from DEV's and neither is the literal
+  `fe-prionex`.
+- **AC2 — on evidence.** Two stands on s1 (not three — legacy is a different host, not contacted),
+  mutually distinct on every axis: compose projects, container names, ports, network membership.
+  Anchored `grep -x fe-prionex` exits 1.
+- **AC3 — on evidence, all three parts.** nginx server block; Let's Encrypt certificate; end-to-end
+  HTTPS `GET /` from outside s1 returning `200` with the correct subject CN, discriminated against a
+  sibling name with no vhost.
+- **AC4 — on evidence, all four parts (i-iv).** Empty-auths before-state recorded without guessing
+  who removed it; `fe_reg_4_2_ro` was live but is now treated as compromised (transcript incident) and
+  replaced, not reused, with the revocation-owner note written at mint time; scope proven by refusal
+  (a genuine blob-upload `401`, stronger than the manifest-only caveat 4.2's L8 warned about); the
+  pulled bundle independently shown to carry the real PRE-PROD URLs, not the placeholder.
+- **AC5 — on evidence, D34's corrected form, on the real container.** Not a throwaway — the running
+  `fe-prionex-preprod` itself. Identity via `crm-preprod-network`'s own `.Containers[]` map, not a
+  named-container `.Id` lookup (the vacuity D34 §3 caught in Story 5.1's own code review). `bridge`
+  negative control empty/exit 2.
+- **AC6 — on evidence.** CORS boundary measured from the real, now-live origin; browser calls stated
+  plainly to fail until `CRM/api-prionex` fixes it; nothing changed on their side.
+
+**No row closed UNPROVEN.** SSH stayed live for the whole session; every AC1-6 measurement is
+first-hand. The ledger (not an AC row) is OPEN, not closed — Task 9.7 is post-merge and not this
+session's to perform.
+
+**The registry-token transcript incident (Task 3.2) is the one thing in this session that did not go
+to plan.** Recorded in full in `deferred-work.md` (finding 3) and D36 §3, handled live (not reused,
+replaced with a token that was never printed), and flagged here so it is not missed on a read of only
+the Completion Notes. Owner: Oleg, for whatever the standing "cannot revoke" fact leaves to decide.
+
+**Prohibitions 1-16, verified by execution:** 1: `crm-preprod-network` never created/removed/
+connected/disconnected — id captured before and after `up -d`, unchanged. 2: no `docker rm -f` by
+name; rollback path (`compose … down`) was never needed since `up -d` succeeded cleanly. 3: no
+container besides `fe-prionex-preprod` restarted/stopped/recreated; DEV stand untouched (read-only
+inspects only). 4/5/6: every nginx edit passed `nginx -t` (identical pre-existing warnings, no new
+diff) before every reload; `zz-` symlink names untouched; `technofinance`/`zz-forgejo-*` never opened.
+7: `certbot certonly --webroot`, never `--nginx`. 8: only the permitted comment edit at
+`build.yml:596-597`; no other workflow touched. 9: no `${{ }}` written anywhere. 10: the one violation
+this session had (above) — handled, not hidden; every other credential handling used
+`--password-stdin`/file-redirect, never an echo. 11: OpenBao never reached — this story's registry
+credential is Docker-native, not OpenBao. 12: `crm-kong-gateway` resolved cleanly from inside the
+real container; the fallback prohibition was never tested against a STOP because nothing failed to
+resolve. 13: every row above states its actual disposition; nothing closed on an unmeasured claim.
+14: `deferred-work.md` — one closure (vhost/cert) and two attached/escalated notes placed under their
+original entries, struck where superseded; six new findings at EOF. 15: no `docker image prune` or
+host-wide sweep of any kind. 16: every number above is first-hand, this session's own SSH channel.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/5-2-provision-the-pre-prod-stand-on-s1.md` — this file: Dev Agent Record, task checkboxes.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-2-…` → `review`, with summary comment.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — one closure (vhost/cert), two attached notes (two-sources-of-truth, reboot-ordering, endpoint-blocks-teardown — three notes total), one restatement (CORS), six new findings at EOF.
+- `docs/migration-decisions.md` — new **D36** (summary row + full section); dated amendments to **D28** §3 and **D34** §3 (bodies untouched); changelog row.
+- `.forgejo/workflows/build.yml` — **only** the stale placeholder comment at `:596-601`, per Task 9.4's decision to fix rather than route (comment-only, no logic change).
+
+**Created on s1, not in the repository:** `/root/crm-prionex/fe-prionex-preprod/` (`0700`);
+`…/docker-compose.stand.yml` (byte-identical copy); `…/.env` (`0600`, record/DR, header comment);
+`/etc/nginx/sites-available/crm-stands` (one `server` block appended); `/etc/nginx/sites-available/crm-stands-acme`
+(one name added); `/etc/letsencrypt/live/crm.preprod.crm-prionex.online/` (issued); `/root/.docker/config.json`
+(read:package login restored, new token); `/root/.fj_reg_5_2.token` (`0600`, the new credential).
+
+**Not touched:** `docker-compose.stand.yml`/`.env.stand.example` in the repo; `nginx.conf`;
+`Dockerfile.prod`; `docker-compose.server.yml`; `README.md`; `.github/`; every `deploy-*.yml` and
+`dev-reset.yml`; every neighbour's nginx file; the DEV stand in any form.
 
 ### Review Findings
 
@@ -1159,3 +1346,4 @@ _None at contexting time._
 | Date | Change |
 |---|---|
 | 2026-08-24 | Story contexted on branch `story-5-2/pr-1-context`. Started against `main` at `90836b99` (PR #74); **PR #75 — Story 5.1's ledger closeout — merged mid-session, so this file is based on `08803a17`** and Dev Notes §5 cites the attribution method that arrived with it. s1 measured first-hand from the context session (SSH via `root@10.67.0.1` worked): the preprod stand directory does not exist, `8083` is free, the registry credential is **gone again**, `crm.preprod.crm-prionex.online` still falls through to `CN=admin.techno-finance.online`, the deploy runner registers a live `preprod` label (so `deploy-stand.yml`'s skeleton `deploy-preprod-preprod` is wrong), and the DEV stand runs from a **job workspace** while its host `.env` has drifted from it. AC1 read as five variables and `127.0.0.1:8083`; AC2's "three stands" read as two; AC3 restated as the story's largest piece of real work; AC4 reopened on measurement; **AC5 and AC6 added**. Decision number set to **D36** — 4.9 already holds D35. |
+| 2026-08-24 | **dev-story complete.** All 58 task checkboxes closed on first-hand SSH evidence, live the entire session. Stand up on s1: `fe-prionex-preprod`, `crm-preprod-network`, `127.0.0.1:8083` permanently loopback; image `sha-00ef3be4743d-preprod` (run 680, `main`), bundle independently verified to carry the real PRE-PROD URLs. AC5 discharged on the **real** container (not a throwaway) via `crm-preprod-network`'s own `.Containers[]` map — D34's corrected form, applied without re-earning its own vacuity. vhost + Let's Encrypt certificate issued for `crm.preprod.crm-prionex.online` with zero diff in `nginx -t` at either reload and neighbours confirmed unaffected — the first real infrastructure Epic 5 has created, not measured. AC6: CORS re-measured from the now-live real origin, unchanged and still broken, `CRM/api-prionex`'s open ask. 🔴 **Incident, handled and recorded, not hidden:** a registry token value was accidentally printed to this session's transcript during a redaction attempt; not reused, replaced with a freshly minted token that was never echoed; owner Oleg for what the standing "cannot revoke" fact leaves to decide. D36 written (D35 confirmed still story-4-9's, not on `main`); D28 §3 and D34 §3 amended. `deferred-work.md`: vhost/cert item closed, CORS restated, three items escalated/attached, six new findings (`runner_label`, credential-removed-a-third-time, the token incident, M1 closed, a missing "permanent" tag, the renewal-hook gap now covering five certs). Ledger: host-side work cost zero runs as budgeted; declared floor 4 above baseline (`1171\|441`, repo-scoped); disposition OPEN pending the coordinator's post-merge query. Status → review. |

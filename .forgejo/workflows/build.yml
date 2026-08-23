@@ -593,13 +593,16 @@ jobs:
           # value fails the build with the variable named.
           #
           # 🔴 The placeholder test is a SCHEME test, not a string match.
-          # `secret/fe/pre-prod/app` currently holds
-          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys, and a
-          # non-empty check passes it happily — which would bake the literal word
-          # PLACEHOLDER into a bundle and satisfy AC2 with exactly the failure
-          # AC2 exists to prevent. Requiring a scheme rejects it on a property
-          # rather than on its spelling, so the check still works for whatever
-          # the next placeholder happens to say.
+          # `secret/fe/pre-prod/app` held
+          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys until
+          # 2026-08-15 (version 2 holds the real PRE-PROD URLs since; corrected
+          # here by Story 5.2, which is the first story to actually consume this
+          # secret's bundle output). The check stays a scheme test regardless —
+          # a non-empty check would have passed the placeholder happily, baking
+          # the literal word PLACEHOLDER into a bundle and satisfying AC2 with
+          # exactly the failure AC2 exists to prevent. Requiring a scheme rejects
+          # it on a property rather than on its spelling, so the check still
+          # works for whatever the next placeholder happens to say.
           # 🔴 Rewritten by this story's own code review, which showed the first
           # version did not do what the comment claimed. It accepted a bare
           # `https://` with no host; it accepted `https://PLACEHOLDER-...`; it
