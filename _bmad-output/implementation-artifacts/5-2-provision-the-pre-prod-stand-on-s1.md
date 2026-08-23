@@ -4,7 +4,7 @@ baseline_commit: 08803a17
 
 # Story 5.2: Provision the PRE-PROD Stand on s1
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-24 (local; the measurements below are timestamped in UTC and were taken
      2026-08-23 20:52–21:10 UTC) against `main` at `08803a17` — the merge of PR #75, Story 5.1's
