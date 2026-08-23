@@ -643,7 +643,12 @@ development_status:
   # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
   # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
   epic-5: in-progress
-  5-1-stand-up-the-isolated-pre-prod-backend-network: ready-for-dev
+  5-1-stand-up-the-isolated-pre-prod-backend-network: review
+  # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — all five
+  # discriminators (N1-N5) closed on live evidence, ledger baseline via psql (max(action_run.id)=1160).
+  # N4 rescoped pre-work per coordinator's citation audit (epic's "different addresses" was
+  # unfalsifiable). D34 recorded. Three known defects routed, not fixed (AC5). Awaiting Opus
+  # code-review and coordinator PR-open (Dev Notes §7).
   5-2-provision-the-pre-prod-stand-on-s1: backlog
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog

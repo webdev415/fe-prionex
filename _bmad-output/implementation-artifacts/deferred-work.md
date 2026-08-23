@@ -3397,3 +3397,73 @@ else the review found is an action item inside the story file's own `### Review 
   read-and-paste task, not new investigation. Until then, `docs/migration-decisions.md#d31` §7 and
   the story's own Review Findings/Run Budget Ledger carry explicit 🔴 "relayed, not independently
   verified" flags — do not read their current wording as a completed measurement.
+
+## Deferred from: story-5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-23)
+
+Nine findings this round. Three are routed to somebody else's ownership by design (Story 5.1's AC5
+records, does not fix, per §8/§12 of that story); the rest are this story's own methodology notes or
+open items for a sibling story. All measurements below are first-hand, from this session's own SSH
+channel (`root@10.67.0.1`) and sandbox network probes, UTC-timestamped at the point of measurement.
+
+1. **PRE-PROD Kong's CORS is static and wrong.** `Access-Control-Allow-Origin: http://localhost:8320`
+   on `api.crm.preprod.crm-prionex.online`, unchanged under any supplied `Origin` (tested with
+   `https://crm.preprod.crm-prionex.online`), `Access-Control-Allow-Credentials: true`, `vary: Origin`
+   present but the value never varies. Measured 2026-08-23T18:57Z, from the sandbox (no host access
+   needed) and reproduced identically via direct in-network request to `crm-kong-gateway:8000` at
+   2026-08-23T19:01:09Z. A browser at the real frontend origin will be refused. **Configured wrong is
+   worse than unconfigured** — this looks done and fails only in a browser. **Owner: `CRM/api-prionex`
+   (external ask, extended 2026-08-23). Consumer: Story 5.2.**
+2. **No nginx vhost or certificate for `crm.preprod.crm-prionex.online`.** The name resolves
+   (`185.185.49.127`) but TLS falls through to s1's default vhost: `CN=admin.techno-finance.online`,
+   issued `2026-08-15T20:01:59Z`. Measured 2026-08-23T18:57Z. **Owner: ours, Story 5.2.**
+3. **`README.md:136` mislabels the legacy DEV stand as `Environment: Pre-production`.** Was harmless
+   before a real PRE-PROD existed; is actively misleading now. **Not fixed here** — `README.md` is
+   inside Story 4.9's blast radius. **Owner: coordinator, after Story 4.9 merges.**
+4. **`secret/fe/pre-prod/app` OpenBao value: not re-verified this session.** The written record
+   (`3-3-build-per-environment-images-with-explicit-variables.md:112,725-731`, independently confirmed
+   2026-08-17 by run 680's bundle extraction) says version 2 holds the real PRE-PROD URLs, not the
+   placeholder still repeated by `epics.md:2169-2171`, `build.yml:596-597` and this file's own
+   `:1794-1798`. This session had SSH/psql to s1 but no OpenBao token, and Prohibition 8 forbids
+   `/usr/local/bin/bao`; the claim above is the *record's* claim, not a fresh read. **Owner: whoever
+   next has an explicit `X-Vault-Token` and five minutes.**
+5. **`Dockerfile.prod:34` citation is stale by 22 lines; the real line is `:55-56`.** Nine artifacts
+   repeat the stale citation as of this measurement: the epic (`epics.md:259,2129,2165`),
+   `sprint-change-proposal-2026-08-13-kong-naming.md:36`, `4-1-parameterize-the-compose-file-for-coexisting-stands.md:224,656,675`
+   (which itself already flags the drift), `4-8-factor-out-the-shared-deploy-mechanics.md:300`, this
+   file's own `:918`, `sprint-status.yaml:636`, `1-6-secure-the-pre-prod-infrastructure-commitment.md`
+   (five lines), `docs/preprod-infrastructure-requirement.md` (three lines), and
+   `docs/migration-decisions.md:3924`. Not corrected in place anywhere except this story's own text and
+   `docs/preprod-infrastructure-requirement.md`'s header amendment (Task 8.1) — the rest is `epics.md`
+   and closed-story history, out of this story's writable scope.
+6. **N4 as epic-inherited was unfalsifiable.** "Different addresses in two different networks" is
+   guaranteed by subnetting alone and could never have discriminated isolation from its absence.
+   Rescoped this story (with the coordinator's citation audit, 2026-08-23) to container **identity**:
+   resolve the alias in each network, match the resolved address to a container Name/ID via that
+   network's own `docker network inspect`, assert the IDs differ. Measured 2026-08-23T18:59Z:
+   `crm-kong-gateway` in `crm-preprod-network` → `172.21.0.24` → container `61eb0eaa9f64`
+   (`crm-preprod-kong-gateway`); in `crm-dev-network` → `172.22.0.53` → container `6c1b4ac96e8d`
+   (`crm-dev-kong-gateway`). Different containers, confirmed by ID, not by address alone. Worth
+   carrying forward as the correct N4 shape for Story 5.2/6.4's own isolation checks.
+7. **Measurement-script gotcha: a naive container-ID-set diff over `docker network inspect
+   --format` output produces a false non-empty intersection.** Go's `{{range}}…{{end}}` template
+   emits a trailing blank line after the last entry; two independently-sorted ID lists both carry
+   that blank line, and `comm -12` reports it as a shared "ID". Observed once at 2026-08-23T18:59:19Z
+   (reported intersection=1, counts 70/71 against a true 69/70) and reproduced deliberately five times
+   in immediate succession at 19:00:07Z before the cause was found; filtering blank lines
+   (`grep -v '^$'`) before the diff gives the true, stably empty intersection. **Not an infrastructure
+   defect** — a warning for any future script (this story's own probe script included) that diffs
+   `docker network inspect` container-ID sets.
+8. **§11's `expect_unrouted_api` question, answered partially.** PRE-PROD's Kong, requested directly
+   in-network at `crm-kong-gateway:8000/api/` (not through external nginx), returns the identical
+   `404 {"message":"no Route matched with those values"}` that DEV's Kong gives — measured
+   2026-08-23T18:58:33Z. `KONG_PORT`/`8000` is confirmed as the working in-network listener by the
+   same request (closes `deferred-work.md:934-937` for PRE-PROD). D33's stated rationale for
+   `expect_unrouted_api: "false"` on PRE-PROD ("PRE-PROD's Kong routes real services") is not
+   contradicted by this — `/api/` specifically may simply have no route configured on either stand —
+   but the datum did not exist before this story and Story 5.3 should read it before relying on the
+   rationale as written. **Owner: Story 5.3** (Task 5.4/§11 of this story).
+9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
+   raw `psql` output for its three items captured verbatim in Story 5.1's Debug Log References, since
+   this session had the SSH/psql access that entry was waiting on. **Not edited here or there** —
+   Story 5.1's Dev Notes §5 is explicit that applying the backfill is somebody else's edit, only the
+   capture is free. **Owner: coordinator**, to fold into `docs/migration-decisions.md#d31` §7.
