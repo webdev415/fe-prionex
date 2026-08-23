@@ -643,7 +643,7 @@ development_status:
   # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
   # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
   epic-5: in-progress
-  5-1-stand-up-the-isolated-pre-prod-backend-network: review
+  5-1-stand-up-the-isolated-pre-prod-backend-network: done
   # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — three
   # discriminators (N1, N4, N5; N2 is a standing DNS falsification, N3 a negative control, neither
   # is itself a PRE-PROD-vs-DEV discriminator) closed on live evidence, ledger baseline via psql
@@ -671,6 +671,16 @@ development_status:
   # направлено" unstruck; nine-artifact citation count fixed at §7(b); alpine precedent re-cited to
   # 4-2-provision-the-new-dev-stand-on-s1.md:600. Ledger +1 contingency line for this pass, still
   # OPEN. Status back to review.
+  # 🔴 Closeout 2026-08-23: Oleg merged PR #74 (90836b99). Ledger CLOSED against a post-merge query
+  # on branch story-5-1/pr-2-ledger-closeout: baseline 1160, instance-wide max/count now 1167|1167 —
+  # first ledger of the parallel era (Story 4.9 pushing concurrently). Method set for future ledgers:
+  # filter action_run to repo_id=16 (fe-prionex) first (zero sibling-repo noise this window, confirmed
+  # by the filtered/instance-wide delta agreeing exactly), then attribute each row by commit_sha/ref,
+  # not by id range. Of 7 fe-prionex runs above baseline: 5 belong to Story 5.1 (1161-1164, 1167 —
+  # context push, review-commit push, fix-pass push, PR-open check, merge run), 2 belong to Story 4.9
+  # (1165-1166, its own branch pushes, not this story's spend). Declared floor 8: 6 spent and
+  # accounted for by commit, 2 (closeout PR open/merge) not yet spent — coordinator's to incur per the
+  # standing PR-open convention, not an overrun. Status: done.
   5-2-provision-the-pre-prod-stand-on-s1: backlog
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog
