@@ -557,6 +557,40 @@ development_status:
   # new findings routed). Ledger OPEN (retro-D4) — above-baseline spend 13 as of this write-up,
   # against a floor of 24, six unbudgeted dispatches all tracing to the one probe-branch root cause.
   # Status review.
+  # 🔴 Code review 2026-08-23 (`d5e5fa65` vs main `06224481`): CHANGES REQUESTED, reset review ->
+  # in-progress. The MOVE is clean and verified mechanically (every changed step-body line is a
+  # literal->input substitution; 0 of 33 run: bodies contain `${{`; all bash -n clean; Prohibition
+  # 1/§9 holds BYTE-LEVEL and dev-reset.yml's dispatch + title grep still match; runs-on input on
+  # all five jobs). Four intolerable findings, all in what is NOT a move: (1) image_tag-only mode is
+  # structurally dead — clone-test hard-fails on an empty ref and deploy needs it, so Story 5.3
+  # cannot consume this file, and the github.sha fallback is unreachable rather than merely
+  # untested (Open Question 7 understates it); (2) the new restore step runs `up -d` with no lock
+  # re-assertion, and its likeliest trigger is the holder-is-gone refusal it then overrides; (3)
+  # both compose-project-label guards compare against container_name, right on DEV only because the
+  # caller passes one value for both; (4) the shipped commit has never been dispatched — 174 lines
+  # landed after the 1132-1138 matrix and 55 after run 1143, including the two exit-code changes
+  # inside the restore step that Task 7.3 claims to have fixed. E5 accounting: 8 of 10 inherited
+  # rows re-earned live; 4.4's FAIL/STALE argued not dispatched, and Task 6.7's own void-clause
+  # fires (Task 2.7 added an 8-line control-flow branch inside the acquire step). Ledger arithmetic
+  # verified correct (13 above 1129, floor 24, closed OPEN); only its narration contradicts itself.
+  # 4 decisions for Oleg + 27 action items + 2 deferred, in the story file's Review Findings.
+  # 🟢 Fix-pass 2026-08-23, zero dispatch: DN1-DN4 resolved by Oleg (secrets:inherit is a
+  # structural pre-6.4 decision, not patched here; 6.7's void-clause amended with a textual diff
+  # proof instead of a dispatch; restore trigger narrowed to steps.compose_down.outcome=='success';
+  # one green dispatch from the shipped commit left to the coordinator, timed around the 01:45-02:30
+  # UTC window). All 4 High findings fixed in code: image_tag mode's two blockers (clone-test's
+  # empty-ref fallback, the revision cross-check's explicit skip in that mode); restore now
+  # re-confirms the lock holder before up -d; both compose-project-label guards compare against
+  # compose_project_name, not container_name. 18 of 20 Medium/Low findings fixed (numeric input
+  # validation incl. the dangerous TTL-bypass-under-set-e case; fail-closed booleans; image_tag shape
+  # validation; RepoDigests format check; run-id-suffixed clone-test checkout; IMAGE_REPO-derived
+  # diagnostic URLs; guarded diagnostic step; four DEV-literal messages generalized; stale identity
+  # strings renamed; stale concurrency comment fixed; ledger prose and run:-body counts corrected;
+  # D33's concurrency-survival range narrowed to 1132-1138; File List path and D33 cosmetics fixed).
+  # Left open by design: the restore's weaker verification bar (named in code, not re-engineered),
+  # crm-kong-gateway staying hardcoded (Oleg's own chosen alternative over adding an input), Task
+  # 6.2's SQL text pasted but this session had no live DB connectivity to paste raw rows, and the
+  # TTL-600 literal still not structurally coupled to timeout-minutes. Status back to review.
   4-8-factor-out-the-shared-deploy-mechanics: review
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional

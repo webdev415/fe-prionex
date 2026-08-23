@@ -3337,3 +3337,34 @@ chronicle) — not a gap for someone else to act on.
   image). **Owner: Oleg's own call, or whoever next revisits `hold-lock`'s own cost/timing budget**
   — accept the partial (drift risk lowered, not eliminated), or accept a small checkout cost on
   `hold-lock` to reach a genuinely single definition.
+
+---
+
+## Deferred from: code review of story-4.8 (2026-08-23)
+
+Two items from the `d5e5fa65` code review that are real but not this story's to fix. Everything
+else the review found is an action item inside the story file's own `### Review Findings`.
+
+- ⚠️ **`dev-reset.yml` carries roughly nine line-number citations into a `deploy-dev.yml` body that
+  no longer exists.** Story 4.8 reduced the caller from 1875 lines to 89 and moved its mechanics
+  into `deploy-stand.yml`. `dev-reset.yml` cites `deploy-dev.yml:65`, `:127`, `:323`, `:342`,
+  `:415`, `:454`, `:469`, `:498`, `:560` and a few line ranges besides — every one of them now
+  points past EOF or at unrelated bytes. **This was correctly NOT fixed in Story 4.8: Prohibition 2
+  forbids touching `dev-reset.yml` at all in that story**, and the byte-level invariants the weekly
+  reset actually depends on (the file name, the literal `name: Deploy DEV Stand`, the required
+  `ref` input, the literal concurrency group) were verified intact. This is a documentation break
+  only — no dispatch path is affected. **Owner: whoever next opens `dev-reset.yml` — Story 4.9
+  touches the stand at cutover and is the natural place.** Re-point each citation at
+  `deploy-stand.yml`'s own lines, or drop the line numbers and cite step names, which survive
+  refactors and line numbers do not.
+
+- ⚠️ **Every step name in the deploy ladder lost its `(Task N)` / `(code review Mn)` suffix in the
+  move, and this project's primary evidence channel is keyed on step names.** Story 4.8 stripped
+  them deliberately and correctly (Dev Notes §11 item 13, Story 4.3's own L12 — these names become
+  permanent across three environments, and a name carrying one story's task numbering is wrong on
+  the other two). The cost is that `action_task_step` rows are, per Story 4.7's H4, the ONLY
+  per-step evidence that reliably survives for the `deploy` job — so any saved query, note, or
+  runbook that selects on a name like `'Record start time (Task 1b.5)'` now returns zero rows,
+  silently, with no error to distinguish "the step did not run" from "the name changed". **Owner:
+  whoever maintains this project's own zero-dispatch-verification conventions.** Worth one standing
+  line: when matching `action_task_step.name`, match on a stable prefix, never the full string.

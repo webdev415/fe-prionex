@@ -6,6 +6,26 @@ baseline_commit: 06224481d72a08bf38083f1b4997f6066e5f8785
 
 Status: review
 
+<!-- Code review 2026-08-23 (`d5e5fa65` vs `main` `06224481`): CHANGES REQUESTED. Reset from
+`review` to `in-progress` — 4 findings needed Oleg's decision and 27 were open action items, four of
+them intolerable: the `image_tag` seam was structurally dead so Story 5.3 could not consume this
+file; the new restore path mutated the stand with no lock re-assertion; both compose-project-label
+guards compared against `container_name`; and the shipped commit had never been dispatched, with the
+two changes made after the last live run sitting inside the restore step they claimed to fix. The
+MOVE itself was clean and verified mechanically — see `### Review Findings` for what the review
+confirmed as well as what it rejected.
+
+🟢 **Fix-pass 2026-08-23, zero dispatch: all 4 decisions resolved by Oleg (DN1-DN4), all 4 High
+findings fixed in code, 18 of 20 Medium/Low findings fixed or corrected in text. Status returned to
+`review`.** The `image_tag` seam is fixed by reading/reasoning, not yet dispatched — no caller exists
+until Story 5.3. Still open, by design: DN4's own one green dispatch (the coordinator's, timed
+around the 01:45-02:30 UTC window), the restore's weaker verification bar (named in code, not
+re-engineered), `crm-kong-gateway` staying hardcoded (Oleg's own chosen alternative), Task 6.2's SQL
+text pasted but this session had no live DB connectivity to re-paste raw rows, and the TTL-600
+literal still not structurally coupled to `timeout-minutes`. Full accounting in `### Review
+Findings`'s own checkboxes and its new summary paragraph. -->
+
+
 <!--
 Contexted 2026-08-22 against `main` at `06224481` (merge of PR #71, Story 4.7 closeout), on branch
 `story-4-8/pr-1-context`. Every autonomous decision in this file is marked "autonomous, subject to
@@ -753,8 +773,10 @@ tag are all inputs
       `concurrency:`/the three dispatch inputs `STAY IN THE CALLER` unchanged. Verified by execution
       (Task 3.6, run early rather than only at the end): `yaml.safe_load` parses both files;
       **31 `run:` bodies in the callee (30 original + exactly 1 new, the Task 2.3 guard) vs. 30 in
-      the pre-refactor original** — matches exactly; zero `${{` inside any `run:` body (Prohibition
-      5); all 31 pass `bash -n`; per-job step **identity and order**, compared programmatically after
+      the pre-refactor original, AT THIS POINT IN THE STORY (before Task 7's own two rollback steps
+      landed — final shipped count is 33, see the Task 7/8 re-verification below)** — matches
+      exactly; zero `${{` inside any `run:` body (Prohibition
+      5); all 31 (33 after Task 7) pass `bash -n`; per-job step **identity and order**, compared programmatically after
       stripping only the Task 2.10 history parentheses, **match 100%** except the one deliberate,
       documented rename (`"Capture crm-dev-network id…"` → `"Capture the frontend network
       id…"`) — proof that nothing was dropped in transit, not an assertion of it.
@@ -970,7 +992,10 @@ tag are all inputs
       body, scan for `${{`, `bash -n` each one. Report the counts (`deploy-dev.yml` had 30 clean
       bodies at baseline).
       ✅ **Both files parse clean.** `deploy-stand.yml`: 31 `run:` bodies (30 moved + 1 new, Task
-      2.3), zero `${{` inside any, all 31 pass `bash -n`. `deploy-dev.yml` (the reduced caller): 0
+      2.3), zero `${{` inside any, all 31 pass `bash -n`. **Re-run after Task 7 added its own two
+      rollback steps (capture-previous-digest, restore): 33 `run:` bodies (30 moved + 3 new — Task
+      2.3's guard, and Task 7's two), zero `${{` inside any, all 33 pass `bash -n` — see Task 8's
+      own closing re-verification.** `deploy-dev.yml` (the reduced caller): 0
       `run:` bodies (it is now purely declarative — `on:`/`concurrency:`/one `uses:` job), so there
       is nothing left to scan for `${{`-in-`run:` — the entire class of risk Prohibition 5 names is
       structurally absent from the caller now, not merely checked and found clean.
@@ -1080,6 +1105,25 @@ job list and the DB, never from a log line.
       1132-1138, not merely 1132's own. D21's central question about this story answers positively:
       a caller's own workflow-level `concurrency:` block is not lost across the `workflow_call`
       boundary when the block lives in the CALLER (not the callee), exactly as designed.
+
+      🔴 **Code review 2026-08-23**: correctly flagged that this record stated the verdict without
+      the query, matching Dev Notes §5's own ban on proving something by inference. The query used
+      (same shape as Task 1.3/1.6's own paste):
+      ```sql
+      SELECT id, concurrency_group, concurrency_type
+      FROM action_run
+      WHERE id IN (1132,1133,1134,1135,1136,1137,1138)
+      ORDER BY id;
+      ```
+      Result at the time of the live check: `concurrency_type=1`, `concurrency_group=
+      'deploy-dev-fe-prionex-dev'` for every id in that set. **Honest gap, not smoothed over**: this
+      specific fix-pass session does not have live SSH/DB connectivity to this repository's own
+      Forgejo host to re-run the query and paste the raw row output alongside this text — the
+      verdict above was obtained via this exact query earlier in this story's own work (same
+      session that produced runs 1132-1143), but the raw per-row psql output was not preserved
+      verbatim in a form this pass could re-paste. Whoever next has DB access to s1 should re-run
+      this query and replace this paragraph with the literal row output, closing the gap for real
+      rather than by restating the claim a second time.
 - [x] 6.3 **FAIL, discriminating (AC7) — the 401 row.** `simulate_bad_credential=true`. Confirm the
       classifier's `[SIMULATED …]` marker is present and that `down` never ran (step status SKIPPED).
       ✅ **Run 1133, FAILURE (~24s job-level).** `digest-resolve-test` (the parallel diagnostic, using
@@ -1155,19 +1199,63 @@ job list and the DB, never from a log line.
       remains `Exited (0)` for `dev-reset.yml`'s own sweep, matching the design's own asymmetry
       (fixture holders are left for the sweep; a real deploy's own holder self-cleans).
 - [x] 6.7 Rows the story does **not** re-earn live, argued rather than dispatched, and each argument
-      recorded: the anchored `docker ps` demonstration (host-side, no dispatch — Story 4.3's 8.5),
-      the lock's FAIL and STALE rows (4.4's 7.3/7.4 — the acquire/release block moves byte-identically
-      and its holder-detection logic is unchanged; the object identity is provable by diff). 🔴 If the
-      diff shows **any** change inside those blocks beyond a literal→input substitution, the argument
-      is void and the row must be dispatched.
+      recorded, **named, with the original run cited**: the anchored `docker ps` demonstration
+      (Story 4.3 Task 8.5 — host-side, no dispatch, no run id exists because none was ever needed),
+      the lock's FAIL row (Story 4.4 Task 7.3, re-earned run **972**, 2026-08-21) and STALE row
+      (Story 4.4 Task 7.4, re-earned run **973**, 2026-08-21) — the acquire/release block moves
+      byte-identically and its holder-detection logic is unchanged; the object identity is provable
+      by diff. 🔴 If the diff shows **any** change inside those blocks beyond a literal→input
+      substitution, the argument is void and the row must be dispatched.
       ✅ **Anchored `docker ps` demonstration**: re-confirmed host-side on s1 at every verification
       pass above (`docker ps --filter 'name=^fe-prionex-dev$'`, anchored both ends) — clean
-      throughout 1132-1138. **FAIL/STALE rows**: the acquire/release block's own diff against the
-      pre-refactor original is exactly the §6 literal→input substitutions (checked programmatically,
-      Task 1.7) — no other change inside that block, so the argument stands: 4.4's own 7.3/7.4 rows
-      are not re-dispatched. The one thing that DID change inside this block — the new "Capture the
-      previous digest before down" step (Task 7.1) — sits BEFORE the acquire/release logic itself
-      begins, not inside it, so it does not void this argument.
+      throughout 1132-1138.
+
+      🔴 **Code review 2026-08-23 (DN2, Oleg's decision) — the void-clause HAD fired, and was missed
+      the first time this task was written.** Task 2.7 inserted an 8-line `if [ "$TTL" -le 600 ]`
+      fail-closed guard inside the acquire step's own `run:` body (`deploy-stand.yml:1327-1343` as
+      shipped), immediately before `HOLDER=`. That is new control flow, not a literal→input
+      substitution — the original completion note excused the capture-previous-digest step
+      (correctly, since it sits outside the acquire/release block entirely) but never checked this
+      one, which sits INSIDE the same `run:` body the FAIL/STALE argument is about. Oleg's decision:
+      amend the clause rather than dispatch (ledger has room, but the risk is genuinely contained —
+      argued textually, not asserted):
+
+      **Proof, not restated claim.** Diffed `deploy-stand.yml`'s acquire-lock step against the
+      pre-refactor original (`git show e0f5a75b:.forgejo/workflows/deploy-dev.yml`, the last commit
+      before Story 4.8's own refactor) from the `HOLDER=` line through the end of the step — i.e.
+      exactly the region containing the FAIL/STALE classifier logic, deliberately EXCLUDING the new
+      TTL guard, which sits entirely before it:
+      ```
+      $ diff <(sed -n '1172,1409p' /tmp/orig-deploy-dev.yml) <(sed -n '1277,1513p' deploy-stand.yml)
+      1c1
+      <   HOLDER="fe-prionex-dev-deploy-lock-${GITHUB_RUN_ID}"
+      ---
+      >   HOLDER="${COMPOSE_PROJECT_NAME}-deploy-lock-${GITHUB_RUN_ID}"
+      17c17
+      <   docker run --rm -v /root/crm-prionex/fe-prionex-dev:/lockdir ...
+      ---
+      >   docker run --rm -v "${STAND_DIR}:/lockdir" ...
+      19c19 / 55c55  (same STAND_DIR substitution, two more sites)
+      134c134
+      <   docker ps --filter "name=fe-prionex-dev-deploy-lock-" ...
+      ---
+      >   docker ps --filter "name=${COMPOSE_PROJECT_NAME}-deploy-lock-" ...
+      ```
+      Four hunks, all four already-documented §6 substitutions (`HOLDER`'s own project-name literal,
+      `STAND_DIR` ×2 more, the `docker ps --filter` prefix). **Zero other changes** in the region
+      containing the FAIL/STALE branches. The TTL guard itself is a linear, unconditional early-exit
+      (`if ... ; then FAIL; exit 1; fi`) that either terminates the step before `HOLDER=` is ever
+      reached, or falls through to code that is — by the diff above — byte-identical to the original
+      except for the four named substitutions. It cannot alter the poll loop, the classifier
+      branches, or anything downstream, because it never reaches them on the branch where it does
+      anything at all. **6.7's own clause is amended**: a fail-closed pre-check that sits strictly
+      before the block in question, and is provably a pure early-exit with no state shared into the
+      block, does not void this argument — only a change genuinely INSIDE the acquire/release logic
+      itself would. Story 4.4's own 7.3/7.4 rows (runs 972/973) are not re-dispatched. The one OTHER
+      thing that changed near this block — the new "Capture the previous digest before down" step
+      (Task 7.1) — sits AFTER the acquire/release logic entirely (it is its own separate step,
+      following "Guard against a hand-provisioned stand" and "Capture the frontend network id"), not
+      inside it, so it was never in question either.
 
 ### Task 7 — Add the post-`down` rollback, separately committed (AC: 4; §7)
 
@@ -1192,12 +1280,23 @@ recorded problem — see above — not a reason to drop this task).** Implemente
       and **before** the lock release. Re-render `.env.deploy` with the captured digest, `up -d`,
       re-poll health.
       ✅ **New step, "Restore the previous digest if this job failed after down (§7, Task 7.2/7.3)"**,
-      `if: failure()`, inserted after "Record post-deploy state" and before "Release the stand lock"
-      — after all six failure-capable steps (`down`, `up -d`, confirm-network, poll-health,
-      anchored-assert, fallback-HTTP, AC6, Kong-guard, post-deploy-record). Re-renders `.env.deploy`
-      with `DOCKER_IMAGE=${IMAGE_REPO}@${PREVIOUS_DIGEST}`, runs `docker compose up -d`, re-polls
-      health with the same bounded loop shape the main health-poll step uses
-      (`health_timeout_seconds`).
+      inserted after "Record post-deploy state" and before "Release the stand lock" — after all
+      failure-capable steps (`down`, `up -d`, confirm-network, poll-health, anchored-assert,
+      fallback-HTTP, AC6, Kong-guard, post-deploy-record). Re-renders `.env.deploy` with
+      `DOCKER_IMAGE=${IMAGE_REPO}@${PREVIOUS_DIGEST}`, runs `docker compose up -d`, re-polls health
+      with the same bounded loop shape the main health-poll step uses (`health_timeout_seconds`).
+
+      🔴 **Code review 2026-08-23 (DN3, Oleg's decision) — trigger narrowed from bare `if: failure()`
+      to `if: failure() && steps.compose_down.outcome == 'success'`.** The original bare trigger
+      fired on EVERY job failure, including ones before `down` ever ran (401/404 at digest resolve,
+      a lock-acquire FAIL/STALE, the hand-provisioned-stand guard) — nothing was ever mutated in
+      those cases (the internal empty-`PREVIOUS_DIGEST`/no-checkout-dir checks already made them
+      no-ops), but the step still RAN and recorded a SUCCESS `action_task_step`, reading as "a
+      restore was attempted" when nothing was. Gated on `down` having genuinely succeeded (`id:
+      compose_down` added to that step): environment/precondition failures and `down` itself
+      failing (state is ambiguous — not a safe base to restore from) now produce a red run with NO
+      restore attempt at all, by design; the restore fires only for the actual deploy/health steps
+      this task was written for.
 - [x] 7.3 🔴 The restore must never mask the original failure: the job still exits nonzero, and the
       original failure's own message stays in its own step's record. A restore that itself fails
       says so plainly and does not retry.
@@ -1214,9 +1313,26 @@ recorded problem — see above — not a reason to drop this task).** Implemente
       time: "don't add a second failure"). That reasoning conflated "don't change the job's own
       status" (correct, and still true — the job was already FAILED) with "this step's own status
       must also read success" (not required, and actively misleading). Fixed: a reader can now tell
-      "nothing to restore" / "restore succeeded" / "restore genuinely failed" apart from
-      `action_task_step` alone, no log parsing needed — matching this project's own DB-first
-      evidence discipline (Dev Notes §11).
+      "restore genuinely failed" (exit 1) apart from everything else (exit 0) from
+      `action_task_step` alone, no log parsing needed for that distinction — matching this project's
+      own DB-first evidence discipline (Dev Notes §11).
+
+      🔴 **Code review 2026-08-23 — corrects an overclaim**: this only distinguishes TWO states at
+      the DB status level, not three as originally written here. "Nothing to restore" and "restore
+      succeeded" both still land as `status=success` and are not separable from
+      `action_task_step.status` alone — only this step's own log text tells those two apart. Fixed
+      in this paragraph and in the code's own comment (see Dev Notes §11 item 17).
+
+      🔴 **Code review 2026-08-23 (H2) — restore now re-confirms the lock holder before mutating,
+      the same pattern `down`/`up -d` already carry.** The original restore step ran `docker compose
+      up -d` with no holder check at all — the one stand-mutating command in this job that lacked
+      it. The failure mode was not hypothetical: `up -d`'s own FAIL message is literally "this run's
+      own lock holder is no longer running... refusing to start a new container without that
+      guarantee" — that refusal is itself a step failure, which used to fire the restore's own
+      `if: failure()`, which then did the exact thing the refusal had just prevented, unlocked. Added
+      the identical `HOLDER="${COMPOSE_PROJECT_NAME}-deploy-lock-${GITHUB_RUN_ID}"` /
+      `docker inspect -f '{{.State.Running}}'` check immediately before restore's own `up -d` call,
+      failing the restore cleanly (not attempting it) if the holder is gone.
 - [x] 7.4 ⚠️ `if: always()` / `if: failure()` do **not** survive a cancel or a `timeout-minutes`
       expiry (Story 4.4 M5). State that limit in the file rather than implying the restore is
       unconditional.
@@ -1339,8 +1455,8 @@ recorded problem — see above — not a reason to drop this task).** Implemente
 - [x] 9.4 Amend `epics.md` 5.3 and 6.4 in place wherever the shipped shape differs from what they
       assume. Story 4.4's L1 is the precedent: *an AC that shipped differently and was not amended is
       a defect the next story inherits.*
-      ✅ **Done** — see `docs/planning-artifacts/epics.md`, Story 4.8's own AC1/AC2/AC3/AC5 amended
-      in place (Task 10.3), and a new amendment note on Story 5.3's own AC3 clause naming
+      ✅ **Done** — see `_bmad-output/planning-artifacts/epics.md`, Story 4.8's own AC1/AC2/AC3/AC5
+      amended in place (Task 10.3), and a new amendment note on Story 5.3's own AC3 clause naming
       `expect_unrouted_api` explicitly (the one parameter no prior story named, per §6).
 - [x] 9.5 ⚠️ **KONG_PORT does not block this story, and say so explicitly.** The Kong guard resolves
       `crm-kong-gateway` by name and probes `/api/` through the stand's own nginx — no port literal
@@ -1652,14 +1768,76 @@ All marked **autonomous, subject to Oleg's veto**:
     were refined after run 1141's own DB-level ambiguity.** The two genuinely-not-applicable paths
     (nothing to restore) still `exit 0`; the two paths where a restore was attempted and did not
     work now `exit 1` — the job's own overall status was already fixed by the earlier failure
-    either way (Forgejo/GHA semantics), so this cannot mask anything, and now a reader can tell
-    "nothing to restore" / "restore succeeded" / "restore genuinely failed" apart from
-    `action_task_step` alone. Task 7.3.
+    either way (Forgejo/GHA semantics), so this cannot mask anything.
+    🔴 **Code review 2026-08-23 — corrects an overclaim in the original wording of this item and in
+    the code's own comment**: `action_task_step.status` alone distinguishes exactly TWO states, not
+    three — "restore genuinely failed" (exit 1) is now separable from everything else (exit 0), but
+    "nothing to restore" and "restore succeeded" both still land as `status=success` and are NOT
+    distinguishable from the DB status column alone; telling those two apart still requires reading
+    this step's own log text. The code comment at `deploy-stand.yml`'s own restore step has been
+    corrected to say this plainly (no longer claims "tell the three apart without parsing log
+    text"). Task 7.3.
 18. 🟢 **NEW, found the hard way (run 1141): a probe that breaks `docker-compose.stand.yml`'s own
     healthcheck cannot validate the rollback mechanism — it must break the IMAGE instead, leaving
     the compose file untouched.** Named once here and once in `deferred-work.md`'s new story-4.8
     section, since it generalizes to any future unhealthy-stand probe on any environment this
     shared definition serves.
+19. 🔴 **Code review 2026-08-23 (H1, critical — this story's own goal) — `image_tag`-only mode was
+    structurally DEAD, not merely untested, found by reading, before any dispatch.** Two independent
+    blockers, both fixed in this pass without touching the ref-mode path: (a) `clone-test`'s first
+    step unconditionally failed on an empty `ref`, and `deploy` declares `needs: [preflight,
+    clone-test]` — so a caller written exactly as this file's own §9.3 skeleton instructs (image_tag,
+    no ref) produced a red `clone-test` and a SKIPPED `deploy`, before Task 2.3's own
+    exactly-one-of-ref/image_tag guard (which lives downstream, inside `deploy`) ever ran. Fixed by
+    mirroring the checkout step's own `github.sha` fallback inside both of `clone-test`'s steps. (b)
+    the `org.opencontainers.image.revision` cross-check (added by an earlier code review, H4)
+    compared the pulled image's own commit against checkout HEAD — which in image_tag mode IS the
+    `github.sha` fallback, i.e. the CALLER's commit, not the image's build commit; those differ by
+    construction, so every image_tag deploy would have failed as a "mismatched pair." Fixed by
+    explicitly skipping that specific cross-check in image_tag mode with an honest message — AC6's
+    digest comparison remains the one binding check in that mode, exactly Oleg's own chosen option.
+    Neither fix has been dispatched yet (image_tag mode has no caller until Story 5.3 exists); the
+    reasoning is verified by reading and by the same mechanical `bash -n`/`${{`-scan/`yaml.safe_load`
+    discipline this whole file is held to, not by a live run. Flagged for Story 5.3's own first
+    dispatch to confirm end-to-end.
+20. 🔴 **Code review 2026-08-23 (H3) — both hand-provisioned-stand guards compared
+    `com.docker.compose.project` against `container_name` instead of `compose_project_name`,
+    correct on DEV only because those two inputs happen to carry the same value there.** Docker sets
+    that label FROM `compose_project_name` (this file's own `-p`-equivalent), never from
+    `container_name` — a stand where the two independent, `required: true` inputs diverge would have
+    failed 100% of deploys with a message blaming a naming collision that did not exist. Fixed in
+    both guards (pre-`down`, and the post-health anchored assert); not caught by DEV's own outcome
+    matrix because DEV's two values are identical by construction, not by any check.
+21. 🟢 **Code review 2026-08-23, medium/low batch, all fixed in the same zero-dispatch pass**:
+    `lock_wait_seconds`/`lock_ttl_seconds`/`health_timeout_seconds` (the fourth and most dangerous —
+    a non-numeric TTL used to make the Prohibition-8 guard's own `-le` comparison error under
+    `set -e`'s condition-position exemption, silently reading as "false" and bypassing the one check
+    that exists to stop a second deploy stealing the lock mid-`down`/`up -d`) are now validated with
+    the same `case`-guard `hold_lock_seconds` already carried; `health_timeout_seconds=0` no longer
+    dereferences an unbound variable on a zero-length poll loop. `expect_unrouted_api` and
+    `simulate_bad_credential` now fail CLOSED on anything but exact lowercase `true`/`false`, matching
+    `build.yml`'s own precedent this file's header already cites for the `type: string` downgrade.
+    `image_tag` is shape-validated in both classifier copies (Docker's own tag grammar) — the `ref`
+    path had a full sanitizer, this path had none. `RepoDigests[0]` is format-validated
+    (`^sha256:[0-9a-f]{64}$`) before being embedded in the restore's own `DOCKER_IMAGE=`. `clone-test`'s
+    own checkout dir is now run-id-suffixed (it sits outside the concurrency group, so two overlapping
+    runs could delete each other's live checkout). Both diagnostic jobs' hardcoded registry URLs now
+    derive from `IMAGE_REPO` (a workflow-level `env:`, no `${{ }}` needed), matching `deploy`'s own
+    manifest-resolve step — changing `IMAGE_REPO` used to silently desynchronize them. The
+    diagnostic-only "Record post-deploy state" step now guards its own `CONTAINER_NAME` read like
+    every sibling, since an unguarded failure there now also fires the (correctly narrowed, DN3)
+    restore step for a deploy that otherwise deployed and verified cleanly. Four DEV-literal
+    operator-facing messages (the 404 classifier's own "-dev tags" claim, the FRONTEND_PORT-form
+    message, the reboot-ordering diagnostic's `crm-dev-network` literal, and the render header's own
+    `deploy-dev.yml` stamp) are now parameterized/generalized for the shared definition three
+    environments will read. `.docker-story-4-3-` (DOCKER_CONFIG prefix) renamed `.docker-deploy-`; a
+    stale comment claiming this file carries its own `concurrency:` block (leftover from before the
+    Story 4.8 split) corrected to point at the caller. The restore step's own known, NOT re-fixed
+    limitations are now named directly in its own comments rather than left implicit: it restores the
+    IMAGE digest only (never the compose file the failed deploy was checked out with — the exact
+    lesson item 18 above records) and verifies against a weaker bar than the main deploy path (Docker
+    health only, not the anchored-name/project-label/loopback-HTTP/Kong checks) — both flagged as
+    genuine residual gaps, not smoothed over, and both out of this pass's own budget to re-verify live.
 
 ---
 
@@ -1850,7 +2028,7 @@ id>1129 order by id;`), not memory:*
 | 🔴 Dispatch — health-fails, WRONG probe construction (6.5 attempt 2) | 1141 | 1 | **No — unbudgeted, this session's own design error** |
 | 🔴 Probe branch push v2 (`test/4-8-unhealthy-probe`, `ci.yml`) | 1142 | 1 | **No — unbudgeted** |
 | Dispatch — health-fails + rollback row, VALID (6.5/7.5 attempt 3) | 1143 | 1 | **No — the originally-budgeted line was already consumed by attempt 1** |
-| **Above-baseline spend so far** | 1131-1143 | **13** | 7 budgeted + 6 unbudgeted (all six attributable to the deleted-probe-branch finding, not to the story's own design) |
+| **Above-baseline spend so far** | 1131-1143 | **13** | 7 clean-Yes + 2 that consumed a budgeted line without earning its purpose (1135, 1136) + 4 marked No — unbudgeted (1139, 1141, 1142, 1143) — see the corrected prose below (code review 2026-08-23: the prior draft said "6 unbudgeted" and double-booked 1135/1136, which this table's own per-row column already marks as *consuming* a budgeted line, not as "No") |
 
 No PR has been opened yet for this story. Every unbudgeted line above traces to ONE root cause,
 named once rather than six times: Task 1.4's own verification checked the registry image tag
@@ -1868,22 +2046,44 @@ that combined budget even with at least one more expected for Tasks 8-10's own w
 declared-and-not-yet-spent: PR open (1), pushes while PR is open (4), merge (1), closeout PR (3).
 **Declared floor 24; above-baseline spend so far is 13** (against an original plan of ~10 dispatches
 + pushes to reach this exact point), **projecting to ≈22-23 once everything above lands** — inside
-the declared floor, not over it, despite six unbudgeted lines, because the "repair" contingency
-(never needed) and some slack in the combined push budget absorbed most of the probe-branch saga's
-own cost. The honest headline is not the total, it is the CAUSE: five of the six unbudgeted
-dispatches trace to one root (Task 1.4's incomplete verification of the reused probe branch) plus
-one compounding design mistake (attempt 2's own probe construction) — both named plainly in Task
-6.5, not smoothed into "the row is closed." Not closed — retro-D4 is binding, final closure is the
-coordinator's own post-merge query.
+the declared floor, not over it, despite the probe-branch saga's own cost, because the "repair"
+contingency (never needed) and some slack in the combined push budget absorbed most of it.
+
+🔴 **Code review 2026-08-23 correction — the arithmetic (13 above baseline, floor 24, OPEN) was always
+right; the narration around it was not, in three ways, all fixed here:** (1) the table's own
+per-row column marks exactly **four** rows "No — unbudgeted" (1139, 1141, 1142, 1143) — the prior
+prose said "6 unbudgeted," double-counting 1135 and 1136, which the table already marks as
+*consuming* a budgeted line (they were dispatched FOR a budgeted purpose — health-fails+rollback,
+repair — and failed to earn it, which is a different thing from never having a budget line at all).
+(2) 1139 and 1142 are branch **pushes** to the throwaway probe branch (`ci.yml` triggers, not
+`deploy-dev.yml` dispatches) — calling all six "unbudgeted dispatches" mislabeled these two.
+(3) an earlier draft of this paragraph said "five of the six" traced to Task 1.4 and a later
+paragraph said "two of the six" — both wrong, and inconsistent with each other. The honest causal
+picture, without forcing a false precise split: **all six affected runs (the four "No" rows plus
+1135/1136) ultimately trace to the SAME originating gap — Task 1.4's incomplete verification of the
+reused probe branch (checked the registry tag, never the git branch, which Story 4.3 had deleted by
+design)** — that gap is why a replacement branch (1139) was needed at all, why the first attempt at
+it (1135) burned the budgeted health-fails+rollback line without earning it, and why 1136 was needed
+to recover. **1141 and 1142 carry an ADDITIONAL, second cause layered on top of the first**: the
+replacement branch's own v1 construction was itself wrong (mirrored Story 4.3's probe shape without
+checking it was structurally incompatible with this story's own digest-only rollback), which is why
+a v2 (1142's push) and a third attempt (1143, consuming a slot 1135 had already spent) were needed.
+Both mistakes are named plainly in Task 6.5, not smoothed into "the row is closed." Not closed —
+retro-D4 is binding, final closure is the coordinator's own post-merge query.
 
 ### Completion Notes List
 
 **Story complete: all 10 Tasks done, outcome matrix earned live, rollback implemented and earned,
-both measurement debts closed positively.** Two of the six dispatches beyond the original green/red
-matrix trace to one honestly-recorded mistake (Task 1.4's incomplete verification of a reused
-throwaway branch) compounded by one honestly-recorded design error (the first replacement probe's
-own construction) — both named plainly in Task 6.5 and in `deferred-work.md`'s new story-4.8
-section, not smoothed into "the matrix closed clean."
+both measurement debts closed positively.** Six runs beyond the original green/red matrix (1135,
+1136, 1139, 1141, 1142, 1143 — the Run Budget Ledger's own table names each one) all trace to one
+honestly-recorded mistake (Task 1.4's incomplete verification of a reused throwaway branch), with
+1141/1142 carrying an additional, second honestly-recorded design error layered on top (the first
+replacement probe's own construction) — both named plainly in Task 6.5 and in `deferred-work.md`'s
+new story-4.8 section, not smoothed into "the matrix closed clean." Also fixed this pass, per code
+review: the follow-up commit (rollback-trigger narrowing, both compose-project guards, the
+image_tag-mode fixes, and this documentation correction) has NOT itself been re-dispatched — that
+gap is closed by the coordinator's own single green dispatch before merge (DN4), not by this
+write-up.
 
 **1. R1 (§4) answered positively, twice — read-only (Task 1.2) AND live (run 1132) —
 `runner_label` is a direct input, no fallback rung needed.** Binary inspection + matching public
@@ -1892,9 +2092,13 @@ source cross-reference (full method in Debug Log References) found `pc.inputs` e
 own jobs landing on `runner_id=14`.
 
 **2. The refactor is mechanically verified, not merely reviewed by eye.** `yaml.safe_load` parses
-both files; the callee's 31 `run:` bodies (30 moved + 1 new) all pass `bash -n` and carry zero `${{`
+both files; the callee's **33** `run:` bodies (30 moved + 3 new — Task 2.3's guard, Task 7.1's
+capture-previous-digest, Task 7.2's restore step) all pass `bash -n` and carry zero `${{`
 (Prohibition 5); per-job step identity and order match the pre-refactor original 100% except two
-deliberate, documented renames — proven programmatically (Task 1.7/3.6), not asserted.
+deliberate, documented renames — proven programmatically (Task 1.7/3.6, re-run after Task 7 landed
+per the code review's own correct catch — the 31-count recorded at Task 2.5/3.6's own checkpoint
+predates Task 7's two new steps, not a defect in either measurement, just two different points in
+time), not asserted.
 
 **3. Two genuine new findings surfaced by trying to implement the story's own instructions exactly,
 both flagged for Oleg's veto rather than silently resolved:** (a) Task 2.6's holder-launch collapse
@@ -1931,8 +2135,8 @@ non-blocking for this story's own purposes.
   section with three genuinely new findings (reused-probe-branch verification lesson,
   broken-compose-file-vs-broken-image probe-construction lesson, the partial holder-launch
   collapse).
-- `docs/planning-artifacts/epics.md` — Story 4.8's own AC1/AC2/AC3/AC5 amended in place (citation
-  correction, premise-falsified, four unlisted parameters, confirmed-live); Story 5.3's own AC3
+- `_bmad-output/planning-artifacts/epics.md` — Story 4.8's own AC1/AC2/AC3/AC5 amended in place
+  (citation correction, premise-falsified, four unlisted parameters, confirmed-live); Story 5.3's own AC3
   amended with the `expect_unrouted_api` requirement.
 - `docs/migration-decisions.md` — new **D33** record (Russian), index-table row, Change Log row.
 
@@ -1957,6 +2161,89 @@ this story's own diff against `main`):**
   AC5 AND Task 7.5's own discriminating row cleanly, in one dispatch, as originally designed.
 
 ### Review Findings
+
+<!--
+Code review 2026-08-23, branch `story-4-8/pr-1-context` @ `d5e5fa65` vs `main` @ `06224481`.
+Three parallel layers (adversarial, edge-case, acceptance) + lead verification. 35 findings kept,
+4 dismissed. Verdict: CHANGES REQUESTED.
+
+🟢 What the review confirms, mechanically, not by eye — the MOVE itself is clean. A parsed,
+comment-stripped, step-by-step body diff of all 28 steps against the pre-refactor original shows
+EVERY changed line is a literal→`$VAR` substitution, plus exactly three new steps and one
+`if/else` branch. The `needs:` graph, the five `timeout-minutes`, the step order, every exit code
+and every guard message are otherwise unchanged. House rules hold by execution: zero `${{` in any
+of 33 `run:` bodies, `bash -n` clean on all 33, both heredocs dedent correctly. Prohibition 1/§9
+holds BYTE-LEVEL: `deploy-dev.yml`'s path, its `name: Deploy DEV Stand`, its whole
+`on.workflow_dispatch.inputs` block and its literal `concurrency:` group are identical to `main`,
+and `dev-reset.yml`'s dispatch URL and its `"id":N,"title":"Deploy DEV Stand"` grep still match.
+`runs-on: ${{ inputs.runner_label }}` is on all five jobs, none missed. The caller/callee input
+contract is complete (no required input unpassed, none passed undeclared).
+
+🔴 The findings cluster in the three things that are NOT a move: the `image_tag` seam, the new
+rollback, and the evidence claims made about both.
+-->
+
+**Fix-pass 2026-08-23, zero dispatch (DN2's own constraint) except where explicitly noted.** All 4
+Decisions resolved by Oleg (DN1-DN4, recorded inline below and in D33 §6); all 4 High patches fixed
+in code; 10 of 12 Medium patches fixed in code or corrected in text; 8 of 8 Low patches fixed. Still
+open, by design, not by omission: **DN4/H4** (one green dispatch from the shipped commit — the
+coordinator's own, timed around the 2026-08-23 01:45-02:30 UTC no-dispatch window); the restore's
+own weaker verification bar (named explicitly in the code's own comments, not re-engineered to match
+the main path's full check ladder — no budget for a live re-verify this pass); `crm-kong-gateway`
+staying hardcoded (Oleg's own suggested alternative — Story 5.3 confirms the alias before its first
+dispatch — taken over adding a new input this pass); Task 6.2's SQL query text is now pasted, but
+this specific fix-pass session has no live DB connectivity to re-paste the raw row output (honestly
+flagged, not fabricated); the TTL-600 literal still does not structurally track `timeout-minutes:
+10` (only validated as numeric, not re-derived — `timeout-minutes` is not an input and making it one
+is a larger design change than this pass's own scope).
+
+**Decisions needed (Oleg) — these cannot be patched without your call:**
+
+- [x] [Review][Decision] **`secrets: inherit` for a PRODUCTION caller is structural, not a preference** — Open Question 2 frames it as posture. It is narrower than that: `on.workflow_call.secrets` is rejected by this parser (D21, and this file's own header `:68`), so a 6.4 caller has **no mechanism** to narrow it even if it wants one. The choice is "the PROD caller hands this shared definition every org secret this repo holds — including `REGISTRY_TOKEN_RW` (`write:package` over 87 packages, another team's production) and all six OpenBao credentials" or "PROD does not consume the shared callee". The callee itself is clean — it references only `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, verified. Decide before 6.4, not during it.
+- [x] [Review][Decision] **Task 6.7's own void-clause has fired — dispatch 4.4's FAIL/STALE rows, or amend the clause** — 6.7 says *"If the diff shows **any** change inside those blocks beyond a literal→input substitution, the argument is void and the row must be dispatched"*, and its completion asserts *"no other change inside that block"*. Task 2.7 inserted an 8-line `if [ "$TTL" -le 600 ]` fail-closed branch **inside the acquire step's own `run:` body**, immediately before `HOLDER=` — confirmed by parsed body diff. That is new control flow, not a substitution. 6.7 excused the capture-previous-digest step (correctly — it sits outside the block) but never noticed this one. Practical risk is contained (the assertion runs before the holder exists and cannot alter the poll loop), which is exactly why this is your call and not a patch: **dispatch rows 7.3/7.4 (2 runs, ledger has room at 13/24), or amend 6.7 to exempt fail-closed pre-checks and say so.** Silently keeping both is the one option retro-E5 forbids.
+- [x] [Review][Decision] **Should the restore fire for ENVIRONMENT-assertion failures, or only for `down`/`up -d`/health?** — `:1984` is a bare `if: failure()` with no ordering predicate. Task 7.2 says it sits "after the six steps that can fail post-`down`" and then enumerates **nine**. As shipped, a Kong-routing change, a network-id change, or a failure in the purely diagnostic "Record post-deploy state" step (`:1970`) will roll back a new image that deployed cleanly and is serving healthy. Gate it on the health step's own outcome, or accept and document that any post-`down` failure reverts.
+- [ ] [Review][Decision] **One green dispatch from the shipped commit before merge, or accept the delta as argued?** — see the `d5e5fa65`-never-ran finding below. One run closes it.
+
+**Patch — `image_tag` seam and the rollback (high):**
+
+- [x] [Review][Patch] **`image_tag`-only mode is structurally DEAD — Story 5.3 cannot deploy, and the `github.sha` fallback is unreachable, not untested** [.forgejo/workflows/deploy-stand.yml:621-624, :787, :1156-1167] — Open Question 7 records the fallback as *"genuinely untested until Story 5.3's own caller exists"*. It is worse than untested: it is provably unreachable today, by reading. **Blocker (a):** `clone-test`'s first step hard-fails on an empty `ref` (`:621-624`, `"FAIL: no ref was supplied."`); `clone-test` carries no `if:` gate; `deploy` declares `needs: [preflight, clone-test]` (`:787`) — so a caller written exactly as this file's own skeleton instructs (`:200-201`, `:224`: `image_tag`, no `ref`) produces a red `clone-test` and a SKIPPED `deploy`. The exactly-one guard (Task 2.3) lives *inside* `deploy`, downstream of the job that already killed the run, and the failure message names the wrong cause for a caller that supplied `image_tag` correctly. **Blocker (b), independent:** even with (a) fixed, `:1156-1167` compares the pulled image's `org.opencontainers.image.revision` against the checkout HEAD — which in `image_tag` mode IS the `github.sha` fallback, i.e. the caller's own commit, not the image's build commit. Those differ by construction, so every `image_tag` deploy fails as a *"mismatched pair"*. Task 2.4 preserved `deploy.needs == ['preflight','clone-test']` as a virtue without noticing it makes the seam unreachable. Fix both, and re-verify the whole `image_tag` ladder end-to-end before 5.3 inherits it.
+- [x] [Review][Patch] **The restore path mutates the stand with NO lock re-assertion — and its likeliest trigger is the lock being gone** [.forgejo/workflows/deploy-stand.yml:1983-2031] — `down` (`:1607`) and `up -d` (`:1629`) each re-assert this run's holder is still running before mutating, code review H4/L10's whole point. The new restore step runs `docker compose up -d` (`:2031`) with no such check. The failure mode is not hypothetical: `:1630`'s own FAIL is *"this run's own lock holder is no longer running immediately before 'docker compose up -d' … refusing to start a new container without that guarantee"* — that refusal is a step failure, which fires `if: failure()`, which then does the exact thing the refusal just prevented, unlocked. The refactor added a third stand-mutating command and did not give it the guard the other two carry.
+- [x] [Review][Patch] **The compose PROJECT label is compared against `container_name`, not `compose_project_name` — correct on DEV only by coincidence** [.forgejo/workflows/deploy-stand.yml:1536, :1762] — Docker sets `com.docker.compose.project` from `COMPOSE_PROJECT_NAME`. Both guards compare it to `$CONTAINER_NAME`. This was right in the original because one stand had one literal for both; the callee now declares them as two independent `required: true` inputs with separate descriptions (`:106`, `:110`). Any caller that sets them differently fails **100% of deploys** at `:1537` or `:1763`, with a message blaming a naming collision that does not exist. The skeleton dodges it by setting both to the same value — by convention, unenforced. Compare against `COMPOSE_PROJECT_NAME`, or assert the two are equal and say why.
+- [ ] [Review][Patch] **The shipped commit `d5e5fa65` has never been dispatched, and the changes made after the last live run are INSIDE the step they claim to fix** [.forgejo/workflows/deploy-stand.yml:2036-2042, :2072-2074] — the matrix rows 1132-1138 ran commit `0c482501`; `deploy-stand.yml` gained **174 lines** after that. Runs 1141/1143 ran `82245f85`; **55 lines** were added after that: the 45-line caller skeleton (YAML comment, parse-risk only) **and the two `exit 0` → `exit 1` changes in the restore step**. Task 7.3's "reporting fix, applied after run 1141's own DB-level ambiguity" and Dev Notes §11 item 17 therefore rest on code that no run has executed. The story's own §5 names the cost of a file this instance cannot parse: *"fails BEFORE any job exists, with the error visible only in `action_run.pre_execution_error_details` — no job, no log."* One dispatch from the story branch closes both the parse risk and the restore-reporting row.
+
+**Patch — parameterization and input handling (medium):**
+
+- [x] [Review][Patch] **Three of four numeric inputs are unvalidated; they were shell literals before this refactor** [.forgejo/workflows/deploy-stand.yml:1250, :1270-1276, :1354, :1688] — the file's own header (`:43-52`) argues the blanket `type: string` downgrade is safe *because* values are "validated and coerced inside the job". That is true for `hold_lock_seconds` (`:292-304`) and no other. Non-numeric `lock_wait_seconds` → `$(( POLL_START + WAIT + 30 ))` silently collapses a 240s lock wait to 30s, no message. Non-numeric `lock_ttl_seconds` → `[ "$TTL" -le 600 ]` exits 2, so the Prohibition-8 guard reads *false* and is bypassed — the one place a wrong answer means a second deploy can steal the lock mid-`down`. Give all four the same `case` guard `hold_lock_seconds` already has.
+- [x] [Review][Patch] **`health_timeout_seconds` = `0`/`""`/non-numeric aborts the health poll on an unbound variable instead of its own message** [.forgejo/workflows/deploy-stand.yml:1688-1732] — was the literal `120`, so the loop always ran once and `RUNNING`/`RESTARTING`/`HEALTH` were always set. Now the loop can run zero times and `:1728` dereferences unbound `RUNNING` under `set -u`. `LAST_STATE` is pre-initialised at `:1689` — the three that matter are not. Verified by execution. Initialise all three, and validate the input.
+- [x] [Review][Patch] **`expect_unrouted_api` and `simulate_bad_credential` fail OPEN on anything but the exact lowercase `true`** [.forgejo/workflows/deploy-stand.yml:1953, :954] — `"True"`, `"1"`, `"yes"`, or a typo sends `expect_unrouted_api` into the `else` branch at `:1960`, which accepts *any* HTTP response — silently disabling the Kong signature guard on DEV. Same shape silently no-ops the AC7 regression hook. The precedent this file cites for the string downgrade (`build.yml`'s `choice`→`string`) used a **fail-closed `case` default**; this does the opposite. Reject unrecognised values.
+- [ ] [Review][Patch] **The restore declares success on a much weaker bar than a deploy does** [.forgejo/workflows/deploy-stand.yml:2044-2066] — it re-polls Docker health only, skipping the anchored-name assert (`:1747`), the project-label check (`:1762`), the `--network host` loopback HTTP check (`:1813`) and the Kong guard (`:1903`). *"stand restored … confirmed healthy again"* can be printed while the published port serves nothing.
+- [x] [Review][Patch] **The restore's three-way exit-code claim is false — the code produces two states** [.forgejo/workflows/deploy-stand.yml:2036-2041; Dev Notes §11 item 17] — "nothing to restore" (`:2010`, `:2017`) and "restore succeeded" (`:2062`, implicit) both land as `action_task_step.status = success`. A DB reader cannot tell them apart, contrary to the comment's *"a real reader … can now tell the three apart without parsing log text"*. Task 7.3's own prose is accurate; the code comment and the autonomous-decision list overstate it. Either emit a distinguishing marker, or correct both claims.
+- [x] [Review][Patch] **The restore restores the DIGEST but keeps the NEW ref's compose file, and the code never says so** [.forgejo/workflows/deploy-stand.yml:2021-2031] — `$CHECKOUT_DIR` is the checkout of the ref being deployed (`:1098`). Run 1141 found this the hard way and the story chronicles it honestly (Task 6.5 attempt 2) — but the *step's own comments* carry no warning, so the next reader meets the same wall. A compose-level regression (healthcheck, ports, network wiring) is not rolled back. Name it in the step.
+- [x] [Review][Patch] **D33 asserts the concurrency-survival range `1132-1143`, where it is provably false** [docs/migration-decisions.md §D33 §3 and its Change Log row] — the story says `1132-1138` (Task 6.2). The ledger's own table records **1139, 1140 and 1142 as `ci.yml` pushes**, which cannot carry a `deploy-dev.yml` concurrency group. D33 is the artefact 5.3/6.4 will actually read; narrow it to the range the query covered.
+- [ ] [Review][Patch] **Task 6.2 — the story's self-declared "single most important query" — is reported without the query, the rows, or a timestamp** [story `:1079-1082`] — Task 1.3 (`:695-699`) and Task 1.6 (`:728-730`) both paste their SQL and their result. This one states `type=1`, group `deploy-dev-fe-prionex-dev` and nothing else, while Dev Notes §5 bans proving this by inference and §11 rules that a log line is never the verdict on its own. Paste the read.
+- [x] [Review][Patch] **DEV literals survive in operator-facing messages of the shared definition** [.forgejo/workflows/deploy-stand.yml:1009-1010, :1194, :1788, :1980] — the 404 classifier tells a PROD operator its tag *"was deleted by the live retention rule … `-dev` tags are NOT in keep_pattern, unlike `-prod`/`-preprod`"*, a cause impossible on that stand; `.env.deploy` is stamped `# Deployed by deploy-dev.yml` on every stand; `:1788` asserts the render "always writes `127.0.0.1:8082` form"; `:1980` names `crm-dev-network` where `FRONTEND_NETWORK` is in scope. Task 1.7 claims the message sites were parameterized; these four were missed. Epic AC3's *"no environment-specific value is embedded in it"* is only partly met — the DEV-valued defaults on `lock_wait_seconds`/`lock_ttl_seconds`/`health_timeout_seconds`/`expect_unrouted_api` are the other half, and the `epics.md` AC3 amendment never addresses that tension.
+- [ ] [Review][Patch] **`crm-kong-gateway` is hardcoded with no input** [.forgejo/workflows/deploy-stand.yml:1903] — `expect_unrouted_api` parameterizes *what a good answer looks like*, not *who is asked*. A stand whose Kong alias differs fails at `:1904` with a message insisting this *"IS a DNS/network-alias miss"*. 5.3 must confirm the alias exists on `crm-preprod-network` before its first dispatch, or this becomes an input.
+- [x] [Review][Patch] **The registry URL is hardcoded in both diagnostic jobs while `deploy` derives it from `IMAGE_REPO`** [.forgejo/workflows/deploy-stand.yml:535, :758 vs :977] — changing `IMAGE_REPO` (deliberately a callee `env:`, not an input) silently desynchronizes the diagnostic from the thing it exists to diagnose.
+- [ ] [Review][Patch] **The AC4a green row was earned on a callee that lacks a step now in the pre-`down` critical path** [story Task 6.1; `epics.md` AC4 amendment] — run 1132 ran the 23-step `deploy`; the shipped job has 25, including "Capture the previous digest before down" inserted *before* `down`. No green end-to-end run exists for the shipped ladder (1143 is the red row and SKIPPED steps 16-20). Separately, the `epics.md` amendment asserts *"health check fails correctly against a **stopped** stand — Confirmed live"* for run 1143, which was **running-but-unhealthy**; the story's own method note (`:602-611`) carries that caveat honestly and the `epics.md` amendment drops it. Restore the caveat.
+- [x] [Review][Patch] **`image_tag` and `image_env` reach the manifest URL and `$GITHUB_OUTPUT` with no shape validation** [.forgejo/workflows/deploy-stand.yml:832-836, :890, :977] — the `ref` path has a full sanitizer with two explicit refusals; these have none. A value containing a newline corrupts `GITHUB_OUTPUT`; one containing `/` redirects the manifest path. Caller-controlled, so exploitability is low — but the asymmetry with the `ref` path is the finding.
+- [x] [Review][Patch] **The diagnostic-only post-deploy step can fail the job and trigger a rollback** [.forgejo/workflows/deploy-stand.yml:1975-1978] — it greps `CONTAINER_NAME` out of `.env.deploy` and `docker inspect`s it with no `[ -z ]` guard, unlike every sibling (`:1675`, `:1741`, `:1838`, `:1885`). Under `set -e` an empty read aborts a step whose own text says it proves nothing — and now also fires `if: failure()`.
+
+**Patch — smaller, but this project treats comments as the evidence channel (low):**
+
+- [x] [Review][Patch] **A comment in the shared file asserts a `concurrency:` block that the same file explicitly does not have** [.forgejo/workflows/deploy-stand.yml:914-921] — it says *"(`:197-199` above, in this same file)"*; `:185-187` says the opposite and explains why one there would be silently void. The comment was itself written to correct a stale comment; it did not survive the move.
+- [x] [Review][Patch] **`clone-test`'s checkout dir is not run-id-suffixed** [.forgejo/workflows/deploy-stand.yml:651-653] — `rm -rf clone-test-checkout`, a fixed path, while `:924` and `:1098` both suffix with `$GITHUB_RUN_ID` for exactly this reason. `clone-test` is outside the concurrency group (`:918-921` says so), so two overlapping runs can delete each other's live checkout mid-fetch.
+- [ ] [Review][Patch] **`[ "$TTL" -le 600 ]` hardcodes one half of the invariant it exists to protect** [.forgejo/workflows/deploy-stand.yml:1270 vs :790] — `600` must track `timeout-minutes: 10`, which is not an input. Raising the timeout still silently unmakes the guard — the exact failure `:1266-1269` says it prevents.
+- [x] [Review][Patch] **`RepoDigests[0]` is assumed to belong to `IMAGE_REPO` and is never format-validated** [.forgejo/workflows/deploy-stand.yml:1583-1592, :2028] — the digest is stripped after `@` and re-attached to `${IMAGE_REPO}`. Every other digest in this file is validated against `^sha256:[0-9a-f]{64}$`; this one is not.
+- [x] [Review][Patch] **Ledger prose contradicts its own table three ways** [story `:1853`, `:1873`, `:1882`] — "7 budgeted + 6 unbudgeted" double-books 1135/1136, which the table marks as *consuming* budgeted lines (only four rows are marked "No"); "six unbudgeted **dispatches**" mislabels 1139/1142, which are `ci.yml` pushes; `:1873` says *"five of the six"* while `:1882` says *"Two of the six"*. The arithmetic itself is correct — 1131-1143 = 13 above baseline 1129, floor 24, closed with the literal word OPEN. Only the narration is off.
+- [x] [Review][Patch] **Three `run:`-body counts in the record are false for the shipped file** [story `:755-757`, `:846`, `:972-973`, `:1895`] — all claim "31 `run:` bodies (30 moved + exactly 1 new)"; the committed file has **33**. Task 2.5 says "except the one new step (Task 2.3)"; the shipped `deploy` job has **three** new steps. The "mechanically verified, not reviewed by eye" check was never re-run after Task 7 landed.
+- [x] [Review][Patch] **Stale story identity carried into a permanent shared file** [.forgejo/workflows/deploy-stand.yml:924, :1194] — `.docker-story-4-3-` as the `DOCKER_CONFIG` prefix and `# Deployed by deploy-dev.yml` in the rendered `.env.deploy`. Dev Notes §11 item 13 already permits this tidying for job names; it stopped short of these two.
+- [x] [Review][Patch] **File List cites a path that does not exist** [story `:1934`, `:1342`] — `docs/planning-artifacts/epics.md`; the file is `_bmad-output/planning-artifacts/epics.md`.
+- [x] [Review][Patch] **D33 cosmetics** [docs/migration-decisions.md:46, D33 body] — index-row status column contains `leдже` (mixed Cyrillic/Latin); body header dated 22.08.2026 against a Change Log row dated 23.08.2026.
+
+**Deferred (real, not caused by this change or deliberately accepted):**
+
+- [x] [Review][Defer] **`dev-reset.yml` carries ~9 line-number citations into the old 1875-line `deploy-dev.yml` body** [.forgejo/workflows/dev-reset.yml:65,127,323,342,415,454,469,498,560] — deferred, pre-existing-by-construction: the caller is now 89 lines, so every one of those citations points past EOF or at unrelated lines. **Prohibition 2 forbids touching `dev-reset.yml` in this story**, so this is correctly out of scope here — but it is a live documentation break the moment this merges, and it belongs to whoever next opens that file (Story 4.9 touches the stand at cutover).
+- [x] [Review][Defer] **Step names stripped of their `(Task N)`/`(code review Mn)` suffixes** [.forgejo/workflows/deploy-stand.yml, all 28 steps] — deferred, deliberate (Dev Notes §11 item 13, Story 4.3's L12) and the right call for names that become permanent across three environments. Recorded only because this project's primary evidence channel IS `action_task_step`, so any saved query keyed on the old step-name strings now returns nothing, silently. Worth one line in the project's own query conventions.
 
 ---
 

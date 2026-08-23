@@ -2060,12 +2060,17 @@ image tag are all inputs
 **Then** a DEV deploy still succeeds end to end
 **And** the health check still fails correctly against a stopped stand.
 > ✅ **Confirmed live, 2026-08-22/23.** DEV deploy: run 1132, all 23 `action_task_step` rows
-> SUCCESS (22 original + one new fail-closed guard). Health check fails correctly against a stopped
-> stand AND the post-`down` rollback restores it with no human: run 1143, the third dispatch
-> attempt against a replacement throwaway probe (the original probe branch this AC's own test
-> depended on, `test/4-3-unhealthy-probe`, was found deleted by design at Story 4.3's own closeout —
-> the first two replacement attempts used a probe construction incompatible with the rollback
-> mechanism by design, both recorded honestly rather than smoothed over — see `4-8-…md` Task 6.5).
+> SUCCESS (22 original + one new fail-closed guard). Health check fails correctly against a
+> **running-but-unhealthy** stand AND the post-`down` rollback restores it with no human: run 1143,
+> the third dispatch attempt against a replacement throwaway probe (the original probe branch this
+> AC's own test depended on, `test/4-3-unhealthy-probe`, was found deleted by design at Story 4.3's
+> own closeout — the first two replacement attempts used a probe construction incompatible with the
+> rollback mechanism by design, both recorded honestly rather than smoothed over — see `4-8-…md`
+> Task 6.5). 🔴 **Corrected 2026-08-23 (code review)**: this amendment originally said "a stopped
+> stand" — inaccurate. Run 1143's probe broke `nginx.conf`'s own listen port, not the compose file;
+> the container stayed RUNNING throughout, only its Docker healthcheck failed. The story's own
+> method note (Task 6.5's own text) already carried this caveat honestly; this amendment had dropped
+> it. "Stopped" is a genuinely different, untested failure shape for this AC.
 
 **Given** the shared definition exists
 **When** the remaining deploy workflows are written in Epics 5 and 6

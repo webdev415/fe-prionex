@@ -276,6 +276,17 @@ jobs:
                     # below already refuses hold_lock_seconds > TTL, so bounding this fixture
                     # holder's TOTAL life at TTL from its own start (code review H1/DN2, Oleg's
                     # choice: option (a), no API dependency) never truncates a valid request.
+          # Code review (2026-08-23, Medium): lock_ttl_seconds was a shell literal before this
+          # story's own parameterization — a non-numeric value here used to be impossible; now it
+          # would make the `-gt` comparison below error under `set -e` with a raw shell message
+          # instead of this job's own. Validated the same way hold_lock_seconds already is.
+          case "$TTL" in
+            ''|*[!0-9]*)
+              echo "FAIL: lock_ttl_seconds='${TTL}' is not a non-negative integer. Refusing to"\
+                   "start a holder with an unparseable TTL."
+              exit 1
+              ;;
+          esac
 
           # Task 5.2: reject non-numeric and out-of-bound values, fail closed, before anything
           # touches docker at all. 🔴 Code review H5: this shell-side check only ever RUNS when
@@ -532,8 +543,16 @@ jobs:
           # Code review H1 (:148): a transport-level failure (DNS/TLS/refused/timeout) must not
           # abort this step before its own `if` can classify it — `|| true` (not `|| echo`, which
           # would double it: curl already writes '000' on total failure, see the header comment).
-          CODE="$(curl -sS -m 10 -o /dev/null -w '%{http_code}' https://git.crm-prionex.com/v2/ || true)"
-          echo "GET https://git.crm-prionex.com/v2/ -> HTTP ${CODE} (401 expected: reachable,"\
+          #
+          # Code review (2026-08-23, Medium): derived from IMAGE_REPO (workflow-level `env:`,
+          # already in every step's own shell environment as a plain variable — no template
+          # expression needed, Prohibition 5 is about template interpolation, not plain env vars),
+          # not a hardcoded host — matching `deploy`'s own manifest-resolve step. Changing
+          # IMAGE_REPO used to desynchronize this diagnostic from the registry it exists to
+          # diagnose.
+          REGISTRY_HOST="${IMAGE_REPO%%/*}"
+          CODE="$(curl -sS -m 10 -o /dev/null -w '%{http_code}' "https://${REGISTRY_HOST}/v2/" || true)"
+          echo "GET https://${REGISTRY_HOST}/v2/ -> HTTP ${CODE} (401 expected: reachable,"\
                "unauthenticated)"
           if [ "$CODE" = "000" ]; then
             echo "FAIL: transport-level failure reaching the registry (DNS, TLS, connection"\
@@ -609,6 +628,8 @@ jobs:
       - name: Validate ref shape before any git call
         env:
           REF_IN: ${{ inputs.ref }}
+          IMAGE_TAG_IN: ${{ inputs.image_tag }}
+          CALLER_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # This is the FIRST job that touches inputs.ref — git parses options after positional
@@ -618,9 +639,25 @@ jobs:
           # construction DOES execute over local/ssh transports) — real consequence today is a
           # confusing failure, not code execution, but rejected here regardless, before any git
           # call anywhere in this workflow runs.
+          #
+          # Code review H1 (2026-08-23, critical — this story's own goal): image_tag mode (Story
+          # 5.3/6.4's own shape, no ref supplied) used to make THIS job unconditionally fail here
+          # ("no ref was supplied"), which SKIPPED `deploy` entirely (`deploy: needs: [preflight,
+          # clone-test]`) — the story's own stated reusability goal was broken in exactly the mode
+          # it exists for. Fix: mirror the checkout step's own fallback (Task 2/9.4) — in image_tag
+          # mode, this job validates/fetches the CALLER's own commit (github.sha) instead, which is
+          # EXACTLY what the deploy job's own checkout step will fetch in that mode too, so this
+          # job's own diagnostic value (does authenticated fetch work) is preserved, not skipped.
           if [ -z "${REF_IN:-}" ]; then
-            echo "FAIL: no ref was supplied."
-            exit 1
+            if [ -n "${IMAGE_TAG_IN:-}" ]; then
+              echo "No ref supplied (image_tag mode) — validating the CALLER's own commit"\
+                   "(github.sha=${CALLER_SHA}) instead, matching the deploy job's own checkout"\
+                   "fallback in this mode."
+              REF_IN="$CALLER_SHA"
+            else
+              echo "FAIL: neither ref nor image_tag was supplied."
+              exit 1
+            fi
           fi
           case "$REF_IN" in
             -*)
@@ -634,6 +671,8 @@ jobs:
       - name: Attempt the exact same authenticated git fetch the deploy job's checkout step performs
         env:
           REF_IN: ${{ inputs.ref }}
+          IMAGE_TAG_IN: ${{ inputs.image_tag }}
+          CALLER_SHA: ${{ github.sha }}
           FJ_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPO_SLUG: ${{ github.repository }}
@@ -646,11 +685,22 @@ jobs:
             exit 1
           fi
 
+          # Code review H1 (2026-08-23): same image_tag-mode fallback as the shape-validation step
+          # above — each step re-reads inputs independently (no shared shell state across steps),
+          # so the fallback must be repeated here too.
+          if [ -z "${REF_IN:-}" ] && [ -n "${IMAGE_TAG_IN:-}" ]; then
+            REF_IN="$CALLER_SHA"
+          fi
+
           AUTH_B64="$(printf 'x-access-token:%s' "$FJ_TOKEN" | base64 | tr -d '\n')"
 
-          rm -rf clone-test-checkout
-          mkdir clone-test-checkout
-          cd clone-test-checkout
+          # Code review (2026-08-23, Low): run-id-suffixed, matching :924/:1098's own reasoning —
+          # this job is OUTSIDE the concurrency group (:918-921 below), so two overlapping runs
+          # used to be able to delete each other's live checkout mid-fetch under the fixed name.
+          CLONE_TEST_DIR="clone-test-checkout-${GITHUB_RUN_ID}"
+          rm -rf "$CLONE_TEST_DIR"
+          mkdir "$CLONE_TEST_DIR"
+          cd "$CLONE_TEST_DIR"
           git init --quiet
           git remote add origin "${SERVER_URL}/${REPO_SLUG}.git"
 
@@ -696,6 +746,24 @@ jobs:
           # narrower check here rather than assuming the caller only ever sent one.
           if [ -n "${IMAGE_TAG_IN:-}" ]; then
             TAG="$IMAGE_TAG_IN"
+            # Code review (2026-08-23, Medium): same shape validation as `deploy`'s own copy of
+            # this branch — this job builds the identical manifest URL from TAG independently.
+            case "$TAG" in
+              *[!a-zA-Z0-9._-]*)
+                echo "FAIL: image_tag='${TAG}' contains characters outside Docker's own legal tag"\
+                     "charset ([a-zA-Z0-9._-])."
+                exit 1
+                ;;
+              [.-]*)
+                echo "FAIL: image_tag='${TAG}' begins with '.' or '-', which Docker's own tag"\
+                     "grammar forbids."
+                exit 1
+                ;;
+            esac
+            if [ "${#TAG}" -gt 128 ]; then
+              echo "FAIL: image_tag='${TAG}' exceeds Docker's own 128-character tag limit."
+              exit 1
+            fi
             echo "Using the supplied image_tag directly: '${TAG}'."
           else
           if [ -z "${REF_IN:-}" ]; then
@@ -748,6 +816,10 @@ jobs:
           # otherwise either 404ing or silently down-converting to a digest a real `docker pull`
           # would not resolve); `--retry` covers a transient 429/503 instead of failing identically
           # to a permanent misconfiguration; `-L` follows a registry redirect.
+          #
+          # Code review (2026-08-23, Medium): derived from IMAGE_REPO (workflow-level `env:`), not
+          # a hardcoded host/path — same fix and reasoning as preflight's own reachability check;
+          # `deploy`'s own manifest-resolve step already does this.
           HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
             | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused \
                 -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' --config - \
@@ -755,7 +827,7 @@ jobs:
                 -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
                 -H "Accept: application/vnd.oci.image.manifest.v1+json" \
                 -H "Accept: application/vnd.oci.image.index.v1+json" \
-                "https://git.crm-prionex.com/v2/crm/fe-prionex/manifests/${TAG}" || true)"
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${TAG}" || true)"
           echo "GET .../manifests/${TAG} -> HTTP ${HTTP_CODE}"
           if [ "$HTTP_CODE" = "000" ]; then
             echo "FAIL: transport-level failure resolving ${TAG} — not an HTTP response at all"\
@@ -831,6 +903,31 @@ jobs:
           # Task 2.3's guard step already confirmed exactly one of the two was supplied.
           if [ -n "${IMAGE_TAG_IN:-}" ]; then
             TAG="$IMAGE_TAG_IN"
+            # Code review (2026-08-23, Medium): shape-validated — the `ref` path below has a full
+            # sanitizer with two explicit refusals; this path had none, and TAG is interpolated
+            # into a manifest URL (the "Resolve the digest" step) AND written raw to
+            # $GITHUB_OUTPUT. A value containing "/" would redirect the manifest path; one
+            # containing a newline would corrupt GITHUB_OUTPUT. Caller-controlled (deploy-stand.yml
+            # has no external/anonymous dispatch surface of its own), so exploitability is low —
+            # rejected anyway, matching Docker's own tag grammar, for the same reason the `ref`
+            # path already does.
+            case "$TAG" in
+              *[!a-zA-Z0-9._-]*)
+                echo "FAIL: image_tag='${TAG}' contains characters outside Docker's own legal tag"\
+                     "charset ([a-zA-Z0-9._-]). Refusing to pass it into a manifest URL or"\
+                     "\$GITHUB_OUTPUT unsanitized."
+                exit 1
+                ;;
+              [.-]*)
+                echo "FAIL: image_tag='${TAG}' begins with '.' or '-', which Docker's own tag"\
+                     "grammar forbids."
+                exit 1
+                ;;
+            esac
+            if [ "${#TAG}" -gt 128 ]; then
+              echo "FAIL: image_tag='${TAG}' exceeds Docker's own 128-character tag limit."
+              exit 1
+            fi
             echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
             echo "Using the supplied image_tag directly: '${TAG}' — no ref-derivation needed."
             exit 0
@@ -911,17 +1008,25 @@ jobs:
           # Workspace-scoped DOCKER_CONFIG (Task 3.6), suffixed with $GITHUB_RUN_ID (code review
           # M4) — a self-hosted runner reuses its workspace across dispatches, so a FIXED path let
           # job A's cleanup step delete job B's live credential mid-pull on any two concurrent
-          # dispatches. 🔴 Code review M7 (2026-08-21): this comment used to say "not a
-          # `concurrency:` block (still Story 4.4's to add)" — stale the moment Story 4.4 added one
-          # (`:197-199` above, in this same file) — corrected here rather than left standing next to
-          # the block it used to say was absent. The per-run-id suffix below is still independently
-          # useful even with `concurrency:` in place: the group serializes `deploy` JOBS, but this
-          # workspace path is also read by `clone-test`/`digest-resolve-test`, which are NOT in the
+          # dispatches.
+          #
+          # Code review (2026-08-23, Low — corrects a comment stale since the Story 4.8 split):
+          # this file (the CALLEE) declares NO `concurrency:` block of its own — see this file's
+          # own header, "no concurrency block" — the group lives ONLY in each CALLER (`deploy-dev
+          # .yml`'s own literal `concurrency: {group: deploy-dev-fe-prionex-dev, ...}`), never
+          # here (D21: a callee's own concurrency block is silently void). The per-run-id suffix
+          # below is still independently useful even with the caller's own group in place: that
+          # group serializes `deploy` JOBS across dispatches to the SAME stand, but this workspace
+          # path is also read by `clone-test`/`digest-resolve-test`, which are NOT in the caller's
           # concurrency group and can legitimately run alongside a `deploy` job from a different
           # dispatch.
           # Cleared on the way IN too (code review M5), not only via `mkdir -p`, so a stale
           # directory a cancelled prior run of the SAME id left behind never lingers.
-          DOCKER_CONFIG_DIR="${GITHUB_WORKSPACE}/.docker-story-4-3-${GITHUB_RUN_ID}"
+          #
+          # Code review (2026-08-23, Low): renamed from `.docker-story-4-3-` — this file is now a
+          # permanent shared definition serving three environments across multiple stories, not a
+          # Story 4.3 artifact.
+          DOCKER_CONFIG_DIR="${GITHUB_WORKSPACE}/.docker-deploy-${GITHUB_RUN_ID}"
           rm -rf "$DOCKER_CONFIG_DIR"
           mkdir -p "$DOCKER_CONFIG_DIR"
           chmod 700 "$DOCKER_CONFIG_DIR"
@@ -945,6 +1050,21 @@ jobs:
           trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
 
           SIMULATED_MARKER=""
+          # Code review (2026-08-23, Medium): fail CLOSED on anything but the exact lowercase
+          # "true"/"false" — this input is `type: string` on the callee (Task 2.2a), so nothing
+          # enforces boolean shape at the schema level; deploy-dev.yml's own `type: boolean`
+          # workflow_dispatch input coerces cleanly today, but a future caller (5.3/6.4) passing
+          # "True"/"1"/"yes"/a typo would previously fall through to the `else`-equivalent (no
+          # simulation) silently, the opposite of build.yml's own fail-closed `case` precedent this
+          # file's header cites for the same `type: string` downgrade.
+          case "${SIMULATE_BAD_CREDENTIAL:-false}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: simulate_bad_credential='${SIMULATE_BAD_CREDENTIAL}' is neither 'true'"\
+                   "nor 'false'. Refusing to guess whether the AC7 regression hook should fire."
+              exit 1
+              ;;
+          esac
           # Task 8.3/AC7 discriminating-row switch. Deliberately AFTER login (the step above uses
           # the real REG_TOKEN and succeeds normally) so this corrupts ONLY the credential this
           # step's own curl call uses — hitting the registry's real 401 and this step's own
@@ -1003,11 +1123,22 @@ jobs:
               exit 1
               ;;
             404)
+              # Code review (2026-08-23, Low): the retention clause is DEV-only (build.yml's own
+              # keep_pattern excludes only -dev tags) — a hardcoded "-dev" here would misdirect a
+              # PRE-PROD/PROD operator (5.3/6.4) who never sees that cause. Branches on IMAGE_ENV
+              # instead of asserting one environment's own fact for every caller.
+              if [ "${IMAGE_ENV}" = "dev" ]; then
+                RETENTION_NOTE="or (b) a -${IMAGE_ENV} tag older than 14 days was deleted by the"\
+                                "live retention rule (build.yml:962 — -dev tags are NOT in"\
+                                "keep_pattern, unlike -prod/-preprod)."
+              else
+                RETENTION_NOTE="(the 14-day retention rule this file also knows about only"\
+                                "applies to -dev tags, per build.yml's own keep_pattern — not a"\
+                                "likely cause for image_env=${IMAGE_ENV})."
+              fi
               echo "FAIL: registry returned 404 Not Found resolving ${TAG}. Two possible causes,"\
                    "both stated because this session cannot tell them apart: (a) no image was ever"\
-                   "built for this ref — push the branch so ci.yml's image job builds it; or"\
-                   "(b) a -dev tag older than 14 days was deleted by the live retention rule"\
-                   "(build.yml:962 — -dev tags are NOT in keep_pattern, unlike -prod/-preprod)."
+                   "built for this ref — push the branch so ci.yml's image job builds it; ${RETENTION_NOTE}"
               exit 1
               ;;
             000)
@@ -1082,6 +1213,7 @@ jobs:
           # whatever ref dispatched this deploy, typically main) as the trusted source for
           # stand infra config in that mode. The ref-based path above is byte-identical to
           # deploy-dev.yml's own proven behaviour and is unaffected.
+          IMAGE_TAG_MODE=0
           if [ -z "${REF_IN:-}" ]; then
             if [ -z "${CALLER_SHA:-}" ]; then
               echo "FAIL: neither ref nor github.sha (the caller's own commit) is available —"\
@@ -1091,6 +1223,7 @@ jobs:
             echo "No ref supplied (image_tag mode) — obtaining docker-compose.stand.yml from"\
                  "the caller's own commit (${CALLER_SHA}) instead of an application ref."
             REF_IN="$CALLER_SHA"
+            IMAGE_TAG_MODE=1
           fi
 
           AUTH_B64="$(printf 'x-access-token:%s' "$FJ_TOKEN" | base64 | tr -d '\n')"
@@ -1153,20 +1286,36 @@ jobs:
           # (build.yml already stamps org.opencontainers.image.revision on every image). Compare the
           # image's own stamped revision to the SHA this checkout just fetched — closes AC6's stated
           # intent ("the running container is the image that was requested"), not only its letter.
-          IMAGE_REVISION="$(docker inspect "${IMAGE_REPO}@${DIGEST}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)"
-          if [ -z "$IMAGE_REVISION" ] || [ "$IMAGE_REVISION" = "<no value>" ]; then
-            echo "⚠️ org.opencontainers.image.revision label not present on the pulled image —"\
-                 "cannot cross-check it against checkout HEAD ${HEAD_SHA}. Not a FAIL: older images"\
-                 "built before build.yml started stamping this label would not have it. AC6's"\
-                 "digest comparison later in this job is still the binding check."
-          elif [ "$IMAGE_REVISION" != "$HEAD_SHA" ]; then
-            echo "FAIL: the pulled image's org.opencontainers.image.revision (${IMAGE_REVISION})"\
-                 "does not match the SHA this checkout just fetched (${HEAD_SHA}). The compose file"\
-                 "and the image were built from different commits — refusing to deploy a"\
-                 "mismatched pair."
-            exit 1
+          # Code review H1 (2026-08-23), Oleg's chosen option: in image_tag mode HEAD_SHA is the
+          # CALLER's own commit (github.sha) — the commit docker-compose.stand.yml was read from —
+          # NOT the commit the image_tag's own image was built from. Comparing the two would compare
+          # unrelated commits and fail falsely on almost every real image_tag dispatch (Story 5.3/
+          # 6.4 both dispatch a specific already-built tag, built from whatever commit build.yml ran
+          # against, independent of whichever commit later calls this workflow). Explicitly skipped
+          # in that mode instead of asserting a comparison that has no correct answer — AC6's digest
+          # comparison later in this job is the ONLY binding check in image_tag mode; this label
+          # cross-check is a ref-mode-only enhancement (code review H4, above) on top of it.
+          if [ "$IMAGE_TAG_MODE" = "1" ]; then
+            echo "SKIPPED: image_tag mode — no application ref to cross-check the image's own"\
+                 "revision label against (checkout HEAD ${HEAD_SHA} is the CALLER's own commit,"\
+                 "unrelated to which commit the image_tag's image was built from). AC6's digest"\
+                 "comparison later in this job is the only binding check in this mode."
           else
-            echo "OK: pulled image's revision label (${IMAGE_REVISION}) matches checkout HEAD."
+            IMAGE_REVISION="$(docker inspect "${IMAGE_REPO}@${DIGEST}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)"
+            if [ -z "$IMAGE_REVISION" ] || [ "$IMAGE_REVISION" = "<no value>" ]; then
+              echo "⚠️ org.opencontainers.image.revision label not present on the pulled image —"\
+                   "cannot cross-check it against checkout HEAD ${HEAD_SHA}. Not a FAIL: older"\
+                   "images built before build.yml started stamping this label would not have it."\
+                   "AC6's digest comparison later in this job is still the binding check."
+            elif [ "$IMAGE_REVISION" != "$HEAD_SHA" ]; then
+              echo "FAIL: the pulled image's org.opencontainers.image.revision (${IMAGE_REVISION})"\
+                   "does not match the SHA this checkout just fetched (${HEAD_SHA}). The compose"\
+                   "file and the image were built from different commits — refusing to deploy a"\
+                   "mismatched pair."
+              exit 1
+            else
+              echo "OK: pulled image's revision label (${IMAGE_REVISION}) matches checkout HEAD."
+            fi
           fi
           echo "checkout_dir=${CHECKOUT_DIR}" >> "$GITHUB_OUTPUT"
 
@@ -1190,8 +1339,12 @@ jobs:
           # external: true, and that refusing to start is the ONLY loud failure on this axis;
           # auto-creating it converts that refusal into an empty, backend-less network that comes
           # up happily (CD.yml:185's anti-pattern).
+          # Code review (2026-08-23, Low): "deploy-stand.yml", not "deploy-dev.yml" — this render
+          # step is the shared callee, executed on behalf of whichever caller dispatched it
+          # (deploy-dev.yml today, deploy-preprod.yml/deploy-prod.yml once Story 5.3/6.4 exist);
+          # naming one specific caller here would be wrong for the other two the moment they ship.
           cat > "${CHECKOUT_DIR}/.env.deploy" <<EOF
-          # Deployed by deploy-dev.yml, $(date -u +%FT%TZ). Tag at deploy time: ${RAW_TAG}
+          # Deployed by deploy-stand.yml, $(date -u +%FT%TZ). Tag at deploy time: ${RAW_TAG}
           COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
           CONTAINER_NAME=${CONTAINER_NAME}
           FRONTEND_PORT=${FRONTEND_PORT}
@@ -1254,6 +1407,20 @@ jobs:
                      # not against queued deploys. 240s wait + ~90s deploy stays inside this job's
                      # own 10-minute timeout with room; do not raise the job timeout to fit a
                      # longer wait without re-reading Story 4.7's 10-minute budget (NFR2).
+          # Code review (2026-08-23, Medium): lock_wait_seconds was a shell literal before this
+          # story's own parameterization. Unvalidated, a non-numeric value here would silently
+          # collapse `POLL_DEADLINE=$(( POLL_START + WAIT + 30 ))` below to whatever arithmetic
+          # a bad string coerces to (commonly zero), truncating a 240s wait to ~30s with no
+          # message — exactly the "safe because validated inside the job" claim this file's own
+          # header (§2.2a) makes and this input did not yet keep.
+          case "$WAIT" in
+            ''|*[!0-9]*)
+              echo "FAIL: lock_wait_seconds='${WAIT}' is not a non-negative integer. Refusing to"\
+                   "poll for a lock with an unparseable wait bound. The stand has not been"\
+                   "touched."
+              exit 1
+              ;;
+          esac
           TTL="${LOCK_TTL_SECONDS}"    # Input, DEV default 720 (Task 4.5), AC4's whole answer, and now also the holder's own total-life bound
                      # (H1/DN2): must EXCEED the longest legitimate hold (~2-3 min) — today
                      # 720 > 600 (this job's own timeout-minutes: 10) holds, but only because
@@ -1263,6 +1430,19 @@ jobs:
                      # does not survive cancel or a hard timeout (code review M5) — TTL expiry is
                      # the ONLY reliable release for a dead job, which is why AC4 is satisfied by
                      # this constant, not by the release step below.
+          # Code review (2026-08-23, Medium — the dangerous one): validated BEFORE the Prohibition-8
+          # `-le 600` check below. `[ "$TTL" -le 600 ]` on a non-numeric TTL errors (status 2)
+          # rather than comparing — inside an `if [ ... ]`, `set -e` does not fire (the condition
+          # position is exempt), so the guard's own `if` reads that error as FALSE and is silently
+          # bypassed, the one place a bad value means a second deploy can steal the lock
+          # mid-down/up-d. Fail closed here, before that comparison ever runs.
+          case "$TTL" in
+            ''|*[!0-9]*)
+              echo "FAIL: lock_ttl_seconds='${TTL}' is not a non-negative integer. Refusing to"\
+                   "acquire a lock with an unparseable TTL. The stand has not been touched."
+              exit 1
+              ;;
+          esac
           # Task 2.7 / Prohibition 8: lock_ttl_seconds must EXCEED this job's own
           # timeout-minutes (10, i.e. 600s — a literal, not an input, same for every stand) —
           # asserted here, in the file, now that TTL is configurable and the invariant is no
@@ -1515,6 +1695,7 @@ jobs:
       - name: Guard against a hand-provisioned stand before down
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
+          COMPOSE_PROJECT_NAME: ${{ inputs.compose_project_name }}
         run: |
           set -euo pipefail
           # `docker compose down` removes containers by compose PROJECT LABEL, not by name. Story
@@ -1524,6 +1705,12 @@ jobs:
           # /fe-prionex-dev is already in use". The label assertion this file already carries
           # (Task 7.2) used to run only AFTER `up -d` — too late to prevent exactly this collision.
           # Checked here, before `down` is ever called.
+          #
+          # Code review H3 (2026-08-23): compares against COMPOSE_PROJECT_NAME, not CONTAINER_NAME —
+          # `com.docker.compose.project` is the PROJECT label docker compose sets from
+          # COMPOSE_PROJECT_NAME (this file's own `-p`-equivalent), not from CONTAINER_NAME. DEV
+          # happens to have them equal (fe-prionex-dev/fe-prionex-dev), which masked the bug; a
+          # stand where they diverge would have compared the wrong value.
           CONTAINER_NAME="$(grep '^CONTAINER_NAME=' "${CHECKOUT_DIR}/.env.deploy" | cut -d= -f2-)"
           if [ -z "$CONTAINER_NAME" ]; then
             echo "FAIL: could not read CONTAINER_NAME back from .env.deploy — this workflow's own"\
@@ -1533,9 +1720,9 @@ jobs:
           EXISTING="$(docker ps -a --filter "name=^${CONTAINER_NAME}$" --format '{{.Names}}' || true)"
           if [ -n "$EXISTING" ]; then
             EXISTING_LABEL="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$CONTAINER_NAME" 2>/dev/null || true)"
-            if [ "$EXISTING_LABEL" != "$CONTAINER_NAME" ]; then
+            if [ "$EXISTING_LABEL" != "$COMPOSE_PROJECT_NAME" ]; then
               echo "FAIL: a container named '${CONTAINER_NAME}' already exists but its compose"\
-                   "project label is '${EXISTING_LABEL:-<none>}', not '${CONTAINER_NAME}'."\
+                   "project label is '${EXISTING_LABEL:-<none>}', not '${COMPOSE_PROJECT_NAME}'."\
                    "'docker compose down' would report success without touching it, and 'up -d'"\
                    "would then fail with 'name already in use'. Not proceeding — resolve the"\
                    "naming collision by hand first."
@@ -1589,10 +1776,24 @@ jobs:
             exit 0
           fi
           PREV_DIGEST="${PREV_REPO_DIGEST#*@}"
+          # Code review (2026-08-23, Low): format-validated, matching every other digest this file
+          # handles (AC6's own step, the manifest-resolve steps) — RepoDigests[0] is taken on
+          # faith that it belongs to IMAGE_REPO and is a well-formed sha256 digest; an image with
+          # multiple repo tags/digests (unusual on this path, not impossible) could otherwise
+          # smuggle an unrelated string into `DOCKER_IMAGE=${IMAGE_REPO}@${PREVIOUS_DIGEST}` in the
+          # restore step.
+          if ! printf '%s' "$PREV_DIGEST" | grep -qE '^sha256:[0-9a-f]{64}$'; then
+            echo "Existing container '${CONTAINER_NAME}'s own RepoDigests[0] did not yield a"\
+                 "well-formed sha256 digest ('${PREV_DIGEST}') — nothing to capture. Refusing to"\
+                 "guess."
+            echo "previous_digest=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "previous_digest=${PREV_DIGEST}" >> "$GITHUB_OUTPUT"
           echo "OK: captured previous digest ${PREV_DIGEST} for the post-down restore path, if needed."
 
       - name: docker compose down
+        id: compose_down
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
           COMPOSE_PROJECT_NAME: ${{ inputs.compose_project_name }}
@@ -1677,6 +1878,20 @@ jobs:
             exit 1
           fi
 
+          # Code review (2026-08-23, Medium): health_timeout_seconds was the literal 120 before
+          # this story's own parameterization — the poll loop below always ran at least once, so
+          # RUNNING/RESTARTING/HEALTH were always assigned before the post-loop check at :1810
+          # reads them. A 0/empty/non-numeric value can now make DEADLINE <= "now", the loop body
+          # never executes, and that check dereferences unbound variables under `set -u`. Validated
+          # and the three pre-initialized so a zero-length poll fails with ITS OWN message instead
+          # of a raw "unbound variable" one.
+          case "$HEALTH_TIMEOUT_SECONDS" in
+            ''|*[!0-9]*)
+              echo "FAIL: health_timeout_seconds='${HEALTH_TIMEOUT_SECONDS}' is not a"\
+                   "non-negative integer. Refusing to poll for health with an unparseable bound."
+              exit 1
+              ;;
+          esac
           # Code review M6: a single Health.Status field cannot distinguish "no healthcheck
           # configured", "container gone" and "slow start" — all three read as neither healthy nor
           # unhealthy and used to spin the full 120s regardless. Worse, Docker retains the LAST
@@ -1687,6 +1902,9 @@ jobs:
           # Health.Status=healthy together before accepting the container as good.
           DEADLINE=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
           LAST_STATE="starting"
+          RUNNING="unpolled"
+          RESTARTING="unpolled"
+          HEALTH="unpolled"
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
             # `docker inspect` on a nonexistent target writes a single bare newline to its OWN
             # stdout even as it exits nonzero (verified) — `|| echo 'gone|...'` would concatenate
@@ -1735,6 +1953,7 @@ jobs:
       - name: Assert the healthy container is THIS project's, anchored
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
+          COMPOSE_PROJECT_NAME: ${{ inputs.compose_project_name }}
         run: |
           set -euo pipefail
           CONTAINER_NAME="$(grep '^CONTAINER_NAME=' "${CHECKOUT_DIR}/.env.deploy" | cut -d= -f2-)"
@@ -1752,6 +1971,10 @@ jobs:
           # Code review H1 (:600): a nil .Config.Labels would be a template error, not a clean
           # empty string — guarded so that failure produces its OWN message, not an unexplained
           # abort indistinguishable from every other cause.
+          #
+          # Code review H3 (2026-08-23): compares against COMPOSE_PROJECT_NAME, not CONTAINER_NAME —
+          # same fix and same reasoning as the pre-down guard above; DEV's own values happen to be
+          # equal, which is why this passed here without being correct.
           PROJECT_LABEL="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$CONTAINER_NAME" || true)"
           if [ -z "$PROJECT_LABEL" ]; then
             echo "FAIL: could not read '${CONTAINER_NAME}'s compose project label at all (docker"\
@@ -1759,9 +1982,10 @@ jobs:
                  "project identity."
             exit 1
           fi
-          if [ "$PROJECT_LABEL" != "$CONTAINER_NAME" ]; then
+          if [ "$PROJECT_LABEL" != "$COMPOSE_PROJECT_NAME" ]; then
             echo "FAIL: container '${CONTAINER_NAME}' has compose project label '${PROJECT_LABEL}',"\
-                 "expected '${CONTAINER_NAME}'. This would be reporting a DIFFERENT project's health."
+                 "expected '${COMPOSE_PROJECT_NAME}'. This would be reporting a DIFFERENT"\
+                 "project's health."
             exit 1
           fi
           echo "OK: '${CONTAINER_NAME}' matched anchored, compose project label confirmed."
@@ -1785,7 +2009,8 @@ jobs:
             *:*) : ;;
             *)
               echo "FAIL: FRONTEND_PORT ('${FP}') has no host prefix — this workflow's own render"\
-                   "step (Task 4.4) always writes '127.0.0.1:8082' form; a bare port would parse"\
+                   "step (Task 4.4) always writes this stand's own host:port form (e.g. DEV's"\
+                   "'127.0.0.1:8082', from the frontend_port input); a bare port would parse"\
                    "wrong here (host and port would both become the port number). Not proceeding."
               exit 1
               ;;
@@ -1950,6 +2175,20 @@ jobs:
           # service (PRE-PROD today, per Story 4.8's own finding — 69 containers of real
           # services) would fail this literal check forever, for no real reason: it only ever
           # asks 'is Kong itself answering', not 'is Kong deliberately unrouted'.
+          #
+          # Code review (2026-08-23, Medium): fail CLOSED on anything but exact lowercase
+          # "true"/"false" — same reasoning as simulate_bad_credential above. Silently accepting
+          # "True"/"1"/a typo used to fall through to the permissive `else` branch (any real HTTP
+          # response accepted), which would have masked a genuine DEV Kong-routing regression this
+          # guard exists to catch.
+          case "${EXPECT_UNROUTED_API:-true}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: expect_unrouted_api='${EXPECT_UNROUTED_API}' is neither 'true' nor"\
+                   "'false'. Refusing to guess which Kong signature is expected."
+              exit 1
+              ;;
+          esac
           if [ "${EXPECT_UNROUTED_API:-true}" = "true" ]; then
             if ! printf '%s' "$RESP_BODY" | grep -q "no Route matched"; then
               echo "FAIL: GET /api/ (code ${RESP_CODE}) did not return Kong's own 'no Route"\
@@ -1970,18 +2209,45 @@ jobs:
       - name: Record post-deploy state for the reboot-ordering item
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
+          FRONTEND_NETWORK: ${{ inputs.frontend_network }}
         run: |
           set -euo pipefail
+          # Code review (2026-08-23, Medium): guarded, matching every sibling read of
+          # CONTAINER_NAME (:1765, :1831, :1928, :1975 in this job) — this step is PURELY
+          # diagnostic ("NOT proof against it", below), but an unguarded empty read would still
+          # abort it under `set -e`, and post-DN3 that now fires the restore step's own
+          # `if: failure() && steps.compose_down.outcome == 'success'` for a deploy that otherwise
+          # deployed and verified cleanly.
           CONTAINER_NAME="$(grep '^CONTAINER_NAME=' "${CHECKOUT_DIR}/.env.deploy" | cut -d= -f2-)"
+          if [ -z "$CONTAINER_NAME" ]; then
+            echo "FAIL: could not read CONTAINER_NAME back from .env.deploy."
+            exit 1
+          fi
           echo "=== post-deploy state (deferred-work.md reboot-ordering item — NOT proof against it) ==="
           docker inspect "$CONTAINER_NAME" --format 'running={{.State.Running}} restart_policy={{.HostConfig.RestartPolicy.Name}}'
           docker inspect "$CONTAINER_NAME" --format 'networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.NetworkID}} {{end}}'
+          # Code review (2026-08-23, Low): FRONTEND_NETWORK in scope but was named as the literal
+          # crm-dev-network below — wrong the moment a PRE-PROD/PROD caller (5.3/6.4) reads this.
           echo "This proves the CURRENT state only — restart: always + external: true is a silent"\
-               "restart loop on daemon start if crm-dev-network is absent or recreated with a new"\
-               "id at boot time. That risk stays open for Story 4.9 (deferred-work.md reboot item)."
+               "restart loop on daemon start if ${FRONTEND_NETWORK} is absent or recreated with a"\
+               "new id at boot time. That risk stays open for Story 4.9 (deferred-work.md reboot"\
+               "item)."
 
       - name: Restore the previous digest if this job failed after down (§7, Task 7.2/7.3)
-        if: failure()
+        # Code review DN3 (2026-08-23, Oleg's decision): narrowed from bare `if: failure()` — that
+        # fired on EVERY job failure, including ones before `down` ever ran (401/404 at digest
+        # resolve, a lock-acquire FAIL/STALE, the hand-provisioned-stand guard) — those already
+        # exited leniently via the empty-PREVIOUS_DIGEST/no-checkout-dir branches below, so nothing
+        # was ever mutated, but the step still RAN and recorded a SUCCESS `action_task_step`,
+        # reading as "a restore was attempted" when nothing was. Gated on
+        # `steps.compose_down.outcome == 'success'`: `down` must have genuinely torn down the
+        # previous instance for a restore to mean anything. This deliberately excludes `down`
+        # itself failing (state is ambiguous — a partial teardown is not a safe base to build a
+        # restore on) as well as everything before it (environment/precondition failures — a red
+        # run with no rollback attempt, by design). It fires for the actual deploy/health steps
+        # this task's own §7 was written for: `up -d`, confirm-network, poll-health, the anchored
+        # assert, the fallback HTTP check, AC6, the Kong guard, and post-deploy-record.
+        if: failure() && steps.compose_down.outcome == 'success'
         env:
           CHECKOUT_DIR: ${{ steps.checkout.outputs.checkout_dir }}
           PREVIOUS_DIGEST: ${{ steps.previous_digest.outputs.previous_digest }}
@@ -2016,8 +2282,29 @@ jobs:
                  "restore attempt could not run at all, and that is stated plainly, not retried."
             exit 0
           fi
+          # Code review H2 (2026-08-23): re-confirm this run's own lock holder is still running
+          # before mutating anything — the exact same re-check the `down` and `up -d` steps already
+          # apply (code review H4/L10) immediately before their own mutation. Without it, restore
+          # would call `up -d` even if the lock had been force-released (crash, OOM, or an operator
+          # following AC5's own advice against the wrong run) between `down` and here.
+          HOLDER="${COMPOSE_PROJECT_NAME}-deploy-lock-${GITHUB_RUN_ID}"
+          if ! docker inspect -f '{{.State.Running}}' "$HOLDER" 2>/dev/null | grep -q true; then
+            echo "Restore path FAILED: this run's own lock holder '${HOLDER}' is no longer"\
+                 "running — the lock this job believed it held is gone. Refusing to restore"\
+                 "without that guarantee (same re-confirmation the down/up-d steps already apply)."\
+                 "The stand is left exactly as the original failure left it; a human must"\
+                 "intervene."
+            exit 1
+          fi
+          # Code review (2026-08-23, Medium — named, not fixed this pass): this restores the IMAGE
+          # digest only. $CHECKOUT_DIR is the checkout of the REF/image_tag BEING deployed (this
+          # job's own "Obtain docker-compose.stand.yml" step), not the previous one — so a
+          # docker-compose.stand.yml-level regression in THIS deploy (healthcheck, ports, network
+          # wiring) is never rolled back, only the image is. Run 1141 found this the hard way
+          # (Task 6.5, attempt 2) — recorded here so the next reader does not have to rediscover it.
           echo "Restore path: re-rendering .env.deploy with the PREVIOUS digest (${PREVIOUS_DIGEST})"\
-               "and running 'docker compose up -d' against it."
+               "and running 'docker compose up -d' against it. NOTE: this restores the IMAGE only —"\
+               "docker-compose.stand.yml itself is NOT rolled back to any previous version."
           cat > "${CHECKOUT_DIR}/.env.deploy" <<EOF
           # RESTORE render by deploy-stand.yml, $(date -u +%FT%TZ). Restoring the previous digest
           # after this deploy's own failure post-down (Task 7).
@@ -2035,14 +2322,32 @@ jobs:
                  "failure above remains the one to diagnose first."
             # This step's OWN exit code is deliberately non-zero here — the job's overall status
             # was already fixed to FAILED by the earlier step (Forgejo/GHA semantics, Task 7.3),
-            # so this cannot mask or double-count anything; it only makes THIS step's own
-            # action_task_step.status distinguish "restore genuinely failed" from "nothing to
-            # restore" (exit 0, below) or "restore succeeded" (implicit exit 0, falls through) —
-            # a real reader querying the DB can now tell the three apart without parsing log text.
+            # so this cannot mask or double-count anything.
+            #
+            # Code review (2026-08-23, Medium — corrects an overclaim): this only distinguishes
+            # TWO states at the action_task_step.status level, not three — "restore genuinely
+            # failed" (exit 1, here and at the health-timeout branch below) is now separable from
+            # everything else (exit 0). "Nothing to restore" (exit 0, above) and "restore
+            # succeeded" (implicit exit 0, below) BOTH land as status=SUCCESS and are NOT
+            # distinguishable from `action_task_step.status` alone — only this step's own log text
+            # (the specific "Restore path: ..." / "No previous digest..." messages) tells those two
+            # apart. A DB reader who needs that distinction still has to read the log.
             exit 1
           fi
           echo "Restore path: 'up -d' with the previous digest succeeded. Re-polling health"\
                "(bounded ${HEALTH_TIMEOUT_SECONDS}s, the same bound the main health check used)."
+          # Code review (2026-08-23, Medium): validated independently here, not merely inherited
+          # from the main poll-health step's own check — if `up -d` itself is what failed (this
+          # step's OWN trigger, since `compose_down.outcome == 'success'` only guarantees `down`
+          # ran, not that poll-health ever did), the main step's validation never executed.
+          case "$HEALTH_TIMEOUT_SECONDS" in
+            ''|*[!0-9]*)
+              echo "Restore path FAILED: health_timeout_seconds='${HEALTH_TIMEOUT_SECONDS}' is"\
+                   "not a non-negative integer — cannot bound the re-poll. The stand is left as"\
+                   "'up -d' with the previous digest left it; a human must intervene."
+              exit 1
+              ;;
+          esac
           DEADLINE=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
           RESTORED=""
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
@@ -2060,8 +2365,15 @@ jobs:
             sleep 5
           done
           if [ -n "$RESTORED" ]; then
+            # Code review (2026-08-23, Medium — named, not fixed this pass): "confirmed healthy"
+            # here means Docker health status ONLY — this re-poll does not repeat the anchored-name
+            # assert, the compose-project-label check, the --network host loopback HTTP check, or
+            # the Kong guard the MAIN deploy path runs after its own health poll. A restore can
+            # print this success message while the published port serves nothing; the main path's
+            # own bar is higher than this one.
             echo "OK (restore path): stand restored to its previous digest (${PREVIOUS_DIGEST}) and"\
-                 "confirmed healthy again, with no human intervention. The job's own status stays"\
+                 "confirmed Docker-healthy again (NOT re-verified against the fuller checks the"\
+                 "main deploy path runs), with no human intervention. The job's own status stays"\
                  "FAILED — this deploy's own target digest never became healthy, which is the"\
                  "failure this job correctly reports; the restore is a side effect, not a fix."
           else
