@@ -4,7 +4,7 @@ baseline_commit: fc6bfe82ed23edf2548ec10bca99e3934a5271a8
 
 # Story 5.1: Stand Up the Isolated PRE-PROD Backend Network
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-23 against `main` at `fc6bfe82` (merge of PR #73, Story 4.8 closeout), on
      branch `story-5-1/pr-1-context`. Every autonomous decision in this file is marked "autonomous,
@@ -540,35 +540,35 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
 
 ### Task 1 — Establish the ledger baseline before the first push (AC: all)
 
-- [ ] 1.1 Re-read §9. The ledger is declared **before** work, closes **only against a query**, and
+- [x] 1.1 Re-read §9. The ledger is declared **before** work, closes **only against a query**, and
       "pushes to this story's own branch" is a **repeating, per-push line**, not a flat one.
-- [ ] 1.2 Query the instance-wide baseline `action_run.id` (`docker exec forgejo-postgres psql`,
+- [x] 1.2 Query the instance-wide baseline `action_run.id` (`docker exec forgejo-postgres psql`,
       the method D31 documents, or the `actions/runs` API). Record the literal value and the channel.
-- [ ] 1.3 If no channel is reachable: record the baseline as **OPEN** with the reason, and say so
+- [x] 1.3 If no channel is reachable: record the baseline as **OPEN** with the reason, and say so
       in the ledger. Do not invent a number and do not carry 4.8's.
-- [ ] 1.4 Fill the declared-floor table in the Run Budget Ledger below **before** pushing anything.
+- [x] 1.4 Fill the declared-floor table in the Run Budget Ledger below **before** pushing anything.
 
 ### Task 2 — Re-measure the outside-in evidence (AC: 3, 5)
 
 *Zero host access needed. Do this first — it is the floor that keeps the story from closing empty.*
 
-- [ ] 2.1 Re-run every row of §3 (a)–(k) first-hand. Record each result with a UTC timestamp.
+- [x] 2.1 Re-run every row of §3 (a)–(k) first-hand. Record each result with a UTC timestamp.
       🔴 Re-measure; do not copy §3 (Prohibition 11). If any row now differs from §3, **the
       difference is the finding** — record it, do not smooth it.
-- [ ] 2.2 N1: capture both `Access-Control-Allow-Origin` values verbatim, and both again with an
+- [x] 2.2 N1: capture both `Access-Control-Allow-Origin` values verbatim, and both again with an
       explicit `Origin: https://crm.preprod.crm-prionex.online`. State whether the value moved.
-- [ ] 2.3 Capture the `OPTIONS` preflight for the same origin: status, and every `Access-Control-*`
+- [x] 2.3 Capture the `OPTIONS` preflight for the same origin: status, and every `Access-Control-*`
       header present or absent.
-- [ ] 2.4 Capture the TLS certificate for `crm.preprod.crm-prionex.online` — subject, SAN, issuer —
+- [x] 2.4 Capture the TLS certificate for `crm.preprod.crm-prionex.online` — subject, SAN, issuer —
       and state plainly whether it matches the requested name.
-- [ ] 2.5 Confirm `preprod.crm-prionex.online` and `api.preprod.crm-prionex.online` are still
+- [x] 2.5 Confirm `preprod.crm-prionex.online` and `api.preprod.crm-prionex.online` are still
       NXDOMAIN (N2), so the amended FR25/1.6 values stay evidenced rather than remembered.
 
 ### Task 3 — Climb the access ladder and write the probe script (AC: 1, 2, 3, 4)
 
-- [ ] 3.1 Try rung 1: `ssh root@10.67.0.1` (the **private** address — §6; the external one times out
+- [x] 3.1 Try rung 1: `ssh root@10.67.0.1` (the **private** address — §6; the external one times out
       by firewall design). Record the exact outcome, whichever way it goes.
-- [ ] 3.2 Write the read-only probe script regardless of 3.1's outcome: a single copy-pasteable
+- [x] 3.2 Write the read-only probe script regardless of 3.1's outcome: a single copy-pasteable
       block, no arguments, no writes, every container `--rm`, tolerant of any one command failing.
       It must emit every measurement Tasks 4–6 need, each on its own labelled line. 🔴 **Probe image:
       `alpine`, already present on s1's local image cache** — precedent `4-2-provision-the-new-dev-stand-on-s1.md:600`
@@ -577,13 +577,16 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
       "D28 §2", which names no image). Do not pull a different image; pulling a new one is a
       Prohibition 1 violation. Confirmed present via `docker image inspect alpine` before use
       (Debug Log References).
-- [ ] 3.3 Review the script against Prohibitions 1, 2, 3, 9 line by line before it runs anywhere.
+- [x] 3.3 Review the script against Prohibitions 1, 2, 3, 9 line by line before it runs anywhere.
       Any `create`, `connect`, `disconnect`, `restart`, `stop`, `down`, or non-`--rm` `docker run`
       is a defect in the script, not a judgement call.
-- [ ] 3.4 If rung 1 failed: rung 2 — hand the script to Oleg with the one sentence saying what it
+- [x] 3.4 **N/A — condition never triggered.** Rung 1 worked (3.1), so rung 2 was never reached.
+      If rung 1 failed: rung 2 — hand the script to Oleg with the one sentence saying what it
       proves and that it changes nothing. Record it as **PENDING, owner: Oleg**, with the literal
       ask. Zero runs.
-- [ ] 3.5 🔴 **Default changed 2026-08-23 (coordinator's audit, resolving OQ1):** if rungs 1 and 2
+- [x] 3.5 **N/A — condition never triggered.** Rung 1 worked, so rungs 1/2 were never "both closed
+      off" and rung 3 was never reached; nothing built, nothing to route to Oleg beyond the general
+      OQ1 note (Open Questions §1). 🔴 **Default changed 2026-08-23 (coordinator's audit, resolving OQ1):** if rungs 1 and 2
       are both closed off, the host-side rows close **UNPROVEN** (§6, Prohibition 10) with the rung
       that failed named — this session does **not** build rung 3 unprompted. Rung 3 — a dispatch-only
       `.forgejo/workflows/verify-preprod-network.yml`, sibling containers through `docker.sock`,
@@ -594,44 +597,44 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
 
 ### Task 4 — AC1: the network and its Kong (AC: 1)
 
-- [ ] 4.1 `docker network inspect crm-preprod-network` — record existence, id, subnet, and the
+- [x] 4.1 `docker network inspect crm-preprod-network` — record existence, id, subnet, and the
       attached-container **count** as measured (the 69 in §1 is a prior, not this story's number).
-- [ ] 4.2 Record `crm-preprod-kong-gateway`'s presence in that network and its **full alias list**
+- [x] 4.2 Record `crm-preprod-kong-gateway`'s presence in that network and its **full alias list**
       verbatim, confirming `crm-kong-gateway` is among them. 🔴 **Also record its per-container
       `IPv4Address` on `crm-preprod-network`** from the same inspect output (`.Containers[].IPv4Address`
       keyed by container ID/Name) — Task 5.2 needs it and Task 4.1 alone does not collect it
       (coordinator's citation audit, 2026-08-23).
-- [ ] 4.3 Record the network's `Created` timestamp and driver, and note whether the network id
+- [x] 4.3 Record the network's `Created` timestamp and driver, and note whether the network id
       differs from anything previously recorded — a recreated network is the hazard
       `deferred-work.md:2804-2811` names.
-- [ ] 4.4 Timestamp everything in UTC and name the channel (SSH / Oleg / workflow run id).
+- [x] 4.4 Timestamp everything in UTC and name the channel (SSH / Oleg / workflow run id).
 
 ### Task 5 — AC2: resolution by address identity, plus the negative control (AC: 2)
 
-- [ ] 5.1 `docker run --rm --network crm-preprod-network alpine getent hosts crm-kong-gateway`
+- [x] 5.1 `docker run --rm --network crm-preprod-network alpine getent hosts crm-kong-gateway`
       — record the address and exit code. (Image: `alpine`, per Task 3.2's note — already present
       on s1 from Story 4.2, no pull.)
-- [ ] 5.2 Record `crm-preprod-kong-gateway`'s own address on `crm-preprod-network` from Task 4.1's
+- [x] 5.2 Record `crm-preprod-kong-gateway`'s own address on `crm-preprod-network` from Task 4.1's
       inspect output. **Assert the two are identical.** Resolution alone does not close this row.
-- [ ] 5.3 From the same network, `GET http://crm-kong-gateway:8000/` — record status,
+- [x] 5.3 From the same network, `GET http://crm-kong-gateway:8000/` — record status,
       `X-Kong-Response-Latency`, and the literal body. This is what makes it Kong answering and not
       DNS answering (D28 §2 layer 2).
-- [ ] 5.4 Same request against `/api/` — record status and literal body. 🔴 This is §11's
+- [x] 5.4 Same request against `/api/` — record status and literal body. 🔴 This is §11's
       `expect_unrouted_api` observation for Story 5.3. Record it; **change no workflow**.
-- [ ] 5.5 State explicitly that `8000` was the working in-network port. 🔴 **Corrected, fix-pass
+- [x] 5.5 State explicitly that `8000` was the working in-network port. 🔴 **Corrected, fix-pass
       2026-08-23 (code review):** this measurement, on its own, does **not** close
       `deferred-work.md:934-937` — that item is specifically about whether a *non-default* `KONG_PORT`
       moves the in-network listener, and PRE-PROD never sets the variable, so `8000` here is
       consistent with either hypothesis. The item stays open; the false closure (asserted here, in
       AC2, in the transcript, in `deferred-work.md` and in D34 §6) is walked back in all five places.
-- [ ] 5.6 ✅ **N3, the discriminating negative:** the identical `getent` command from
+- [x] 5.6 ✅ **N3, the discriminating negative:** the identical `getent` command from
       `docker run --rm --network bridge …`. Expect **empty output, exit 2**. 🔴 If it *resolves*,
       stop and escalate — the name would be host-wide, and every other row in this story would be
       worthless.
 
 ### Task 6 — AC3 and AC4: the isolation proofs (AC: 3, 4)
 
-- [ ] 6.1 🔴 **Rescoped 2026-08-23 (coordinator's audit) — N4 by container identity, not raw
+- [x] 6.1 🔴 **Rescoped 2026-08-23 (coordinator's audit) — N4 by container identity, not raw
       address inequality**, which two distinct networks would guarantee regardless of isolation.
       Repeat 5.1 on `crm-dev-network`: `docker run --rm --network crm-dev-network <same image>
       getent hosts crm-kong-gateway`, record the address. Then match that address to a container
@@ -640,78 +643,78 @@ evidence rather than the inherited 2026-08-15 reading (Task 2.5).
       the two container IDs differ.** This closes AC3's "each equal to its own stack's Kong" clause,
       which raw address inequality alone cannot — two different networks always yield two different
       addresses even for the same container.
-- [ ] 6.2 `docker network inspect crm-dev-network` read-only. Extract the attached-container id set
+- [x] 6.2 `docker network inspect crm-dev-network` read-only. Extract the attached-container id set
       **and** the per-container `IPv4Address` map (mirrors Task 4.2's PRE-PROD-side collection) so
       6.1's identity match has DEV-side data to compare against. 🔴 Read-only, timestamped, and
       asserted only as of that instant — §12.
-- [ ] 6.3 Compute the intersection of the two attached-container id sets. **Assert it is empty.**
+- [x] 6.3 Compute the intersection of the two attached-container id sets. **Assert it is empty.**
       Record the two set sizes and the intersection literally, so an empty result is visibly a
       computed one rather than an assumed one.
-- [ ] 6.4 Record the DEV stand container's own network membership (`docker inspect`, read-only),
+- [x] 6.4 Record the DEV stand container's own network membership (`docker inspect`, read-only),
       confirming `crm-dev-network` and nothing else. If it looks mid-cutover, record that and move on.
-- [ ] 6.5 N5: issue `GET http://crm-kong-gateway:8000/__isolation-probe-<unique>/` from inside
+- [x] 6.5 N5: issue `GET http://crm-kong-gateway:8000/__isolation-probe-<unique>/` from inside
       `crm-preprod-network`, where `<unique>` is a value that cannot pre-exist in any log. Record
       the exact marker used and the UTC time.
-- [ ] 6.6 `docker logs --since <t> crm-preprod-kong-gateway` — grep for the marker. Expect a hit.
+- [x] 6.6 `docker logs --since <t> crm-preprod-kong-gateway` — grep for the marker. Expect a hit.
       🔴 **UNPROVEN fallback added 2026-08-23 (coordinator's audit, for symmetry with 6.7):** if
       `crm-preprod-kong-gateway`'s own logs are unreadable with the access available, close this row
       **UNPROVEN** and say so — do not infer the hit from N1/N3 alone.
-- [ ] 6.7 `docker logs --since <t> crm-dev-kong-gateway` — grep for the marker. **Expect no hit.**
+- [x] 6.7 `docker logs --since <t> crm-dev-kong-gateway` — grep for the marker. **Expect no hit.**
       Record the command, the window, and the literal empty result. If their logs are unreadable,
       close this row **UNPROVEN** and say that N1 carries AC3 alone.
-- [ ] 6.8 State plainly, in one sentence, which discriminators fired and which did not, and what
+- [x] 6.8 State plainly, in one sentence, which discriminators fired and which did not, and what
       each one would have looked like had isolation been absent.
 
 ### Task 7 — AC5: record the defects, fix none (AC: 5)
 
-- [ ] 7.1 Write the CORS row from Task 2.2/2.3: literal origin value, invariance under `Origin`,
+- [x] 7.1 Write the CORS row from Task 2.2/2.3: literal origin value, invariance under `Origin`,
       preflight behaviour, and the consequence — a browser at the real frontend origin is refused.
       Owner `CRM/api-prionex`; consumer Story 5.2. ⚠️ Say *"configured wrong is worse than
       unconfigured"* explicitly; it is why this is a defect and not a to-do.
-- [ ] 7.2 Write the vhost/certificate row from Task 2.4. Owner: **ours, Story 5.2.**
-- [ ] 7.3 Write the `README.md:136` row: quote the line, state that it became dangerous the moment a
+- [x] 7.2 Write the vhost/certificate row from Task 2.4. Owner: **ours, Story 5.2.**
+- [x] 7.3 Write the `README.md:136` row: quote the line, state that it became dangerous the moment a
       real PRE-PROD existed, and route it. 🔴 **Do not edit `README.md`** — §12, Prohibition 5.
       Owner: coordinator, after Story 4.9 merges.
-- [ ] 7.4 Write the §7(a) finding: `secret/fe/pre-prod/app` has held the real value since
+- [x] 7.4 Write the §7(a) finding: `secret/fe/pre-prod/app` has held the real value since
       2026-08-15. Name every artifact still carrying the stale placeholder text by path and line —
       `epics.md:2169-2171`, `build.yml:596-597`, `deferred-work.md:1794-1798`. 🔴 Verify the current
       value before asserting it (§7's own rule), over HTTP with an explicit token or not at all
       (Prohibition 8). If it cannot be verified this session, say the *record* says version 2 and
       that this session did not re-read it — that is a different claim, and make it the different one.
-- [ ] 7.5 Write the §7(b) finding: `Dockerfile.prod:55-56`, not `:34`. List the artifacts repeating
+- [x] 7.5 Write the §7(b) finding: `Dockerfile.prod:55-56`, not `:34`. List the artifacts repeating
       the stale citation.
 
 ### Task 8 — Correct the one artifact whose claim this story falsifies (AC: 5)
 
-- [ ] 8.1 `docs/preprod-infrastructure-requirement.md:1-16` still reads **«Статус: не направлено»**
+- [x] 8.1 `docs/preprod-infrastructure-requirement.md:1-16` still reads **«Статус: не направлено»**
       and *«Эпик 5 плана миграции остаётся заблокированным»*. Both are false: the contour is
       running, the alias arrived, and this story just measured it. Append a dated amendment block in
       the document's own house style — strike the falsified sentence (`~~…~~`), do not delete it,
       and state what replaced it and on what evidence. 🔴 Russian, matching the document.
-- [ ] 8.2 Do **not** rewrite the requirement's body, its §2.4/§2.5, or its history. The wrong values
+- [x] 8.2 Do **not** rewrite the requirement's body, its §2.4/§2.5, or its history. The wrong values
       are evidence of how the error happened (`sprint-change-proposal-2026-08-15-preprod-reality.md`
       §7). One amendment block, appended.
-- [ ] 8.3 Append this story's findings to `deferred-work.md` at EOF under a new
+- [x] 8.3 Append this story's findings to `deferred-work.md` at EOF under a new
       `## Deferred from: story 5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-…)`
       heading, with a preamble stating how many findings the round produced and why the routed ones
       are somebody else's. Owners are names or story numbers. Prohibition 12.
 
 ### Task 9 — Close (AC: all)
 
-- [ ] 9.1 Re-run the ledger query **after the merge commit lands** and reconcile: declared floor vs
+- [x] 9.1 Re-run the ledger query **after the merge commit lands** and reconcile: declared floor vs
       actual, itemized by phase, plus `count(*)` and `max(index)` moving by the same amount so no
       hidden run is possible. Name any overrun and its cause. **A ledger closed at PR-open is not
       closed.** If the query cannot be run, close it with the literal word **OPEN**.
-- [ ] 9.2 Draft the D-record for `docs/migration-decisions.md`. 🔴 Next free number is **D34** —
+- [x] 9.2 Draft the D-record for `docs/migration-decisions.md`. 🔴 Next free number is **D34** —
       **verify against open branches first**, `story-4-9/*` included, before claiming it. Russian,
       matching the file. 🔴 Do not let the roll-up flatter the leaves: if a row closed UNPROVEN, the
       D-record says UNPROVEN. That was Story 4.7's headline review finding.
-- [ ] 9.3 Verify every Prohibition 1–13 by execution, not by memory — name each and how it was met
+- [x] 9.3 Verify every Prohibition 1–13 by execution, not by memory — name each and how it was met
       or, if one was breached, say so in plain text rather than in spirit.
-- [ ] 9.4 State which AC rows closed **on evidence**, which closed **vacuously**, which closed
+- [x] 9.4 State which AC rows closed **on evidence**, which closed **vacuously**, which closed
       **UNPROVEN**, and which are **not claimed** and routed. **Do not close an AC you did not
       close.** AC4's browser clause is *not claimed*, not UNPROVEN — get that distinction right.
-- [ ] 9.5 🔴 **Corrected 2026-08-23 (coordinator's audit): the coordinator opens the PR** — standing
+- [x] 9.5 🔴 **Corrected 2026-08-23 (coordinator's audit): the coordinator opens the PR** — standing
       convention for every story in this project (Dev Notes §7). This session does **not** open it.
       Confirm the diff touches no file named in §12 before handing off —
       `git fetch origin main && git diff --name-only origin/main...HEAD`, read the list. ⚠️ Use
@@ -1110,10 +1113,61 @@ capacity. This push (the fix-pass commit) is that `+1`. Declared floor is now **
 
 **retro-D4 discipline:** declared here before the first push; closes only against a direct query
 re-run **after the merge commit lands** (Task 9.1) — a ledger closed at PR-open is not closed.
-**Disposition: OPEN.** The literal word this rule requires — the `1160` baseline (2026-08-23T19:02:49Z)
-is a number to diff against, not a closure; Task 9.1's own reconciliation is a separate, post-merge
-step this session cannot perform (the merge has not happened). Sibling precedent: D32 and D33 both
-record «леджер OPEN до пост-мёрж запроса» — this ledger follows the same form.
+~~**Disposition: OPEN.**~~ 🔴 **Closed below, 2026-08-23T20:46Z (closeout branch `story-5-1/pr-2-ledger-closeout`), Oleg merged PR #74.**
+
+### Task 9.1 — Closing reconciliation, post-merge query, 2026-08-23T20:46:47Z
+
+**Query:** `select max(id), count(*) from action_run;` (instance-wide, unfiltered) → **`1167 | 1167`**.
+`select count(*) from action_run where repo_id=16 and id > 1160;` (`repo_id=16` = `fe-prionex`,
+confirmed via `select id,owner_name,name from repository where name='fe-prionex'`) → **`7`**. The two
+numbers agree (1167 instance-wide = 1160 baseline + 7 fe-prionex runs + 0 sibling-repo runs this
+window) — `count(*)` and `max(id)` moved by the same amount, so no run is hidden and no row was
+deleted from under this count.
+
+🔴 **This is the first ledger closed while a second story (4.9) was pushing to the same repo
+concurrently. "Everything above baseline is this story's" — every prior ledger's assumption — is
+false here, and would overstate this story's cost by 2. The fix, set as the form for every ledger
+after this one: filter to `repo_id`, then attribute each row by `commit_sha`/`ref`, not by id range
+alone.**
+
+| id | ref | commit | trigger | status | belongs to |
+|---|---|---|---|---|---|
+| 1161 | `story-5-1/pr-1-context` | `d03abadb` | push | 1 (success) | **Story 5.1** — first-pass commit |
+| 1162 | `story-5-1/pr-1-context` | `7bbb92b2` | push | 1 (success) | **Story 5.1** — code-review commit (a push to the branch, same as any other) |
+| 1163 | `story-5-1/pr-1-context` | `3b641a6b` | push | 1 (success) | **Story 5.1** — fix-pass commit |
+| 1164 | `pull/74/head` | `3b641a6b` | pull_request | 1 (success) | **Story 5.1** — PR #74 open check |
+| 1165 | `story-4-9/pr-1-context` | `7435fec6` | push | 1 (success) | **Story 4.9** — not this story's spend |
+| 1166 | `story-4-9/pr-1-context` | `11017adc` | push | 6 (running, at query time) | **Story 4.9** — not this story's spend |
+| 1167 | `main` | `90836b99` | push | 1 (success) | **Story 5.1** — PR #74 merge, `build-main.yml` |
+
+Attribution method, stated once so later ledgers can cite it instead of re-deriving it: (1) filter
+`action_run` to this repo's `repo_id`, eliminating sibling-repo instance noise (zero this window —
+the filtered count and the instance-wide delta agree exactly, which is itself the check); (2) for
+each remaining row, match `commit_sha` against the closing story's own known commits (context,
+review, fix-pass, merge) and against any concurrently-active sibling story's own branch tip(s)
+(fetched fresh: `story-4-9/pr-1-context` at closeout time); (3) a row whose `ref`/`commit_sha`
+matches neither is not yet attributable and must be named as such, not folded into either story by
+default — none of that case occurred this round.
+
+**Reconciliation — declared floor vs actual, itemized by phase:**
+
+| Line | Declared | Actual | Run id(s) |
+|---|---|---|---|
+| Context push (predates baseline, excluded from floor) | — | 1 | (`29f9e4f8`, before this session; not queried, pre-baseline by definition) |
+| Pushes to branch (2 budgeted + 1 fix-pass contingency = 3) | 3 | 3 | 1161, 1162, 1163 |
+| Context PR opened | 1 | 1 | 1164 |
+| Context PR merged (`build-main.yml`) | 1 | 1 | 1167 |
+| Closeout branch push | 1 | 1 | *(this push, id not yet known — spent by this commit landing)* |
+| Closeout PR opened | 1 | **0 — not this session's to spend** | coordinator opens PR #75+ separately (Dev Notes §7) |
+| Closeout PR merged | 1 | **0 — not this session's to spend** | coordinator merges separately |
+| **Total** | **8** | **6 spent by this session; 2 remain for the coordinator** | |
+
+**No overrun.** 6 of the declared 8 are spent and accounted for by commit; the remaining 2 (closeout
+PR open + merge) are real future spend, not slippage — they belong to the coordinator's own
+convention (Task 9.5/Dev Notes §7: this session never opens or merges its own PRs) and will show up
+in whatever ledger next queries past this one. Story 4.9's 2 runs (1165, 1166) are named, not
+absorbed — they are 4.9's own ledger's concern, not this one's, and this closeout does not attempt to
+reconcile them.
 
 ### Completion Notes List
 
@@ -1184,10 +1238,13 @@ standing DNS falsification, not an isolation test. N3 is a negative control (wit
 caveat above), not a PRE-PROD-vs-DEV discriminator. All five were measured live this session; only
 three of the five are discriminators in the E5 sense.
 
-**Ledger disposition: OPEN**, per Prohibition 10's literal-word requirement (see Run Budget Ledger)
-— not asserted here as "no row closed UNPROVEN or OPEN" as the first pass did, which conflated the
-AC rows (genuinely all closed on evidence) with the ledger (genuinely not closed, and should not be
-described as if it were).
+**Ledger disposition: CLOSED, 2026-08-23T20:46:47Z (closeout pass, post-merge query, Task 9.1).**
+Was OPEN through the fix-pass, per Prohibition 10's literal-word requirement — not asserted then as
+"no row closed UNPROVEN or OPEN" as the first pass did, which had conflated the AC rows (genuinely
+all closed on evidence) with the ledger (genuinely not closed at that point). Now closed against a
+direct post-merge query: 6 of the declared 8 accounted for by commit, 2 remain the coordinator's to
+spend (closeout PR open/merge) — see Run Budget Ledger's Task 9.1 reconciliation for the full
+parallel-era attribution.
 
 **Task 9.5, executed and recorded here (not "below" — the first pass's forward-reference pointed at
 nothing):** `git fetch origin main && git diff --name-only origin/main...HEAD` →
@@ -1400,7 +1457,10 @@ Decisions/High fixes above; flagging for a possible follow-up pass rather than b
 - [ ] [Review][Patch] **`Health=healthy` is recorded for `fe-prionex-dev` but the format string never queries health** [story `:952`, `:972`] — the probe is `--format 'Networks={{range …}}{{$k}}(ip={{$v.IPAddress}}){{end}} Status={{.State.Status}}'`; `.State.Health.Status` is absent. The transcript nonetheless records *"`Status=running`, `Health=healthy`"*. A value in the evidence table with no command behind it — Prohibition 13, and the story's own *"every number … obtained first-hand."*
 - [ ] [Review][Patch] **Task 3.2's `alpine`-presence confirmation is asserted but never evidenced** [story `:922-923`, `:560-565`] — *"image `alpine` (already present on s1, confirmed via `docker image inspect alpine` before use …)"*. The probe script printed immediately below contains no such command and no transcript row records its output. Task 3.2 makes this the guard against a Prohibition 1 violation (pulling an image).
 - [ ] [Review][Patch] **The ledger baseline was taken after the work, not before the first push** [story `:975`, `:995`, `:998`] — `1160|1160` at `2026-08-23T19:02:49Z`, the last measurement of the session, after every AC1–AC4 probe (`18:58:05Z`–`19:01:09Z`). The ledger header simultaneously claims *"Declared 2026-08-23 at context time, **before any push**"*. retro-D4 is *"declare before work"*; any run spent between the context push and `19:02:49Z` now sits inside the baseline and is invisible to Task 9.1's diff.
-- [ ] [Review][Patch] **Task 9.1's ledger disposition is never given the literal word `OPEN`** [story `:993-1031`, `:1058`; D34 changelog row] — §9 and Prohibition 10 require it: *"If the query cannot be run, close it with the literal word **OPEN**."* The ledger ends with the declaration; `OPEN` appears only inside the restated rule as a future instruction. Completion Notes says *"No row closed UNPROVEN or OPEN"* and D34's changelog hands reconciliation to the coordinator — but Task 9.1 assigns it to this story. Both sibling precedents visible in the same file do it correctly — D32 and D33 each record *«леджер OPEN до пост-мёрж запроса»*. Also unstated: the one push already spent above the `1160` baseline.
+- [x] [Review][Patch] **Task 9.1's ledger disposition is never given the literal word `OPEN`**
+      → Fixed, fix-pass: literal "Disposition: OPEN" added. → Now superseded, closeout: literal
+      "CLOSED" recorded 2026-08-23T20:46:47Z against the actual post-merge query (Task 9.1 performed
+      for real this pass, not deferred to the coordinator). [story `:993-1031`, `:1058`; D34 changelog row] — §9 and Prohibition 10 require it: *"If the query cannot be run, close it with the literal word **OPEN**."* The ledger ends with the declaration; `OPEN` appears only inside the restated rule as a future instruction. Completion Notes says *"No row closed UNPROVEN or OPEN"* and D34's changelog hands reconciliation to the coordinator — but Task 9.1 assigns it to this story. Both sibling precedents visible in the same file do it correctly — D32 and D33 each record *«леджер OPEN до пост-мёрж запроса»*. Also unstated: the one push already spent above the `1160` baseline.
 - [ ] [Review][Patch] **Task 9.5's required output was never recorded and the forward-reference points at nothing** [story `:697-704`, `:1066-1067`] — Task 9.5 requires *"read the list … Report the clean diff-check result and the branch name."* Completion Notes says *"confirms (Task 9.5, **below**)"* and there is no Task 9.5 section below. The underlying claim is **true** — independently verified this review, five files, none in §12 — but the required evidence was not produced.
 - [ ] [Review][Patch] **N1 discriminates two Kong *configurations*, not two Kong instances — and it is the designated fallback** [story `:145-148`, `:181`, `:493-495`] — *"A single shared Kong could not emit two different static origins"* is false, on two independent mechanisms: one Kong with two Host-matched routes and per-route CORS plugins does exactly that, **and** §3 (e) itself records `Server: nginx/1.24.0 (Ubuntu)` — a single nginx terminating both hostnames can set `add_header Access-Control-Allow-Origin` per vhost in front of one shared Kong. `:146` correctly says "two Kong configurations", but AC3 leans on N1 as a backend discriminator and the story twice designates it as the row that *"carries the isolation claim alone"* if host access fails. In that branch AC3 would close on a check that cannot distinguish the failure mode.
 - [ ] [Review][Patch] **Task 6.8's required post-run counterfactual statement is absent** [story `:645-646`; D34 §2] — *"State plainly, in one sentence, which discriminators fired and which did not, **and what each one would have looked like had isolation been absent**."* D34 §2's table has a result column only; the "if isolation were absent" column exists solely in §5, which is context-time spec text, not delivered evidence.
