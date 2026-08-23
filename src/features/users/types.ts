@@ -186,3 +186,27 @@ export interface IpWhitelistSettings {
 export interface UpdateIpWhitelistSettingsInput {
   enabled: boolean
 }
+
+export type FilterTemplateValue = string | number | boolean | null
+
+export interface FilterTemplate {
+  id: number
+  name: string
+  filters: Record<string, FilterTemplateValue>
+  created_at: string
+  updated_at?: string | null
+}
+
+export interface FilterTemplateListResponse {
+  templates: FilterTemplate[]
+}
+
+export interface SaveFilterTemplateInput {
+  name: string
+  filters: Record<string, FilterTemplateValue>
+}
+
+export interface UpdateFilterTemplateInput {
+  name?: string
+  filters?: Record<string, FilterTemplateValue>
+}

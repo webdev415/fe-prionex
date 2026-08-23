@@ -24,8 +24,19 @@ import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
-import type { ApiUser, UserSearchField, UserSortOrder } from '@/features/users/types'
+import { FilterTemplatesMenu } from './components/FilterTemplatesMenu'
+import type {
+  ApiUser,
+  FilterTemplate,
+  UserSearchField,
+  UserSortOrder,
+} from '@/features/users/types'
 import { ALL_PROJECTS, departmentsOf, positionsOf } from './lib/employeeOrg'
+import {
+  filterStateToTemplate,
+  templateToExtras,
+  templateToFilterState,
+} from './lib/filterTemplateMapping'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -364,6 +375,54 @@ export function UserManagementPage() {
       statusFilter,
       sortBy,
       sortOrder,
+    ]
+  )
+
+  const currentTemplateDocument = useMemo(
+    () =>
+      filterStateToTemplate(filterState, {
+        search: searchQuery,
+        searchField,
+        pageSize,
+      }),
+    [filterState, searchQuery, searchField, pageSize]
+  )
+
+  const handleApplyTemplate = useCallback(
+    (template: FilterTemplate) => {
+      const restored = templateToFilterState(template.filters)
+      const extras = templateToExtras(template.filters, {
+        search: '',
+        searchField: DEFAULT_SEARCH_FIELD,
+        pageSize: DEFAULT_PAGE_SIZE,
+      })
+
+      setRoleFilter(restored.roleId)
+      setProjectFilter(restored.projectId)
+      setDepartmentFilter(restored.departmentId)
+      setGroupFilter(restored.groupId)
+      setWorkFormatFilter(restored.workFormat)
+      setStatusFilter(restored.statusFilter)
+      setSortBy(restored.sortBy)
+      setSortOrder(restored.sortOrder)
+      setSearchQuery(extras.search)
+      setSearchField(extras.searchField)
+      setPageSize(extras.pageSize)
+      setCurrentPage(1)
+    },
+    [
+      setRoleFilter,
+      setProjectFilter,
+      setDepartmentFilter,
+      setGroupFilter,
+      setWorkFormatFilter,
+      setStatusFilter,
+      setSortBy,
+      setSortOrder,
+      setSearchQuery,
+      setSearchField,
+      setPageSize,
+      setCurrentPage,
     ]
   )
 
@@ -787,6 +846,13 @@ export function UserManagementPage() {
         </div>
 
         {/* Filter panel */}
+        <div className="mb-4 flex justify-end">
+          <FilterTemplatesMenu
+            currentFilters={currentTemplateDocument}
+            onApply={handleApplyTemplate}
+          />
+        </div>
+
         <UserFiltersBar
           filters={filterState}
           onFilterChange={handleFilterChange}

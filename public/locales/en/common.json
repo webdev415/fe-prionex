@@ -3782,6 +3782,16 @@
         "offline": "Offline",
         "busy": "Busy",
         "onCall": "On Call"
+      },
+      "filterTemplates": {
+        "label": "Templates",
+        "saveCurrent": "Save current filters",
+        "nameLabel": "Template name",
+        "saved": "Filter template saved",
+        "deleted": "Filter template deleted",
+        "empty": "No saved templates yet",
+        "confirmDeleteTitle": "Delete this template?",
+        "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed."
       }
     },
     "ipWhitelist": {
