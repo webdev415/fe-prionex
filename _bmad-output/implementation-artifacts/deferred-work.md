@@ -3630,3 +3630,18 @@ SSH channel (`root@10.67.0.1`), UTC-timestamped.
    renewals, including the neighbour's. **Owner: Oleg / host administrator** — a
    `renewal-hooks/deploy/` script is host-wide, not story-local, and needs a decision above any one
    story's scope.
+
+## Deferred from: code review of story-5.2 (2026-08-24)
+
+- ⚠️ **`epics.md:2169-2171` still states that `secret/fe/pre-prod/app` holds
+  `PLACEHOLDER-preprod-backend-not-provisioned`.** Story 5.2's §7 (a) names three artifacts carrying
+  the stale claim — `epics.md:2169-2171`, `build.yml:596-597` and `deferred-work.md:1803-1807`. Story
+  5.2 corrected only `build.yml`; `:1803-1807` is a finding against 5.2 itself (its own file, its own
+  Task 9.4), but `epics.md` is a **planning artifact outside 5.2's blast radius** and correcting it is
+  an epic amendment, not a story edit. Recorded here so the claim is not silently carried into Epic 5's
+  remaining stories, all of which build against that secret's output. ⚠️ Note the epistemic shape,
+  which 5.2's own §7 (a) states and which no story has yet discharged: **version 2 of the secret has
+  never been re-read.** The strongest evidence anyone holds is the extracted bundle of run 680's image
+  (2026-08-17), which proves the *artifact* carries the real PRE-PROD URLs — it does not prove the
+  secret's live content today. A correction to `epics.md` should say that, not replace one flat
+  assertion with another. **Owner: Oleg**, at whichever story next amends the epic.

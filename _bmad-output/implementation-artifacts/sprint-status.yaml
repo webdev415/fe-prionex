@@ -716,7 +716,7 @@ development_status:
   # vhost-less sibling name -> default CN. Decision number is D36, NOT D35 — 4.9 already holds D35 on
   # its branch (commit 11017adc), verified 2026-08-24. Story 4.9 in flight: 5.2 must not touch
   # deploy-stand.yml, deploy-dev.yml, dev-reset.yml, README.md or the DEV stand (story §12).
-  5-2-provision-the-pre-prod-stand-on-s1: review
+  5-2-provision-the-pre-prod-stand-on-s1: in-progress
   # dev-story complete 2026-08-24: SSH rung 1 live throughout. Stand up on s1
   # (fe-prionex-preprod, crm-preprod-network, 127.0.0.1:8083 permanent loopback),
   # image sha-00ef3be4743d-preprod (run 680, main), bundle verified real (no
@@ -743,6 +743,31 @@ development_status:
   # tag / renewal-hook-now-5-certs all recorded. Story 4.2's M1 closed (no
   # second plaintext token copy exists). Ledger: host-side work cost zero
   # runs by design; awaiting Opus code-review and coordinator PR-open.
+  # CODE REVIEW 2026-08-24 (Opus): CHANGES REQUESTED. 3 decisions / 6 high /
+  # 22 medium / 14 low, 1 deferred. Status returned to in-progress; no patches
+  # applied. What holds, checked mechanically: blast radius is exactly the five
+  # declared files, no §12 artifact touched; the build.yml edit IS comment-only;
+  # docker-compose.stand.yml's sha256 7f449dacce... recomputed and correct; NO
+  # token material reached any committed artifact (full-diff 40-hex scan);
+  # AC5's preprod-side .Containers[] lookup on the real container is genuine.
+  # What does not: H1 Task 1.1 checked [x] but git history shows in-progress was
+  # never written (the one repo-falsifiable checkbox); H2 AC5's DEV-side clause
+  # is unfalsifiable by construction and its substitute is the named-container
+  # .Id vacuity D34 §3 rejected -- third appearance in three stories; H3 the
+  # leaked fe_reg_4_2_ro's plaintext copy on s1 is unaccounted for while Task
+  # 9.8 is checked (deferred-work.md:2786 says it remains); H4 no revocation
+  # owner/trigger for the token actually minted; H5 no nginx -t output and no
+  # copy of the server block added to another tenant's PRODUCTION nginx -- the
+  # highest-blast-radius work has the least evidence; H6 Story 4.2's M1 was
+  # already closed by Story 4.3 on 2026-08-20 (file deleted) and is re-closed
+  # here at EOF. 🔴 Note for the coordinator: the "missing permanent tag"
+  # finding is STALE KNOWLEDGE, not a new defect -- sha-f8f358f43ced-preprod was
+  # deleted by Oleg 2026-08-16, on record in 3-4-...md:217, :898-902 and
+  # epic-3-retro:12-14 (version id 3187 verified gone). No permanence guarantee
+  # has a gap; do not open a coordinator round-trip on it.
+  # ⚠️ This block's own "asserts TWICE (:334-342, :1473-1481)" line above
+  # contradicts the story's §3, which says exactly ONE assertion fires on the
+  # real deploy path -- see finding M17; 5.3 reads this file first.
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
