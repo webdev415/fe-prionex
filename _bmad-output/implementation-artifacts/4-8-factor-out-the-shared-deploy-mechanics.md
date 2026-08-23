@@ -4,7 +4,17 @@ baseline_commit: 06224481d72a08bf38083f1b4997f6066e5f8785
 
 # Story 4.8: Factor Out the Shared Deploy Mechanics
 
-Status: review
+Status: done
+
+<!-- 🟢 CLOSEOUT 2026-08-23: PR #72 merged (`6ec3f139`, auto-merge 15:15 UTC). This closeout
+(`story-4-8/pr-2-ledger-closeout`, branched from post-merge `main`, matching Story 4.7's own
+precedent) closes Task 5.2 retroactively, closes the Run Budget Ledger through run 1152 plus a
+pending merge-run id (coordinator to supply separately), deletes the throwaway probe branch
+`test/4-8-unhealthy-probe` from origin, and flips Status to `done`. This session still had no
+SSH/psql access at closeout time (checked again) — the ledger and D31 §7 are closed with the
+coordinator's own supplied run ids/outcomes per their explicit instruction, not independently
+re-verified; the "relayed, not measured" flags stay in place, routed to `deferred-work.md`'s new
+closeout entry for whoever next has DB access. -->
 
 <!-- Code review 2026-08-23 (`d5e5fa65` vs `main` `06224481`): CHANGES REQUESTED. Reset from
 `review` to `in-progress` — 4 findings needed Oleg's decision and 27 were open action items, four of
@@ -1079,11 +1089,12 @@ tag are all inputs
       write-up: commit `82245f85`, run 1140; this closeout: below). Every dispatch in Task 6 was
       read from `story-4-8/pr-1-context`, confirmed by `action_run.ref` on every row — the pair
       (caller + callee) travelled together at the story branch's own tip throughout.
-- [ ] 5.2 Open the PR. Record run ids for the push and the PR-open rows as they occur, not at the end.
-      **Not this session's own action, per this project's standing division of labor** — Forgejo API
-      calls (dispatches, PR open/merge) are the coordinator's; git/SSH/DB reads are this session's.
-      Left open here so the checklist stays honest about who does what, not because it was
-      forgotten. Push is done (5.1); the coordinator opens the PR from here.
+- [x] 5.2 Open the PR. Record run ids for the push and the PR-open rows as they occur, not at the end.
+      ✅ **Done — PR #72 opened and merged by the coordinator** (merge commit `6ec3f139`, auto-merge
+      2026-08-23 15:15 UTC), matching this project's standing division of labor (Forgejo API calls
+      are the coordinator's; git/SSH/DB reads are this session's). This closeout (`pr-2-ledger-
+      closeout`, branched from post-merge `main`) is the follow-on, matching Story 4.7's own
+      precedent.
 
 ### Task 6 — Re-earn the outcome matrix on the refactored path (AC: 4; retro-E5)
 
@@ -2014,7 +2025,11 @@ is carried forward here as confirmation the template lesson was applied, not mer
 | Closeout PR | 3 |
 | **Declared floor** | **24** |
 
-**Closed:** _(by query, re-run after the merge commit lands; the literal word OPEN if the query cannot be run)_
+**Closed:** OPEN at the arithmetic level, closed at the process level — the merge commit (`6ec3f139`,
+PR #72) has landed, but this closeout session still cannot run the query itself (no SSH/psql access,
+checked at closeout time too). Closed with the coordinator's own supplied run ids per their explicit
+2026-08-23 closeout instruction rather than left indefinitely open; the literal query is deferred to
+the first session with DB access (`deferred-work.md`'s new closeout entry).
 
 ---
 *Running spend log, updated as each phase completes — direct `psql` query
@@ -2043,7 +2058,9 @@ id>1129 order by id;`), not memory:*
 | 🔴 NOT this story's own spend — the deploy triggered BY 1146's own sweep/reset cycle, not a Story 4.8 dispatch | 1147 | — | n/a, same reasoning as 1146 |
 | Story-branch push (commit `a003e25b`, code review fix-pass — DN1-DN4, H1-H3, 18 of 20 Medium/Low) | ~1148-1149 (🔴 exact id not independently confirmed) | 1 | Yes — "implementation pushes before PR open" |
 | **DN4 control dispatch** — one green run confirming the shipped commit (`a003e25b`) parses and deploys end to end, closing H4 | 1150 | 1 | **New line, introduced by the code review itself (2026-08-23) — not in the original §10 declared-floor table.** Coordinator-reported SUCCESS, ~70s |
-| **Above-baseline spend so far** | 1131-1150 | **~17** (13 + 2 story-branch pushes + 1 DN4 dispatch; 1146/1147 excluded as not this story's own spend) | 7 clean-Yes + 2 that consumed a budgeted line without earning its purpose (1135, 1136) + 4 marked No — unbudgeted (1139, 1141, 1142, 1143) + 2 more budgeted pushes (d5e5fa65, a003e25b) + 1 new DN4 line the review itself introduced. 🔴 **Honest gap: this session has no SSH/psql access to s1/Forgejo's DB (checked explicitly, twice) to confirm the exact run ids for the two post-review pushes or to independently verify 1146/1147/1150's own outcomes — all four are recorded as coordinator-reported, not independently re-queried. Whoever opens the PR and has DB access should re-run `select id, index, workflow_id, ref, event, status, created from action_run where repo_id=16 and id>1143 order by id;` and replace the approximate ids above with the confirmed ones.** |
+| CI for the final closeout push (commit `2a319f58`, DN4/D31 §7 write-up) | 1151, 1152 | 2 | Yes — "pushes while PR is open" (`ci.yml`'s own lint/build check runs, both coordinator-reported SUCCESS) |
+| PR #72 open + auto-merge (`6ec3f139`, 2026-08-23 15:15 UTC) | 🔴 merge-run id not yet supplied — coordinator to request separately | 1 (budgeted "PR open" + "Merge → `build-main.yml`") | Yes, once the id is supplied |
+| **Above-baseline spend at closeout** | 1131-1152 (+ merge-run, id pending) | **~19 confirmed + 1 pending** | 7 clean-Yes + 2 that consumed a budgeted line without earning its purpose (1135, 1136) + 4 marked No — unbudgeted (1139, 1141, 1142, 1143) + 2 story-branch pushes (`d5e5fa65`, `a003e25b`) + 1 DN4 dispatch + 2 CI runs of the closeout push + 1 merge run (pending). 🔴 **Closeout-time honest gap, unchanged from the code-review pass: this session still has no SSH/psql access to s1/Forgejo's DB (checked again at closeout — `ssh s1` fails to resolve, no local `psql`).** Every id above from 1144 onward is coordinator-reported, not independently re-queried by this session. Per the coordinator's own closeout instruction (2026-08-23): closed with the coordinator's own supplied data rather than left open indefinitely; the "relayed, not measured" flags on 1146/1147/1150 (D31 §7, Review Findings) **stay in place** — routed to `deferred-work.md`'s own new closeout entry for the first session with DB access to backfill. **Declared floor 24; ~19-20 confirmed above-baseline spend is comfortably inside it.** |
 
 No PR has been opened yet for this story. Every unbudgeted line above traces to ONE root cause,
 named once rather than six times: Task 1.4's own verification checked the registry image tag
@@ -2169,12 +2186,15 @@ non-blocking for this story's own purposes.
   9.3's own fully-commented caller skeleton for Story 5.3/6.4.
 
 **New (throwaway probe branch, `test/4-8-unhealthy-probe`, two commits, never merged, not part of
-this story's own diff against `main`):**
+this story's own diff against `main` — 🔴 deleted from `origin` at closeout, 2026-08-23, matching
+Story 4.3's own precedent for its throwaway probe: `git push origin --delete
+test/4-8-unhealthy-probe`, confirmed via `git ls-remote --heads origin` before and after — its own
+evidence is fully captured in this story's run records and does not depend on the branch surviving):**
 - v1 (`13b9202e`) — `docker-compose.stand.yml`'s own healthcheck pointed at a port nothing listens
   on. Dispatched as run 1141: earned AC5's own health-fails row validly, but the rollback restore
   could not (and structurally cannot) succeed against this construction — the compose file itself
   travels with the checked-out ref, so restoring even the correct image digest still runs under the
-  same broken healthcheck. Superseded by v2, not deleted (still on `origin`, harmless, never merged).
+  same broken healthcheck. Superseded by v2.
 - v2 (`cf7865fb`) — `docker-compose.stand.yml` reverted to byte-identical with `main`;
   `nginx.conf`'s own `listen` directive changed to `8080` instead. Dispatched as run 1143: earned
   AC5 AND Task 7.5's own discriminating row cleanly, in one dispatch, as originally designed.
