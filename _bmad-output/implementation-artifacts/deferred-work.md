@@ -3368,3 +3368,32 @@ else the review found is an action item inside the story file's own `### Review 
   silently, with no error to distinguish "the step did not run" from "the name changed". **Owner:
   whoever maintains this project's own zero-dispatch-verification conventions.** Worth one standing
   line: when matching `action_task_step.name`, match on a stable prefix, never the full string.
+
+---
+
+## Deferred from: story-4.8 closeout (2026-08-23)
+
+- ⚠️ **Live DB/host verification of three specific claims, backfilled with coordinator-reported data
+  because no session in this story's own closeout window had SSH/psql access to s1/Forgejo's DB**
+  (checked explicitly at both the code-review fix-pass and closeout — `ssh s1` fails to resolve, no
+  local `psql`). Three items, all currently resting on the coordinator's own relayed report, not an
+  independent query/log read:
+  1. **Run 1150 (DN4 control dispatch)**: reported SUCCESS (~70s) against the shipped commit
+     `a003e25b`. Needs: the full `action_task_step` sequence, and specific confirmation that the
+     restore step (DN3's own narrowed trigger, `if: failure() && steps.compose_down.outcome ==
+     'success'`) shows SKIPPED on this run, not merely absent from the log — the distinction this
+     project's own evidence discipline (Dev Notes §5/§11) requires.
+  2. **Runs 1146→1147 (Story 4.6's first fully autonomous Sunday weekly-reset firing)**: reported
+     SUCCESS for both. Needs the full protocol `docs/migration-decisions.md#d31` §7 names:
+     `trigger_event='schedule'`, `actor=-2`, timing against the `02:00:00+44s` pattern prior tick's
+     established; run 1146's own sweep/dispatch/read-back log; host-side confirmation that 1147 left
+     the stand on `main`'s own digest, healthy.
+  3. **Exact `action_run.id` values** for the two story-branch pushes after the code-review fix-pass
+     (`d5e5fa65` and `a003e25b`) — approximated as "~1144-1145" and "~1148-1149" in the story's own
+     Run Budget Ledger, never confirmed by query.
+
+  **Owner: the first session (this project's own dev-agent cycle, or Oleg directly) with restored
+  SSH/psql access to s1.** Query pattern already named in the story and in D31 §7 — this is a
+  read-and-paste task, not new investigation. Until then, `docs/migration-decisions.md#d31` §7 and
+  the story's own Review Findings/Run Budget Ledger carry explicit 🔴 "relayed, not independently
+  verified" flags — do not read their current wording as a completed measurement.

@@ -590,8 +590,15 @@ development_status:
   # Left open by design: the restore's weaker verification bar (named in code, not re-engineered),
   # crm-kong-gateway staying hardcoded (Oleg's own chosen alternative over adding an input), Task
   # 6.2's SQL text pasted but this session had no live DB connectivity to paste raw rows, and the
-  # TTL-600 literal still not structurally coupled to timeout-minutes. Status back to review.
-  4-8-factor-out-the-shared-deploy-mechanics: review
+  # TTL-600 literal still not structurally coupled to timeout-minutes.
+  # Closeout 2026-08-23: PR #72 merged (6ec3f139, auto-merge 15:15 UTC). Ledger closed through run
+  # 1152 (+ a pending merge-run id, coordinator to supply) with the coordinator's own reported data —
+  # this session still had no SSH/psql access at closeout (checked again). The "relayed, not
+  # independently measured" flags on runs 1146/1147/1150 (D31 §7, story's own Review Findings) stay
+  # in place, routed to deferred-work.md's own new closeout entry for the first session with DB
+  # access to backfill. Probe branch test/4-8-unhealthy-probe deleted from origin (Story 4.3
+  # precedent). Task 5.2 (open the PR) closed retroactively — #72, merged. Status done.
+  4-8-factor-out-the-shared-deploy-mechanics: done
   4-9-cut-dev-over-to-the-new-stand: backlog
   epic-4-retrospective: optional
 
