@@ -1,5 +1,61 @@
 # Deferred Work
 
+## How to read this file
+
+> 🔴 **Added 2026-08-24 by a BMAD reconciliation pass (`chore/bmad-actualization-2026-08-24`).**
+> This file had NO conventions block: every rule below was already being followed, but each was
+> stated only incidentally, mid-file, inside an individual entry — and the closure-placement rule's
+> authoritative statement lives in a *different* file. Nothing here is new. Each rule is transcribed
+> with the citation that already established it, so a first-time reader does not have to reconstruct
+> them from 3,900 lines. **No entry, owner or disposition was changed by this pass.**
+
+**Structure.** `## Deferred from: <story or code review> (<date>)` heading → an optional preamble
+that counts the findings and says where each was routed → entries as `- <emoji> **<claim>.**`
+bullets (Epic 5 sections use `1.`-numbered items instead) → evidence → `**Owner: X.**` as the last
+bold clause → closure and attachment notes indented under the entry.
+
+**Closures go UNDER THE ORIGINAL, struck, never deleted. New findings append at EOF.** Stated at
+`5-1-stand-up-the-isolated-pre-prod-backend-network.md:25-27`, which resolved the rule's own earlier
+self-contradiction; enforced in this file at `:3644-3648` and demonstrated at `:1812-1824`,
+`:2828-2831`, `:3506-3515`. A closure filed at EOF instead of under its original is a defect, and
+this file has moved one back for exactly that reason.
+
+**Owners are NAMES or STORY NUMBERS, never trigger conditions.** Enforced in this file at `:3526`,
+`:3678` and `:3882` (three separate rewrites of a "whoever next…" owner into a name). One explicit
+exception is on record — `:3802-3807`, Oleg's own decision to leave one owner as a trigger condition
+— so a trigger-condition owner is a defect signal, not proof of one.
+
+**Emoji, as actually used** (never defined until now, inferred from use, not a new scheme):
+🔴 correction or blocking finding · ⚠️ open caveat · ✅ closed · 🟡 partially closed
+(`:2949`, `:3075`, `:3213`, `:3226`) · 🔑 credential · 📅 dated obligation · ⛔ superseded entry.
+
+**Line-number citations in this file are not maintained.** The file says so itself at `:3534-3536`
+and then uses more than a hundred of them anyway. Verify any `file:line` against the current file
+before acting on it; a wrong one is a known failure mode here (one is corrected by this pass).
+
+### 🔴 Two things a reader should know before trusting a status in this file
+
+**(1) The "Prohibition N" numbers are per-story and were never normalised, so they collide.** The
+SAME rule appears under three different numbers: "owner must be a name" is Prohibition 12 at `:3527`,
+Prohibition 14 at `:3678` and Prohibition 19 at `:3882`; "closures go under the original" is
+Prohibition 12 per `5-1-…md:25-27` but Prohibition 14 at `:3645` and in `5-3-…md:891`. A reader of
+this file alone cannot resolve any of those numbers. **Renumbering them is a real decision and was
+NOT taken by this pass — owner: Oleg.** Until then, cite the rule by its text, not its number.
+
+**(2) Roughly a third of the OPEN entries have no owner, or an owner that is a trigger condition.**
+That is a standing property of this file, not a new regression, and assigning those owners is Oleg's
+call — this pass deliberately assigned none. Two that should not wait for a sweep:
+
+- 📅 **`## 📅 DUE 2026-08-29` (below) has NO owner and is five days out at the time of writing.** It
+  is the first moment the registry retention rule can be observed doing anything, it is the only
+  dated obligation in this file that has not already passed, and Story 5.4 added `preprod-current` /
+  `preprod-<sha>` to what it must check while leaving `**Owner unchanged**` — unchanged from nobody.
+- The `imagetools create` compare-and-swap race is tracked as OPEN-and-unowned in **two** places
+  (`:2309-2333` and the later restatement near EOF), each saying "owner still needed". Closing one
+  will not close the other.
+
+---
+
 ## Deferred from: code review of 1-3-verify-forgejo-actions-availability-and-concurrency-support (2026-08-08)
 
 - `_bmad-output/planning-artifacts/epics.md` carries six pre-existing stale `CD.yml` citations
@@ -895,7 +951,9 @@
 
 `CRM/api-prionex` commit `517e6975`: the `crm-kong-gateway` alias is in their `docker-compose.server.yml`, Kong is now an explicit exception to their 93-container rename, their plan gained a «render with non-empty `STACK`» step, and — beyond the ask — `ops/deploy/post-deploy-checks.sh:427-490` now fails their deploy job if the name does not resolve **from inside the stand's network**, asserting Kong's own `no Route matched` signature so the check proves both DNS and that the thing behind the name is the gateway. Their honest caveat, kept: they have no automated byte-identity gate on the compose render, so the empty-variable regression is a manual comparison.
 
-⚠️ **Still open, and not part of this ask:** DNS, TLS, the external `api.preprod` hostname and CORS (§2.4/§2.5 of `docs/preprod-infrastructure-requirement.md`), and the PRE-PROD stack itself, for which no date has been given.
+⚠️ ~~**Still open, and not part of this ask:** DNS, TLS, the external `api.preprod` hostname and CORS (§2.4/§2.5 of `docs/preprod-infrastructure-requirement.md`), and the PRE-PROD stack itself, for which no date has been given.~~
+
+🔴 **Corrected 2026-08-24 (BMAD reconciliation) — the struck line above went stale and was never revisited.** Of the four things it lists, three are DONE: the PRE-PROD stack is up (69 containers on `crm-preprod-network`), and DNS + TLS for the frontend name `crm.preprod.crm-prionex.online` were closed by **Story 5.2** on 2026-08-24 (vhost + Let's Encrypt cert issued; re-verified live 2026-08-24 — the host presents `CN=crm.preprod.crm-prionex.online`, no longer the default `CN=admin.techno-finance.online`). See this file's own vhost/cert closure under its original entry. **Only CORS is still open**, and it is owned by `CRM/api-prionex` — see the CORS entry, restated but NOT closed by Story 5.2. No owner or disposition changed here; only a stale status was corrected.
 
 Original entry follows.
 
@@ -2736,7 +2794,7 @@ retag:**
   s1 access must manually redeploy the stand against a current `main`-HEAD tag (`docker compose -f
   docker-compose.stand.yml --env-file .env pull && … up -d` from the stand directory, after updating
   `DOCKER_IMAGE` in `.env` to a live tag) before the old tag expires.
-**Owner: Story 4.3 (primary path) / Oleg or whoever holds s1 access (fallback trigger, 2026-08-30).**
+~~**Owner: Story 4.3 (primary path) / Oleg or whoever holds s1 access (fallback trigger, 2026-08-30).**~~ 🔴 **Struck 2026-08-24 (BMAD reconciliation): reads as a live owner and a live 2026-08-30 trigger on a skim, but this entry's own ✅ closure is three lines below — the primary path landed 2026-08-20 and the fallback was never armed. Owner: none, closed.**
 Retention rule itself is DB-only and out of scope for either path — see the standing note elsewhere
 in this file about `keep_pattern` never being editable from this repository.
 ✅ **CLOSED, Story 4.3, 2026-08-20 — primary path landed (run 929, well before the 2026-08-30
@@ -3228,8 +3286,8 @@ query. These two are the ones that are genuinely somebody else's, and each has a
   plan is `capacity: 1`, so the two remain permanently indistinguishable by observation on any of
   them; NFR10's own reliance on `flock` as the load-bearing half is the correct response, not a gap
   to close. **(ii) the scheduled actor** — re-routed to **the coordinator**, unchanged, with an
-  explicit recommendation attached during Story 4.8's own execution: **do not deliberately stage a
-  `dev-reset.yml` contention probe on 2026-08-23** — doing so would confound the reset's own first
+  explicit recommendation attached during Story 4.8's own execution: ~~**do not deliberately stage a
+  `dev-reset.yml` contention probe on 2026-08-23**~~ 🔴 **(advisory SPENT — the date has passed and the event it protected is measured: `action_run` id 1146, repo_id=16, `dev-reset.yml`, `trigger_event='schedule'`, SUCCESS, 2026-08-23 02:00:44 UTC. Struck 2026-08-24, BMAD reconciliation; axis (ii) below is unchanged and still open.)** — doing so would confound the reset's own first
   genuinely autonomous firing (the coordinator's own measured event) with an artificial contention
   test, compounding two unknowns instead of resolving one. **(iii) pending-depth beyond 2** — still
   genuinely open, owner unchanged (whoever next needs it, no story currently does, per the
@@ -3467,6 +3525,17 @@ else the review found is an action item inside the story file's own `### Review 
   the story's own Review Findings/Run Budget Ledger carry explicit 🔴 "relayed, not independently
   verified" flags — do not read their current wording as a completed measurement.
 
+  > 🟡 **PARTIALLY DISCHARGED — pointer added 2026-08-24 (BMAD reconciliation), text not moved.**
+  > Story 5.1 CAPTURED all three items verbatim while its SSH session was live, and recorded that
+  > capture as **finding 9 of its own section below** rather than here — which is why this entry
+  > still reads fully open. It is not: item 3 is complete; item 1 is captured AND surfaced a real
+  > discrepancy (**measured 49s against the coordinator-relayed "~70s"**); item 2 is captured with
+  > `trigger_user_id=-2` confirmed, with one named residual gap (1147's isolated effect on the
+  > stand is not separately traceable). What remains OPEN is only the *application* of that
+  > capture into `docs/migration-decisions.md#d31` §7, including the 49s-vs-70s discrepancy —
+  > **Owner: coordinator**, as finding 9 states. This pointer exists because a closure recorded
+  > away from its original is a closure nobody finds; the capture itself is not repeated here.
+
 ## Deferred from: story-5-1-stand-up-the-isolated-pre-prod-backend-network (2026-08-23)
 
 🔴 **Fix-pass 2026-08-23 (post code-review, commit `7bbb92b2`): this whole section is corrected in
@@ -3613,7 +3682,11 @@ UTC-timestamped at the point of measurement.
    other work touching either residue) is still the right cadence, or whether these two logs should
    simply be accepted as permanently unarchived on this instance. Not decided here — named for
    whoever picks this up next.
-9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
+9. Story 4.8's open backfill (`## Deferred from: story-4.8 closeout (2026-08-23)`, the entry
+   immediately above this one — 🔴 **citation corrected 2026-08-24, BMAD reconciliation: this read
+   `deferred-work.md:3374-3399`, which is the *story-4.8 implementation* section's throwaway-probe-branch
+   lesson, an unrelated entry. The prose "immediately above" was right; the number was not. Replaced
+   with the heading text, which does not shift.**) —
    raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
    (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
    unchanged/complete; item 1 (run 1150) now includes the actual query text and its 33-row step log,
@@ -3646,13 +3719,19 @@ an action item inside the story file's own `### Review Findings`, not deferred w
 
 ## Deferred from: story-5-2-provision-the-pre-prod-stand-on-s1 (2026-08-24)
 
-🔴 **Fix-pass 2026-08-24 (post code-review, commit `5a17770c`): counts and placement corrected —
-see the note at EOF of this section for what changed and why.** Original round: five new findings
-below (a sixth, the M1 re-confirmation, was miscategorised as a new closure and has been moved to sit
-under its actual original entry above, per Prohibition 14 — see that entry). Of the five: one closure
-(vhost/cert, above), one explicit restatement that is **not** a closure (CORS, above), three
-attached/escalated notes under their originals (two-sources-of-truth, reboot-ordering,
-endpoint-blocks-teardown, all above). All measurements first-hand, this session's own SSH channel
+🔴 **Fix-pass 2026-08-24 (post code-review, commit `5a17770c`): counts and placement corrected.**
+~~see the note at EOF of this section for what changed and why.~~ 🔴 **Dangling pointer struck
+2026-08-24 (BMAD reconciliation): there is no note at the EOF of this section — it ends at item 5
+and the next heading follows immediately. Nothing is missing; the pointer was simply never
+written.** Original round: five new findings below (a sixth, the M1 re-confirmation, was
+miscategorised as a new closure and has been moved to sit under its actual original entry above —
+see that entry). 🔴 **Also disambiguated by the same pass: the sentence that follows describes a
+DIFFERENT five from the five numbered items below it, and reading them as one set is what makes
+this paragraph look self-contradictory.** The five DISPOSITIONS this story produced elsewhere in
+the file are: one closure (vhost/cert, above), one explicit restatement that is **not** a closure
+(CORS, above), and three attached/escalated notes under their originals (two-sources-of-truth,
+reboot-ordering, endpoint-blocks-teardown, all above). The five NEW findings are the numbered
+items 1-5 below. Both counts are correct; they are counts of different things. All measurements first-hand, this session's own SSH channel
 (`root@10.67.0.1`), UTC-timestamped.
 
 1. 🔴 **`deploy-stand.yml:216`'s PRE-PROD caller skeleton names a `runner_label` that does not

@@ -41,6 +41,30 @@
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+#
+# READ FIRST — reconciled 2026-08-24 (`chore/bmad-actualization-2026-08-24`)
+# ========================================================================
+# One-line state: Epics 1, 2 and 3 CLOSED. Epic 4 is 7-of-9 done and its last two stories are held
+# by things outside this repository, not by unfinished engineering. Epic 5 is 4-of-6 done. Epics 6
+# and 7 have not started. The pipeline itself — CI gate, per-environment image build, on-demand DEV
+# deploy, per-stand serialization, rollback, the shared deploy callee, the weekly reset, PRE-PROD
+# deploy-by-tag and candidate recording — is BUILT AND RUNNING. What is left in Epics 4 and 5 is
+# waiting on other people and writing PROD down.
+#
+# THE ONE BLOCKER WORTH KNOWING IF YOU READ NOTHING ELSE: the Kong gateways on BOTH the DEV and the
+# PRE-PROD contours return a STATIC, WRONG `Access-Control-Allow-Origin` (localhost:8310 and
+# localhost:8320 respectively, for every Origin — re-measured live 2026-08-24). The app sends
+# credentials, so the CORS spec requires an exact match. Nothing in a browser can talk to either
+# backend until `CRM/api-prionex` fixes it. It is ONE ask against ONE team and it unblocks Story 4.9's
+# cutover AND every "validated" claim Epic 5 can make. It has been sent. It has no date.
+#
+# ⚠️ WHAT THIS FILE IS NOT AUTHORITATIVE FOR. `epics.md` has NOT been amended in place since
+# 2026-08-23 (Story 4.8): stories 4.2, 4.3, 4.7, 5.1, 5.2, 5.3 and 5.4 recorded their AC amendments
+# and FR deviations in their own story files and in `docs/migration-decisions.md` instead, and by
+# Epic 5 that had become an explicit policy. Eight FR/AC statements in `epics.md` are therefore false
+# as built — enumerated, with their authoritative sources, in that file's own new "Amendment drift"
+# section. Deciding whether to back-fill `epics.md` or to declare it frozen is OLEG'S, and was not
+# taken here. Until then: for what an AC actually requires today, read the story file, not the epic.
 
 generated: 2026-08-07
 last_updated: 2026-08-24
@@ -144,6 +168,19 @@ development_status:
   # Opened 2026-08-19 with story 4.1 — the retro's critical path (A1/B2/C3) closed first, as Oleg
   # required. 4.1 is the epic's foundation: 4.2, 4.3, 4.8 and Epics 5-6 all consume the compose file
   # it produces, so per retro action E5 it is code-reviewed BEFORE 4.2 is written.
+  # 📍 WHERE THE EPIC STANDS as of 2026-08-24 (BMAD reconciliation): 7 of 9 stories DONE and merged
+  # (4.1, 4.2, 4.3, 4.4, 4.6, 4.7, 4.8). The two that are not are BOTH held by things outside this
+  # repository, not by unfinished engineering:
+  #   • 4.5 (Slack) — PARKED by Oleg 2026-08-21. Context branch exists, unmerged. Held on an ORG
+  #     secret shared with CRM/api-prionex. Does NOT gate 4.9 (Oleg's DP6) and does not gate the epic.
+  #   • 4.9 (cutover) — IN PROGRESS on `story-4-9/pr-1-context`, substantially implemented, paused
+  #     before its own gates on TWO external parties: the DEV Kong's static CORS (CRM/api-prionex)
+  #     and the DEV frontend vhost+cert (aleksey). Both re-measured red 2026-08-24.
+  # The pipeline itself is DONE and running unattended: on-demand deploy, per-stand serialization,
+  # post-`down` rollback, the shared `workflow_call` deploy callee, and the weekly reset — whose FIRST
+  # AUTONOMOUS (scheduler-actor) firing is now MEASURED, not predicted: `action_run` id 1146,
+  # repo_id=16, `dev-reset.yml`, `trigger_event='schedule'`, SUCCESS, 2026-08-23 02:00:44 UTC. That
+  # closes the last check Story 4.6's closeout left open and assigned to the coordinator.
   epic-4: in-progress
   # Contexted 2026-08-19. 🔴 One BLOCKING open question: the legacy GitHub `CD.yml` copies
   # `docker-compose.server.yml` from the repo onto the legacy stand on every deploy (`:154-162`) and
@@ -307,6 +344,17 @@ development_status:
   #   • The standing rule is unchanged and every deploy story has honoured it: THE DEPLOY MUST WORK
   #     WITHOUT IT (`epics.md:1814-1818`). 4.3, 4.4 and now 4.6 each defer their Slack clause to this
   #     story rather than blocking on it, exactly as 5.3 and 6.4 already do.
+  # ✅ Re-verified 2026-08-24 (BMAD reconciliation, by `git fetch` across all remote refs): the park
+  # still holds and nothing has changed since 2026-08-21. `story-4-5/pr-1-context` is still present
+  # on origin at `badbb1ac`, still UNMERGED into `main`, still the only place the story file exists.
+  # No later story has built on it. The park's cause — the ORG-level `SLACK_CD_WEBHOOK_URL` that our
+  # own Story 1.13 overwrote with `example.invalid` — is STILL PENDING ON OLEG and is shared with
+  # `CRM/api-prionex`, so it is not this repository's to fix in passing.
+  # 🔴 What changed AROUND it, and what a reader of Epic 4 needs to know: Story 4.9's decision point
+  # DP6 was accepted by Oleg — the DEV CUTOVER PROCEEDS WITHOUT SLACK. So 4.5 does not gate 4.9 and
+  # does not gate closing Epic 4; it is the one Epic 4 story that will be left un-started when every
+  # other story in the epic is done. Whoever closes Epic 4 must decide explicitly whether 4.5 is
+  # un-parked, re-scoped or `cancelled` — that decision is Oleg's and is NOT taken here.
   4-5-notify-slack-on-deploy-start-success-and-failure: backlog
   # Contexted 2026-08-21 against `main` at 22dceedc, on branch `story-4-6/pr-1-context`.
   # 🔴 THE STORY'S OWN PREMISE WAS FALSIFIED WHILE CONTEXTING IT, and the correction is the finding:
@@ -599,7 +647,43 @@ development_status:
   # access to backfill. Probe branch test/4-8-unhealthy-probe deleted from origin (Story 4.3
   # precedent). Task 5.2 (open the PR) closed retroactively — #72, merged. Status done.
   4-8-factor-out-the-shared-deploy-mechanics: done
-  4-9-cut-dev-over-to-the-new-stand: backlog
+  # 🔴 This key read `backlog` on `main` until 2026-08-24 and that was the single most misleading
+  # value in this file: 4.9 has been contexted AND substantially implemented since 2026-08-23. The
+  # authoritative, full-length block lives on `story-4-9/pr-1-context` alongside the work; this is a
+  # reconciliation summary so that a reader of `main` alone is not told the epic's last story is
+  # un-started. When 4.9's own PR merges, ITS block supersedes this one — resolve any conflict here
+  # by taking the branch's version, not by merging the two.
+  # Contexted 2026-08-23 against `main` at `fc6bfe82`, branch `story-4-9/pr-1-context`, tip
+  # `11017adc` (verified unmerged 2026-08-24). Work already done ON THAT BRANCH: the two external
+  # asks written and SENT by Oleg (`docs/dev-cutover-requirement.md`); all six decision points
+  # DP1-DP6 accepted by Oleg as their own conservative defaults; `docs/dev-stand-dr-runbook.md`
+  # written; the KV rewrite of `secret/fe/dev/app` + the rebuild staged and documented but
+  # deliberately NOT executed; Story 4.8's entire inherited evidence backfill discharged against a
+  # live psql session; D35 written (D35 exists ONLY on that branch — `main`'s decision log runs
+  # D1-D34, D36-D38 with D35 deliberately absent; see docs/migration-decisions.md's header note).
+  # 🔴 BLOCKED ON TWO EXTERNAL PARTIES, both re-measured live 2026-08-24 from outside s1 and both
+  # still red. Neither is ours to fix and neither has a date:
+  #   • CRM/api-prionex — the DEV Kong answers a STATIC `Access-Control-Allow-Origin:
+  #     http://localhost:8310` for every Origin. The app sends `withCredentials: true`, so the CORS
+  #     spec requires an exact match and forbids `*`: no HTTPS DEV frontend name can call the s1
+  #     backend until they change it. 🔴 THE SAME DEFECT IS OPEN FOR PRE-PROD (`http://localhost:8320`,
+  #     re-measured the same day) — it is ONE ask against ONE team that unblocks BOTH contours, and
+  #     it is the reason browser-path validation is impossible on DEV and PRE-PROD alike.
+  #   • aleksey (hub admin) + Oleg — `crm.dev.crm-prionex.online` resolves to s1 (185.185.49.127)
+  #     but has NO vhost: s1 still presents another tenant's fall-through `CN=admin.techno-finance
+  #     .online`. Exactly the gap Story 5.2 closed for PRE-PROD, where the cert IS now issued and
+  #     valid — so this is a known-solved shape waiting on the same out-of-VCS nginx, not a risk.
+  # Ordering is load-bearing and is why the story is paused rather than pushing: the Kong CORS fix
+  # MUST land before the KV rewrite + rebuild, or the new stand serves a page that is CORS-blocked
+  # with an opaque error. The story is correctly paused BEFORE its own gates, not stalled inside them.
+  # Two items left genuinely OPEN with exact commands recorded, both blocked by the dev session's own
+  # permission classifier, neither silently skipped: deleting the five Story 4.7 validation branches
+  # from origin, and the DEV host `.env` refresh (`docs/dev-stand-dr-runbook.md` §3).
+  # ✅ Free rollback, and it is why none of the above is an emergency: DP1 cut onto the EXISTING
+  # `.crm.` DNS plane, so the legacy names `dev.crm-prionex.online` / `api.dev.crm-prionex.online`
+  # are untouched and still serving from `72.62.17.132` (re-confirmed 2026-08-24). NFR5(b) ends at
+  # one timestamped COMMUNICATION act, not a host act — nothing is torn down to cut over.
+  4-9-cut-dev-over-to-the-new-stand: in-progress
   epic-4-retrospective: optional
 
   # Epic 5: PRE-PROD Release Candidate Environment
@@ -642,6 +726,43 @@ development_status:
   # Story 4.9 is in flight in parallel: 5.1 must not touch deploy-stand.yml, deploy-dev.yml,
   # dev-reset.yml, the DEV stand, README.md or any story-4-9 artifact (story §12). README.md:136's
   # now-dangerous "Pre-production" mislabel is ROUTED to the coordinator, not fixed here.
+  # 📍 WHERE THE EPIC STANDS as of 2026-08-24 (BMAD reconciliation): 5.1, 5.2, 5.3 and 5.4 are ALL
+  # DONE and merged — 5.4 as PR #80 (`a1fda827`), its ledger closeout as PR #81 (`fe4a4133`), which
+  # merged while this reconciliation was being written and which owns 5.4's own `review` -> `done`
+  # transition. 5.5 and 5.6 remain genuine backlog, and 5.5 is next: it is the story that has to say
+  # what "validated" means, in a world where the browser path cannot be validated at all (below).
+  # 🔴 Epic 5 is therefore 4-of-6 and NOT blocked by anything inside itself.
+  # ✅ THE PRE-PROD STAND IS LIVE AND REAL, not a plan: `fe-prionex-preprod` on `crm-preprod-network`,
+  # bound `127.0.0.1:8083` (permanent loopback, not a temporary measure), with the nginx vhost and a
+  # Let's Encrypt certificate ISSUED for `crm.preprod.crm-prionex.online` — re-verified live
+  # 2026-08-24: the host now presents `CN=crm.preprod.crm-prionex.online`, no longer the default
+  # `CN=admin.techno-finance.online`. This is the first infrastructure Epic 5 CREATED rather than
+  # measured, and it is the shape Story 4.9 is still waiting for on the DEV side.
+  # ✅ A VALIDATED CANDIDATE IS ON RECORD: `preprod-current` -> `sha-28f7fd36b75e-preprod`
+  # (digest `sha256:d2f6aefc…`), with `preprod-00ef3be4743d` retained as history — the pointer moved
+  # and the history did not, proven on real tag names. `docs/preprod-candidates.md` is the readable
+  # record and is AUTHORITATIVE for why a candidate passed; the registry tags carry identity and
+  # permanence (Story 6.5 reads those, not the file); the job log is best-effort only.
+  # 🔴 THREE STANDING CONSTRAINTS THIS EPIC IS HANDING FORWARD, none of them fixable inside it:
+  #   • BROWSER-PATH VALIDATION IS IMPOSSIBLE ON BOTH ENVIRONMENTS. Re-measured live 2026-08-24: the
+  #     PRE-PROD Kong answers a static `Access-Control-Allow-Origin: http://localhost:8320` and the
+  #     DEV Kong a static `http://localhost:8310`, for every Origin. It is ONE defect class, ONE ask,
+  #     ONE owner (`CRM/api-prionex`) — and it blocks Story 4.9's cutover and every "validated"
+  #     claim Epic 5 can make, which is why 5.3 AC6 and 5.4 AC6 say so out loud instead of closing
+  #     silently. Whatever "validated" means for 5.5's checklist, today it cannot mean "a browser
+  #     loaded the app and it talked to the backend".
+  #   • 🔑 TWO REGISTRY TOKENS LEAKED INTO AGENT TRANSCRIPTS AND CANNOT BE REVOKED (`fe_reg_4_2_ro`,
+  #     `fe_reg_5_2_ro`; `fe_reg_5_2b_ro` is the live one). Both are `read:package` only, both host
+  #     files were deleted, neither value reached any committed artifact — but an admin cannot revoke
+  #     another account's token on this instance, so the exposure is permanent by construction and
+  #     scrubbing the transcripts is the ONLY remaining mitigation. That decision is STILL OPEN with
+  #     Oleg. Full account in deferred-work.md; the standing lesson is in this project's token model.
+  #   • THE INSTANCE DOES NOT RELIABLY ARCHIVE JOB LOGS. Story 5.3's tasks 9745/9769 have come back
+  #     `log_in_storage = f` on SIX consecutive checks across six sessions and two stories, with no
+  #     trend toward archival — at some point "delayed" has to be read as "will not happen", and
+  #     nobody has taken that call. `$GITHUB_STEP_SUMMARY` persistence here is UNPROVEN — the step
+  #     has not yet been exercised by a real dispatch. Consequence, and it is why
+  #     `docs/preprod-candidates.md` exists at all: a claim that survives only in a job log may not.
   epic-5: in-progress
   5-1-stand-up-the-isolated-pre-prod-backend-network: done
   # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — three
@@ -977,6 +1098,49 @@ development_status:
   # Epic 6: Production Release and Verified Rollback
   # PROD target moved 2026-08-18: s2 -> s10 (VM e1-rung3, 192.168.122.11, behind jump
   # 62.112.10.55). See sprint-change-proposal-2026-08-18-prod-target.md.
+  # 📦 WHAT EPIC 6 INHERITS, assembled 2026-08-24 (BMAD reconciliation) from what Epics 4 and 5
+  # actually shipped. Nothing here is new work or a new decision — it is the handover that is
+  # currently scattered across ten story files, gathered so the first Epic 6 story does not have to
+  # rediscover it. Ordering first: 6.10 (the s10 contour) MUST complete before 6.4, same precedent
+  # as 1.13 before 1.12.
+  # ✅ ARRIVES WORKING — do not rebuild it:
+  #   • `deploy-stand.yml`, the shared `workflow_call` deploy callee (Story 4.8). 6.4 writes a THIN
+  #     CALLER, exactly as `deploy-preprod.yml` did. The epic's own AC2 premise ("neither
+  #     workflow_call nor composite actions are supported") is FALSE and was measured so: composite
+  #     actions are dead on the deploy runner, `workflow_call` works and is live.
+  #   • `runs-on: ${{ inputs.runner_label }}` in a callee — R1, confirmed read-only AND live. This is
+  #     the one thing that made a shared callee possible across hosts, and 6.4 on s10 is the FIRST
+  #     case where the label genuinely differs from DEV/PRE-PROD's.
+  #   • Per-stand `concurrency:` group + sibling-container `flock` (D30). The callee declares NO
+  #     group; each caller carries its own literal. Get this wrong and the guard vanishes silently.
+  #   • The tag<->environment guard: a tag must end in `-${IMAGE_ENV}` or the deploy fails before it
+  #     acts. Added by Story 5.3 and now shared — it is what stops a `-dev` tag deploying to PROD.
+  #   • `image_tag` mode, proven live for the first time by 5.3. 6.4 is its second consumer.
+  # 🔴 ARRIVES BROKEN OR UNPROVEN — budget for these, they are known and dated:
+  #   • `deploy-stand.yml:216`'s caller skeleton names `runner_label: deploy-preprod-preprod`, which
+  #     EXISTS NOWHERE. An unmatched label queues SILENTLY on this instance. Fixing that comment is
+  #     explicitly routed to Story 6.4 — 5.3 declined it to keep the file read-only.
+  #   • 6.5 must implement the EXACT INVERSE of 5.4's `preprod-<sha>` derivation, and must read that
+  #     tag as "a human recorded a pass verdict while the stand provably served this artifact" — NOT
+  #     as "this commit was deployed". Those are different claims; D38 exists to close that gap.
+  #   • `preprod-current` MOVES BACKWARDS SILENTLY. Nothing in the registry orders the candidates —
+  #     the registry gives the SET, git gives the ORDER. 6.5 cannot infer recency from the pointer.
+  #   • The markers `preprod-current`/`preprod-<sha>` are NOT deployable through `deploy-preprod.yml`.
+  #   • Three guard rows are structurally unearnable live and are routed here already; and the
+  #     registry retention rule has NEVER been observed deleting anything — the first moment it can
+  #     be observed is 2026-08-29, and that dated item in deferred-work.md still has NO OWNER.
+  #   • `secrets: inherit` for a cross-repo/cross-host caller is a STRUCTURAL PRE-6.4 DECISION that
+  #     Story 4.8 deliberately did not take.
+  #   • 🔑 `OPENBAO_PROD_SECRET_ID` expires 2027-06-09 and nothing rotates or monitors it. Story 7.6
+  #     owns it. Nobody notices until production stops building.
+  # ⚠️ ASSUME NOTHING ABOUT THE PROD BACKEND UNTIL IT IS MEASURED. Two facts from Epics 4-5 that
+  # nobody has yet checked against PROD, and both were surprises where they were found:
+  #   • THE BROWSER NEVER TRAVERSES THE CONTAINER'S OWN /api/ PROXY — `src/lib/api.ts` bakes an
+  #     ABSOLUTE `VITE_API_BASE_URL` into the bundle and every call goes there directly. Every
+  #     in-container `crm-kong-gateway` proof from 4.1/4.2/4.3/4.8 proves the CONTAINER can reach
+  #     Kong, NOT that the APPLICATION does. 6.7's smoke check must not repeat that mistake.
+  #   • The static-CORS defect was found on PRE-PROD, then found again on DEV when someone finally
+  #     looked. PROD's Kong has never been probed. Probe it before 6.4, not after.
   epic-6: backlog
   6-1-disable-the-github-cd-deploy-job: cancelled
   6-2-publish-the-production-approval-regulation: backlog

@@ -64,6 +64,52 @@ environment. Artifact promotion PRE-PROD → PROD is **not** achieved in this mi
 is recorded as explicit technical debt. Every requirement below that would have depended
 on a single promotable artifact is adjusted accordingly and marked `[C]`.
 
+## 🔴 Amendment drift — read this before trusting an FR or an AC below
+
+> **Added 2026-08-24 by a BMAD reconciliation pass (`chore/bmad-actualization-2026-08-24`).**
+> **No requirement and no acceptance criterion was changed by that pass.** This section only records
+> a gap that was found while reconciling the tracking artifacts, because a reader who opens this file
+> alone is currently being told several things that the shipped pipeline contradicts.
+
+**The fact.** The last commit that modified this file is `a003e25b` (2026-08-23, Story 4.8's code
+review fix-pass). Stories **4.2, 4.3, 4.7, 5.1, 5.2, 5.3 and 5.4 never edited this file at all.**
+Each of them amended, narrowed, substituted or added acceptance criteria — and each recorded those
+amendments **in its own story file and in `docs/migration-decisions.md`** instead. By Epic 5 this had
+become an explicit, stated policy rather than an oversight: `5-3-…md:1185` and `5-4-…md:1366` both
+list `epics.md` under *"Explicitly not touched … a planning artifact — an epic amendment is not a
+story edit."*
+
+**Why it matters.** Stories 1.x through 4.1 and 4.4/4.6/4.8 *did* amend this file in place, and did
+it well — the `🔴 AMENDED` / `~~struck~~` markers throughout are theirs. So this file looks
+maintained, and a reader has no way to tell which regions stopped being maintained on 2026-08-23.
+
+**What is materially FALSE as built.** Each of the following still asserts the pre-amendment reading.
+The authoritative text is named for each; none of it is transcribed here, because transcribing it
+would change what the criterion asserts, and that is Oleg's call, not a reconciliation pass's.
+
+| Where | What it still says | What actually shipped | Authority |
+|---|---|---|---|
+| **FR14** and **Story 5.4 AC1** | the retag happens automatically *"after a successful PRE-PROD deploy"* | `record-preprod-candidate.yml` is `workflow_dispatch`-only with a required `validated: pass\|fail` verdict — a **deliberate deviation from FR14's letter**, taken so that `preprod-<sha>` means "validated", which is what Story 6.5's promotion guard actually reads it as | D38; Story 5.4 |
+| **FR19** and **Story 4.3 AC3** | deploy order `down → pull → up -d → health` | shipped order is `resolve → pull → down → up -d → health`. Load-bearing: "fails before touching the container" is the guarantee 4.4, 5.3 and 6.4 all lean on | D29; Story 4.3 |
+| **FR25** | `docker-compose.server.yml` is parameterized | that file was deliberately left **untouched**; the artifact is the NEW `docker-compose.stand.yml` + `.env.stand.example`. Story 4.1's four Givens still cite line numbers inside a file the story never edited | D27; Story 4.1 |
+| **Story 4.7 AC2 / AC3** | verdict measured on the deploy job; a week-long inspection of the legacy DEV stand | AC2 rebound to run wall-clock against 600s; AC3 substituted — the legacy stand is on `72.62.17.132` and is unreachable, so the AC as written is **unexecutable** | Story 4.7 |
+| **Story 5.1 AC3** | *"the DEV stand remains attached to `crm-network`"* | `crm-dev-network`. `crm-network` is the **legacy** stand's network, on another host — and this file says so itself elsewhere | Story 5.1 |
+| **Story 5.2 AC2** | *"three stands now share s1"* | two, per **this file's own FR25 amendment of 2026-08-19**. Internally contradictory | Story 5.2 |
+| **Story 4.2 AC5** | legacy and new container both healthy on s1 | unsatisfiable on s1 for the same reason as 4.7 AC3 | Story 4.2 |
+| Epic 5 preamble | `secret/fe/pre-prod/app` holds `PLACEHOLDER-preprod-backend-not-provisioned` | falsified by Story 5.1 — Oleg wrote the real values on 2026-08-15, confirmed twice by bundle extraction | Story 5.1 |
+
+**Purely mechanical gaps** (the decision exists and is recorded; only the transcription is missing):
+Story 3.3's `environment` becoming a REQUIRED input; Story 4.1's AC3 choice (image default **removed**,
+not repointed); Story 4.2's AC2 permissions clause deferred to 4.3; Story 4.3's AC7/AC8; Story 4.7's
+AC4 narrowing and AC5; Story 5.1's AC4/AC5; Story 5.2's AC1 detail, AC4 reopening, AC5 and AC6;
+Story 5.3's AC6/AC7; Story 5.4's AC6/AC7/AC8. Also: `D25`, `D26`, `D27`, `D32`, `D34`, `D36`, `D37`
+and `D38` are referenced by no line in this file, although `D20`-`D24` and `D28`-`D31`, `D33` are.
+
+**The decision this needs.** Either amend this file to match what shipped, or state explicitly that
+`docs/migration-decisions.md` plus the story files are the authoritative record of AC drift and that
+this file freezes as the original plan. Both are defensible; the current middle state — a file that
+*looks* amended up to date and is not — is the one that misleads. **Owner: Oleg.**
+
 ## Requirements Inventory
 
 ### Functional Requirements
