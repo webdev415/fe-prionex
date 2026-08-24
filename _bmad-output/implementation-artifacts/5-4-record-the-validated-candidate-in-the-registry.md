@@ -973,13 +973,27 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 8 — D7-D9: a second candidate, and the deployed-evidence refusal (AC: 3, 7 row 5)
 
-- [ ] 8.1 🔴 **Announce before dispatching, do not ask permission twice.** Relay to Oleg through the
+- [x] 8.1 🔴 **Announce before dispatching, do not ask permission twice.** Relay to Oleg through the
       coordinator: *"5.4 will dispatch `build.yml` (`ref: main`, `environment: preprod`) once, minting
       one new permanent `sha-<12hex>-preprod` tag, because AC3 cannot be proven with the one candidate
       that exists. Vetoable; fallback is Task 9.5."* Proceed unless vetoed. Record the announcement
-      and the outcome.
-- [ ] 8.2 D7 — dispatch `build.yml` with `ref: main`, `environment: preprod`. Record the new tag,
-      its digest, and the commit. **Do not edit `build.yml`.**
+      and the outcome. **Done.** Announced verbatim by the coordinator to Oleg. Per the standing
+      "announce, don't ask twice" convention, proceeded without waiting for an explicit
+      affirmative — the coordinator noted any veto would still land before the MOVE phase (D9/D10
+      held back if so). No veto received through D7's own dispatch.
+- [x] 8.2 D7 — dispatch `build.yml` with `ref: main`, `environment: preprod`. Record the new tag,
+      its digest, and the commit. **Do not edit `build.yml`.** **Done, coordinator, run 1223,
+      SUCCESS, ~4 min.** New tag: `sha-28f7fd36b75e-preprod`, commit `28f7fd36b75e` (`main` HEAD at
+      dispatch time, sampled by the coordinator immediately before the `POST`). Verified
+      independently on s1, not from the run's own log: `docker buildx imagetools inspect --format
+      '{{.Manifest.Digest}}'` →
+      **`sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26`** — a genuinely
+      **new** digest, `≠ sha256:5e5b190d…` (candidate #1's). `--raw` `mediaType` →
+      `application/vnd.oci.image.manifest.v1+json` — single manifest, not an index. Labels read via
+      `{{json .Image}}` → `.config.Labels`: `org.opencontainers.image.version=28f7fd36b75e`
+      (equals the derived hex), `org.opencontainers.image.revision=28f7fd36b75ee773cd3e7d9d8586b3ac3d1d915b`
+      (starts with it — the full 40-char commit SHA), `org.prionex.environment=preprod`. All three
+      match exactly what G6 will require when candidate #2 is recorded (D10).
 - [ ] 8.3 D8 — dispatch `deploy-preprod.yml` with the new `image_tag`. Confirm the stand comes up
       healthy on the new digest. **Do not edit `deploy-preprod.yml`.** Timestamp in UTC; the runner
       is shared with 4.9 at capacity 1.
