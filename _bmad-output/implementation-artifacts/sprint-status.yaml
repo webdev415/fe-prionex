@@ -841,7 +841,7 @@ development_status:
   # green tick is one green tick). The green row is staged on a deliberately-wrong pre-image so
   # the digest change is a discriminator that could have failed. No new -preprod tag is minted.
   # Ledger declared before work: floor 13, ceiling 16, disposition OPEN. Status: ready-for-dev.
-  5-3-deploy-a-specific-image-tag-to-pre-prod: in-progress
+  5-3-deploy-a-specific-image-tag-to-pre-prod: review
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
