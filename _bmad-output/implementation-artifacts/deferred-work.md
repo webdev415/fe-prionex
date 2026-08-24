@@ -1566,6 +1566,15 @@ constraint 3.1 created and nobody wrote down.
   3.2 and 3.4 will add, reaches the whole namespace. A `_RO` variant exists; no narrower RW does.
   **Owner: whoever can ask the platform team for a repository-scoped `write:package` credential —
   worth asking before Epic 6 puts production deploys on the same token.**
+  🔴 **Story 5.4's own dev-story, 2026-08-24: this token now has a THIRD holder.**
+  `record-preprod-candidate.yml`'s `record` job authenticates with the same
+  `secrets.REGISTRY_TOKEN_RW` (`build.yml` and `build-buildkit-cni-image.yml` are the other two).
+  Every write target in the new file is asserted to begin with the literal
+  `git.crm-prionex.com/crm/fe-prionex:` before any write (Prohibition 3), and both marker names are
+  derived from a fixed rule rather than taken from a dispatch input (Prohibition 4) — but neither
+  narrows the token's own org-wide scope, only this file's own use of it. **Owner unchanged: Oleg /
+  the platform team** — this story is the moment the ask becomes concrete (Epic 6 is next), not a
+  reason to act unilaterally here.
 - ⚠️ **Four robustness gaps in `build.yml`, all cheap, none urgent alone.** (1) No `timeout-minutes`
   on the job — the only ceiling is the runner's 2h, on a host with capacity 2 shared with another
   tenant's production. (2) No `docker image prune` and no free-space precheck: one build grew
@@ -1989,6 +1998,18 @@ runs `LEVEL = info`. An earlier version of this note said "nothing unless it del
 implies a deletion would show up. Judge it by rows in `package_version`. The same shape as Story
 1.11's standing rule that an empty result is not evidence of safety.
 
+🔴 **Story 5.4's own dev-story, 2026-08-24: this story's two new marker shapes are now also inside
+what the 08-29 observation checks — restated, not re-owned.** `preprod-current` and
+`preprod-00ef3be4743d`/`preprod-28f7fd36b75e` all match the stored `keep_pattern`, confirmed by
+compiling the STORED string (not `build.yml`'s copy) against both full names — `AC4 verified by
+compilation, not by execution`, the same disposition every prior story recorded. If the 08-29
+observation later finds the retention rule does NOT do what its fields say, that finding now also
+implicates these two new tag shapes, not only the ones named when this item was first raised. The
+escalation clause is unchanged: *"Epic 5 and Epic 6 both rely on `keep_pattern` protecting
+`prod-current`/`preprod-current` and on everything else expiring. Escalate rather than record."*
+**Owner unchanged** — this story does not own the 08-29 observation, only adds to what it will be
+checking.
+
 
 ---
 
@@ -2299,6 +2320,17 @@ short-lived token per story) is unchanged and still not urgent.
   the race predates the guard; what is new is that D24 now claims the repoint is refused «по конструкции»,
   which is stronger than the code. The wording is filed as a patch against Story 3.6, the race is not.
   **Owner needed.**
+  🔴 **Story 5.4's own dev-story, 2026-08-24: this recorder is a SECOND site with the same window,
+  named rather than closed.** `record-preprod-candidate.yml`'s two writes (`preprod-<sha>`,
+  `preprod-current`) share the same `imagetools create`, no compare-and-swap. This file narrows the
+  window rather than closing it: it shares `deploy-preprod.yml`'s own literal concurrency group
+  (`deploy-preprod-fe-prionex-preprod`), serializing recorder runs against each other and against
+  PRE-PROD deploys — proven live twice (run 1217's own transient `blocked`→`waiting`, and run
+  1229's ~60s `waiting`, both observed directly by the coordinator) — and every write is read back
+  and fails the run if the tag does not carry this run's own digest, which is the mitigation this
+  entry itself names. **Owner still needed** — the underlying gap (no compare-and-swap on
+  `imagetools create`) is unchanged; this story adds a second, narrowed-but-not-closed instance of
+  it, not a fix.
 - **AC2's guarantee lapses silently on `dev` at 14 days.** `sha-<12>-dev` matches no `keep_pattern`
   alternative and the retention rule reaps it. Rebuild a commit older than the window and `predigest`
   legitimately reports "absent", so the guard attaches a *different* digest under a name that previously
@@ -3567,6 +3599,13 @@ UTC-timestamped at the point of measurement.
    until then it stays open, upgraded from "curl-probe-only" to "confirmed passing on the real guard
    path, literal code still unread" — not silently marked done on the strength of the step status
    alone.
+   🔴 **Story 5.4's own dev-story, 2026-08-24, Task 2.8 (the standing obligation handed forward by
+   5.3): re-checked, first action of the session, before any other work.** `select id, log_in_storage
+   from action_task where id in (9745, 9769)` → **still `f` for both — the FIFTH check across five
+   sessions, all negative.** Still stays open with the same plan: whoever next has SSH/psql access
+   should re-check `log_in_storage` before other work touching either story's residue, and paste the
+   literal text here the moment it flips. Named honestly rather than silently re-polled without
+   record.
 9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
    raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
    (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
@@ -3806,3 +3845,51 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   story that generalizes `dev-reset.yml`'s own sweep/reaper to cover multiple stands instead of
   hardcoding DEV's own naming pattern.** Epic 6/PROD repeats this exact shape for a third stand
   regardless, so whichever story fixes it first should fix it generally, not per-environment again.
+  🔴 **Story 5.4's own dev-story, 2026-08-24: named as a candidate owner above — this story
+  DECLINES and says why.** It edits no `dev-reset.yml`, touches no stand directory, and does
+  nothing that would generalize the sweep/reaper — `record-preprod-candidate.yml`'s only host
+  contact is `docker inspect` (read-only, no `docker run`, no lock, no compose). **Owner remains
+  the story that generalizes `dev-reset.yml`, re-stated as a name/story-number candidate, not a
+  trigger condition: Story 6.4/6.10 (PROD's own equivalent of this exact gap) is the next point
+  this repeats, and is the more natural place to fix it generally rather than per-environment a
+  third time.** The one thing this story DOES add to the item: the two marker tags this story
+  writes (`preprod-current`, `preprod-<sha>`) protect a candidate **in the registry** —
+  `keep_pattern` covers them, confirmed against the stored rule (AC4, this story). They give **no**
+  protection whatsoever to the **host's local image cache** on s1, which is exactly what
+  `dev-reset.yml`'s own ≥168h untagged-image sweep can still catch mid `pull → up -d`, regardless
+  of what the registry says about that same digest. Registry permanence and host-cache survival are
+  two different guarantees, and this story only ever provided the first — naming the distinction is
+  this story's whole contribution to the item, not a fix for it.
+
+## Deferred from: dev-story of story-5.4 (2026-08-24)
+
+- ⚠️ **`record-preprod-candidate.yml`'s three permanently-unearnable guard rows — force-tested only,
+  never fired live, and none of them ever can be under this repository's current state.** All three
+  named explicitly rather than counted as earned (Prohibition 16, story's own AC7/Dev Notes §9 row
+  10):
+  - **G4** (marker name not protected by `keep_pattern`) — the file's own derivation rule can only
+    ever produce `preprod-<12hex>`/`preprod-current`, both of which match the retention pattern by
+    construction. A failing G4 row would require a bug in the derivation itself, not a real dispatch
+    input.
+  - **G6's failing half** (artifact labels disagree with the derived commit) — every live dispatch
+    used a real `build.yml`-produced image, whose labels agree with its own tag by construction
+    (`build.yml:1367-1374`). Reaching a disagreement would need either a hand-crafted image pushed
+    outside `build.yml`, or a future `build.yml` defect in its own label-writing step — neither is
+    something this story can or should manufacture.
+  - **AC8's repoint refusal** (two different digests under one `sha-<12>-preprod`) — structurally
+    unreachable without a real operator `DELETE` first, per `build.yml:1476-1516`'s own AC2 guard,
+    which this story's `preprod-<sha>` write logic copies wholesale (Prohibition 7/D24).
+  **Owner: none needed at this repository's own guard boundaries** — these are genuinely closed
+  disposition, not open items, named here so a later reader does not mistake "force-tested only" for
+  "still needs a live dispatch". If `build.yml`'s own label-writing step or its AC2 guard ever
+  changes, G6/AC8's own dispositions should be re-examined then, not before.
+- ⚠️ **AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
+  anything.** `GET /v2/crm/fe-prionex/tags/list` yields the **set** of `preprod-*` tags and their
+  digests; it is not chronological, and creation timestamps live in the Forgejo package API, not the
+  OCI one this workflow's final step reads. The **order** of validation history comes from `git log`
+  against each marker's own derived commit, not from the registry. Both halves are satisfied without
+  consulting any deployment server (the AC's own actual point), but a reader expecting the registry
+  itself to hand back an ordered history will not get one from this file's own final step — it prints
+  the unordered set. **Owner: whichever story next builds a human-facing view of the validation
+  history** (candidate: Story 5.6's full-cycle rehearsal) — should compose the registry's set with
+  `git log`'s order explicitly, not assume the registry does it.
