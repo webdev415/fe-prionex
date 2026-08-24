@@ -1,5 +1,6 @@
-import type { ReactElement } from 'react'
+import type { KeyboardEvent, ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 
 export interface HeaderKpiTileProps {
   label: string
@@ -9,6 +10,11 @@ export interface HeaderKpiTileProps {
   iconColor: string
   iconBg: string
   accentColor: string
+  /**
+   * Makes the tile interactive (role="button", focusable, Enter/Space).
+   * Tiles without `onClick` render exactly as before — a static card.
+   */
+  onClick?: () => void
 }
 
 /** Single KPI card — Figma "Work Type" frame in style.md */
@@ -20,9 +26,32 @@ export function HeaderKpiTile({
   iconColor,
   iconBg,
   accentColor,
+  onClick,
 }: HeaderKpiTileProps) {
+  const interactiveProps = onClick
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': label,
+        onClick,
+        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onClick()
+          }
+        },
+      }
+    : {}
+
   return (
-    <div className="relative isolate flex h-[72px] min-w-[200px] flex-1 flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+    <div
+      {...interactiveProps}
+      className={cn(
+        'relative isolate flex h-[72px] min-w-[200px] flex-1 flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]',
+        onClick &&
+          'focus-visible:ring-primary-400 cursor-pointer transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:outline-none'
+      )}
+    >
       <div className="flex w-full items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <div
