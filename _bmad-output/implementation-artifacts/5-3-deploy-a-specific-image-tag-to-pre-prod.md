@@ -785,12 +785,17 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
 ### Task 6 — Dispatch 2: the absent tag (AC: 4)
 
 - [x] 6.1 Dispatch with `image_tag=sha-000000000000-preprod`. Expect **failure**.
-- [ ] 6.2 **NOT MET on the first dispatch — this is the §12 defect.** The step crashed
-      (`IMAGE_ENV: unbound variable`) before it could print any classified message at all, `preprod`
-      branch or otherwise. Root-caused, fixed (one line, `deploy-stand.yml:1041-1045`), local
-      force-tested for both `IMAGE_ENV` values (§12 record above), authorized by Oleg. **Closes on
-      the coordinator's re-dispatch of this row**, not on this first attempt — left unchecked
-      honestly rather than checked on the strength of the fix alone. Confirm the failure is the digest-resolve step's `404` classifier, and that its message
+- [ ] 6.2 **NOT MET on the first two dispatches — two separate §12 defects in the same block.**
+      Dispatch 2 (run 1185): crashed (`IMAGE_ENV: unbound variable`) before printing any classified
+      message at all. Fixed (one line, `deploy-stand.yml:1041-1045`), authorized by Oleg. Re-dispatch
+      (run 1190): reached the `if`/`else` for the first time ever, then crashed one statement later
+      inside the `else` branch's `RETENTION_NOTE` assignment (`command not found`, exit 127) — a
+      second, previously-undiscoverable defect, only reachable once the first was fixed. Fixed
+      (`RETENTION_NOTE`, both branches, single-line strings), same authorization, local force-tested
+      for both `IMAGE_ENV` values against the actual post-fix content this time (see the corrected
+      §12 record above). **Closes on the coordinator's third re-dispatch of this row**, not on either
+      prior attempt — left unchecked honestly rather than checked on the strength of the fix alone.
+      Confirm the failure is the digest-resolve step's `404` classifier, and that its message
       carries the **`preprod` branch** of the retention note, not the `-dev` one (`:1130-1138`).
       Paste the literal message.
 - [x] 6.3 🔴 Confirm from the **step list** that `docker compose down` is **SKIPPED**, along with
@@ -1367,17 +1372,110 @@ step's own `env:` block, matching the existing pattern at `:741`/`:900`. Nothing
 **Local force-test, before pushing the fix (Oleg's own instruction, step 3), zero dispatches.**
 The 404 branch's logic (`:1126-1144`) was reproduced in an isolated local script under
 `set -euo pipefail`, run once with `IMAGE_ENV=dev` and once with `IMAGE_ENV=preprod`:
-- `IMAGE_ENV=dev` → completes cleanly, message includes *"or (b) a -dev tag older than 14 days was
+~~- `IMAGE_ENV=dev` → completes cleanly, message includes *"or (b) a -dev tag older than 14 days was
   deleted by the live retention rule…"* — the DEV-specific clause fires.
 - `IMAGE_ENV=preprod` → completes cleanly, message includes *"the 14-day retention rule…only
   applies to -dev tags…not a likely cause for image_env=preprod"* — the non-DEV clause fires,
-  correctly excluding the misdirection the original code review fix existed to prevent.
+  correctly excluding the misdirection the original code review fix existed to prevent.~~
 - **Control, same script, `IMAGE_ENV` left unset:** reproduces the exact original crash —
   `bash: line 1: IMAGE_ENV: unbound variable`, exit 1 — confirming this is the real root cause, not
   a guess, before the fix was ever pushed.
 
+🔴 **Corrected, 2026-08-24, after run 1190: the two struck lines above were wrong, and the error was
+mine, not the file's.** My first draft of the local test script copied the real file's
+backslash-continued `RETENTION_NOTE="a"\`/`"b"` string literals verbatim and hit `command not found`
+on both branches — a real result, but I misdiagnosed it as *my own transcription artifact*
+("trailing whitespace after a backslash") and rewrote the harness with single-line strings instead of
+debugging why the multi-line form failed. That rewrite made the test pass — but it was no longer
+testing the pattern the real file uses, so its "completes cleanly" conclusion proved nothing about
+`deploy-stand.yml` itself. The real bug stayed live and was found the hard way, in production, by run
+**1190** (see the second §12 record immediately below). Leaving the disproven claim struck in place
+rather than deleted, per this story's own citation convention — the mistake is now part of the record,
+not erased from it.
+
 Both branches now provably correct without a live dispatch. The coordinator will re-run the actual
 404 row (PRE-PROD) plus a DEV control once this fix is pushed.
+
+---
+
+### 🔴 §12 exception, continued — a second real defect in the same block, found by dispatch 6
+### (run 1190), same authorization ("this is the completion of the same fix, not a new question" —
+### coordinator, 2026-08-24)
+
+**1. The defect, stated with the failing run id and exact log line.** Run **1190** (the priced
+PRE-PROD re-run from the first §12 fix, dispatched immediately after commit `78261b15`), job 10377
+(task 9780), step "Resolve the digest before pulling": `/var/run/act/workflow/digest.sh: line 91:
+applies to -dev tags, per build.yml's own keep_pattern — not a: command not found`, `exitcode '127'`.
+Wall clock 2s. The `IMAGE_ENV` fix worked — the `if` condition was reached this time — but the
+`RETENTION_NOTE` assignment inside the `else` branch (`:1136-1138`, pre-fix line numbers) crashed one
+statement later. Safety property held regardless: step "docker compose down" (index 12) and everything
+after it show `status=4` (SKIPPED), the stand's own lock was released
+(`OK: stand lock released ('fe-prionex-preprod-deploy-lock-1190' removed, or was already gone)`), and
+the stand was never touched.
+
+**Root cause.** The backslash-continued `VAR="a"\`+indented-`"b"` pattern used throughout this file
+(e.g. the 401 branch, `:1119-1122`, which worked live in run 1186) is safe **only** as arguments to a
+command like `echo`, which space-joins multiple arguments regardless of how they were split. It is
+**not** safe as the right-hand side of a plain assignment: after backslash-newline splicing, the
+continuation line's own indentation survives into the spliced source, producing `VAR="a"   "b"` — two
+whitespace-separated words, not one concatenated string. Bash parses that as `VAR=a` scoped to a
+command literally named `b`, which fails as "command not found." Confirmed by extracting both
+`RETENTION_NOTE` branches (`:1131-1139`, pre-fix numbering) verbatim into an isolated script and
+running under `set -euo pipefail`: **both** `IMAGE_ENV=dev` and `IMAGE_ENV=preprod` crash identically,
+matching run 1190's log exactly. A whole-file grep for the same assignment-context pattern
+(`="[^"]*"\$`) found exactly three occurrences: the two just fixed (`:1132`, `:1136`) and one dormant
+instance never reached by any dispatch this story ran (`:1652`, `KIND_NOTE=` inside the lock-wait-
+timeout classifier — routed to `deferred-work.md`, owner "the first story that exercises the lock-
+timeout-against-a-simulated-holder branch," not fixed here as out of this exception's scope).
+
+**Origin.** Same as the first §12 finding — this is the other half of the same never-dispatched
+2026-08-23 code-review fix. The `if`/`else` branches (`:1131-1139`) were both added together; neither
+had ever executed before this story, because the first defect (missing `IMAGE_ENV` in the step's own
+`env:` block) crashed at the `if` condition itself, before either branch's body could run. Fixing that
+first defect is precisely what let this second one surface — not a new introduction, the same
+never-tested code finally reached one statement deeper.
+
+**2. Which retro-E5 rows this invalidates: none, same exemption as the first finding.** A two-line
+change to two string assignments, sharing no state with the `200`/`401`/`000`/`*` branches, the
+pull/compose/lock/health machinery, or any other step. Only the 404 row's own re-earning is affected —
+already open from the first finding, not newly opened by this one.
+
+**3. Priced.** **+1** dispatch: a third PRE-PROD attempt at the absent-tag row (the coordinator's own
+run, once this fix lands). No DEV control this round — run **1191** (the DEV control dispatched
+alongside 1190) never reached this code at all: `deploy-dev.yml`'s `clone-test` job failed first on
+the nonexistent `ref` (an ordinary, expected `git fetch` failure — a different code path entirely, not
+this bug), and `deploy`'s own `needs: [preflight, clone-test]` gate skipped the job that contains the
+fixed line before it could run. The separate `digest-resolve-test` diagnostic job that also failed in
+both 1190 and 1191 is unrelated: a simpler, non-gating script with its own hardcoded message, no
+`IMAGE_ENV` reference anywhere in it — its 404 there was the correct, expected result for a ref-derived
+tag that was never built. **No cheap live way to reach this code on the DEV path was found**: it
+requires an *existing* ref whose derived tag is nonetheless absent from the registry (not a
+nonexistent ref, which is gated earlier by `clone-test`) — e.g. a real branch whose tag was later
+deleted by the 14-day retention rule. No such branch is known to exist on demand; manufacturing one
+would mean waiting out the retention window or asking Oleg to delete a real tag, neither of which is
+cheap. **Recorded honestly instead of claimed: the DEV branch of this classifier (`IMAGE_ENV=dev` at
+`:1131`) is confirmed only by the local force-test below, live-run confirmation for a DEV-path 404 that
+actually reaches the digest-resolve step remains open** — not blocking, since the code is identical
+across both branches and the PRE-PROD branch will be live-confirmed a third time, but not the same
+strength of evidence. Declared floor moves from 15 to **16** — the last dispatch inside the original
+ceiling; the three-red-round reserve is now fully consumed by this one classifier.
+
+**4. Escalated to the coordinator/Oleg as a blocking Open Question before any edit was made.**
+Coordinator's decision, 2026-08-24: continuation of the same authorization ("это завершение того же
+фикса, не новый вопрос") — fix both `RETENTION_NOTE` assignments (single-line, readability's choice
+over `+=`), leave `:1652` alone and route it to `deferred-work.md` instead, force-test locally, push.
+Executed exactly as authorized — `git diff --stat` shows 11 insertions/6 deletions, all inside the
+`404)` case block (the two assignments plus an explanatory comment on the lesson); nothing else in
+`deploy-stand.yml` touched.
+
+**Local force-test, before pushing, zero dispatches — this time reproducing the pattern correctly.**
+The *fixed* block was extracted verbatim and run under `set -euo pipefail`:
+- `IMAGE_ENV=preprod` → prints in full: *"...not a likely cause for image_env=preprod)."* — no crash.
+- `IMAGE_ENV=dev` → prints in full: *"...or (b) a -dev tag older than 14 days was deleted by the live
+  retention rule..."* — no crash.
+
+Both branches complete and print their full intended message this time, confirmed against the actual
+post-fix file content (not a rewritten stand-in, correcting the earlier methodology error above).
 
 ### Run Budget Ledger
 
@@ -1386,6 +1484,13 @@ reserved). Disposition starts **OPEN** and closes only against a post-merge quer
 🔴 **Revised, `2026-08-24`, per the §12 exception above: floor moves to 15** (+2 dispatches: the
 PRE-PROD 404 re-run and the DEV 404 control), still inside the original ceiling of 16 — the
 red-round reserve absorbs it exactly as named for.
+
+🔴 **Revised again, `2026-08-24`, per the second §12 finding (same block, same authorization): floor
+moves to 16** (+1 dispatch: a third PRE-PROD attempt at the absent-tag row, after run 1190 surfaced
+the `RETENTION_NOTE` defect). This is the last unit inside the originally declared ceiling of 16 — the
+entire three-red-round reserve is now consumed by this one classifier's two-stage defect. Any further
+red round on this same row would exceed the declared budget and require explicit renegotiation, not
+silent absorption.
 
 ### Completion Notes List
 

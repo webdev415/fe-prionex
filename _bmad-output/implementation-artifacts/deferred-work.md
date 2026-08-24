@@ -3706,3 +3706,27 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   (2026-08-17), which proves the *artifact* carries the real PRE-PROD URLs — it does not prove the
   secret's live content today. A correction to `epics.md` should say that, not replace one flat
   assertion with another. **Owner: Oleg**, at whichever story next amends the epic.
+
+## Deferred from: dev-story of story-5.3 (2026-08-24)
+
+- ⚠️ **`deploy-stand.yml:1652` (`KIND_NOTE=` inside the lock-wait-timeout classifier) carries the same
+  latent defect class as the one just fixed in the 404 classifier (`:1132`/`:1136`, §12 exception, run
+  1190) — not fixed here, deliberately, because it is out of this story's own §12 scope (that
+  authorization covers the 404 classifier only) and it has never fired live. **Mechanism, identical to
+  the fixed instance:** a backslash-continued `VAR="a"\`-then-indented-`"b"` assignment. After
+  backslash-newline splicing, the continuation line's own indentation survives into the spliced source,
+  producing `VAR="a"   "b"` — two whitespace-separated words, not one concatenated string. In an
+  `echo "a"\`/`"b"` context this is harmless (echo prints multiple arguments space-joined regardless);
+  in a plain assignment it is not — bash reads it as `VAR=a` scoped to a command literally named `b`,
+  which fails as "command not found" (exit 127) the instant that branch executes. This exact failure
+  was reproduced live in run 1190 for the 404 classifier and confirmed by local reproduction for both
+  `IMAGE_ENV` values before the §12 fix. `:1652` has never been reached by any dispatch this story ran
+  — 5.3's own lock-contention row (1187 holder / 1188 waiter) succeeded via the non-timeout path, and
+  this code only executes when a wait actually **times out** against a `hold_lock_seconds`-simulated
+  holder. A whole-file grep for the pattern (`="[^"]*"\$`, i.e. an assignment whose value ends the line
+  with a bare trailing backslash) after the 404 fix confirms `:1652` is the *only* remaining instance
+  in the entire file. **Owner: the first story that exercises the lock-timeout-against-a-simulated-
+  holder branch** (a real lock-timeout dispatch, not merely lock contention/queueing, which 5.3 already
+  covers) — fix the same way as `:1132`/`:1136`: single-line string, no backslash continuation, or an
+  explicit `+=` if the continuation is kept for readability, with the same lesson pinned as a comment
+  at the site.

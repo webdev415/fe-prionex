@@ -1128,14 +1128,19 @@ jobs:
               # keep_pattern excludes only -dev tags) — a hardcoded "-dev" here would misdirect a
               # PRE-PROD/PROD operator (5.3/6.4) who never sees that cause. Branches on IMAGE_ENV
               # instead of asserting one environment's own fact for every caller.
+              # §12 fix (2026-08-24, run 1190): the backslash-continued "a"\<newline>"b" string
+              # pattern used throughout this file is only safe as arguments to a command like
+              # echo, which space-joins multiple args regardless of how they were split — it is
+              # NOT safe as the right-hand side of a plain assignment. There, the continuation
+              # line's own indentation survives the splice into VAR="a"   "b", which bash parses
+              # as "VAR=a" scoped to a command named "b" — not concatenation. That crashed both
+              # branches below with "command not found" (exit 127) the first time this code ever
+              # ran live. Single-line strings here, deliberately, instead of the file's usual
+              # multi-line echo style.
               if [ "${IMAGE_ENV}" = "dev" ]; then
-                RETENTION_NOTE="or (b) a -${IMAGE_ENV} tag older than 14 days was deleted by the"\
-                                "live retention rule (build.yml:962 — -dev tags are NOT in"\
-                                "keep_pattern, unlike -prod/-preprod)."
+                RETENTION_NOTE="or (b) a -${IMAGE_ENV} tag older than 14 days was deleted by the live retention rule (build.yml:962 — -dev tags are NOT in keep_pattern, unlike -prod/-preprod)."
               else
-                RETENTION_NOTE="(the 14-day retention rule this file also knows about only"\
-                                "applies to -dev tags, per build.yml's own keep_pattern — not a"\
-                                "likely cause for image_env=${IMAGE_ENV})."
+                RETENTION_NOTE="(the 14-day retention rule this file also knows about only applies to -dev tags, per build.yml's own keep_pattern — not a likely cause for image_env=${IMAGE_ENV})."
               fi
               echo "FAIL: registry returned 404 Not Found resolving ${TAG}. Two possible causes,"\
                    "both stated because this session cannot tell them apart: (a) no image was ever"\
