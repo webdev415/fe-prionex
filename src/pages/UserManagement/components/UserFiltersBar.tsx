@@ -48,7 +48,7 @@ function FilterSelect({
   children,
 }: FilterSelectProps) {
   return (
-    <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:max-w-[220px] sm:min-w-[160px]">
+    <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:min-w-[160px]">
       <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
         {label}
       </span>
@@ -289,7 +289,7 @@ export function UserFiltersBar({
           ))}
         </FilterSelect>
 
-        <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:max-w-[220px] sm:min-w-[160px]">
+        <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:min-w-[160px]">
           <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.users.filters.department')}
           </span>
