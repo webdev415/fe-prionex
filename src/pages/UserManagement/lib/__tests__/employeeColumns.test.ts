@@ -30,6 +30,15 @@ describe('the employees table', () => {
     expect(page).not.toContain("actions.edit'")
   })
 
+  it('shows a face beside the name', () => {
+    const start = page.indexOf("key: 'fullName'")
+    const end = page.indexOf("key: 'department'", start)
+    const cell = page.slice(start, end)
+
+    expect(cell).toContain('<UserAvatar')
+    expect(cell).toContain('avatarUrl={user.avatar_url}')
+  })
+
   it('keeps the actions that have nowhere else to live', () => {
     for (const action of ['resetPassword', 'unlock', 'impersonate']) {
       expect(page).toContain(`actions.${action}`)

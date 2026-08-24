@@ -24,6 +24,7 @@ import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import { FilterTemplatesMenu } from './components/FilterTemplatesMenu'
 import type {
   ApiUser,
@@ -505,9 +506,20 @@ export function UserManagementPage() {
         <button
           type="button"
           onClick={() => handleView(user)}
-          className="text-foreground hover:text-primary cursor-pointer text-left font-medium underline-offset-2 hover:underline"
+          className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
         >
-          {user.full_name || user.username}
+          <UserAvatar
+            userId={user.id}
+            firstName={user.first_name}
+            lastName={user.last_name}
+            fullName={user.full_name}
+            avatarUrl={user.avatar_url}
+            size={32}
+            className="shrink-0"
+          />
+          <span className="underline-offset-2 group-hover:underline">
+            {user.full_name || user.username}
+          </span>
         </button>
       ),
     },
