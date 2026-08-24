@@ -254,7 +254,7 @@ export function UserManagementPage() {
       status: statusFilterToApiStatus(statusFilter),
       role_id: roleFilter > 0 ? roleFilter : undefined,
       project_id: projectFilter > 0 ? projectFilter : undefined,
-      department_ids: departmentIds.length > 0 ? departmentIds.join(',') : undefined,
+      department_ids: departmentIds.length > 0 ? departmentIds : undefined,
       group_id: groupFilter > 0 ? groupFilter : undefined,
       work_format: workFormatToApiValue(workFormatFilter),
       sort_by: sortBy as UserFilterState['sortBy'],
