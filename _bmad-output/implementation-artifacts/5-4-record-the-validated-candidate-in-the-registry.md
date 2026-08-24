@@ -4,7 +4,7 @@ baseline_commit: 28f7fd36
 
 # Story 5.4: Record the Validated Candidate in the Registry
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-24 against `main` at `28f7fd36` — the merge of PR #79, Story 5.3's ledger
      closeout. Branch `story-5-4/pr-1-context`, cut from a scratchpad worktree because the primary
@@ -1146,8 +1146,8 @@ is also listed in §10 and Dev Notes §9.
 
 - [x] 11.1 Update `sprint-status.yaml` → `review`, **its own commit**.
 - [x] 11.2 Fill Completion Notes, File List, Change Log.
-- [ ] 11.3 `PENDING (owner: coordinator)` — PR open. The dev agent does not open it.
-- [x] 11.4 Ledger disposition stays **OPEN** until a post-merge query. Never a self-reported number.
+- [x] 11.3 PR #80 opened by the coordinator, merged via auto-merge (merge commit `a1fda8276df2ea3e6e89f6d2aa620a0282f1c7d0`). Confirmed in this closeout worktree's own `git log` on fresh `origin/main`.
+- [x] 11.4 Ledger disposition stayed **OPEN** until the post-merge query, run in this closeout pass. Never a self-reported number — final: 30 rows above baseline, overrun 9 against the M9-adjusted ceiling of 21, ledger now **CLOSED**. See the Final closeout ledger reconciliation above and D38 §10.
 
 ---
 
@@ -1739,6 +1739,32 @@ M9-adjusted ceiling of 21 (context push excluded consistently on both sides — 
 the previously-reported "3". **Ledger stays OPEN** — this record does not unilaterally set a new
 ceiling; renegotiation is the coordinator's/Oleg's call at close-out.
 
+**Final closeout `psql` ledger reconciliation, `2026-08-24`, through the merge (PR #80, merge
+commit `a1fda8276df2`), repo-scoped, `commit_sha`, baseline `max(id)=1212`** (fresh `git fetch
+origin`; checked against all still-open sibling branches, including all three `story-4-4` PR
+branches — `71e7c271`/`ae80a3b0`/`fd7db9a0` — plus `story-4-9` `11017adc` and `story-4-5`
+`badbb1ac`; none match any row's `commit_sha`, zero foreign rows): **30 rows above baseline** — 11
+dispatch rows (D1-D10 + the smoke dispatch, run 1244) + **17 CI-push rows**, one per commit
+`48b7434c..08cdc389` (`git log --oneline 48b7434c..08cdc389 \| wc -l` → 17, 1:1 attribution, no
+batching anywhere in this story) + 1 PR-open row (id 1249, `refs/pull/80/head`) + 1 merge row (id
+1252, `refs/heads/main`, `a1fda8276df2`).
+
+**Against the M9-adjusted ceiling of 21 — overrun 9. Root cause, named as requested: two
+unplanned rounds, both legitimate, neither scope creep.** (1) **The critical G5 fail-open bug
+(H1)** — the one guard in the file that failed in the unsafe direction on an empty digest —
+required a dedicated fix-pass: diagnosis, an explicit-shape rewrite, a four-case local force-test
+(including a self-caught regression in an intermediate version of the fix itself), and a live
+verification dispatch (run 1244) before it could be trusted. (2) **The OCI-annotations dead end
+(D1)** — Oleg's original instruction to move `validation_note` into OCI annotations was not
+implemented on faith; it was live-tested on s1 and found rejected outright by this instance's
+exact buildx version (`v0.33.0`), which then required escalation, a follow-up decision (the
+three-tier evidence model), a new file (`docs/preprod-candidates.md`), a new workflow step, and a
+second live verification round. Both rounds trace directly to review catching a real defect and a
+decision meeting a measured tool limitation — not to indecision or added scope. **Ledger CLOSED at
+this number**: 30 rows above baseline, overrun 9 against the adjusted ceiling of 21 (equivalently
+13 against the original unadjusted 18/22 pair). This is the post-merge query itself (retro-D4) —
+final, not a projection; no further commits are expected on this story.
+
 ### Completion Notes List
 
 1. `record-preprod-candidate.yml` written and dispatched ten times: a `workflow_dispatch`-only
@@ -1822,7 +1848,7 @@ failure mode this story was written to prevent.
 
 #### Decisions needed (owner: Oleg)
 
-- [ ] [Review][Decision] **D1 (HIGH) — `validation_note` is declared "the record" and written only
+- [x] [Review][Decision] **Resolved — three-tier evidence model, coordinator's decision (Oleg's veto open): registry (identity/permanence) + `docs/preprod-candidates.md` (authoritative human-readable record, written by the dev session) + job log/`$GITHUB_STEP_SUMMARY` (best-effort, persistence still unverified — see D38 §8a). "It is the record" reworded throughout.** D1 (HIGH) — `validation_note` is declared "the record" and written only
       to a sink this instance cannot read.** `record-preprod-candidate.yml:120` ("Echoed verbatim
       into the log — it is the record") and `:303-308`. The note goes nowhere else: no OCI
       annotation, no label, no git note, no job summary. This story's own Task 2.8 recorded the
@@ -1834,7 +1860,7 @@ failure mode this story was written to prevent.
       annotation on the marker at `imagetools create` time; (b) `$GITHUB_STEP_SUMMARY`; (c) accept
       that only the verdict survives and delete the "it is the record" claim from `:120` and D38.
       Not disclosed in any known-limits list.
-- [ ] [Review][Decision] **D2 (MEDIUM) — `preprod-current` has no ordering contract and moves
+- [x] [Review][Decision] **Resolved autonomously (Oleg's veto open, literal instruction "not a prohibition"): new `allow_backwards_move` input, `G-backwards` step warns on unconfirmed direction, never blocks the write.** D2 (MEDIUM) — `preprod-current` has no ordering contract and moves
       backwards silently.** `:593-598` moves on any digest difference, in either direction.
       Re-recording an older candidate — which G5 permits the moment that candidate is redeployed —
       regresses the pointer with no warning and no log distinction from a forward move. Nothing in
@@ -1843,7 +1869,7 @@ failure mode this story was written to prevent.
       says "moving pointer to the most recently validated candidate", which the code does not
       enforce. **Options:** (a) state the contract as "last recorded, which was serving on the stand
       at that moment" and leave the code alone; (b) add a monotonicity refusal.
-- [ ] [Review][Decision] **D3 (MEDIUM) — a second artifact of an already-recorded commit is
+- [x] [Review][Decision] **Resolved autonomously (option a): documented as a known consequence, with the exact manual `DELETE` command named as the only exit.** D3 (MEDIUM) — a second artifact of an already-recorded commit is
       permanently unrecordable.** The build is non-reproducible (`vite.config.ts:8`, AC2's own
       residual 1), so a rebuild of commit `X` yields digest `B` while `preprod-X` already names `A`.
       `:532-538` refuses, and Prohibition 14 forbids deleting the marker — so the only exit is
@@ -1855,7 +1881,7 @@ failure mode this story was written to prevent.
 
 #### Patch
 
-- [ ] [Review][Patch] **H1 (HIGH) — G5 fails OPEN when the digest is empty; it is the one guard in
+- [x] [Review][Patch] **Fixed: explicit `^sha256:[0-9a-f]{64}$` shape assertion on `CANDIDATE_DIGEST` before any comparison, plus exact-equality per parsed `.RepoDigests` entry. Four-case force-tested (empty/garbage/valid-mismatch/valid-match); a self-caught regression in an intermediate version of this very fix was found and corrected before shipping. Verified live via smoke-dispatch run 1244.** H1 (HIGH) — G5 fails OPEN when the digest is empty; it is the one guard in
       the file that fails in the unsafe direction** [`.forgejo/workflows/record-preprod-candidate.yml:293`].
       `grep -qF "$CANDIDATE_DIGEST"` with an empty needle matches any input. Replayed locally with
       `CANDIDATE_DIGEST=""` and a stubbed `docker`: G5 exits **0** and prints
@@ -1866,7 +1892,7 @@ failure mode this story was written to prevent.
       `:84` for output-plumbing surprises on this instance, which is precisely the path that
       produces an empty value. **Fix:** assert `^sha256:[0-9a-f]{64}$` on `CANDIDATE_DIGEST` at the
       top of G5, classified as a tool failure.
-- [ ] [Review][Patch] **H2 (HIGH) — AC6's operative verb is unimplemented, and AC6 is graded MET on
+- [x] [Review][Patch] **Fixed: new "Print AC6's boundary" step in the `record` job actually echoes the SUPPORTS/DOES NOT SUPPORT table live. Verified via the archived log of smoke-dispatch run 1244. AC6 re-graded MET on workflow output, not operator input.** H2 (HIGH) — AC6's operative verb is unimplemented, and AC6 is graded MET on
       operator input rather than workflow output** [`record-preprod-candidate.yml:25-34`].
       AC6 reads "**Then** the workflow itself **prints** … exactly which claims the recording
       supports"; Dev Notes §9 row 9 repeats "printed by the workflow itself"; and the file's own
@@ -1879,7 +1905,7 @@ failure mode this story was written to prevent.
       Task 5.1 itself records that note's text arriving mangled. **Fix:** add one `echo` step
       emitting the boundary paragraph in both jobs (or at minimum in `record`), and re-grade AC6
       **PARTIAL** until it ships.
-- [ ] [Review][Patch] **H3 (HIGH) — the digest G5 proves and the digest the marker records are
+- [x] [Review][Patch] **Resolved via the review's own second option: the no-cross-job-outputs design is kept (D8/D21 plumbing history), and the residual is now explicitly disclosed in the workflow's own header ("the two jobs' digests are never actually cross-checked... only argued to agree structurally") and in `deferred-work.md`, rather than left unstated.** H3 (HIGH) — the digest G5 proves and the digest the marker records are
       never compared** [`record-preprod-candidate.yml:236`, `:293`, `:376`, `:541`, `:601`].
       §5 states the design property explicitly — *"the two resolutions must agree, and if they ever
       did not, that is a finding rather than a plumbing problem"* — and the file restates it as
@@ -1892,7 +1918,7 @@ failure mode this story was written to prevent.
       exists to prevent. **Fix:** expose `verify-on-stand`'s digest as a job output and assert
       equality in `record` — a cross-check, not a data dependency, so Dev Notes §9 row 6's argument
       is preserved. If the no-outputs rule is held instead, the residual must be disclosed.
-- [ ] [Review][Patch] **M1 (MEDIUM) — G6 cannot disagree for any `build.yml`-produced image; the
+- [x] [Review][Patch] **Fixed (subsumed by H2's fix): claim corrected in the workflow header, G6's own comments, AC2, and D38 §3/§10's derivation section — G6 narrows the gap against a FOREIGN artifact, does not close it for a `build.yml` artifact.** M1 (MEDIUM) — G6 cannot disagree for any `build.yml`-produced image; the
       claim that it *establishes* the commit over-reaches** [`record-preprod-candidate.yml:36-46`,
       `:434-439`]. Traced in `build.yml`: the tag is `TAGS="${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}"`
       (`:933`) and the label is `org.opencontainers.image.version=${{ steps.tags.outputs.short_sha }}`
@@ -1906,7 +1932,7 @@ failure mode this story was written to prevent.
       re-reads one variable through a second channel. (`deferred-work.md`'s own G6 entry states the
       mechanism correctly — it is the load-bearing prose that overshoots.) **Fix:** correct the
       claim in `:36-46`, `:434-439`, AC2 and D38. Keep the guard.
-- [ ] [Review][Patch] **M2 (MEDIUM) — G2 and G3 are line-oriented; a multi-line `image_tag`
+- [x] [Review][Patch] **Fixed: any `image_tag` containing a newline is rejected via a `case` clause before G2 runs.** M2 (MEDIUM) — G2 and G3 are line-oriented; a multi-line `image_tag`
       satisfies both** [`record-preprod-candidate.yml:162-171`, `:180-195`]. `grep -E '^…$'` anchors
       per **line**, not per string. Replayed: `IMAGE_TAG=$'sha-00ef3be4743d\nsha-000000000000-preprod'`
       → G2 rc=0, G3 rc=0, and `derived_hex` becomes the two-line value `00ef3be4743d\nsha-000000000000`,
@@ -1915,7 +1941,7 @@ failure mode this story was written to prevent.
       registry write — but two shape guards accept a value neither was written to accept, in a file
       whose entire premise is that the tag's shape is trustworthy. **Fix:** reject any `image_tag`
       containing a newline (or use `case` globs) before G2.
-- [ ] [Review][Patch] **M3 (MEDIUM) — G5 reintroduces two `docker inspect` patterns that
+- [x] [Review][Patch] **Fixed: adopted `deploy-stand.yml`'s guarded templates — `{{range .RepoDigests}}{{.}} {{end}}` and `{{if .State.Health}}...{{else}}none{{end}}` — and split container-absent/no-healthcheck/unhealthy into distinct verdicts.** M3 (MEDIUM) — G5 reintroduces two `docker inspect` patterns that
       `deploy-stand.yml` fixed under its own code review** [`record-preprod-candidate.yml:271`,
       `:286-291`]. (1) `--format '{{.RepoDigests}}'` renders an empty slice as the literal `[]`,
       which is **non-empty**, so the `-z` "Tool failure, not a verdict" branch at `:287` is dead for
@@ -1928,7 +1954,7 @@ failure mode this story was written to prevent.
       `deploy-stand.yml:2098-2142` — it mirrors the pre-fix shape. **Fix:** adopt both guarded
       templates. Also split `:272-277`, which currently collapses *container absent*, *no
       healthcheck defined* and *genuinely unhealthy* into one verdict.
-- [ ] [Review][Patch] **M4 (MEDIUM) — the absence classifier can silently convert AC8's refusal
+- [x] [Review][Patch] **Fixed: absence is now determined via a classified HTTP status code against `/v2/.../manifests/<marker>` (new "Probe whether ... already exists, over HTTP" steps in both write paths), not `imagetools` stderr-text matching.** M4 (MEDIUM) — the absence classifier can silently convert AC8's refusal
       into a repoint, and it is the one misclassification the read-back cannot catch**
       [`record-preprod-candidate.yml:510-522`]. Absence is inferred from `imagetools` **stderr text**
       (`MANIFEST_UNKNOWN` or `": not found"`). A false positive on the `preprod-<sha>` step skips the
@@ -1938,7 +1964,7 @@ failure mode this story was written to prevent.
       direction is sound — it is the fail-*open* direction that has no second check.
       `verify-on-stand` already carries the robust form (HTTP 404 against `/v2/…/manifests/`).
       **Fix:** probe absence over HTTP and branch on the status code, not on stderr.
-- [ ] [Review][Patch] **M5 (MEDIUM) — G6's parse-failure classifier is unreachable, and its input
+- [x] [Review][Patch] **Fixed: stderr now captured separately (`2>"$ERR_FILE"`, never merged via `2>&1`), and every `jq` call guarded with `\|\| true` so the PARSE-failure branch is actually reachable.** M5 (MEDIUM) — G6's parse-failure classifier is unreachable, and its input
       can be corrupted by stderr** [`record-preprod-candidate.yml:401`, `:406-418`]. `:401` captures
       with `2>&1`, so any buildx warning on a **successful** inspect is prepended to the JSON.
       `:406-408` then run `jq` under `set -euo pipefail` with no `|| true`: a real parse failure
@@ -1947,7 +1973,7 @@ failure mode this story was written to prevent.
       — never prints. The `-z` guard only fires when `jq` *succeeds* and returns empty. The stated
       contract is inverted by the code. **Fix:** drop `2>&1` (capture stderr separately, as the
       write steps do), and guard each `jq` with `|| true`.
-- [ ] [Review][Patch] **M6 (MEDIUM) — the check-to-write residual is stated self-contradictorily,
+- [x] [Review][Patch] **Fixed: reworded in both the workflow header and `deferred-work.md` to name the real residual — a writer outside the concurrency group entirely (an operator `imagetools create`, or `DELETE` + rebuild) — not "two concurrent recorder runs", and the recorder-vs-deploy claim removed since no run demonstrates it.** M6 (MEDIUM) — the check-to-write residual is stated self-contradictorily,
       and the "proven live" half of it is unearned** [`record-preprod-candidate.yml:64-69`;
       `deferred-work.md`, the TOCTOU restatement]. `:66-67` says two concurrent recorder runs "could
       both read absent and both attach", then in the same breath says the shared group "serializes
@@ -1963,7 +1989,7 @@ failure mode this story was written to prevent.
       digest". **Fix:** rewrite `:64-69` and the deferred-work entry to say what was actually
       earned. **Answers the review question directly: the window is narrowed correctly and
       described imprecisely.**
-- [ ] [Review][Patch] **M7 (MEDIUM) — the known-limits disclosure is incomplete: eight unexercised
+- [x] [Review][Patch] **Fixed: all eight unexercised branches added to `deferred-work.md`'s new "Deferred from: code review fix-pass of story-5.4" section with their dispositions.** M7 (MEDIUM) — the known-limits disclosure is incomplete: eight unexercised
       branches are named nowhere.** The disclosed set (G4, G6's failing half, AC8's repoint refusal,
       AC6's CORS boundary, AC4-UNPROVEN-by-execution, the ledger) is correct as far as it goes, and
       G4's structural vacuity is stated accurately in `deferred-work.md`. Undisclosed: the
@@ -1979,7 +2005,7 @@ failure mode this story was written to prevent.
       *disagreement*); and G3's exactly-12 clause, which no live row exercised (D5 used
       `main-preprod`, which fails the shape regex first). **Fix:** add these to the
       `deferred-work.md` EOF section with their dispositions.
-- [ ] [Review][Patch] **M8 (MEDIUM) — AC7's "after every refusal" was one read-back; the matrix
+- [x] [Review][Patch] **Fixed: the five "marker state after" cells for D2-D6 in the retro-E5 matrix marked `†`, covered by a single shared post-series read, not presented as five independent observations.** M8 (MEDIUM) — AC7's "after every refusal" was one read-back; the matrix
       renders it as five** [story `:959-972` vs `:1590-1594`]. AC7 requires "after **every** refusal,
       `preprod-current` and `preprod-<sha>` are read back … and shown **unchanged**", and Task 7.5
       honestly records "**Done — single read-back after the entire D2-D6 series**" with an argument
@@ -1988,7 +2014,7 @@ failure mode this story was written to prevent.
       observation as five, in the very table whose purpose is to make evidence countable. The
       argument in 7.5 is sound; the matrix should carry it. **Fix:** mark those five cells as
       covered by a single post-series read.
-- [ ] [Review][Patch] **M9 (MEDIUM) — the disclosed ledger overrun is understated by at least
+- [x] [Review][Patch] **Fixed: recounted at a single, stated baseline convention (context push excluded consistently on both sides, floor 17/ceiling 21) and recomputed fresh at every subsequent round rather than reused stale — 23 → 26 → final closeout 30 rows, overrun 9. See the Final closeout ledger reconciliation above and D38 §10.** M9 (MEDIUM) — the disclosed ledger overrun is understated by at least
       three rows** [story `:1613-1637`, D38 §10]. Two independent errors. (1) The reconciliation
       counts 8 CI-push rows, but `git log` shows **11** commits after the baseline commit
       `48b7434c` — and the reconciliation itself lives in `42471a62`, whose own push row cannot be
@@ -1999,7 +2025,7 @@ failure mode this story was written to prevent.
       of 3, not 2.** The disclosure itself is exactly the right instinct and was made before review
       asked; only its size is wrong. **Fix:** recount at the post-merge query and state the
       overrun against a single, stated baseline convention.
-- [ ] [Review][Patch] **M10 (MEDIUM) — AC1 and AC5 are graded MET on evidence the story elsewhere
+- [x] [Review][Patch] **Fixed: AC1's evidence reworded to cite the independent registry read actually observed, not the never-archived log lines; AC5's raw 263-tag `tags/list` response pulled fresh and pasted verbatim into Debug Log References, replacing the earlier characterisation.** M10 (MEDIUM) — AC1 and AC5 are graded MET on evidence the story elsewhere
       says was never obtained.** AC1's discharge clause requires "D1 green, with the **two read-back
       lines**" (`:504-505`); Task 5.4 records job 10653 as `log_in_storage=f`, so the lines were
       never read, yet the AC1 verdict at `:1604` asserts "both **read back** matching the source
@@ -2010,7 +2036,7 @@ failure mode this story was written to prevent.
       names — and the recorder's own listing step prints only into logs that never archived. AC5 is
       graded MET at `:1608`. **Fix:** re-grade both PARTIAL, or paste the raw artifact (a registry
       read is available from anywhere at any time — this is the cheapest evidence in the story).
-- [ ] [Review][Patch] **M11 (MEDIUM) — two line citations inside workflow comments, one falsified by
+- [x] [Review][Patch] **Fixed: both line-number citations replaced with search strings, per Dev Notes §8's own explicit instruction.** M11 (MEDIUM) — two line citations inside workflow comments, one falsified by
       this very commit** [`record-preprod-candidate.yml:31`, `:64`; D38 §5]. `:64` cites
       `deferred-work.md:2288-2301` for the check-to-write window; in the post-change tree line 2288
       is the `fe_pkg_3_6` token entry and the TOCTOU entry has moved to ~`:2309-2322` — shifted by
@@ -2018,7 +2044,7 @@ failure mode this story was written to prevent.
       against a *different* base. Dev Notes §8 is explicit: *"Cite by search string, not line
       number, inside workflow comments … this repository already carries two stale line citations …
       **Do not add a third.**"* **Fix:** replace both with search strings.
-- [ ] [Review][Patch] **L1 (LOW) — the AC5 listing step is unguarded in three ways**
+- [x] [Review][Patch] **Fixed: empty-credential precheck added, matching the pattern used elsewhere in the file.** L1 (LOW) — the AC5 listing step is unguarded in three ways**
       [`record-preprod-candidate.yml:611-623`]. No empty-credential precheck (unlike `:211-216`), no
       `-w '%{http_code}'` and no status classification (unlike `:227-264`), and `jq … || true` at
       `:623`. A rotated `REGISTRY_TOKEN_RO` therefore yields a **green** step printing
@@ -2026,21 +2052,21 @@ failure mode this story was written to prevent.
       step that discharges AC5. Conversely a transport failure reds the run *after* both writes
       succeeded, inviting a needless re-dispatch. `tags/list` is also unpaginated, on a repository
       whose design accumulates one permanent `preprod-<sha>` per validated commit.
-- [ ] [Review][Patch] **L2 (LOW) — five dead `$GITHUB_OUTPUT` writes, and the branch evidence had to
+- [x] [Review][Patch] **Fixed: `id: write-history` / `id: write-current` added to both write steps, making `history_written`/`current_written` addressable and read in the final summary step.** L2 (LOW) — five dead `$GITHUB_OUTPUT` writes, and the branch evidence had to
       be inferred from step durations because of them** [`:529`, `:550`, `:588`, `:591`, `:597`].
       Both write steps declare `name:` and `env:` but no `id:`, so `history_written` /
       `current_written` are unaddressable and unread. As a direct consequence D2's and D10's
       branch-taken evidence rests on timing ("~1s vs D1's 2s/1s", `:1590`; `:1043-1046`) — a weak
       discriminator that addressable outputs would have made unnecessary. `verify-on-stand`'s
       `derived_hex` (`:196`) is likewise never read.
-- [ ] [Review][Patch] **L3 (LOW) — `validation_note` is never checked non-empty and is echoed
+- [x] [Review][Patch] **Fixed: whitespace-only notes now rejected in "Record the validation note verbatim".** L3 (LOW) — `validation_note` is never checked non-empty and is echoed
       unescaped** [`:119-122`, `:303-308`]. `required: true` on a `type: string` dispatch input does
       not reject `" "`, so the header's claim that the marker asserts "a human … named what they
       checked" is satisfiable by a single space. The value is also echoed straight into the log with
       no neutralisation of workflow-command syntax (`::add-mask::`, `::error::`). Related: on
       `validated=fail` the note is **never echoed at all** — G1 exits first — so the rationale for a
       refusal is discarded (run 1218 recorded none).
-- [ ] [Review][Patch] **L4 (LOW) — the read-back inspect is unguarded under `set -e`** [`:543`,
+- [x] [Review][Patch] **Fixed: explicit read-back-failure messages added; `mktemp`+`trap` added to both write steps; `--max-time 30` added to every `curl`.** L4 (LOW) — the read-back inspect is unguarded under `set -e`** [`:543`,
       `:603`]. `ATTACHED="$(docker buildx imagetools inspect …)"` — if the read-back itself errors
       **after** `create` succeeded, the step dies with no message and the operator sees a red run
       for a tag that was written. Idempotence makes the re-dispatch safe, so this is confusion, not
@@ -2048,7 +2074,7 @@ failure mode this story was written to prevent.
       `:207-209`); `head -n1` on a header file that `-L`/`--retry` can append to (`:229`); no
       `--max-time` on either `curl`; `IMAGE="${HISTORY_TAG%%:*}"` (`:540`, `:600`) breaks if
       `IMAGE_REPO` ever carries a port.
-- [ ] [Review][Patch] **L5 (LOW) — three instructions the story gave itself and did not carry out.**
+- [x] [Review][Patch] **Fixed, all three. (a) — added to the workflow's own header at this closeout (new "`preprod-current`/`preprod-<sha>` are NOT deployable through `deploy-preprod.yml`" section), no longer only in Open Question 6. (b) — `<a id="d38"></a>` added to `docs/migration-decisions.md`. (c) — noted as unnoted-but-harmless in the fix-pass; the safety property still holds.** L5 (LOW) — three instructions the story gave itself and did not carry out.**
       (a) Dev Notes §4: *"`preprod-current` and `preprod-<sha>` … are **not deployable** through
       `deploy-preprod.yml` … **so say it in the file**"* — it is in Open Question 6 only, not in the
       workflow. (b) Task 10.1(c) required `<a id="d38"></a>`; `docs/migration-decisions.md:4375` is a
@@ -2057,7 +2083,7 @@ failure mode this story was written to prevent.
       (c) §5/Task 3.6 made the `imagetools inspect` "the **first** step of the `record` job" so a
       bad driver/login/DNS fails before anything else; shipped, it is the fourth executing step with
       a `derive` shell step ahead of it. The safety property still holds; the change is unnoted.
-- [ ] [Review][Patch] **L6 (LOW) — G4 drops a divergence `build.yml` marks load-bearing, and the
+- [x] [Review][Patch] **Fixed: `-i` added to G4's `grep -Eqi`, matching `build.yml`'s own case-insensitive form; the divergence named explicitly on both sides.** L6 (LOW) — G4 drops a divergence `build.yml` marks load-bearing, and the
       "three divergences" list is wrong** [`record-preprod-candidate.yml:455-462`]. `:462` uses
       `grep -qE`; `build.yml:977` and `:1064` use `grep -Eqi`, with `build.yml:972-976` naming `-i`
       *"a deliberate third divergence … an unnamed divergence is how that instruction rots."* The
@@ -2066,7 +2092,7 @@ failure mode this story was written to prevent.
       are semantically identical here, so a non-divergence was counted in place of the real one.
       No functional gap for the two lowercase markers. **Fix:** name the `-i` divergence on both
       sides.
-- [ ] [Review][Patch] **L7 (LOW) — G2 adds no discrimination G3 does not, and the guard count leans
+- [x] [Review][Patch] **Fixed: G2 documented as message-only, a strict subset of G3, in the workflow's own comments — not claimed as an independent discriminator.** L7 (LOW) — G2 adds no discrimination G3 does not, and the guard count leans
       on it** [`:157-172`]. Force-tested: G2's reject set is a **strict subset** of G3's — G2 passes
       `main-preprod` and `-preprod`, which G3 then refuses; every string G2 rejects, G3 rejects too.
       G2 is a better-worded earlier message, not an independent discriminator, yet D38 counts it as
@@ -2075,7 +2101,7 @@ failure mode this story was written to prevent.
       so the `:336` framing "resolves everything independently" is selective on the single most
       load-bearing input. Also `:324`'s "before buildx setup" rationale is inert under
       `driver: docker` (nothing is pulled), imported from `build.yml` without its mechanism.
-- [ ] [Review][Patch] **L8 (LOW) — convention drift in the new records.** Prohibition 19 ("Owners
+- [x] [Review][Patch] **Fixed: owners in `deferred-work.md`'s new entries corrected from trigger-conditions to named stories (5.6, 6.4, 6.5) or an explicit closed disposition; `sprint-status.yaml`'s comment corrected from "Three guards" to "FOUR guards" (G5 also earned a live failing row at D9).** L8 (LOW) — convention drift in the new records.** Prohibition 19 ("Owners
       are names or story numbers, never trigger conditions"): the new AC5 entry uses *"Owner:
       whichever story next builds a human-facing view…"* and the force-tested-guards entry uses
       *"Owner: none needed … should be re-examined then"* — both trigger conditions. Prohibition 18
@@ -2147,3 +2173,4 @@ failure mode this story was written to prevent.
 | 2026-08-24 | **Dev-story complete.** `record-preprod-candidate.yml` written and dispatched ten times (D1-D10), plus the free zero-run rejection (D0). All six guards' passing halves earned live; G1/G2/G3/G5's failing halves also earned live (runs 1218/1219/1220/1227), each with a classified message and confirmed markers unchanged afterward. G4, G6's failing half, and AC8's repoint refusal remain force-tested only, named as structurally unearnable, not counted as earned. AC3 proven on the real tag names: Task 8.1's mint of a second permanent candidate (`sha-28f7fd36b75e-preprod`, run 1223) was announced to Oleg and never vetoed across four dispatch cycles; `preprod-current` MOVED to it (run 1229), `preprod-00ef3be4743d`'s own history stayed untouched. Every write independently verified via direct registry reads on s1, not from any workflow's own log (most `record`-job logs never archived during this story) or its own "OK" message — `--prefer-index=false` confirmed via raw `mediaType` reads, real manifests throughout, never an index. D38 written to `docs/migration-decisions.md`, verified against every open `story-*` branch. `deferred-work.md` updated: RW-scope credential's third holder, the check-to-write window's second site, the 08-29 retention observation's extended scope, the PRE-PROD lock-holder debris declined with one distinguishing contribution (registry permanence vs. host-cache survival), and the standing archived-log check (fifth negative, done first this session per the standing plan). 🔴 Ledger reconciled honestly: 18 rows above baseline (psql, repo-scoped, zero unattributable) against ceiling 22 — 7 more CI-push rows than declared because every verification write-up got its own push; the remaining review-cycle lines will exceed the ceiling by 2, flagged now rather than left for code review to find. Blast radius confirmed as exactly five files — `deploy-stand.yml`/`deploy-preprod.yml`/`build.yml`/`deploy-dev.yml`/`dev-reset.yml` all absent, no §12-style exception ever needed. Status → **review**. |
 | 2026-08-24 | **Code review fix-pass.** H1 (CRITICAL): G5 failed OPEN on an empty `CANDIDATE_DIGEST` (`grep -qF` with an empty needle matches anything) -- fixed with explicit shape-checks on both operands and exact-equality comparison against each parsed `.RepoDigests` entry; force-tested empty/garbage/valid-mismatch/valid-match, catching and fixing a regression introduced mid-pass (an intermediate fix compared full `repo@digest` strings against the bare candidate digest and would have failed a genuine match). H2: G6's claim corrected everywhere (workflow header, G6's own comments, AC2, D38) -- it narrows D33 §6(b)'s gap against a FOREIGN artifact; for a `build.yml`-produced image all three clauses are identities, so it does not establish the deployed commit on that path. H3: AC6's boundary now actually printed by the workflow (a new step in the `record` job), not just a YAML comment no execution ever emitted. D2 (Oleg's veto open, decided autonomously per the coordinator's literal instruction "not a prohibition"): a new `allow_backwards_move` input and a `G-backwards` step that WARNS on any `preprod-current` move whose direction cannot be confirmed (no git checkout available) -- never blocks the write. D3 (decided autonomously): the one real exit for an already-recorded commit needing a new artifact documented with the exact manual `DELETE` command. **D1 investigated and found blocked**: live-tested `imagetools create --annotation` on s1 against this instance's buildx (v0.33.0) -- rejected outright ("annotations are not supported yet") on a plain retag, with or without `--prefer-index`. OCI annotations are not an available channel for `validation_note` here; flagged for Oleg's follow-up decision between the review's own options (b) `$GITHUB_STEP_SUMMARY` or (c) narrowing the "it is the record" claim. M2-M6, L1-L4, L6-L8 addressed in code and documentation (newline rejection, guarded docker templates split into distinct messages, HTTP-based absence classification replacing stderr-text matching in both write steps, G6's stderr separated from stdout with `\|\| true` guards, check-to-write wording corrected to name the real residual, addressable step `id:`s added, non-empty `validation_note` check, explicit read-back failure messages, `-i` added to G4's `keep_pattern` grep, G2 documented as message-only). M8: the retro-E5 matrix's five "marker state after" cells for D2-D6 marked `†` as one shared post-series observation, not five. M9: **ledger overrun corrected to 3, not 2** -- fresh `psql` recount, 23 rows above baseline (10 dispatches + 13 CI-push rows, one per commit including the review's own and this fix-pass's own), against an adjusted ceiling of 21 (excluding the context push consistently on both sides) -- the ceiling is already exceeded, not merely projected to be, with PR-open and merge still ahead; renegotiation due now. M10: AC1's evidence reworded to cite the actual observation (independent registry read, not the never-archived log lines); AC5's raw `tags/list` response (263 tags) pulled fresh via a script that never prints the credential itself and pasted into Debug Log References, replacing the earlier characterisation. M11: the workflow's own remaining line-number citation replaced with a search string. M7: eight previously-undisclosed unexercised branches added to `deferred-work.md`. L5(b): `<a id="d38"></a>` added -- the index row and header range previously linked to nothing. Not addressed this pass: M1 (subsumed by H2's fix), the three DECISION items' own code beyond D1/D2/D3 as scoped, and the reviewer's own W1-W3 deferred items (correctly left deferred). Mechanical gates re-confirmed: 19 `run:` bodies (was 15), 0 containing `${{ }}`, 0 `bash -n` errors, 0 assignment-context backslash-continuations, exactly 2 `--prefer-index=false` in real code. Status stays **in-progress** (flipped back by the review's own commit) -- not yet returned to review; D1's blocker and the fixes still need a live verification dispatch before this story can honestly close. |
 | 2026-08-24 | **D1 resolved, close.** OCI annotations confirmed a measured dead end (live probe, `docker/buildx v0.33.0`, rejected `--annotation` outright on a plain retag, both `--prefer-index` settings). Coordinator's decision (Oleg's veto open): three-tier evidence model -- registry (identity/permanence, Story 6.5's own read), `docs/preprod-candidates.md` in this repository (new file, authoritative human-readable record, append-only, written by the dev session as part of the recording procedure -- the workflow holds no repository-write credential and is not getting one for this), job log/`$GITHUB_STEP_SUMMARY` (best-effort, this instance's own summary persistence unverified before this fix-pass's own live test). `docs/preprod-candidates.md` seeded with candidates #1/#2's own rows, entered retroactively as the file's first act. Smoke-dispatch (run 1244) confirmed live: G5 passes on the fixed logic, both writes hit no-op, AC6's boundary genuinely printed, `G-backwards` took its correct early exit, HTTP-based existence probes returned 200. Final `psql` ledger: 26 rows above baseline (11 dispatches + 15 CI-push rows, 1:1 commit attribution confirmed), overrun now 5 against the adjusted ceiling of 21 -- reported honestly as it grew through this fix-pass's several rounds, not held to a stale number. Blast radius: six files now (`docs/preprod-candidates.md` added). Status → **review**. |
+| 2026-08-24 | **Closeout, after merge.** PR #80 merged via auto-merge (`a1fda8276df2`). New worktree/branch (`story-5-4/pr-2-ledger-closeout`) cut from fresh `origin/main`. L5(a) fixed: the "not deployable through `deploy-preprod.yml`" sentence added to the workflow's own header (previously only in Open Question 6). Every `[Review][Decision]`/`[Review][Patch]` checkbox (D1-D3, H1-H3, M1-M11, L1-L8) verified against actual evidence in the shipped code/docs and checked off -- none rubber-stamped; H3 and M6 resolved via disclosure (the review's own stated fallback) rather than a structural fix, named as such. Task 11.3 flipped to done (PR confirmed merged). **Final `psql` ledger through the merge, repo-scoped, `commit_sha`, zero foreign rows (checked against all three `story-4-4` PR branches plus `story-4-9`/`story-4-5`): 30 rows above baseline** -- 11 dispatches + 17 CI-push rows (1:1 on `git log --oneline 48b7434c..08cdc389`, 17 commits) + 1 PR-open row + 1 merge row. **Overrun 9 against the M9-adjusted ceiling of 21, ledger CLOSED.** Root cause named explicitly, per the coordinator's request: two unplanned rounds, both legitimate -- the critical G5 fail-open fix (H1, requiring force-testing and a live verification dispatch) and the OCI-annotations dead end (D1, requiring live investigation and a full follow-up decision/implementation round) -- not scope creep. Sixth standing-plan check of tasks 9745/9769 (Story 5.3): still `log_in_storage=f` for both. `$GITHUB_STEP_SUMMARY` persistence re-checked post-merge: still nothing found on disk or in the DB; the step has not yet been exercised by any dispatch since it was added, so the question remains open for the next real dispatch, not resolved here either way. Status → **done**. |

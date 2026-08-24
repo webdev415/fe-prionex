@@ -140,6 +140,13 @@ name: Record a validated PRE-PROD candidate
 # dev-reset.yml both dispatches and reads back by both file name and workflow `name:`). If a future
 # story starts doing so, this header should be upgraded then, the same way deploy-dev.yml's is.
 #
+# ── `preprod-current`/`preprod-<sha>` are NOT deployable through `deploy-preprod.yml` ────────────
+# 🔴 Code review L5(a), corrected: this belonged in the file, not only in the story's own Open
+# Question 6. Neither marker ends in `-preprod` — `deploy-stand.yml`'s own tag<->environment guard
+# (which `deploy-preprod.yml` inherits) refuses both. This is correct and intended (a moving
+# pointer is exactly the wrong thing to hand a deploy, and `preprod-<sha>` is history, not a live
+# artifact reference) but would read as a bug to whoever tries it without this sentence.
+#
 # ── What this file does NOT do (Story 5.5's and Story 6.5's territory) ──────────────────────────
 # It does not define what "validation" consists of — `validation_note` is free text on purpose,
 # until Story 5.5 ships a checklist. It does not gate PRODUCTION on this tag's presence — that is
