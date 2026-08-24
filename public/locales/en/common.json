@@ -3577,7 +3577,7 @@
       }
     },
     "users": {
-      "title": "User Management",
+      "title": "Employees",
       "addNewUser": "New User",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",

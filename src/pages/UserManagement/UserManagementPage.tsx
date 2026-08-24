@@ -283,10 +283,6 @@ export function UserManagementPage() {
     setEditUserId(null)
   }
 
-  const handleEdit = (user: ApiUser) => {
-    setEditUserId(user.id)
-  }
-
   const handleView = (user: ApiUser) => {
     setViewUserId(user.id)
   }
@@ -501,13 +497,6 @@ export function UserManagementPage() {
   // Table columns definition
   const columns: Column<ApiUser>[] = [
     {
-      key: 'id',
-      header: t('pages.users.tableHeaders.userId'),
-      sortable: true,
-      sortKey: 'id',
-      render: (user) => <span className="text-foreground">{user.id}</span>,
-    },
-    {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
       sortable: true,
@@ -523,11 +512,15 @@ export function UserManagementPage() {
       ),
     },
     {
-      key: 'email',
-      header: t('pages.users.tableHeaders.email'),
-      sortable: true,
-      sortKey: 'email',
-      render: (user) => <span className="text-foreground">{user.email || '-'}</span>,
+      key: 'department',
+      header: t('pages.users.tableHeaders.department'),
+      render: (user) => {
+        const departments = departmentsOf(user, projectFilter > 0 ? projectFilter : ALL_PROJECTS)
+        if (departments.length === 0) {
+          return <span className="text-muted-foreground">—</span>
+        }
+        return <span className="text-foreground">{departments.join(', ')}</span>
+      },
     },
     {
       key: 'position',
@@ -541,15 +534,17 @@ export function UserManagementPage() {
       },
     },
     {
-      key: 'department',
-      header: t('pages.users.tableHeaders.department'),
-      render: (user) => {
-        const departments = departmentsOf(user, projectFilter > 0 ? projectFilter : ALL_PROJECTS)
-        if (departments.length === 0) {
-          return <span className="text-muted-foreground">—</span>
-        }
-        return <span className="text-foreground">{departments.join(', ')}</span>
-      },
+      key: 'status',
+      header: t('pages.users.tableHeaders.status'),
+      align: 'center',
+      sortable: true,
+      sortKey: 'status',
+      render: (user) => (
+        <div className="flex items-center justify-center gap-1.5">
+          <StatusBadge status={getStatusType(user.status)} />
+          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
+        </div>
+      ),
     },
     {
       key: 'workFormat',
@@ -592,19 +587,6 @@ export function UserManagementPage() {
       ),
     },
     {
-      key: 'status',
-      header: t('pages.users.tableHeaders.status'),
-      align: 'center',
-      sortable: true,
-      sortKey: 'status',
-      render: (user) => (
-        <div className="flex items-center justify-center gap-1.5">
-          <StatusBadge status={getStatusType(user.status)} />
-          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
-        </div>
-      ),
-    },
-    {
       key: 'actions',
       header: t('pages.users.tableHeaders.actions'),
       align: 'center',
@@ -612,19 +594,6 @@ export function UserManagementPage() {
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Desktop: Individual link buttons */}
           <div className="hidden items-center gap-1 lg:flex">
-            <IconAction
-              label={t('pages.users.actions.view')}
-              icon={<Icons.View size={18} strokeWidth={1.5} />}
-              onClick={() => handleView(user)}
-            />
-            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-              <IconAction
-                label={t('pages.users.actions.edit')}
-                icon={<Icons.PencilEdit size={18} strokeWidth={1.5} />}
-                onClick={() => handleEdit(user)}
-              />
-            </PermissionGuard>
-
             <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               {currentUser?.id !== String(user.id) && (
                 <IconAction
@@ -692,22 +661,6 @@ export function UserManagementPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card">
-                <DropdownMenuItem
-                  onClick={() => handleView(user)}
-                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.View size={16} strokeWidth={1.5} />
-                  <span>{t('pages.users.actions.view')}</span>
-                </DropdownMenuItem>
-                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-                  <DropdownMenuItem
-                    onClick={() => handleEdit(user)}
-                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
-                  >
-                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                    <span>{t('pages.users.actions.edit')}</span>
-                  </DropdownMenuItem>
-                </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
                   {currentUser?.id !== String(user.id) && (
                     <DropdownMenuItem
