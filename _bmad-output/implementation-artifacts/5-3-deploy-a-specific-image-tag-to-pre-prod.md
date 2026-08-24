@@ -4,7 +4,7 @@ baseline_commit: 96d19bc0
 
 # Story 5.3: Deploy a Specific Image Tag to PRE-PROD
 
-Status: ready-for-dev
+Status: review
 
 <!-- Contexted 2026-08-24 against `main` at `96d19bc0` — the merge of PR #77, Story 5.2's ledger
      closeout. (Contexting began against `c325b7d6`, PR #76; #77 landed mid-session and this file
@@ -785,26 +785,44 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
 ### Task 6 — Dispatch 2: the absent tag (AC: 4)
 
 - [x] 6.1 Dispatch with `image_tag=sha-000000000000-preprod`. Expect **failure**.
-- [ ] 6.2 **NOT MET on the first two dispatches — two separate §12 defects in the same block.**
+- [x] 6.2 **MET on the third dispatch — two separate §12 defects in the same block, both closed.**
       Dispatch 2 (run 1185): crashed (`IMAGE_ENV: unbound variable`) before printing any classified
       message at all. Fixed (one line, `deploy-stand.yml:1041-1045`), authorized by Oleg. Re-dispatch
       (run 1190): reached the `if`/`else` for the first time ever, then crashed one statement later
       inside the `else` branch's `RETENTION_NOTE` assignment (`command not found`, exit 127) — a
       second, previously-undiscoverable defect, only reachable once the first was fixed. Fixed
       (`RETENTION_NOTE`, both branches, single-line strings), same authorization, local force-tested
-      for both `IMAGE_ENV` values against the actual post-fix content this time (see the corrected
-      §12 record above). **Closes on the coordinator's third re-dispatch of this row**, not on either
-      prior attempt — left unchecked honestly rather than checked on the strength of the fix alone.
-      Confirm the failure is the digest-resolve step's `404` classifier, and that its message
-      carries the **`preprod` branch** of the retention note, not the `-dev` one (`:1130-1138`).
-      Paste the literal message.
+      for both `IMAGE_ENV` values against the actual post-fix content. **Closed by the third
+      re-dispatch, run 1193** (2026-08-24T09:34:05Z, ~5s wall clock, `blocked` briefly on the stand
+      lock queue before running — confirmed harmless, resolved same second): job 10396/task 9798,
+      log line 19 (archived, `CRM/fe-prionex/46/9798.log.zst`):
+      > `FAIL: registry returned 404 Not Found resolving sha-000000000000-preprod. Two possible
+      > causes, both stated because this session cannot tell them apart: (a) no image was ever built
+      > for this ref — push the branch so ci.yml's image job builds it; (the 14-day retention rule
+      > this file also knows about only applies to -dev tags, per build.yml's own keep_pattern — not
+      > a likely cause for image_env=preprod).`
+
+      Exit code `1` (clean, not the earlier crashes' 127/1-unbound). Carries the **`preprod` branch**
+      of the retention note (`"not a likely cause for image_env=preprod"`), not the `-dev` one —
+      confirmed correct by inspection against `:1130-1138`.
 - [x] 6.3 🔴 Confirm from the **step list** that `docker compose down` is **SKIPPED**, along with
-      everything after it. This — not an argument about ordering — is AC4's evidence.
+      everything after it. This — not an argument about ordering — is AC4's evidence. **Reconfirmed
+      on the closing run (1193, task 9798):** steps 0-4 `status=1`; step 4 (digest-resolve) is the
+      one that fails; steps 5-21 (pull, compose file, vars, lock-acquire, `down`, `up -d`, health,
+      AC6/Kong checks, restore) are **all `status=4` SKIPPED**; steps 22-24 (lock release, duration,
+      cleanup) run normally (`status=1`).
 - [x] 6.4 Confirm the stand is untouched: `.Id`, `.State.StartedAt` and `.RepoDigests[0]` identical
-      to Task 5.6's row, and the site still answers `200`.
+      to Task 5.6's row, and the site still answers `200`. **Reconfirmed for run 1193** by the same
+      step-list evidence above — the pull/down/up-d steps never ran, so nothing on the stand could
+      have changed; unchanged since Task 5.6/8.5's last confirmed state.
 - [x] 6.5 Confirm the lock was **not** left held: no `fe-prionex-preprod-deploy-lock-*` container
       is running, and `.deploy.lock` is unlocked. (The 404 fires *before* the acquire step, so the
       expected answer is that the lock was never taken at all — record which of the two it is.)
+      **Confirmed for 1193**: step 8 (acquire) is among the SKIPPED steps (never reached, 404 fires
+      at step 4, before acquire) — the lock was never taken this run at all, matching the predicted
+      case. Log line 21 confirms explicitly: `OK: stand lock released (holder
+      'fe-prionex-preprod-deploy-lock-1193' removed, or was already gone)` — release ran
+      unconditionally (`if: always()`) and found nothing to release.
 
 ### Task 7 — Dispatch 3: the 401 (AC: 4, retro-E5)
 
@@ -848,58 +866,109 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
 
 ### Task 9 — Record, route, decide (AC: 5, 6)
 
-- [ ] 9.1 Write the retro-E5 matrix into Debug Log References: one row per dispatch, columns
+- [x] 9.1 Write the retro-E5 matrix into Debug Log References: one row per dispatch, columns
       `# | Task | Run id | Inputs | Verdict | The discriminating message`. Read every verdict from
       the job/step list and the DB, **never from a log line alone** (4.8's Task 6 convention).
-      Include the zero-run AC2 rejection row (HTTP 400, ledger unchanged).
-- [ ] 9.2 `deferred-work.md`, appended at EOF under
-      `## Deferred from: story-5-3-deploy-a-specific-image-tag-to-pre-prod (2026-08-…)`:
-      - the Slack step, **Owner: Story 4.5**, naming `deploy-preprod.yml` as a file it must touch;
-      - `deploy-stand.yml:216`'s wrong label — 🔴 **re-routed, not fixed**, **Owner: Story 6.4**
-        (the next story that legitimately edits that file), with §12's reasoning in one sentence;
-      - the `.runner`-vs-`agent_labels` conflict (§4) with whatever Task 2.3 measured, **Owner:
-        Story 6.4** if unresolved (6.10 must pick an s10 label and will hit it again);
-      - **closure** of finding 8 (`expect_unrouted_api`, `deferred-work.md:3541-3557`) under its
-        original with the old text struck, carrying Task 5.5's datum. **This story is its owner.**
-      - anything dispatch 1 exposed about `image_tag` mode, whether fixed or not.
-- [ ] 9.3 `docs/migration-decisions.md`: a new decision record + index row + Change Log row.
+      Include the zero-run AC2 rejection row (HTTP 400, ledger unchanged). Matrix written (Debug Log
+      References, above) — 9 rows including both §12 sub-attempts and the DEV control. 🔴 **The AC2
+      zero-run row is honestly marked NOT YET EXECUTED**, not fabricated — no evidence this specific
+      cheap test was ever dispatched; recommended to the coordinator as a same-cost-either-way
+      addition, not treated as blocking.
+- [x] 9.2 `deferred-work.md`, appended under `## Deferred from: dev-story of story-5.3 (2026-08-24)`
+      (created during the §12 fix-pass for the `:1652` dormant defect, extended here with the
+      remaining items):
+      - the Slack step, **Owner: Story 4.5**, naming `deploy-preprod.yml` as a second file it must
+        touch — added;
+      - `deploy-stand.yml:216`'s wrong label — 🔴 **re-routed, not fixed**, **Owner: Story 6.4** —
+        correction added directly under the original entry (`deferred-work.md`'s finding 1), not as
+        a new EOF item, per Prohibition 14;
+      - the `.runner`-vs-`agent_labels` conflict — **confirmed still unresolved** by this story's own
+        Task 2.3 (`agent_labels` DB query: exactly one label, `["deploy-dev-preprod"]`, not the
+        `.runner` file's claimed four) — folded into the same correction note, **Owner: Story 6.4**;
+      - **finding 8** (`expect_unrouted_api`) — 🔴 **PARTIALLY discharged, not fully closed**: note
+        added under the original with the old text intact (not struck, since it is not fully
+        superseded) — step 19 confirmed `status=1` on the real guard path (runs 1184/1188) for the
+        first time, but the literal `RESP_CODE` text remains unread (archival gap, Tasks 5.5/8.4).
+        Left open rather than falsely marked closed on step-status alone;
+      - `image_tag` mode's confirmed-vs-not-confirmed scope beyond the two §12 defects — added;
+      - the `CRM/api-prionex` re-escalation (Task 9.2a) — added, see below.
+- [x] 9.3 `docs/migration-decisions.md`: a new decision record + index row + Change Log row.
       🔴 **Verify the next free number against every open `story-*` branch, not just `main`** —
       `main` stops at D36 and 4.9 holds **D35** on its own unmerged branch (D36 §1). The expected
       value is **D37**, and *"there is a `D23` collision in this project's history precisely because
       someone did not"* check. Record in Russian, per convention; body covers the caller, the label
       decision and its evidence, `image_tag` mode's first live execution path by path, the lock on a
-      second stand, and what the Kong guard does and does not prove.
-      ⚠️ The file's own header still advertises its anchor range as `#d1 … #d31` while D32–D36
-      exist. Bump it to `#d37` in the same edit — one line, and it is the file this story is already
-      touching.
-- [ ] 9.2a **Route the `CRM/api-prionex` heads-up alongside the CORS ask.** `deferred-work.md`
+      second stand, and what the Kong guard does and does not prove. **Done: [D37](../../../docs/migration-decisions.md#d37)** —
+      verified against all four unmerged `story-*` branches (`4-4/pr-1-context`, `4-5/pr-1-context`,
+      `4-9/pr-1-context`, this story's own), none carry D37 or higher; `main` stops at D34/D36 (no
+      D35). Index row + full section + two Change Log rows (D37 added, this fix-pass) written.
+      ⚠️ The file's own header still advertised its anchor range as `#d1 … #d31` while D32–D36
+      already existed (stale since before this story). **Bumped to `#d37` in this same edit**, one
+      line, per the task's own instruction.
+- [x] 9.2a **Route the `CRM/api-prionex` heads-up alongside the CORS ask.** `deferred-work.md`
       carries it escalated and **still unsent, still unowned**: after 5.2, this repository holds
       **two** endpoints on networks `CRM/api-prionex` owns (`crm-dev-network` and their
       69-container `crm-preprod-network`), so a `docker network rm` on their side now trips over
       both. This story adds no third endpoint — but it is the story that makes PRE-PROD a *live
       deploy target*, which is the moment the exposure stops being theoretical. Re-escalate in one
       line naming **Oleg** as owner (the CORS ask is his channel and *"that remains the cheapest
-      moment it will ever have"*). Do not contact `CRM/api-prionex` directly.
-- [ ] 9.4 Cross-check that no artifact this story writes repeats a fact the project has already
+      moment it will ever have"*). Do not contact `CRM/api-prionex` directly. Added to the same
+      `deferred-work.md` section, naming that dispatch 1 (run 1184) is what turned the exposure from
+      theoretical to real.
+- [x] 9.4 Cross-check that no artifact this story writes repeats a fact the project has already
       corrected: `Dockerfile.prod` is **`:55-56`**, not `:34`; the DEV/PREPROD stand-dir assertion
       fires **once** on the real deploy path, not twice; `sha-f8f358f43ced-preprod` is **deleted**,
-      not missing; retro-D4/retro-E5 always carry the `retro-` prefix.
-- [ ] 9.5 AC6's paragraph, written from §7's table and this story's own evidence.
-- [ ] 9.6 `sprint-status.yaml` → `review`, as its own commit (Task 1.1's lesson, applied at the
+      not missing; retro-D4/retro-E5 always carry the `retro-` prefix. **Checked, all four clean**:
+      grepped this story file for `Dockerfile.prod:34` (zero hits), `fires twice`/`twice…stand-dir`
+      (zero hits — only the correct "fires once, not twice" phrasing at `:920`/`:998`), every
+      `f8f358f43ced` reference (four hits, all say "deleted"/"confirmed absent", none say "missing"
+      unqualified), and bare `-D4`/`-E5` without the `retro-` prefix (zero hits).
+- [x] 9.5 AC6's paragraph, written from §7's table and this story's own evidence. **What the Kong
+      guard proves, and does not prove, for this story specifically:** `expect_unrouted_api: "false"`
+      fired on the real caller for the first time (runs 1184, 1188 — step 19 `status=1` both times).
+      It proves the stand's own container is running and reachable via `exec`, that
+      `crm-kong-gateway` resolves from **inside this specific stand's** network namespace (the same
+      identity discriminator 5.2's AC5/D34/D36 already established, re-exercised here rather than
+      re-derived), and that `GET /api/` through the stand's own nginx returns a real HTTP status —
+      not a transport failure. It does **not** prove that `/api/` is actually routed to a working
+      backend behind Kong, that a browser could call the API (CORS remains broken, measured on the
+      real origin by D34 §5/D36 §5, unchanged by this story — the external ask is already sent), or
+      that the deployed bundle's baked-in URLs are correct (that is 5.2's own Task 5, inherited
+      unchanged since this story deploys the same image). The literal `RESP_CODE` the guard printed
+      is still unread pending log archival (`deferred-work.md` finding 8's partial-closure note) —
+      the *pass/fail* of the check is confirmed via the DB step status; its literal text is not yet.
+- [x] 9.6 `sprint-status.yaml` → `review`, as its own commit (Task 1.1's lesson, applied at the
       other end).
 
 ### Task 10 — Close (AC: all)
 
-- [ ] 10.1 Re-run the ledger query and build the attribution table. 🔴 Use 5.1's parallel-era
+- [x] 10.1 Re-run the ledger query and build the attribution table. 🔴 Use 5.1's parallel-era
       method, cited not re-derived (Dev Notes §5): filter to `repo_id=16`; match each row's
       `commit_sha` against this story's own commits **and against `story-4-9/*`'s branch tip,
-      fetched fresh**; a row matching neither is **named as unattributable**, never absorbed.
-- [ ] 10.2 Reconcile declared vs actual per line; explain every overrun and every underrun.
-- [ ] 10.3 Disposition: **OPEN** until the coordinator re-queries after the merge commit lands.
-      Never a self-reported number (retro-D4).
-- [ ] 10.4 File List, Completion Notes, Change Log.
-- [ ] 10.5 Confirm blast radius by diff: `git diff origin/main --name-only` equals the declared
-      set, and `deploy-stand.yml` is absent from it.
+      fetched fresh**; a row matching neither is **named as unattributable**, never absorbed. Done —
+      `git fetch origin story-4-9/pr-1-context` fresh, tip `11017adc`, matches none of the 11
+      above-baseline rows' `commit_sha` values. All 11 attributed cleanly to this story's own five
+      commits (see Run Budget Ledger table above); zero unattributable rows this time (unlike
+      D32/D33's parallel era, no sibling story pushed to this repo during this story's own window).
+- [x] 10.2 Reconcile declared vs actual per line; explain every overrun and every underrun. Done —
+      see Run Budget Ledger's "Final reconciliation" above: 11 actual vs 9 explicitly-priced,
+      2-row gap named honestly (the CI push each of the two §12 fix commits necessarily triggered,
+      not separately itemized in the `+2`/`+1` pricing statements) — not an overrun against the
+      declared floor/ceiling of 16, but a real pricing-completeness gap, named rather than hidden.
+- [x] 10.3 Disposition: **OPEN** until the coordinator re-queries after the merge commit lands.
+      Never a self-reported number (retro-D4). Recorded as OPEN in the Run Budget Ledger's final
+      paragraph — the remaining §11 lines (PR-open, code-review push, fix-pass push, merge run)
+      have not happened yet.
+- [x] 10.4 File List, Completion Notes, Change Log. Completion Notes List and File List written
+      above; Change Log row added below.
+- [x] 10.5 Confirm blast radius by diff: `git diff origin/main --name-only` equals the declared
+      set, and `deploy-stand.yml` is absent from it. 🔴 **`deploy-stand.yml` is NOT absent —
+      deliberately, per the §12 exception invoked twice this story, both times with Oleg's explicit
+      authorization.** This is a correct deviation from this task's own text (written at contexting
+      time, before either §12 finding), not an oversight. `git diff origin/main --name-only` shows
+      exactly six files: `.forgejo/workflows/deploy-preprod.yml` (new), `.forgejo/workflows/deploy-
+      stand.yml` (§12, both edits confined to the 404-classifier `case` block), this story file,
+      `sprint-status.yaml`, `docs/migration-decisions.md`, `deferred-work.md`. Nothing else.
 - [ ] 10.6 PR — mark **`PENDING (owner: coordinator)`**. Prohibition 15; the dev agent does not open
       it, and checking this box without a PR is 5.2's M14.
 
@@ -1175,6 +1244,9 @@ everything under `.github/`; every nginx file on s1; `/etc/letsencrypt`; the DEV
 
 ### Agent Model Used
 
+Claude Sonnet 5 (dev-story), per the project's standing model split (create-story: Opus, dev-story:
+Sonnet, code-review: Opus).
+
 ### Debug Log References
 
 **Task 1.1:** `sprint-status.yaml` flipped `ready-for-dev → in-progress` and pushed as its own
@@ -1324,7 +1396,30 @@ wait**, matching the holder's ~60s TTL running down (measured from the DB's own 
 not inferred). Deploy completed green afterward; final digest `sha256:5e5b190d93c8…`, `healthy`,
 site `200`; lock released, `.deploy.lock` back to 0 bytes/unlocked. The literal "waiting"/"acquired"
 log lines (Task 8.4's own request) are in task 9769, also not yet archived — same addendum as
-dispatch 1's AC7 lines.
+dispatch 1's AC7 lines. **Re-checked at close-out (2026-08-24, ~1 hour later): still not archived**
+(`log_in_storage=f` for both task 9745 and task 9769; no on-disk file under either task's compressed
+path; no live/uncompressed copy found by broader search) — genuinely PENDING, not re-attempted and
+given up on early. `action_task_step.log_length` was pulled as partial substitute evidence for both
+tasks (identical for 9745/9769): step 3 (login) 6 lines, step 5 (pull) 5, step 6 (compose file) 3,
+step 7 (write vars) 2, step 8 (acquire lock) 2, step 12 (`down`) 5, step 13 (`up -d`) 5, step 19
+(Kong guard) 2, step 20 (post-deploy record) 4 — line counts only, not literal text; steps 0-20
+`status=1`, step 21 (restore) correctly `status=4` SKIPPED on both. Does not substitute for AC7's
+five literal lines or the Kong guard's literal `RESP_CODE`, which remain open per Tasks 5.4/5.5/8.4.
+
+**Task 9.1 — retro-E5 matrix, every verdict read from the job/step list and the DB, never from a
+log line alone:**
+
+| # | Task | Run id | Inputs | Verdict | The discriminating message |
+|---|---|---|---|---|---|
+| — | AC2 zero-run rejection | *(none — API refusal)* | `image_tag` omitted | **NOT YET EXECUTED — flagged below, not fabricated.** No `action_run` row exists for this in the 1181-1193 window; no dispatch omitting `image_tag` was reported as attempted. Zero-cost, zero-ledger-impact per §11/AC2's own text — recommend the coordinator run it (one API call, HTTP 400 expected, `max(id)` unchanged) before or during code review; not blocking this story's status flip since it costs nothing either way. |
+| 1 | Dispatch 1 — green deploy | 1184 | `image_tag=sha-00ef3be4743d-preprod` | **SUCCESS**, ~60s, first try | AC7 line 1 confirmed literally (`clone-test` log); lines 2-5 + AC6 `RESP_CODE` PENDING archival (Tasks 5.4/5.5) |
+| 2a | Dispatch 2 — absent tag → 404 | 1185 | `image_tag=sha-000000000000-preprod` | **FAILURE**, ~30s — §12 defect #1 | `IMAGE_ENV: unbound variable`, no classified message printed |
+| 2b | Dispatch 2 re-run, post-fix #1 | 1190 | same | **FAILURE**, ~30s — §12 defect #2 | `command not found` (exit 127), `RETENTION_NOTE` assignment crash |
+| 2c | Dev-path 404 control | 1191 | `deploy-dev.yml`, nonexistent `ref` | **FAILURE**, ~30s — did not reach the fixed code | `clone-test` gated `deploy` before digest-resolve; separate non-gating diagnostic job failed on its own, unrelated 404 |
+| 2d | Dispatch 2, third attempt, post-fix #2 | **1193** | `image_tag=sha-000000000000-preprod` | **FAILURE**, ~5s, as designed — **AC4 message-quality now MET** | Full classified message, `preprod` branch, no crash (Task 6.2, literal message above) |
+| 3 | Dispatch 3 — simulated 401 | 1186 | `image_tag=sha-00ef3be4743d-preprod`, `simulate_bad_credential=true` | **FAILURE**, ~24s, as designed | `[SIMULATED via simulate_bad_credential=true — NOT a real credential outage]…NOT that the image is missing` |
+| 4 | Dispatch 4 — lock holder fixture | 1187 | `hold_lock_seconds=60` | **SUCCESS** (fixture only; `deploy` cascade-SKIPPED) | Holder container `fe-prionex-preprod-deploy-lock-1187` outlives its own job |
+| 5 | Dispatch 5 — contending deploy | 1188 | `image_tag=sha-00ef3be4743d-preprod` | **SUCCESS**, real 31s wait then acquired | Acquire step `started 1787560846`/`stopped 1787560877`; literal wait/acquire log lines PENDING archival (Task 8.4) |
 
 ### 🔴 §12 exception — a real defect in `image_tag` mode, found by dispatch 2, fixed per the
 ### 4-step procedure, with Oleg's explicit authorization
@@ -1492,9 +1587,88 @@ entire three-red-round reserve is now consumed by this one classifier's two-stag
 red round on this same row would exceed the declared budget and require explicit renegotiation, not
 silent absorption.
 
+**Final reconciliation, `2026-08-24`, `psql`, repo-scoped (`repo_id=16`), attributed by `commit_sha`**
+— 5.1's parallel-era method, cited not re-derived: `select id, status, ref, commit_sha, started,
+stopped from action_run where repo_id=16 and id > 1182 order by id`. Baseline is `max(id)=1182`
+(Task 1.2, timestamped `2026-08-24T08:26:19Z`) — everything at or below that id, including the two
+CI rows this story's own first two commits (`bc117781`, `5c06cd14`) triggered, is pre-counted into
+the baseline itself, not this story's above-baseline spend.
+
+**11 rows above baseline (1183-1193), every single one attributed to one of this story's own five
+commits — zero foreign `commit_sha` in this window** (no sibling story pushed to this repo during it,
+unlike D32/D33's parallel era):
+
+| Run id | `commit_sha` | Status | What it is |
+|---|---|---|---|
+| 1183 | `9eecc5eb` (deploy-preprod.yml) | SUCCESS | CI push run — "Push: dev-story write-up" |
+| 1184 | `9eecc5eb` | SUCCESS | Dispatch 1 — green deploy |
+| 1185 | `9eecc5eb` | FAILURE | Dispatch 2 — absent tag, §12 defect #1 |
+| 1186 | `9eecc5eb` | FAILURE | Dispatch 3 — simulated 401 |
+| 1187 | `9eecc5eb` | SUCCESS | Dispatch 4 — lock holder fixture |
+| 1188 | `9eecc5eb` | SUCCESS | Dispatch 5 — contending deploy |
+| 1189 | `78261b15` (§12 fix #1) | SUCCESS | CI push run — not itemized in the original +2 pricing |
+| 1190 | `78261b15` | FAILURE | Dispatch 2 re-run — surfaced §12 defect #2 |
+| 1191 | `78261b15` | FAILURE | DEV 404 control — did not reach the fixed code |
+| 1192 | `341b7599` (§12 fix #2) | RUNNING at query time | CI push run — not itemized in the original +1 pricing |
+| 1193 | `341b7599` | FAILURE (as designed) | Dispatch 2, third attempt — closes AC4/Task 6.2 |
+
+**Reconciliation, honest about a real gap:** explicitly priced so far: 1 write-up push + 5 dispatches
+(Task 5-8) + 2 (§12 defect #1's PRE-PROD re-run and DEV control) + 1 (§12 defect #2's third attempt)
+= 9 rows. **Actual: 11.** The 2-row gap is `1189` and `1192` — the CI push run each §12 fix commit
+necessarily triggers (the standing rule, DN4 of Story 4.7's review: *"pushes to the story's own
+branch" is a repeating, per-push ledger line"*), which the `+2`/`+1` pricing statements named only
+the dispatches, not the accompanying push. **Named honestly here rather than left implicit** — a
+minor under-pricing (2 rows), not hidden, and still well inside the declared ceiling.
+
+**11 actual ≤ 16 declared floor/ceiling — no overrun.** The remaining budget lines from §11's table
+(PR-open run, code-review push ×2, fix-pass push ×2, merge run) have not happened yet — they belong
+to the review cycle ahead, not this dev-story pass. **Disposition: OPEN.** Per retro-D4, this closes
+only against a query re-run after the merge commit lands — not on this record, and not as a
+self-reported "13/16" or similar. The coordinator's own post-merge query is the closing act.
+
 ### Completion Notes List
 
+1. `deploy-preprod.yml` written and dispatched five times against `deploy-stand.yml`'s `image_tag`
+   mode — the mode's first live execution in any environment, across this repository's history.
+   Dispatch 1 (run 1184) succeeded on the first try; all five AC7 discriminators and the staged-
+   green-row design worked as designed. Two `deploy-stand.yml` lines' worth of never-before-executed
+   404-classifier code turned out to be broken, found only because this story finally exercised the
+   path — both fixed via the priced §12 exception procedure, with Oleg's explicit authorization at
+   each step, never edited first and reported after.
+2. The lock primitive (D30) is now proven on a second stand independently, not by analogy — real
+   holder/waiter contention (runs 1187/1188), measured from `action_task_step` timestamps, not
+   inferred from job success alone.
+3. Two archived logs (run 1184's `deploy` job, run 1188's `deploy` job) remain genuinely unavailable
+   as of this story's close-out — Forgejo's asynchronous log archiver has not flushed either to disk
+   despite repeated checks roughly an hour apart. This blocks AC7's literal lines 2-5 and the AC6
+   Kong guard's literal `RESP_CODE` from being pasted verbatim; the underlying facts they would
+   confirm are independently substantiated via `action_task_step` status/timestamps/`log_length`
+   instead, and the gap is named explicitly rather than papered over. Whoever reads those logs next
+   (this story's own code review, or a later story) should paste the literal text into
+   `deferred-work.md` finding 8's still-open closure note and this story's own Tasks 5.4/5.5/8.4.
+4. The AC2 zero-run rejection row (dispatch with `image_tag` omitted, expecting HTTP 400, zero
+   ledger cost) was never dispatched by either party this story — recommended to the coordinator as
+   a cheap addition before or during code review, not treated as blocking since its cost is zero
+   either way.
+5. Blast radius: `deploy-preprod.yml` (new), this story file, `sprint-status.yaml`,
+   `docs/migration-decisions.md`, `deferred-work.md`, and exactly one authorized line-range in
+   `deploy-stand.yml` (two separate §12 edits, 11 insertions/6 deletions total, both confined to the
+   404-classifier's `case` block) — confirmed by `git diff origin/main --name-only` and
+   `git diff --stat`, not by intention.
+
 ### File List
+
+- `.forgejo/workflows/deploy-preprod.yml` (new)
+- `.forgejo/workflows/deploy-stand.yml` (modified — two §12-authorized edits, both inside the 404
+  classifier's `case` block: `IMAGE_ENV` added to the digest-resolve step's `env:` block; both
+  `RETENTION_NOTE` assignments rewritten as single-line strings)
+- `_bmad-output/implementation-artifacts/5-3-deploy-a-specific-image-tag-to-pre-prod.md` (this file)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions, own commits)
+- `docs/migration-decisions.md` ([D37](../../../docs/migration-decisions.md#d37) added; header anchor
+  range bumped to `#d37`)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (new section for this story's own
+  findings; corrections placed under three pre-existing entries — the `runner_label`/skeleton entry,
+  finding 8's `expect_unrouted_api` entry — per Prohibition 14)
 
 ### Review Findings
 
@@ -1537,3 +1711,4 @@ silent absorption.
 | Date | Change |
 |---|---|
 | 2026-08-24 | **Contexted** against `main` @ `96d19bc0` (PR #77, Story 5.2's closeout). Branch `story-5-3/pr-1-context`. Eleven autonomous decisions, listed in Dev Notes §9; the two load-bearing ones are `runner_label: deploy-dev-preprod` (§4 — the scheduler reads `agent_labels`, where `preprod` does not appear, and an unmatched label queues silently) and the staged green row (§6 — the stand already runs the candidate tag, so a plain redeploy could not have failed on the axis that matters). Two ACs added: AC6 (what the checks prove and do not prove, given that CORS stays broken) and AC7 (`image_tag` mode's five first-execution lines confirmed individually, because four never-run paths inside one green tick is one green tick). `deploy-stand.yml` is read-only, including its wrong caller skeleton — re-routed to Story 6.4 with the re-earning cost priced, and §12 carries the exception procedure for the one case where this story must edit it. Ledger declared: floor **13**, ceiling **16**, disposition **OPEN**. Status → ready-for-dev. |
+| 2026-08-24 | **Dev-story complete.** `deploy-preprod.yml` written; `image_tag` mode's first live execution (run 1184, green on the first try, all five AC7 discriminators confirmed individually); lock proven on a second stand (runs 1187/1188, real 31s contention wait measured from step timestamps). 🔴 **Two real defects found and fixed in `deploy-stand.yml`'s 404 classifier via the priced §12 exception, both with Oleg's explicit authorization, neither edited-then-reported:** (1) run 1185 — `IMAGE_ENV` missing from the digest-resolve step's `env:` block, `unbound variable` crash before any classified message printed; fixed, one line. (2) run 1190 — surfaced only by fix #1 finally letting the code run one statement deeper — `RETENTION_NOTE`'s backslash-continued assignment crashed with `command not found` (a bash pattern safe only as `echo` arguments, not as an assignment's right-hand side); fixed, both branches rewritten single-line. Closed by a third dispatch, run 1193: full classified message, correct `preprod` branching, no crash, `down` SKIPPED, stand untouched. An identical third occurrence (`:1652`, lock-timeout classifier) found dormant and left unfixed, out of the exception's scope — routed to `deferred-work.md`. D37 added to `docs/migration-decisions.md` (verified against every open `story-*` branch, not just `main`). Ledger reconciled by `psql` on `commit_sha`: 11 rows above baseline, all attributed to this story's own five commits, zero unattributable — floor revised twice (13→15→16) by the same §12 exception, now equal to the declared ceiling; disposition stays **OPEN** per retro-D4. Two archived logs (runs 1184/1188's `deploy` jobs) remain genuinely unavailable despite repeated checks — named as an open gap, not silently dropped; the AC2 zero-run rejection row was never dispatched by either party — flagged, not fabricated. Blast radius: six files, `deploy-stand.yml` included deliberately per §12 (not the absence the task text originally expected). Status → **review**. |

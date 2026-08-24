@@ -3555,6 +3555,18 @@ UTC-timestamped at the point of measurement.
    either stand — but the datum (now on the correct Host) did not exist before this story and Story
    5.3 should read it before relying on the rationale as written. **Owner: Story 5.3** (Task 5.4/§11
    of this story).
+   🔴 **Story 5.3's own dev-story, 2026-08-24: PARTIALLY discharged, not fully closed.** This is the
+   third measurement, and the first taken on the guard's own path from **inside a real deploy** (runs
+   1184/1188) rather than a standalone curl probe. Behaviorally confirmed via the DB: step 19 ("Kong
+   alias guard — recurring, not one-shot") shows `status=1` (success) on both 1184 and 1188 — the
+   `expect_unrouted_api: "false"` permissive branch fired and did not block either deploy, on the real
+   caller (`deploy-preprod.yml`), for the first time. **Still open: the guard's own literal printed
+   `RESP_CODE`** — its log (task 9745/9769) has not archived to disk as of this story's close-out,
+   despite two check attempts roughly an hour apart (Story 5.3's own Tasks 5.5/8.4). Whoever reads
+   that log next should paste the literal `RESP_CODE` line here to actually close this finding;
+   until then it stays open, upgraded from "curl-probe-only" to "confirmed passing on the real guard
+   path, literal code still unread" — not silently marked done on the strength of the step status
+   alone.
 9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
    raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
    (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
@@ -3604,6 +3616,18 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
    `deploy-dev-preprod`, which DEV already uses live — same runner, same job image either way). **Not
    fixed here** — `deploy-stand.yml` is Story 4.8's shipped artifact and inside Story 4.9's blast
    radius (§12 of this story). **Owner: Story 5.3.**
+   🔴 **Story 5.3's own dev-story, 2026-08-24: re-routed further, not fixed there either — Owner:
+   Story 6.4.** 5.3 read-only-verified `runner_label` before dispatching (its own Task 2.3), used
+   `deploy-dev-preprod` (chosen live, not this comment's suggested `preprod`), and its own §12
+   exception covers only the 404-classifier bug it found — not this skeleton comment, which is a
+   separate, unrelated finding sharing the same file. **The DB-vs-disk conflict this entry's own
+   `.runner`-file reading rests on is still live, measured again by 5.3's Task 2.3:**
+   `select agent_labels from action_runner where name='s1-deploy-dev-preprod'` →
+   `["deploy-dev-preprod"]` — exactly **one** label in the DB (the scheduler's actual source, per
+   D33), not the four this entry's on-disk `.runner` file claims. Whichever story next legitimately
+   edits `deploy-stand.yml` should fix the skeleton's label AND resolve (or at minimum re-measure)
+   this DB-vs-disk disagreement before picking an s10 label for PROD by the same method — Story 6.4
+   will need a working answer, not an inherited assumption.
 2. ⚠️ **The s1 registry login has been removed twice, not three times** — 🔴 corrected, fix-pass:
    the first pass's heading claimed "a third time" while its own body named only two events. The
    *first* disappearance is on record as **13 Aug**, discovered by Story 4.2
@@ -3730,3 +3754,26 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   covers) — fix the same way as `:1132`/`:1136`: single-line string, no backslash continuation, or an
   explicit `+=` if the continuation is kept for readability, with the same lesson pinned as a comment
   at the site.
+- ⚠️ **The Slack notification step named by earlier stories still does not exist, and
+  `deploy-preprod.yml` is now a second file it will need to touch. Owner: Story 4.5.** No step in
+  either `deploy-dev.yml` or the new `deploy-preprod.yml` posts to Slack on failure or success; the
+  classified messages this story worked to make honest (`[SIMULATED …]` markers, the 404/401
+  classifiers, the two §12 fixes) only reach a log excerpt someone pastes by hand today. Recorded here
+  again, naming the new file explicitly, so Story 4.5 does not have to rediscover the second caller.
+- ⚠️ **What dispatch 1 (run 1184) confirmed and did not confirm about `image_tag` mode, beyond the two
+  §12 defects.** Confirmed live for the first time in any environment: the exactly-one-of-`ref`-or-
+  `image_tag` guard, the direct-tag-no-derivation path, digest resolution and pull by tag, and the
+  full deploy/health/AC6/Kong sequence all work correctly when the tag exists (Story 4.8's own H1 fix,
+  applied but never dispatched, is now confirmed live). **Not confirmed by this story:** `image_tag`
+  mode's behavior when the resolved digest matches what is *already running* (a true no-op redeploy —
+  5.3 deliberately staged a different image first, per its own §6, specifically to avoid ever
+  observing this case) and `image_tag` mode combined with a malformed (not merely absent) tag string
+  — the shape-validation code path (`:729-856` per Dev Notes §9) was read, not dispatched. Neither
+  blocks 5.3's own ACs; named for whichever story next relies on either behavior.
+- ⚠️ **`CRM/api-prionex` heads-up, re-escalated once more — still unsent, still unowned.** After this
+  story, `CRM/fe-prionex` holds live, working deploy paths onto **two** of `CRM/api-prionex`'s own
+  networks (`crm-dev-network` since 4.2, `crm-preprod-network`'s 69-container network now proven a
+  real deploy target by this story, not merely measured). A `docker network rm` on their side now
+  trips over both, and PRE-PROD stopped being a theoretical target the moment this story's first
+  dispatch (1184) actually redeployed onto it. Same channel as the CORS ask — **Owner: Oleg** — not
+  contacted directly by this session, per standing instruction.
