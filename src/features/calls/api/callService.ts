@@ -17,6 +17,37 @@ const API_BASE_URL =
     ? import.meta.env.VITE_API_BASE_URL
     : 'http://localhost:8000'
 
+/**
+ * The server answered 200 but the body carried fewer bytes than the
+ * Content-Length it promised — the recording stream was cut mid-transfer
+ * (KAN-1023: call-service sometimes drops the connection while proxying a
+ * large recording). Playing such a blob silently truncates the call for the
+ * trainer, so the fetch surfaces it as an explicit, retryable error instead.
+ */
+export class RecordingTruncatedError extends Error {
+  readonly expectedBytes: number
+  readonly receivedBytes: number
+
+  constructor(expectedBytes: number, receivedBytes: number) {
+    super(`Recording truncated: received ${receivedBytes} of ${expectedBytes} bytes`)
+    this.name = 'RecordingTruncatedError'
+    this.expectedBytes = expectedBytes
+    this.receivedBytes = receivedBytes
+  }
+}
+
+export interface FetchRecordingProgress {
+  loadedBytes: number
+  /** Total from Content-Length when the server sent one; null otherwise. */
+  totalBytes: number | null
+}
+
+export interface FetchRecordingOptions {
+  /** Cancels the download (dialog switched / player unmounted). */
+  signal?: AbortSignal
+  onProgress?: (progress: FetchRecordingProgress) => void
+}
+
 class CallService {
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
     const response = await api.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
@@ -59,13 +90,36 @@ class CallService {
     return `${API_BASE_URL}/api/v1/calls/${callId}/recording`
   }
 
-  /** Fetches recording bytes with auth headers (required — native <audio src> cannot send Bearer tokens). */
-  async fetchRecordingBlob(callId: string): Promise<Blob> {
+  /**
+   * Fetches recording bytes with auth headers (required — native <audio src>
+   * cannot send Bearer tokens).
+   *
+   * Verifies the body against Content-Length: a 200 whose stream was cut short
+   * rejects with {@link RecordingTruncatedError} rather than handing back a
+   * blob that plays as a shorter call. Only `size < expected` counts — with
+   * `Content-Encoding` compression the decoded blob is legitimately larger
+   * than the wire length, never smaller.
+   */
+  async fetchRecordingBlob(callId: string, options: FetchRecordingOptions = {}): Promise<Blob> {
     const response = await api.get(`/api/v1/calls/${callId}/recording`, {
       responseType: 'blob',
       timeout: 120_000,
+      signal: options.signal,
+      onDownloadProgress: options.onProgress
+        ? (event) => {
+            options.onProgress?.({
+              loadedBytes: event.loaded,
+              totalBytes: typeof event.total === 'number' && event.total > 0 ? event.total : null,
+            })
+          }
+        : undefined,
     })
-    return response.data
+    const blob: Blob = response.data
+    const expectedBytes = Number(response.headers?.['content-length'])
+    if (Number.isFinite(expectedBytes) && expectedBytes > 0 && blob.size < expectedBytes) {
+      throw new RecordingTruncatedError(expectedBytes, blob.size)
+    }
+    return blob
   }
 
   async getAMIHealth(): Promise<AMIHealthResponse> {
