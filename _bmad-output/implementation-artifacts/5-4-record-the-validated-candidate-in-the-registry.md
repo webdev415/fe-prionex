@@ -1005,9 +1005,26 @@ is also listed in §10 and Dev Notes §9.
       — matches D7's own newly-minted digest exactly. `curl -s -o /dev/null -w '%{http_code}'
       http://127.0.0.1:8083/` → `200`. The stand is now genuinely, demonstrably serving candidate
       #2 — the precondition D9's own G5 test needs.
-- [ ] 8.4 D9 — dispatch the recorder for **candidate #1** while the stand serves candidate #2.
+- [x] 8.4 D9 — dispatch the recorder for **candidate #1** while the stand serves candidate #2.
       Expect RED at G5, with a message that names both digests and says which is which. Read both
-      markers back: unchanged at `sha256:5e5b190d…`.
+      markers back: unchanged at `sha256:5e5b190d…`. **Done, coordinator, run 1227, FAILURE, ~10s
+      (`2026-08-24T12:39:49Z`–`12:39:51Z`).** Step-level: `verify-on-stand` steps 0-3 (G1/G2/G3/
+      digest-resolve) all `status=1`; step 4 (**G5**) `status=2` — the refusal landed exactly where
+      designed, not earlier, not later; step 5 (record the validation note) `status=4` SKIPPED —
+      never reached. `record` job (10700) `status=4` SKIPPED entirely (`needs:` cascade). Log (task
+      10079, archived) — full multi-line message, both digests named and unambiguously attributed:
+      ```
+      FAIL(G5): the stand is healthy but is NOT demonstrably serving the candidate.
+        candidate's own registry digest: sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c
+        stand's own running .RepoDigests: [git.crm-prionex.com/crm/fe-prionex@sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26]
+        Recording this candidate now would be a claim, not evidence -- refusing.
+      ```
+      Both markers re-read directly on s1 after the run: `preprod-00ef3be4743d` →
+      `sha256:5e5b190d…`, `preprod-current` → `sha256:5e5b190d…` — **unchanged**, exactly as before
+      D9. **G5's failing half is now earned live**, closing the last of AC7's three genuinely
+      earnable-but-not-yet-earned rows (G4 and AC8's repoint refusal remain force-tested only,
+      per §5 — G5 was never in that "no live row possible" set, it just needed candidate #2 on the
+      stand first, which D7/D8 supplied).
 
 ### Task 9 — D10: the move (AC: 3)
 
