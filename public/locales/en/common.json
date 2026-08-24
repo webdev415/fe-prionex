@@ -2212,7 +2212,9 @@
           "callType": "Call type",
           "duration": "Duration",
           "dispute": "dispute",
-          "disputeHint": "The trainer disagreed with the AI review"
+          "disputeHint": "The trainer disagreed with the AI review",
+          "loanNumber": "Loan number",
+          "moreLoans": "+{{count}} more"
         },
         "view": {
           "list": "Scorecards",

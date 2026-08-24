@@ -21,6 +21,7 @@ import type {
   CreateClientRequest,
   CreateContactRequest,
   CreateRestructuringAgreementRequest,
+  DebtDetail,
   GetClientsParams,
   ManualPriorityRequest,
   SearchByTinParams,
@@ -148,6 +149,33 @@ export function useClientNames(clientIds: number[]): Map<number, string> {
     }
   })
   return names
+}
+
+/**
+ * Resolve a set of client ids to their debts, returning a Map<id, DebtDetail[]>.
+ *
+ * Rides the exact same `clientKeys.detail(id)` queries as `useClientNames`
+ * above (the client detail response already carries `debts[]`), so a list that
+ * shows both names and loan numbers costs the same requests as names alone —
+ * React Query dedupes the identical query definitions into one fetch.
+ */
+export function useClientDebts(clientIds: number[]): Map<number, DebtDetail[]> {
+  const uniqueIds = Array.from(new Set(clientIds))
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: clientKeys.detail(id),
+      queryFn: () => clientApi.getClientById(id),
+      enabled: !!id,
+      staleTime: 5 * 60_000,
+    })),
+  })
+
+  const debtsById = new Map<number, DebtDetail[]>()
+  uniqueIds.forEach((id, i) => {
+    const debts = results[i]?.data?.debts
+    if (debts && debts.length > 0) debtsById.set(id, debts)
+  })
+  return debtsById
 }
 
 /**

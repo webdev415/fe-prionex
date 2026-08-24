@@ -2221,7 +2221,9 @@
           "callType": "Тип дзвінка",
           "duration": "Тривалість",
           "dispute": "спір",
-          "disputeHint": "Тренер не погодився з AI-розбором"
+          "disputeHint": "Тренер не погодився з AI-розбором",
+          "loanNumber": "Номер кредиту",
+          "moreLoans": "+{{count}} ще"
         },
         "view": {
           "list": "Скоркарти",
