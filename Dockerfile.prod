@@ -18,8 +18,13 @@ COPY . .
 # Build arguments for environment variables (Vite requires these at build time)
 ARG VITE_API_BASE_URL
 ARG VITE_WS_URL
+# Assistant report tables (heat map + attention rows). Off unless the build is
+# given "true"/"1" — an unset ARG lands as an empty string, i.e. the feature
+# stays off. Vite inlines the value at build time, so it MUST arrive here.
+ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
 
 # Build the application
 RUN npm run build

@@ -101,6 +101,11 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # VITE_ASSISTANT_REPORT_TABLES_ENABLED — feature flag for the assistant's
+      # report tables (heat map + attention rows). Vite inlines it at build
+      # time, so it has to be a build-arg. The repository variable is normally
+      # unset: it then expands to an empty string and the feature stays off;
+      # set it to "true" to ship the feature.
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -112,6 +117,7 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ steps.set-api-url.outputs.API_URL }}
             VITE_WS_URL=${{ steps.set-api-url.outputs.WS_URL }}
+            VITE_ASSISTANT_REPORT_TABLES_ENABLED=${{ vars.VITE_ASSISTANT_REPORT_TABLES_ENABLED }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
