@@ -43,6 +43,7 @@ export const clientKeys = {
   loans: (id: number) => [...clientKeys.details(), id, 'loans'] as const,
   paymentsSection: (id: number) => [...clientKeys.details(), id, 'payments'] as const,
   callSmsHistory: (id: number) => [...clientKeys.details(), id, 'callSmsHistory'] as const,
+  recentCalls: (id: number) => [...clientKeys.details(), id, 'recentCalls'] as const,
   tasks: (id: number) => [...clientKeys.details(), id, 'tasks'] as const,
   operatorsSection: (id: number) => [...clientKeys.details(), id, 'operators'] as const,
   documents: (id: number) => [...clientKeys.details(), id, 'documents'] as const,
@@ -523,6 +524,41 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     refetchOnMount: false,
+  })
+}
+
+/**
+ * The client's most recent calls, in the raw API shape (KAN-973 §4).
+ *
+ * Deliberately separate from `useClientCallSmsHistory`, for two reasons that
+ * both broke the hotkey phone pre-selection:
+ *
+ *  * that query is enabled only while the Call/SMS tab is open — and the
+ *    default tab is Loans — so at the moment a hotkey is pressed it has
+ *    usually never run;
+ *  * it returns records mapped for display, where `customer_number` has been
+ *    renamed to `phone` and unknown numbers replaced with "-", so the number
+ *    the switchboard reported is no longer recoverable.
+ *
+ * Returns `CallRecord` untouched, and is enabled only for operators who
+ * actually have a shortcut bound — for everyone else it would be a request per
+ * client card in service of a feature they have not set up.
+ *
+ * The window is short on purpose: the question is only ever about the last few
+ * minutes, and a stale answer would pre-select the wrong number.
+ */
+export function useClientRecentCalls(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.recentCalls(clientId),
+    queryFn: async () => {
+      // Ordered newest-first by the API, so a small page still contains the
+      // call that just ended.
+      const res = await callSmsApi.getClientCalls(clientId, { limit: 20 })
+      return res.calls ?? []
+    },
+    enabled: enabled && clientId > 0,
+    staleTime: 15 * 1000,
+    refetchOnMount: true,
   })
 }
 

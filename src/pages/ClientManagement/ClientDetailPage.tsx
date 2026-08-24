@@ -92,6 +92,7 @@ import {
   useClientLoans,
   useClientPaymentsSection,
   useClientCallSmsHistory,
+  useClientRecentCalls,
   useClientTasks,
   useClientOperatorsSection,
   useClientDocuments,
@@ -167,6 +168,10 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { useTAHotkeyLaunch } from '@/features/taHotkeys/useTAHotkeyLaunch'
+import { TA_EXECUTOR_DIALOG_CLASS } from '@/features/taHotkeys/hotkey'
+import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
+import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
@@ -429,6 +434,19 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhone, setChainExecutorPrefilledPhone] = useState<string | null>(
     null
   )
+  // KAN-973 — template the executor should start immediately, set only by a
+  // hotkey launch. Cleared with the other executor context on close so a later
+  // click-open does not re-run the hotkey's template.
+  // KAN-973 §4 — the source of a phone pre-selected by a hotkey. Kept apart
+  // from chainExecutorContactSource, which also narrows the template list: the
+  // hotkey already knows which template it wants, so narrowing could filter it
+  // out and start nothing.
+  const [chainExecutorPrefilledPhoneSource, setChainExecutorPrefilledPhoneSource] = useState<
+    'client' | 'recommender' | null
+  >(null)
+  const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
+    number | null
+  >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
@@ -487,6 +505,8 @@ export function ClientDetailPage() {
     if (open) {
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(null)
+      setChainExecutorPrefilledPhoneSource(null)
+      setChainExecutorInitialTemplateId(null)
       setIsChainExecutorOpen(true)
     } else if (disarm) {
       setChainAutoOpenArmed(false)
@@ -684,6 +704,19 @@ export function ClientDetailPage() {
     isValidClientId && activeRightCardTab === 'call-sms-history',
     showAllCalls
   )
+  // KAN-973 §4 — answers "did a call to this client just end?" at the moment a
+  // hotkey is pressed. Separate from the Call/SMS history above, which loads
+  // only while its tab is open (and the default tab is Loans) and returns
+  // display-mapped records.
+  //
+  // Fetched only for operators who have a shortcut bound; the answer is used at
+  // one moment, so for everyone else this would be a request per client card
+  // serving nothing. Reading the bindings is free — useTAHotkeyLaunch below
+  // already subscribes to the same query.
+  const hotkeyBindings = useTAHotkeyBindings()
+  const hasHotkeyBindings = Object.keys(hotkeyBindings).length > 0
+  const { data: recentCalls } = useClientRecentCalls(clientId, isValidClientId && hasHotkeyBindings)
+
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
     PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
@@ -1406,6 +1439,59 @@ export function ClientDetailPage() {
     () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
     [client?.activities]
   )
+
+  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
+  // in the hook and its pure modules; this only says what "launch" means here.
+  //
+  // Declared this far down because it reads `client` and `recentCalls`; a hook
+  // call placed above their `const`s throws on every render.
+  useTAHotkeyLaunch({
+    enabled: isValidClientId,
+    isExecutorOpen: isChainExecutorOpen,
+    onLaunch: (templateId) => {
+      // §4: on a hotkey launch only, pre-select the number of a call that ended
+      // in the last 10 minutes — the operator has just hung up and is logging
+      // that conversation. Resolved here, at the keypress, rather than in a memo
+      // so the 10-minute window is measured against the moment of the press.
+      //
+      // Feeding it through prefilledPhone/contactSource reuses the pre-selection
+      // path the phone-row entry point already uses, in both wizard and instant
+      // mode — no new effect in a component that has had races before.
+      const recentPhone = resolveRecentCallPhone({
+        calls: recentCalls ?? [],
+        phones: client?.phones ?? [],
+        nowMs: Date.now(),
+        // Only THIS operator's calls may drive the pre-selection. A colleague
+        // can have spoken to the same client inside the window, and their
+        // number would otherwise be seeded into this operator's log without
+        // anyone choosing it. Operators with no extension configured keep the
+        // unfiltered behaviour rather than silently losing the feature.
+        agentExtension: user?.asterisk_extension,
+      })
+
+      // Only the prefill source — NOT contactSource, which would filter the
+      // chain list and could hide the very template this hotkey launches.
+      //
+      // Gated on the id actually being in the map. `classifyContactSource`
+      // coerces anything it cannot find to 'recommender', and
+      // `contactTypesById` is still empty while `useContactTypes('all')` is in
+      // flight — a hotkey can be pressed seconds after mount, unlike the phone
+      // row below which fires long after. Defaulting there would seed only
+      // 'recommender' contact steps and silently drop a client phone, so leave
+      // the source unset: ChainExecutor then seeds nothing rather than seeding
+      // into the wrong step class.
+      const prefillContactTypeId = recentPhone?.contactTypeId
+      setChainExecutorPrefilledPhoneSource(
+        prefillContactTypeId != null && contactTypesById.has(prefillContactTypeId)
+          ? classifyContactSource(prefillContactTypeId)
+          : null
+      )
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(recentPhone?.number ?? null)
+      setChainExecutorInitialTemplateId(templateId)
+      setIsChainExecutorOpen(true)
+    },
+  })
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -2827,6 +2913,8 @@ export function ClientDetailPage() {
                 onClick={() => {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                   setIsChainExecutorOpen(true)
                 }}
               >
@@ -3258,6 +3346,7 @@ export function ClientDetailPage() {
                               onClick={() => {
                                 setChainExecutorContactSource('client')
                                 setChainExecutorPrefilledPhone(phone.number)
+                                setChainExecutorInitialTemplateId(null)
                                 setIsChainExecutorOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -3415,6 +3504,7 @@ export function ClientDetailPage() {
                     onInteraction={(phone) => {
                       setChainExecutorContactSource('client')
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -3544,6 +3634,7 @@ export function ClientDetailPage() {
                                 onClick={() => {
                                   setChainExecutorContactSource('client')
                                   setChainExecutorPrefilledPhone(client.work?.workPhone || '')
+                                  setChainExecutorInitialTemplateId(null)
                                   setIsChainExecutorOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -4330,6 +4421,7 @@ export function ClientDetailPage() {
                     onStartInteraction={(phone, contactTypeId) => {
                       setChainExecutorContactSource(classifyContactSource(contactTypeId))
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -5349,9 +5441,15 @@ export function ClientDetailPage() {
               setIsChainExecutorOpen(false)
               setChainExecutorContactSource(null)
               setChainExecutorPrefilledPhone(null)
+              setChainExecutorPrefilledPhoneSource(null)
+              setChainExecutorInitialTemplateId(null)
             }}
             maxWidth="xl"
             showCloseButton={false}
+            /* Marks this dialog as the TA executor's own so a hotkey pressed
+               while it is open reaches the single-modal guard and produces the
+               toast, instead of being swallowed as "the operator is typing". */
+            className={TA_EXECUTOR_DIALOG_CLASS}
           >
             {/* Minimize & Close buttons */}
             <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
@@ -5367,6 +5465,8 @@ export function ClientDetailPage() {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
@@ -5382,15 +5482,21 @@ export function ClientDetailPage() {
                 debts={loans}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
+                prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
+                initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimize={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
@@ -5415,6 +5521,8 @@ export function ClientDetailPage() {
                   onClick={() => {
                     setChainExecutorContactSource(null)
                     setChainExecutorPrefilledPhone(null)
+                    setChainExecutorPrefilledPhoneSource(null)
+                    setChainExecutorInitialTemplateId(null)
                     setIsChainExecutorOpen(true)
                   }}
                   className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
