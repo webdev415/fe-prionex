@@ -959,8 +959,17 @@ development_status:
   # docs/preprod-candidates.md (authoritative human-readable record, written by the dev session, not
   # the workflow), job log/step summary (best-effort). Ledger overrun corrected honestly through
   # several states as fix/verification rounds landed: 26 rows above baseline, overrun 5 against the
-  # adjusted ceiling of 21. Status: review.
-  5-4-record-the-validated-candidate-in-the-registry: review
+  # adjusted ceiling of 21.
+  # Closeout 2026-08-24, after PR #80 merged (a1fda8276df2): every Review][Decision]/[Review][Patch]
+  # checkbox verified against shipped evidence and checked off; L5(a) (markers not deployable
+  # through deploy-preprod.yml) added to the workflow's own header, not just Open Question 6. Final
+  # psql ledger through the merge, zero foreign rows: 30 above baseline (11 dispatches + 17 CI-push
+  # + PR-open + merge), overrun 9 against the adjusted ceiling of 21, ledger CLOSED. Root cause:
+  # two unplanned rounds, both legitimate -- the critical G5 fail-open fix (H1) and the OCI-
+  # annotations dead end (D1) -- not scope creep. Sixth check of Story 5.3's tasks 9745/9769: still
+  # unarchived. STEP_SUMMARY persistence still unverified post-merge (the step has not yet been
+  # exercised by a real dispatch). Status: done.
+  5-4-record-the-validated-candidate-in-the-registry: done
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional

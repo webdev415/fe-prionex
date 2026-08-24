@@ -3606,6 +3606,13 @@ UTC-timestamped at the point of measurement.
    should re-check `log_in_storage` before other work touching either story's residue, and paste the
    literal text here the moment it flips. Named honestly rather than silently re-polled without
    record.
+   🔴 **Story 5.4's own ledger closeout, 2026-08-24, post-merge: re-checked per the standing plan.**
+   Same query, same two ids → **still `f` for both — the SIXTH check across six sessions, all
+   negative.** No trend toward archival is visible across six checks spanning two stories' worth of
+   sessions; whoever next inherits this should weigh whether the standing plan (re-check before
+   other work touching either residue) is still the right cadence, or whether these two logs should
+   simply be accepted as permanently unarchived on this instance. Not decided here — named for
+   whoever picks this up next.
 9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
    raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
    (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
