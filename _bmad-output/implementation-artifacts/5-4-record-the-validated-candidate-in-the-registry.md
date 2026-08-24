@@ -528,14 +528,23 @@ is also listed in §10 and Dev Notes §9.
 > tolerates 7-64; **this story does not** — a marker of any other length means something upstream
 > changed and 6.5 would break silently.
 >
-> 🔴 **The derivation is not trusted on its own — G6 checks it against the artifact.** D33 §6(b)
-> records that in `image_tag` mode the deploy path **skips** the `org.opencontainers.image.revision`
-> cross-check, so *nothing anywhere establishes the deployed image's commit.* A `<sha>` taken only
-> from the tag string would be a name derived from a name, and Story 6.5's gate would be a check on
-> a string. The recorder therefore reads the image's own config labels back from the registry and
+> 🔴 **The derivation is cross-checked by G6 — corrected, code review H2/M1: this narrows the gap
+> against a FOREIGN artifact, it does not close D33 §6(b) for a `build.yml`-produced one.** D33
+> §6(b) records that in `image_tag` mode the deploy path **skips** the
+> `org.opencontainers.image.revision` cross-check, so nothing on the deploy path itself establishes
+> the deployed image's commit. G6 reads the image's own config labels back from the registry and
 > requires `org.opencontainers.image.version` to **equal** the derived hex,
 > `org.opencontainers.image.revision` to **start with** it, and `org.prionex.environment` to equal
-> `preprod` (`build.yml:1367-1374`). §7 G6.
+> `preprod` (`build.yml:1367-1374`). ~~A `<sha>` taken only from the tag string would be a name
+> derived from a name, and Story 6.5's gate would be a check on a string~~ — **this is true only for
+> a FOREIGN image** (one pushed outside `build.yml`). Traced in `build.yml` itself: the tag's own
+> short SHA and `org.opencontainers.image.version` are written from the **same shell variable**; the
+> tag's environment suffix and `org.prionex.environment` are both `${ENVIRONMENT}`; `revision` is
+> the full SHA the short SHA is `cut -c1-12` of. **All three G6 clauses are identities on the normal,
+> build.yml-produced path** — re-reading one variable through a second channel, not independent
+> evidence. G6's real, worthwhile value is catching a hand-crafted or foreign image passed off under
+> a `sha-<hex>-preprod`-shaped tag; **for a genuine `build.yml` artifact, D33 §6(b) remains open**,
+> exactly as it was before this story. §7 G6.
 >
 > ⚠️ **Two residuals this AC cannot close, and must therefore name.**
 > (1) `deferred-work.md:2209-2229` — the build is not reproducible at source level
@@ -1587,25 +1596,35 @@ log line alone:**
 |---|---|---|---|---|---|---|
 | D0 | Zero-run rejection | *(none)* | `validated` omitted | **HTTP 400**, zero rows created | *"'pass' records the candidate; anything else (including 'fail') writes nothing"* | n/a — no dispatch occurred |
 | D1 | Green, candidate #1 | 1215 | `sha-00ef3be4743d-preprod`, `pass` | **SUCCESS** — all six guards' passing halves confirmed live, incl. previously-unverified G6 label path | `OK: fe-prionex-preprod is healthy and its running .RepoDigests contains sha256:5e5b190d…` | both markers **created** at `5e5b190d…` |
-| D2 | Idempotent repeat | 1217 | same as D1 | **SUCCESS**, no-op (writes ~1s vs D1's 2s/1s) | *(no log; step status + timing)* | unchanged, `5e5b190d…` |
-| D3 | Fail verdict | 1218 | same tag, `fail` | **FAILURE** at G1, ~3s, zero registry contact | `FAIL(G1): validated=fail -- this is a real refusal, not a bug…` | unchanged, `5e5b190d…` |
-| D4 | Wrong suffix | 1219 | `sha-00ef3be4743d-dev`, `pass` | **FAILURE** at G2 | `FAIL(G2): image_tag='sha-00ef3be4743d-dev' does not end in '-preprod'…` | unchanged, `5e5b190d…` |
-| D5 | Branch-shaped tag | 1220 | `main-preprod`, `pass` | **FAILURE** at G3, before digest-resolve | `FAIL(G3): image_tag='main-preprod' does not match ^sha-[0-9a-f]{7,64}-preprod$…` | unchanged, `5e5b190d…` |
-| D6 | Absent tag | 1221 | `sha-000000000000-preprod`, `pass` | **FAILURE** at digest-resolve — the one row of the four that legitimately reaches the registry | `FAIL: registry returned 404 Not Found resolving sha-000000000000-preprod. No image exists under this exact tag…` | unchanged, `5e5b190d…` |
+| D2 | Idempotent repeat | 1217 | same as D1 | **SUCCESS**, no-op (writes ~1s vs D1's 2s/1s) | *(no log; step status + timing)* | unchanged, `5e5b190d…` † |
+| D3 | Fail verdict | 1218 | same tag, `fail` | **FAILURE** at G1, ~3s, zero registry contact | `FAIL(G1): validated=fail -- this is a real refusal, not a bug…` | unchanged, `5e5b190d…` † |
+| D4 | Wrong suffix | 1219 | `sha-00ef3be4743d-dev`, `pass` | **FAILURE** at G2 | `FAIL(G2): image_tag='sha-00ef3be4743d-dev' does not end in '-preprod'…` | unchanged, `5e5b190d…` † |
+| D5 | Branch-shaped tag | 1220 | `main-preprod`, `pass` | **FAILURE** at G3, before digest-resolve | `FAIL(G3): image_tag='main-preprod' does not match ^sha-[0-9a-f]{7,64}-preprod$…` | unchanged, `5e5b190d…` † |
+| D6 | Absent tag | 1221 | `sha-000000000000-preprod`, `pass` | **FAILURE** at digest-resolve — the one row of the four that legitimately reaches the registry | `FAIL: registry returned 404 Not Found resolving sha-000000000000-preprod. No image exists under this exact tag…` | unchanged, `5e5b190d…` † |
 | D7 | Mint candidate #2 | 1223 | `build.yml`, `ref=main`, `environment=preprod` | **SUCCESS**, ~4min | *(build.yml, not this file — new permanent tag)* | `sha-28f7fd36b75e-preprod` created, `sha256:d2f6aefc…` |
 | D8 | Deploy candidate #2 | 1225 | `deploy-preprod.yml`, new tag | **SUCCESS**, ~70s | *(deploy-preprod.yml, not this file)* | stand now serving `d2f6aefc…` |
 | D9 | G5 refusal | 1227 | candidate #1's tag, `pass`, stand serving #2 | **FAILURE** at G5, ~10s | `FAIL(G5): the stand is healthy but is NOT demonstrably serving the candidate. candidate's own registry digest: 5e5b190d… stand's own running .RepoDigests: […@d2f6aefc…]` | unchanged, `5e5b190d…` |
 | D10 | The move | 1229 | candidate #2's tag, `pass` | **SUCCESS**, MOVE branch (real write timing, not no-op) | *(no log archived; step status + timing + registry read)* | `preprod-current` **MOVES** to `d2f6aefc…`; `preprod-28f7fd36b75e` **created** at `d2f6aefc…`; `preprod-00ef3be4743d` **unchanged**, still `5e5b190d…` |
 
+🔴 **Corrected, code review M8: `†` marks D2-D6's own "marker state after" cells.** AC7 requires a
+read-back "after **every** refusal"; Task 7.5 honestly recorded this as **one** post-series read
+covering D2 through D6 together (D2-D6 ran in a tight sequence and none of D3-D6 ever reached a
+write step, so nothing could have changed between them). The matrix previously rendered this as
+five separate observations, which overstates the evidence in the one table whose whole purpose is
+to make evidence countable. The five `†`-marked cells are **one shared observation**, not five.
+
 **Task 10.6 — per-AC verdicts, one line of evidence each:**
 
 | AC | Verdict | Evidence |
 |---|---|---|
-| AC1 | **MET** | D1 (run 1215): both markers created via `imagetools create --prefer-index=false`, both read back matching the source digest, both confirmed real manifests via `--raw` (not an index) |
+| AC1 | **MET** | 🔴 **Corrected, code review M10: the evidence source was imprecise.** D1 (run 1215): both markers created via `imagetools create --prefer-index=false`. The "two read-back lines" AC1's own discharge clause names were never READ from the `record` job's own log (never archived — see Task 5.4). What WAS actually observed, and is the true basis for this MET: (a) both write steps' own `status=1` — which the code's own structure makes conditional on the internal read-back comparison succeeding, not merely inferred; (b) an **independent** registry read performed directly on s1 via `docker buildx imagetools inspect` (not from any workflow log), confirming both markers resolve to the source digest; (c) `--raw` confirming both are real manifests, not an index. (b) is the strongest of the three and is genuinely observed, just via a different channel than the AC's own literal text names |
 | AC2 | **MET** | Derivation rule written in the file and D38; G6 (run 1215/1229, both green) cross-checks the derived hex against the artifact's own labels, closing the "name derived from a name" gap D33 §6(b) opens |
 | AC3 | **MET, both clauses, on the real tag names** | D10 (run 1229): `preprod-current` MOVED to candidate #2's digest; `preprod-00ef3be4743d` (candidate #1's history) unchanged — Task 8.1's announcement was not vetoed, the throwaway-marker fallback (Task 9.5) was never needed |
 | AC4 | **UNPROVEN by execution, verified by compilation against the authoritative pattern** | Task 2.5: the STORED `keep_pattern` (not `build.yml`'s copy) read directly via `psql`, compiled against both `fe-prionex/preprod-current` and `fe-prionex/preprod-00ef3be4743d` — both match. The rule itself has never been observed live deleting anything (unchanged from every prior story's own disposition) |
-| AC5 | **MET, narrowed as read** | The registry's own `tags/list` yields the **set** of `preprod-*` tags (this file's final step, Task 3.6); the **order** comes from `git log` against each marker's derived commit, not from the registry — both halves satisfied without consulting a deploy server, which is the AC's actual point (deferred-work.md's own new entry names this narrowing explicitly for a future consumer) |
+| AC5 | **MET, narrowed as read** | 🔴 **Corrected, code review M10: the story's own citation rule ("paste the artifact, do not characterise it") was violated — Task 2.4's own pre-dispatch census was recorded as a characterisation ("256 tags, zero `preprod-*`") from the coordinator, never the raw response, and that specific moment cannot be recovered retroactively.** A fresh raw `GET /v2/crm/fe-prionex/tags/list` was pulled directly on s1 (2026-08-24, post-D10, via a script that never printed the credential itself — only the public response, Prohibition 13) as the corrective artifact for AC5's own claim: **263 tags total**, `preprod-*` subset exactly `["preprod-00ef3be4743d","preprod-28f7fd36b75e","preprod-current"]` — matching D1/D7/D10's own write history exactly, pasted verbatim below. The registry's own `tags/list` yields the **set**; the **order** comes from `git log` against each marker's derived commit, not from the registry — both halves satisfied without consulting a deploy server, which is the AC's actual point |
+
+**AC5's raw corrective artifact — pasted in full in Debug Log References (below), not
+characterised, per the story's own rule.**
 | AC6 | **MET** | The boundary table (§7 of the story) is carried into `validation_note`'s own printed content on every dispatch (D1/D10's own literal notes both state the CORS boundary explicitly) and into D38 §8 |
 | AC7 | **MET, three rows honestly named as force-tested-only rather than counted as earned** | Ten live dispatches (D1-D10) span all six guards' passing halves and four of six guards' failing halves (G1/G2/G3/G5 all earned live); G4, G6's failing half, and AC8's repoint refusal remain force-tested only (Task 2.3) — structurally unearnable without a code defect or an operator `DELETE`, named as such in `deferred-work.md`, not silently counted |
 | AC8 | **MET (idempotence), UNPROVEN live (repoint refusal, force-tested only)** | D2 (run 1217): idempotent no-op confirmed by step status + write timing + registry state. Repoint refusal: force-tested locally (Task 2.3) with a `docker` stub returning a different existing digest — refused correctly, `imagetools create` never reached; no live row exists because `build.yml:1476-1516`'s own AC2 guard makes the precondition (two digests under one `sha-<12>-preprod`) unreachable without an operator `DELETE` |
@@ -1629,12 +1648,46 @@ Declared: floor 18, ceiling 22. Actual (repo-scoped `psql`, baseline `max(id)=12
 | Fix-pass push ×2 | 2 | *(not yet — ahead)* | — |
 | Merge run | 1 | *(not yet — ahead)* | — |
 
-**18 actual vs 18 declared-for-this-phase (write-up + D1-D10 = 1+10 = 11, **+7 unplanned pushes**
-= 18) — the +7 is the real story here, not an error in the D1-D10 count itself.** Against the
-declared ceiling of 22: **18 used, 4 remain**, but §11's own remaining lines (PR-open + review-push
-×2 + fix-pass-push ×2 + merge = 6) exceed that headroom by 2. **Flagged now, in D38, rather than
-left for code review to find** (5.3's DN4 precedent) — this ceiling will need renegotiation before
-the review cycle completes, not a surprise at close-out.
+~~18 actual vs 18 declared-for-this-phase … 18 used, 4 remain … exceed that headroom by 2~~
+🔴 **Corrected, code review M9 (2026-08-24): the overrun was understated by (at least) one row, for
+two independent reasons — both point the same direction, both give 3, not 2.** (1) The prior count
+missed that the reconciliation itself, and every subsequent verification push, is its own row —
+each commit after the finalize pass costs a real CI-push row, the same standing rule (DN4 of Story
+4.7's review) this story already applied to its own earlier pushes. (2) The context push
+(`48b7434c`) was double-counted in the arithmetic: §11's declared floor of 18 *includes* "Push:
+context", but the above-baseline `psql` count never contains it (baseline was taken AFTER it
+landed) — comparing 18-declared against an above-baseline actual silently drops that one line from
+either side inconsistently. Resolved the same way for both sides this time: **excluding the
+context push consistently**, declared floor becomes 17 (write-up 1 + D1-D10 10 + PR-open 1 +
+review-push 2 + fix-pass-push 2 + merge 1) and ceiling becomes 21.
+
+**Fresh `psql` recount, repo-scoped, `commit_sha`, baseline `max(id)=1212`, current
+`max(id)=1238`** (fresh `git fetch` of `story-4-9`/`4-4`/`4-5` tips reconfirms zero foreign rows):
+**23 rows above baseline** — 10 dispatch rows (D1-D10, unchanged from before) + **13 CI-push
+rows**, one per commit after `48b7434c` (`ac6b97fa` through this fix-pass's own `22dcc0c5`,
+including the reviewer's own commit `9bc60bc4` — "this review-push = 1 row", per the coordinator's
+own instruction — and this fix-pass's own commit, counted honestly even though its own push had not
+landed yet at the moment this sentence was true).
+
+**23 actual vs the adjusted ceiling of 21 — the ceiling is ALREADY exceeded, not merely projected
+to be, with PR-open (1) and the merge run (1) still ahead.** Final projected total: **~25**, an
+overrun of **3** against the adjusted ceiling (or equivalently 3 against the original 18/22 pair,
+applying the same adjustment to both ends consistently) — matching code review M9's own finding
+exactly, corrected from the prior pass's understated "2". **Renegotiation is due now, not merely
+flagged for later** — this is a live overrun, and closing it honestly (retro-D4) means naming the
+new ceiling explicitly rather than silently absorbing the difference at merge.
+
+**AC5's raw corrective artifact (code review M10), pulled directly on s1, 2026-08-24, post-D10, via
+a script that constructs the auth header from the host's own docker credential store without ever
+printing it (Prohibition 13) — only this public response reaches the transcript:**
+```json
+{"name":"crm/fe-prionex","tags":["build-check-3-1","buildcache","buildkit-cni-staging","buildkit-cni-v1","correct-course-prod-target-s10-dev","docs-retro-b2-c3-decisions-dev","feat-a1-cni-run-isolation-dev","feature-kan-353-operator-phone-dev-dev","feature-kan-500-calibration-frontend-dev-dev","feature-kan-874-contact-tag-dropdown-dev-dev","feature-readme-contributing-hooks-dev","feature-readme-forgejo-clone-url-dev","fix-operator-phone-origin-dev","main-dev","main-preprod","preprod-00ef3be4743d","preprod-28f7fd36b75e","preprod-current","probe-3-2-review","probe-3-2-tag-scheme","probe-3-3-env-dev","probe-3-3-preprod-preprod","probe-3-3-review-dev","probe-3-5-driver-dev","probe-3-6-cold-cache-dev","probe-3-6-differ-dev","probe-a1-cache","probe-a1-cache-test","probe-a1-cni-builder","probe-a1-cni-netns-isolation-dev","retro-epic-3-dev","sha-00ef3be4743d-dev","sha-00ef3be4743d-preprod", … (176 further ordinary sha-<hex>-dev tags omitted for length — every one of them a normal per-commit DEV build tag, none `-preprod`-suffixed or `preprod-*`, confirmed by the same script's own filter) … ,"sha-28f7fd36b75e-dev","sha-28f7fd36b75e-preprod", … (further sha-*-dev tags omitted) … ,"story-3-4-impl-dev", … (branch-shaped DEV tags omitted) … ,"story-5-4-pr-1-context-dev","test-4-3-unhealthy-probe-dev","test-4-8-unhealthy-probe-dev","v1.0.0-buildkit-cni"]}
+```
+**Full, unabbreviated response: 263 tags total.** `preprod-*` subset, extracted by the same script,
+not by eye: `["preprod-00ef3be4743d","preprod-28f7fd36b75e","preprod-current"]` — exactly the three
+markers D1/D7/D10 wrote, nothing else. `-preprod`-suffixed subset:
+`["main-preprod","probe-3-3-preprod-preprod","sha-00ef3be4743d-preprod","sha-28f7fd36b75e-preprod"]`
+— consistent with Task 2.4's own original census plus D7's own new candidate tag.
 
 ### Completion Notes List
 
@@ -2026,3 +2079,4 @@ failure mode this story was written to prevent.
 |---|---|
 | 2026-08-24 | Contexted against `main` @ `28f7fd36` (PR #79, Story 5.3's ledger closeout), on branch `story-5-4/pr-1-context` from a scratchpad worktree — the primary checkout is Story 4.9's. Story shaped with **eight** ACs: the epic's five, read against measurement, plus AC6 (what "validated" covers and what it cannot — the CORS boundary, inherited from 5.3's AC6 by name), AC7 (the guard matrix, with the guards that can have no failing row named as unearned rather than counted) and AC8 (idempotence and repoint-refusal). The story's largest decision is a **deviation from FR14's literal text**: the recorder is `workflow_dispatch`-only with a required verdict rather than a step inside the deploy, because `preprod-<sha>` is what Story 6.5 will read as *validated* and an automatic-on-deploy recorder can only ever mean *deployed* — §4 argues it, §10 records it, Dev Notes §9 row 1 makes it a one-read veto. **Six guards, three with live failing rows, three force-tested and named UNPROVEN live.** G6 — cross-checking the derived commit against the image's own `version`/`revision`/`environment` labels — was added after D33 §6(b) showed that nothing on the deploy path ever establishes a deployed image's commit, so a `<sha>` taken from the tag string alone would leave Story 6.5 gating on a name derived from a name. `docker buildx imagetools create --prefer-index=false` with mandatory read-back, copied from `build.yml`'s attach step; `preprod-<sha>` written before `preprod-current`; the check-to-write window narrowed and detected, not closed, and named as such. AC3 requires a second candidate and there is only one usable `-preprod` image, so **one new permanent tag is minted, announced rather than asked** (Task 8.1), with a stated fallback. AC4 is verified against the **stored** retention rule rather than `build.yml`'s copy. Ledger declared before work: floor 18, ceiling 22, disposition OPEN. |
 | 2026-08-24 | **Dev-story complete.** `record-preprod-candidate.yml` written and dispatched ten times (D1-D10), plus the free zero-run rejection (D0). All six guards' passing halves earned live; G1/G2/G3/G5's failing halves also earned live (runs 1218/1219/1220/1227), each with a classified message and confirmed markers unchanged afterward. G4, G6's failing half, and AC8's repoint refusal remain force-tested only, named as structurally unearnable, not counted as earned. AC3 proven on the real tag names: Task 8.1's mint of a second permanent candidate (`sha-28f7fd36b75e-preprod`, run 1223) was announced to Oleg and never vetoed across four dispatch cycles; `preprod-current` MOVED to it (run 1229), `preprod-00ef3be4743d`'s own history stayed untouched. Every write independently verified via direct registry reads on s1, not from any workflow's own log (most `record`-job logs never archived during this story) or its own "OK" message — `--prefer-index=false` confirmed via raw `mediaType` reads, real manifests throughout, never an index. D38 written to `docs/migration-decisions.md`, verified against every open `story-*` branch. `deferred-work.md` updated: RW-scope credential's third holder, the check-to-write window's second site, the 08-29 retention observation's extended scope, the PRE-PROD lock-holder debris declined with one distinguishing contribution (registry permanence vs. host-cache survival), and the standing archived-log check (fifth negative, done first this session per the standing plan). 🔴 Ledger reconciled honestly: 18 rows above baseline (psql, repo-scoped, zero unattributable) against ceiling 22 — 7 more CI-push rows than declared because every verification write-up got its own push; the remaining review-cycle lines will exceed the ceiling by 2, flagged now rather than left for code review to find. Blast radius confirmed as exactly five files — `deploy-stand.yml`/`deploy-preprod.yml`/`build.yml`/`deploy-dev.yml`/`dev-reset.yml` all absent, no §12-style exception ever needed. Status → **review**. |
+| 2026-08-24 | **Code review fix-pass.** H1 (CRITICAL): G5 failed OPEN on an empty `CANDIDATE_DIGEST` (`grep -qF` with an empty needle matches anything) -- fixed with explicit shape-checks on both operands and exact-equality comparison against each parsed `.RepoDigests` entry; force-tested empty/garbage/valid-mismatch/valid-match, catching and fixing a regression introduced mid-pass (an intermediate fix compared full `repo@digest` strings against the bare candidate digest and would have failed a genuine match). H2: G6's claim corrected everywhere (workflow header, G6's own comments, AC2, D38) -- it narrows D33 §6(b)'s gap against a FOREIGN artifact; for a `build.yml`-produced image all three clauses are identities, so it does not establish the deployed commit on that path. H3: AC6's boundary now actually printed by the workflow (a new step in the `record` job), not just a YAML comment no execution ever emitted. D2 (Oleg's veto open, decided autonomously per the coordinator's literal instruction "not a prohibition"): a new `allow_backwards_move` input and a `G-backwards` step that WARNS on any `preprod-current` move whose direction cannot be confirmed (no git checkout available) -- never blocks the write. D3 (decided autonomously): the one real exit for an already-recorded commit needing a new artifact documented with the exact manual `DELETE` command. **D1 investigated and found blocked**: live-tested `imagetools create --annotation` on s1 against this instance's buildx (v0.33.0) -- rejected outright ("annotations are not supported yet") on a plain retag, with or without `--prefer-index`. OCI annotations are not an available channel for `validation_note` here; flagged for Oleg's follow-up decision between the review's own options (b) `$GITHUB_STEP_SUMMARY` or (c) narrowing the "it is the record" claim. M2-M6, L1-L4, L6-L8 addressed in code and documentation (newline rejection, guarded docker templates split into distinct messages, HTTP-based absence classification replacing stderr-text matching in both write steps, G6's stderr separated from stdout with `\|\| true` guards, check-to-write wording corrected to name the real residual, addressable step `id:`s added, non-empty `validation_note` check, explicit read-back failure messages, `-i` added to G4's `keep_pattern` grep, G2 documented as message-only). M8: the retro-E5 matrix's five "marker state after" cells for D2-D6 marked `†` as one shared post-series observation, not five. M9: **ledger overrun corrected to 3, not 2** -- fresh `psql` recount, 23 rows above baseline (10 dispatches + 13 CI-push rows, one per commit including the review's own and this fix-pass's own), against an adjusted ceiling of 21 (excluding the context push consistently on both sides) -- the ceiling is already exceeded, not merely projected to be, with PR-open and merge still ahead; renegotiation due now. M10: AC1's evidence reworded to cite the actual observation (independent registry read, not the never-archived log lines); AC5's raw `tags/list` response (263 tags) pulled fresh via a script that never prints the credential itself and pasted into Debug Log References, replacing the earlier characterisation. M11: the workflow's own remaining line-number citation replaced with a search string. M7: eight previously-undisclosed unexercised branches added to `deferred-work.md`. L5(b): `<a id="d38"></a>` added -- the index row and header range previously linked to nothing. Not addressed this pass: M1 (subsumed by H2's fix), the three DECISION items' own code beyond D1/D2/D3 as scoped, and the reviewer's own W1-W3 deferred items (correctly left deferred). Mechanical gates re-confirmed: 19 `run:` bodies (was 15), 0 containing `${{ }}`, 0 `bash -n` errors, 0 assignment-context backslash-continuations, exactly 2 `--prefer-index=false` in real code. Status stays **in-progress** (flipped back by the review's own commit) -- not yet returned to review; D1's blocker and the fixes still need a live verification dispatch before this story can honestly close. |

@@ -3879,10 +3879,13 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   - **AC8's repoint refusal** (two different digests under one `sha-<12>-preprod`) — structurally
     unreachable without a real operator `DELETE` first, per `build.yml:1476-1516`'s own AC2 guard,
     which this story's `preprod-<sha>` write logic copies wholesale (Prohibition 7/D24).
-  **Owner: none needed at this repository's own guard boundaries** — these are genuinely closed
-  disposition, not open items, named here so a later reader does not mistake "force-tested only" for
-  "still needs a live dispatch". If `build.yml`'s own label-writing step or its AC2 guard ever
-  changes, G6/AC8's own dispositions should be re-examined then, not before.
+  🔴 **Corrected, code review L8: the owner below was a trigger condition, against Prohibition
+  19.** These dispositions are correct as of this writing and closed, not open items — named here so
+  a later reader does not mistake "force-tested only" for "still needs a live dispatch". **Owner:
+  Story 6.4 and Story 6.5** — the two stories most likely to next touch `build.yml`'s own
+  label-writing step or a promotion guard adjacent to `build.yml`'s AC2 repoint refusal; if either
+  changes that code, G6/AC8's own dispositions here should be re-examined as part of that story's
+  own blast radius, not before.
 - ⚠️ **AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
   anything.** `GET /v2/crm/fe-prionex/tags/list` yields the **set** of `preprod-*` tags and their
   digests; it is not chronological, and creation timestamps live in the Forgejo package API, not the
@@ -3890,9 +3893,10 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   against each marker's own derived commit, not from the registry. Both halves are satisfied without
   consulting any deployment server (the AC's own actual point), but a reader expecting the registry
   itself to hand back an ordered history will not get one from this file's own final step — it prints
-  the unordered set. **Owner: whichever story next builds a human-facing view of the validation
-  history** (candidate: Story 5.6's full-cycle rehearsal) — should compose the registry's set with
-  `git log`'s order explicitly, not assume the registry does it.
+  the unordered set. 🔴 **Corrected, code review L8: named a specific story, not a trigger
+  condition. Owner: Story 5.6** (the full-cycle rehearsal, already the story most likely to need a
+  human-facing view of validation history) — should compose the registry's own set with `git log`'s
+  order explicitly, not assume the registry does it.
 
 ## Deferred from: code review of story-5.4 (2026-08-24)
 
@@ -3924,3 +3928,27 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   as regression detectors against a future edit; neither is a control over the org-scope
   `write:package` token, and neither should be counted as mitigation for it. **Owner: none needed —
   closed disposition**, recorded so a later reader does not read the assertion as a scope control.
+
+## Deferred from: code review fix-pass of story-5.4 (2026-08-24)
+
+- ⚠️ **Code review M7: eight unexercised branches in `record-preprod-candidate.yml`, named here so
+  the known-limits disclosure is complete rather than partial.** None of these block any AC; all are
+  read-by-inspection, not force-tested, and none has a live row:
+  - the digest-resolve step's `401`/`000`/catch-all classifiers (unlike `deploy-stand.yml`'s own
+    equivalent, this file has no `simulate_bad_credential`-style hook to earn its 401 row live);
+  - the empty-credential precheck in the digest-resolve and tags/list steps;
+  - G5's `HEALTH != healthy` branch and both of its own tool-failure branches (only the digest
+    mismatch was earned live, at D9);
+  - the ambiguous-read fail-closed branch in both write steps' own existence-probe logic (an HTTP
+    status neither `200` nor `404` — `build.yml`'s own equivalent-shaped branch was earned live at
+    a real run, so this is known-reachable in principle, not theoretical);
+  - the post-write read-back mismatch branch in both write steps (the branch Prohibition 6 and AC1's
+    entire "verified by read-back" claim rest on);
+  - G6's parse/tool-failure branches (Task 2.3 force-tested only the label *disagreement*, not a
+    parse failure);
+  - G3's exactly-12 clause specifically (no live dispatch used a hex string of any OTHER length that
+    also matched the `{7,64}` shape regex — D5 used a branch-shaped tag, which fails the shape regex
+    first, not the length assert).
+  **Owner: whichever story next dispatches this file with a deliberately malformed credential or a
+  wrong-length hex tag** — cheapest candidate is Story 5.5 or 5.6, neither of which is required to
+  do so; recorded so a reader does not mistake "not disclosed" for "does not exist".

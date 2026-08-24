@@ -874,8 +874,10 @@ development_status:
   # org.prionex.environment labels read back from the registry. 🔴 G6 exists because D33 §6(b):
   # in image_tag mode the revision cross-check is deliberately SKIPPED, so NOTHING on the deploy
   # path ever establishes a deployed image's commit -- without G6, preprod-<sha> is a name derived
-  # from a name and 6.5 gates on a string. Three guards earn a live failing row; G4, G6 and AC8's
-  # repoint-refusal cannot and are force-tested + named UNPROVEN live, not counted as earned.
+  # from a name and 6.5 gates on a string. FOUR guards earn a live failing row (G1/G2/G3/G5 --
+  # corrected, code review L8: this comment said "three" and was never updated after D9 earned G5's
+  # own failing row live); G4, G6's failing half and AC8's repoint-refusal cannot and are
+  # force-tested + named UNPROVEN live, not counted as earned.
   # Mechanism: docker buildx imagetools create --prefer-index=false + mandatory read-back, copied
   # from build.yml:1476-1554 (D24). The flag is blocking-grade: without it the attach writes an
   # OCI index whose digest can never equal the source manifest's (run 716), and -- a second reason
