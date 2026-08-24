@@ -18,6 +18,7 @@ import type {
 } from '@/features/training/types'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsTableOverlay } from './AnalyticsTableOverlay'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -158,6 +159,10 @@ export function PromisesAndCallbacksSubTab() {
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const overdueCount = cards?.overdue_count ?? 0
+  // keepPreviousData keeps the PREVIOUS filter's rows on screen while the new
+  // request is in flight — without an explicit indicator that reads as wrong
+  // data (KAN-1027/KAN-1029 UX follow-up). Dim + spinner until it settles.
+  const isRefetching = query.isFetching && !query.isLoading
 
   // The BE carries no priority field yet (KAN-733 plan §Discrepancy #2), so
   // only the "All priorities" chip renders (others count 0 → auto-hidden).
@@ -291,56 +296,62 @@ export function PromisesAndCallbacksSubTab() {
         </div>
       </div>
 
-      <AnalyticsMockTable>
-        <thead className={ANALYTICS_TABLE_HEAD}>
-          <tr>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.date', 'Date / Time')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.operator', 'Operator')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.client', 'Client')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.agreement', 'Agreement')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.amount', 'Amount')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.paymentTerm', 'Payment term')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.promises.cols.status', 'Status')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {query.isLoading ? (
+      <div className="relative" aria-busy={isRefetching}>
+        <AnalyticsMockTable>
+          <thead className={ANALYTICS_TABLE_HEAD}>
             <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.promises.loading', 'Loading…')}
-              </td>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.date', 'Date / Time')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.operator', 'Operator')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.client', 'Client')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.agreement', 'Agreement')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.amount', 'Amount')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.paymentTerm', 'Payment term')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.promises.cols.status', 'Status')}
+              </th>
             </tr>
-          ) : query.isError ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
-                {t('pages.training.promises.loadFailed', 'Failed to load. Please retry.')}
-              </td>
-            </tr>
-          ) : filteredRows.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.promises.empty', 'No promises or callbacks match the filters.')}
-              </td>
-            </tr>
-          ) : (
-            filteredRows.map((row) => <PromiseRow key={row.id} row={row} />)
-          )}
-        </tbody>
-      </AnalyticsMockTable>
+          </thead>
+          <tbody>
+            {query.isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t('pages.training.promises.loading', 'Loading…')}
+                </td>
+              </tr>
+            ) : query.isError ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
+                  {t('pages.training.promises.loadFailed', 'Failed to load. Please retry.')}
+                </td>
+              </tr>
+            ) : filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t(
+                    'pages.training.promises.empty',
+                    'No data for the selected filters in this period.'
+                  )}
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row) => <PromiseRow key={row.id} row={row} />)
+            )}
+          </tbody>
+        </AnalyticsMockTable>
+        <AnalyticsTableOverlay visible={isRefetching} />
+      </div>
 
       {priorityFilter === 'all' && total > pageSize ? (
         <Pagination

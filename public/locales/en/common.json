@@ -1747,6 +1747,9 @@
       "openClientCard": "Open client card"
     },
     "training": {
+      "actionAnalysis": {
+        "updating": "Updating data…"
+      },
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",
       "tabs": {
@@ -2792,7 +2795,7 @@
         },
         "loading": "Loading…",
         "loadFailed": "Failed to load. Please retry.",
-        "empty": "No promises or callbacks match the filters."
+        "empty": "No data for the selected filters in this period."
       },
       "assign": {
         "courses": "Published courses",
@@ -2922,7 +2925,7 @@
           "operator": "Operator",
           "status": "Status in CRM"
         },
-        "empty": "No closures match the filters.",
+        "empty": "No data for the selected filters in this period.",
         "filters": {
           "allOperators": "All operators",
           "allStatuses": "All statuses",
@@ -3298,7 +3301,7 @@
           "returned": "Returned to the client",
           "thirdPartyPhone": "Third party phone"
         },
-        "empty": "No third-party calls match the filters.",
+        "empty": "No data for the selected filters in this period.",
         "export": "Export",
         "exporting": "Exporting…",
         "filters": {
