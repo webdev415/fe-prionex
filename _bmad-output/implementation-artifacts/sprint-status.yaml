@@ -847,9 +847,11 @@ development_status:
   # defect plus a genuine tag<->environment binding gap (a -dev tag could deploy fully green onto
   # PRE-PROD) via the same §12 procedure. Floor revised 13->15->16 by the two dev-story defects;
   # ceiling renegotiated 16->24 at code review, every row beyond the original 16 named. Two
-  # archived deploy-job logs remain genuinely unavailable despite repeated checks. Disposition
-  # still OPEN, closes only post-merge. Status: review (not ready-for-dev).
-  5-3-deploy-a-specific-image-tag-to-pre-prod: review
+  # archived deploy-job logs remain genuinely unavailable despite four checks across three
+  # sessions -- PENDING with an explicit plan (first future SSH/psql session re-checks before other
+  # work), not an open promise. Closed 2026-08-24: PR #78 merged (78964187e5bc), final ledger 19
+  # rows above baseline, 19/24, disposition CLOSED. Status: done.
+  5-3-deploy-a-specific-image-tag-to-pre-prod: done
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
