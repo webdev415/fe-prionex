@@ -859,17 +859,53 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 5 — D1: record candidate #1, the green row (AC: 1, 2, 6)
 
-- [ ] 5.1 Dispatch from `story-5-4/pr-1-context` (a non-default branch dispatch is proven, run 917).
+- [x] 5.1 Dispatch from `story-5-4/pr-1-context` (a non-default branch dispatch is proven, run 917).
       Inputs: `image_tag=sha-00ef3be4743d-preprod`, `validated=pass`, `validation_note=` the honest
-      sentence AC6 requires.
-- [ ] 5.2 Confirm from the DB: `concurrency_group = deploy-preprod-fe-prionex-preprod` **and**
+      sentence AC6 requires. **Done, coordinator, run 1215, SUCCESS, `2026-08-24T12:18:22Z`–
+      `12:19:45Z`.**
+- [x] 5.2 Confirm from the DB: `concurrency_group = deploy-preprod-fe-prionex-preprod` **and**
       `concurrency_type = 1`. `type=0` means the file claims protection it does not have (D21).
-- [ ] 5.3 Confirm both jobs ran on the runners they were meant to: `verify-on-stand` on runner 14,
-      `record` on a `node-20` runner.
-- [ ] 5.4 Read both markers back **from the registry, after the run** — not from its log. Both must
-      resolve to `sha256:5e5b190d…`. Paste the raw responses.
-- [ ] 5.5 Confirm the candidate's own `sha-00ef3be4743d-preprod` still resolves to the same digest,
-      i.e. this story wrote two names and touched nothing else.
+      `select concurrency_group, concurrency_type from action_run where id=1215` →
+      `deploy-preprod-fe-prionex-preprod | 1` — real, survived.
+- [x] 5.3 Confirm both jobs ran on the runners they were meant to: `verify-on-stand` on runner 14,
+      `record` on a `node-20` runner. `verify-on-stand` (job 10652) → `runner_id=14`
+      (`s1-deploy-dev-preprod`), exactly as expected. `record` (job 10653) → `runner_id=19`
+      (`s1-fe-prionex-1`, the `node-20`-labelled runner).
+- [x] 5.4 Read both markers back **from the registry, after the run** — not from its log. Both must
+      resolve to `sha256:5e5b190d…`. Paste the raw responses. **Independent registry read via s1's
+      own `docker buildx imagetools inspect`** (not the workflow's log — job 10653's log had not
+      archived yet at verification time, `log_in_storage=f`):
+      ```
+      preprod-00ef3be4743d -> sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c
+      preprod-current      -> sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c
+      ```
+      🔴 **Both confirmed as REAL manifests, not OCI indexes** — `imagetools inspect --raw` on each
+      → `mediaType: application/vnd.oci.image.manifest.v1+json` for both, not
+      `application/vnd.oci.image.index.v1+json`. `--prefer-index=false` genuinely worked; this is
+      exactly the D26/`build.yml:1518-1538` defect class this story exists to avoid, proven not to
+      have recurred, independently, not by trusting the step's own "OK" message.
+- [x] 5.5 Confirm the candidate's own `sha-00ef3be4743d-preprod` still resolves to the same digest,
+      i.e. this story wrote two names and touched nothing else. `docker buildx imagetools inspect
+      --format '{{.Manifest.Digest}}' git.crm-prionex.com/crm/fe-prionex:sha-00ef3be4743d-preprod`
+      → `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` — unchanged.
+
+**Step-level evidence, both jobs, all `status=1`:**
+- `verify-on-stand` (task 10044, log archived — read in full): G1 `OK: validated=pass.`; G2
+  `OK: 'sha-00ef3be4743d-preprod' ends in '-preprod'.`; G3
+  `OK: 'sha-00ef3be4743d-preprod' -> commit hex '00ef3be4743d'.`; digest resolve
+  `OK: resolved sha-00ef3be4743d-preprod -> sha256:5e5b190d…`; G5
+  `OK: fe-prionex-preprod is healthy and its running .RepoDigests contains sha256:5e5b190d….`;
+  `validation_note` echoed verbatim (apostrophes rendered dropped in the terminal/log pipeline —
+  a JSON/log-rendering artifact of the dispatch input, not a code defect, since the step's own
+  `run:` prints the variable byte-for-byte).
+- `record` (task 10046, **not yet archived** — verified via `action_task_step` timestamps instead,
+  Prohibition 17): steps 0-10 all `status=1`. **Write order confirmed by real timestamps, not by
+  reading the file**: step 8 ("Write preprod-<sha>…") `started=1787573980, stopped=1787573982`;
+  step 9 ("Write preprod-current…") `started=1787573982, stopped=1787573983` — `preprod-<sha>`
+  genuinely wrote first (§6). G6 (step 5) and G4 (step 6) both `status=1` — **G6's passing half is
+  earned live on this run**, including the previously-unverified `{{json .Image}}` →
+  `.config.Labels` field path (§5's own flagged uncertainty; the expression was correct on the
+  first live dispatch, no fix needed).
 
 ### Task 6 — D2: the same dispatch again (AC: 8, 7 row 7)
 
