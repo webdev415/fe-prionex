@@ -3,7 +3,8 @@ name: Record a validated PRE-PROD candidate
 # Story 5.4. Story 5.3 made PRE-PROD a real deploy target; this file makes the registry remember
 # what was validated there. It creates no image and deploys nothing: `docker buildx imagetools
 # create --prefer-index=false` is a registry-side retag — it points a second name at a manifest
-# that is already there (build.yml:1450-1554, the exact pattern this file's write steps copy). Two
+# that is already there (build.yml's own "Enforce AC2" step is the exact pattern this file's write
+# steps copy -- cited by search string, not line number, per Dev Notes §8/code review M11). Two
 # jobs: `verify-on-stand` (read-only, no lock, no compose) confirms the candidate is what PRE-PROD
 # is demonstrably serving right now; `record` (holding REGISTRY_TOKEN_RW) then points
 # `preprod-<12hex>` (permanent, one per validated commit) and `preprod-current` (moving) at its
@@ -69,11 +70,31 @@ name: Record a validated PRE-PROD candidate
 # project has never exercised, and the retention clause that would have covered it is recorded as
 # inert on this Forgejo version. Writing the source manifest verbatim keeps the marker inside the
 # model this project has actually reasoned about.
-# 🔴 Live-tested consequence (code review fix-pass, 2026-08-24): `--annotation` is REJECTED outright
-# by this instance's buildx (v0.33.0) on a plain `imagetools create` retag, with or without
-# `--prefer-index` — confirmed by direct probe on s1, error `"" annotations are not supported yet`.
-# OCI annotations are therefore NOT an available channel for `validation_note` on this file's own
-# write shape; see the story's own Review Findings / D1 for the follow-up decision this forces.
+# 🔴 Live-tested, measured fact (code review fix-pass, 2026-08-24): `--annotation` is REJECTED
+# outright by this instance's buildx — `github.com/docker/buildx v0.33.0
+# f7897eba028583e0071642db3c011e860444f8cf` — on a plain `imagetools create` retag, with or without
+# `--prefer-index`, error `"" annotations are not supported yet`. Confirmed by direct probe on s1;
+# no tag was left behind by the failed probe. OCI annotations are therefore NOT an available
+# channel for `validation_note` on THIS instance's exact tool version, on this write shape.
+#
+# ── D1 (Oleg's veto open): three evidence tiers, none of them alone "the record" ─────────────────
+# 🔴 Corrected, code review D1: this file used to claim `validation_note` is "echoed into the log —
+# it is the record" (single sink, and this instance's own logs have failed to archive five
+# consecutive times across this story alone). Restated as three tiers, none overstated:
+#   (1) THE REGISTRY (preprod-<sha>/preprod-current themselves) — identity and permanence. What
+#       artifact, at what digest, protected by keep_pattern. This is the only tier Story 6.5 reads.
+#   (2) docs/preprod-candidates.md, IN THIS REPOSITORY — the human-readable verdict record: date,
+#       candidate tag, digest, verdict, note, run id. Append-only, one line per recording. THIS
+#       WORKFLOW DOES NOT WRITE IT — giving this job a repository-write credential is a new class of
+#       permission this story does not open (a separate decision, if ever). The dev session appends
+#       the line as part of the recording PROCEDURE itself, immediately after a green run: "record a
+#       candidate" is now "dispatch, then commit one ledger line" — both halves, not either alone.
+#       This file's own last step prints exactly the line to append, so the procedure has no
+#       transcription step of its own.
+#   (3) `$GITHUB_STEP_SUMMARY` and the job log — BEST-EFFORT. Cheap, rendered on the run's own page
+#       when it works, but this instance's own persistence for either is not proven reliable (no
+#       summary-shaped row or file was found anywhere in Forgejo's own data directory or database
+#       for any prior run on this repository before this fix-pass's own live test).
 #
 # ── The check-to-write window is real and is not closed here ────────────────────────────────────
 # 🔴 Code review M6, corrected: `imagetools create` offers no compare-and-swap. The PREVIOUS wording
@@ -178,7 +199,7 @@ on:
           - pass
           - fail
       validation_note:
-        description: "Free text: who validated, against what, when. Echoed into the log (this instance's own logs frequently never archive -- see deferred-work.md). Story 5.5 may later define a checklist this note references."
+        description: "Free text: who validated, against what, when. The AUTHORITATIVE record is docs/preprod-candidates.md in this repository -- append the printed line there right after a green run. Also echoed into the job log and $GITHUB_STEP_SUMMARY, both best-effort only. Story 5.5 may later define a checklist this note references."
         required: true
         type: string
       allow_backwards_move:
@@ -906,3 +927,50 @@ jobs:
           cat /tmp/tags_list.json
           echo "preprod-* subset:"
           jq -r '.tags[]? | select(startswith("preprod-"))' /tmp/tags_list.json
+
+      - name: Write the run's own verdict to the job summary (cheap, second sink -- see D1)
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          VALIDATION_NOTE: ${{ inputs.validation_note }}
+          DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          HISTORY_WRITTEN: ${{ steps.write-history.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ steps.write-current.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          # Code review D1 (Oleg's veto open, decided by the coordinator): OCI annotations were
+          # tested live and rejected outright by this instance's buildx (v0.33.0, error `""
+          # annotations are not supported yet`, both --prefer-index settings) -- not an available
+          # channel. This is the cheap second sink: $GITHUB_STEP_SUMMARY, rendered on the run's own
+          # page, cheap to write. Whether this instance actually PERSISTS step summaries anywhere
+          # retrievable is itself unverified as of this fix-pass -- no summary-shaped row or file
+          # was found anywhere on s1's own Forgejo data directory or database for ANY prior run on
+          # this repository, which is either "nobody has used it yet" or "unsupported here"; this
+          # step is the live test. The AUTHORITATIVE, permanent sink is
+          # docs/preprod-candidates.md in this repository (append-only, one line per recording,
+          # written by the dev session as part of the recording procedure -- NOT by this workflow,
+          # which holds no repository-write credential and is not getting one for this). This
+          # step's own summary is best-effort, exactly like the job log it supplements, never the
+          # sole record.
+          {
+            echo "## Recorded: ${IMAGE_TAG}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Verdict | pass (G1 already refused anything else before this job ever ran) |"
+            echo "| Candidate digest | \`${CANDIDATE_DIGEST}\` |"
+            echo "| Derived commit hex | \`${DERIVED_HEX}\` |"
+            echo "| preprod-<sha> write | \`${HISTORY_WRITTEN}\` |"
+            echo "| preprod-current write | \`${CURRENT_WRITTEN}\` |"
+            echo "| validation_note | ${VALIDATION_NOTE} |"
+            echo ""
+            echo "This summary is best-effort (see D1) -- the authoritative human-readable record"
+            echo "is \`docs/preprod-candidates.md\` in this repository, appended by the dev session"
+            echo "as part of the recording procedure, not by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The recording procedure's own copy-paste step: this line matches
+          # docs/preprod-candidates.md's own table format exactly, so appending it is mechanical,
+          # not a re-derivation.
+          echo "=== docs/preprod-candidates.md row to append (recording procedure, not automated) ==="
+          echo "| $(date -u +%Y-%m-%d) | \`${IMAGE_TAG}\` | \`${CANDIDATE_DIGEST}\` | pass | ${VALIDATION_NOTE} | ${GITHUB_RUN_ID:-unknown} |"
+          echo "OK: wrote job summary."
