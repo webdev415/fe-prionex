@@ -266,6 +266,23 @@ html.theme-switching * {
   --xy-controls-button-color-hover-default: #111827;
 }
 
+/*
+ * AI assistant: факт-сноски внутри ячеек отчётных таблиц («46①») намеренно
+ * приглушены — рядом с числом это шум. Мельче и полупрозрачны в покое, полная
+ * видимость при наведении на строку. Правило вне @layer, чтобы гарантированно
+ * перебить утилиту размера сноски (text-[0.72em]) без !important. Вне таблиц
+ * сноски не получают этот класс и остаются обычными (источник — часть доверия).
+ */
+.assistant-cite-muted {
+  font-size: 0.62em;
+  opacity: 0.35;
+  transition: opacity 0.15s ease-out;
+}
+
+tr:hover .assistant-cite-muted {
+  opacity: 1;
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { MarkdownMessage } from '../MarkdownMessage'
+import { MarkdownMessage, MUTED_CITATION_CLASS } from '../MarkdownMessage'
 import { REPORT_TABLES_FLAG } from '../reportTableHighlight'
 
 /** Отчёт «как из ассистента»: числовая колонка, строка-аномалия и вывод. */
@@ -222,5 +222,33 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
   it('видит «Висновок:» и когда модель выделила его жирным', () => {
     render(<MarkdownMessage>{'**Висновок:** середній чек виріс.'}</MarkdownMessage>)
     expect(screen.getByTestId('markdown-conclusion')).toBeInTheDocument()
+  })
+})
+
+describe('MarkdownMessage — сноски-цитаты в ячейках таблиц приглушены', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  /** Таблица с факт-сноской `[[1]]` прямо в числовой ячейке («46①»). */
+  const CITED_TABLE_MD = ['| Оператор | Сума |', '| --- | --- |', '| Петренко | 46[[1]] |'].join(
+    '\n'
+  )
+
+  it('цитата внутри ячейки получает приглушающий класс', () => {
+    render(<MarkdownMessage>{CITED_TABLE_MD}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).toHaveClass(MUTED_CITATION_CLASS)
+  })
+
+  it('та же цитата вне таблицы приглушающего класса не получает', () => {
+    render(<MarkdownMessage>{'Борг 46[[1]] закрито.'}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).not.toHaveClass(MUTED_CITATION_CLASS)
+  })
+
+  it('приглушение цитат не зависит от флага отчётных таблиц', () => {
+    // Шум сносок в ячейках убираем всегда, а не только при включённых отчётах.
+    vi.stubEnv(REPORT_TABLES_FLAG, 'true')
+    render(<MarkdownMessage>{CITED_TABLE_MD}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).toHaveClass(MUTED_CITATION_CLASS)
   })
 })

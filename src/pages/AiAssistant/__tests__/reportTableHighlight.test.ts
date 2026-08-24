@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ATTENTION_MARKER,
+  ATTENTION_OPACITY,
+  attentionBackground,
   buildTableHighlightPlan,
   cellHeatRatio,
   heatBackground,
+  HEAT_COLOR_TOKEN,
   isAssistantReportTablesEnabled,
   isAttentionCell,
   isConclusionParagraph,
@@ -173,13 +176,36 @@ describe('cellHeatRatio / heatBackground', () => {
     expect(cellHeatRatio(9000, column)).toBe(1)
   })
 
-  it('красит тёплым токеном темы с ростом непрозрачности', () => {
+  it('красит спокойным нейтральным токеном с ростом непрозрачности', () => {
     expect(heatBackground(0)).toBe(
-      `color-mix(in srgb, var(--color-warning-500) ${MIN_HEAT_OPACITY.toFixed(1)}%, transparent)`
+      `color-mix(in srgb, var(${HEAT_COLOR_TOKEN}) ${MIN_HEAT_OPACITY.toFixed(1)}%, transparent)`
     )
     expect(heatBackground(1)).toBe(
-      `color-mix(in srgb, var(--color-warning-500) ${MAX_HEAT_OPACITY.toFixed(1)}%, transparent)`
+      `color-mix(in srgb, var(${HEAT_COLOR_TOKEN}) ${MAX_HEAT_OPACITY.toFixed(1)}%, transparent)`
     )
+  })
+
+  it('масштабная заливка не использует тёплых токенов (тепло = только проблема)', () => {
+    // Решение CEO 24.08: масштаб чисел — нейтрально; тёплое остаётся у «⚠️».
+    for (const ratio of [0, 0.25, 0.5, 0.75, 1]) {
+      const bg = heatBackground(ratio)
+      expect(bg).not.toMatch(/warning|error|amber|orange|yellow|red/i)
+      expect(bg).toContain(HEAT_COLOR_TOKEN)
+    }
+  })
+
+  it('интенсивность масштаба снижена — потолок не выше 10%', () => {
+    expect(MAX_HEAT_OPACITY).toBeLessThanOrEqual(10)
+    expect(MIN_HEAT_OPACITY).toBeLessThan(MAX_HEAT_OPACITY)
+  })
+})
+
+describe('attentionBackground — единственный тёплый сигнал', () => {
+  it('строка «⚠️» остаётся янтарной на warning-токене', () => {
+    expect(attentionBackground()).toBe(
+      `color-mix(in srgb, var(--color-warning-400) ${ATTENTION_OPACITY}%, transparent)`
+    )
+    expect(attentionBackground()).toContain('--color-warning-400')
   })
 })
 

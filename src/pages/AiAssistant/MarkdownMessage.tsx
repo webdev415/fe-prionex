@@ -1,7 +1,9 @@
 import {
   cloneElement,
+  createContext,
   isValidElement,
   useCallback,
+  useContext,
   useMemo,
   useState,
   type ComponentProps,
@@ -78,6 +80,21 @@ SyntaxHighlighter.registerLanguage('yml', yaml)
 
 /** Default rows shown before a long table/list is folded behind a toggle. */
 export const TABLE_PREVIEW_ROWS = 10
+
+/**
+ * Признак «рендерим внутри ячейки таблицы ассистента»: его выставляет
+ * {@link TableRenderer}, а читает {@link FactFootnote}, чтобы приглушить
+ * факт-сноски прямо в `<td>` (в тексте они остаются полноценными).
+ */
+const AssistantTableCellContext = createContext(false)
+
+/**
+ * Класс приглушённой факт-сноски в ячейке таблицы (мельче, полупрозрачна, полная
+ * видимость при hover строки). Сами стили — в `src/index.css`; здесь только
+ * хук-класс, чтобы приглушение жило исключительно в контексте `<td>`, а источники
+ * вне таблиц оставались обычными.
+ */
+export const MUTED_CITATION_CLASS = 'assistant-cite-muted'
 
 /** Pull plain text out of a React node tree (for the copy-to-clipboard value). */
 function nodeToText(node: ReactNode): string {
@@ -211,9 +228,10 @@ function rowCellTexts(row: ReactNode): string[] {
 }
 
 /**
- * Ячейка числовой колонки: мягкая тёплая заливка по величине и полужирный
- * максимум. Нечисловая ячейка внутри числовой колонки (прочерк, «—») остаётся
- * нетронутой — заливать её нечем.
+ * Ячейка числовой колонки: спокойная нейтральная заливка по величине и
+ * полужирный максимум (тёплого тона тут быть не должно — он только у «⚠️»-строк).
+ * Нечисловая ячейка внутри числовой колонки (прочерк, «—») остаётся нетронутой —
+ * заливать её нечем.
  */
 function decorateCell(cell: ReactNode, column: NumericColumn | undefined): ReactNode {
   if (!isValidElement(cell) || !column) return cell
@@ -318,35 +336,40 @@ function TableRenderer({ children, ...props }: ComponentPropsWithoutRef<'table'>
     ? visibleRows.map((row, rowIndex) => decorateRow(row, rowIndex, plan))
     : visibleRows
 
+  // Провайдер оборачивает всю таблицу (DOM не добавляет): факт-сноски в любой
+  // ячейке узнают, что они внутри `<td>`, и приглушаются. Разметка без сносок —
+  // как была, поэтому байт-в-байт деградация таблиц не ломается.
   return (
-    <div data-testid="markdown-table" className="my-2">
-      <div className="overflow-x-auto">
-        <table {...props}>
-          {head}
-          <tbody>{renderedRows}</tbody>
-        </table>
+    <AssistantTableCellContext.Provider value={true}>
+      <div data-testid="markdown-table" className="my-2">
+        <div className="overflow-x-auto">
+          <table {...props}>
+            {head}
+            <tbody>{renderedRows}</tbody>
+          </table>
+        </div>
+        {overflows && (
+          <button
+            type="button"
+            data-testid="markdown-table-toggle"
+            onClick={() => setExpanded((value) => !value)}
+            className="text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1 text-[11px] font-medium transition-colors"
+          >
+            {expanded ? (
+              <>
+                <Icons.ArrowUp size={13} strokeWidth={1.5} className="shrink-0" />
+                {t('pages.aiAssistant.collapseRows')}
+              </>
+            ) : (
+              <>
+                <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0" />
+                {t('pages.aiAssistant.showAllRows', { count: total })}
+              </>
+            )}
+          </button>
+        )}
       </div>
-      {overflows && (
-        <button
-          type="button"
-          data-testid="markdown-table-toggle"
-          onClick={() => setExpanded((value) => !value)}
-          className="text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1 text-[11px] font-medium transition-colors"
-        >
-          {expanded ? (
-            <>
-              <Icons.ArrowUp size={13} strokeWidth={1.5} className="shrink-0" />
-              {t('pages.aiAssistant.collapseRows')}
-            </>
-          ) : (
-            <>
-              <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0" />
-              {t('pages.aiAssistant.showAllRows', { count: total })}
-            </>
-          )}
-        </button>
-      )}
-    </div>
+    </AssistantTableCellContext.Provider>
   )
 }
 
@@ -397,6 +420,9 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
   const label = citation?.label
   const title = label ?? `Источник ${n}`
   const interactive = typeof onFactClick === 'function'
+  // В ячейке таблицы сноска рядом с числом («46①») — визуальный шум: приглушаем.
+  // Вне таблиц (default `false`) источник остаётся обычным — это часть доверия.
+  const muted = useContext(AssistantTableCellContext)
 
   const activate = useCallback(() => {
     onFactClick?.(n)
@@ -420,7 +446,8 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
         title={title}
         className={cn(
           FACT_BASE_CLASS,
-          'text-primary-600 underline decoration-dotted underline-offset-2'
+          'text-primary-600 underline decoration-dotted underline-offset-2',
+          muted && MUTED_CITATION_CLASS
         )}
       >
         {glyph}
@@ -429,7 +456,7 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
   }
 
   return (
-    <sup className={FACT_BASE_CLASS}>
+    <sup className={cn(FACT_BASE_CLASS, muted && MUTED_CITATION_CLASS)}>
       <span
         role="button"
         tabIndex={0}
