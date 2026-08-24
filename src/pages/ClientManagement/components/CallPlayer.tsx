@@ -18,7 +18,8 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { callService } from '@/features/calls/api/callService'
+import { callService, RecordingTruncatedError } from '@/features/calls/api/callService'
+import { isNetworkError } from '@/lib/errors'
 
 export interface CallPlayerHandle {
   seekTo: (ms: number) => void
@@ -48,6 +49,20 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${String(secs).padStart(2, '0')}`
 }
 
+type LoadErrorKind = 'truncated' | 'timeout' | 'generic'
+
+const LOAD_ERROR_KEYS: Record<LoadErrorKind, string> = {
+  truncated: 'pages.clients.modals.callRecording.loadTruncated',
+  timeout: 'pages.clients.modals.callRecording.loadTimeout',
+  generic: 'pages.clients.modals.callRecording.loadFailed',
+}
+
+const classifyLoadError = (error: unknown): LoadErrorKind => {
+  if (error instanceof RecordingTruncatedError) return 'truncated'
+  if (isNetworkError(error)) return 'timeout'
+  return 'generic'
+}
+
 const recordingExtensionFromBlob = (blob: Blob): string => {
   const m = blob.type
   if (m.includes('mpeg')) return '.mp3'
@@ -75,7 +90,13 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   const recordingBlobRef = useRef<Blob | null>(null)
   const recordingObjectUrlRef = useRef<string | null>(null)
   const [audioObjectUrl, setAudioObjectUrl] = useState<string | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  // The error KIND lives in state and is translated at render time — keeping
+  // `t` out of the fetch effect's dependencies (react-i18next re-creates it).
+  const [loadErrorKind, setLoadErrorKind] = useState<LoadErrorKind | null>(null)
+  /** Download progress percent (0–100) while the blob streams; null = unknown. */
+  const [downloadPct, setDownloadPct] = useState<number | null>(null)
+  // Bumped by the retry button to re-run the fetch effect after a failure.
+  const [retryToken, setRetryToken] = useState(0)
 
   useImperativeHandle(
     forwardedRef,
@@ -95,7 +116,17 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       download: async () => {
         if (!callId) return
         let blob = recordingBlobRef.current
-        if (!blob) blob = await callService.fetchRecordingBlob(callId)
+        if (!blob) {
+          try {
+            blob = await callService.fetchRecordingBlob(callId)
+          } catch (error) {
+            // Surface the failure in the player (a truncated 200 now rejects
+            // instead of silently saving a cut-off file), then let the caller
+            // observe the rejection too.
+            setLoadErrorKind(classifyLoadError(error))
+            throw error
+          }
+        }
         const ext = recordingExtensionFromBlob(blob)
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -121,14 +152,20 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       }
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
-      setLoadError(null)
+      setLoadErrorKind(null)
       setIsAudioLoading(false)
+      setDownloadPct(null)
       return
     }
 
+    // Aborts the in-flight download when the trainer switches dialogs or the
+    // player unmounts — a 9 MB recording must not keep streaming for a row
+    // that is no longer on screen (KAN-1030).
+    const controller = new AbortController()
     let cancelled = false
     setIsAudioLoading(true)
-    setLoadError(null)
+    setLoadErrorKind(null)
+    setDownloadPct(null)
 
     if (recordingObjectUrlRef.current) {
       URL.revokeObjectURL(recordingObjectUrlRef.current)
@@ -138,9 +175,16 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
     recordingBlobRef.current = null
     ;(async () => {
       try {
-        const blob = await callService.fetchRecordingBlob(callId)
+        const blob = await callService.fetchRecordingBlob(callId, {
+          signal: controller.signal,
+          onProgress: ({ loadedBytes, totalBytes }) => {
+            if (cancelled || totalBytes == null) return
+            setDownloadPct(Math.min(100, Math.round((loadedBytes / totalBytes) * 100)))
+          },
+        })
         if (cancelled) return
         recordingBlobRef.current = blob
+        setDownloadPct(null)
         const url = URL.createObjectURL(blob)
         if (cancelled) {
           URL.revokeObjectURL(url)
@@ -148,16 +192,21 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         }
         recordingObjectUrlRef.current = url
         setAudioObjectUrl(url)
-      } catch {
+      } catch (error) {
+        // An abort is not a failure — the effect that cancelled it owns the UI.
         if (cancelled) return
         recordingBlobRef.current = null
-        setLoadError(t('pages.clients.modals.callRecording.loadFailed'))
+        setDownloadPct(null)
+        // A truncated 200 (server cut the body short) must not be played as a
+        // shorter call — it surfaces as an explicit, retryable error instead.
+        setLoadErrorKind(classifyLoadError(error))
         setIsAudioLoading(false)
       }
     })()
 
     return () => {
       cancelled = true
+      controller.abort()
       if (recordingObjectUrlRef.current) {
         URL.revokeObjectURL(recordingObjectUrlRef.current)
         recordingObjectUrlRef.current = null
@@ -165,7 +214,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
     }
-  }, [active, callId, requested, t])
+  }, [active, callId, requested, retryToken])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // A new call re-arms the lazy gate so the next recording isn't pre-fetched.
@@ -188,6 +237,13 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       setPlaybackSpeed(1.0)
       setShowSpeedMenu(false)
     }
+  }
+
+  // Re-runs the fetch effect after a failed / truncated download.
+  const handleRetry = () => {
+    setLoadErrorKind(null)
+    setIsAudioLoading(true)
+    setRetryToken((token) => token + 1)
   }
 
   const handlePlayPause = () => {
@@ -239,6 +295,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   }
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
+  const loadErrorMessage = loadErrorKind ? t(LOAD_ERROR_KEYS[loadErrorKind]) : null
 
   return (
     <div className={cn('flex flex-col gap-4 sm:gap-6', className)}>
@@ -268,7 +325,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onEnded={() => setIsPlaying(false)}
           onError={() => {
-            setLoadError(t('pages.clients.modals.callRecording.loadFailed'))
+            setLoadErrorKind('generic')
             setIsAudioLoading(false)
             setIsPlaying(false)
           }}
@@ -279,16 +336,42 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
 
       {/* Audio Player */}
       <div className="relative">
-        {loadError && <p className="text-error-600 mb-2 text-center text-sm">{loadError}</p>}
-        {isAudioLoading && !loadError && (
-          <div className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center rounded-full">
+        {loadErrorMessage && (
+          <div className="mb-2 flex flex-col items-center gap-1.5">
+            <p className="text-error-600 text-center text-sm">{loadErrorMessage}</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              data-testid="call-player-retry"
+              onClick={handleRetry}
+              className="h-[32px] rounded-md text-xs"
+            >
+              <Icons.Reload size={14} className="mr-1" />
+              {t('pages.clients.modals.callRecording.retry')}
+            </Button>
+          </div>
+        )}
+        {isAudioLoading && !loadErrorMessage && (
+          <div
+            className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-full"
+            aria-label={t('pages.clients.modals.callRecording.downloading')}
+          >
             <Icons.Spinner className="h-6 w-6" />
+            {downloadPct != null && (
+              <span
+                data-testid="call-player-progress"
+                className="text-foreground text-xs font-medium tabular-nums"
+              >
+                {downloadPct}%
+              </span>
+            )}
           </div>
         )}
         <div className="bg-card flex items-center gap-2 self-stretch rounded-full px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
           <button
             onClick={handlePlayPause}
-            disabled={isAudioLoading || !!loadError}
+            disabled={isAudioLoading || !!loadErrorKind}
             className="shrink-0 cursor-pointer disabled:opacity-40"
           >
             {isPlaying ? (
@@ -342,7 +425,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         <Button
           variant="secondary"
           onClick={handleSkipBackward}
-          disabled={isAudioLoading || !!loadError}
+          disabled={isAudioLoading || !!loadErrorKind}
           className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
           size="sm"
         >
@@ -352,7 +435,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         <Button
           variant="secondary"
           onClick={handlePlayPause}
-          disabled={isAudioLoading || !!loadError}
+          disabled={isAudioLoading || !!loadErrorKind}
           className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
           size="sm"
         >
@@ -371,7 +454,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         <Button
           variant="secondary"
           onClick={handleSkipForward}
-          disabled={isAudioLoading || !!loadError}
+          disabled={isAudioLoading || !!loadErrorKind}
           className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
           size="sm"
         >
@@ -382,7 +465,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
           <Button
             variant="secondary"
             onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-            disabled={isAudioLoading || !!loadError}
+            disabled={isAudioLoading || !!loadErrorKind}
             className="flex h-[40px] w-full rounded-md text-xs sm:h-[45px] sm:text-sm"
             size="sm"
           >
