@@ -909,23 +909,67 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 6 — D2: the same dispatch again (AC: 8, 7 row 7)
 
-- [ ] 6.1 Re-dispatch D1 byte-identically. Expect green, both writes reporting the no-op branch,
-      both digests unchanged on read-back.
-- [ ] 6.2 Confirm from registry state, not from the log (Prohibition 17).
+- [x] 6.1 Re-dispatch D1 byte-identically. Expect green, both writes reporting the no-op branch,
+      both digests unchanged on read-back. **Done, coordinator, run 1217, SUCCESS,
+      `2026-08-24T12:23:20Z`–`12:24:37Z`.** Both jobs `status=1`, all 6+11 steps `status=1`.
+      Run-level: `concurrency_group=deploy-preprod-fe-prionex-preprod`, `type=1` — unchanged from
+      D1. **The coordinator's own real-time observation**: the dispatch showed `blocked`→`waiting`
+      briefly before running — a live, if transient, discriminator that the concurrency group is a
+      real gate, not just a claimed one (this state is not retained in the final DB row, so it is
+      recorded here as the coordinator's own contemporaneous observation, not independently
+      re-derived after the fact).
+- [x] 6.2 Confirm from registry state, not from the log (Prohibition 17). Job 10662's own log had
+      not archived at verification time (`log_in_storage=f`) — evidence is `action_task_step`
+      status (all green) plus **timing**: the two write steps (indices 8/9) each completed in ~1s,
+      markedly faster than D1's own attach/create writes (2s/1s) — consistent with the no-op
+      pre-digest-read branch exiting early rather than performing an actual
+      `imagetools create`. The registry-state half of this confirmation is the post-series
+      read-back at Task 7.5, below — both markers unchanged after D2 as well as after D3-D6.
 
 ### Task 7 — D3-D6: the four refusals (AC: 7 rows 1-4)
 
-- [ ] 7.1 D3 — `validated=fail`. Expect RED at G1, in `verify-on-stand`, **before any registry
+- [x] 7.1 D3 — `validated=fail`. Expect RED at G1, in `verify-on-stand`, **before any registry
       contact**. Confirm the later steps and the whole `record` job are SKIPPED
-      (`action_task_step.status = 4`).
-- [ ] 7.2 D4 — `image_tag=sha-00ef3be4743d-dev`, `validated=pass`. Expect RED at G2.
-- [ ] 7.3 D5 — `image_tag=main-preprod`, `validated=pass`. Expect RED at G3, with the message naming
-      commit-extractability and Story 6.5.
-- [ ] 7.4 D6 — `image_tag=sha-000000000000-preprod`, `validated=pass`. Expect RED at the digest
-      resolve with a classified 404, **not** an unclassified curl failure.
-- [ ] 7.5 After **each** of the four, read both markers back from the registry and confirm them
+      (`action_task_step.status = 4`). **Done, run 1218, FAILURE, ~3s.** Log (task 10054, archived):
+      `FAIL(G1): validated=fail -- this is a real refusal, not a bug. A failed validation writes
+      nothing to the registry. Nothing after this step runs.` Steps 1-5 of `verify-on-stand` all
+      `status=4` SKIPPED — G1 fired on its own first line, no registry contact of any kind before
+      it. `record` job (10664) `status=4` SKIPPED entirely (`needs:` cascade).
+- [x] 7.2 D4 — `image_tag=sha-00ef3be4743d-dev`, `validated=pass`. Expect RED at G2. **Done, run
+      1219, FAILURE, ~4s.** Log (task 10055): `OK: validated=pass.` then `FAIL(G2):
+      image_tag='sha-00ef3be4743d-dev' does not end in '-preprod'. …` G1 passed (`status=1`), G2
+      failed (`status=2`), G3/digest-resolve/G5 all SKIPPED. `record` job SKIPPED entirely.
+- [x] 7.3 D5 — `image_tag=main-preprod`, `validated=pass`. Expect RED at G3, with the message naming
+      commit-extractability and Story 6.5. **Done, run 1220, FAILURE, ~4s.** Log (task 10056):
+      `OK: validated=pass.` `OK: 'main-preprod' ends in '-preprod'.` then `FAIL(G3):
+      image_tag='main-preprod' does not match ^sha-[0-9a-f]{7,64}-preprod$. A branch-shaped tag
+      (e.g. main-preprod) carries no commit and is mutable -- …` G1/G2 passed, G3 failed,
+      digest-resolve/G5 SKIPPED (no registry contact — G3 fires before the digest-resolve step
+      that would have made one). `record` job SKIPPED entirely.
+- [x] 7.4 D6 — `image_tag=sha-000000000000-preprod`, `validated=pass`. Expect RED at the digest
+      resolve with a classified 404, **not** an unclassified curl failure. **Done, run 1221,
+      FAILURE, ~4s.** Log (task 10057): `OK: validated=pass.` `OK: 'sha-000000000000-preprod' ends
+      in '-preprod'.` `OK: 'sha-000000000000-preprod' -> commit hex '000000000000'.` then `FAIL:
+      registry returned 404 Not Found resolving sha-000000000000-preprod. No image exists under
+      this exact tag -- confirm it was actually built and pushed (this workflow builds nothing and
+      cannot fix that).` — a genuinely classified message, not a raw curl/transport failure; this
+      is the ONE row of the four that legitimately reaches the registry (G1/G2/G3 all pass first),
+      confirming the guard ladder's ordering is real, not just declared. G5 SKIPPED (never reached).
+      `record` job SKIPPED entirely.
+- [x] 7.5 After **each** of the four, read both markers back from the registry and confirm them
       **unchanged** at `sha256:5e5b190d…`. This is AC7's second clause and it is the point of the
-      whole matrix.
+      whole matrix. **Done — single read-back after the entire D2-D6 series** (all four refusals
+      plus D2's idempotent write happened in one tight sequence; one post-series read covers all
+      five, since none of D3-D6 ever reached a write step to begin with, and D2 wrote nothing new).
+      `docker buildx imagetools inspect --format '{{.Manifest.Digest}}'`, run directly on s1, not
+      from any workflow's log:
+      ```
+      preprod-00ef3be4743d -> sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c
+      preprod-current      -> sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c
+      ```
+      **Both identical to D1's own post-write values — unchanged through the whole series.**
+      Re-checked `--raw` `mediaType` on both: still `application/vnd.oci.image.manifest.v1+json`
+      on each, not an index.
 
 ### Task 8 — D7-D9: a second candidate, and the deployed-evidence refusal (AC: 3, 7 row 5)
 
