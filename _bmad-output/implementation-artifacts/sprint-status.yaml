@@ -720,7 +720,7 @@ development_status:
   # number is D36, NOT D35 — 4.9 already holds D35 on
   # its branch (commit 11017adc), verified 2026-08-24. Story 4.9 in flight: 5.2 must not touch
   # deploy-stand.yml, deploy-dev.yml, dev-reset.yml, README.md or the DEV stand (story §12).
-  5-2-provision-the-pre-prod-stand-on-s1: review
+  5-2-provision-the-pre-prod-stand-on-s1: done
   # dev-story complete 2026-08-24: SSH rung 1 live throughout. Stand up on s1
   # (fe-prionex-preprod, crm-preprod-network, 127.0.0.1:8083 permanent loopback),
   # image sha-00ef3be4743d-preprod (run 680, main), bundle verified real (no
@@ -800,6 +800,23 @@ development_status:
   # this story's own context push (bed0c366); Task 1.4's rule applied
   # (push-while-PR-open costs two rows); honest floor is 5, not 4. Status:
   # review.
+  # 🔴 CLOSEOUT 2026-08-24: Oleg merged PR #76 (c325b7d648943d852ade3579f142b92c06ab60cf).
+  # Ledger CLOSED against a post-merge query on branch story-5-2/pr-2-ledger-closeout:
+  # repo-scoped (repo_id=16) max/count 1177|446, instance-wide 1177|1177. Declared floor 5
+  # above baseline 1171, actual 5, zero overrun: 1172 (dev push), 1173 (review push), 1174
+  # (fix-pass push, two commits/one push event), 1175 (PR-open check), 1177 (merge run) --
+  # all attributed by commit_sha. One interleaved row (1176) confirmed to belong to a
+  # DIFFERENT repo (PRIONEX_HUB's own scheduled run, verified by direct query), named and
+  # excluded, not absorbed -- second ledger of the parallel era, same method as 5.1's
+  # closeout, held cleanly again. Task 1.1 stays UNCHECKED permanently: git history shows
+  # the in-progress flip was never pushed as its own transition in the first pass; the
+  # dishonesty is the finding, and closing the story does not retroactively fix history.
+  # Task 9.6 now genuinely done -- PR #76 exists and merged, discharging the fix-pass
+  # round's PENDING disposition with a real commit. Credential state re-verified via SHAPE
+  # ONLY (ls -la, no cat, per the standing reminder after two prior transcript exposures):
+  # exactly one plaintext copy (/root/.fj_reg_5_2b.token, 41 bytes, 0600) remains; both
+  # compromised tokens' files stay deleted. Stand still healthy 8+ hours later, no stray
+  # containers or networks. Status: done.
   5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog

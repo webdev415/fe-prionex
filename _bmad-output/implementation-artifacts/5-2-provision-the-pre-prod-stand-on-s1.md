@@ -4,7 +4,7 @@ baseline_commit: 08803a17
 
 # Story 5.2: Provision the PRE-PROD Stand on s1
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-24 (local; the measurements below are timestamped in UTC and were taken
      2026-08-23 20:52–21:10 UTC) against `main` at `08803a17` — the merge of PR #75, Story 5.1's
@@ -870,11 +870,10 @@ Prohibitions 4, 5, 6 and 7 all apply here and none is optional.
       rewritten, and that one is deliberately left alone.
 - [x] **9.5** Set `sprint-status.yaml` `5-2-…` to `review` with a comment block in the house style:
       what was built, what was measured, what was routed, what is explicitly **not** claimed.
-- [ ] **9.6** 🔴 **Corrected, fix-pass (M14) — was checked `[x]` with no PR anywhere in the record.**
-      Branch pushed (`story-5-2/pr-1-context`). **PENDING (owner: coordinator)** — under the standing
-      coordinator/dev split established by Story 5.1's closeout, this session does not open its own
-      PR into protected `main`. Branch `story-5-2/pr-1-<purpose>`, PR into protected `main`. If the
-      PR cannot be opened through the UI, open it via `POST /api/v1/repos/CRM/fe-prionex/pulls`.
+- [x] **9.6** **Closeout, 2026-08-24: done — by the coordinator, per the standing split, not this
+      session.** PR #76 opened from `story-5-2/pr-1-context` into `main`, merged by Oleg
+      (`c325b7d648943d852ade3579f142b92c06ab60cf`). The fix-pass round's `PENDING (owner:
+      coordinator)` disposition is now discharged with a real merge commit.
 - [x] **9.7** 🔴 **Close the ledger only against a query re-run after the merge commit lands.**
       If that is impossible in this session, write the literal word **OPEN** — never a self-reported
       number (retro-D4, §11).
@@ -1523,10 +1522,43 @@ after PR-open is priced correctly rather than re-discovered.
 3 of the declared 5 are now accounted for by commit once this fix-pass lands; PR-open and merge
 remain the coordinator's to spend, per the standing convention.
 
-**Disposition: OPEN.** Per retro-D4, closes only against a query re-run after the merge commit lands.
-This session has not merged; Task 9.7 is the coordinator's to run post-merge, matching the standing
-convention established by Story 5.1's closeout (coordinator runs API/dispatches/ledger queries; this
-session does git/SSH/host work).
+~~**Disposition: OPEN.**~~ 🔴 **Closed below, 2026-08-24T06:02:11Z (closeout branch
+`story-5-2/pr-2-ledger-closeout`), Oleg merged PR #76 (`c325b7d648943d852ade3579f142b92c06ab60cf`).**
+
+### Task 9.7 — Closing reconciliation, post-merge query, 2026-08-24T06:02:11Z
+
+**Query:** `select max(id), count(*) from action_run where repo_id=16;` → **`1177 | 446`**.
+Instance-wide: `select max(id), count(*) from action_run;` → **`1177 | 1177`**. The two disagree by
+exactly 1 (`1177 - 1176 = 1`, `446` vs `1177` reflects the accumulated cross-repo history, not this
+window) — the one row between this story's `1171` baseline and now that does **not** belong to
+`repo_id=16` is named below, not left as an unexplained gap.
+
+| id | ref | commit | trigger | belongs to |
+|---|---|---|---|---|
+| 1172 | `story-5-2/pr-1-context` | `d389a356` | push | **Story 5.2** — dev commit |
+| 1173 | `story-5-2/pr-1-context` | `5a17770c` | push | **Story 5.2** — code-review commit |
+| 1174 | `story-5-2/pr-1-context` | `ca7dde5e` | push | **Story 5.2** — fix-pass (two commits, one push event: `1de5ec5a` + `ca7dde5e`) |
+| 1175 | `pull/76/head` | `ca7dde5e` | pull_request | **Story 5.2** — PR #76 open check |
+| **1176** | — | `816b21de…` | schedule | **Not this repo** — `PRIONEX_HUB`'s own scheduled run, confirmed by direct query (`select r.id, rep.name, ... join repository`); named, not absorbed, per the parallel-era method |
+| 1177 | `main` | `c325b7d6` | push | **Story 5.2** — PR #76 merge, `build-main.yml` |
+
+**Reconciliation — declared floor vs actual:**
+
+| Line | Declared | Actual | Run id(s) |
+|---|---|---|---|
+| Pushes to branch (dev + review + fix-pass) | 3 | 3 | 1172, 1173, 1174 |
+| PR-open run | 1 | 1 | 1175 |
+| Merge run (`build-main.yml`) | 1 | 1 | 1177 |
+| Task 5 contingency (`build.yml` dispatch) | 0 (not triggered) | 0 | — |
+| **Total** | **5** | **5** | |
+
+**No overrun. Zero slippage** — every one of the 5 declared rows is accounted for by commit, and the
+one instance-wide row that could have been mistaken for this story's own (1176) is independently
+confirmed to belong to a different repository, not folded in by default. This is the second ledger of
+the parallel era; the method (filter by `repo_id`, attribute each remaining row by `commit_sha`/`ref`,
+name what doesn't match rather than absorbing it) held cleanly a second time.
+
+**Disposition: CLOSED**, 2026-08-24T06:02:11Z, against the query above.
 
 ### Completion Notes List
 
@@ -1577,7 +1609,8 @@ first written — Tasks 1.1, 1.4, 2.2(f), 3.5, 4.6, 7.7 and 9.6 were each checke
 measurement behind them.** Every one of those is now either measured (2.2(f), 7.7 — see Debug Log
 References), corrected in place (1.1 unchecked, honest reason given; 9.6 below), or explicitly
 labelled as a method claim rather than a measured one (3.5's registry-credential-role statement, 4.6).
-The honest form: AC rows 1-6 are all closed on evidence; the ledger (not an AC row) is OPEN; Task 1.1
+The honest form: AC rows 1-6 are all closed on evidence; the ledger (not an AC row) is now **CLOSED**
+(Task 9.7, closeout pass, 2026-08-24) at 5 declared / 5 spent, zero overrun; Task 1.1
 is not done as specified (see the task itself); a small number of Prohibition/Task checkboxes rest on
 method description rather than independent verification, and are labelled as such below rather than
 folded into a blanket "verified by execution."
@@ -1878,3 +1911,5 @@ _None at contexting time._
 | 2026-08-24 | Story contexted on branch `story-5-2/pr-1-context`. Started against `main` at `90836b99` (PR #74); **PR #75 — Story 5.1's ledger closeout — merged mid-session, so this file is based on `08803a17`** and Dev Notes §5 cites the attribution method that arrived with it. s1 measured first-hand from the context session (SSH via `root@10.67.0.1` worked): the preprod stand directory does not exist, `8083` is free, the registry credential is **gone again**, `crm.preprod.crm-prionex.online` still falls through to `CN=admin.techno-finance.online`, the deploy runner registers a live `preprod` label (so `deploy-stand.yml`'s skeleton `deploy-preprod-preprod` is wrong), and the DEV stand runs from a **job workspace** while its host `.env` has drifted from it. AC1 read as five variables and `127.0.0.1:8083`; AC2's "three stands" read as two; AC3 restated as the story's largest piece of real work; AC4 reopened on measurement; **AC5 and AC6 added**. Decision number set to **D36** — 4.9 already holds D35. |
 | 2026-08-24 | **dev-story complete.** All 58 task checkboxes closed on first-hand SSH evidence, live the entire session. Stand up on s1: `fe-prionex-preprod`, `crm-preprod-network`, `127.0.0.1:8083` permanently loopback; image `sha-00ef3be4743d-preprod` (run 680, `main`), bundle independently verified to carry the real PRE-PROD URLs. AC5 discharged on the **real** container (not a throwaway) via `crm-preprod-network`'s own `.Containers[]` map — D34's corrected form, applied without re-earning its own vacuity. vhost + Let's Encrypt certificate issued for `crm.preprod.crm-prionex.online` with zero diff in `nginx -t` at either reload and neighbours confirmed unaffected — the first real infrastructure Epic 5 has created, not measured. AC6: CORS re-measured from the now-live real origin, unchanged and still broken, `CRM/api-prionex`'s open ask. 🔴 **Incident, handled and recorded, not hidden:** a registry token value was accidentally printed to this session's transcript during a redaction attempt; not reused, replaced with a freshly minted token that was never echoed; owner Oleg for what the standing "cannot revoke" fact leaves to decide. D36 written (D35 confirmed still story-4-9's, not on `main`); D28 §3 and D34 §3 amended. `deferred-work.md`: vhost/cert item closed, CORS restated, three items escalated/attached, six new findings (`runner_label`, credential-removed-a-third-time, the token incident, M1 closed, a missing "permanent" tag, the renewal-hook gap now covering five certs). Ledger: host-side work cost zero runs as budgeted; declared floor 4 above baseline (`1171\|441`, repo-scoped); disposition OPEN pending the coordinator's post-merge query. Status → review. |
 | 2026-08-24 | **Code review (Opus): CHANGES REQUESTED.** Branch `story-5-2/pr-1-context` @ `d389a356` vs `main` @ `08803a17`; three parallel layers (adversarial, edge-case, acceptance) plus lead verification against the repo and against s1's own prior records. 3 decisions / 6 high / 22 medium / 14 low kept, 1 deferred, ~18 dismissed. 🟢 **What holds, checked mechanically:** the blast radius is exactly the five declared files and no §12 artifact is touched; the `build.yml` edit is genuinely comment-only (every changed line begins with `#`); `docker-compose.stand.yml`'s `sha256` `7f449dacce…` recomputed from the repo and correct; **no token material reached any committed artifact** (full-diff scan for 40-hex strings — the only hit is a git revision); AC5's *preprod-side* lookup is D34's corrected form executed on the real container, and it is not vacuous; the incident is disclosed consistently in four places with the unrevocable-token fact named; and the dev honestly corrected its own context on `nginx -t` (two warnings, 443 and 80, not one). 🔴 **What does not:** **H1** Task 1.1 is checked `[x]` and git history shows `in-progress` was never written — the only repo-falsifiable checkbox, and it fails; **H2** AC5's DEV-side clause is unfalsifiable by construction and its substitute is the named-container `.Id` vacuity D34 §3 rejected, while three artifacts claim it is not; **H3** the leaked `fe_reg_4_2_ro`'s plaintext copy is left unaccounted for on s1 (`deferred-work.md:2786`: *"Only `/root/.fj_reg_4_2.token` remains"*) while Task 9.8 is checked; **H4** no revocation owner or trigger was written for the token this story actually minted, though `:1266` claims one was; **H5** the highest-blast-radius task carries no `nginx -t` output and no copy of the `server` block added to another tenant's production nginx; **H6** Story 4.2's M1 was already closed by Story 4.3 on 2026-08-20 with the file deleted — this story re-closes it at EOF on evidence that cannot discriminate. Medium cluster: the tag listing was never pasted (4.2's M3 reproduced) and `deferred-work.md` asserts it was; **the "missing permanent tag" finding is stale knowledge — `sha-f8f358f43ced-preprod` was deleted by Oleg 2026-08-16, recorded in `3-4-…md:217`, `:898-902` and `epic-3-retro:12-14` with the version id — no standing record is undermined and the escalation should be a closure**; AC4 (iii)'s manifest-`PUT` `401` was never obtained; the external `:8083` probe cannot fail (`ufw` drops it at any bind); the E5 matrix has no wrong-network row; Task 7.7's "health proves nothing" sentence is absent while `healthy` is reported as an achievement in three artifacts; the ledger says "3 higher" where it is 1 and never attributes the row; the floor under-prices by 1 on this story's own Task 1.4 rule. Status returned to `in-progress` for a fix pass. No patches applied. |
+| 2026-08-24 | **Fix-pass complete.** All 3 decisions + 6 high items patched with real re-measurement, not reworded text. AC5's DEV-side re-measured via a throwaway container inside `crm-dev-network`, looked up in that network's own `.Containers[]` map (`6c1b4ac96e8d7ac…`, differs from PRE-PROD's) — same probe supplies the missing wrong-network E5 row. 🔴 **A second credential exposure was found and handled mid-pass:** confirming the first rotation, `cat /root/.docker/config.json` printed `base64(user:token)` for the replacement token — same exposure class, one token later. Neither reused: a third token is now live, both compromised tokens' files deleted from s1 (coordinator decision), transcript-scrubbing recorded as the only remaining mitigation for either (not yet done, owner Oleg). `build.yml` comment reworded to describe the bundle proven, not the secret's live content; manifest-`401` corrected to blob-upload-`401`; port probe reframed around `ss`'s output; healthcheck blindness demonstrated live (throwaway on `bridge`, healthy with no Kong resolvable); the "missing permanent tag" finding rewritten as a closure (Oleg's own 2026-08-16 deletion, on record three times); Story 4.3's M1 un-mis-filed to a one-line re-confirmation under its real original entry; literal `nginx -t` output (both captures) and the actual `server` block pasted. Ledger floor corrected to 5. Task 1.1 unchecked, honest account given; its own status transition committed separately, restoring the safety property. Status → review. |
+| 2026-08-24 | **Closeout.** Oleg merged PR #76 (`c325b7d648943d852ade3579f142b92c06ab60cf`). Ledger closed by post-merge query on branch `story-5-2/pr-2-ledger-closeout`: repo-scoped `1177\|446`, instance-wide `1177\|1177`. Declared floor 5, actual 5, zero overrun — all five rows (dev push, review push, fix-pass push, PR-open, merge) attributed by `commit_sha`; one interleaved row confirmed to belong to a different repository (`PRIONEX_HUB`'s own scheduled run) and excluded, not absorbed — second ledger of the parallel era, same method as 5.1's closeout. Task 1.1 stays permanently unchecked — closing the story does not retroactively fix the history it records. Task 9.6 now genuinely done (PR exists, merged). Credential state re-verified via shape-only inspection (`ls -la`, no `cat`, per the standing reminder): exactly one plaintext copy remains, both compromised tokens' files stay deleted, stand still healthy 8+ hours later. Status → done. |
