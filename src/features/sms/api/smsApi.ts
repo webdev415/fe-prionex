@@ -13,6 +13,7 @@ import type {
   TemplateUpdate,
   TemplateResponse,
   TemplatesListResponse,
+  TemplatesTrashListResponse,
   SMSHistoryResponse,
   SMSHistoryParams,
   SMSConfigResponse,
@@ -77,9 +78,41 @@ export async function updateTemplate(
 
 /**
  * Delete SMS template
+ *
+ * Soft delete: the row stays and the template moves to trash, recoverable via
+ * restoreTemplate until the retention purge removes it.
  */
 export async function deleteTemplate(templateId: number): Promise<void> {
   await api.delete(`${BASE_URL}/templates/${templateId}`)
+}
+
+/**
+ * List soft-deleted templates (trash)
+ *
+ * Deliberately takes no project_id. The endpoint has no such parameter: it
+ * scopes to `current_user.project_id` off the token and the service filters
+ * `project_id == <that>`, so a caller cannot widen it. The project_id that
+ * getTemplates accepts is decorative for the same reason - the live-list
+ * endpoint clamps any foreign value back to the caller's own project. Adding
+ * one here would suggest cross-project trash is supported when it is not.
+ */
+export async function getDeletedTemplates(params?: {
+  category?: string
+  limit?: number
+  offset?: number
+}): Promise<TemplatesTrashListResponse> {
+  const response = await api.get<TemplatesTrashListResponse>(`${BASE_URL}/templates/trash`, {
+    params,
+  })
+  return response.data
+}
+
+/**
+ * Restore a soft-deleted template back into the active list
+ */
+export async function restoreTemplate(templateId: number): Promise<TemplateResponse> {
+  const response = await api.post<TemplateResponse>(`${BASE_URL}/templates/${templateId}/restore`)
+  return response.data
 }
 
 /**

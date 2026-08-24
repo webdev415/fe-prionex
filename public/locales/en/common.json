@@ -7258,7 +7258,6 @@
       "variablesLabel": "Variables",
       "used": "Used",
       "times": "times",
-      "systemTemplatesCannotBeDeleted": "System templates cannot be deleted, only disabled",
       "tableHeaders": {
         "templateName": "Template Name",
         "messageTextExcerpt": "Message Text (Excerpt)",
@@ -7293,8 +7292,6 @@
         "clickToInsert": "Click to insert",
         "availableVariables": "Available Variables",
         "active": "Active",
-        "systemTemplate": "System Template",
-        "systemTemplateDescription": "This is a system template. Some fields may be restricted.",
         "fixErrorsBeforeSubmitting": "Please fix the errors above before submitting.",
         "useVariableFormat": "Use {variable_name} format for variables (e.g., {debt_amount}, {client_name})",
         "placeholders": {
@@ -7326,12 +7323,13 @@
         "delete": {
           "title": "Delete Template",
           "confirmMessage": "Are you sure you want to delete the template",
-          "cannotDeleteSystemTemplate": "Cannot Delete System Template",
-          "systemTemplateCannotBeDeleted": "System templates cannot be deleted. You can only disable them.",
-          "actionCannotBeUndone": "This action cannot be undone",
-          "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
+          "recoverableTitle": "The template will be removed from the active list",
+          "recoverableDescription": "It moves to the deleted list at the bottom of this page, where a supervisor can restore it.",
           "deleting": "Deleting..."
         }
+      },
+      "deleted": {
+        "title": "Deleted templates"
       }
     },
     "contactTypes": {
@@ -9054,13 +9052,16 @@
       "delete": {
         "title": "Delete draft",
         "confirmMessage": "Are you sure you want to delete the draft \"{{name}}\"?",
-        "cannotUndo": "This action cannot be undone",
-        "permanentRemoval": "The draft will be permanently removed."
+        "recoverableTitle": "The draft will be removed from the active list",
+        "recoverableDescription": "It moves to the deleted list at the bottom of this page, where a supervisor can restore it."
       },
       "toasts": {
         "created": "Draft created successfully",
         "updated": "Draft updated successfully",
         "deleted": "Draft deleted successfully"
+      },
+      "deleted": {
+        "title": "Deleted drafts"
       }
     },
     "messagingIntegrations": {
@@ -10427,5 +10428,22 @@
     "Written off": "Written off",
     "Sold": "Sold",
     "Legal": "Legal"
+  },
+  "softDelete": {
+    "sectionHint": "These were deleted and can still be restored until the date shown.",
+    "columns": {
+      "deletedAt": "Deleted",
+      "expires": "Expires",
+      "actions": "Actions"
+    },
+    "expiry": {
+      "noDeadline": "No deadline",
+      "today": "Removed today",
+      "inDays_one": "{{count}} day left",
+      "inDays_other": "{{count}} days left"
+    },
+    "actions": {
+      "restore": "Restore"
+    }
   }
 }
