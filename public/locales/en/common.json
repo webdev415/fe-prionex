@@ -684,6 +684,35 @@
       "historyArchiveEmpty": "The archive is empty.",
       "historyBackToChats": "Back to chats",
       "historyUpdateError": "Failed to update the chat.",
+      "memory": {
+        "title": "Personalization",
+        "helper": "What the assistant remembers about you — it shapes its answers.",
+        "usageTitle": "Facts in memory: {{used}} of {{limit}}",
+        "limitHint": "The memory is full: the oldest and unused facts are evicted automatically. You can also delete extras manually.",
+        "empty": "Memory is empty. Add a fact about your work and the assistant will take it into account.",
+        "loadError": "Failed to load the memory.",
+        "retry": "Retry",
+        "addAria": "New fact for the assistant memory",
+        "addPlaceholder": "For example: I run the Alfa portfolio, amounts without cents",
+        "addAction": "Add fact",
+        "addSuccess": "Fact added to the memory",
+        "deleteAria": "Delete fact from the memory",
+        "deleteError": "Failed to delete the fact.",
+        "tooLong": "Maximum {{max}} characters",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "consolidated": "consolidated",
+          "unknown": "other"
+        },
+        "errors": {
+          "duplicate": "A similar fact is already in the memory.",
+          "validation": "The server rejected the text. Remove personal data and try again.",
+          "forbidden": "You are not allowed to change the assistant memory.",
+          "unknown": "Failed to add the fact. Try again."
+        }
+      },
       "voiceFallback": "Server speech recognition is unavailable — switched to browser recognition.",
       "voiceFinalizing": "Processing speech…",
       "voiceHoldHint": "Click to dictate, hold to record a voice message",
@@ -727,6 +756,10 @@
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",
+      "onexContextChip": "Context: {{label}}",
+      "onexContextClientFallback": "Client #{{id}}",
+      "onexContextPageFallback": "CRM page",
+      "onexContextClear": "Clear page context",
       "filePreview": {
         "loading": "Loading…",
         "loadFailed": "Could not load the file",
@@ -942,6 +975,7 @@
         "confirmAndCreate": "Confirm & create task",
         "confirming": "Confirming…",
         "confirmSuccess": "Task created on kanban board",
+        "alreadyConfirmed": "Task already created on kanban",
         "contractLoading": "Loading contracts…",
         "lawyerAssigned": "Assigned on kanban",
         "noContracts": "No contracts",
@@ -1046,7 +1080,9 @@
         "transitionSuccess": "Moved to {{state}}",
         "deadlineSaved": "Deadline set to {{deadline}}",
         "deadlineCleared": "Deadline cleared",
-        "deadlineSaveFailed": "Deadline was not saved"
+        "deadlineSaveFailed": "Deadline was not saved",
+        "startWork": "Start work",
+        "statusLabel": "Status"
       },
       "documents": {
         "title": "Documents",
@@ -1135,7 +1171,8 @@
             "title": "Add incoming document",
             "file": "File",
             "changeFile": "Click to replace",
-            "dropHint": "Drag & drop or click to upload PDF, DOC, or image",
+            "dropHint": "Drag & drop or click to upload PDF, DOC, ZIP, or image",
+            "fileTooLarge": "File is too large. Limit — 50 MB",
             "documentName": "Document name",
             "documentNamePlaceholder": "Enter document name",
             "client": "Client",
@@ -2135,14 +2172,19 @@
           "reached": "Reached"
         },
         "commentOptional": "Comment (optional)",
-        "pts": "pts"
+        "pts": "pts",
+        "disputeReason": "Why you disagree with the AI",
+        "disputeReasonHint": "Optional. Your score stands either way — filling this in records it as an objection to the AI review.",
+        "divergenceAi": "AI",
+        "divergenceTrainer": "Trainer"
       },
       "dialogue": {
         "chips": {
           "all": "All calls",
           "low": "Low",
           "average": "Average",
-          "high": "High"
+          "high": "High",
+          "disputesOnly": "Disputes only"
         },
         "ratings": {
           "notDone": "Not done",
@@ -2168,7 +2210,9 @@
           "deleted": "Assessment deleted",
           "deleteFailed": "Could not delete assessment",
           "callType": "Call type",
-          "duration": "Duration"
+          "duration": "Duration",
+          "dispute": "dispute",
+          "disputeHint": "The trainer disagreed with the AI review"
         },
         "view": {
           "list": "Scorecards",
@@ -2219,7 +2263,8 @@
         },
         "detail": {
           "assignTask": "Assign task",
-          "empty": "Select a dialog to review"
+          "empty": "Select a dialog to review",
+          "transcript": "Transcript and AI review"
         },
         "employee": {
           "all": "All employees",
@@ -2254,7 +2299,13 @@
           "evaluation": "Evaluation",
           "notEvaluated": "Not evaluated",
           "loadError": "Failed to load dialogs.",
-          "empty": "No dialogs match the filters."
+          "empty": "No dialogs match the filters.",
+          "noExtensions": "The selected employees have no telephony extensions"
+        },
+        "department": {
+          "empty": "No departments available",
+          "label": "Department",
+          "selected": "{{count}} departments"
         }
       },
       "transcript": {
@@ -3844,6 +3895,34 @@
           "unknown": "Could not save. Try again."
         },
         "overridden": "overridden"
+      },
+      "memory": {
+        "title": "Memory",
+        "helper": "What the assistant remembers about employees and what it takes from the shared reference.",
+        "tableTitle": "Memory scopes",
+        "tableDescription": "Click a row to see its records and delete what should not be there.",
+        "empty": "The memory is empty — no records yet.",
+        "unavailable": "The assistant memory service is unavailable.",
+        "columnScope": "Scope",
+        "columnRecords": "Records",
+        "usageTitle": "Records: {{used}} of {{limit}}",
+        "overLimit": "over limit",
+        "columnLastAt": "Last",
+        "globalScope": "Shared reference",
+        "globalHint": "Applies to every operator",
+        "unknownUser": "Employee #{{id}}",
+        "recordsEmpty": "This scope has no records.",
+        "recordsError": "Failed to load the scope records.",
+        "deleteAria": "Delete memory record",
+        "deleteError": "Failed to delete the record.",
+        "sources": {
+          "user": "added manually",
+          "agent": "learned",
+          "observation": "observation",
+          "consolidated": "consolidated",
+          "unknown": "other"
+        },
+        "collapsedHint": "{{count}} scopes · click to show"
       },
       "internals": {
         "title": "Assistant internals",
@@ -5942,7 +6021,6 @@
         "openLoans": "Open loans",
         "includingPayments": "Including payments: {{amount}}",
         "remainingDebtTooltip": "Remaining debt including payments: {{total}} ({{remaining}} − {{payments}})",
-        "principalDebtTooltip": "Principal amount less principal repaid and principal written off. For loans carried over from the old CRM, the amount issued is shown instead.",
         "remainingDebtPlain": "Remaining debt: {{amount}}",
         "closedInline": "Closed: {{date}}",
         "primaryCreditor": "Primary creditor",
@@ -6307,7 +6385,8 @@
           "card": "Card"
         },
         "email": "E-mail",
-        "dateOfBirthWithAge": "{{date}} ({{age}} years)"
+        "dateOfBirthWithAge": "{{date}} ({{age}} years)",
+        "closingCoefficientLabel": "Loan closing coefficient"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -8308,7 +8387,8 @@
         "verification": "Third-party verification",
         "low-verification": "Low verifications",
         "searcher-followup": "Unworked searcher finds",
-        "communication-gap": "Communication gap"
+        "communication-gap": "Communication gap",
+        "operator-promises": "Operator promises"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8459,6 +8539,49 @@
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "operatorPromises": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "subtabs": {
+          "all": "All",
+          "tp": "TP",
+          "dialer": "Dialer",
+          "collection": "Collection"
+        },
+        "columns": {
+          "operator": "Operator",
+          "department": "Department",
+          "group": "Group",
+          "interactions": "TA count",
+          "sumFrom": "Promises taken",
+          "sumTo": "Due in period",
+          "paidFull": "Paid",
+          "unpaid": "Unpaid",
+          "conversion": "Conversion",
+          "paidVerified": "Paid (verified)",
+          "unpaidVerified": "Unpaid (verified)",
+          "conversionVerified": "Conversion (verified)"
+        },
+        "inactiveBadge": "dismissed",
+        "totals": {
+          "title": "Totals",
+          "generatedAt": "Data as of {{value}}",
+          "metricAria": "Metric",
+          "operators": "Operators",
+          "overall": "Whole period"
+        },
+        "empty": "No data for the selected period",
+        "emptyDepartment": "No operators in this department for the period — every department is shown on the «All» tab",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
           "retry": "Retry"
         }
       },
@@ -10325,6 +10448,190 @@
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted"
+    },
+    "profileSettings": {
+      "photo": {
+        "upload": "Upload photo",
+        "replace": "Replace photo",
+        "remove": "Remove photo",
+        "wrongType": "Choose a JPEG, PNG or WebP image",
+        "tooLarge": "The photo must be 2 MB or smaller",
+        "uploaded": "Photo updated",
+        "removed": "Photo removed",
+        "confirmRemoveTitle": "Remove your photo?",
+        "confirmRemoveMessage": "Your initials will be shown instead. You can upload a new photo at any time."
+      },
+      "workFormat": {
+        "label": "Work format",
+        "office": "Office",
+        "remote": "Remote"
+      }
+    },
+    "coefficientRanges": {
+      "title": "Coefficient ranges",
+      "description": "Loan closing coefficients by loan age. Ranges are inclusive on both ends and may not overlap.",
+      "add": "Add range",
+      "addTitle": "Add range",
+      "editTitle": "Edit range",
+      "empty": "No ranges configured. The coefficient tooltip stays hidden until one matches.",
+      "daysColumn": "Loan age (days)",
+      "coefficientColumn": "Coefficient",
+      "updatedByColumn": "Updated by",
+      "minDays": "Min days",
+      "maxDays": "Max days",
+      "minCoefficient": "Min coefficient",
+      "maxCoefficient": "Max coefficient",
+      "hint": "Both day boundaries are inclusive. Coefficients take one decimal place, 1.0 to 10.0.",
+      "readOnly": "Editing coefficient ranges requires the Manage settings permission. The rest of this page follows its own permission.",
+      "created": "Range added",
+      "updated": "Range updated",
+      "deleted": "Range deleted",
+      "deleteTitle": "Delete range",
+      "deleteConfirm": "Delete the range {{range}}?",
+      "saveError": "Could not save the range",
+      "deleteError": "Could not delete",
+      "errors": {
+        "days": "Days must be whole numbers of 0 or more",
+        "dayOrder": "Min days must not exceed max days",
+        "coefficientFormat": "Coefficients allow at most one decimal place (e.g. 1.5)",
+        "coefficientRange": "Coefficients must be 1.0–10.0",
+        "coefficientOrder": "Min coefficient must not exceed max coefficient"
+      },
+      "loadError": "Could not load the coefficient ranges.",
+      "refreshError": "Could not refresh — showing the last loaded ranges."
+    },
+    "qaRules": {
+      "title": "Listening (AI)",
+      "helper": "Stop-phrases that mark a call critical, and the rubrics the AI scores calls against.",
+      "saveError": "Could not save the change",
+      "tabs": {
+        "blockers": "Critical blockers",
+        "rubrics": "AI rubrics"
+      },
+      "category": {
+        "profanity": "Profanity",
+        "threat": "Threat",
+        "third_party_disclosure": "Third-party disclosure",
+        "misleading_legal": "Misleading legal claim",
+        "pressure": "Pressure",
+        "insult": "Insult",
+        "data_violation": "Data handling violation",
+        "script_critical": "Critical script breach"
+      },
+      "severity": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "lang": {
+        "uk": "Ukrainian",
+        "ru": "Russian"
+      },
+      "scale": {
+        "binary": "Yes/No",
+        "0-5": "0–5"
+      },
+      "blockers": {
+        "phrase": "Phrase",
+        "newPhrase": "New phrase",
+        "category": "Category",
+        "categoryFilter": "Category",
+        "allCategories": "All categories",
+        "severity": "Severity",
+        "lang": "Language",
+        "langFilter": "Language",
+        "allLangs": "All languages",
+        "active": "Active",
+        "add": "Add",
+        "total": "Phrases",
+        "empty": "No blockers yet.",
+        "loadError": "Failed to load the blocker dictionary.",
+        "created": "Blocker added",
+        "updated": "Blocker updated",
+        "deleted": "Blocker deactivated",
+        "deleteTitle": "Deactivate blocker?",
+        "deleteMessage": "«{{phrase}}» will stop flagging calls. You can bring it back with the «Active» switch.",
+        "deactivate": "Deactivate",
+        "showInactive": "Show deactivated",
+        "duplicate": "That phrase is already in the dictionary for this language"
+      },
+      "rubrics": {
+        "name": "Rubric name",
+        "description": "Description",
+        "scorecardType": "Interlocutor",
+        "typeClient": "Debtor",
+        "typeThirdParty": "Third party",
+        "allTypes": "All interlocutors",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "universal": "Universal (fallback)",
+        "status": "Status",
+        "statusActive": "Active",
+        "statusArchived": "Archived",
+        "statusAll": "All",
+        "create": "New rubric",
+        "empty": "No AI rubrics for this slice.",
+        "loadError": "Failed to load AI rubrics.",
+        "saved": "Rubric saved",
+        "archive": "Archive",
+        "unarchive": "Restore",
+        "archiveTitle": "Archive rubric?",
+        "unarchiveTitle": "Restore rubric?",
+        "sectionName": "Section name",
+        "addSection": "Add section",
+        "removeSection": "Remove section",
+        "criterionName": "Criterion",
+        "criterionDescription": "AI instruction",
+        "addCriterion": "Add criterion",
+        "removeCriterion": "Remove criterion",
+        "weight": "Weight",
+        "scale": "Scale",
+        "weightTotal": "Weights",
+        "weightError": "Weights must add up to 100",
+        "slice": "Applies to",
+        "sliceTaken": "Another rubric is already active for this slice: {{name}}",
+        "critical": "Critical",
+        "sliceTakenGeneric": "This slice already has a live rubric — archive it first",
+        "telephonyType": "Telephony type",
+        "telephonyAny": "Any line",
+        "allTelephony": "All lines",
+        "telephony": {
+          "white": "White",
+          "grey": "Grey"
+        },
+        "criteriaCount": "Criteria",
+        "toggleSection": "Fold / unfold section",
+        "expandAll": "Unfold all",
+        "collapseAll": "Fold all",
+        "missingInstruction": "No AI instruction: {{n}}",
+        "instructionHint": "The «AI instruction» is what the model grades the criterion by. Left empty, it goes by the criterion name alone and interprets it however it likes.",
+        "criterionDescriptionPlaceholder": "e.g. count it when the operator names themselves, the company and the reason for the call in the first 15 seconds",
+        "criterionExamples": "Speech examples",
+        "criterionExamplesPlaceholder": "Wording the model should recognise. One example per line.",
+        "grading": {
+          "title": "Unfinished dialogue scale",
+          "levels": "Levels",
+          "hint": "Bands of the final score for a call the client cut short. The wording tells the model which band a call lands in, and the top band must be 100.",
+          "heading": "Scale heading",
+          "line": "Scale telephony type",
+          "source": "Source",
+          "score": "Score",
+          "description": "When it applies",
+          "descriptionPlaceholder": "What puts a call in this band",
+          "add": "Add an unfinished dialogue scale",
+          "remove": "Remove scale",
+          "addLevel": "Add level",
+          "removeLevel": "Remove level",
+          "blocked": "Fix before saving",
+          "issueEmptyScale": "A scale needs at least one level",
+          "issueRange": "A score must be between 0 and 100",
+          "issueDuplicate": "Two levels share a score — keep one",
+          "issueTop": "The top level must be exactly 100, or every cut-short call is marked down",
+          "issueNoWording": "A level with no wording gives the model nothing to tell it by",
+          "issueLineMismatch": "The card is narrowed to one line and the scale points at the other — it would never apply"
+        }
+      }
     }
   },
   "contactTypes": {

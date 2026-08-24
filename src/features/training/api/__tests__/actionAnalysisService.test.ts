@@ -18,6 +18,7 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import {
+  getCallMonitoring,
   getInteractionMonitoring,
   getLeaks,
   getPromisesAndCallbacks,
@@ -387,5 +388,37 @@ describe('getThirdParty — param builder (KAN-736)', () => {
     expect(params.get('sort_dir')).toBe('asc')
     expect(params.get('page')).toBe('2')
     expect(params.get('page_size')).toBe('25')
+  })
+})
+
+describe('getCallMonitoring — disputes param', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({ data: { calls: [], summary: {}, total: 0 } })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function callParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('omits `disputed` when the filter is off', async () => {
+    await getCallMonitoring({ agent_extensions: ['101'] })
+    expect(callParams().get('disputed')).toBeNull()
+  })
+
+  it('omits `disputed` when it is explicitly false', async () => {
+    // `disputed=false` and no param mean the same thing to the backend; not
+    // sending it keeps the query cache key stable for the default view.
+    await getCallMonitoring({ agent_extensions: ['101'], disputed: false })
+    expect(callParams().get('disputed')).toBeNull()
+  })
+
+  it('sends `disputed=true` when narrowing to disputes', async () => {
+    await getCallMonitoring({ agent_extensions: ['101'], disputed: true })
+    expect(callParams().get('disputed')).toBe('true')
   })
 })

@@ -5,6 +5,8 @@ import { useUpdateScorecard } from './useScorecards'
 interface DraftState {
   scores: ScoresPayload
   overall_comment: string
+  /** Why the trainer disagrees with the AI. '' = no objection recorded. */
+  dispute_reason: string
 }
 
 interface UseScorecardDraftArgs {
@@ -23,7 +25,7 @@ interface UseScorecardDraftArgs {
   flushOnUnmount?: boolean
 }
 
-const EMPTY_DRAFT: DraftState = { scores: {}, overall_comment: '' }
+const EMPTY_DRAFT: DraftState = { scores: {}, overall_comment: '', dispute_reason: '' }
 
 /**
  * Local draft state with debounced autosave to the server.
@@ -87,6 +89,10 @@ export function useScorecardDraft({
     const payload: ScorecardUpdatePayload = {
       scores: stateRef.current.scores,
       overall_comment: stateRef.current.overall_comment || null,
+      // Explicit `null`, never `undefined`: clearing the textarea has to reach
+      // the backend as "this is no longer a dispute". An omitted key would
+      // leave the old reason standing behind an empty field.
+      dispute_reason: stateRef.current.dispute_reason || null,
     }
     await mutateAsync({ scorecardId, payload })
   }, [scorecardId, mutateAsync])
@@ -142,6 +148,11 @@ export function useScorecardDraft({
     setState((prev) => ({ ...prev, overall_comment: next }))
   }, [])
 
+  const setDisputeReason = useCallback((next: string) => {
+    setDirty(true)
+    setState((prev) => ({ ...prev, dispute_reason: next }))
+  }, [])
+
   const reset = useCallback((next: DraftState) => {
     setDirty(false)
     setState(next)
@@ -150,8 +161,10 @@ export function useScorecardDraft({
   return {
     scores: state.scores,
     overallComment: state.overall_comment,
+    disputeReason: state.dispute_reason,
     setScore,
     setOverallComment,
+    setDisputeReason,
     reset,
     flush,
     isDirty: dirty,

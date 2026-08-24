@@ -104,6 +104,22 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.reports.lowVerification.floorHint') {
         return `${key}:${String(vars?.count)}`
       }
+      // Same shape, same reason: the operator-promises totals block states WHEN
+      // the numbers were computed (the report is re-served from a 15-minute
+      // server-side cache), so the stamp itself has to be assertable and not
+      // just the key it rides on.
+      if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
+        return `${key}:${String(vars?.value)}`
+      }
+      // Same shape, same reason: the OneX dock's context chip exists to tell
+      // the operator WHICH page will be sent along, so the label has to be
+      // assertable and not just the key it rides on.
+      if (key === 'pages.aiAssistant.onexContextChip') {
+        return `${key}:${String(vars?.label)}`
+      }
+      if (key === 'pages.aiAssistant.onexContextClientFallback') {
+        return `${key}:${String(vars?.id)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
@@ -300,6 +316,24 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        // Profile settings: photo + work format.
+        'pages.profile.agentStatus.online': 'Online',
+        'pages.profile.agentStatus.offline': 'Offline',
+        'pages.profile.agentStatus.busy': 'Busy',
+        'pages.profile.agentStatus.onCall': 'On Call',
+        'pages.profileSettings.photo.upload': 'Upload photo',
+        'pages.profileSettings.photo.replace': 'Replace photo',
+        'pages.profileSettings.photo.confirmRemoveTitle': 'Remove your photo?',
+        'pages.profileSettings.photo.confirmRemoveMessage':
+          'Your initials will be shown instead. You can upload a new photo at any time.',
+        'pages.profileSettings.photo.remove': 'Remove photo',
+        'pages.profileSettings.photo.wrongType': 'Choose a JPEG, PNG or WebP image',
+        'pages.profileSettings.photo.tooLarge': 'The photo must be 2 MB or smaller',
+        'pages.profileSettings.photo.uploaded': 'Photo updated',
+        'pages.profileSettings.photo.removed': 'Photo removed',
+        'pages.profileSettings.workFormat.label': 'Work format',
+        'pages.profileSettings.workFormat.office': 'Office',
+        'pages.profileSettings.workFormat.remote': 'Remote',
         // Shared soft-delete section labels.
         'softDelete.columns.deletedAt': 'Deleted',
         'softDelete.columns.expires': 'Expires',

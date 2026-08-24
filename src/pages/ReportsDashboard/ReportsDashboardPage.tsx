@@ -1,13 +1,13 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts six tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts seven tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
  * "Мало верифікацій" client work list, the "Серчер без відпрацювання"
- * searcher follow-up work list, and the "Великий розрив" communication-gap
- * work list.
+ * searcher follow-up work list, the "Великий розрив" communication-gap
+ * work list, and the "Обіцянки по операторах" operator promises report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -46,6 +46,7 @@ import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
 import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
 import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
+import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -446,6 +447,7 @@ const REPORT_TABS = [
   'low-verification',
   'searcher-followup',
   'communication-gap',
+  'operator-promises',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -502,7 +504,8 @@ export function ReportsDashboardPage() {
   // The report tabs' filter params (`?from/?to/?dept` for processing,
   // `?sf/?st/?cf/?ct` for verification, `?pf/?pt/?mv/?pg/?ps` for the
   // low-verification feed, `?if/?it/?spg/?sps` for the searcher feed,
-  // `?gf/?gt/?gm/?gpg/?gps` for the communication-gap feed) are
+  // `?gf/?gt/?gm/?gpg/?gps` for the communication-gap feed,
+  // `?opf/?opt/?opd` for the operator-promises report) are
   // deliberately KEPT when switching tabs: the
   // filters must survive a round-trip through the dashboard (documented
   // contract of the tabs, and the key sets don't collide). A slightly "dirty"
@@ -559,6 +562,8 @@ export function ReportsDashboardPage() {
           <SearcherFollowupFeedTab />
         ) : activeTab === 'communication-gap' ? (
           <CommunicationGapFeedTab />
+        ) : activeTab === 'operator-promises' ? (
+          <OperatorPromisesTab />
         ) : (
           <DashboardTab />
         )}

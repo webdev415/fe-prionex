@@ -349,3 +349,54 @@ describe('sendChatMessage SSE transport', () => {
     expect(onText).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('conversation_id из CRM-события meta', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('берёт id диалога из meta, а не из hex-строки session мозга', async () => {
+    // Живой баг прода 20.08.2026: «мозг» шлёт свой внутренний ключ сессии
+    // (hex-строка), Number() от неё — NaN, поэтому id оставался 0; следующий
+    // ход уходил с conversation_id: 0, прокси такой диалог не находил и
+    // отвечал 404 «Асистент зараз недоступний» — на ЛЮБОМ втором сообщении.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      sseResponse([
+        'event: meta\ndata: {"conversation_id":77}\n\n',
+        'event: session\ndata: {"session_id":"06a76d1f72744d79"}\n\n',
+        'event: text\ndata: {"delta":"351 обіцянка"}\n\n',
+        'event: done\ndata: {}\n\n',
+      ])
+    )
+
+    const result = await sendChatMessage(baseRequest, {})
+
+    expect(result.conversation_id).toBe(77)
+  })
+
+  it('hex-строка session НЕ затирает уже полученный id', async () => {
+    // Порядок кадров: meta приходит раньше session, и парс session не должен
+    // сбросить id обратно в 0.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      sseResponse([
+        'event: meta\ndata: {"conversation_id":12}\n\n',
+        'event: session\ndata: {"session_id":"deadbeefcafe0001"}\n\n',
+        'event: done\ndata: {}\n\n',
+      ])
+    )
+
+    const result = await sendChatMessage(baseRequest, {})
+
+    expect(result.conversation_id).toBe(12)
+  })
+
+  it('числовой session_id по-прежнему принимается (обратная совместимость)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      sseResponse(['event: session\ndata: {"session_id":5}\n\n', 'event: done\ndata: {}\n\n'])
+    )
+
+    const result = await sendChatMessage(baseRequest, {})
+
+    expect(result.conversation_id).toBe(5)
+  })
+})

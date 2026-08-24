@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,7 +12,11 @@ import {
 import { useCallDetail } from '@/features/calls/hooks/useCall'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import {
+  CallRecordingModal,
+  type CallRecordingModalHandle,
+} from '@/pages/ClientManagement/components/CallRecordingModal'
+import { CallTranscriptPanel } from '@/features/quality'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   CALL_FILTERS_DEFAULT,
@@ -236,6 +240,10 @@ export function CallsTab() {
   //     "undefined NaN, NaN 16:39" caused by feeding it `DD-MM-YYYY`.
   //   - `clientId` enables the modal's clientName→client-page link for the
   //     trainer flow without affecting operator-side call sites.
+  // Seek target for the transcript's timecodes (the modal delegates to its
+  // embedded player).
+  const callModalRef = useRef<CallRecordingModalHandle>(null)
+
   const modalCallData = useMemo(() => {
     if (!detailForModal) return null
     const dt = new Date(detailForModal.initiated_at)
@@ -312,8 +320,26 @@ export function CallsTab() {
         </>
       )}
 
+      {/* Call QA — the same AI review the client card and the Dialogue
+        Evaluation panel show. CallTranscriptPanel carries its own gates
+        (`view_transcripts` + the global Call QA switch) and renders nothing
+        when either is off. */}
       {isModalOpen && modalCallData && (
-        <CallRecordingModal open={true} onClose={handleCloseCall} callData={modalCallData} />
+        <CallRecordingModal
+          ref={callModalRef}
+          open={true}
+          onClose={handleCloseCall}
+          callData={modalCallData}
+          transcriptPanel={
+            modalCallData.call_id ? (
+              <CallTranscriptPanel
+                callId={modalCallData.call_id}
+                active={isModalOpen}
+                onSeek={(ms) => callModalRef.current?.seekTo(ms)}
+              />
+            ) : undefined
+          }
+        />
       )}
     </div>
   )

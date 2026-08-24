@@ -36,6 +36,7 @@ import { ActionAnalysisInnerTab } from './components/analytics/ActionAnalysisInn
 import { DialogueEvaluationTab } from './components/dialogue/DialogueEvaluationTab'
 import { TrainingsAndSessionsTab } from './components/training/TrainingsAndSessionsTab'
 import { TasksTab } from './components/tasks/TasksTab'
+import { TrainingSettingsTab } from './components/settings/TrainingSettingsTab'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
   readInteractionBarState,
@@ -95,7 +96,9 @@ const TOP_TAB_ICONS: Record<
   settings: Icons.Settings,
 }
 
-// Visible tab order — drives the strip render.
+// Visible tab order — drives the strip render. `settings` is appended only
+// for `manage_qa_rules` holders (the Call QA listening rules live there);
+// everyone else sees the strip exactly as before.
 const VISIBLE_TOP_TABS: TrainingTopTabId[] = [
   'inbox',
   'team',
@@ -223,7 +226,11 @@ export function TrainingPage() {
     setSearchParams(next, { replace: true })
   }
 
-  const visibleTopTabs = useMemo(() => VISIBLE_TOP_TABS, [])
+  const canManageQaRules = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_QA_RULES)
+  const visibleTopTabs = useMemo(
+    () => (canManageQaRules ? [...VISIBLE_TOP_TABS, 'settings' as const] : VISIBLE_TOP_TABS),
+    [canManageQaRules]
+  )
 
   // â”€â”€â”€ Legacy ?tab=calls path — kept alive so existing CallsTab still works
   // until Phase B fully drops the calls top-tab. Read-shim above redirects
@@ -407,6 +414,8 @@ export function TrainingPage() {
         <TrainingsAndSessionsTab />
       ) : activeTopTab === 'tasks' ? (
         <TasksTab onAssignTask={() => setQuickActionDialog('assign')} />
+      ) : activeTopTab === 'settings' && canManageQaRules ? (
+        <TrainingSettingsTab />
       ) : activeTopTab === 'calls' ? (
         <LegacyCallsBranch
           subTab={legacySubTab}

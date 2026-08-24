@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
@@ -7,7 +7,11 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useThirdParty } from '@/features/training/hooks/useThirdParty'
 import { useExportThirdParty } from '@/features/training/hooks/useExportThirdParty'
-import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import {
+  CallRecordingModal,
+  type CallRecordingModalHandle,
+} from '@/pages/ClientManagement/components/CallRecordingModal'
+import { CallTranscriptPanel } from '@/features/quality'
 import type {
   CallMonitoringPeriod,
   ThirdPartyFilters,
@@ -154,6 +158,10 @@ export function ThirdPartiesSubTab() {
   const rows = query.data?.items ?? []
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  // Seek target for the transcript's timecodes (the modal delegates to its
+  // embedded player).
+  const callModalRef = useRef<CallRecordingModalHandle>(null)
 
   const modalCallData = useMemo(() => {
     if (!selected || !selected.call_id) return null
@@ -374,8 +382,25 @@ export function ThirdPartiesSubTab() {
         />
       ) : null}
 
+      {/* Call QA — third-party calls are exactly where a trainer wants the AI
+        read of the conversation; the panel gates itself on `view_transcripts`
+        plus the global Call QA switch. */}
       {selected && modalCallData ? (
-        <CallRecordingModal open onClose={() => setSelected(null)} callData={modalCallData} />
+        <CallRecordingModal
+          ref={callModalRef}
+          open
+          onClose={() => setSelected(null)}
+          callData={modalCallData}
+          transcriptPanel={
+            modalCallData.call_id ? (
+              <CallTranscriptPanel
+                callId={modalCallData.call_id}
+                active
+                onSeek={(ms) => callModalRef.current?.seekTo(ms)}
+              />
+            ) : undefined
+          }
+        />
       ) : null}
     </div>
   )

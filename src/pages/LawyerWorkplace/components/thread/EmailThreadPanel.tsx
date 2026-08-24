@@ -475,10 +475,10 @@ export function EmailThreadPanel({
   }
 
   // Fired by the generation modal after a successful generate: pull the freshly
-  // persisted PDF and attach it to the reply, then close the modal.
+  // persisted PDF and attach it to the reply. The modal stays open on its
+  // success screen so the lawyer can download the .docx twin before closing.
   const handleGeneratedDocument = async (result: GenerateDocumentResponse) => {
     if (letterClientId == null) return
-    setGenerateOpen(false)
     try {
       const blob = await documentApi.preview(letterClientId, result.document_id)
       const filename = result.pdf_document?.original_filename ?? `${result.document_name}.pdf`
