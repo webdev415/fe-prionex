@@ -124,7 +124,8 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     const [first, second] = bodyRows()
     expect(second).toHaveClass('assistant-attention-row')
     expect(second).toHaveAttribute('data-row-marker', 'attention')
-    expect(second).toHaveTextContent('⚠️ Коваль')
+    expect(second).toHaveTextContent('Коваль')
+    expect(second.textContent).not.toContain('⚠')
     // Приоритет маркера: помеченная строка целиком, без поячеечного градиента.
     expect(within(second).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
 
@@ -149,11 +150,13 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     // в юнит-тесте markerBackground (jsdom не парсит color-mix в inline-style).
     expect(bad).toHaveClass('assistant-bad-row')
     expect(bad).toHaveAttribute('data-row-marker', 'bad')
-    expect(bad).toHaveTextContent('🔴 Коваль')
+    expect(bad).toHaveTextContent('Коваль')
+    expect(bad.textContent).not.toContain('🔴')
 
     expect(good).toHaveClass('assistant-good-row')
     expect(good).toHaveAttribute('data-row-marker', 'good')
-    expect(good).toHaveTextContent('🟢 Шевченко')
+    expect(good).toHaveTextContent('Шевченко')
+    expect(good.textContent).not.toContain('🟢')
   })
 
   it('красный маркер перебивает зелёный градиент даже на максимуме колонки', () => {
@@ -223,7 +226,8 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     expect(second).toHaveAttribute('data-row-marker', 'attention')
     // Клонирование строки не должно стереть её ячейки: колонок по-прежнему две.
     expect(within(second).getAllByRole('cell')).toHaveLength(2)
-    expect(second).toHaveTextContent('⚠️ Коваль')
+    expect(second).toHaveTextContent('Коваль')
+    expect(second.textContent).not.toContain('⚠')
     expect(second).toHaveTextContent('Юристи')
   })
 
