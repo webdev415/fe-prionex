@@ -7727,7 +7727,9 @@
         "priority": "Priority",
         "targetTag": "Target Tag",
         "triggerTag": "Expired Tag",
-        "replaceTag": "Replace With Tag",
+        "tagToAdd": "Tag to add",
+        "tagToReplace": "Tag to be replaced",
+        "replaceEffect": "This rule replaces \"{{remove}}\" with \"{{add}}\" for clients that have \"{{remove}}\".",
         "selectTag": "Select tag",
         "empty": "No rules found. Create a rule to automate tag assignments.",
         "editRule": "Edit Rule",
@@ -7869,7 +7871,9 @@
           "targetRequired": "Target tag is required",
           "triggerTagRequired": "Trigger tag is required for tag expiry triggers",
           "eventRequired": "Event name is required for event triggers",
-          "cronRequired": "Cron expression is required for schedule triggers"
+          "cronRequired": "Cron expression is required for schedule triggers",
+          "replaceTagRequired": "Tag to be replaced is required for replace rules",
+          "replaceTagSameAsTarget": "Tag to be replaced must differ from the tag to add"
         },
         "useTemplate": "Use Template",
         "selectTemplate": "Select a debt collection template...",
