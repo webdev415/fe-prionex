@@ -753,82 +753,91 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
 
 ### Task 5 — Dispatch 1: the green deploy (AC: 3, 6, 7)
 
-- [ ] 5.1 Dispatch `deploy-preprod.yml` from **`story-5-3/pr-1-context`** with
+- [x] 5.1 Dispatch `deploy-preprod.yml` from **`story-5-3/pr-1-context`** with
       `image_tag=sha-00ef3be4743d-preprod`. §9 — the compose file will come from this branch's own
       commit; Task 2.6 already proved those bytes. Record the run id and the UTC dispatch time.
       **Coordinator dispatches** (Prohibition 15).
-- [ ] 5.2 🔴 Confirm the **concurrency block survived `workflow_call` expansion**: read
+- [x] 5.2 🔴 Confirm the **concurrency block survived `workflow_call` expansion**: read
       `concurrency_group` and `concurrency_type` from `action_run` for this caller's own run.
       `type=1` **and** the literal `deploy-preprod-fe-prionex-preprod` means the guard is real;
       `type=0` means the file claims protection it does not have (D21, and `deploy-stand.yml:35`
       makes this check mandatory after a first dispatch).
-- [ ] 5.3 Confirm every job landed on `runner_id=14` and that `runs-on: ${{ inputs.runner_label }}`
+- [x] 5.3 Confirm every job landed on `runner_id=14` and that `runs-on: ${{ inputs.runner_label }}`
       resolved (R1 re-exercised from a new caller).
-- [ ] 5.4 🔴 **AC7: find all five lines** from the table, individually, in this run's log, and paste
+- [ ] 5.4 **PENDING — not archival-blocked forever, just not yet.** Line 1 confirmed (Debug Log
+      References). Lines 2-5 are in job 10340's own log (task 9745), not yet flushed to disk
+      storage as of this write-up; will be pulled via SSH once `log_in_storage` flips true. 🔴 **AC7: find all five lines** from the table, individually, in this run's log, and paste
       each. A missing line — especially #3 — is a blocking finding, not a curiosity.
-- [ ] 5.5 🔴 **AC6 datum:** record the Kong guard's own printed `RESP_CODE` and whether the body
+- [ ] 5.5 **PENDING, same reason as 5.4** — the Kong-guard `RESP_CODE` line is in the same
+      not-yet-archived log. 🔴 **AC6 datum:** record the Kong guard's own printed `RESP_CODE` and whether the body
       still carried `no Route matched`. This is the third measurement of `deferred-work.md`
       finding 8, taken on the guard's own path from inside a real deploy — **this story owns that
       finding and this is how it discharges.** §7.
-- [ ] 5.6 Confirm the stand moved: `.RepoDigests[0]` is now
+- [x] 5.6 Confirm the stand moved: `.RepoDigests[0]` is now
       `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`, `.Id` and
       `.State.StartedAt` changed from Task 4.3's row, health is `healthy`, and
       `https://crm.preprod.crm-prionex.online/` answers `200`. Then do Task 4.5.
-- [ ] 5.7 Record the run's wall clock and step count, for 5.4/6.4 to budget against.
-- [ ] 5.8 ⚠️ **If this dispatch is red:** classify before re-dispatching. A caller mistake is
+- [x] 5.7 Record the run's wall clock and step count, for 5.4/6.4 to budget against.
+- [ ] 5.8 **N/A — dispatch 1 was green on the first try.** Condition never triggered. ⚠️ **If this dispatch is red:** classify before re-dispatching. A caller mistake is
       fixed and re-dispatched from the red-round reserve. A genuine `image_tag`-mode defect
       triggers §12's exception procedure — **escalate, do not edit `deploy-stand.yml`.**
 
 ### Task 6 — Dispatch 2: the absent tag (AC: 4)
 
-- [ ] 6.1 Dispatch with `image_tag=sha-000000000000-preprod`. Expect **failure**.
-- [ ] 6.2 Confirm the failure is the digest-resolve step's `404` classifier, and that its message
+- [x] 6.1 Dispatch with `image_tag=sha-000000000000-preprod`. Expect **failure**.
+- [ ] 6.2 **NOT MET on the first dispatch — this is the §12 defect.** The step crashed
+      (`IMAGE_ENV: unbound variable`) before it could print any classified message at all, `preprod`
+      branch or otherwise. Root-caused, fixed (one line, `deploy-stand.yml:1041-1045`), local
+      force-tested for both `IMAGE_ENV` values (§12 record above), authorized by Oleg. **Closes on
+      the coordinator's re-dispatch of this row**, not on this first attempt — left unchecked
+      honestly rather than checked on the strength of the fix alone. Confirm the failure is the digest-resolve step's `404` classifier, and that its message
       carries the **`preprod` branch** of the retention note, not the `-dev` one (`:1130-1138`).
       Paste the literal message.
-- [ ] 6.3 🔴 Confirm from the **step list** that `docker compose down` is **SKIPPED**, along with
+- [x] 6.3 🔴 Confirm from the **step list** that `docker compose down` is **SKIPPED**, along with
       everything after it. This — not an argument about ordering — is AC4's evidence.
-- [ ] 6.4 Confirm the stand is untouched: `.Id`, `.State.StartedAt` and `.RepoDigests[0]` identical
+- [x] 6.4 Confirm the stand is untouched: `.Id`, `.State.StartedAt` and `.RepoDigests[0]` identical
       to Task 5.6's row, and the site still answers `200`.
-- [ ] 6.5 Confirm the lock was **not** left held: no `fe-prionex-preprod-deploy-lock-*` container
+- [x] 6.5 Confirm the lock was **not** left held: no `fe-prionex-preprod-deploy-lock-*` container
       is running, and `.deploy.lock` is unlocked. (The 404 fires *before* the acquire step, so the
       expected answer is that the lock was never taken at all — record which of the two it is.)
 
 ### Task 7 — Dispatch 3: the 401 (AC: 4, retro-E5)
 
-- [ ] 7.1 Dispatch with `image_tag=sha-00ef3be4743d-preprod` **and**
+- [x] 7.1 Dispatch with `image_tag=sha-00ef3be4743d-preprod` **and**
       `simulate_bad_credential=true`. Expect **failure**.
-- [ ] 7.2 Confirm the `401` classifier fired and that its message carries the literal
+- [x] 7.2 Confirm the `401` classifier fired and that its message carries the literal
       `[SIMULATED via simulate_bad_credential=true — NOT a real credential outage]` marker
       (`:1082`) — the marker exists precisely so a log excerpt is never mistaken for a real outage.
-- [ ] 7.3 Confirm the message distinguishes the cause correctly: *"the deploy job's OWN registry
+- [x] 7.3 Confirm the message distinguishes the cause correctly: *"the deploy job's OWN registry
       credential … is missing, wrong, or revoked — **NOT** that the image is missing."*
-- [ ] 7.4 Confirm `down` SKIPPED and the stand untouched, as in 6.3/6.4.
-- [ ] 7.5 🔴 Confirm the **real** org secret was not disturbed: the *next* dispatch (Task 8.4)
+- [x] 7.4 Confirm `down` SKIPPED and the stand untouched, as in 6.3/6.4.
+- [x] 7.5 🔴 Confirm the **real** org secret was not disturbed: the *next* dispatch (Task 8.4)
       resolves a digest normally. The simulation corrupts only this step's local copy, deliberately
       **after** login — but "deliberately" is a code reading, and the next green resolve is the
       measurement.
 
 ### Task 8 — Dispatches 4 & 5: the lock, under real contention (AC: 3)
 
-- [ ] 8.1 🔴 Check the no-touch window first (Task 1.4). This task deliberately leaves a lock
+- [x] 8.1 🔴 Check the no-touch window first (Task 1.4). This task deliberately leaves a lock
       holder alive.
-- [ ] 8.2 Dispatch 4 with `hold_lock_seconds=60`. Expect the `hold-lock` **fixture** job to run and
+- [x] 8.2 Dispatch 4 with `hold_lock_seconds=60`. Expect the `hold-lock` **fixture** job to run and
       `preflight`/`clone-test`/`digest-resolve-test`/`deploy` to be **SKIPPED** — the gate is
       `if: ${{ !(inputs.hold_lock_seconds > 0) }}` on `preflight` alone, cascading through `needs:`
       (`:494-500`). Confirm that cascade in the job list; it is what keeps a fixture dispatch cheap.
-- [ ] 8.3 Confirm the holder container `fe-prionex-preprod-deploy-lock-<run id>` is **running on
+- [x] 8.3 Confirm the holder container `fe-prionex-preprod-deploy-lock-<run id>` is **running on
       the host** after its own job has finished — that outliving is the whole mechanism. Record its
       name and the `.deploy.lock` path it holds. Confirm the name derives from
       `compose_project_name`, per `:1457`.
-- [ ] 8.4 **Immediately** dispatch 5: a normal deploy of `sha-00ef3be4743d-preprod`. Expect the
+- [ ] 8.4 **Substantively confirmed via DB timestamps (31s real wait, Debug Log References), literal
+      log lines PENDING archival — same gap as 5.4/5.5.** 🔴 **Immediately** dispatch 5: a normal deploy of `sha-00ef3be4743d-preprod`. Expect the
       acquire step to **poll, report waiting, and then succeed** once the holder's 60s elapse —
       not to fail. Paste the acquire step's own waiting/acquired lines with their timestamps.
-- [ ] 8.5 Confirm the deploy completed green afterwards and the stand is on the expected digest.
-- [ ] 8.6 Confirm the lock was released: the release step ran (`if: always()`), no holder container
+- [x] 8.5 Confirm the deploy completed green afterwards and the stand is on the expected digest.
+- [x] 8.6 Confirm the lock was released: the release step ran (`if: always()`), no holder container
       remains. ⚠️ Note in the record that `always()` does **not** survive a cancel or a hard
       `timeout-minutes` kill — TTL expiry (720s) is the only reliable release for a dead job
       (`:2395`). This is a property, not a finding.
-- [ ] 8.7 ⚠️ **If dispatch 5 instead fails to acquire**, record `lock_wait_seconds=240` vs the 60s
+- [ ] 8.7 **N/A — dispatch 5 acquired successfully.** Condition never triggered. ⚠️ **If dispatch 5 instead fails to acquire**, record `lock_wait_seconds=240` vs the 60s
       hold and diagnose honestly: a 60s hold inside a 240s wait must succeed, so a failure here is
       a real defect in the lock's first exercise on a second stand.
 
@@ -1263,10 +1272,120 @@ confirmed via `.RepoDigests`, not `.Image`), `Health=healthy`, `https://crm.prep
 less. **This is the row Task 5.6 will compare dispatch 1's own result against.** **Shape used:
 strong (staged pre-image), not the Task 4.4 weak fallback.**
 
+**Task 5 — dispatch 1, run 1184, `2026-08-24T08:32:xx`, SUCCESS in ~60s on the first try.**
+`concurrency_group=deploy-preprod-fe-prionex-preprod`, `concurrency_type=1` — real, survived
+`workflow_call` expansion. All jobs `runner_id=14`, `runs_on=["deploy-dev-preprod"]`. Step list:
+24/25 steps `status=1`, the one `status=4` is the (correctly unneeded) post-`down` restore step.
+Digest moved cleanly: `Id` `26e990ff…` (Task 4's staged probe) → `29dbd804…` (post-deploy),
+`RepoDigests` now exactly `sha256:5e5b190d93c8…` (the target, not the probe), `healthy`, site `200`
+— a real discriminator, not a no-op. AC7 line 1 confirmed literally from the archived `clone-test`
+log: `No ref supplied (image_tag mode) — validating the CALLER's own commit
+(github.sha=9eecc5eb…)`. Lines 2-5 and the AC6 Kong-guard `RESP_CODE` line are in the `deploy` job's
+own log (task 9745), **not yet archived to disk as of this write-up** — Forgejo compresses task
+logs to storage asynchronously and this one is queued behind others; will be read via SSH once
+`log_in_storage` flips true (Debug Log addendum, once available).
+
+**Task 6 — dispatch 2, run 1185, `2026-08-24T08:39:xx`, FAILURE as designed — but see the §12
+finding below.** Step 4 ("Resolve the digest before pulling") failed; steps 5-21 all
+`status=4` **SKIPPED**, including step 12 (`docker compose down`) — AC4's safety evidence, from the
+step list, not an argument. Step 8 ("Acquire the stand lock") also `status=4` — the lock was never
+taken. Container `Id`/`StartedAt`/`RepoDigests` unchanged from dispatch 1's post-state; site still
+`200`.
+🔴 **But the message-quality half of AC4 was not met as first dispatched.** The step's raw log:
+```
+2026-08-24T08:39:10.5417487Z /var/run/act/workflow/digest.sh: line 85: IMAGE_ENV: unbound variable
+2026-08-24T08:39:10.6093231Z ⚙️ [runner]: exitcode '1': failure
+```
+No classified 404 message was ever printed — see the §12 record immediately below.
+
+**Task 7 — dispatch 3, run 1186, `2026-08-24T08:39:5x`, FAILURE as designed, clean.** Same
+down-SKIPPED/untouched pattern as 1185. The 401 classifier fired correctly (this path does not
+reference `IMAGE_ENV`, so it was unaffected by the defect): literal message from the `deploy` job's
+own archived log (task 9759): `FAIL: registry returned 401 Unauthorized resolving
+sha-00ef3be4743d-preprod. [SIMULATED via simulate_bad_credential=true — NOT a real credential
+outage] This means the deploy job's OWN registry credential (REGISTRY_USER_RO/ REGISTRY_TOKEN_RO)
+is missing, wrong, or revoked — NOT that the image is missing. Fix: check the org secrets. Do not
+chase a build problem for this failure.` The diagnostic `digest-resolve-test` job (non-gating)
+**succeeded** in the same run — confirms the simulation corrupts only the deploy job's own local
+credential copy, not the org secret (Task 7.5's own check).
+
+**Task 8 — dispatches 4 (run 1187) and 5 (run 1188), back-to-back, real contention.** 1187: only
+`hold-lock` ran (`status=1`); `preflight`/`clone-test`/`digest-resolve-test`/`deploy` all `status=4`
+**SKIPPED** — the `needs:`-cascade gate held. Holder container
+`fe-prionex-preprod-deploy-lock-1187` (name derived from `compose_project_name-deploy-lock-<run
+id>`, per `:1457`), later confirmed `Exited (0)`. 1188 dispatched immediately after: its own
+"Acquire the stand lock" step **started `1787560846`, stopped `1787560877` — a real 31-second
+wait**, matching the holder's ~60s TTL running down (measured from the DB's own step timestamps,
+not inferred). Deploy completed green afterward; final digest `sha256:5e5b190d93c8…`, `healthy`,
+site `200`; lock released, `.deploy.lock` back to 0 bytes/unlocked. The literal "waiting"/"acquired"
+log lines (Task 8.4's own request) are in task 9769, also not yet archived — same addendum as
+dispatch 1's AC7 lines.
+
+### 🔴 §12 exception — a real defect in `image_tag` mode, found by dispatch 2, fixed per the
+### 4-step procedure, with Oleg's explicit authorization
+
+**1. The defect, stated with the failing run id and exact log line.** Run **1185**, job 10346
+(task 9752), step "Resolve the digest before pulling": `/var/run/act/workflow/digest.sh: line 85:
+IMAGE_ENV: unbound variable`, `exitcode '1'`. The step's own `env:` block (`deploy-stand.yml:1041-1045`)
+declared `REG_USER`, `REG_TOKEN`, `TAG`, `SIMULATE_BAD_CREDENTIAL` — but not `IMAGE_ENV`, which the
+404 branch (`:1131`, `if [ "${IMAGE_ENV}" = "dev" ]`) references under `set -euo pipefail`
+(`:1047`). No classified 404 message was ever produced; the job aborted one line into the branch
+that was supposed to write it. **The safety property held regardless** — the script still exited
+non-zero, and the `needs:`-cascade still skipped `down` and everything after it identically to a
+clean classification (Task 6's own evidence above). Only the *message* was lost, not the guarantee
+the message describes.
+
+**Origin.** The `IMAGE_ENV` branch itself was added by a **"Code review (2026-08-23, Low)"** fix —
+visible in the comment directly above it (`:1127-1130`) — specifically to stop a hardcoded `-dev`
+retention note from misdirecting a PRE-PROD/PROD operator. That fix is exactly the class this
+story's own §3 names generally: *verified by reading, never dispatched* — DEV has apparently never
+hit a real 404 on this exact code path since the fix landed, and this story's own dispatch 1
+(a genuine, valid tag) never needed to reach this branch either. Dispatch 2 is the first live
+execution of this specific line, in any environment.
+
+**2. Which retro-E5 rows this invalidates: none, per the void-clause's own exemption.** The fix is
+a single `env:` key added to one step; it shares no state with the `200`/`401`/`000`/`*` branches
+of the same `case`, with the pull/compose/lock/health machinery, or with any other step in the job.
+Task 6.7's void-clause, as amended by Oleg (*"exempt a pure fail-closed early-exit that shares no
+state with the block"*), covers exactly this shape. Story 4.8's own retro-E5 matrix (runs
+1132–1150) is **not** invalidated — none of those runs exercised this branch, so none of their
+evidence changes. Only the 404 row itself — this story's own Task 6 — needs re-earning.
+
+**3. Priced, before the edit landed (Oleg's own instruction: fix now, price now).** **+2** dispatches:
+one PRE-PROD re-run of the absent-tag row (this story, confirming the fix in the environment that
+found the bug) and one DEV control (`deploy-dev.yml` with a nonexistent `ref`, same code path,
+proving the fix holds for both branches of the `if`, not just the one this story happened to hit).
+Both are the coordinator's to run. Declared floor moves from 13 to **15** (see Run Budget Ledger,
+below) — named as a priced consequence of a real, escalated defect, not absorbed silently.
+
+**4. Escalated to Oleg as a blocking Open Question before any edit was made** — not fixed and
+reported afterward. **Oleg's decision, 2026-08-24: fix in this story, per the §12 procedure.**
+Executed exactly as authorized: one line, `IMAGE_ENV: ${{ inputs.image_env }}`, added to the
+step's own `env:` block, matching the existing pattern at `:741`/`:900`. Nothing else in
+`deploy-stand.yml` touched — confirmed by `git diff` showing exactly one added line.
+
+**Local force-test, before pushing the fix (Oleg's own instruction, step 3), zero dispatches.**
+The 404 branch's logic (`:1126-1144`) was reproduced in an isolated local script under
+`set -euo pipefail`, run once with `IMAGE_ENV=dev` and once with `IMAGE_ENV=preprod`:
+- `IMAGE_ENV=dev` → completes cleanly, message includes *"or (b) a -dev tag older than 14 days was
+  deleted by the live retention rule…"* — the DEV-specific clause fires.
+- `IMAGE_ENV=preprod` → completes cleanly, message includes *"the 14-day retention rule…only
+  applies to -dev tags…not a likely cause for image_env=preprod"* — the non-DEV clause fires,
+  correctly excluding the misdirection the original code review fix existed to prevent.
+- **Control, same script, `IMAGE_ENV` left unset:** reproduces the exact original crash —
+  `bash: line 1: IMAGE_ENV: unbound variable`, exit 1 — confirming this is the real root cause, not
+  a guess, before the fix was ever pushed.
+
+Both branches now provably correct without a live dispatch. The coordinator will re-run the actual
+404 row (PRE-PROD) plus a DEV control once this fix is pushed.
+
 ### Run Budget Ledger
 
 _Declared before work — see §11. Floor **13** above baseline, ceiling **16** (three red rounds
 reserved). Disposition starts **OPEN** and closes only against a post-merge query (retro-D4)._
+🔴 **Revised, `2026-08-24`, per the §12 exception above: floor moves to 15** (+2 dispatches: the
+PRE-PROD 404 re-run and the DEV 404 control), still inside the original ceiling of 16 — the
+red-round reserve absorbs it exactly as named for.
 
 ### Completion Notes List
 

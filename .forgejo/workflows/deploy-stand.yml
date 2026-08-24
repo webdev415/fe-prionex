@@ -1043,6 +1043,7 @@ jobs:
           REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
           TAG: ${{ steps.tag.outputs.tag }}
           SIMULATE_BAD_CREDENTIAL: ${{ inputs.simulate_bad_credential }}
+          IMAGE_ENV: ${{ inputs.image_env }}
         run: |
           set -euo pipefail
           HEADERS_FILE="$(mktemp)"
