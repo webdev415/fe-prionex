@@ -78,7 +78,7 @@ export function FilterTemplatesMenu({ currentFilters, onApply }: FilterTemplates
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm transition-colors"
           >
             <Icons.Save size={14} strokeWidth={1.5} />
             {t('pages.users.filterTemplates.label')}

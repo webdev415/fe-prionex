@@ -109,7 +109,7 @@ function AppliedFilterChips({
           <button
             type="button"
             onClick={onReset}
-            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm transition-colors"
           >
             <Icons.CancelCircle size={14} strokeWidth={1.5} />
             {clearLabel}
