@@ -843,7 +843,6 @@ export function UserManagementPage() {
               onSearchFieldChange={handleSearchFieldChange}
               onSearch={handleSearch}
               onClear={handleClearSearch}
-              isLoading={isLoading}
             />
           }
           actions={

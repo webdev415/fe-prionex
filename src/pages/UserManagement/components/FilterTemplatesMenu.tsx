@@ -80,7 +80,7 @@ export function FilterTemplatesMenu({ currentFilters, onApply }: FilterTemplates
             type="button"
             className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm underline-offset-2 hover:underline"
           >
-            <Icons.Star size={14} strokeWidth={1.5} />
+            <Icons.Save size={14} strokeWidth={1.5} />
             {t('pages.users.filterTemplates.label')}
           </button>
         </DropdownMenuTrigger>
