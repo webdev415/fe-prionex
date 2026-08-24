@@ -111,6 +111,12 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
         return `${key}:${String(vars?.value)}`
       }
+      // Same shape, same reason: the dialogs-list loan cell collapses extra
+      // active loans into a "+N more" badge — the N is the whole point of the
+      // badge, so it has to be assertable and not just the key it rides on.
+      if (key === 'pages.training.dialogue.list.moreLoans') {
+        return `${key}:${String(vars?.count)}`
+      }
       // Same shape, same reason: the OneX dock's context chip exists to tell
       // the operator WHICH page will be sent along, so the label has to be
       // assertable and not just the key it rides on.

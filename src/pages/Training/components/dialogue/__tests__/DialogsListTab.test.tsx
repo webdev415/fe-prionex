@@ -1,16 +1,22 @@
 /**
  * Tests for the call-grain Dialogue Evaluation list: one row per call with the
- * inline scorecard summary (category / rating / comment) + Trainer/Client cols.
- * Data hooks are mocked; the i18n mock returns the key.
+ * inline scorecard summary (category / rating / comment) + Trainer/Client/Loan
+ * cols. Data hooks are mocked; the i18n mock returns the key.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { useCallMonitoring } from '@/features/training'
 import { useMyOperators } from '@/features/quality/coaching/hooks'
 import { useOperators } from '@/features/users/hooks'
 import { useScopedUserIds } from '../../../lib/scope'
 import { DialogsListTab } from '../DialogsListTab'
+
+// The loan cell renders a real client-card <Link>, so the tab needs a Router.
+// RTL re-applies the wrapper on `rerender`, so the loading/error test keeps it.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter })
 
 vi.mock('@/features/training', () => ({ useCallMonitoring: vi.fn() }))
 vi.mock('@/features/quality/coaching/hooks', () => ({
@@ -23,8 +29,12 @@ vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
 // The departments directory is `manage_roles`-gated; the tab falls back to the
 // roster, which is what these tests exercise.
 vi.mock('@/features/departments', () => ({ useDepartments: () => ({ data: undefined }) }))
+// Mutable per-test: which debts each client id resolves to (reset in
+// beforeEach; the factory closure reads it lazily at render time).
+let clientDebtsById = new Map<number, Record<string, unknown>[]>()
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClientNames: () => new Map([[99, 'Acme Corp']]),
+  useClientDebts: () => clientDebtsById,
 }))
 vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
 // Stubbed to just the quick-select shortcut, so these tests assert the wiring
@@ -116,9 +126,23 @@ function setCalls(result: Partial<ReturnType<typeof useCallMonitoring>>) {
   } as ReturnType<typeof useCallMonitoring>)
 }
 
+function debt(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    seller_company: 'Seller LLC',
+    contract_number: 'KR-100',
+    original_debt_amount: '1000.00',
+    remaining_debt_amount: '500.00',
+    status: 'active',
+    credit_issued_date: '2026-01-10',
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   permissions.length = 0
+  clientDebtsById = new Map()
   mockUseMyOperators.mockReturnValue({ data: [41], isLoading: false } as ReturnType<
     typeof useMyOperators
   >)
@@ -415,5 +439,104 @@ describe('DialogsListTab — disputes', () => {
 
     fireEvent.click(screen.getByTestId('disputes-only-chip'))
     expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.disputed).toBeUndefined()
+  })
+})
+
+describe('DialogsListTab — loan column', () => {
+  const oneCall = (overrides: Record<string, unknown> = {}) =>
+    setCalls({
+      data: { calls: [call(overrides)], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+
+  it('renders the single active loan number as a link to the client card', () => {
+    clientDebtsById = new Map([[99, [debt({ contract_number: 'KR-100' })]]])
+    oneCall()
+    render(<DialogsListTab />)
+
+    const link = screen.getByRole('link', { name: 'KR-100' })
+    expect(link).toHaveAttribute('href', '/dashboard/clients/99')
+    expect(screen.queryByTestId('more-loans-badge')).not.toBeInTheDocument()
+  })
+
+  it('shows the freshest active loan with a "+N more" badge when several are active', () => {
+    clientDebtsById = new Map([
+      [
+        99,
+        [
+          debt({ id: 1, contract_number: 'KR-OLD', credit_issued_date: '2024-01-01' }),
+          debt({ id: 2, contract_number: 'KR-NEW', credit_issued_date: '2026-02-01' }),
+          debt({ id: 3, contract_number: 'KR-MID', credit_issued_date: '2025-06-01' }),
+        ],
+      ],
+    ])
+    oneCall()
+    render(<DialogsListTab />)
+
+    expect(screen.getByRole('link', { name: 'KR-NEW' })).toBeInTheDocument()
+    // Three active, one shown → +2 (the i18n mock renders `<key>:<count>`).
+    expect(screen.getByTestId('more-loans-badge')).toHaveTextContent(
+      'pages.training.dialogue.list.moreLoans:2'
+    )
+  })
+
+  it('falls back to the freshest loan of any status (no badge) when none is active', () => {
+    clientDebtsById = new Map([
+      [
+        99,
+        [
+          debt({
+            id: 1,
+            contract_number: 'KR-C1',
+            status: 'closed',
+            credit_issued_date: '2024-01-01',
+          }),
+          debt({
+            id: 2,
+            contract_number: 'KR-C2',
+            status: 'closed',
+            credit_issued_date: '2025-01-01',
+          }),
+        ],
+      ],
+    ])
+    oneCall()
+    render(<DialogsListTab />)
+
+    expect(screen.getByRole('link', { name: 'KR-C2' })).toBeInTheDocument()
+    expect(screen.queryByTestId('more-loans-badge')).not.toBeInTheDocument()
+  })
+
+  it('renders a dash for a call without a client', () => {
+    oneCall({ client_id: null })
+    render(<DialogsListTab />)
+
+    expect(screen.getByTestId('loan-cell')).toHaveTextContent('—')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('clicking the loan link opens the client card without selecting the row', () => {
+    clientDebtsById = new Map([
+      [99, [debt()]],
+      [77, [debt({ id: 9, contract_number: 'KR-77' })]],
+    ])
+    setCalls({
+      data: {
+        calls: [call(), call({ call_id: 'c2', client_id: 77, agent_extension: '102' })],
+        summary: {},
+        total: 2,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    // Auto-select picked the first call.
+    expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
+
+    const link = screen.getByRole('link', { name: 'KR-77' })
+    // A real <a href>, so ctrl/middle-click opens the card in a new tab.
+    expect(link).toHaveAttribute('href', '/dashboard/clients/77')
+    fireEvent.click(link)
+    // The click navigates to the card; it must NOT also select c2 for review.
+    expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
   })
 })
