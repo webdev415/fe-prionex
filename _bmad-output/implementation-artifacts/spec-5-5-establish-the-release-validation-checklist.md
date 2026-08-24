@@ -4,6 +4,7 @@ type: 'feature'
 created: '2026-08-24'
 status: 'done'
 baseline_revision: '35c1a39e4b9063af272fdb5e980a31ee13b1b92e'
+final_revision: '472c03c7'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
@@ -196,6 +197,11 @@ Today's executability split: `EXECUTABLE` F1, F2; `EXECUTABLE, degraded` F3, F12
 ## Auto Run Result
 
 Status: done. One outstanding item is owned by the coordinator and is named below, not hidden.
+
+Committed as `92a8c8ef` (status flip, its own commit per the project's convention) and `472c03c7`
+(the implementation). The pre-commit hook ran full CI parity on each: format:check, lint
+`--max-warnings=0`, typecheck, and 229 test files / 1924 tests, all green. Not pushed; Oleg opens and
+merges the PR.
 
 ### What was implemented
 
