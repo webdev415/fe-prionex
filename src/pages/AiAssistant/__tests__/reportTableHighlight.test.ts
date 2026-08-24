@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ATTENTION_MARKER,
@@ -216,7 +218,7 @@ describe('cellHeatRatio / heatBackground', () => {
     expect(cellHeatRatio(9000, column)).toBe(1)
   })
 
-  it('красит зелёным (success) токеном с ростом непрозрачности', () => {
+  it('красит зелёной переменной зоны ассистента с ростом непрозрачности', () => {
     expect(heatBackground(0)).toBe(
       `color-mix(in srgb, var(${HEAT_COLOR_TOKEN}) ${MIN_HEAT_OPACITY.toFixed(1)}%, transparent)`
     )
@@ -225,32 +227,55 @@ describe('cellHeatRatio / heatBackground', () => {
     )
   })
 
-  it('авто-градиент — зелёный (success), а не тёплый и не красный', () => {
-    // Светофор: масштаб = зелёная гамма; тёплое (внимание) и красное (плохо) —
-    // только у маркеров строк, а не у авто-градиента.
-    expect(HEAT_COLOR_TOKEN).toContain('success')
+  it('авто-градиент — собственная зелёная переменная, не accent/warning/error', () => {
+    // Светофор: масштаб = зелёная гамма на --assistant-heat (не --color-primary-*,
+    // тот перекрашивается акцентом). Тёплое (внимание) и красное (плохо) — только
+    // у маркеров строк, а не у авто-градиента.
+    expect(HEAT_COLOR_TOKEN).toBe('--assistant-heat')
     for (const ratio of [0, 0.25, 0.5, 0.75, 1]) {
       const bg = heatBackground(ratio)
-      expect(bg).not.toMatch(/warning|error|amber|orange|yellow|red/i)
-      expect(bg).toContain(HEAT_COLOR_TOKEN)
+      expect(bg).not.toMatch(/warning|error|primary|amber|orange|yellow|red/i)
+      expect(bg).toContain('--assistant-heat')
     }
   })
 })
 
 describe('markerBackground — фон строки по «светофору»', () => {
-  it('внимание = жёлтый (warning), плохо = красный (error), хорошо = зелёный (success)', () => {
+  it('внимание = жёлтый (warning), плохо = красный (error), хорошо = зелёный (assistant)', () => {
     expect(markerBackground('attention')).toBe(
       `color-mix(in srgb, var(--color-warning-400) ${MARKER_STYLE.attention.opacity}%, transparent)`
     )
     expect(markerBackground('bad')).toContain('--color-error-500')
-    expect(markerBackground('good')).toContain('--color-success-500')
+    expect(markerBackground('good')).toContain('--assistant-heat-strong')
   })
 
   it('красный не путается с зелёным, «хорошо» плотнее авто-градиента', () => {
-    expect(markerBackground('bad')).not.toMatch(/success|warning/)
+    expect(markerBackground('bad')).not.toMatch(/success|assistant|warning/)
     expect(markerBackground('good')).not.toMatch(/error|warning/)
     // «Хорошо» — усиленный зелёный: заметно плотнее потолка авто-градиента.
     expect(MARKER_STYLE.good.opacity).toBeGreaterThan(MAX_HEAT_OPACITY)
+  })
+})
+
+describe('переменные зелёного масштаба заданы в index.css (не висячие var())', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8')
+
+  it('--assistant-heat и --assistant-heat-strong заданы явным зелёным', () => {
+    // hue-канал зелёного (G) должен доминировать — грубая проверка «это зелёный».
+    for (const name of ['--assistant-heat', '--assistant-heat-strong']) {
+      const m = css.match(new RegExp(`${name}:\\s*#([0-9a-f]{6})`, 'i'))
+      expect(m, `${name} должен быть задан hex-значением`).not.toBeNull()
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(m![1].slice(i - 1, i + 1), 16))
+      expect(g).toBeGreaterThan(r)
+      expect(g).toBeGreaterThan(b)
+    }
+  })
+
+  it('обе переменные осветлены под тёмные темы (neutral-dim / ultra-dark)', () => {
+    expect(css).toMatch(/html\[data-theme='(?:neutral-dim|ultra-dark)'\]/)
+    // Базовое определение + тёмное переопределение → минимум по два вхождения.
+    expect((css.match(/--assistant-heat:/g) ?? []).length).toBeGreaterThanOrEqual(2)
+    expect((css.match(/--assistant-heat-strong:/g) ?? []).length).toBeGreaterThanOrEqual(2)
   })
 })
 
