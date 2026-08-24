@@ -3555,6 +3555,18 @@ UTC-timestamped at the point of measurement.
    either stand — but the datum (now on the correct Host) did not exist before this story and Story
    5.3 should read it before relying on the rationale as written. **Owner: Story 5.3** (Task 5.4/§11
    of this story).
+   🔴 **Story 5.3's own dev-story, 2026-08-24: PARTIALLY discharged, not fully closed.** This is the
+   third measurement, and the first taken on the guard's own path from **inside a real deploy** (runs
+   1184/1188) rather than a standalone curl probe. Behaviorally confirmed via the DB: step 19 ("Kong
+   alias guard — recurring, not one-shot") shows `status=1` (success) on both 1184 and 1188 — the
+   `expect_unrouted_api: "false"` permissive branch fired and did not block either deploy, on the real
+   caller (`deploy-preprod.yml`), for the first time. **Still open: the guard's own literal printed
+   `RESP_CODE`** — its log (task 9745/9769) has not archived to disk as of this story's close-out,
+   despite two check attempts roughly an hour apart (Story 5.3's own Tasks 5.5/8.4). Whoever reads
+   that log next should paste the literal `RESP_CODE` line here to actually close this finding;
+   until then it stays open, upgraded from "curl-probe-only" to "confirmed passing on the real guard
+   path, literal code still unread" — not silently marked done on the strength of the step status
+   alone.
 9. Story 4.8's open backfill (`deferred-work.md:3374-3399`, the entry immediately above this one) —
    raw `psql` output for all three items now captured verbatim in Story 5.1's Debug Log References
    (completed fix-pass, `2026-08-23T19:34Z`–`19:35Z`, while SSH access was still live): item 3
@@ -3604,6 +3616,18 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
    `deploy-dev-preprod`, which DEV already uses live — same runner, same job image either way). **Not
    fixed here** — `deploy-stand.yml` is Story 4.8's shipped artifact and inside Story 4.9's blast
    radius (§12 of this story). **Owner: Story 5.3.**
+   🔴 **Story 5.3's own dev-story, 2026-08-24: re-routed further, not fixed there either — Owner:
+   Story 6.4.** 5.3 read-only-verified `runner_label` before dispatching (its own Task 2.3), used
+   `deploy-dev-preprod` (chosen live, not this comment's suggested `preprod`), and its own §12
+   exception covers only the 404-classifier bug it found — not this skeleton comment, which is a
+   separate, unrelated finding sharing the same file. **The DB-vs-disk conflict this entry's own
+   `.runner`-file reading rests on is still live, measured again by 5.3's Task 2.3:**
+   `select agent_labels from action_runner where name='s1-deploy-dev-preprod'` →
+   `["deploy-dev-preprod"]` — exactly **one** label in the DB (the scheduler's actual source, per
+   D33), not the four this entry's on-disk `.runner` file claims. Whichever story next legitimately
+   edits `deploy-stand.yml` should fix the skeleton's label AND resolve (or at minimum re-measure)
+   this DB-vs-disk disagreement before picking an s10 label for PROD by the same method — Story 6.4
+   will need a working answer, not an inherited assumption.
 2. ⚠️ **The s1 registry login has been removed twice, not three times** — 🔴 corrected, fix-pass:
    the first pass's heading claimed "a third time" while its own body named only two events. The
    *first* disappearance is on record as **13 Aug**, discovered by Story 4.2
@@ -3706,3 +3730,79 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   (2026-08-17), which proves the *artifact* carries the real PRE-PROD URLs — it does not prove the
   secret's live content today. A correction to `epics.md` should say that, not replace one flat
   assertion with another. **Owner: Oleg**, at whichever story next amends the epic.
+
+## Deferred from: dev-story of story-5.3 (2026-08-24)
+
+- ⚠️ **`deploy-stand.yml:1652` (`KIND_NOTE=` inside the lock-wait-timeout classifier) carries the same
+  latent defect class as the one just fixed in the 404 classifier (`:1166`/`:1168`, §12 exception, run
+  1190) — not fixed here, deliberately, because it is out of this story's own §12 scope (that
+  authorization covers the 404 classifier only) and it has never fired live. **Mechanism, identical to
+  the fixed instance:** a backslash-continued `VAR="a"\`-then-indented-`"b"` assignment. After
+  backslash-newline splicing, the continuation line's own indentation survives into the spliced source,
+  producing `VAR="a"   "b"` — two whitespace-separated words, not one concatenated string. In an
+  `echo "a"\`/`"b"` context this is harmless (echo prints multiple arguments space-joined regardless);
+  in a plain assignment it is not — bash reads it as `VAR=a` scoped to a command literally named `b`,
+  which fails as "command not found" (exit 127) the instant that branch executes. This exact failure
+  was reproduced live in run 1190 for the 404 classifier and confirmed by local reproduction for both
+  `IMAGE_ENV` values before the §12 fix. `:1652` has never been reached by any dispatch this story ran
+  — 5.3's own lock-contention row (1187 holder / 1188 waiter) succeeded via the non-timeout path, and
+  this code only executes when a wait actually **times out** against a `hold_lock_seconds`-simulated
+  holder. A whole-file grep for the pattern (`="[^"]*"\$`, i.e. an assignment whose value ends the line
+  with a bare trailing backslash) after the 404 fix confirms `:1652` is the *only* remaining instance
+  in the entire file. **Owner: the first story that exercises the lock-timeout-against-a-simulated-
+  holder branch** (a real lock-timeout dispatch, not merely lock contention/queueing, which 5.3 already
+  covers) — fix the same way as `:1166`/`:1168`: single-line string, no backslash continuation, or an
+  explicit `+=` if the continuation is kept for readability, with the same lesson pinned as a comment
+  at the site.
+  🔴 **CODE FIXED, code review §12-batch #3 (2026-08-24, same story, later pass — Oleg's decision,
+  relayed by the coordinator): the assignment itself is no longer broken.** Rewritten single-line,
+  same pattern as `:1166`/`:1168`, comment pinned at the site. Confirmed by local force-test, both
+  branches (`HOLDER_SIMULATED=true` — full `[SIMULATED …]` message prints; `=false`/unset — `KIND_NOTE`
+  stays empty, no crash either way). **What is still open, deliberately: live verification.** This
+  story still did not dispatch a real lock-timeout-against-a-simulated-holder to exercise the fixed
+  branch under real conditions — code review M1 flagged the owner phrasing above as a trigger
+  condition rather than a name (against the house convention); **Oleg's decision at this same
+  review: leave it as a trigger condition, not a rename** — the fix itself is done and force-tested;
+  what remains open is narrower now (live confirmation only, not the defect), and the honest owner
+  for "who runs that dispatch" genuinely is whichever story first needs to, not a name chosen for
+  its own sake. Not an oversight — a considered choice, recorded as one.
+- ⚠️ **The Slack notification step named by earlier stories still does not exist, and
+  `deploy-preprod.yml` is now a second file it will need to touch. Owner: Story 4.5.** No step in
+  either `deploy-dev.yml` or the new `deploy-preprod.yml` posts to Slack on failure or success; the
+  classified messages this story worked to make honest (`[SIMULATED …]` markers, the 404/401
+  classifiers, the two §12 fixes) only reach a log excerpt someone pastes by hand today. Recorded here
+  again, naming the new file explicitly, so Story 4.5 does not have to rediscover the second caller.
+- ⚠️ **What dispatch 1 (run 1184) confirmed and did not confirm about `image_tag` mode, beyond the two
+  §12 defects.** Confirmed live for the first time in any environment: the exactly-one-of-`ref`-or-
+  `image_tag` guard, the direct-tag-no-derivation path, digest resolution and pull by tag, and the
+  full deploy/health/AC6/Kong sequence all work correctly when the tag exists (Story 4.8's own H1 fix,
+  applied but never dispatched, is now confirmed live). **Not confirmed by this story:** `image_tag`
+  mode's behavior when the resolved digest matches what is *already running* (a true no-op redeploy —
+  5.3 deliberately staged a different image first, per its own §6, specifically to avoid ever
+  observing this case) and `image_tag` mode combined with a malformed (not merely absent) tag string
+  — the shape-validation code path (`:729-856` per Dev Notes §9) was read, not dispatched. Neither
+  blocks 5.3's own ACs; named for whichever story next relies on either behavior.
+- ⚠️ **`CRM/api-prionex` heads-up, re-escalated once more — still unsent, still unowned.** After this
+  story, `CRM/fe-prionex` holds live, working deploy paths onto **two** of `CRM/api-prionex`'s own
+  networks (`crm-dev-network` since 4.2, `crm-preprod-network`'s 69-container network now proven a
+  real deploy target by this story, not merely measured). A `docker network rm` on their side now
+  trips over both, and PRE-PROD stopped being a theoretical target the moment this story's first
+  dispatch (1184) actually redeployed onto it. Same channel as the CORS ask — **Owner: Oleg** — not
+  contacted directly by this session, per standing instruction.
+- ⚠️ **PRE-PROD lock-holder debris has no reaper — missed, not deferred, until code review (M3/M4).**
+  `dev-reset.yml:338`/`:350` anchors its sweep to `^fe-prionex-dev-deploy-lock-[0-9]+$`;
+  `deploy-stand.yml:317` derives THIS caller's holders as `fe-prionex-preprod-deploy-lock-<id>`,
+  which that regex can never match. Holders are started `docker run -d` without `--rm`, and the
+  `hold_lock_seconds` fixture deliberately outlives its own job — run 1187's holder is `Exited (0)`
+  and sits on s1 right now with nothing collecting it. Related (M4): PRE-PROD also sits outside the
+  serialization `dev-reset.yml` relies on (`deploy-dev.yml`'s literal concurrency group is
+  deliberately duplicated in `dev-reset.yml:156-157` specifically so the sweep cannot run inside a
+  deploy's own pull→`up -d` window; PRE-PROD correctly has its own separate group, and is therefore
+  not covered) — and it shares the host and the `IMAGE_REPO` `dev-reset.yml:231` enumerates with
+  **no environment filter**, so the sweep's ≥168h-old untagged/unreferenced-image rule can catch a
+  PRE-PROD validation candidate mid pull→`up -d` (a normal week-old digest-pulled image is exactly
+  that shape). Fails loudly at `up -d` — availability, not corruption — but real. **Owner: whichever
+  of Story 5.4/5.5 next establishes ongoing PRE-PROD operational tooling — or, more naturally, the
+  story that generalizes `dev-reset.yml`'s own sweep/reaper to cover multiple stands instead of
+  hardcoding DEV's own naming pattern.** Epic 6/PROD repeats this exact shape for a third stand
+  regardless, so whichever story fixes it first should fix it generally, not per-environment again.

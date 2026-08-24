@@ -817,7 +817,39 @@ development_status:
   # exactly one plaintext copy (/root/.fj_reg_5_2b.token, 41 bytes, 0600) remains; both
   # compromised tokens' files stay deleted. Stand still healthy 8+ hours later, no stray
   # containers or networks. Status: done.
-  5-3-deploy-a-specific-image-tag-to-pre-prod: backlog
+  # Contexted 2026-08-24 against main @ 96d19bc0 (PR #77, Story 5.2's closeout), on branch
+  # story-5-3/pr-1-context. The FIRST consumer of deploy-stand.yml's image_tag mode: one new
+  # thin caller, .forgejo/workflows/deploy-preprod.yml (workflow_dispatch only, image_tag
+  # required, no ref), deploying a permanent sha-<12hex>-preprod tag onto the stand 5.2 built.
+  # 🔴 The file is ~90 lines and is the smallest part of the story: image_tag mode has NEVER
+  # executed anywhere. It was structurally dead until 4.8's review H1, and both fixes were
+  # verified by reading (yaml.safe_load / bash -n / ${{ }} scan), never by a dispatch — 4.8 says
+  # so itself and routes the first live exercise here. Four code paths run for the first time in
+  # dispatch 1; three red rounds are reserved and named, not hidden.
+  # runner_label resolved to deploy-dev-preprod, NOT the skeleton's deploy-preprod-preprod (which
+  # exists nowhere) and NOT the prettier `preprod`: the .runner file on disk says four labels, but
+  # the runner's own config.yml AND Postgres action_runner.agent_labels — the table the scheduler
+  # matches runs-on against — say one. deploy-dev-preprod is in every list and has live dispatch
+  # evidence; an unmatched label queues SILENTLY on this instance. Settled by one read-only query
+  # (Task 2.3) before any dispatch. Answers 5.2's Open Question 2.
+  # deploy-stand.yml stays READ-ONLY, its wrong skeleton label included — the corrected value
+  # lives in the executing caller, and the comment fix is re-routed to Story 6.4. §12 carries a
+  # priced exception procedure for the one case where a real image_tag-mode defect forces an edit.
+  # Two ACs added: AC6 (what the health/Kong checks can and cannot prove — CORS stays broken, so
+  # browser-path validation is impossible and the AC says so) and AC7 (image_tag mode's five
+  # first-execution log lines confirmed individually, because four never-run paths inside one
+  # green tick is one green tick). The green row is staged on a deliberately-wrong pre-image so
+  # the digest change is a discriminator that could have failed. No new -preprod tag is minted.
+  # Ledger declared before work: floor 13, ceiling 16, disposition OPEN.
+  # Updated 2026-08-24 (code review M8): image_tag mode's first live execution found two real
+  # defects in deploy-stand.yml's 404 classifier (fixed via the priced §12 exception, Oleg's
+  # decision relayed by the coordinator both times); a code-review batch found and fixed a third
+  # defect plus a genuine tag<->environment binding gap (a -dev tag could deploy fully green onto
+  # PRE-PROD) via the same §12 procedure. Floor revised 13->15->16 by the two dev-story defects;
+  # ceiling renegotiated 16->24 at code review, every row beyond the original 16 named. Two
+  # archived deploy-job logs remain genuinely unavailable despite repeated checks. Disposition
+  # still OPEN, closes only post-merge. Status: review (not ready-for-dev).
+  5-3-deploy-a-specific-image-tag-to-pre-prod: review
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
