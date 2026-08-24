@@ -773,20 +773,29 @@ is also listed in §10 and Dev Notes §9.
       (`pre_digest != new_digest`). All three are AC7/AC8 rows with **no live dispatch**; the
       force-test is the substitute and must be recorded as such, with the disposition **UNPROVEN
       live** written next to each.
-- [ ] 2.4 Tag census. Coordinator: `GET /v2/crm/fe-prionex/tags/list`. **Paste the raw response.**
+- [x] 2.4 Tag census. Coordinator: `GET /v2/crm/fe-prionex/tags/list`. **Paste the raw response.**
       Confirm: `sha-00ef3be4743d-preprod` present; `preprod-current` and `preprod-*` **absent**
       (if either exists, stop — something wrote them and that is a blocking Open Question);
       `probe-3-3-preprod-preprod` present (AC3's fallback needs it); `main-preprod` present or not
       (AC7 row 3 does not need it to exist — G3 fires before any registry call — but say which).
-- [ ] 2.5 Re-read the **stored** retention rule from the instance (read-only, coordinator) and paste
+      **Done, coordinator, 2026-08-24T12:2xZ: 256 tags total, zero `preprod-*` of any shape.**
+      `-preprod`-suffixed tags present: `main-preprod`, `probe-3-3-preprod-preprod`,
+      `sha-00ef3be4743d-preprod` — all three of Open Question 2's watch-list, none of them a
+      marker this workflow would write. **No blocker.**
+- [x] 2.5 Re-read the **stored** retention rule from the instance (read-only, coordinator) and paste
       `keep_pattern` verbatim. Compile it — the stored string, not `build.yml`'s copy — against the
       literals `preprod-current` and `preprod-00ef3be4743d` under `match full name = true`, i.e.
       against `fe-prionex/preprod-current` and `fe-prionex/preprod-00ef3be4743d`. AC4.
+      🔴 **Corrected: this is the dev agent's own SSH/psql channel, per the standing 5.1-5.3
+      convention, not the coordinator's** — mistakenly requested from the coordinator first;
+      corrected on the coordinator's own instruction and done directly. Evidence below.
 - [x] 2.6 Confirm the deploy runner's labels have not drifted:
       `select id, name, agent_labels from action_runner where name='s1-deploy-dev-preprod'`.
       Expect `["deploy-dev-preprod"]`. An unmatched `runs-on` queues **silently**.
-- [ ] 2.7 Confirm `secrets.REGISTRY_USER` / `REGISTRY_TOKEN_RW` are visible to this repository
-      (org secret list, coordinator, names only — **never values**).
+- [x] 2.7 Confirm `secrets.REGISTRY_USER` / `REGISTRY_TOKEN_RW` are visible to this repository
+      (org secret list, coordinator, names only — **never values**). **Done, coordinator:** five
+      org secrets visible — `REGISTRY_USER`, `REGISTRY_USER_RO`, `REGISTRY_TOKEN_RW`,
+      `SLACK_CD_WEBHOOK_URL`, `REGISTRY_TOKEN_RO`. The RW pair is present.
 - [x] 2.8 🔴 **The standing obligation 5.3 handed to the first session with SSH/psql access, to be
       done before other work on this story's residue:** re-check
       `select id, log_in_storage from action_task where id in (9745, 9769)`. If either flipped to
@@ -838,9 +847,15 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 4 — Zero-run rejection (AC: 7 row 0)
 
-- [ ] 4.1 Coordinator: dispatch `record-preprod-candidate.yml` **omitting `validated`**. Expect
+- [x] 4.1 Coordinator: dispatch `record-preprod-candidate.yml` **omitting `validated`**. Expect
       HTTP 400. Confirm `max(action_run.id)` is unchanged across the call — the row is free and it
-      is a real discriminator. `PENDING (owner: coordinator)` until done.
+      is a real discriminator. **Done, 2026-08-24T12:2xZ: HTTP 400**, body carrying the full
+      description of the `validated` input (*"'pass' records the candidate; anything else
+      (including 'fail') writes nothing"*). **Independently confirmed zero-row via this session's
+      own `psql`**: `select max(id), count(*) from action_run where repo_id=16` → `1213 | 476`,
+      and row **1213** is attributed to this story's own CI push (`commit_sha=ac6b97fa…`,
+      `ref=story-5-4/pr-1-context`) — the coordinator's own push-adjacent commit, confirmed by DB,
+      not accepted on say-so — **not** a row created by this dispatch. The zero-run claim holds.
 
 ### Task 5 — D1: record candidate #1, the green row (AC: 1, 2, 6)
 
@@ -1377,6 +1392,45 @@ verified, zero dispatches:**
   outside `jobs:`, no `${{ }}` anywhere in it.
 - Write order confirmed by reading the file: the `preprod-<sha>` write step is textually and
   therefore execution-order **before** the `preprod-current` write step (§6).
+
+**Task 2.4 — tag census, coordinator, `2026-08-24T12:2xZ`:** `GET
+/v2/crm/fe-prionex/tags/list` → **256 tags total, zero `preprod-*` of any shape.** The three
+`-preprod`-suffixed tags on Open Question 2's own watch-list are all present and none is a marker
+this workflow writes: `main-preprod` (branch-shaped, refused by G3), `probe-3-3-preprod-preprod`
+(AC3's fallback target, refused by G3 — no commit), `sha-00ef3be4743d-preprod` (the actual
+candidate). **No blocker — Open Question 2 closes clean.**
+
+**Task 2.5 — stored retention rule, dev agent's own SSH/psql, `2026-08-24T12:3xZ`:**
+`select id, enabled, type, keep_count, keep_pattern, remove_days, remove_pattern, match_full_name
+from package_cleanup_rule` →
+```
+1 | t | container | 0 | fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64}) | 14 | fe-prionex/.+ | t
+```
+Byte-identical to §2 row h's own quoted value. Compiled (Python `re.fullmatch`, the STORED string,
+not `build.yml`'s copy) against both full names:
+`fe-prionex/preprod-current` → **MATCH**; `fe-prionex/preprod-00ef3be4743d` → **MATCH**. Both
+markers this story writes are protected. 🔴 **The known divergence from G4's own embedded literal
+is real and does not matter here, said explicitly rather than glossed over**: G4 uses
+`build.yml`'s copy (no `fe-prionex/` prefix, `[0-9]` not `\d`, no `sha256:[0-9a-f]{64}` clause —
+G4 cannot query the live database at runtime, so it copies the same literal `build.yml:971` does).
+Both forms independently protect both of this story's own marker names; the divergence between
+"copy" and "authority" (§2 row g vs h) is real for other tag shapes but does not create a gap for
+`preprod-current`/`preprod-<sha>` specifically. AC4.
+
+**Task 2.7 — org secret visibility, coordinator:** five secrets visible to this repository at
+org scope — `REGISTRY_USER`, `REGISTRY_USER_RO`, `REGISTRY_TOKEN_RW`, `SLACK_CD_WEBHOOK_URL`,
+`REGISTRY_TOKEN_RO`. Names only, confirmed no value was shared. The RW pair this file's `record`
+job needs is present.
+
+**Task 4.1 — zero-run rejection, D0 in AC7's matrix, `2026-08-24T12:2xZ`:** dispatched with
+`validated` omitted → **HTTP 400**, body carrying the input's own full description (*"'pass'
+records the candidate; anything else (including 'fail') writes nothing"*) — the schema itself is
+the discriminator. `select max(id), count(*) from action_run where repo_id=16` → `1213 | 476`.
+Row 1213 attributed by `commit_sha` to this story's own CI push (`ac6b97fa…`,
+`ref=refs/heads/story-5-4/pr-1-context`) — the four-job `ci.yml` run this file's own commit
+necessarily triggers — **not** a row created by the dispatch. Confirmed independently via this
+session's own `psql`, not accepted on the coordinator's report alone. Free, and it is a real
+discriminator.
 
 ### Completion Notes List
 
