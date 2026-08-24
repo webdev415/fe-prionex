@@ -4280,6 +4280,18 @@ assignment-контекст того же паттерна нашёл ровно
 открыт, мерж-рана нет; закрывается только пост-мёрж запросом (retro-D4), не на этой записи ни на
 какой предыдущей.
 
+**Финальный пересчёт, `2026-08-24`, `psql`, тот же метод (repo-scoped, `commit_sha`, свежий фетч
+`story-4-9`'s tip для проверки чужих строк).** Above-baseline (id > 1182) на текущий `max(id)=1198`:
+**16 строк** (1183-1198), все — без исключения — привязаны к одному из шести `commit_sha`, каждый
+из которых принадлежит собственной цепочке коммитов этой стори (`9eecc5eb`, `78261b15`,
+`341b7599`, `82475a08`, `f8d4dfdc`, `f913a75b`); `story-4-9`'s tip (`11017adc`) не совпадает ни с
+одной. Разбивка: 6 CI-пуш ранов (1183, 1189, 1192, 1194, 1195, 1196 — по одному на пуш, не на
+коммит: два пуша этой сессии, каждый нёсший по два коммита, дали ровно по одной строке на пуш,
+консистентно с ранее наблюдавшимся поведением) + 10 диспатчей (исходная пятёрка 1184-1188; §12-
+дефект-1 ре-заработка 1190/1191; §12-дефект-2 ре-заработка 1193; §12-батч-3 ре-заработка 1197/1198).
+**16 из потолка 24** — восемь строк резерва остаются на PR-open и мерж-раны, ещё не наступившие.
+**Леджер OPEN** — закрывается только пост-мёрж запросом координатора (retro-D4), не этой записью.
+
 ### 8. §12-батч №3 — третье вторжение в `deploy-stand.yml`, та же авторизация Oleg, три отдельные правки
 
 Код-ревью нашло три новых пункта в том же файле, все — decision-needed, все три авторизованы Oleg
@@ -4316,7 +4328,40 @@ image was ever built for this ref — push the branch» — но в `image_tag`-
 
 ### 9. Ре-заработка §12-батча №3 — mismatched-ряд и зелёный контроль
 
-*(заполняется по факту диспатчей координатора)*
+**G1, ран 1197, `2026-08-24T10:28:26Z`–`10:28:32Z`, FAILURE за ~30с общего wall clock (шаг деплоя —
+2с), как задумано.** Диспатч: `image_tag=sha-00ef3be4743d-dev` на PRE-PROD-caller'е. Job "Deploy a
+ref or image tag to the stand" (job 10423, task 9825), шаг «Resolve the digest before pulling»
+(`status=2`) — новый гард сработал первым же оператором шага, **сразу после** шага логина
+(отдельный, предыдущий шаг), но **до** какого-либо сетевого вызова к registry manifest'у внутри
+самого digest-resolve шага (в архивном логе между `Login Succeeded` и `FAIL:` — ни одного `curl`/
+manifest-запроса). Литеральное сообщение из архивного лога
+(`CRM/fe-prionex/61/9825.log.zst`):
+> `FAIL: image_tag/derived tag 'sha-00ef3be4743d-dev' does not end in '-preprod'. Refusing to
+> deploy a tag that does not name this stand's own environment — build.yml bakes environment
+> configuration into the image at build time, so this is a genuinely different artifact, not a
+> naming nitpick. Nothing later on this path (health check, Kong guard, AC6's digest match) can
+> detect this once the wrong image is running. If this tag is correct, this stand's own image_env
+> input is wrong instead — check the caller's own with: block.`
+
+Все шаги после (5-21, включая `docker compose down` на индексе 12 и «Acquire the stand lock» на
+индексе 8) — `status=4` SKIPPED. Лок не брался вовсе. `OK: stand lock released (holder
+'fe-prionex-preprod-deploy-lock-1197' removed, or was already gone)` — release прошёл штатно, найдя
+нечего снимать. Стенд не тронут.
+
+**G2, ран 1198, `2026-08-24T10:29:13Z`–`10:29:32Z`, SUCCESS, ~19с шаг деплоя.** Диспатч: валидный
+`image_tag=sha-00ef3be4743d-preprod`. Все шаги 0-20 — `status=1`; шаг 21 (restore) корректно
+`status=4` SKIPPED (деплой не падал, восстанавливать нечего). Лог: `OK: resolved
+sha-00ef3be4743d-preprod -> sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`,
+`OK: 'fe-prionex-preprod' is running, not restarting, and healthy.` **Финальное состояние стенда
+подтверждено напрямую** (не по логу шага): `docker inspect fe-prionex-preprod --format '{{.Image}}'`
+→ конфиг-дайджест `sha256:5e5b190d…`; `docker image inspect <тот дайджест> --format
+'{{.RepoDigests}}'` → `[git.crm-prionex.com/crm/fe-prionex@sha256:5e5b190d…]` — тот же манифест-
+дайджест, что и целевой тег, `.RepoDigests`, не `.Image` (стоячий метод этой стори). **Ничего не
+сломано гардом на легитимном пути.**
+
+Обе строки закрывают ре-заработку §12-батча №3 полностью: гард отказывает mismatched-тегу с честным
+сообщением до сети, пропускает matched-тег без изменения поведения. Финальный леджер (§7 выше,
+пересчитан ниже) включает раны 1197/1198 как последние две строки above-baseline.
 
 **Требования:** AC1-AC7 Story 5.3; FR25 (продолжение D33/D36's паттерна на PRE-PROD); D33's
 прикреплённый скелет.
