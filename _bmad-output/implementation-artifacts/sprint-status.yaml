@@ -852,7 +852,73 @@ development_status:
   # work), not an open promise. Closed 2026-08-24: PR #78 merged (78964187e5bc), final ledger 19
   # rows above baseline, 19/24, disposition CLOSED. Status: done.
   5-3-deploy-a-specific-image-tag-to-pre-prod: done
-  5-4-record-the-validated-candidate-in-the-registry: backlog
+  # Contexted 2026-08-24 against main @ 28f7fd36 (PR #79, 5.3's ledger closeout), on branch
+  # story-5-4/pr-1-context, from a SCRATCHPAD WORKTREE -- the primary checkout is Story 4.9's
+  # agent's. One new file: .forgejo/workflows/record-preprod-candidate.yml, two jobs
+  # (verify-on-stand on deploy-dev-preprod, read-only; record on node-20 with REGISTRY_TOKEN_RW).
+  # 🔴 THE STORY'S LARGEST DECISION IS A DEVIATION FROM FR14's LITERAL TEXT. FR14 and the epic's
+  # AC1 say the retag happens "after a successful PRE-PROD deploy" -- i.e. a job inside the deploy.
+  # Read that way, preprod-<sha> means "this commit was DEPLOYED", while Story 6.5 refuses a
+  # production release unless preprod-<sha> exists BECAUSE it reads the tag as "this commit was
+  # VALIDATED". Those are different claims and the gap is invisible in the registry. So the
+  # recorder is workflow_dispatch-only with a required `validated: pass|fail` verdict -- which is
+  # also the only shape in which retro-E5's row "the marker does NOT move on a failed validation"
+  # exists at all. Argued in story §4, listed for a one-read veto in Dev Notes §9 row 1.
+  # SIX guards before any write: G1 verdict (fail-closed on a third value), G2 tag ends in
+  # -preprod (mirrors deploy-stand.yml:1060-1073's own §12-batch-#3 guard, NOT an edit to it),
+  # G3 shape ^sha-[0-9a-f]{7,64}-preprod$ + exactly 12 hex (build.yml:707-710 names 5.4 and 6.5
+  # by number: "a length mismatch fails every legitimate release"), G4 compile keep_pattern
+  # against both derived markers before writing either, G5 the stand must be healthy AND serving
+  # exactly the candidate's digest (.RepoDigests on the IMAGE, never .Image on the container),
+  # G6 the derived hex must match the image's OWN org.opencontainers.image.version / .revision /
+  # org.prionex.environment labels read back from the registry. 🔴 G6 exists because D33 §6(b):
+  # in image_tag mode the revision cross-check is deliberately SKIPPED, so NOTHING on the deploy
+  # path ever establishes a deployed image's commit -- without G6, preprod-<sha> is a name derived
+  # from a name and 6.5 gates on a string. Three guards earn a live failing row; G4, G6 and AC8's
+  # repoint-refusal cannot and are force-tested + named UNPROVEN live, not counted as earned.
+  # Mechanism: docker buildx imagetools create --prefer-index=false + mandatory read-back, copied
+  # from build.yml:1476-1554 (D24). The flag is blocking-grade: without it the attach writes an
+  # OCI index whose digest can never equal the source manifest's (run 716), and -- a second reason
+  # no artifact had stated -- cleanup_sha256 is a SEPARATE sweeper that deletes unreferenced
+  # sha256:* rows >=24h old regardless of keep_pattern. Write order preprod-<sha> FIRST, then
+  # preprod-current: a mid-run death then leaves history + a stale pointer (recoverable) rather
+  # than a pointer with no history (the state 6.5 misreads). The check-to-write window
+  # (deferred-work.md:2288-2301, imagetools create has no compare-and-swap) is NARROWED by the
+  # shared concurrency group and DETECTED by the read-back -- not closed, and said so.
+  # 🔴 Do NOT cite D24 as protecting preprod-<sha>: D24's own 2026-08-18 amendment names this story
+  # and says the AC2 guard covers sha-<12>-preprod only.
+  # concurrency: group is deploy-preprod.yml's OWN literal (deploy-preprod-fe-prionex-preprod), not
+  # a new one -- D30 keys on the stand's identity and G5 reads that stand's live state. This is the
+  # one place 5.3's Prohibition 7 must be read rather than applied mechanically.
+  # EIGHT ACs: the epic's five read against measurement, plus AC6 (what "validated" covers and what
+  # it cannot -- CORS is still broken, browser-path validation still impossible, 5.3's AC6 named
+  # this story by number), AC7 (the guard matrix) and AC8 (idempotence + repoint refusal).
+  # 🔴 AC3 needs a SECOND candidate and only one usable -preprod image exists
+  # (sha-00ef3be4743d-preprod, digest 5e5b190d, run 680). main-preprod is the same digest;
+  # probe-3-3-preprod-preprod carries no commit and G3 refuses it; sha-f8f358f43ced-preprod does
+  # NOT exist (Oleg deleted it 2026-08-16, on record three times -- do not re-escalate). So the
+  # story mints ONE new permanent sha-<12hex>-preprod from main HEAD, ANNOUNCED to Oleg through
+  # the coordinator rather than asked (Task 8.1), with a stated fallback (Task 9.5: throwaway
+  # non-protected marker moved between two real digests; AC3 then closes UNPROVEN on the real
+  # names, routed to 5.6). Ordering matters: D9's G5-refusal row falls out FREE because D8 has
+  # already put candidate #2 on the stand -- do not merge Tasks 8 and 9.
+  # AC4 is verified against the STORED retention rule (the only authoritative copy; build.yml:971
+  # is a copy with three named divergences), improving on the 2026-08-13 pattern-read of the copy.
+  # Still UNPROVEN by execution -- the rule has never been observed deleting anything, and the
+  # 2026-08-29 observation window belongs to deferred-work's own DUE item, not to this story.
+  # AC5's "sequence" narrowed honestly: the registry gives the SET, git gives the ORDER.
+  # Declines the PRE-PROD lock-holder debris / sweep-scoping item (5.3 M3/M4) with an argument --
+  # it would mean editing dev-reset.yml inside 4.9's blast radius for a host-hygiene item unrelated
+  # to recording, and the item's own text names the better owner. Contributes one distinction:
+  # the marker tags protect the candidate in the REGISTRY and give no protection to the host's
+  # local image cache, which is what the >=168h untagged sweep can still catch mid pull->up -d.
+  # Blast radius: deploy-stand.yml, deploy-preprod.yml, build.yml, deploy-dev.yml, dev-reset.yml,
+  # ci.yml all READ-ONLY -- this story adds a file rather than a code path, and dispatches
+  # build.yml and deploy-preprod.yml once each without modifying a line. Decision number is D38
+  # (main holds D34/D36/D37; story-4-9 still holds D35 unmerged -- re-verify by git fetch across
+  # every open story-* branch, not just main). Ledger declared before work: floor 18, ceiling 22,
+  # disposition OPEN. Ten dispatches plus one free HTTP-400 zero-run rejection.
+  5-4-record-the-validated-candidate-in-the-registry: ready-for-dev
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional
