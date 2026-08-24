@@ -15,6 +15,7 @@ import {
   isAssistantReportTablesEnabled,
   isAttentionCell,
   isConclusionParagraph,
+  isTotalCell,
   MARKER_STYLE,
   markerBackground,
   MAX_HEAT_OPACITY,
@@ -203,6 +204,69 @@ describe('buildTableHighlightPlan — градиент только числов
     const plan = buildTableHighlightPlan([])
     expect(plan.columns.size).toBe(0)
     expect(plan.markerRows.size).toBe(0)
+    expect(plan.totalRows.size).toBe(0)
+  })
+
+  it('итоговую строку помечает как total, а её маркер игнорирует', () => {
+    const plan = buildTableHighlightPlan([
+      ['Петренко', '100'],
+      ['Коваль', '300'],
+      [`${GOOD_MARKER} **Усього**`, '400'],
+    ])
+    expect([...plan.totalRows]).toEqual([2])
+    // Маркер на итоге не попадает в markerRows — он игнорируется барьером.
+    expect(plan.markerRows.has(2)).toBe(false)
+    expect(plan.markerRows.size).toBe(0)
+  })
+
+  it('числа итоговой строки не входят в шкалу колонки (итог не «сжигает» градиент)', () => {
+    const plan = buildTableHighlightPlan([
+      ['Петренко', '100'],
+      ['Коваль', '300'],
+      ['Разом', '400'],
+    ])
+    // Шкала — по строкам данных: 100..300, а не 100..400.
+    expect(plan.columns.get(1)).toMatchObject({ min: 100, max: 300 })
+  })
+
+  it('таблица из одного итога не даёт числовых колонок', () => {
+    const plan = buildTableHighlightPlan([['РАЗОМ КОНТАКТ-ЦЕНТР', '503']])
+    expect(plan.totalRows.has(0)).toBe(true)
+    expect(plan.columns.size).toBe(0)
+  })
+})
+
+describe('isTotalCell — распознавание итоговой строки', () => {
+  it.each([
+    'РАЗОМ',
+    'Разом',
+    'усього',
+    'Усього:',
+    'ВСЬОГО ',
+    'Итого',
+    'ВСЕГО',
+    'Total',
+    'total',
+    'РАЗОМ КОНТАКТ-ЦЕНТР',
+    'Разом (за місяць)',
+    '**Усього**',
+    `${GOOD_MARKER} **Усього**`,
+    `${BAD_MARKER} Разом:`,
+  ])('видит итог в «%s»', (text) => {
+    expect(isTotalCell(text)).toBe(true)
+  })
+
+  it.each([
+    'Петренко',
+    'Коваль О. П.',
+    'разомкнути',
+    'всеговідомо',
+    'Оператор',
+    '',
+    '   ',
+    'Итоговый отдел взыскания', // «итого» без границы (буква «в» дальше)
+  ])('не считает итогом «%s»', (text) => {
+    expect(isTotalCell(text)).toBe(false)
   })
 })
 
