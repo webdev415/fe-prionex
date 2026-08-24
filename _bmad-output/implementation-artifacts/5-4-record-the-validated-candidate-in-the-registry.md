@@ -4,7 +4,7 @@ baseline_commit: 28f7fd36
 
 # Story 5.4: Record the Validated Candidate in the Registry
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-24 against `main` at `28f7fd36` — the merge of PR #79, Story 5.3's ledger
      closeout. Branch `story-5-4/pr-1-context`, cut from a scratchpad worktree because the primary
@@ -684,6 +684,21 @@ is also listed in §10 and Dev Notes §9.
 > ⚠️ **Scope, so this AC does not quietly become 5.5's job:** one honest paragraph in the workflow's
 > own output plus this table. It is **not** a new measurement campaign, it is **not** a CORS fix, and
 > it does not block on `CRM/api-prionex`.
+
+> 🔴 **Corrected, code review H3: "the workflow itself prints" was false until this fix-pass.** The
+> table above lived only as a YAML comment, which no execution ever emits — graded MET on the
+> dispatcher's own free-text `validation_note` (input, not workflow output), which is a different
+> claim. A new step in the `record` job now genuinely echoes this table's own content on every
+> dispatch, live-confirmed via the archived log of the fix-pass's own smoke dispatch (run 1244,
+> task 10246 — the literal lines `=== AC6: what this recording supports, and what it does not ===`
+> through `validation_note (as supplied): ...` are present, read directly, not inferred from step
+> status). **AC6 is genuinely MET now, not merely on operator input.**
+
+> 🔴 **D1's resolution touches this AC's own boundary table indirectly.** The table's last row
+> ("a human asserted a validation verdict and named what they checked") now has a real, durable
+> sink — `docs/preprod-candidates.md` in this repository — rather than resting on a job log this
+> instance has repeatedly failed to archive. See D38 §8a and the story's own Review Findings
+> response to D1, below.
 
 ### AC7 — 🔴 ADDED: every guard proves itself on a run that fails
 
@@ -1689,6 +1704,41 @@ markers D1/D7/D10 wrote, nothing else. `-preprod`-suffixed subset:
 `["main-preprod","probe-3-3-preprod-preprod","sha-00ef3be4743d-preprod","sha-28f7fd36b75e-preprod"]`
 — consistent with Task 2.4's own original census plus D7's own new candidate tag.
 
+**Code review D1 — investigated, found blocked, resolved by coordinator decision (Oleg's veto
+open):** live probe on s1, `docker buildx imagetools create --annotation … --prefer-index=false …`
+against `preprod-00ef3be4743d`'s own digest under a disposable probe tag → **rejected outright**,
+`ERROR: "" annotations are not supported yet`. Repeated with `--prefer-index` at its default (index
+allowed) → **same rejection**. `docker buildx version` → `github.com/docker/buildx v0.33.0
+f7897eba028583e0071642db3c011e860444f8cf`. Confirmed the failed probe left no tag behind
+(`imagetools inspect` on the probe name → `not found`). **Decision: three-tier evidence model**
+(registry = identity/permanence; `docs/preprod-candidates.md` = authoritative human-readable
+record, written by the dev session as part of the recording procedure, not by the workflow;
+job log/`$GITHUB_STEP_SUMMARY` = best-effort). `docs/preprod-candidates.md` created, seeded with
+candidates #1/#2's own rows (runs 1215/1229), entered retroactively as the file's first act.
+
+**Smoke-dispatch, run 1244, `2026-08-24T13:44:xxZ`, against commit `a95cf58b`** (the H1/H2/H3/D2/D3
+fix-pass, predating the `$GITHUB_STEP_SUMMARY` step which landed in a later commit — this run does
+not test summary persistence, a later dispatch would need to): both jobs green, all 6+15 steps
+`status=1`. Archived log (job 10879/task 10246) read directly, confirming: AC6's boundary genuinely
+printed (`=== AC6: what this recording supports, and what it does not ===` through
+`validation_note (as supplied): ...`, literal lines); both write steps hit their no-op branches
+(`... already points at ... -- nothing to do.`, both); `G-backwards` correctly took its "no move at
+all" early exit (candidate == current already); both existence probes returned HTTP 200 live (not
+inferred from stderr text). Job 10878 (`verify-on-stand`)'s own log had not archived at
+verification time; G5's own pass on the fixed logic is confirmed via step status (`status=1`) —
+substantively sufficient per Prohibition 17, literal log line not required where status +
+independent registry state already confirm the same fact.
+
+**Final `psql` ledger reconciliation, `2026-08-24`, repo-scoped, `commit_sha`, baseline
+`max(id)=1212`, current `max(id)=1246`** (fresh `git fetch` of `story-4-9`/`4-4`/`4-5` tips — zero
+foreign rows, reconfirmed): **26 rows above baseline** — 11 dispatch rows (D1-D10 + the smoke
+dispatch, run 1244) + **15 CI-push rows**, one per commit after `48b7434c` (`git log
+48b7434c..HEAD` → 15 commits, 1:1 attribution confirmed, no batching this time). Against the
+M9-adjusted ceiling of 21 (context push excluded consistently on both sides — see D38 §10):
+**overrun now 5**, growing with each fix/verification round as it honestly should, not frozen at
+the previously-reported "3". **Ledger stays OPEN** — this record does not unilaterally set a new
+ceiling; renegotiation is the coordinator's/Oleg's call at close-out.
+
 ### Completion Notes List
 
 1. `record-preprod-candidate.yml` written and dispatched ten times: a `workflow_dispatch`-only
@@ -1724,18 +1774,34 @@ markers D1/D7/D10 wrote, nothing else. `-preprod`-suffixed subset:
    `deploy-preprod.yml`, `build.yml`, `deploy-dev.yml`, `dev-reset.yml` are all absent from the
    diff — confirmed by `git diff origin/main --name-only`, not by intention (Prohibition 1 held
    throughout; no §12-style exception was ever needed).
+7. **Code review fix-pass (2026-08-24): three HIGH findings, three decisions, and the ledger's own
+   understated overrun, all addressed.** H1 (critical: G5's fail-open bug) fixed and force-tested
+   four ways, catching a self-introduced regression along the way before it shipped. H2/H3 fixed in
+   code and every documentation site. D2/D3 decided autonomously (Oleg's veto open) and implemented.
+   D1 investigated with a live, zero-risk probe on s1 rather than guessed at — found genuinely
+   blocked (OCI annotations unsupported by this instance's exact buildx version on a plain retag) —
+   and resolved via the coordinator's own three-tier decision:
+   `docs/preprod-candidates.md` is now the authoritative human-readable sink, a new file this
+   fix-pass both creates and seeds with the story's own first two real recordings. Ledger overrun
+   corrected from an understated "2" through "3" to a final, honest "5" as more fix/verification
+   rounds landed — reported at each state, not held back for a single final number. Blast radius
+   grew by exactly one file (`docs/preprod-candidates.md`) and stayed otherwise unchanged.
 
 ### File List
 
-- `.forgejo/workflows/record-preprod-candidate.yml` (new)
+- `.forgejo/workflows/record-preprod-candidate.yml` (new; code review fix-pass: H1 G5 fix, H2 G6
+  reword, H3 AC6 echo step, D2 `G-backwards`/`allow_backwards_move`, M2-M6/L1-L4/L6-L7 code fixes,
+  D1's three-tier evidence model incl. the new `$GITHUB_STEP_SUMMARY` step)
+- `docs/preprod-candidates.md` (**new** — D1's authoritative human-readable sink, append-only,
+  seeded with candidates #1/#2's own rows)
 - `_bmad-output/implementation-artifacts/5-4-record-the-validated-candidate-in-the-registry.md` (this file)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions, own commits)
 - `docs/migration-decisions.md` (new [D38](../../../docs/migration-decisions.md#d38); index row;
-  header anchor range bumped to `#d38`; Change Log row)
-- `_bmad-output/implementation-artifacts/deferred-work.md` (new EOF section for this story's own
-  findings; restatements placed under four pre-existing entries — the RW-scope credential holder
-  count, the check-to-write window, the 08-29 retention observation's scope, the PRE-PROD
-  lock-holder debris/sweep-scoping decline, and finding 8's fifth archived-log check)
+  header anchor range bumped to `#d38`; §8a added for D1; §10's ledger corrected twice (M9, then
+  the final post-fix-pass recount); Change Log rows)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (new EOF sections — this story's own
+  original findings, plus the code-review fix-pass's M7 disclosure list; restatements placed under
+  pre-existing entries; two Prohibition-19 owner-phrasing corrections)
 
 ### Review Findings
 
@@ -2080,3 +2146,4 @@ failure mode this story was written to prevent.
 | 2026-08-24 | Contexted against `main` @ `28f7fd36` (PR #79, Story 5.3's ledger closeout), on branch `story-5-4/pr-1-context` from a scratchpad worktree — the primary checkout is Story 4.9's. Story shaped with **eight** ACs: the epic's five, read against measurement, plus AC6 (what "validated" covers and what it cannot — the CORS boundary, inherited from 5.3's AC6 by name), AC7 (the guard matrix, with the guards that can have no failing row named as unearned rather than counted) and AC8 (idempotence and repoint-refusal). The story's largest decision is a **deviation from FR14's literal text**: the recorder is `workflow_dispatch`-only with a required verdict rather than a step inside the deploy, because `preprod-<sha>` is what Story 6.5 will read as *validated* and an automatic-on-deploy recorder can only ever mean *deployed* — §4 argues it, §10 records it, Dev Notes §9 row 1 makes it a one-read veto. **Six guards, three with live failing rows, three force-tested and named UNPROVEN live.** G6 — cross-checking the derived commit against the image's own `version`/`revision`/`environment` labels — was added after D33 §6(b) showed that nothing on the deploy path ever establishes a deployed image's commit, so a `<sha>` taken from the tag string alone would leave Story 6.5 gating on a name derived from a name. `docker buildx imagetools create --prefer-index=false` with mandatory read-back, copied from `build.yml`'s attach step; `preprod-<sha>` written before `preprod-current`; the check-to-write window narrowed and detected, not closed, and named as such. AC3 requires a second candidate and there is only one usable `-preprod` image, so **one new permanent tag is minted, announced rather than asked** (Task 8.1), with a stated fallback. AC4 is verified against the **stored** retention rule rather than `build.yml`'s copy. Ledger declared before work: floor 18, ceiling 22, disposition OPEN. |
 | 2026-08-24 | **Dev-story complete.** `record-preprod-candidate.yml` written and dispatched ten times (D1-D10), plus the free zero-run rejection (D0). All six guards' passing halves earned live; G1/G2/G3/G5's failing halves also earned live (runs 1218/1219/1220/1227), each with a classified message and confirmed markers unchanged afterward. G4, G6's failing half, and AC8's repoint refusal remain force-tested only, named as structurally unearnable, not counted as earned. AC3 proven on the real tag names: Task 8.1's mint of a second permanent candidate (`sha-28f7fd36b75e-preprod`, run 1223) was announced to Oleg and never vetoed across four dispatch cycles; `preprod-current` MOVED to it (run 1229), `preprod-00ef3be4743d`'s own history stayed untouched. Every write independently verified via direct registry reads on s1, not from any workflow's own log (most `record`-job logs never archived during this story) or its own "OK" message — `--prefer-index=false` confirmed via raw `mediaType` reads, real manifests throughout, never an index. D38 written to `docs/migration-decisions.md`, verified against every open `story-*` branch. `deferred-work.md` updated: RW-scope credential's third holder, the check-to-write window's second site, the 08-29 retention observation's extended scope, the PRE-PROD lock-holder debris declined with one distinguishing contribution (registry permanence vs. host-cache survival), and the standing archived-log check (fifth negative, done first this session per the standing plan). 🔴 Ledger reconciled honestly: 18 rows above baseline (psql, repo-scoped, zero unattributable) against ceiling 22 — 7 more CI-push rows than declared because every verification write-up got its own push; the remaining review-cycle lines will exceed the ceiling by 2, flagged now rather than left for code review to find. Blast radius confirmed as exactly five files — `deploy-stand.yml`/`deploy-preprod.yml`/`build.yml`/`deploy-dev.yml`/`dev-reset.yml` all absent, no §12-style exception ever needed. Status → **review**. |
 | 2026-08-24 | **Code review fix-pass.** H1 (CRITICAL): G5 failed OPEN on an empty `CANDIDATE_DIGEST` (`grep -qF` with an empty needle matches anything) -- fixed with explicit shape-checks on both operands and exact-equality comparison against each parsed `.RepoDigests` entry; force-tested empty/garbage/valid-mismatch/valid-match, catching and fixing a regression introduced mid-pass (an intermediate fix compared full `repo@digest` strings against the bare candidate digest and would have failed a genuine match). H2: G6's claim corrected everywhere (workflow header, G6's own comments, AC2, D38) -- it narrows D33 §6(b)'s gap against a FOREIGN artifact; for a `build.yml`-produced image all three clauses are identities, so it does not establish the deployed commit on that path. H3: AC6's boundary now actually printed by the workflow (a new step in the `record` job), not just a YAML comment no execution ever emitted. D2 (Oleg's veto open, decided autonomously per the coordinator's literal instruction "not a prohibition"): a new `allow_backwards_move` input and a `G-backwards` step that WARNS on any `preprod-current` move whose direction cannot be confirmed (no git checkout available) -- never blocks the write. D3 (decided autonomously): the one real exit for an already-recorded commit needing a new artifact documented with the exact manual `DELETE` command. **D1 investigated and found blocked**: live-tested `imagetools create --annotation` on s1 against this instance's buildx (v0.33.0) -- rejected outright ("annotations are not supported yet") on a plain retag, with or without `--prefer-index`. OCI annotations are not an available channel for `validation_note` here; flagged for Oleg's follow-up decision between the review's own options (b) `$GITHUB_STEP_SUMMARY` or (c) narrowing the "it is the record" claim. M2-M6, L1-L4, L6-L8 addressed in code and documentation (newline rejection, guarded docker templates split into distinct messages, HTTP-based absence classification replacing stderr-text matching in both write steps, G6's stderr separated from stdout with `\|\| true` guards, check-to-write wording corrected to name the real residual, addressable step `id:`s added, non-empty `validation_note` check, explicit read-back failure messages, `-i` added to G4's `keep_pattern` grep, G2 documented as message-only). M8: the retro-E5 matrix's five "marker state after" cells for D2-D6 marked `†` as one shared post-series observation, not five. M9: **ledger overrun corrected to 3, not 2** -- fresh `psql` recount, 23 rows above baseline (10 dispatches + 13 CI-push rows, one per commit including the review's own and this fix-pass's own), against an adjusted ceiling of 21 (excluding the context push consistently on both sides) -- the ceiling is already exceeded, not merely projected to be, with PR-open and merge still ahead; renegotiation due now. M10: AC1's evidence reworded to cite the actual observation (independent registry read, not the never-archived log lines); AC5's raw `tags/list` response (263 tags) pulled fresh via a script that never prints the credential itself and pasted into Debug Log References, replacing the earlier characterisation. M11: the workflow's own remaining line-number citation replaced with a search string. M7: eight previously-undisclosed unexercised branches added to `deferred-work.md`. L5(b): `<a id="d38"></a>` added -- the index row and header range previously linked to nothing. Not addressed this pass: M1 (subsumed by H2's fix), the three DECISION items' own code beyond D1/D2/D3 as scoped, and the reviewer's own W1-W3 deferred items (correctly left deferred). Mechanical gates re-confirmed: 19 `run:` bodies (was 15), 0 containing `${{ }}`, 0 `bash -n` errors, 0 assignment-context backslash-continuations, exactly 2 `--prefer-index=false` in real code. Status stays **in-progress** (flipped back by the review's own commit) -- not yet returned to review; D1's blocker and the fixes still need a live verification dispatch before this story can honestly close. |
+| 2026-08-24 | **D1 resolved, close.** OCI annotations confirmed a measured dead end (live probe, `docker/buildx v0.33.0`, rejected `--annotation` outright on a plain retag, both `--prefer-index` settings). Coordinator's decision (Oleg's veto open): three-tier evidence model -- registry (identity/permanence, Story 6.5's own read), `docs/preprod-candidates.md` in this repository (new file, authoritative human-readable record, append-only, written by the dev session as part of the recording procedure -- the workflow holds no repository-write credential and is not getting one for this), job log/`$GITHUB_STEP_SUMMARY` (best-effort, this instance's own summary persistence unverified before this fix-pass's own live test). `docs/preprod-candidates.md` seeded with candidates #1/#2's own rows, entered retroactively as the file's first act. Smoke-dispatch (run 1244) confirmed live: G5 passes on the fixed logic, both writes hit no-op, AC6's boundary genuinely printed, `G-backwards` took its correct early exit, HTTP-based existence probes returned 200. Final `psql` ledger: 26 rows above baseline (11 dispatches + 15 CI-push rows, 1:1 commit attribution confirmed), overrun now 5 against the adjusted ceiling of 21 -- reported honestly as it grew through this fix-pass's several rounds, not held to a stale number. Blast radius: six files now (`docs/preprod-candidates.md` added). Status → **review**. |
