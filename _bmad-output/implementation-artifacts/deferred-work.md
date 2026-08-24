@@ -3734,7 +3734,7 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
 ## Deferred from: dev-story of story-5.3 (2026-08-24)
 
 - ⚠️ **`deploy-stand.yml:1652` (`KIND_NOTE=` inside the lock-wait-timeout classifier) carries the same
-  latent defect class as the one just fixed in the 404 classifier (`:1132`/`:1136`, §12 exception, run
+  latent defect class as the one just fixed in the 404 classifier (`:1166`/`:1168`, §12 exception, run
   1190) — not fixed here, deliberately, because it is out of this story's own §12 scope (that
   authorization covers the 404 classifier only) and it has never fired live. **Mechanism, identical to
   the fixed instance:** a backslash-continued `VAR="a"\`-then-indented-`"b"` assignment. After
@@ -3751,9 +3751,21 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   with a bare trailing backslash) after the 404 fix confirms `:1652` is the *only* remaining instance
   in the entire file. **Owner: the first story that exercises the lock-timeout-against-a-simulated-
   holder branch** (a real lock-timeout dispatch, not merely lock contention/queueing, which 5.3 already
-  covers) — fix the same way as `:1132`/`:1136`: single-line string, no backslash continuation, or an
+  covers) — fix the same way as `:1166`/`:1168`: single-line string, no backslash continuation, or an
   explicit `+=` if the continuation is kept for readability, with the same lesson pinned as a comment
   at the site.
+  🔴 **CODE FIXED, code review §12-batch #3 (2026-08-24, same story, later pass — Oleg's decision,
+  relayed by the coordinator): the assignment itself is no longer broken.** Rewritten single-line,
+  same pattern as `:1166`/`:1168`, comment pinned at the site. Confirmed by local force-test, both
+  branches (`HOLDER_SIMULATED=true` — full `[SIMULATED …]` message prints; `=false`/unset — `KIND_NOTE`
+  stays empty, no crash either way). **What is still open, deliberately: live verification.** This
+  story still did not dispatch a real lock-timeout-against-a-simulated-holder to exercise the fixed
+  branch under real conditions — code review M1 flagged the owner phrasing above as a trigger
+  condition rather than a name (against the house convention); **Oleg's decision at this same
+  review: leave it as a trigger condition, not a rename** — the fix itself is done and force-tested;
+  what remains open is narrower now (live confirmation only, not the defect), and the honest owner
+  for "who runs that dispatch" genuinely is whichever story first needs to, not a name chosen for
+  its own sake. Not an oversight — a considered choice, recorded as one.
 - ⚠️ **The Slack notification step named by earlier stories still does not exist, and
   `deploy-preprod.yml` is now a second file it will need to touch. Owner: Story 4.5.** No step in
   either `deploy-dev.yml` or the new `deploy-preprod.yml` posts to Slack on failure or success; the
@@ -3777,3 +3789,20 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   trips over both, and PRE-PROD stopped being a theoretical target the moment this story's first
   dispatch (1184) actually redeployed onto it. Same channel as the CORS ask — **Owner: Oleg** — not
   contacted directly by this session, per standing instruction.
+- ⚠️ **PRE-PROD lock-holder debris has no reaper — missed, not deferred, until code review (M3/M4).**
+  `dev-reset.yml:338`/`:350` anchors its sweep to `^fe-prionex-dev-deploy-lock-[0-9]+$`;
+  `deploy-stand.yml:317` derives THIS caller's holders as `fe-prionex-preprod-deploy-lock-<id>`,
+  which that regex can never match. Holders are started `docker run -d` without `--rm`, and the
+  `hold_lock_seconds` fixture deliberately outlives its own job — run 1187's holder is `Exited (0)`
+  and sits on s1 right now with nothing collecting it. Related (M4): PRE-PROD also sits outside the
+  serialization `dev-reset.yml` relies on (`deploy-dev.yml`'s literal concurrency group is
+  deliberately duplicated in `dev-reset.yml:156-157` specifically so the sweep cannot run inside a
+  deploy's own pull→`up -d` window; PRE-PROD correctly has its own separate group, and is therefore
+  not covered) — and it shares the host and the `IMAGE_REPO` `dev-reset.yml:231` enumerates with
+  **no environment filter**, so the sweep's ≥168h-old untagged/unreferenced-image rule can catch a
+  PRE-PROD validation candidate mid pull→`up -d` (a normal week-old digest-pulled image is exactly
+  that shape). Fails loudly at `up -d` — availability, not corruption — but real. **Owner: whichever
+  of Story 5.4/5.5 next establishes ongoing PRE-PROD operational tooling — or, more naturally, the
+  story that generalizes `dev-reset.yml`'s own sweep/reaper to cover multiple stands instead of
+  hardcoding DEV's own naming pattern.** Epic 6/PROD repeats this exact shape for a third stand
+  regardless, so whichever story fixes it first should fix it generally, not per-environment again.

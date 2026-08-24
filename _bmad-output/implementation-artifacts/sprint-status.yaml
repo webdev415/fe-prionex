@@ -840,7 +840,15 @@ development_status:
   # first-execution log lines confirmed individually, because four never-run paths inside one
   # green tick is one green tick). The green row is staged on a deliberately-wrong pre-image so
   # the digest change is a discriminator that could have failed. No new -preprod tag is minted.
-  # Ledger declared before work: floor 13, ceiling 16, disposition OPEN. Status: ready-for-dev.
+  # Ledger declared before work: floor 13, ceiling 16, disposition OPEN.
+  # Updated 2026-08-24 (code review M8): image_tag mode's first live execution found two real
+  # defects in deploy-stand.yml's 404 classifier (fixed via the priced §12 exception, Oleg's
+  # decision relayed by the coordinator both times); a code-review batch found and fixed a third
+  # defect plus a genuine tag<->environment binding gap (a -dev tag could deploy fully green onto
+  # PRE-PROD) via the same §12 procedure. Floor revised 13->15->16 by the two dev-story defects;
+  # ceiling renegotiated 16->24 at code review, every row beyond the original 16 named. Two
+  # archived deploy-job logs remain genuinely unavailable despite repeated checks. Disposition
+  # still OPEN, closes only post-merge. Status: review (not ready-for-dev).
   5-3-deploy-a-specific-image-tag-to-pre-prod: review
   5-4-record-the-validated-candidate-in-the-registry: backlog
   5-5-establish-the-release-validation-checklist: backlog
