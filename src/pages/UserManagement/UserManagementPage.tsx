@@ -22,6 +22,7 @@ import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModa
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
 import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
+import { cn } from '@/lib/utils'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -40,7 +41,6 @@ import {
 } from './lib/filterTemplateMapping'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -67,6 +67,25 @@ import {
   type UserFilterState,
   type WorkFormatFilter,
 } from './lib/userFilterDefaults'
+
+function EmployeeStatus({ status }: { status: 'active' | 'disabled' | 'inactive' | 'suspended' }) {
+  const { t } = useTranslation('common')
+  const isActive = status === 'active'
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          'h-2 w-2 shrink-0 rounded-full',
+          isActive ? 'bg-success-500' : 'bg-muted-foreground'
+        )}
+      />
+      <span className={cn('text-sm', isActive ? 'text-success-500' : 'text-muted-foreground')}>
+        {t(`statusLabels.${status}`, { defaultValue: status })}
+      </span>
+    </span>
+  )
+}
 
 function IconAction({
   label,
@@ -553,7 +572,7 @@ export function UserManagementPage() {
       sortKey: 'status',
       render: (user) => (
         <div className="flex items-center justify-center gap-1.5">
-          <StatusBadge status={getStatusType(user.status)} />
+          <EmployeeStatus status={getStatusType(user.status)} />
           <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
         </div>
       ),

@@ -39,6 +39,24 @@ describe('the employees table', () => {
     expect(cell).toContain('avatarUrl={user.avatar_url}')
   })
 
+  it('shows status as a dot and a label, not a filled badge', () => {
+    const start = page.indexOf("key: 'status'")
+    const end = page.indexOf("key: 'workFormat'", start)
+    const cell = page.slice(start, end)
+
+    expect(cell).toContain('<EmployeeStatus')
+    expect(cell).not.toContain('StatusBadge')
+    expect(page).not.toContain("from '@/components/ui/StatusBadge'")
+  })
+
+  it('colours the status by whether the person is active', () => {
+    const start = page.indexOf('function EmployeeStatus')
+    const body = page.slice(start, page.indexOf('function IconAction'))
+
+    expect(body).toContain('bg-success-500')
+    expect(body).toContain('text-muted-foreground')
+  })
+
   it('keeps the actions that have nowhere else to live', () => {
     for (const action of ['resetPassword', 'unlock', 'impersonate']) {
       expect(page).toContain(`actions.${action}`)
