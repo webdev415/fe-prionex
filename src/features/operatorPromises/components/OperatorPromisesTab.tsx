@@ -36,11 +36,10 @@
  * create history entries.
  *
  * The URL keys are deliberately NEW — the host page keeps every tab's params in
- * the URL, so this tab must not collide with `?tab` (host), `?from/?to/?dept`
- * (processing), `?sf/?st/?cf/?ct` (verification), `?pf/?pt/?mv/?pg/?ps` (the
- * low-verification feed), `?if/?it/?spg/?sps` (the searcher feed) or
- * `?gf/?gt/?gm/?gpg/?gps` (the communication-gap feed). A shared key would
- * silently transplant one tab's filter into another.
+ * the URL, so this tab must not collide with any sibling's. Every tab's set is
+ * declared in the page-wide registry (`src/lib/reportsUrlKeys.ts`), whose test
+ * keeps the namespace collision-free; a shared key would silently transplant
+ * one tab's filter into another.
  */
 
 import { useMemo } from 'react'
@@ -60,6 +59,7 @@ import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperatorPromisesReport } from '../hooks'
 import {
@@ -75,15 +75,15 @@ import { OPERATOR_PROMISES_COLUMN_COUNT, OperatorPromisesTable } from './Operato
 import { OperatorPromisesTotals } from './OperatorPromisesTotals'
 
 /**
- * URL keys, distinct from every other tab of the host page — the host's own
- * `tab`, processing (`from/to/dept`), verification (`sf/st/cf/ct`), the
- * low-verification feed (`pf/pt/mv/pg/ps`), the searcher feed (`if/it/spg/sps`)
- * and the communication-gap feed (`gf/gt/gm/gpg/gps`). "opf"/"opt" =
- * Operator-Promises From/To; "opd" = Operator-Promises Department sub-tab.
+ * This tab's slice of the Reports page URL namespace (see the registry).
+ * "opf"/"opt" = Operator-Promises From/To; "opd" = Operator-Promises
+ * Department sub-tab.
  */
-const DATE_FROM_KEY = 'opf'
-const DATE_TO_KEY = 'opt'
-const DEPARTMENT_KEY = 'opd'
+const {
+  dateFrom: DATE_FROM_KEY,
+  dateTo: DATE_TO_KEY,
+  department: DEPARTMENT_KEY,
+} = REPORTS_URL_KEYS.operatorPromises
 
 const TABS_ID_PREFIX = 'operator-promises'
 
@@ -213,14 +213,26 @@ export function OperatorPromisesTab() {
   // Fixed triple first (aggregate → ТП → Дайлер → Стягнення), then one tab per
   // remaining department of the response, alphabetically. The fixed labels are
   // TRANSLATED; a dynamic one is the department's own live name, which no
-  // locale file can know.
+  // locale file can know — so its length is unbounded too.
+  //
+  // A long name is NOT truncated. What made the strip overflow the page was the
+  // number of tabs, and `flex-wrap` (below) already answers that: a wide tab
+  // simply takes a row of its own. Capping it as well would ellipsize a name
+  // that had room to render, leaving the reader to hover for a word the layout
+  // could have shown them — worse for touch and for anyone reading a screen at
+  // 200 %. `title` stays as pure redundancy (a native tooltip on hover); the
+  // accessible name is the full label either way.
   const tabItems: SegmentedTabItem<OperatorPromisesTabId>[] = useMemo(
     () => [
       ...OPERATOR_PROMISES_FIXED_TAB_IDS.map((id) => ({
         id,
         label: t(`pages.reports.operatorPromises.subtabs.${id}`),
       })),
-      ...dynamicTabs.map((tab) => ({ id: tab.id, label: tab.label })),
+      ...dynamicTabs.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        title: tab.label,
+      })),
     ],
     [dynamicTabs, t]
   )
@@ -285,20 +297,31 @@ export function OperatorPromisesTab() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Both bounds are required — this report has no default period at all.
+      {/* Both bounds are REQUIRED — neither may be left empty, so there is no
+          "×" on either field; the window simply defaults to today–today.
 
           NEITHER picker is bounded by the other (no `min`/`max`), on purpose.
-          The default window is today–today, so a mutual bound would open BOTH
-          calendars with exactly one selectable day: whichever field the user
-          reaches for first is dead — every other day greyed out — and the only
-          way through is to widen the other bound first, which is not a rule
-          anything on screen states. Letting an inverted window be PICKED and
-          then refused by the guard above (`isInverted` → the pair-level alert,
-          no request) trades an unexplained dead calendar for a sentence, and
-          the guard is needed regardless: manual input bypasses picker bounds
-          anyway. The sibling processing tab still keeps the same picker bounds
-          and the dead calendar that comes with them; fixing both together is
-          deferred. */}
+          A mutual bound does not deaden a calendar; what it does is impose an
+          ORDER nothing on screen states. With the today–today default,
+          `max={dateTo}` would leave «з» open on every day up to today and
+          `min={dateFrom}` would leave «по» open on every day from today — so
+          the common request "give me last month" is reachable only by moving
+          «з» first. Reach for «по» first and the whole past is greyed out,
+          with nothing saying why or which field to touch instead. (DateSelect
+          adds no bounds of its own: `minDate`/`maxDate` reach react-datepicker
+          only from these props, so passing none leaves both calendars fully
+          open.)
+
+          What actually protects the API is the guard above (`isInverted` →
+          the pair-level alert, no request), which is needed regardless: manual
+          input and hand-edited URLs bypass picker bounds anyway. So an
+          inverted window can be PICKED, and it is answered in words instead of
+          by a calendar the user cannot get past.
+
+          This is the rule for every date pair WITH A DEFAULTED WINDOW on the
+          Reports page (this tab, processing, searcher). The two feeds whose
+          bounds start empty and optional keep their mutual picker bounds —
+          without a default there is no order trap to remove. */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
         <DateSelect
           label={t('pages.reports.operatorPromises.dateFrom')}
@@ -340,6 +363,11 @@ export function OperatorPromisesTab() {
           the host page's own expensive strip deliberately opts out of. */}
       <SegmentedTabs<OperatorPromisesTabId>
         items={tabItems}
+        // The dynamic half makes the strip unbounded in length (one tab per
+        // department the directory grows), and the segmented variant neither
+        // wraps nor scrolls on its own — without this the strip overflows the
+        // page sideways once enough departments report rows.
+        className="flex-wrap"
         value={activeTab}
         onChange={(tabId) =>
           // The default tab is the ABSENCE of the key, never a spelled-out

@@ -46,14 +46,21 @@
  * halves of the fact at once. Before the id existed, the money could only be
  * found by going back to «Всі».
  *
- * Two edges, both accepted (Aleksey, 2026-08-20), both stable rather than
+ * Three edges, all accepted (Aleksey, 2026-08-20), all stable rather than
  * clever:
  * - two departments sharing a name under different ids render as two tabs with
  *   the SAME label. Rare, and the alternative — merging them — would sum two
  *   different departments into one number;
  * - a department that is NOT the original ТП but is named «ТП» is shown by the
  *   fixed ТП tab (name match, see above) and gets no dynamic tab of its own,
- *   so its rows appear exactly once in the strip.
+ *   so its rows appear exactly once in the strip;
+ * - when such an impostor coexists WITH the original — two departments named
+ *   «ТП» under different ids — the one fixed tab claims BOTH (its rows and
+ *   subtotals are their sum), and neither earns a dynamic tab. The fixed tabs
+ *   cannot have the dynamic half's same-label duality: they match by name, so
+ *   for them an identical name IS one tab. Only «Всі» and the rows themselves
+ *   show that two departments are in play; a directory naming two departments
+ *   identically is the fault to fix at the source.
  *
  * Filtering is CLIENT-side over the single response — one request serves every
  * tab, exactly as in Techno-Finance, and switching a tab is therefore cheap

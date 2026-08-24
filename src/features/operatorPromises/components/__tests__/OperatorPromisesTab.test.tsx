@@ -350,12 +350,14 @@ describe('OperatorPromisesTab', () => {
   })
 
   it('bounds neither picker by the other — no min/max on either field', async () => {
-    // With the today–today default, a mutual min/max opens BOTH calendars with
-    // exactly one selectable day: whichever field the user reaches for first is
-    // dead, every other day greyed out, and nothing on screen says why. So the
-    // tab passes no bounds at all and lets the pair-level guard refuse in words
-    // (the test below). This is the regression guard for that: reinstating
-    // `min={dateFrom}` on the «по» field fails here.
+    // A mutual bound would not deaden a calendar, but it would impose an ORDER
+    // nothing on screen states: with the today–today default, «з» would open on
+    // days up to today and «по» on days from today, so a window entirely in the
+    // PAST is reachable only by moving «з» first — reach for «по» first and the
+    // whole past is greyed out with no explanation. So the tab passes no bounds
+    // at all and lets the pair-level guard refuse in words (the test below).
+    // This is the regression guard for that: reinstating `min={dateFrom}` on
+    // the «по» field fails here.
     mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab(['/?opf=2026-07-10&opt=2026-07-31'])
@@ -572,6 +574,34 @@ describe('OperatorPromisesTab', () => {
     await screen.findByRole('tab', { name: 'Аналітики' })
 
     expect(tabLabels()).toEqual([...FIXED_TAB_LABELS, 'Аналітики', 'Юристи', 'Ялинка'])
+  })
+
+  it('shows a long dynamic label in full and lets the strip wrap', async () => {
+    // The dynamic half makes the strip unbounded twice over: one tab per
+    // department the directory grows, each labelled with a live name of
+    // arbitrary length. The segmented variant neither wraps nor scrolls on its
+    // own, so the instance opts into wrapping — and that alone answers the
+    // overflow: a wide tab takes a row of its own. So the label is NOT capped
+    // and NOT ellipsized; truncating a name the layout had room for would make
+    // the reader hover for a word that could simply have been shown. `title`
+    // stays as redundancy, and the accessible name is the full label either
+    // way, so this very query keeps working.
+    const longName = 'Відділ супроводження реструктуризованих заборгованостей і досудових угод'
+    mockGetReport.mockResolvedValue(
+      makeResponse([makeRow({ user_id: 1, department: longName, department_id: 44 })])
+    )
+
+    renderTab()
+    const longTab = await screen.findByRole('tab', { name: longName })
+
+    expect(longTab).toHaveAttribute('title', longName)
+    expect(longTab.className).not.toContain('max-w-')
+    expect(longTab).toHaveTextContent(longName)
+    expect(screen.getByRole('tablist').className).toContain('flex-wrap')
+
+    // The fixed tabs are ours and short by construction — no tooltip needed.
+    expect(subTab('all')).not.toHaveAttribute('title')
+    expect(subTab('all').className).not.toContain('max-w-')
   })
 
   it('keeps the fixed triple in the strip even when the response is empty', async () => {

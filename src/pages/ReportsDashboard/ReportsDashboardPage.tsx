@@ -26,6 +26,7 @@ import {
 } from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
@@ -453,6 +454,9 @@ type ReportsTab = (typeof REPORT_TABS)[number]
 
 const DEFAULT_REPORTS_TAB: ReportsTab = 'dashboard'
 
+/** The host's own slice of the page URL namespace (see the registry). */
+const { tab: TAB_KEY } = REPORTS_URL_KEYS.host
+
 /** Unknown/absent `?tab=` values fall back to the default tab. */
 function resolveReportsTab(rawTab: string | null): ReportsTab {
   return REPORT_TABS.includes(rawTab as ReportsTab) ? (rawTab as ReportsTab) : DEFAULT_REPORTS_TAB
@@ -465,7 +469,7 @@ export function ReportsDashboardPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
 
-  const activeTab: ReportsTab = resolveReportsTab(searchParams.get('tab'))
+  const activeTab: ReportsTab = resolveReportsTab(searchParams.get(TAB_KEY))
 
   // DEV-only token expiry check, at the host level so it covers every tab.
   // Kept in useEffect to avoid impure operations during render.
@@ -501,21 +505,17 @@ export function ReportsDashboardPage() {
   // Page-tab switches push a history entry (Back returns to the previous
   // tab); only filter updates inside the tabs use `replace`.
   //
-  // The report tabs' filter params (`?from/?to/?dept` for processing,
-  // `?sf/?st/?cf/?ct` for verification, `?pf/?pt/?mv/?pg/?ps` for the
-  // low-verification feed, `?if/?it/?spg/?sps` for the searcher feed,
-  // `?gf/?gt/?gm/?gpg/?gps` for the communication-gap feed,
-  // `?opf/?opt/?opd` for the operator-promises report) are
-  // deliberately KEPT when switching tabs: the
-  // filters must survive a round-trip through the dashboard (documented
-  // contract of the tabs, and the key sets don't collide). A slightly "dirty"
-  // dashboard URL is accepted cosmetics.
+  // The report tabs' filter params (every per-tab set declared in
+  // `src/lib/reportsUrlKeys.ts`) are deliberately KEPT when switching tabs:
+  // the filters must survive a round-trip through the dashboard (documented
+  // contract of the tabs, and the registry's test keeps the key sets from
+  // colliding). A slightly "dirty" dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
       // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
-      if (tab === DEFAULT_REPORTS_TAB) next.delete('tab')
-      else next.set('tab', tab)
+      if (tab === DEFAULT_REPORTS_TAB) next.delete(TAB_KEY)
+      else next.set(TAB_KEY, tab)
       return next
     })
   }

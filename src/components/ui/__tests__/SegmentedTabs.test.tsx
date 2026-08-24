@@ -119,4 +119,36 @@ describe('SegmentedTabs', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(3)
     expect(screen.getByRole('tab', { name: 'One' })).toHaveAttribute('aria-selected', 'true')
   })
+
+  it('supports opt-in per-item title and className; plain items stay unchanged', () => {
+    // Both fields are opt-in extras of the component, not a house style: no
+    // consumer caps a tab today (the operator-promises strip wraps instead, so
+    // its long department names render in full and only take `title`). What is
+    // pinned here is that the capability exists and stays inert unless asked
+    // for — `className` reaches the button in the `segmented` variant, where
+    // the truncating label span can ellipsize inside the cap, and `title`
+    // reaches it as a native tooltip. The accessible NAME stays the full label
+    // either way — the name-based queries above and in every consumer suite
+    // keep working.
+    const longLabel = 'A department name much longer than any tab should have to fit'
+    render(
+      <SegmentedTabs
+        items={[
+          { id: 'one', label: 'One' },
+          { id: 'long', label: longLabel, title: longLabel, className: 'max-w-[14rem]' },
+        ]}
+        value="one"
+        onChange={() => {}}
+      />
+    )
+
+    const longTab = screen.getByRole('tab', { name: longLabel })
+    expect(longTab).toHaveAttribute('title', longLabel)
+    expect(longTab.className).toContain('max-w-[14rem]')
+
+    // Opt-in only: an item without the new fields renders without them.
+    const plainTab = screen.getByRole('tab', { name: 'One' })
+    expect(plainTab).not.toHaveAttribute('title')
+    expect(plainTab.className).not.toContain('max-w-')
+  })
 })
