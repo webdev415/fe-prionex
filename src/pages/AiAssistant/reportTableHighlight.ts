@@ -24,23 +24,62 @@ export function isAssistantReportTablesEnabled(): boolean {
 }
 
 /**
- * Маркер строки-аномалии (U+26A0 U+FE0F). Конвенция пакета: модель ставит его
- * В НАЧАЛЕ ячейки, на которую нужно посмотреть; подсвечивается вся строка, сам
- * знак остаётся в тексте — его видит и тот, кто скопирует таблицу.
+ * Семантика цвета в таблицах ассистента — «светофор» (решение CEO 24.08):
+ *
+ *   • жёлтый  = обратить внимание   → маркер `⚠️`
+ *   • красный = плохо               → маркер `🔴`
+ *   • зелёный = хорошо / величина   → маркер `🟢` и авто-градиент масштаба
+ *
+ * Авто-градиент (зелёная гамма) показывает МАСШТАБ величины: больше = насыщеннее
+ * зелёный. Но градиент не знает направления метрики («просрочка»: больше = хуже),
+ * а модель знает — она и ставит маркер В НАЧАЛЕ ячейки строки. Маркер
+ * ПЕРЕКРЫВАЕТ авто-градиент: в колонке «больше = хуже» красный маркер строки
+ * перебьёт зелёный градиент. Сам знак остаётся в тексте — его видит и тот, кто
+ * скопирует таблицу.
  */
+export type RowMarker = 'attention' | 'bad' | 'good'
+
+/** Маркер «обратить внимание» (U+26A0 U+FE0F). */
 export const ATTENTION_MARKER = '⚠️'
+
+/** Маркер «плохо» (U+1F534). */
+export const BAD_MARKER = '🔴'
+
+/** Маркер «хорошо» (U+1F7E2). */
+export const GOOD_MARKER = '🟢'
 
 /** Доля разобравшихся ячеек, с которой колонка считается числовой. */
 export const NUMERIC_COLUMN_RATIO = 0.7
+
+/**
+ * Токен авто-градиента величины: ЗЕЛЁНАЯ гамма. Больше значение — насыщеннее
+ * зелёный. Это СОБСТВЕННАЯ переменная зоны ассистента (`--assistant-heat`,
+ * задана в `src/index.css`), а НЕ `--color-primary-*`: тот перекрашивается
+ * per-accent и под тёплыми акцентами (orange/red/amber) сделал бы «масштаб»
+ * тёплым. Своя переменная явно зелёная и осветляется под тёмные темы —
+ * читается в любой теме и ни от какого акцента не зависит.
+ */
+export const HEAT_COLOR_TOKEN = '--assistant-heat'
 
 /** Заливка самой «холодной» числовой ячейки, % непрозрачности. */
 export const MIN_HEAT_OPACITY = 2
 
 /** Заливка самой «горячей» числовой ячейки, % непрозрачности. */
-export const MAX_HEAT_OPACITY = 18
+export const MAX_HEAT_OPACITY = 14
 
-/** Заливка строки с маркером внимания, % непрозрачности. */
-export const ATTENTION_OPACITY = 14
+/**
+ * Токен и непрозрачность фона строки по типу маркера-«светофора». Внимание —
+ * янтарный статусный токен, плохо — красный статусный (оба НЕ перекрашиваются
+ * акцентом), хорошо — усиленный зелёный на собственной переменной зоны
+ * (`--assistant-heat-strong`, плотнее авто-градиента `MAX_HEAT_OPACITY`, чтобы
+ * явный плюс не путался с обычным максимумом). Все токены осветляются под тёмные
+ * темы — текст остаётся читаемым.
+ */
+export const MARKER_STYLE: Record<RowMarker, { token: string; opacity: number }> = {
+  attention: { token: '--color-warning-400', opacity: 14 },
+  bad: { token: '--color-error-500', opacity: 18 },
+  good: { token: '--assistant-heat-strong', opacity: 22 },
+}
 
 /**
  * Разделитель тысяч. `\s` в JS покрывает всю категорию Zs, то есть и обычный
@@ -67,28 +106,59 @@ const PLAIN_NUMBER = /^[+-]?\d+(?:[.,]\d+)?$/
  */
 const GROUPED_THOUSANDS = /^[+-]?\d{1,3}(?:,\d{3}){2,}(?:\.\d+)?$/
 
-/** Маркер внимания с необязательным вариационным селектором и пробелами. */
-const ATTENTION_PREFIX = /^\s*⚠️?\s*/
+/**
+ * Ведущие маркеры-«светофор» и порядок их проверки. Каждый — с необязательным
+ * вариационным селектором U+FE0F и окружающими пробелами. Флаг `u`: `🔴`/`🟢` —
+ * астральные символы, без него квантификатор `?` цеплялся бы за суррогат.
+ */
+const MARKER_PREFIXES: { marker: RowMarker; prefix: RegExp }[] = [
+  { marker: 'attention', prefix: /^\s*⚠️?\s*/u },
+  { marker: 'bad', prefix: /^\s*🔴️?\s*/u },
+  { marker: 'good', prefix: /^\s*🟢️?\s*/u },
+]
+
+/** Любой ведущий маркер-«светофор» — для снятия перед разбором числа. */
+const ANY_MARKER_PREFIX = /^\s*(?:⚠️?|🔴️?|🟢️?)\s*/u
+
+/**
+ * Если строка помечена несколькими разными маркерами, побеждает худший сигнал:
+ * плохо > внимание > хорошо (красная строка не должна «позеленеть»).
+ */
+const MARKER_SEVERITY: Record<RowMarker, number> = { bad: 3, attention: 2, good: 1 }
 
 /** Лид-абзац вывода: «Висновок:», «Підсумок:», «Вывод:» и их множественные. */
 const CONCLUSION_PREFIX = /^\s*(?:висновок|висновки|підсумок|вывод|выводы|итог|итоги)\s*:/iu
 
-/** Есть ли у ячейки маркер внимания в начале. */
-export function isAttentionCell(text: string): boolean {
-  return ATTENTION_PREFIX.test(text)
+/** Тип ведущего маркера-«светофора» у ячейки, или `null`. */
+export function cellRowMarker(text: string): RowMarker | null {
+  if (typeof text !== 'string') return null
+  for (const { marker, prefix } of MARKER_PREFIXES) {
+    if (prefix.test(text)) return marker
+  }
+  return null
 }
 
-/** Текст ячейки без ведущего маркера внимания (в DOM текст не меняется). */
-export function stripAttentionMarker(text: string): string {
-  return text.replace(ATTENTION_PREFIX, '')
+/** Есть ли у ячейки любой ведущий маркер-«светофор». */
+export function isMarkerCell(text: string): boolean {
+  return ANY_MARKER_PREFIX.test(text)
+}
+
+/** Есть ли у ячейки маркер «обратить внимание» (`⚠️`) в начале. */
+export function isAttentionCell(text: string): boolean {
+  return cellRowMarker(text) === 'attention'
+}
+
+/** Текст ячейки без ведущего маркера-«светофора» (в DOM текст не меняется). */
+export function stripRowMarker(text: string): string {
+  return text.replace(ANY_MARKER_PREFIX, '')
 }
 
 /**
  * Число из ячейки украинского отчёта или `null`.
  *
  * Разбирает: `1 209 239.06`, `1 209 239,06`, `48 750,50 грн`, `12,5%`,
- * `−1 234` (юникодный минус), `1,234,567.89`, а также ячейку с ведущим «⚠️»
- * (маркер не должен выбивать колонку из числовых).
+ * `−1 234` (юникодный минус), `1,234,567.89`, а также ячейку с ведущим маркером-
+ * «светофором» (`⚠️`/`🔴`/`🟢`) — маркер не должен выбивать колонку из числовых.
  *
  * Не разбирает: даты `24.08.2026`, время `09:14`, телефоны и идентификаторы с
  * ведущим нулём (`0671234567`), любой текст.
@@ -96,7 +166,7 @@ export function stripAttentionMarker(text: string): string {
 export function parseNumericCell(raw: string): number | null {
   if (typeof raw !== 'string') return null
 
-  let text = stripAttentionMarker(raw).trim()
+  let text = stripRowMarker(raw).trim()
   if (!text) return null
 
   text = text.replace(DASH_SIGNS, '-')
@@ -129,15 +199,15 @@ export type NumericColumn = {
   max: number
 }
 
-/** План раскраски таблицы: числовые колонки и строки с маркером внимания. */
+/** План раскраски таблицы: числовые колонки и строки с маркерами-«светофором». */
 export type TableHighlightPlan = {
   columns: Map<number, NumericColumn>
-  attentionRows: Set<number>
+  markerRows: Map<number, RowMarker>
 }
 
 /** Пустой план — таблица рендерится как обычная. */
 export function emptyHighlightPlan(): TableHighlightPlan {
-  return { columns: new Map(), attentionRows: new Set() }
+  return { columns: new Map(), markerRows: new Map() }
 }
 
 /**
@@ -145,14 +215,23 @@ export function emptyHighlightPlan(): TableHighlightPlan {
  *
  * Колонка попадает в тепловую карту, если ≥{@link NUMERIC_COLUMN_RATIO} её
  * непустых ячеек — числа И шкала не вырождена (`min < max`): в колонке из
- * одинаковых значений подсвечивать нечего.
+ * одинаковых значений подсвечивать нечего. Строка попадает в `markerRows`, если
+ * в любой её ячейке есть ведущий маркер; при разных маркерах побеждает худший
+ * ({@link MARKER_SEVERITY}).
  */
 export function buildTableHighlightPlan(rows: string[][]): TableHighlightPlan {
   const plan = emptyHighlightPlan()
   if (rows.length === 0) return plan
 
   rows.forEach((cells, rowIndex) => {
-    if (cells.some(isAttentionCell)) plan.attentionRows.add(rowIndex)
+    let best: RowMarker | null = null
+    for (const cell of cells) {
+      const marker = cellRowMarker(cell)
+      if (marker && (best === null || MARKER_SEVERITY[marker] > MARKER_SEVERITY[best])) {
+        best = marker
+      }
+    }
+    if (best) plan.markerRows.set(rowIndex, best)
   })
 
   const width = rows.reduce((max, cells) => Math.max(max, cells.length), 0)
@@ -165,7 +244,7 @@ export function buildTableHighlightPlan(rows: string[][]): TableHighlightPlan {
 
     for (const cells of rows) {
       const raw = cells[col] ?? ''
-      if (stripAttentionMarker(raw).trim() === '') continue
+      if (stripRowMarker(raw).trim() === '') continue
       filled += 1
       const value = parseNumericCell(raw)
       if (value == null) continue
@@ -193,23 +272,28 @@ export function cellHeatRatio(value: number, column: NumericColumn): number {
 }
 
 /**
- * Фон ячейки по её «температуре»: один тёплый тон, непрозрачность растёт с
- * величиной (прозрачный → акцент). Тон берут из токена темы, а не из хардкода:
- * тёмные темы (`neutral-dim`, `ultra-dark`) переопределяют `--color-warning-500`
- * на более светлый `#facc15` в `src/theme/themes.css`, светлые пользуются
- * базовым `#eab308` из `src/index.css`. Плюс `color-mix(… , transparent)`
+ * Фон ячейки по её «температуре»: зелёная гамма, непрозрачность растёт с
+ * величиной (прозрачный → насыщеннее зелёный). Тон берут из токена темы
+ * {@link HEAT_COLOR_TOKEN}, а не из хардкода. `color-mix(… , transparent)`
  * подмешивает не белый, а реальный фон под ячейкой — на тёмной теме заливка не
  * выцветает в молоко.
+ *
+ * Направление метрики градиент не знает: его задаёт маркер строки, который
+ * ПЕРЕКРЫВАЕТ этот фон (см. {@link markerBackground}).
  */
 export function heatBackground(ratio: number): string {
   const clamped = Math.min(1, Math.max(0, ratio))
   const percent = MIN_HEAT_OPACITY + clamped * (MAX_HEAT_OPACITY - MIN_HEAT_OPACITY)
-  return `color-mix(in srgb, var(--color-warning-500) ${percent.toFixed(1)}%, transparent)`
+  return `color-mix(in srgb, var(${HEAT_COLOR_TOKEN}) ${percent.toFixed(1)}%, transparent)`
 }
 
-/** Фон строки, помеченной маркером внимания. */
-export function attentionBackground(): string {
-  return `color-mix(in srgb, var(--color-warning-400) ${ATTENTION_OPACITY}%, transparent)`
+/**
+ * Фон строки по типу маркера-«светофора»: жёлтый (внимание), красный (плохо) или
+ * усиленный зелёный (хорошо). Токен и плотность — из {@link MARKER_STYLE}.
+ */
+export function markerBackground(marker: RowMarker): string {
+  const { token, opacity } = MARKER_STYLE[marker]
+  return `color-mix(in srgb, var(${token}) ${opacity}%, transparent)`
 }
 
 /** Абзац-вывод («Висновок: …») — его выделяем как лид. */
