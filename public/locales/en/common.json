@@ -3602,7 +3602,7 @@
         "statusOptions": {
           "all": "All",
           "active": "Active",
-          "disabled": "Disabled"
+          "inactive": "Disabled"
         },
         "workFormat": "Work format",
         "clearFilters": "Clear filters"

@@ -62,6 +62,7 @@ import {
   DEFAULT_USER_STATUS_FILTER,
   DEFAULT_WORK_FORMAT_FILTER,
   parseDepartmentIds,
+  asStatusFilter,
   statusFilterToApiStatus,
   workFormatToApiValue,
   type UserFilterState,
@@ -157,11 +158,12 @@ export function UserManagementPage() {
     DEFAULT_WORK_FORMAT_FILTER,
     { debounce: 0 }
   )
-  const [statusFilter, setStatusFilter] = useURLState<UserFilterState['statusFilter']>(
+  const [rawStatusFilter, setStatusFilter] = useURLState<UserFilterState['statusFilter']>(
     'status',
     DEFAULT_USER_STATUS_FILTER,
     { debounce: 0 }
   )
+  const statusFilter = asStatusFilter(rawStatusFilter)
   const [sortBy, setSortBy] = useURLState<string>('sort_by', DEFAULT_USER_SORT_BY, {
     debounce: 0,
   })

@@ -3613,7 +3613,7 @@
         "statusOptions": {
           "all": "Усі",
           "active": "Активні",
-          "disabled": "Вимкнені"
+          "inactive": "Вимкнені"
         },
         "workFormat": "Формат роботи",
         "clearFilters": "Очистити фільтри"

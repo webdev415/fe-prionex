@@ -67,7 +67,7 @@ export interface ApiUser {
 export type UserSearchField = 'full_name' | 'username' | 'email' | 'extension'
 
 /** Status filter values shown in the User Management filter panel */
-export type UserStatusFilter = 'all' | 'active' | 'disabled'
+export type UserStatusFilter = 'all' | 'active' | 'inactive'
 
 export type UserSortField =
   | 'id'

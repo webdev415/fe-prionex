@@ -33,12 +33,27 @@ export const DEFAULT_USER_FILTERS: UserFilterState = {
   sortOrder: DEFAULT_USER_SORT_ORDER,
 }
 
+const LEGACY_STATUS_FILTERS: Record<string, UserStatusFilter> = { disabled: 'inactive' }
+
+export const USER_STATUS_FILTERS: UserStatusFilter[] = ['all', 'active', 'inactive']
+
+/**
+ * Read a status filter that may have been written before the control and the
+ * endpoint agreed on their words. A bookmarked ?status=disabled and a template
+ * saved under the old spelling both still mean inactive.
+ */
+export function asStatusFilter(value: unknown): UserStatusFilter {
+  if (typeof value !== 'string') return DEFAULT_USER_STATUS_FILTER
+  const migrated = LEGACY_STATUS_FILTERS[value] ?? value
+  return USER_STATUS_FILTERS.includes(migrated as UserStatusFilter)
+    ? (migrated as UserStatusFilter)
+    : DEFAULT_USER_STATUS_FILTER
+}
+
 export function statusFilterToApiStatus(
   statusFilter: UserStatusFilter
 ): 'active' | 'inactive' | undefined {
-  if (statusFilter === 'active') return 'active'
-  if (statusFilter === 'disabled') return 'inactive'
-  return undefined
+  return statusFilter === 'all' ? undefined : statusFilter
 }
 
 export function isUserFilterActive(

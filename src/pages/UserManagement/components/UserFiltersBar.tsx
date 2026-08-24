@@ -344,8 +344,8 @@ export function UserFiltersBar({
         >
           <SelectItem value="all">{t('pages.users.filters.statusOptions.all')}</SelectItem>
           <SelectItem value="active">{t('pages.users.filters.statusOptions.active')}</SelectItem>
-          <SelectItem value="disabled">
-            {t('pages.users.filters.statusOptions.disabled')}
+          <SelectItem value="inactive">
+            {t('pages.users.filters.statusOptions.inactive')}
           </SelectItem>
         </FilterSelect>
       </div>

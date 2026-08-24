@@ -5,11 +5,7 @@ import {
   templateToFilterState,
   type TemplateExtras,
 } from '../filterTemplateMapping'
-import {
-  DEFAULT_USER_FILTERS,
-  statusFilterToApiStatus,
-  type UserFilterState,
-} from '../userFilterDefaults'
+import { DEFAULT_USER_FILTERS, type UserFilterState } from '../userFilterDefaults'
 
 const EXTRAS: TemplateExtras = { search: '', searchField: 'full_name', pageSize: 10 }
 
@@ -134,33 +130,27 @@ describe('templateToExtras', () => {
 })
 
 describe('the status a template holds against the status the list takes', () => {
-  const LIST_ACCEPTS = ['active', 'inactive', 'suspended']
+  const LIST_ACCEPTS = ['all', 'active', 'inactive', 'suspended']
 
-  it.each(['all', 'active', 'disabled'] as const)(
-    'replays a saved %s without asking the list for a word it does not know',
+  it.each(['all', 'active', 'inactive'] as const)(
+    'saves %s as a word the list endpoint already takes',
     (statusFilter) => {
       const document = filterStateToTemplate(state({ statusFilter }), EXTRAS)
-      const restored = templateToFilterState(document)
-      const queried = statusFilterToApiStatus(restored.statusFilter)
 
-      expect(restored.statusFilter).toBe(statusFilter)
-      expect(queried === undefined || LIST_ACCEPTS.includes(queried)).toBe(true)
+      if (document.status !== undefined) {
+        expect(LIST_ACCEPTS).toContain(document.status)
+      }
+      expect(templateToFilterState(document).statusFilter).toBe(statusFilter)
     }
   )
 
-  it('asks for nothing at all when the template says every status', () => {
-    const restored = templateToFilterState(
-      filterStateToTemplate(state({ statusFilter: 'all' }), EXTRAS)
-    )
+  it('stores the word the endpoint knows, not a word of its own', () => {
+    const document = filterStateToTemplate(state({ statusFilter: 'inactive' }), EXTRAS)
 
-    expect(statusFilterToApiStatus(restored.statusFilter)).toBeUndefined()
+    expect(document.status).toBe('inactive')
   })
 
-  it('turns the disabled the control offers into the inactive the column stores', () => {
-    const restored = templateToFilterState(
-      filterStateToTemplate(state({ statusFilter: 'disabled' }), EXTRAS)
-    )
-
-    expect(statusFilterToApiStatus(restored.statusFilter)).toBe('inactive')
+  it('restores a template saved before the two agreed on their words', () => {
+    expect(templateToFilterState({ status: 'disabled' }).statusFilter).toBe('inactive')
   })
 })

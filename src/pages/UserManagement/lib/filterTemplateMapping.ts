@@ -1,6 +1,7 @@
 import type { FilterTemplateValue, UserSearchField, UserSortOrder } from '@/features/users/types'
 import {
   ALL_FILTER_VALUE,
+  asStatusFilter,
   DEFAULT_USER_FILTERS,
   DEFAULT_WORK_FORMAT_FILTER,
   type UserFilterState,
@@ -71,10 +72,7 @@ export function templateToFilterState(document: TemplateDocument): UserFilterSta
     workFormat: WORK_FORMATS.includes(workFormat as WorkFormatFilter)
       ? (workFormat as WorkFormatFilter)
       : DEFAULT_WORK_FORMAT_FILTER,
-    statusFilter:
-      status === 'active' || status === 'disabled' || status === 'all'
-        ? (status as UserFilterState['statusFilter'])
-        : DEFAULT_USER_FILTERS.statusFilter,
+    statusFilter: asStatusFilter(status),
     sortBy:
       typeof sortBy === 'string'
         ? (sortBy as UserFilterState['sortBy'])
