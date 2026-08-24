@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// CSS сырой строкой через Vite `?raw` — БЕЗ node:fs: CI-шный `tsc -b` собирает
+// браузерный скоуп без node-типов, и node:fs валил Build/Type Check (run 32753563736).
+import indexCss from '../../../index.css?raw'
 import {
   ATTENTION_MARKER,
   BAD_MARKER,
@@ -258,7 +260,7 @@ describe('markerBackground — фон строки по «светофору»',
 })
 
 describe('переменные зелёного масштаба заданы в index.css (не висячие var())', () => {
-  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8')
+  const css = indexCss
 
   it('--assistant-heat и --assistant-heat-strong заданы явным зелёным', () => {
     // hue-канал зелёного (G) должен доминировать — грубая проверка «это зелёный».
