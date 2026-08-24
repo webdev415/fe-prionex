@@ -24,7 +24,7 @@ vi.mock('@/features/users/hooks/useFilterTemplates', () => ({
 const { FilterTemplatesMenu } = await import('../FilterTemplatesMenu')
 
 function openMenu() {
-  const trigger = screen.getByRole('button', { name: /templates/i })
+  const trigger = screen.getByRole('button', { name: /save as template/i })
   fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
   fireEvent.click(trigger)
 }

@@ -3605,7 +3605,8 @@
           "disabled": "Disabled"
         },
         "workFormat": "Work format",
-        "clearAll": "Clear all"
+        "clearAll": "Clear all",
+        "clearFilters": "Clear filters"
       },
       "tableHeaders": {
         "username": "Username",
@@ -3784,7 +3785,7 @@
         "onCall": "On Call"
       },
       "filterTemplates": {
-        "label": "Templates",
+        "label": "Save as template",
         "saveCurrent": "Save current filters",
         "nameLabel": "Template name",
         "saved": "Filter template saved",

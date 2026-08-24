@@ -14,7 +14,7 @@ export const DEFAULT_WORK_FORMAT_FILTER: WorkFormatFilter = 'all'
 export interface UserFilterState {
   roleId: number
   projectId: number
-  departmentId: number
+  departmentIds: number[]
   groupId: number
   workFormat: WorkFormatFilter
   statusFilter: UserStatusFilter
@@ -25,7 +25,7 @@ export interface UserFilterState {
 export const DEFAULT_USER_FILTERS: UserFilterState = {
   roleId: ALL_FILTER_VALUE,
   projectId: ALL_FILTER_VALUE,
-  departmentId: ALL_FILTER_VALUE,
+  departmentIds: [],
   groupId: ALL_FILTER_VALUE,
   workFormat: DEFAULT_WORK_FORMAT_FILTER,
   statusFilter: DEFAULT_USER_STATUS_FILTER,
@@ -44,10 +44,13 @@ export function statusFilterToApiStatus(
 export function isUserFilterActive(
   key: keyof Pick<
     UserFilterState,
-    'roleId' | 'projectId' | 'departmentId' | 'groupId' | 'workFormat' | 'statusFilter'
+    'roleId' | 'projectId' | 'departmentIds' | 'groupId' | 'workFormat' | 'statusFilter'
   >,
   value: UserFilterState[keyof UserFilterState]
 ): boolean {
+  if (key === 'departmentIds') {
+    return Array.isArray(value) && value.length > 0
+  }
   if (key === 'statusFilter') {
     return value !== DEFAULT_USER_STATUS_FILTER
   }
@@ -61,4 +64,22 @@ export function workFormatToApiValue(
   workFormat: WorkFormatFilter
 ): 'office' | 'remote' | undefined {
   return workFormat === 'all' ? undefined : workFormat
+}
+
+export function parseDepartmentIds(raw: unknown): number[] {
+  const isUsable = (value: number) => Number.isFinite(value) && value > 0
+
+  if (Array.isArray(raw)) {
+    return raw.map((value) => Number(value)).filter(isUsable)
+  }
+  if (typeof raw === 'number') {
+    return isUsable(raw) ? [raw] : []
+  }
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((value) => Number(value.trim()))
+      .filter(isUsable)
+  }
+  return []
 }

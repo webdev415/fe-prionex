@@ -78,9 +78,9 @@ export function FilterTemplatesMenu({ currentFilters, onApply }: FilterTemplates
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="text-foreground border-input-border bg-input mb-0.5 flex h-[45px] cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-light"
+            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm underline-offset-2 hover:underline"
           >
-            <Icons.Star size={16} strokeWidth={1.5} />
+            <Icons.Star size={14} strokeWidth={1.5} />
             {t('pages.users.filterTemplates.label')}
           </button>
         </DropdownMenuTrigger>

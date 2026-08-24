@@ -60,6 +60,7 @@ import {
   DEFAULT_USER_SORT_ORDER,
   DEFAULT_USER_STATUS_FILTER,
   DEFAULT_WORK_FORMAT_FILTER,
+  parseDepartmentIds,
   statusFilterToApiStatus,
   workFormatToApiValue,
   type UserFilterState,
@@ -123,14 +124,14 @@ export function UserManagementPage() {
   const [projectFilter, setProjectFilter] = useURLState<number>('project', ALL_FILTER_VALUE, {
     debounce: 0,
   })
-  const [departmentFilter, setDepartmentFilter] = useURLState<number>(
-    'department',
-    ALL_FILTER_VALUE,
-    { debounce: 0 }
-  )
+  const [departmentFilter, setDepartmentFilter] = useURLState<string | number>('department', '', {
+    debounce: 0,
+  })
   const [groupFilter, setGroupFilter] = useURLState<number>('group', ALL_FILTER_VALUE, {
     debounce: 0,
   })
+  const departmentIds = useMemo(() => parseDepartmentIds(departmentFilter), [departmentFilter])
+
   const [workFormatFilter, setWorkFormatFilter] = useURLState<WorkFormatFilter>(
     'work_format',
     DEFAULT_WORK_FORMAT_FILTER,
@@ -233,7 +234,7 @@ export function UserManagementPage() {
       status: statusFilterToApiStatus(statusFilter),
       role_id: roleFilter > 0 ? roleFilter : undefined,
       project_id: projectFilter > 0 ? projectFilter : undefined,
-      department_id: departmentFilter > 0 ? departmentFilter : undefined,
+      department_ids: departmentIds.length > 0 ? departmentIds.join(',') : undefined,
       group_id: groupFilter > 0 ? groupFilter : undefined,
       work_format: workFormatToApiValue(workFormatFilter),
       sort_by: sortBy as UserFilterState['sortBy'],
@@ -247,7 +248,7 @@ export function UserManagementPage() {
       statusFilter,
       roleFilter,
       projectFilter,
-      departmentFilter,
+      departmentIds,
       groupFilter,
       workFormatFilter,
       sortBy,
@@ -359,7 +360,7 @@ export function UserManagementPage() {
     () => ({
       roleId: roleFilter,
       projectId: projectFilter,
-      departmentId: departmentFilter,
+      departmentIds: departmentIds,
       groupId: groupFilter,
       workFormat: workFormatFilter,
       statusFilter,
@@ -369,7 +370,7 @@ export function UserManagementPage() {
     [
       roleFilter,
       projectFilter,
-      departmentFilter,
+      departmentIds,
       groupFilter,
       workFormatFilter,
       statusFilter,
@@ -399,7 +400,7 @@ export function UserManagementPage() {
 
       setRoleFilter(restored.roleId)
       setProjectFilter(restored.projectId)
-      setDepartmentFilter(restored.departmentId)
+      setDepartmentFilter(restored.departmentIds.join(','))
       setGroupFilter(restored.groupId)
       setWorkFormatFilter(restored.workFormat)
       setStatusFilter(restored.statusFilter)
@@ -438,7 +439,7 @@ export function UserManagementPage() {
     (next: Partial<UserFilterState>) => {
       if (next.roleId !== undefined) setRoleFilter(next.roleId)
       if (next.projectId !== undefined) setProjectFilter(next.projectId)
-      if (next.departmentId !== undefined) setDepartmentFilter(next.departmentId)
+      if (next.departmentIds !== undefined) setDepartmentFilter(next.departmentIds.join(','))
       if (next.groupId !== undefined) setGroupFilter(next.groupId)
       if (next.workFormat !== undefined) setWorkFormatFilter(next.workFormat)
       if (next.statusFilter !== undefined) setStatusFilter(next.statusFilter)
@@ -462,7 +463,7 @@ export function UserManagementPage() {
   const handleResetFilters = useCallback(() => {
     setRoleFilter(DEFAULT_USER_FILTERS.roleId)
     setProjectFilter(DEFAULT_USER_FILTERS.projectId)
-    setDepartmentFilter(DEFAULT_USER_FILTERS.departmentId)
+    setDepartmentFilter(DEFAULT_USER_FILTERS.departmentIds.join(','))
     setGroupFilter(DEFAULT_USER_FILTERS.groupId)
     setWorkFormatFilter(DEFAULT_USER_FILTERS.workFormat)
     setStatusFilter(DEFAULT_USER_FILTERS.statusFilter)
@@ -830,9 +831,11 @@ export function UserManagementPage() {
           </PermissionGuard>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6 flex w-full items-center gap-4">
-          <div className="flex items-center gap-3">
+        <UserFiltersBar
+          filters={filterState}
+          onFilterChange={handleFilterChange}
+          onReset={handleResetFilters}
+          search={
             <UserSearchBar
               value={searchQuery}
               searchField={searchField}
@@ -842,21 +845,13 @@ export function UserManagementPage() {
               onClear={handleClearSearch}
               isLoading={isLoading}
             />
-          </div>
-        </div>
-
-        {/* Filter panel */}
-        <div className="mb-4 flex justify-end">
-          <FilterTemplatesMenu
-            currentFilters={currentTemplateDocument}
-            onApply={handleApplyTemplate}
-          />
-        </div>
-
-        <UserFiltersBar
-          filters={filterState}
-          onFilterChange={handleFilterChange}
-          onReset={handleResetFilters}
+          }
+          actions={
+            <FilterTemplatesMenu
+              currentFilters={currentTemplateDocument}
+              onApply={handleApplyTemplate}
+            />
+          }
         />
 
         {/* Loading State */}

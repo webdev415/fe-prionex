@@ -25,7 +25,7 @@ export function filterStateToTemplate(
 
   if (filters.roleId !== ALL_FILTER_VALUE) document.role_id = filters.roleId
   if (filters.projectId !== ALL_FILTER_VALUE) document.project_id = filters.projectId
-  if (filters.departmentId !== ALL_FILTER_VALUE) document.department_id = filters.departmentId
+  if (filters.departmentIds.length > 0) document.department_ids = filters.departmentIds.join(',')
   if (filters.groupId !== ALL_FILTER_VALUE) document.group_id = filters.groupId
   if (filters.workFormat !== DEFAULT_WORK_FORMAT_FILTER) document.work_format = filters.workFormat
   if (filters.statusFilter !== DEFAULT_USER_FILTERS.statusFilter) {
@@ -44,6 +44,14 @@ export function filterStateToTemplate(
   return document
 }
 
+function asIdList(value: FilterTemplateValue): number[] {
+  if (typeof value !== 'string') return []
+  return value
+    .split(',')
+    .map((piece) => Number(piece.trim()))
+    .filter((id) => Number.isFinite(id) && id > 0)
+}
+
 function asNumber(value: FilterTemplateValue, fallback: number): number {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
@@ -58,7 +66,7 @@ export function templateToFilterState(document: TemplateDocument): UserFilterSta
   return {
     roleId: asNumber(document.role_id, ALL_FILTER_VALUE),
     projectId: asNumber(document.project_id, ALL_FILTER_VALUE),
-    departmentId: asNumber(document.department_id, ALL_FILTER_VALUE),
+    departmentIds: asIdList(document.department_ids),
     groupId: asNumber(document.group_id, ALL_FILTER_VALUE),
     workFormat: WORK_FORMATS.includes(workFormat as WorkFormatFilter)
       ? (workFormat as WorkFormatFilter)

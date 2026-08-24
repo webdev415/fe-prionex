@@ -25,7 +25,7 @@ describe('filterStateToTemplate', () => {
       state({
         roleId: 3,
         projectId: 4,
-        departmentId: 5,
+        departmentIds: [5, 6],
         groupId: 6,
         workFormat: 'office',
         statusFilter: 'all',
@@ -38,7 +38,7 @@ describe('filterStateToTemplate', () => {
     expect(document).toMatchObject({
       role_id: 3,
       project_id: 4,
-      department_id: 5,
+      department_ids: '5,6',
       group_id: 6,
       work_format: 'office',
       status: 'all',
@@ -85,7 +85,7 @@ describe('templateToFilterState', () => {
     const restored = templateToFilterState({ work_format: 'remote' })
 
     expect(restored.roleId).toBe(DEFAULT_USER_FILTERS.roleId)
-    expect(restored.departmentId).toBe(DEFAULT_USER_FILTERS.departmentId)
+    expect(restored.departmentIds).toEqual(DEFAULT_USER_FILTERS.departmentIds)
     expect(restored.statusFilter).toBe(DEFAULT_USER_FILTERS.statusFilter)
   })
 
