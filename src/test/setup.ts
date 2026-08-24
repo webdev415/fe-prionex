@@ -97,6 +97,29 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
         return `Confirm & Assign ${String(options.count)} Clients`
       }
+      // A count-based plural key (locales hold floorHint_one/_few/_many/_other).
+      // The month count is the whole point of this hint — it now comes from the
+      // feed's response, so a test has to be able to see the VALUE and not just
+      // the key. Rendered as `<key>:<count>`, deterministic and still key-based.
+      if (key === 'pages.reports.lowVerification.floorHint') {
+        return `${key}:${String(vars?.count)}`
+      }
+      // Same shape, same reason: the operator-promises totals block states WHEN
+      // the numbers were computed (the report is re-served from a 15-minute
+      // server-side cache), so the stamp itself has to be assertable and not
+      // just the key it rides on.
+      if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
+        return `${key}:${String(vars?.value)}`
+      }
+      // Same shape, same reason: the OneX dock's context chip exists to tell
+      // the operator WHICH page will be sent along, so the label has to be
+      // assertable and not just the key it rides on.
+      if (key === 'pages.aiAssistant.onexContextChip') {
+        return `${key}:${String(vars?.label)}`
+      }
+      if (key === 'pages.aiAssistant.onexContextClientFallback') {
+        return `${key}:${String(vars?.id)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
@@ -214,9 +237,13 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.counterparty': 'Counterparty',
         'pages.clients.detail.tableHeaders.saleDate': 'Sale Date',
         'pages.clients.detail.tableHeaders.debt': 'Debt',
+        // Carries an interpolation, so it needs a template here for the
+        // formatted value to be observable in assertions.
+        'pages.clients.detail.closedInline': 'Closed: {{date}}',
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
+        'actions.delete': 'Delete',
         // Two-Factor Authentication
         'twoFactor.title': 'Two-Factor Authentication',
         'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',
@@ -289,6 +316,47 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        // Profile settings: photo + work format.
+        'pages.profile.agentStatus.online': 'Online',
+        'pages.profile.agentStatus.offline': 'Offline',
+        'pages.profile.agentStatus.busy': 'Busy',
+        'pages.profile.agentStatus.onCall': 'On Call',
+        'pages.profileSettings.photo.upload': 'Upload photo',
+        'pages.profileSettings.photo.replace': 'Replace photo',
+        'pages.profileSettings.photo.confirmRemoveTitle': 'Remove your photo?',
+        'pages.profileSettings.photo.confirmRemoveMessage':
+          'Your initials will be shown instead. You can upload a new photo at any time.',
+        'pages.profileSettings.photo.remove': 'Remove photo',
+        'pages.profileSettings.photo.wrongType': 'Choose a JPEG, PNG or WebP image',
+        'pages.profileSettings.photo.tooLarge': 'The photo must be 2 MB or smaller',
+        'pages.profileSettings.photo.uploaded': 'Photo updated',
+        'pages.profileSettings.photo.removed': 'Photo removed',
+        'pages.profileSettings.workFormat.label': 'Work format',
+        'pages.profileSettings.workFormat.office': 'Office',
+        'pages.profileSettings.workFormat.remote': 'Remote',
+        // Shared soft-delete section labels.
+        'softDelete.columns.deletedAt': 'Deleted',
+        'softDelete.columns.expires': 'Expires',
+        'softDelete.columns.actions': 'Actions',
+        'softDelete.actions.restore': 'Restore',
+        'softDelete.expiry.noDeadline': 'No deadline',
+        'softDelete.expiry.today': 'Removed today',
+        'softDelete.sectionHint':
+          'These were deleted and can still be restored until the date shown.',
+        'pages.smsTemplates.deleted.title': 'Deleted templates',
+        'pages.messagingDrafts.deleted.title': 'Deleted drafts',
+        // Soft delete is a recovery promise, so these two say Trash, not
+        // "permanently removed" — the copy they replaced was untrue.
+        'pages.smsTemplates.modals.delete.recoverableTitle':
+          'The template will be removed from the active list',
+        'pages.smsTemplates.modals.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
+        'pages.messagingDrafts.delete.confirmMessage':
+          'Are you sure you want to delete the draft "{{name}}"?',
+        'pages.messagingDrafts.delete.recoverableTitle':
+          'The draft will be removed from the active list',
+        'pages.messagingDrafts.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
         'pages.clients.modals.deleteClient.title': 'Delete Client',
         'pages.clients.modals.deleteClient.softDeleteWarning':
           'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
@@ -354,10 +422,12 @@ vi.mock('react-i18next', () => ({
           'The assistant is unavailable — try again in a moment',
       }
       const template = translations[key] || key
-      if (options && typeof template === 'string' && template.includes('{{')) {
+      // Interpolate from `vars`, not `options`: in the `t(key, fallback, vars)`
+      // form `options` is the fallback string, and indexing into it throws.
+      if (vars && typeof vars === 'object' && template.includes('{{')) {
         return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-          name in (options as Record<string, unknown>)
-            ? String((options as Record<string, unknown>)[name])
+          name in (vars as Record<string, unknown>)
+            ? String((vars as Record<string, unknown>)[name])
             : `{{${name}}}`
         )
       }
@@ -384,6 +454,11 @@ vi.mock('i18next', () => ({
     // `<html lang>` in step with the active language.
     on: vi.fn(),
     language: 'en',
+    // Hooks that toast outside a component call i18n.t directly. Without this
+    // the call throws inside onSuccess, React Query turns the mutation into a
+    // failure, and any test asserting only on cache state passes while the
+    // success path it claims to cover never runs.
+    t: (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string) ?? key,
   },
 }))
 

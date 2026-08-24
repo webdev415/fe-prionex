@@ -69,8 +69,18 @@ export function formatNumber(
   return getNumberFormat(intlLocaleForUiLanguage(language), opts).format(num)
 }
 
-/** Amount with fixed two decimals (no currency symbol — call-sites add ₴). */
-export function formatMoneyAmount(value: number | string, language: string): string {
+/**
+ * Amount with fixed two decimals (no currency symbol — call-sites add ₴).
+ *
+ * Missing (null/undefined) or non-finite values render as "—", never "NaN":
+ * the guard lives in `formatNumber`, and the signature admits them so a caller
+ * whose amount is legitimately optional (a nullable money column) does not need
+ * a null-check of its own — or a private copy of this formatter.
+ */
+export function formatMoneyAmount(
+  value: number | string | null | undefined,
+  language: string
+): string {
   return formatNumber(value, language, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -88,18 +98,40 @@ export function formatDate(value: DateInput, language: string): string {
   }).format(date)
 }
 
-/** Calendar date + 24h time (HH:mm). */
-export function formatDateTime(value: DateInput, language: string): string {
+/**
+ * Calendar date + 24h time (HH:mm).
+ *
+ * `timeZone` renders the instant in that IANA zone instead of the BROWSER's —
+ * which is what a timestamp stamped by the backend needs: the reader's machine
+ * clock is not the report's clock. An unknown or unusable zone falls back to
+ * the browser zone rather than throwing (same policy as
+ * `getDateStringInTimezone`): a stamp in the wrong zone is a lesser failure
+ * than a blank block.
+ */
+export function formatDateTime(
+  value: DateInput,
+  language: string,
+  timeZone?: string | null
+): string {
   const date = toValidDate(value)
   if (!date) return INVALID_PLACEHOLDER
-  return new Intl.DateTimeFormat(intlLocaleForUiLanguage(language), {
+  const options: Intl.DateTimeFormatOptions = {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(date)
+  }
+  const locale = intlLocaleForUiLanguage(language)
+  if (timeZone) {
+    try {
+      return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(date)
+    } catch {
+      // Unknown/invalid IANA zone — fall through to the browser zone.
+    }
+  }
+  return new Intl.DateTimeFormat(locale, options).format(date)
 }
 
 /** Day + month only: en → MM/DD, uk → DD.MM. */

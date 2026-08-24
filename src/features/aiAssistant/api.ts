@@ -285,6 +285,14 @@ export async function sendChatMessage(
   }
 
   const outcome = await consumeSseStream(response.body, {
+    // CRM `meta` — авторитетный id строки диалога. Читать его ОБЯЗАТЕЛЬНО:
+    // `session.session_id` ниже приходит от «мозга» и содержит его внутренний
+    // ключ (hex-строка вида `06a76d1f72744d79`), а не id записи. Number() от
+    // такой строки — NaN, поэтому id оставался 0, следующий ход уходил с
+    // `conversation_id: 0`, прокси такой диалог не находил и отвечал 404
+    // «Асистент зараз недоступний» (живой баг прода 20.08.2026: воспроизводился
+    // на ЛЮБОМ втором сообщении и при клике по кнопке-уточнению).
+    onMeta: (meta) => applySessionId(meta.conversation_id),
     onSession: (session) => {
       applySessionId(session.session_id)
       callbacks.onSession?.(session)
@@ -399,4 +407,146 @@ export async function markCitationStep({
   verdict,
 }: AssistantMarkCitationRequest): Promise<void> {
   await api.post(`${BASE}/messages/${message_id}/step-mark`, { citation_id, verdict })
+}
+
+/* -------------------------------------------------------------------------
+ * Персональная память ассистента («Персоналізація»)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Происхождение факта памяти:
+ * `user` — сотрудник добавил руками, `agent` — мозг вывел из диалога,
+ * `seed`/`profile` — наблюдение, засеянное при инициализации памяти,
+ * `consolidated` — сводный факт, которым мозг схлопнул несколько похожих
+ * записей при вытеснении по потолку.
+ */
+export type AssistantMemorySource = 'user' | 'agent' | 'seed' | 'profile' | 'consolidated'
+
+/**
+ * Факт, который ассистент помнит о сотруднике. Влияет на ответы, поэтому
+ * оператор обязан видеть список целиком и уметь удалить лишнее.
+ *
+ * `source` намеренно шире {@link AssistantMemorySource}: бэкенд заводит новые
+ * виды раньше фронта, и неизвестное значение должно давать нейтральный бейдж,
+ * а не ломать рендер строки.
+ */
+export interface AssistantMemoryItem {
+  id: number
+  kind: string
+  /** Подзаголовок; у старых записей может быть пустым. */
+  title: string | null
+  content: string
+  source: AssistantMemorySource | string
+  created_at: string
+}
+
+export interface AssistantMemoryList {
+  items: AssistantMemoryItem[]
+  total: number
+  /**
+   * Потолок активных записей скоупа. `null` — потолка нет: либо он выключен на
+   * мозге, либо бэкенд ещё старый и поля не присылает. Для UI оба случая
+   * означают одно — счётчик не рисуем.
+   */
+  limit: number | null
+}
+
+/**
+ * Привести потолок из ответа к `number | null`.
+ *
+ * Потолком считается только положительное конечное число: `null`, отсутствие
+ * поля и мусор одинаково означают «предела нет». Один разбор на оба экрана —
+ * пользовательский список и админскую сводку по скоупам.
+ */
+export function normalizeMemoryLimit(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+}
+
+/**
+ * Привести ответ списка к {@link AssistantMemoryList}.
+ *
+ * Контракт — конверт `{items, total, limit}`, но урок `citations` повторять не
+ * хочется: голый массив (или пустое тело) от промежуточной версии бэкенда не
+ * должен ронять панель на `.map is not a function`, а отсутствующий `limit` —
+ * прятать список за счётчиком, которого нет.
+ */
+export function normalizeMemoryList(payload: unknown): AssistantMemoryList {
+  if (Array.isArray(payload)) {
+    return { items: payload as AssistantMemoryItem[], total: payload.length, limit: null }
+  }
+  const items = (payload as { items?: unknown } | null)?.items
+  if (!Array.isArray(items)) return { items: [], total: 0, limit: null }
+  const total = (payload as { total?: unknown }).total
+  return {
+    items: items as AssistantMemoryItem[],
+    total: typeof total === 'number' ? total : items.length,
+    limit: normalizeMemoryLimit((payload as { limit?: unknown }).limit),
+  }
+}
+
+/** `GET /memory` — вся память текущего сотрудника (скоуп берётся из JWT). */
+export async function getMemoryItems(): Promise<AssistantMemoryList> {
+  const response = await api.get<unknown>(`${BASE}/memory`)
+  return normalizeMemoryList(response.data)
+}
+
+export interface CreateAssistantMemoryRequest {
+  title: string
+  content: string
+}
+
+/**
+ * `POST /memory` — добавить факт руками.
+ *
+ * Отказы, которые обязан прочитать оператор: **409** — похожая запись уже есть,
+ * **422** — пусто либо персональные данные. Текст лежит в `detail`; достаётся
+ * через {@link extractErrorDetail} (см. {@link classifyMemoryError}).
+ *
+ * Ответ — конверт `{item}`; голый объект тоже принимается по тем же
+ * соображениям, что и в {@link normalizeMemoryList}.
+ */
+export async function createMemoryItem(
+  payload: CreateAssistantMemoryRequest
+): Promise<AssistantMemoryItem> {
+  const response = await api.post<{ item?: AssistantMemoryItem } | AssistantMemoryItem>(
+    `${BASE}/memory`,
+    payload
+  )
+  const body = response.data as { item?: AssistantMemoryItem }
+  return body?.item ?? (response.data as AssistantMemoryItem)
+}
+
+/** `DELETE /memory/{id}` — убрать факт из памяти ассистента. */
+export async function deleteMemoryItem(id: number): Promise<void> {
+  await api.delete(`${BASE}/memory/${id}`)
+}
+
+/** Классы отказов при добавлении факта — на каждый своя формулировка в UI. */
+export type AssistantMemoryErrorKind = 'duplicate' | 'validation' | 'forbidden' | 'unknown'
+
+export interface AssistantMemoryError {
+  kind: AssistantMemoryErrorKind
+  /** Текст сервера — есть у `duplicate`/`validation`, где он несёт причину. */
+  message?: string
+}
+
+/**
+ * Разобрать отказ `POST /memory`.
+ *
+ * 409 и 422 нельзя схлопывать в общее «что-то пошло не так»: в первом случае
+ * оператор должен понять, что факт уже записан, во втором — что именно сервер
+ * забраковал (PII), и переписать текст.
+ */
+export function classifyMemoryError(error: unknown): AssistantMemoryError {
+  const response =
+    error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { status?: unknown; data?: unknown } }).response
+      : undefined
+  const status = typeof response?.status === 'number' ? response.status : undefined
+  const { message } = extractErrorDetail(response?.data)
+
+  if (status === 409) return { kind: 'duplicate', message }
+  if (status === 422 || status === 400) return { kind: 'validation', message }
+  if (status === 403) return { kind: 'forbidden' }
+  return { kind: 'unknown' }
 }

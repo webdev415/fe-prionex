@@ -150,6 +150,41 @@ export function isApiError(error: unknown): error is AxiosError {
 }
 
 /**
+ * True when the failed response actually carries a message of the backend's own.
+ *
+ * `getErrorMessage` has no such thing as "nothing to say": with an empty or
+ * body-less response it degrades to axios' own `error.message` — the
+ * untranslated "Request failed with status code 400" — which is exactly what a
+ * proxy that strips the body produces, and not a sentence to show an operator.
+ * So a caller passes a server detail through only when there IS one and takes
+ * its own localized text otherwise.
+ *
+ * The shapes checked are the ones `getErrorMessage` reads out of the BODY for a
+ * FastAPI endpoint: a bare string body, `detail` (string or the validation
+ * array), and `message`. An empty string or an empty array is no detail either:
+ * the empty string falls through to `message` and then to the axios text, while
+ * an empty array makes `getErrorMessage` return its hardcoded English
+ * "Validation error occurred" — both equally unfit to show, so the helper
+ * treats both as "no detail".
+ *
+ * A NON-empty array is taken at its word: this is a "has something to say"
+ * predicate, not a validator of what `getErrorMessage` will make of the items
+ * (a `detail: [{}]` therefore still counts; tightening that branch is a
+ * deferred follow-up).
+ */
+export function hasResponseDetail(error: unknown): boolean {
+  if (!isApiError(error)) return false
+  const data = error.response?.data
+  if (typeof data === 'string') return data.trim() !== ''
+  if (!data || typeof data !== 'object') return false
+  const record = data as Record<string, unknown>
+  const detail = record.detail
+  if (typeof detail === 'string') return detail.trim() !== ''
+  if (Array.isArray(detail)) return detail.length > 0
+  return typeof record.message === 'string' && record.message.trim() !== ''
+}
+
+/**
  * Get HTTP status code from error
  */
 export function getErrorStatus(error: unknown): number | null {

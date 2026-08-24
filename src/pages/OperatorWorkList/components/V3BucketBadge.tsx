@@ -3,6 +3,7 @@
  * Colours use semantic status tokens so light/dark themes stay readable.
  */
 
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import type { V3Bucket } from '@/features/scoring/api/types'
 
@@ -29,17 +30,33 @@ const CONFIG: Record<V3Bucket, { label: string; className: string }> = {
   },
 }
 
-export function V3BucketBadge({ bucket, className }: { bucket: V3Bucket; className?: string }) {
+export function V3BucketBadge({
+  bucket,
+  className,
+  trailing,
+}: {
+  bucket: V3Bucket
+  className?: string
+  /**
+   * Rendered inside the pill, after the label — a disclosure arrow on the
+   * client card, where the badge doubles as the control for the priority
+   * panel below it. A slot rather than a boolean so the badge stays a piece of
+   * presentation: it knows nothing about what is being disclosed, and the four
+   * call sites that pass nothing are unaffected.
+   */
+  trailing?: ReactNode
+}) {
   const config = CONFIG[bucket] ?? CONFIG.LOW
   return (
     <span
       className={cn(
-        'inline-flex h-[25px] min-w-[90px] items-center justify-center rounded-[16px] border px-3 py-1 text-xs font-medium tracking-[-0.24px]',
+        'inline-flex h-[25px] min-w-[90px] items-center justify-center gap-1 rounded-[16px] border px-3 py-1 text-xs font-medium tracking-[-0.24px]',
         config.className,
         className
       )}
     >
       {config.label}
+      {trailing}
     </span>
   )
 }

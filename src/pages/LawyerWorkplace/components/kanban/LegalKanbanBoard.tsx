@@ -26,6 +26,7 @@ import {
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
+import { formatLegalDueDateTime } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
@@ -68,7 +69,7 @@ function parseTaskIdFromSearch(params: URLSearchParams): number | null {
 }
 
 export function LegalKanbanBoard() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const timezone = useLegalProfileTimezone()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -269,6 +270,7 @@ export function LegalKanbanBoard() {
 
       if (metadataKeys.length === 0 && taskKeys.length === 0) return
 
+      const isDeadlineChange = patch.deadline !== undefined
       const finalize = () => setLocalOverrides(null)
 
       void (async () => {
@@ -279,6 +281,7 @@ export function LegalKanbanBoard() {
               patchMetadataMutation.mutateAsync({
                 taskId: task.taskId,
                 payload: metadataPayload,
+                suppressErrorToast: isDeadlineChange,
               })
             )
           }
@@ -287,17 +290,41 @@ export function LegalKanbanBoard() {
               updateTaskMutation.mutateAsync({
                 taskId: task.taskId,
                 payload: taskPayload,
+                suppressErrorToast: isDeadlineChange,
               })
             )
           }
           await Promise.all(ops)
           finalize()
+          if (isDeadlineChange) {
+            toast.success(
+              patch.deadline
+                ? t('pages.lawyerWorkplace.kanban.deadlineSaved', 'Deadline set to {{deadline}}', {
+                    deadline: formatLegalDueDateTime(patch.deadline, timezone, i18n.language),
+                  })
+                : t('pages.lawyerWorkplace.kanban.deadlineCleared', 'Deadline cleared')
+            )
+          }
         } catch {
           finalize()
+          if (isDeadlineChange) {
+            toast.error(
+              t('pages.lawyerWorkplace.kanban.deadlineSaveFailed', 'Deadline was not saved')
+            )
+          }
         }
       })()
     },
-    [apiTasks, lawyers, localOverrides, patchMetadataMutation, timezone, updateTaskMutation]
+    [
+      apiTasks,
+      i18n.language,
+      lawyers,
+      localOverrides,
+      patchMetadataMutation,
+      t,
+      timezone,
+      updateTaskMutation,
+    ]
   )
 
   const handleMoveTask = useCallback(
@@ -397,14 +424,23 @@ export function LegalKanbanBoard() {
     [handleMoveTask]
   )
 
+  // The drawer target is a snapshot taken on card click; re-derive the task
+  // from the current board data so edits made inside the open panel are
+  // reflected there once the mutation lands and the kanban query refetches.
+  const liveThreadTarget = useMemo(() => {
+    if (!threadTarget) return null
+    const live = baseTasks.find((item) => item.taskId === threadTarget.task.taskId)
+    return live ? { ...threadTarget, task: live } : threadTarget
+  }, [baseTasks, threadTarget])
+
   const handleExportCsv = useCallback(() => {
-    const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes)
+    const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes, timezone)
     if (exported === 0) {
       toast.info(
         t('pages.lawyerWorkplace.kanban.exportEmpty', 'No tasks match the current filters')
       )
     }
-  }, [filteredColumns, letterTypes, t])
+  }, [filteredColumns, letterTypes, t, timezone])
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
@@ -428,9 +464,13 @@ export function LegalKanbanBoard() {
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
       <ThreadDrawer
-        target={threadTarget}
+        target={liveThreadTarget}
         letterTypes={letterTypes}
+        lawyers={lawyers}
+        editableLetterTypes={activeLetterTypes}
         onClose={() => setThreadTarget(null)}
+        onMoveTask={handleMoveTask}
+        onTaskUpdate={handleTaskUpdate}
       />
 
       {isLoading ? <KanbanTabSkeleton /> : null}

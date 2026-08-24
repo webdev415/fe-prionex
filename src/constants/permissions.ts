@@ -154,6 +154,10 @@ export const PERMISSIONS = {
     MANAGE_CALL_QA: 'manage_call_qa',
     // AI settings — global assistant kill-switch + its settings surface
     MANAGE_AI_SETTINGS: 'manage_ai_settings',
+    // Call QA listening rules — critical-blocker dictionary + AI rubrics.
+    // Held by the training-department head and admins; gates the Training
+    // «Settings» tab and every write on those two surfaces.
+    MANAGE_QA_RULES: 'manage_qa_rules',
   },
 
   /**
@@ -546,6 +550,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_audit_logs: 'View system audit logs',
   manage_roles: 'Create and edit roles and permissions',
   manage_call_qa: 'Toggle the global AI call analysis (Call QA) switch and manage its settings',
+  manage_qa_rules: 'Manage Call QA listening rules — critical blockers and AI rubrics',
 
   // Projects
   manage_projects: 'Create, update, archive and restore projects',

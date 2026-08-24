@@ -25,6 +25,8 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import {
   getDateTimeStringInTimezone,
   isWallTimeInPast,
+  nowAsWallTimeInTimezone,
+  notInPastTimeFilter,
   wallTimeAsTimezoneToUtcIso,
 } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
@@ -157,27 +159,25 @@ function stepDateIsPast(
   return isWallTimeInPast(value, timezone)
 }
 
-// Stable, module-level time-slot predicate: keep future slots; for *today*
-// grey out slots already in the past. Hoisted so react-datepicker sees a
-// stable ``filterTime`` identity across renders (a fresh closure per render
-// thrashes the time list). It recomputes "now" itself, so it never goes stale.
-const filterFromNow = (time: Date): boolean => {
-  const now = new Date()
-  const isSameDay =
-    time.getFullYear() === now.getFullYear() &&
-    time.getMonth() === now.getMonth() &&
-    time.getDate() === now.getDate()
-  return isSameDay ? time.getTime() >= now.getTime() : true
-}
-
 // Calendar bounds for a step that forbids past dates: block past days via
 // ``min`` and past time-of-day (today only) via ``filterTime``. Returns {} for
-// unconstrained steps so the picker is unrestricted. Browser-local "now" is
-// the right reference because the picker displays in browser-local; the
-// timezone-aware save path handles the stored value separately.
-function notInPastBounds(notInPast: boolean | undefined) {
+// unconstrained steps so the picker is unrestricted.
+//
+// "Now" is measured in the operator's PROFILE timezone, not the browser's
+// (KAN-992 AC5). The wall time a slot shows is browser-local — that is all
+// react-datepicker can render — but ``toUtcIsoIfDate`` below re-reads that
+// same wall time as profile-timezone before saving. Measuring "past" on the
+// browser clock therefore used a different reference from the one that stores
+// the value: with the two zones apart, the picker offered a slot that
+// ``stepDateIsPast`` then rejected on save, which is the confusion this ticket
+// exists to remove rather than relocate. The helpers keep a stable identity
+// per zone, so the time list does not thrash on re-render.
+function notInPastBounds(notInPast: boolean | undefined, timezone: string | null | undefined) {
   if (!notInPast) return {}
-  return { min: new Date(), filterTime: filterFromNow }
+  return {
+    min: nowAsWallTimeInTimezone(timezone),
+    filterTime: notInPastTimeFilter(timezone),
+  }
 }
 
 // Date-type steps store the picker output as a naive browser-local string
@@ -1937,7 +1937,8 @@ export function ChainExecutor({
                               }
                               {...notInPastBounds(
                                 steps.find((s) => s.step_order === editingStep.stepOrder)
-                                  ?.not_in_the_past
+                                  ?.not_in_the_past,
+                                user?.timezone
                               )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
@@ -2150,7 +2151,7 @@ export function ChainExecutor({
                               ? t('pages.clientChains.errors.datePast')
                               : undefined
                           }
-                          {...notInPastBounds(currentStep?.not_in_the_past)}
+                          {...notInPastBounds(currentStep?.not_in_the_past, user?.timezone)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2809,7 +2810,7 @@ export function InstantStepCard({
               ? t('pages.clientChains.errors.datePast')
               : undefined
           }
-          {...notInPastBounds(step.not_in_the_past)}
+          {...notInPastBounds(step.not_in_the_past, cardUser?.timezone)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input

@@ -35,7 +35,7 @@ function createQueryClient() {
 }
 
 const SCORECARD_ID = 1
-const INITIAL = { scores: {}, overall_comment: '' }
+const INITIAL = { scores: {}, overall_comment: '', dispute_reason: '' }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -68,6 +68,7 @@ it('debounces to a single PUT carrying the latest state', async () => {
   expect(mockUpdate).toHaveBeenCalledWith(SCORECARD_ID, {
     scores: { c1: { value: 5, comment: null } },
     overall_comment: 'good call',
+    dispute_reason: null,
   })
 })
 
@@ -91,6 +92,7 @@ it('flushes the latest state exactly once on unmount', async () => {
   expect(mockUpdate).toHaveBeenCalledWith(SCORECARD_ID, {
     scores: { c1: { value: 4, comment: null } },
     overall_comment: null,
+    dispute_reason: null,
   })
 })
 
@@ -111,4 +113,45 @@ it('does not flush on unmount when the caller opts out', async () => {
 
   await Promise.resolve()
   expect(mockUpdate).not.toHaveBeenCalled()
+})
+
+// Stable identity, like INITIAL above: the hook adopts a fresh `initial`
+// object during render, so an inline literal would re-seed on every pass.
+const INITIAL_WITH_REASON = {
+  scores: {},
+  overall_comment: '',
+  dispute_reason: 'AI missed the promise',
+}
+
+it('sends the objection, and an explicit null once it is withdrawn', async () => {
+  const { result } = renderHook(
+    () =>
+      useScorecardDraft({
+        scorecardId: SCORECARD_ID,
+        initial: INITIAL_WITH_REASON,
+        enabled: false,
+        flushOnUnmount: false,
+      }),
+    { wrapper: createWrapper(createQueryClient()) }
+  )
+
+  act(() => result.current.setDisputeReason('AI missed the promise at 3:20'))
+  await act(async () => {
+    await result.current.flush()
+  })
+  expect(mockUpdate).toHaveBeenLastCalledWith(SCORECARD_ID, {
+    scores: {},
+    overall_comment: null,
+    dispute_reason: 'AI missed the promise at 3:20',
+  })
+
+  // Emptying the textarea has to travel as `null`, not as a missing key: the
+  // backend reads an absent key as "leave the stored reason alone".
+  act(() => result.current.setDisputeReason(''))
+  await act(async () => {
+    await result.current.flush()
+  })
+  const lastPayload = mockUpdate.mock.calls.at(-1)?.[1] as Record<string, unknown>
+  expect(lastPayload).toHaveProperty('dispute_reason')
+  expect(lastPayload.dispute_reason).toBeNull()
 })

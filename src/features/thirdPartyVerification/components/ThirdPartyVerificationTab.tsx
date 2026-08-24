@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { isTransientFailure } from '@/lib/api'
+import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
@@ -32,8 +33,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { useThirdPartyVerificationReport } from '../hooks'
 import { currentMonthRange } from '../utils/monthRange'
 import { VerificationTable } from './VerificationTable'
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 // Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
 // api-prionex/services/client/app/routers/reports.py: the (end - start) day
@@ -57,24 +56,6 @@ type FilterKey =
 /** Whole-day span between two ISO dates (the backend compares the same way). */
 function spanInDays(from: string, to: string): number {
   return (Date.parse(to) - Date.parse(from)) / MS_PER_DAY
-}
-
-/**
- * True only for a REAL calendar day in ISO YYYY-MM-DD form.
- *
- * The shape alone is not enough: a hand-edited URL can carry an impossible day
- * (`?sf=2026-02-31`, `?cf=2026-13-01`). Such a bound would poison every check
- * below, because comparisons against NaN are all false — the 366-day guard
- * would pass silently and the request would reach the API — while the picker
- * would display yet another day (`new Date(2026, 1, 31)` → 03.03.2026).
- * Hence the round trip: re-formatting the parsed instant must reproduce the
- * original string, which also rejects any day the parser silently rolls over.
- */
-function isRealCalendarDate(value: string): boolean {
-  if (!DATE_RE.test(value)) return false
-  const parsed = Date.parse(`${value}T00:00:00Z`)
-  if (Number.isNaN(parsed)) return false
-  return new Date(parsed).toISOString().slice(0, 10) === value
 }
 
 export function ThirdPartyVerificationTab() {

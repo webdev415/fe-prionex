@@ -30,3 +30,14 @@ describe('Call QA permission constants', () => {
     }
   })
 })
+
+describe('Call QA listening-rules permission', () => {
+  it('exposes the verbatim backend name', () => {
+    expect(PERMISSIONS.SYSTEM.MANAGE_QA_RULES).toBe('manage_qa_rules')
+  })
+
+  it('is registered and described for the role-management UI', () => {
+    expect(getAllPermissions() as string[]).toContain('manage_qa_rules')
+    expect((PERMISSION_DESCRIPTIONS as Record<string, string>).manage_qa_rules).toBeTruthy()
+  })
+})
