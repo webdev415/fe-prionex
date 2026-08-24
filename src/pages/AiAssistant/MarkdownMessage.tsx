@@ -291,9 +291,22 @@ function decorateCell(cell: ReactNode, column: NumericColumn | undefined): React
  *
  * Если красить нечего (нечисловая строка без маркера), возвращаем ту же строку,
  * а не её клон: у отчёта без чисел дерево обязано остаться прежним.
+ *
+ * ИТОГОВАЯ строка («Разом/Усього/Итого/Total…») — барьер: промпт-правило
+ * запрещает модели ставить маркер на итоге, но она нарушает. Здесь маркер на
+ * итоге игнорируется (строку НЕ красим и авто-градиент к ней не применяем — итог
+ * не сравнивается со строками данных), но из отображения его всё равно вырезаем,
+ * как у обычных помеченных строк.
  */
 function decorateRow(row: ReactNode, rowIndex: number, plan: TableHighlightPlan): ReactNode {
   if (!isValidElement(row)) return row
+
+  if (plan.totalRows.has(rowIndex)) {
+    const children = rowChildren(row)
+    const stripped = children.map(stripCellMarker)
+    if (stripped.every((cell, index) => cell === children[index])) return row
+    return cloneElement(row as ReactElement<Record<string, unknown>>, { children: stripped })
+  }
 
   const marker = plan.markerRows.get(rowIndex)
   if (marker) {

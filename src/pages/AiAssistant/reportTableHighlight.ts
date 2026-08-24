@@ -154,6 +154,33 @@ export function stripRowMarker(text: string): string {
 }
 
 /**
+ * Ключевые слова итоговой строки (укр./рус./англ. «итого»), нижним регистром.
+ * Промпт-правило запрещает модели ставить маркер на итоге, но она нарушает —
+ * детектор боевого gw ловит `marker_on_total` как самое частое нарушение.
+ * Барьер рендера: на итоговой строке маркер игнорируется, а её числа не
+ * участвуют в шкале авто-градиента (итог всегда максимум и «сжёг» бы шкалу).
+ */
+export const TOTAL_KEYWORDS = ['разом', 'усього', 'всього', 'итого', 'всего', 'total']
+
+/**
+ * Итоговая строка по первой ячейке: ключ целиком либо ключ с границей —
+ * пробел/двоеточие/скобка («РАЗОМ КОНТАКТ-ЦЕНТР», «Усього:», «Разом (міс)»).
+ * Граница нужна, чтобы «разомкнути»/«всеговідомо» не считались итогом.
+ */
+const TOTAL_PREFIX = new RegExp(`^(?:${TOTAL_KEYWORDS.join('|')})(?=[\\s:()]|$)`, 'u')
+
+/**
+ * Помечает ли первая ячейка строку как ИТОГОВУЮ. Нормализуем перед сверкой:
+ * снимаем маркер-«светофор», markdown-жирность/курсив (`*`/`_`, модель часто
+ * пишет итог жирным), пробелы по краям и регистр.
+ */
+export function isTotalCell(text: string): boolean {
+  if (typeof text !== 'string') return false
+  const normalized = stripRowMarker(text).replace(/[*_]/g, '').trim().toLowerCase()
+  return TOTAL_PREFIX.test(normalized)
+}
+
+/**
  * Число из ячейки украинского отчёта или `null`.
  *
  * Разбирает: `1 209 239.06`, `1 209 239,06`, `48 750,50 грн`, `12,5%`,
@@ -199,15 +226,19 @@ export type NumericColumn = {
   max: number
 }
 
-/** План раскраски таблицы: числовые колонки и строки с маркерами-«светофором». */
+/**
+ * План раскраски таблицы: числовые колонки, строки с маркерами-«светофором» и
+ * итоговые строки (их маркер игнорируется, а числа не входят в шкалу).
+ */
 export type TableHighlightPlan = {
   columns: Map<number, NumericColumn>
   markerRows: Map<number, RowMarker>
+  totalRows: Set<number>
 }
 
 /** Пустой план — таблица рендерится как обычная. */
 export function emptyHighlightPlan(): TableHighlightPlan {
-  return { columns: new Map(), markerRows: new Map() }
+  return { columns: new Map(), markerRows: new Map(), totalRows: new Set() }
 }
 
 /**
@@ -218,12 +249,20 @@ export function emptyHighlightPlan(): TableHighlightPlan {
  * одинаковых значений подсвечивать нечего. Строка попадает в `markerRows`, если
  * в любой её ячейке есть ведущий маркер; при разных маркерах побеждает худший
  * ({@link MARKER_SEVERITY}).
+ *
+ * ИТОГОВАЯ строка ({@link isTotalCell} по первой ячейке) — особый случай: её
+ * маркер игнорируется (в `markerRows` не попадает), а её числа исключены из
+ * расчёта шкалы колонок (иначе итог, всегда максимум, сжал бы весь градиент).
  */
 export function buildTableHighlightPlan(rows: string[][]): TableHighlightPlan {
   const plan = emptyHighlightPlan()
   if (rows.length === 0) return plan
 
   rows.forEach((cells, rowIndex) => {
+    if (isTotalCell(cells[0] ?? '')) {
+      plan.totalRows.add(rowIndex)
+      return
+    }
     let best: RowMarker | null = null
     for (const cell of cells) {
       const marker = cellRowMarker(cell)
@@ -242,8 +281,9 @@ export function buildTableHighlightPlan(rows: string[][]): TableHighlightPlan {
     let min = Number.POSITIVE_INFINITY
     let max = Number.NEGATIVE_INFINITY
 
-    for (const cells of rows) {
-      const raw = cells[col] ?? ''
+    for (let row = 0; row < rows.length; row += 1) {
+      if (plan.totalRows.has(row)) continue
+      const raw = rows[row][col] ?? ''
       if (stripRowMarker(raw).trim() === '') continue
       filled += 1
       const value = parseNumericCell(raw)

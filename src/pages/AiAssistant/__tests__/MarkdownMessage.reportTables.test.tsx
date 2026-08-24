@@ -182,6 +182,66 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     expect(within(secondRow).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.25')
   })
 
+  it('итоговая строка с маркером: без фона, маркер вырезан, без градиента', () => {
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| 🟢 **Усього** | 503 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const rows = bodyRows()
+    const total = rows[2]
+
+    // Маркер на итоге игнорируется барьером: ни фона, ни класса маркера.
+    expect(total).not.toHaveAttribute('data-row-marker')
+    expect(total).not.toHaveClass('assistant-good-row')
+    // Маркер вырезан из отображения, но текст итога и число на месте.
+    expect(total.textContent).not.toContain('🟢')
+    expect(total).toHaveTextContent('Усього')
+    expect(total).toHaveTextContent('503')
+    // Авто-градиент к итогу не применяется — итог не сравнивается с данными.
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
+  it('итоговая строка без маркера («РАЗОМ КОНТАКТ-ЦЕНТР») рендерится обычной', () => {
+    const md = [
+      '| Відділ | Сума |',
+      '| --- | --- |',
+      '| Стягнення | 100 |',
+      '| Юристи | 300 |',
+      '| РАЗОМ КОНТАКТ-ЦЕНТР | 400 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const total = bodyRows()[2]
+
+    expect(total).not.toHaveAttribute('data-row-marker')
+    expect(total).toHaveTextContent('РАЗОМ КОНТАКТ-ЦЕНТР')
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
+  it('итог исключён из шкалы: строки данных красятся по своим min/max', () => {
+    // Итог 400 не должен «сжечь» шкалу — данные 100..300 дают 0.00 и 1.00.
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| Разом | 400 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [first, second, total] = bodyRows()
+
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.00')
+    expect(within(second).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '1.00')
+    expect(within(second).getAllByRole('cell')[1]).toHaveAttribute('data-heat-max', 'true')
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
   it('нечисловая таблица остаётся без тепловой карты', () => {
     render(<MarkdownMessage>{TEXT_TABLE_MD}</MarkdownMessage>)
     const table = screen.getByTestId('markdown-table')
