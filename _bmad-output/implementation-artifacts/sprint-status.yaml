@@ -918,7 +918,7 @@ development_status:
   # (main holds D34/D36/D37; story-4-9 still holds D35 unmerged -- re-verify by git fetch across
   # every open story-* branch, not just main). Ledger declared before work: floor 18, ceiling 22,
   # disposition OPEN. Ten dispatches plus one free HTTP-400 zero-run rejection.
-  5-4-record-the-validated-candidate-in-the-registry: in-progress
+  5-4-record-the-validated-candidate-in-the-registry: review
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional
