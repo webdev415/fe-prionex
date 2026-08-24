@@ -93,6 +93,11 @@ export function IncomingCallWindowContainer({
   // Held here rather than inside the form: minimising unmounts the window, and
   // a comment written while the caller is on the line cannot be recovered.
   const [draft, setDraft] = useState<Partial<CallInteractionDraftState>>({})
+  // The operator ended the call from this window. Tracked separately from the
+  // `ended` prop, which reports the caller ringing off: both have to leave the
+  // window standing, because the draft lives here and ending a call before
+  // writing it up is ordinary rather than exceptional.
+  const [endedByOperator, setEndedByOperator] = useState(false)
 
   // Registered for as long as the window is up, so `isCallActive()` is true
   // during an inbound call and the click-to-call guard on the client pages
@@ -108,15 +113,16 @@ export function IncomingCallWindowContainer({
     }
   }, [])
 
+  const isEnded = ended || endedByOperator
   const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'
   // Ticks the conversation clock. Derived from the answer time rather than
   // counted up, so a re-render or a minimise-and-restore cannot drift it.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    if (answeredAt === null || ended) return
+    if (answeredAt === null || isEnded) return
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [answeredAt, ended])
+  }, [answeredAt, isEnded])
   const durationSeconds = answeredAt === null ? null : Math.floor((now - answeredAt) / 1000)
 
   const { data: types } = useInteractionTypes()
@@ -166,14 +172,15 @@ export function IncomingCallWindowContainer({
   // Nothing can be filed without the interaction type, and an operator who
   // presses Save while the lookups are unavailable used to get silence — no
   // toast, no error, no saved state. Disabling says so instead.
-  const canSaveInteraction =
-    Boolean(inboundType) && (clients.length === 0 || includedClientIds.length > 0)
+  // At least one client, always. `interactions.client_id` is NOT NULL and the
+  // bulk endpoint requires a non-empty list, so an interaction for a caller who
+  // matched nobody cannot be stored at all — offering Save for it only produces
+  // a 422 and a generic failure toast after the operator has typed it up.
+  const canSaveInteraction = Boolean(inboundType) && includedClientIds.length > 0
 
   const handleSave = async (draft: CallInteractionDraft) => {
     if (!inboundType) return
     await saveInteraction.mutateAsync({
-      // An unknown caller still gets an interaction; it simply belongs to
-      // nobody's card, so the request carries no clients.
       clientIds: includedClientIds,
       typeId: inboundType.id,
       subtypeId: draft.channelId ?? effectiveChannelId,
@@ -235,25 +242,33 @@ export function IncomingCallWindowContainer({
               )
           : undefined
       }
-      ended={ended}
+      ended={isEnded}
       onCancel={() => {
         // Nothing to end once the line is down: the window is only still here
         // so the interaction could be filed, and posting a hangup for a
         // channel Asterisk has torn down fails — leaving a window that cannot
         // be dismissed while it holds the store registration that blocks
         // click-to-call.
-        if (ended) {
+        if (isEnded) {
           onDismiss()
           return
         }
-        // Reject declines a call that is still ringing and records it as
-        // declined; once connected the call is hung up instead, or a finished
-        // conversation is filed as one the operator refused.
-        const ending = phase === 'connected' ? hangup : reject
-        // Dismissed once the request settles rather than only on success: a
-        // failed hangup must not strand the window either, and the operator is
-        // told about the failure by the mutation's own error toast.
-        ending.mutate(incomingCall.call_id, { onSettled: onDismiss })
+        if (phase === 'connected') {
+          // The conversation happened, so there is something to write up. The
+          // window survives the operator's own hang-up exactly as it survives
+          // the caller's — otherwise a draft written during the call is thrown
+          // away by the ordinary act of ending it, with no warning and no way
+          // back, and an interaction cannot be revised once filed.
+          hangup.mutate(incomingCall.call_id, {
+            onSettled: () => setEndedByOperator(true),
+          })
+          return
+        }
+        // Declining a call that never connected leaves nothing to file — the
+        // interaction form only exists once connected — so this one goes.
+        // Dismissed on settle rather than success so a failed reject cannot
+        // strand the window; the mutation's own toast reports the failure.
+        reject.mutate(incomingCall.call_id, { onSettled: onDismiss })
       }}
       acceptPending={answer.isPending}
       holdPending={hold.isPending}

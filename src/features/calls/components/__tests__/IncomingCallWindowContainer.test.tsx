@@ -56,13 +56,20 @@ const incomingCall: IncomingCallData = {
 }
 
 function renderContainer(
-  over: { answeredAt?: number | null; minimized?: boolean; ended?: boolean } = {}
+  over: {
+    answeredAt?: number | null
+    minimized?: boolean
+    ended?: boolean
+    noClients?: boolean
+  } = {}
 ) {
   const onDismiss = vi.fn()
   const onMinimize = vi.fn()
   const ui = (minimized: boolean) => (
     <IncomingCallWindowContainer
-      incomingCall={incomingCall}
+      incomingCall={
+        over.noClients ? { ...incomingCall, client_id: undefined, clients: [] } : incomingCall
+      }
       answeredAt={over.answeredAt ?? null}
       onAnswered={onAnsweredSpy}
       agentExtension="2091"
@@ -164,6 +171,19 @@ describe('IncomingCallWindowContainer', () => {
     expect(saveInteraction.mutateAsync.mock.calls[0][0].subtypeId).toBe(9)
   })
 
+  it('does not offer to file an interaction for a caller who matched nobody', async () => {
+    renderContainer({ answeredAt: Date.now(), noClients: true })
+
+    const [resultTrigger] = screen.getAllByRole('combobox')
+    fireEvent.click(resultTrigger)
+    fireEvent.click(await screen.findByText('Refusal'))
+
+    // interactions.client_id is NOT NULL and the bulk endpoint requires at
+    // least one id, so this interaction cannot be stored at all. Offering Save
+    // only produces a 422 after the operator has typed the whole thing.
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
+  })
+
   it('will not file an interaction against nobody when clients matched', async () => {
     renderContainer({ answeredAt: Date.now() })
 
@@ -258,6 +278,32 @@ describe('IncomingCallWindowContainer', () => {
       // registration that blocks click-to-call.
       expect(hangupCall.mutate).not.toHaveBeenCalled()
       expect(rejectCall.mutate).not.toHaveBeenCalled()
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('keeps the write-up when the operator ends the call themselves', async () => {
+      renderContainer({ answeredAt: Date.now() })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Promised Friday' } })
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel|close/i }))
+      const [, options] = hangupCall.mutate.mock.calls[0]
+      act(() => options.onSettled())
+
+      // The window survives the caller ringing off precisely so a half-written
+      // interaction is not lost. Ending the call yourself and then writing it
+      // up is ordinary, and used to throw the draft away with no warning.
+      await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Promised Friday'))
+      expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument()
+    })
+
+    it('still dismisses a call declined before it connected', () => {
+      const { onDismiss } = renderContainer({ answeredAt: null })
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+      const [, options] = rejectCall.mutate.mock.calls[0]
+      options.onSettled()
+
+      // Nothing was said, so there is nothing to keep the window open for.
       expect(onDismiss).toHaveBeenCalled()
     })
 
