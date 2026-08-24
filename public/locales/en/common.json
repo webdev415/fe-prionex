@@ -394,18 +394,37 @@
     "tabs": {
       "tasks": "Tasks",
       "starred": "Starred",
+      "training": "Training",
       "payments": "Pending Payments",
       "calls": "Inbound Calls",
       "rrPayments": "RR Payments",
-      "ubki": "UBKI"
+      "ubki": "UBKI",
+      "other": "Other",
+      "read": "Read"
     },
     "empty": {
       "tasks": "No overdue tasks",
       "starred": "No starred tasks",
+      "training": "No training notifications",
       "payments": "No pending payments",
       "calls": "No inbound calls",
       "rrPayments": "No RR payments due",
-      "ubki": "No UBKI alerts"
+      "ubki": "No UBKI alerts",
+      "other": "No other notifications",
+      "read": "No read notifications in the last 30 days"
+    },
+    "trainingTypes": {
+      "one_on_one_scheduled": "1-on-1",
+      "one_on_one_reminder": "1-on-1 soon",
+      "course_assigned": "Course",
+      "assignment_taken": "Assignment",
+      "correction_task_assigned": "Correction task",
+      "drill_assigned": "Drill"
+    },
+    "training": {
+      "withTrainer": "With: {{name}}",
+      "durationMin_one": "{{count}} min",
+      "durationMin_other": "{{count}} min"
     },
     "taskActions": {
       "completeAria": "Complete task",

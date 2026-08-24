@@ -399,18 +399,39 @@
     "tabs": {
       "tasks": "Завдання",
       "starred": "Закріплені",
+      "training": "Навчання",
       "payments": "Очікувані платежі",
       "calls": "Вхідні дзвінки",
       "rrPayments": "RR платежі",
-      "ubki": "UBKI"
+      "ubki": "UBKI",
+      "other": "Інше",
+      "read": "Прочитані"
     },
     "empty": {
       "tasks": "Немає прострочених завдань",
       "starred": "Немає закріплених завдань",
+      "training": "Немає повідомлень про навчання",
       "payments": "Немає очікуваних платежів",
       "calls": "Немає вхідних дзвінків",
       "rrPayments": "Немає платежів RR",
-      "ubki": "Немає сповіщень UBKI"
+      "ubki": "Немає сповіщень UBKI",
+      "other": "Немає інших повідомлень",
+      "read": "Немає прочитаних повідомлень за останні 30 днів"
+    },
+    "trainingTypes": {
+      "one_on_one_scheduled": "1-на-1",
+      "one_on_one_reminder": "1-на-1 скоро",
+      "course_assigned": "Курс",
+      "assignment_taken": "Звернення",
+      "correction_task_assigned": "Корекційне завдання",
+      "drill_assigned": "Вправа"
+    },
+    "training": {
+      "withTrainer": "З: {{name}}",
+      "durationMin_one": "{{count}} хв",
+      "durationMin_few": "{{count}} хв",
+      "durationMin_many": "{{count}} хв",
+      "durationMin_other": "{{count}} хв"
     },
     "taskActions": {
       "completeAria": "Завершити завдання",
