@@ -49,6 +49,8 @@ import {
   parseNumericCell,
   type NumericColumn,
   type TableHighlightPlan,
+  isMarkerCell,
+  stripRowMarker,
 } from './reportTableHighlight'
 import {
   AssistantBlockedRef,
@@ -221,6 +223,33 @@ function rowChildren(row: ReactElement): ReactNode[] {
   return children == null ? [] : [children]
 }
 
+/**
+ * Ячейка помеченной строки без ведущего маркера-«светофора» в отображении.
+ * Маркер — служебный префикс для подсветки: строку красит фон, повторять его
+ * значком в тексте не нужно. Вырезаем только ведущую строковую ноду; ячейка
+ * без маркера (или с не-строковым началом) возвращается той же ссылкой.
+ */
+function stripCellMarker(cell: ReactNode): ReactNode {
+  if (!isValidElement(cell)) return cell
+  const props = cell.props as DecoratedCellProps
+  const { children } = props
+  const strip = (value: ReactNode): ReactNode =>
+    typeof value === 'string' && isMarkerCell(value) ? stripRowMarker(value) : value
+  if (typeof children === 'string') {
+    const stripped = strip(children)
+    if (stripped === children) return cell
+    return cloneElement(cell as ReactElement<Record<string, unknown>>, { children: stripped })
+  }
+  if (Array.isArray(children) && children.length > 0) {
+    const first = strip(children[0])
+    if (first === children[0]) return cell
+    return cloneElement(cell as ReactElement<Record<string, unknown>>, {
+      children: [first, ...children.slice(1)],
+    })
+  }
+  return cell
+}
+
 /** Тексты ячеек строки — вход для {@link buildTableHighlightPlan}. */
 function rowCellTexts(row: ReactNode): string[] {
   if (!isValidElement(row)) return []
@@ -256,8 +285,9 @@ function decorateCell(cell: ReactNode, column: NumericColumn | undefined): React
  * ПЕРЕКРЫВАЕТ авто-градиент — помеченную строку красим целиком (жёлтый/красный/
  * зелёный) и числовые ячейки не трогаем, иначе зелёный градиент проступил бы
  * сквозь красную строку «больше = хуже». Строка без маркера получает обычный
- * зелёный градиент по числовым ячейкам. Сам маркер из текста не убираем — он
- * должен остаться и в копипасте.
+ * зелёный градиент по числовым ячейкам. Сам маркер — СЛУЖЕБНЫЙ символ для этой
+ * подсветки: из отображения он вырезается (решение CEO 24.08 «смайлики не
+ * нужны» — фон строки говорит сам), в markdown-исходнике ответа он остаётся.
  *
  * Если красить нечего (нечисловая строка без маркера), возвращаем ту же строку,
  * а не её клон: у отчёта без чисел дерево обязано остаться прежним.
@@ -273,6 +303,7 @@ function decorateRow(row: ReactNode, rowIndex: number, plan: TableHighlightPlan)
       className: cn(props.className, `assistant-${marker}-row`),
       style: { ...props.style, backgroundColor: markerBackground(marker) },
       'data-row-marker': marker,
+      children: rowChildren(row).map(stripCellMarker),
     })
   }
 
