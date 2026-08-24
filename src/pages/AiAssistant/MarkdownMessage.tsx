@@ -40,12 +40,12 @@ import {
 } from './assistantMarkers'
 import { resolveAssistantSource } from './assistantFiles'
 import {
-  attentionBackground,
   buildTableHighlightPlan,
   cellHeatRatio,
   heatBackground,
   isAssistantReportTablesEnabled,
   isConclusionParagraph,
+  markerBackground,
   parseNumericCell,
   type NumericColumn,
   type TableHighlightPlan,
@@ -228,10 +228,11 @@ function rowCellTexts(row: ReactNode): string[] {
 }
 
 /**
- * Ячейка числовой колонки: спокойная нейтральная заливка по величине и
- * полужирный максимум (тёплого тона тут быть не должно — он только у «⚠️»-строк).
- * Нечисловая ячейка внутри числовой колонки (прочерк, «—») остаётся нетронутой —
- * заливать её нечем.
+ * Ячейка числовой колонки: зелёный градиент по величине (больше = насыщеннее) и
+ * полужирный максимум. Направление метрики градиент не знает — его задаёт маркер
+ * строки, который перекрывает эту заливку (см. {@link decorateRow}). Нечисловая
+ * ячейка внутри числовой колонки (прочерк, «—») остаётся нетронутой — заливать
+ * её нечем.
  */
 function decorateCell(cell: ReactNode, column: NumericColumn | undefined): ReactNode {
   if (!isValidElement(cell) || !column) return cell
@@ -251,18 +252,31 @@ function decorateCell(cell: ReactNode, column: NumericColumn | undefined): React
 }
 
 /**
- * Строка тела таблицы: раскрашенные числовые ячейки плюс, если в строке есть
- * «⚠️», лёгкий янтарный фон на всю строку. Сам маркер из текста не убираем —
- * он должен остаться и в копипасте.
+ * Строка тела таблицы. «Светофор»: маркер строки от модели (⚠️/🔴/🟢)
+ * ПЕРЕКРЫВАЕТ авто-градиент — помеченную строку красим целиком (жёлтый/красный/
+ * зелёный) и числовые ячейки не трогаем, иначе зелёный градиент проступил бы
+ * сквозь красную строку «больше = хуже». Строка без маркера получает обычный
+ * зелёный градиент по числовым ячейкам. Сам маркер из текста не убираем — он
+ * должен остаться и в копипасте.
  *
- * Если красить нечего (нечисловая таблица без маркеров), возвращаем ту же
- * строку, а не её клон: у отчёта без чисел дерево обязано остаться прежним.
+ * Если красить нечего (нечисловая строка без маркера), возвращаем ту же строку,
+ * а не её клон: у отчёта без чисел дерево обязано остаться прежним.
  */
 function decorateRow(row: ReactNode, rowIndex: number, plan: TableHighlightPlan): ReactNode {
   if (!isValidElement(row)) return row
 
-  const attention = plan.attentionRows.has(rowIndex)
-  if (plan.columns.size === 0 && !attention) return row
+  const marker = plan.markerRows.get(rowIndex)
+  if (marker) {
+    const element = row as ReactElement<Record<string, unknown>>
+    const props = row.props as DecoratedCellProps
+    return cloneElement(element, {
+      className: cn(props.className, `assistant-${marker}-row`),
+      style: { ...props.style, backgroundColor: markerBackground(marker) },
+      'data-row-marker': marker,
+    })
+  }
+
+  if (plan.columns.size === 0) return row
 
   let columnIndex = 0
   let touched = false
@@ -274,23 +288,10 @@ function decorateRow(row: ReactNode, rowIndex: number, plan: TableHighlightPlan)
     return decorated
   })
 
-  if (!touched && !attention) return row
+  if (!touched) return row
 
   const element = row as ReactElement<Record<string, unknown>>
-  const props = row.props as DecoratedCellProps
-  // `cloneElement` понимает третий аргумент позиционно: передать его как
-  // `undefined` — значит стереть детей строки, поэтому подменяем детей только
-  // когда в строке правда что-то раскрасили.
-  const patch: Record<string, unknown> = attention
-    ? {
-        className: cn(props.className, 'assistant-attention-row'),
-        style: { ...props.style, backgroundColor: attentionBackground() },
-        'data-attention': 'true',
-      }
-    : {}
-  if (touched) patch.children = cells
-
-  return cloneElement(element, patch)
+  return cloneElement(element, { children: cells })
 }
 
 /**

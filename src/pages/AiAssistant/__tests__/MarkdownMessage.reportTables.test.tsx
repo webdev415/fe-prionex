@@ -13,6 +13,15 @@ const REPORT_MD = [
   'Висновок: середній чек виріс.',
 ].join('\n')
 
+/** Отчёт без маркеров — чистый зелёный авто-градиент по колонке сумм. */
+const GRADIENT_MD = [
+  '| Оператор | Сума |',
+  '| --- | --- |',
+  '| Петренко | 1 209 239,06 |',
+  '| Коваль | 12 500 |',
+  '| Шевченко | 340 236 |',
+].join('\n')
+
 /**
  * Разметка того же отчёта ДО доработки (снята с origin/development).
  * Атрибут `node="[object Object]"` на `<table>` — давняя особенность
@@ -66,7 +75,7 @@ describe('MarkdownMessage — отчётные таблицы, флаг выкл
     render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
     const table = screen.getByTestId('markdown-table')
     expect(table.querySelectorAll('[data-heat]')).toHaveLength(0)
-    expect(table.querySelectorAll('[data-attention]')).toHaveLength(0)
+    expect(table.querySelectorAll('[data-row-marker]')).toHaveLength(0)
     expect(screen.queryByTestId('markdown-conclusion')).not.toBeInTheDocument()
   })
 })
@@ -81,7 +90,7 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
   })
 
   it('заливает только числовую колонку и не трогает колонку имён', () => {
-    render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+    render(<MarkdownMessage>{GRADIENT_MD}</MarkdownMessage>)
 
     const [first, second] = bodyRows()
     const firstCells = within(first).getAllByRole('cell')
@@ -97,7 +106,7 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
   })
 
   it('максимум колонки дополнительно выделен полужирным', () => {
-    render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+    render(<MarkdownMessage>{GRADIENT_MD}</MarkdownMessage>)
 
     const [first, second] = bodyRows()
     const max = within(first).getAllByRole('cell')[1]
@@ -109,23 +118,72 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     expect(min).not.toHaveClass('font-semibold')
   })
 
-  it('строка с «⚠️» получает класс подсветки, а маркер остаётся в тексте', () => {
+  it('строка с «⚠️» — жёлтый фон строки, маркер перекрывает авто-градиент', () => {
     render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
 
     const [first, second] = bodyRows()
     expect(second).toHaveClass('assistant-attention-row')
-    expect(second).toHaveAttribute('data-attention', 'true')
+    expect(second).toHaveAttribute('data-row-marker', 'attention')
     expect(second).toHaveTextContent('⚠️ Коваль')
+    // Приоритет маркера: помеченная строка целиком, без поячеечного градиента.
+    expect(within(second).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
 
-    expect(first).not.toHaveClass('assistant-attention-row')
-    expect(first).not.toHaveAttribute('data-attention')
+    // Немаркированная строка — обычный зелёный градиент.
+    expect(first).not.toHaveAttribute('data-row-marker')
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat')
+  })
+
+  it('строка с «🔴» — красный фон (плохо), строка с «🟢» — зелёный (хорошо)', () => {
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 500 |',
+      '| 🔴 Коваль | 0 |',
+      '| 🟢 Шевченко | 900 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [, bad, good] = bodyRows()
+
+    // Тип «светофора» доказываем классом и data-атрибутом; точный токен фона —
+    // в юнит-тесте markerBackground (jsdom не парсит color-mix в inline-style).
+    expect(bad).toHaveClass('assistant-bad-row')
+    expect(bad).toHaveAttribute('data-row-marker', 'bad')
+    expect(bad).toHaveTextContent('🔴 Коваль')
+
+    expect(good).toHaveClass('assistant-good-row')
+    expect(good).toHaveAttribute('data-row-marker', 'good')
+    expect(good).toHaveTextContent('🟢 Шевченко')
+  })
+
+  it('красный маркер перебивает зелёный градиент даже на максимуме колонки', () => {
+    // Колонка «больше = хуже»: максимум помечен 🔴 — зелёного градиента на нём быть
+    // не должно, а немаркированные строки градиент сохраняют.
+    const md = [
+      '| Оператор | Прострочка |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| 🔴 Шевченко | 900 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [first, secondRow, worst] = bodyRows()
+
+    expect(worst).toHaveAttribute('data-row-marker', 'bad')
+    expect(within(worst).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+    expect(within(worst).getAllByRole('cell')[1]).not.toHaveClass('font-semibold')
+
+    // Немаркированные строки — обычный зелёный градиент по шкале всей колонки.
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.00')
+    expect(within(secondRow).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.25')
   })
 
   it('нечисловая таблица остаётся без тепловой карты', () => {
     render(<MarkdownMessage>{TEXT_TABLE_MD}</MarkdownMessage>)
     const table = screen.getByTestId('markdown-table')
     expect(table.querySelectorAll('[data-heat]')).toHaveLength(0)
-    expect(table.querySelectorAll('[data-attention]')).toHaveLength(0)
+    expect(table.querySelectorAll('[data-row-marker]')).toHaveLength(0)
   })
 
   it('нечисловая таблица даёт ту же разметку, что и с выключенным флагом', () => {
@@ -161,8 +219,8 @@ describe('MarkdownMessage — отчётные таблицы, флаг вклю
     render(<MarkdownMessage>{md}</MarkdownMessage>)
     const [first, second] = bodyRows()
 
-    expect(first).not.toHaveAttribute('data-attention')
-    expect(second).toHaveAttribute('data-attention', 'true')
+    expect(first).not.toHaveAttribute('data-row-marker')
+    expect(second).toHaveAttribute('data-row-marker', 'attention')
     // Клонирование строки не должно стереть её ячейки: колонок по-прежнему две.
     expect(within(second).getAllByRole('cell')).toHaveLength(2)
     expect(second).toHaveTextContent('⚠️ Коваль')

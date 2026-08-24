@@ -1,15 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ATTENTION_MARKER,
-  ATTENTION_OPACITY,
-  attentionBackground,
+  BAD_MARKER,
   buildTableHighlightPlan,
   cellHeatRatio,
+  cellRowMarker,
+  GOOD_MARKER,
   heatBackground,
   HEAT_COLOR_TOKEN,
   isAssistantReportTablesEnabled,
   isAttentionCell,
   isConclusionParagraph,
+  MARKER_STYLE,
+  markerBackground,
   MAX_HEAT_OPACITY,
   MIN_HEAT_OPACITY,
   parseNumericCell,
@@ -55,17 +58,40 @@ describe('parseNumericCell — украинские форматы чисел', 
     expect(parseNumericCell(raw)).toBeNull()
   })
 
-  it('игнорирует ведущий маркер внимания — ячейка остаётся числовой', () => {
+  it('игнорирует любой ведущий маркер-«светофор» — ячейка остаётся числовой', () => {
     expect(parseNumericCell(`${ATTENTION_MARKER} 1 209 239,06`)).toBe(1209239.06)
     expect(parseNumericCell('⚠ 512')).toBe(512)
+    expect(parseNumericCell(`${BAD_MARKER} 0`)).toBe(0)
+    expect(parseNumericCell(`${GOOD_MARKER} 1 500 000`)).toBe(1500000)
   })
 })
 
-describe('isAttentionCell', () => {
-  it('видит маркер в начале ячейки', () => {
+describe('cellRowMarker — тип ведущего маркера-«светофора»', () => {
+  it('различает ⚠️ / 🔴 / 🟢 в начале ячейки', () => {
+    expect(cellRowMarker(`${ATTENTION_MARKER} Коваль`)).toBe('attention')
+    expect(cellRowMarker(`${BAD_MARKER} 0 домовленостей`)).toBe('bad')
+    expect(cellRowMarker(`${GOOD_MARKER} 1 500 000`)).toBe('good')
+  })
+
+  it('видит маркер и без вариационного селектора, и с пробелами', () => {
+    expect(cellRowMarker('⚠Коваль')).toBe('attention')
+    expect(cellRowMarker(`  ${BAD_MARKER}  просадка`)).toBe('bad')
+  })
+
+  it('не реагирует на маркер в середине или на его отсутствие', () => {
+    expect(cellRowMarker(`Коваль ${ATTENTION_MARKER}`)).toBeNull()
+    expect(cellRowMarker(`сума ${BAD_MARKER}`)).toBeNull()
+    expect(cellRowMarker('Коваль')).toBeNull()
+    expect(cellRowMarker('')).toBeNull()
+  })
+})
+
+describe('isAttentionCell — совместимость (только ⚠️)', () => {
+  it('видит только маркер внимания, не 🔴/🟢', () => {
     expect(isAttentionCell(`${ATTENTION_MARKER} Коваль`)).toBe(true)
     expect(isAttentionCell('⚠Коваль')).toBe(true)
-    expect(isAttentionCell(`  ${ATTENTION_MARKER}  0 домовленостей`)).toBe(true)
+    expect(isAttentionCell(`${BAD_MARKER} 0`)).toBe(false)
+    expect(isAttentionCell(`${GOOD_MARKER} 1 500 000`)).toBe(false)
   })
 
   it('не реагирует на маркер в середине или на его отсутствие', () => {
@@ -136,29 +162,43 @@ describe('buildTableHighlightPlan — градиент только числов
     expect(plan.columns.size).toBe(0)
   })
 
-  it('собирает строки с маркером внимания по их индексу', () => {
+  it('собирает строки с маркерами по индексу и типу «светофора»', () => {
     const plan = buildTableHighlightPlan([
       ['Петренко', '350'],
       [`${ATTENTION_MARKER} Коваль`, '0'],
-      ['Шевченко', '120'],
+      [`${BAD_MARKER} Шевченко`, '0'],
+      [`${GOOD_MARKER} Ткаченко`, '900'],
     ])
-    expect([...plan.attentionRows]).toEqual([1])
+    expect([...plan.markerRows.entries()]).toEqual([
+      [1, 'attention'],
+      [2, 'bad'],
+      [3, 'good'],
+    ])
+  })
+
+  it('при нескольких маркерах в строке побеждает худший (плохо > внимание > хорошо)', () => {
+    const plan = buildTableHighlightPlan([
+      [`${GOOD_MARKER} Петренко`, `${BAD_MARKER} 0`],
+      [`${GOOD_MARKER} Коваль`, `${ATTENTION_MARKER} 50`],
+    ])
+    expect(plan.markerRows.get(0)).toBe('bad')
+    expect(plan.markerRows.get(1)).toBe('attention')
   })
 
   it('маркер в числовой ячейке не выбивает колонку из числовых', () => {
     const plan = buildTableHighlightPlan([
       ['Петренко', '350'],
-      ['Коваль', `${ATTENTION_MARKER} 0`],
+      ['Коваль', `${BAD_MARKER} 0`],
       ['Шевченко', '120'],
     ])
     expect(plan.columns.has(1)).toBe(true)
-    expect(plan.attentionRows.has(1)).toBe(true)
+    expect(plan.markerRows.get(1)).toBe('bad')
   })
 
   it('на пустой таблице возвращает пустой план', () => {
     const plan = buildTableHighlightPlan([])
     expect(plan.columns.size).toBe(0)
-    expect(plan.attentionRows.size).toBe(0)
+    expect(plan.markerRows.size).toBe(0)
   })
 })
 
@@ -176,7 +216,7 @@ describe('cellHeatRatio / heatBackground', () => {
     expect(cellHeatRatio(9000, column)).toBe(1)
   })
 
-  it('красит спокойным нейтральным токеном с ростом непрозрачности', () => {
+  it('красит зелёным (success) токеном с ростом непрозрачности', () => {
     expect(heatBackground(0)).toBe(
       `color-mix(in srgb, var(${HEAT_COLOR_TOKEN}) ${MIN_HEAT_OPACITY.toFixed(1)}%, transparent)`
     )
@@ -185,27 +225,32 @@ describe('cellHeatRatio / heatBackground', () => {
     )
   })
 
-  it('масштабная заливка не использует тёплых токенов (тепло = только проблема)', () => {
-    // Решение CEO 24.08: масштаб чисел — нейтрально; тёплое остаётся у «⚠️».
+  it('авто-градиент — зелёный (success), а не тёплый и не красный', () => {
+    // Светофор: масштаб = зелёная гамма; тёплое (внимание) и красное (плохо) —
+    // только у маркеров строк, а не у авто-градиента.
+    expect(HEAT_COLOR_TOKEN).toContain('success')
     for (const ratio of [0, 0.25, 0.5, 0.75, 1]) {
       const bg = heatBackground(ratio)
       expect(bg).not.toMatch(/warning|error|amber|orange|yellow|red/i)
       expect(bg).toContain(HEAT_COLOR_TOKEN)
     }
   })
-
-  it('интенсивность масштаба снижена — потолок не выше 10%', () => {
-    expect(MAX_HEAT_OPACITY).toBeLessThanOrEqual(10)
-    expect(MIN_HEAT_OPACITY).toBeLessThan(MAX_HEAT_OPACITY)
-  })
 })
 
-describe('attentionBackground — единственный тёплый сигнал', () => {
-  it('строка «⚠️» остаётся янтарной на warning-токене', () => {
-    expect(attentionBackground()).toBe(
-      `color-mix(in srgb, var(--color-warning-400) ${ATTENTION_OPACITY}%, transparent)`
+describe('markerBackground — фон строки по «светофору»', () => {
+  it('внимание = жёлтый (warning), плохо = красный (error), хорошо = зелёный (success)', () => {
+    expect(markerBackground('attention')).toBe(
+      `color-mix(in srgb, var(--color-warning-400) ${MARKER_STYLE.attention.opacity}%, transparent)`
     )
-    expect(attentionBackground()).toContain('--color-warning-400')
+    expect(markerBackground('bad')).toContain('--color-error-500')
+    expect(markerBackground('good')).toContain('--color-success-500')
+  })
+
+  it('красный не путается с зелёным, «хорошо» плотнее авто-градиента', () => {
+    expect(markerBackground('bad')).not.toMatch(/success|warning/)
+    expect(markerBackground('good')).not.toMatch(/error|warning/)
+    // «Хорошо» — усиленный зелёный: заметно плотнее потолка авто-градиента.
+    expect(MARKER_STYLE.good.opacity).toBeGreaterThan(MAX_HEAT_OPACITY)
   })
 })
 
