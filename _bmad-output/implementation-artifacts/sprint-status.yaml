@@ -918,7 +918,37 @@ development_status:
   # (main holds D34/D36/D37; story-4-9 still holds D35 unmerged -- re-verify by git fetch across
   # every open story-* branch, not just main). Ledger declared before work: floor 18, ceiling 22,
   # disposition OPEN. Ten dispatches plus one free HTTP-400 zero-run rejection.
-  5-4-record-the-validated-candidate-in-the-registry: review
+  # Code review 2026-08-24 (Opus): CHANGES REQUESTED -> back to in-progress for a fix pass.
+  # Three adversarial layers plus replayed force-tests of every extracted guard. Mechanical gates
+  # re-confirmed green and every build.yml/deploy-stand.yml citation in the story verified accurate;
+  # blast radius is genuinely five files. Three HIGH findings, all "the claim outran the code":
+  # (H1) G5 fails OPEN -- `grep -qF "$CANDIDATE_DIGEST"` with an empty needle matches anything, so
+  # an empty digest output turns the story's strongest guard into an unconditional pass and both
+  # markers get written; verify-on-stand never shape-checks the digest although `record` does at
+  # :377. (H2) AC6's operative verb is unimplemented -- the boundary exists only as a YAML comment,
+  # no run: body prints it (all 15 extracted and scanned), yet AC6 is graded MET on the DISPATCHER'S
+  # own free-text validation_note, which is input, not workflow output. (H3) the digest G5 proves
+  # and the digest the marker records are never compared, though §5 states the agreement as a
+  # design property and the file restates it as prose at :386-387.
+  # Eleven MEDIUM: G6 cannot disagree for any build.yml artifact (tag and label both project the
+  # same SHORT_SHA -- it narrows D33 §6(b), it does not close it); G2/G3 are line-oriented and a
+  # two-line image_tag satisfies both; G5 reintroduces two docker-inspect patterns deploy-stand.yml
+  # fixed under its own review ({{.RepoDigests}} renders [] non-empty, so its tool-failure branch is
+  # dead); the stderr-text absence classifier can silently convert AC8's refusal into a repoint --
+  # the one misclassification the read-back cannot catch; G6's parse-failure classifier is
+  # unreachable under set -e; the TOCTOU residual is stated self-contradictorily and its
+  # recorder-vs-deploy half is unearned; eight unexercised branches undisclosed; AC7's "after every
+  # refusal" was one read-back rendered as five; the ledger overrun is understated by 3, not 2;
+  # AC1/AC5 graded MET on evidence the story elsewhere says was never obtained; two line citations
+  # inside workflow comments, one falsified by this very commit.
+  # Three DECISIONS for Oleg: where validation_note actually lives (its only sink is job logs this
+  # instance has failed to archive five consecutive times, so the marker's central claim survives
+  # only by half); preprod-current's ordering contract (it moves BACKWARDS silently -- the sentence
+  # Epic 6.5 consumes); and the permanently-unrecordable second artifact of an already-recorded
+  # commit (non-reproducible build + AC8 refusal + Prohibition 14 = only exit is a manual DELETE).
+  # G4's structural vacuity was disclosed correctly by the dev and is NOT a finding; the Prohibition
+  # 3 assertion is the same shape and was not disclosed -- routed to deferred-work.
+  5-4-record-the-validated-candidate-in-the-registry: in-progress
   5-5-establish-the-release-validation-checklist: backlog
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional

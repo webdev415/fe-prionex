@@ -4,7 +4,7 @@ baseline_commit: 28f7fd36
 
 # Story 5.4: Record the Validated Candidate in the Registry
 
-Status: review
+Status: in-progress
 
 <!-- Contexted 2026-08-24 against `main` at `28f7fd36` — the merge of PR #79, Story 5.3's ledger
      closeout. Branch `story-5-4/pr-1-context`, cut from a scratchpad worktree because the primary
@@ -1685,6 +1685,306 @@ the review cycle completes, not a surprise at close-out.
   lock-holder debris/sweep-scoping decline, and finding 8's fifth archived-log check)
 
 ### Review Findings
+
+**Code review, 2026-08-24 (Opus, per the standing model split).** Three adversarial layers (Blind
+Hunter, Edge Case Hunter, Acceptance Auditor) plus the reviewer's own force-tests. Every guard was
+re-extracted from the shipped file with `yaml.safe_load` and executed locally against crafted
+inputs — the findings below are **replayed, not read**. Mechanical gates independently re-confirmed
+green: YAML parses, 15/15 `run:` bodies start `set -euo pipefail`, 0 contain `${{`, 15/15 pass
+`bash -n`, blast radius is exactly five files with `deploy-stand.yml`/`deploy-preprod.yml`/
+`build.yml` absent. Every `build.yml` and `deploy-stand.yml` citation in the story was checked and
+is accurate.
+
+**Verdict: CHANGES REQUESTED.** The evidence discipline here is the best this project has produced
+— ten live dispatches, four guards with earned failing rows, every write verified by an independent
+registry read rather than a log line, and the ledger overrun declared proactively. The three HIGH
+findings are not sloppiness; each is a place where the *claim* outran the *code*, which is the one
+failure mode this story was written to prevent.
+
+#### Decisions needed (owner: Oleg)
+
+- [ ] [Review][Decision] **D1 (HIGH) — `validation_note` is declared "the record" and written only
+      to a sink this instance cannot read.** `record-preprod-candidate.yml:120` ("Echoed verbatim
+      into the log — it is the record") and `:303-308`. The note goes nowhere else: no OCI
+      annotation, no label, no git note, no job summary. This story's own Task 2.8 recorded the
+      **fifth consecutive** `log_in_storage=f`, and Tasks 5.4/6.2/9.2 each record the `record`
+      job's log as unarchived at verification time. So the marker's central claim — `preprod-<sha>`
+      exists iff "a human asserted validation passed **and named what they checked**"
+      (`:16-19`) — survives only by half: the verdict persists in the registry, the human's
+      statement does not. Story 6.5 cannot read it back. **Options:** (a) write the note as an OCI
+      annotation on the marker at `imagetools create` time; (b) `$GITHUB_STEP_SUMMARY`; (c) accept
+      that only the verdict survives and delete the "it is the record" claim from `:120` and D38.
+      Not disclosed in any known-limits list.
+- [ ] [Review][Decision] **D2 (MEDIUM) — `preprod-current` has no ordering contract and moves
+      backwards silently.** `:593-598` moves on any digest difference, in either direction.
+      Re-recording an older candidate — which G5 permits the moment that candidate is redeployed —
+      regresses the pointer with no warning and no log distinction from a forward move. Nothing in
+      the file, D38 or this story says whether `preprod-current` means *most recently validated* or
+      *most recently recorded*. **This is the sentence Epic 6 will consume**, and §6's table only
+      says "moving pointer to the most recently validated candidate", which the code does not
+      enforce. **Options:** (a) state the contract as "last recorded, which was serving on the stand
+      at that moment" and leave the code alone; (b) add a monotonicity refusal.
+- [ ] [Review][Decision] **D3 (MEDIUM) — a second artifact of an already-recorded commit is
+      permanently unrecordable.** The build is non-reproducible (`vite.config.ts:8`, AC2's own
+      residual 1), so a rebuild of commit `X` yields digest `B` while `preprod-X` already names `A`.
+      `:532-538` refuses, and Prohibition 14 forbids deleting the marker — so the only exit is
+      Oleg's manual `DELETE`. Meanwhile the stand serves `B` and Story 6.5, which gates on the
+      marker's **existence for a commit**, passes while the validated artifact is not the shipped
+      one. AC8 frames the refusal purely as defence in depth and never names this operational dead
+      end. **Options:** (a) accept and record it in D38 as a known consequence; (b) key history on
+      digest (`preprod-<hex>-<digest8>`); (c) allow a documented override input.
+
+#### Patch
+
+- [ ] [Review][Patch] **H1 (HIGH) — G5 fails OPEN when the digest is empty; it is the one guard in
+      the file that fails in the unsafe direction** [`.forgejo/workflows/record-preprod-candidate.yml:293`].
+      `grep -qF "$CANDIDATE_DIGEST"` with an empty needle matches any input. Replayed locally with
+      `CANDIDATE_DIGEST=""` and a stubbed `docker`: G5 exits **0** and prints
+      `OK: fe-prionex-preprod is healthy and its running .RepoDigests contains .` — the empty value
+      is visible in the message and the run proceeds to write both markers anyway. `verify-on-stand`
+      never shape-checks `steps.digest.outputs.digest` before using it, although the `record` job
+      performs exactly that check on its own re-resolution at `:377`. The header cites D8/D21 at
+      `:84` for output-plumbing surprises on this instance, which is precisely the path that
+      produces an empty value. **Fix:** assert `^sha256:[0-9a-f]{64}$` on `CANDIDATE_DIGEST` at the
+      top of G5, classified as a tool failure.
+- [ ] [Review][Patch] **H2 (HIGH) — AC6's operative verb is unimplemented, and AC6 is graded MET on
+      operator input rather than workflow output** [`record-preprod-candidate.yml:25-34`].
+      AC6 reads "**Then** the workflow itself **prints** … exactly which claims the recording
+      supports"; Dev Notes §9 row 9 repeats "printed by the workflow itself"; and the file's own
+      header at `:25` is titled *"— printed by the workflow itself —"*. All 15 `run:` bodies were
+      extracted and scanned: **none** mentions CORS, browser, `Access-Control`, `Date.now`, or any
+      part of the boundary. The table exists only as a YAML comment, which no execution emits.
+      Task 10.6 nonetheless grades AC6 **MET** (`:1609`) on the grounds that the boundary "is
+      carried into `validation_note`'s own printed content" — that is dispatcher-typed input, not
+      workflow behaviour; it is absent on any dispatch where the operator writes "looks fine"; and
+      Task 5.1 itself records that note's text arriving mangled. **Fix:** add one `echo` step
+      emitting the boundary paragraph in both jobs (or at minimum in `record`), and re-grade AC6
+      **PARTIAL** until it ships.
+- [ ] [Review][Patch] **H3 (HIGH) — the digest G5 proves and the digest the marker records are
+      never compared** [`record-preprod-candidate.yml:236`, `:293`, `:376`, `:541`, `:601`].
+      §5 states the design property explicitly — *"the two resolutions must agree, and if they ever
+      did not, that is a finding rather than a plumbing problem"* — and the file restates it as
+      prose at `:386-387`. **No step asserts it.** `verify-on-stand` proves the stand serves the
+      digest curl returned; `record` independently resolves a digest via `imagetools` and writes
+      *that* one. `build.yml:1476-1516`'s repoint refusal constrains `build.yml` only; an operator
+      `DELETE` + re-push repoints the tag freely — and this story's own AC8 disclosure contemplates
+      exactly that `DELETE`. If the tag were repointed between the two jobs, the marker records an
+      artifact the stand was never shown serving: the "records a claim, not evidence" failure G5
+      exists to prevent. **Fix:** expose `verify-on-stand`'s digest as a job output and assert
+      equality in `record` — a cross-check, not a data dependency, so Dev Notes §9 row 6's argument
+      is preserved. If the no-outputs rule is held instead, the residual must be disclosed.
+- [ ] [Review][Patch] **M1 (MEDIUM) — G6 cannot disagree for any `build.yml`-produced image; the
+      claim that it *establishes* the commit over-reaches** [`record-preprod-candidate.yml:36-46`,
+      `:434-439`]. Traced in `build.yml`: the tag is `TAGS="${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}"`
+      (`:933`) and the label is `org.opencontainers.image.version=${{ steps.tags.outputs.short_sha }}`
+      where `short_sha=${SHORT_SHA}` (`:1144`, `:1369`) — the **same variable**. The environment
+      suffix (`:922`) and `org.prionex.environment` (`:1374`) are both `${ENVIRONMENT}`. And
+      `revision` is `FULL_SHA`, of which `SHORT_SHA` is `cut -c1-12` (`:801`). All three G6 clauses
+      are identities on the normal path. G6's real and worthwhile value is detecting an image pushed
+      **outside** `build.yml` — but the header, AC2, D38 §3 and Dev Notes §9 row 3b all say it
+      closes D33 §6(b)'s "nothing establishes the deployed image's commit" gap. It **narrows** that
+      gap against foreign artifacts; it does not close it, because for a `build.yml` artifact it
+      re-reads one variable through a second channel. (`deferred-work.md`'s own G6 entry states the
+      mechanism correctly — it is the load-bearing prose that overshoots.) **Fix:** correct the
+      claim in `:36-46`, `:434-439`, AC2 and D38. Keep the guard.
+- [ ] [Review][Patch] **M2 (MEDIUM) — G2 and G3 are line-oriented; a multi-line `image_tag`
+      satisfies both** [`record-preprod-candidate.yml:162-171`, `:180-195`]. `grep -E '^…$'` anchors
+      per **line**, not per string. Replayed: `IMAGE_TAG=$'sha-00ef3be4743d\nsha-000000000000-preprod'`
+      → G2 rc=0, G3 rc=0, and `derived_hex` becomes the two-line value `00ef3be4743d\nsha-000000000000`,
+      written straight into `$GITHUB_OUTPUT` where it corrupts the `key=value` framing. No write
+      results today (the newline then breaks the digest URL), so this is not exploitable to a
+      registry write — but two shape guards accept a value neither was written to accept, in a file
+      whose entire premise is that the tag's shape is trustworthy. **Fix:** reject any `image_tag`
+      containing a newline (or use `case` globs) before G2.
+- [ ] [Review][Patch] **M3 (MEDIUM) — G5 reintroduces two `docker inspect` patterns that
+      `deploy-stand.yml` fixed under its own code review** [`record-preprod-candidate.yml:271`,
+      `:286-291`]. (1) `--format '{{.RepoDigests}}'` renders an empty slice as the literal `[]`,
+      which is **non-empty**, so the `-z` "Tool failure, not a verdict" branch at `:287` is dead for
+      an image with no registry provenance and control falls through to `:293`, reporting a
+      provenance problem as the verdict *"the stand is NOT demonstrably serving the candidate"*.
+      `deploy-stand.yml:2127` uses `{{range .RepoDigests}}{{.}} {{end}}` and its review note at
+      `:2123-2126` names this exact misattribution. (2) `--format '{{.State.Health.Status}}'`
+      template-errors when `.State.Health` is nil; `deploy-stand.yml:1955`/`:2396` use
+      `{{if .State.Health}}…{{else}}none{{end}}`. The story says G5 "mirrors"
+      `deploy-stand.yml:2098-2142` — it mirrors the pre-fix shape. **Fix:** adopt both guarded
+      templates. Also split `:272-277`, which currently collapses *container absent*, *no
+      healthcheck defined* and *genuinely unhealthy* into one verdict.
+- [ ] [Review][Patch] **M4 (MEDIUM) — the absence classifier can silently convert AC8's refusal
+      into a repoint, and it is the one misclassification the read-back cannot catch**
+      [`record-preprod-candidate.yml:510-522`]. Absence is inferred from `imagetools` **stderr text**
+      (`MANIFEST_UNKNOWN` or `": not found"`). A false positive on the `preprod-<sha>` step skips the
+      pre-digest comparison entirely and attaches over an existing, different digest; the read-back
+      at `:543-549` then compares the result against `CANDIDATE_DIGEST` and passes. Replayed: the
+      ambiguous branch (`mode=ambig`) correctly refuses with zero writes, so the fail-closed
+      direction is sound — it is the fail-*open* direction that has no second check.
+      `verify-on-stand` already carries the robust form (HTTP 404 against `/v2/…/manifests/`).
+      **Fix:** probe absence over HTTP and branch on the status code, not on stderr.
+- [ ] [Review][Patch] **M5 (MEDIUM) — G6's parse-failure classifier is unreachable, and its input
+      can be corrupted by stderr** [`record-preprod-candidate.yml:401`, `:406-418`]. `:401` captures
+      with `2>&1`, so any buildx warning on a **successful** inspect is prepended to the JSON.
+      `:406-408` then run `jq` under `set -euo pipefail` with no `|| true`: a real parse failure
+      aborts the step immediately and the carefully-worded PARSE-vs-MISMATCH block at `:410-418` —
+      the block the comment at `:395-400` insists "must say so, not be folded into the same message"
+      — never prints. The `-z` guard only fires when `jq` *succeeds* and returns empty. The stated
+      contract is inverted by the code. **Fix:** drop `2>&1` (capture stderr separately, as the
+      write steps do), and guard each `jq` with `|| true`.
+- [ ] [Review][Patch] **M6 (MEDIUM) — the check-to-write residual is stated self-contradictorily,
+      and the "proven live" half of it is unearned** [`record-preprod-candidate.yml:64-69`;
+      `deferred-work.md`, the TOCTOU restatement]. `:66-67` says two concurrent recorder runs "could
+      both read absent and both attach", then in the same breath says the shared group "serializes
+      recorder runs against each other" — which it does, and which runs 1217/1229 demonstrate. Both
+      cannot be true. The **real** residual is a writer outside the group (an operator
+      `imagetools create`, or `DELETE` + rebuild); that is a smaller and different claim, and it is
+      the one worth recording. Separately, the deferred-work entry claims the group is proven to
+      serialize "recorder runs against each other **and against PRE-PROD deploys**" — both cited
+      observations are recorder-vs-recorder, and D8 (1225) completed before D9 (1227) was
+      dispatched, so the recorder-vs-deploy half — the reason §9 chose the shared group — has no
+      run behind it. Finally, the read-back compares against `CANDIDATE_DIGEST` rather than a value
+      unique to this run, so it cannot distinguish "our write landed" from "someone wrote the same
+      digest". **Fix:** rewrite `:64-69` and the deferred-work entry to say what was actually
+      earned. **Answers the review question directly: the window is narrowed correctly and
+      described imprecisely.**
+- [ ] [Review][Patch] **M7 (MEDIUM) — the known-limits disclosure is incomplete: eight unexercised
+      branches are named nowhere.** The disclosed set (G4, G6's failing half, AC8's repoint refusal,
+      AC6's CORS boundary, AC4-UNPROVEN-by-execution, the ledger) is correct as far as it goes, and
+      G4's structural vacuity is stated accurately in `deferred-work.md`. Undisclosed: the
+      digest-resolve `401`/`000`/catch-all classifiers (`:239-263` — `deploy-stand.yml:1086-1108`
+      carries a `simulate_bad_credential` hook specifically to earn its 401 row; this file has no
+      equivalent and the omission is not argued); the empty-credential precheck (`:211-216`); G5's
+      `HEALTH != healthy` branch and both tool-failure branches (`:272-291` — only the digest
+      mismatch was earned at D9); **the ambiguous-read fail-closed branch in both write steps**
+      (`:516-521`, `:577-582` — `build.yml`'s equivalent was earned live at run 719, so this is
+      known-reachable, not theoretical); **the post-write read-back mismatch branch** (`:544-549`,
+      `:604-608` — the branch on which Prohibition 6 and AC1's entire "verified by read-back" claim
+      rest); G6's parse/tool-failure branches (`:402-418` — Task 2.3 force-tested only the label
+      *disagreement*); and G3's exactly-12 clause, which no live row exercised (D5 used
+      `main-preprod`, which fails the shape regex first). **Fix:** add these to the
+      `deferred-work.md` EOF section with their dispositions.
+- [ ] [Review][Patch] **M8 (MEDIUM) — AC7's "after every refusal" was one read-back; the matrix
+      renders it as five** [story `:959-972` vs `:1590-1594`]. AC7 requires "after **every** refusal,
+      `preprod-current` and `preprod-<sha>` are read back … and shown **unchanged**", and Task 7.5
+      honestly records "**Done — single read-back after the entire D2-D6 series**" with an argument
+      for why one read covers five rows. The retro-E5 matrix then prints a per-row *"Marker state
+      after: unchanged, `5e5b190d…`"* for D2, D3, D4, D5 and D6 individually — presenting one
+      observation as five, in the very table whose purpose is to make evidence countable. The
+      argument in 7.5 is sound; the matrix should carry it. **Fix:** mark those five cells as
+      covered by a single post-series read.
+- [ ] [Review][Patch] **M9 (MEDIUM) — the disclosed ledger overrun is understated by at least
+      three rows** [story `:1613-1637`, D38 §10]. Two independent errors. (1) The reconciliation
+      counts 8 CI-push rows, but `git log` shows **11** commits after the baseline commit
+      `48b7434c` — and the reconciliation itself lives in `42471a62`, whose own push row cannot be
+      in its own count, with `29ad995f` added afterwards. (2) The arithmetic double-discounts the
+      context push: §11's floor of 18 includes "Push: context", which Task 10.7 then excuses as
+      "pre-counted into baseline". Either it counts against the ceiling (used = 19, +6 remaining =
+      25 vs 22) or it does not (above-baseline ceiling = 21, projected 24) — **both give an overrun
+      of 3, not 2.** The disclosure itself is exactly the right instinct and was made before review
+      asked; only its size is wrong. **Fix:** recount at the post-merge query and state the
+      overrun against a single, stated baseline convention.
+- [ ] [Review][Patch] **M10 (MEDIUM) — AC1 and AC5 are graded MET on evidence the story elsewhere
+      says was never obtained.** AC1's discharge clause requires "D1 green, with the **two read-back
+      lines**" (`:504-505`); Task 5.4 records job 10653 as `log_in_storage=f`, so the lines were
+      never read, yet the AC1 verdict at `:1604` asserts "both **read back** matching the source
+      digest" — inferred from `action_task_step.status`, not observed. AC5 requires "the **raw**
+      `tags/list` response pasted into Debug Log References" with the story's own twice-made rule
+      *"paste the artifact, do not characterise it"* (`:645-647`, repeated at Task 2.4 `:776`); what
+      is recorded is a characterisation — "256 tags total, zero `preprod-*` of any shape" plus three
+      names — and the recorder's own listing step prints only into logs that never archived. AC5 is
+      graded MET at `:1608`. **Fix:** re-grade both PARTIAL, or paste the raw artifact (a registry
+      read is available from anywhere at any time — this is the cheapest evidence in the story).
+- [ ] [Review][Patch] **M11 (MEDIUM) — two line citations inside workflow comments, one falsified by
+      this very commit** [`record-preprod-candidate.yml:31`, `:64`; D38 §5]. `:64` cites
+      `deferred-work.md:2288-2301` for the check-to-write window; in the post-change tree line 2288
+      is the `fe_pkg_3_6` token entry and the TOCTOU entry has moved to ~`:2309-2322` — shifted by
+      this story's own `+9`/`+12` insertions above it. `:31` cites `:2209-2229`, which resolves
+      against a *different* base. Dev Notes §8 is explicit: *"Cite by search string, not line
+      number, inside workflow comments … this repository already carries two stale line citations …
+      **Do not add a third.**"* **Fix:** replace both with search strings.
+- [ ] [Review][Patch] **L1 (LOW) — the AC5 listing step is unguarded in three ways**
+      [`record-preprod-candidate.yml:611-623`]. No empty-credential precheck (unlike `:211-216`), no
+      `-w '%{http_code}'` and no status classification (unlike `:227-264`), and `jq … || true` at
+      `:623`. A rotated `REGISTRY_TOKEN_RO` therefore yields a **green** step printing
+      `preprod-* subset:` and nothing — indistinguishable from "the registry has no markers", in the
+      step that discharges AC5. Conversely a transport failure reds the run *after* both writes
+      succeeded, inviting a needless re-dispatch. `tags/list` is also unpaginated, on a repository
+      whose design accumulates one permanent `preprod-<sha>` per validated commit.
+- [ ] [Review][Patch] **L2 (LOW) — five dead `$GITHUB_OUTPUT` writes, and the branch evidence had to
+      be inferred from step durations because of them** [`:529`, `:550`, `:588`, `:591`, `:597`].
+      Both write steps declare `name:` and `env:` but no `id:`, so `history_written` /
+      `current_written` are unaddressable and unread. As a direct consequence D2's and D10's
+      branch-taken evidence rests on timing ("~1s vs D1's 2s/1s", `:1590`; `:1043-1046`) — a weak
+      discriminator that addressable outputs would have made unnecessary. `verify-on-stand`'s
+      `derived_hex` (`:196`) is likewise never read.
+- [ ] [Review][Patch] **L3 (LOW) — `validation_note` is never checked non-empty and is echoed
+      unescaped** [`:119-122`, `:303-308`]. `required: true` on a `type: string` dispatch input does
+      not reject `" "`, so the header's claim that the marker asserts "a human … named what they
+      checked" is satisfiable by a single space. The value is also echoed straight into the log with
+      no neutralisation of workflow-command syntax (`::add-mask::`, `::error::`). Related: on
+      `validated=fail` the note is **never echoed at all** — G1 exits first — so the rationale for a
+      refusal is discarded (run 1218 recorded none).
+- [ ] [Review][Patch] **L4 (LOW) — the read-back inspect is unguarded under `set -e`** [`:543`,
+      `:603`]. `ATTACHED="$(docker buildx imagetools inspect …)"` — if the read-back itself errors
+      **after** `create` succeeded, the step dies with no message and the operator sees a red run
+      for a tag that was written. Idempotence makes the re-dispatch safe, so this is confusion, not
+      corruption. Same family: `mktemp` without `trap` in both write steps (`:498`, `:559`, unlike
+      `:207-209`); `head -n1` on a header file that `-L`/`--retry` can append to (`:229`); no
+      `--max-time` on either `curl`; `IMAGE="${HISTORY_TAG%%:*}"` (`:540`, `:600`) breaks if
+      `IMAGE_REPO` ever carries a port.
+- [ ] [Review][Patch] **L5 (LOW) — three instructions the story gave itself and did not carry out.**
+      (a) Dev Notes §4: *"`preprod-current` and `preprod-<sha>` … are **not deployable** through
+      `deploy-preprod.yml` … **so say it in the file**"* — it is in Open Question 6 only, not in the
+      workflow. (b) Task 10.1(c) required `<a id="d38"></a>`; `docs/migration-decisions.md:4375` is a
+      bare heading, so the index row `[D38](#d38)` and the bumped `(#d1 … #d38)` range both link to
+      nothing (34 of 37 D-entries carry anchors; D33 and D37 are pre-existing misses — see W1).
+      (c) §5/Task 3.6 made the `imagetools inspect` "the **first** step of the `record` job" so a
+      bad driver/login/DNS fails before anything else; shipped, it is the fourth executing step with
+      a `derive` shell step ahead of it. The safety property still holds; the change is unnoted.
+- [ ] [Review][Patch] **L6 (LOW) — G4 drops a divergence `build.yml` marks load-bearing, and the
+      "three divergences" list is wrong** [`record-preprod-candidate.yml:455-462`]. `:462` uses
+      `grep -qE`; `build.yml:977` and `:1064` use `grep -Eqi`, with `build.yml:972-976` naming `-i`
+      *"a deliberate third divergence … an unnamed divergence is how that instruction rots."* The
+      comment at `:455` calls the literal a "Literal copy". Task 2.5's enumeration (`:1560-1563`)
+      lists "no `fe-prionex/` prefix, `[0-9]` not `\d`, no `sha256:` clause" — but `\d` and `[0-9]`
+      are semantically identical here, so a non-divergence was counted in place of the real one.
+      No functional gap for the two lowercase markers. **Fix:** name the `-i` divergence on both
+      sides.
+- [ ] [Review][Patch] **L7 (LOW) — G2 adds no discrimination G3 does not, and the guard count leans
+      on it** [`:157-172`]. Force-tested: G2's reject set is a **strict subset** of G3's — G2 passes
+      `main-preprod` and `-preprod`, which G3 then refuses; every string G2 rejects, G3 rejects too.
+      G2 is a better-worded earlier message, not an independent discriminator, yet D38 counts it as
+      one of six guards and one of four live refusal rows. Worth keeping for the message; worth
+      saying it is a message. Related: `record` re-checks G2/G3 but **never** re-checks `validated`,
+      so the `:336` framing "resolves everything independently" is selective on the single most
+      load-bearing input. Also `:324`'s "before buildx setup" rationale is inert under
+      `driver: docker` (nothing is pulled), imported from `build.yml` without its mechanism.
+- [ ] [Review][Patch] **L8 (LOW) — convention drift in the new records.** Prohibition 19 ("Owners
+      are names or story numbers, never trigger conditions"): the new AC5 entry uses *"Owner:
+      whichever story next builds a human-facing view…"* and the force-tested-guards entry uses
+      *"Owner: none needed … should be re-examined then"* — both trigger conditions. Prohibition 18
+      ("mark coordinator subtasks `PENDING (owner: coordinator)` rather than checking them"): only
+      Task 11.3 carries the marker; every dispatch subtask is `[x]` (correctly attributed to the
+      coordinator in its text, so this is form, not a false claim). `sprint-status.yaml`'s block
+      still says "Three guards earn a live failing row" — the delivered result is four.
+
+#### Deferred (pre-existing, not caused by this change)
+
+- [x] [Review][Defer] **W1 — `docs/migration-decisions.md` anchor drift predates D38**
+      [`docs/migration-decisions.md`] — deferred, pre-existing. 34 of 37 `## D<n>.` headings carry an
+      explicit `<a id="dN"></a>`; **D33 and D37 do not**, so their index rows already link to
+      nothing. D38 continues the drift rather than starting it (fixing D38's own anchor is L5(b)
+      above; D33/D37 are not this story's).
+- [x] [Review][Defer] **W2 — `imagetools create` still has no compare-and-swap**
+      [`.forgejo/workflows/record-preprod-candidate.yml:541`, `:601`] — deferred, pre-existing.
+      Already tracked against `build.yml`'s own AC2 guard with **owner needed**; this story correctly
+      registers itself as a second site. Only the *description* of the residual is this story's to
+      fix (M6 above); the underlying gap is not.
+- [x] [Review][Defer] **W3 — the org-scope `write:package` token now has a third holder**
+      [`.forgejo/workflows/record-preprod-candidate.yml:324-329`] — deferred, pre-existing. Correctly
+      restated with owner unchanged (Oleg / the platform team). Noted here only so review does not
+      re-raise it: Prohibition 3's literal-repository assertion at `:472-490` is, like G4,
+      **structurally unable to fail** — both write targets are built from the same workflow-level
+      `IMAGE_REPO` constant in the same job — so it is defence against a future edit, not a control
+      over the token's scope. That is the correct reading and it matches the story's own framing;
+      it should simply not be counted as mitigation.
 
 ---
 

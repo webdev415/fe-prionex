@@ -3893,3 +3893,34 @@ endpoint-blocks-teardown, all above). All measurements first-hand, this session'
   the unordered set. **Owner: whichever story next builds a human-facing view of the validation
   history** (candidate: Story 5.6's full-cycle rehearsal) — should compose the registry's set with
   `git log`'s order explicitly, not assume the registry does it.
+
+## Deferred from: code review of story-5.4 (2026-08-24)
+
+- ⚠️ **`docs/migration-decisions.md`'s explicit-anchor convention has drifted, and it predates D38.**
+  34 of the file's 37 `## D<n>.` headings carry an explicit `<a id="dN"></a>`; **D33 and D37 do
+  not**, so the index rows `[D33](#d33)` and `[D37](#d37)` already resolve to nothing — the
+  auto-generated slug for those headings is derived from the full Russian headline, not from `dN`.
+  D38 shipped without one too (routed as a patch against Story 5.4, since Task 10.1(c) asked for it
+  by name); D33's and D37's are **not** Story 5.4's to add. **Owner: Story 6.4** — the next story
+  that writes a D-record, which should add the two missing anchors in the same edit rather than
+  leaving a third and fourth behind.
+- ⚠️ **`imagetools create` still offers no compare-and-swap — restated only to record where review
+  landed on it.** Story 5.4 correctly registers `record-preprod-candidate.yml` as a second site of
+  the pre-existing window (entry above, **owner still needed**) and the underlying gap is unchanged
+  by this review. What review *did* find is that the residual is described inaccurately in the
+  shipped file and in that restatement — the shared concurrency group does serialize recorder runs
+  against each other, so the real residual is a writer **outside** the group, and the
+  recorder-vs-PRE-PROD-deploy half of the "proven live twice" claim has no run behind it (both cited
+  observations are recorder-vs-recorder; run 1225 completed before run 1227 was dispatched). That
+  wording correction is filed as a patch against Story 5.4. **The race itself: owner still needed,
+  unchanged.**
+- ⚠️ **Two guards in `record-preprod-candidate.yml` are structurally unable to fail, and only one of
+  them is disclosed.** `deferred-work.md`'s own Story-5.4 entry states G4's vacuity correctly and in
+  the right terms. The **Prohibition 3 write-target assertion** (`:472-490`) is the same shape and is
+  named nowhere: both `HISTORY_TAG` and `CURRENT_TAG` are composed from the workflow-level
+  `IMAGE_REPO` constant in the same job, ~110 lines earlier, so no dispatch input, secret, or
+  registry state reaches its `exit 1`. Force-tested: it refuses `git.crm-prionex.com/crm/api-prionex:*`
+  and `evil.example.com/*` correctly, but neither value is reachable. Both guards are worth keeping
+  as regression detectors against a future edit; neither is a control over the org-scope
+  `write:package` token, and neither should be counted as mitigation for it. **Owner: none needed —
+  closed disposition**, recorded so a later reader does not read the assertion as a scope control.
