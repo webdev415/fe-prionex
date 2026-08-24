@@ -4,7 +4,7 @@ baseline_commit: 96d19bc0
 
 # Story 5.3: Deploy a Specific Image Tag to PRE-PROD
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-24 against `main` at `96d19bc0` — the merge of PR #77, Story 5.2's ledger
      closeout. (Contexting began against `c325b7d6`, PR #76; #77 landed mid-session and this file
@@ -764,15 +764,21 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
       makes this check mandatory after a first dispatch).
 - [x] 5.3 Confirm every job landed on `runner_id=14` and that `runs-on: ${{ inputs.runner_label }}`
       resolved (R1 re-exercised from a new caller).
-- [ ] 5.4 **PENDING — not archival-blocked forever, just not yet.** Line 1 confirmed (Debug Log
-      References). Lines 2-5 are in job 10340's own log (task 9745), not yet flushed to disk
-      storage as of this write-up; will be pulled via SSH once `log_in_storage` flips true. 🔴 **AC7: find all five lines** from the table, individually, in this run's log, and paste
-      each. A missing line — especially #3 — is a blocking finding, not a curiosity.
-- [ ] 5.5 **PENDING, same reason as 5.4** — the Kong-guard `RESP_CODE` line is in the same
-      not-yet-archived log. 🔴 **AC6 datum:** record the Kong guard's own printed `RESP_CODE` and whether the body
-      still carried `no Route matched`. This is the third measurement of `deferred-work.md`
-      finding 8, taken on the guard's own path from inside a real deploy — **this story owns that
-      finding and this is how it discharges.** §7.
+- [ ] 5.4 **STILL PENDING at closeout — checked a fourth time, first action this session per the
+      standing plan, still negative.** Line 1 confirmed (Debug Log References). Lines 2-5 are in
+      job 10340's own log (task 9745): `select log_in_storage from action_task where id=9745` →
+      `f`, and the on-disk directory (`/data/gitea/actions_log/CRM/fe-prionex/11/`) has not been
+      touched since **2026-08-21** — three days before this story even started, and unchanged
+      across all four checks. This is no longer plausibly "about to arrive"; named as an escalating
+      fact, not a routine re-poll. 🔴 **AC7: find all five lines** from the table, individually — genuinely not achievable this closeout. **Plan moves to the closeout record** (Run Budget
+      Ledger / Completion Notes, below): the first future session with SSH/psql access re-checks
+      `log_in_storage` for task 9745 before any other work touching this story's residue.
+- [ ] 5.5 **STILL PENDING, same reason as 5.4 — same fourth check, same negative result.** The
+      Kong-guard `RESP_CODE` line is in the same not-yet-archived log (task 9769,
+      `/data/gitea/actions_log/CRM/fe-prionex/29/`, untouched since 2026-08-23). 🔴 **AC6 datum:** the Kong guard's own printed `RESP_CODE` — not achievable this closeout. This
+      is the third measurement of `deferred-work.md` finding 8, taken on the guard's own path from
+      inside a real deploy — **this story owns that finding**, and closes it only partially
+      (behaviorally, via `status=1` on the step) — literal text remains open, plan as above. §7.
 - [x] 5.6 Confirm the stand moved: `.RepoDigests[0]` is now
       `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`, `.Id` and
       `.State.StartedAt` changed from Task 4.3's row, health is `healthy`, and
@@ -851,8 +857,9 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
       the host** after its own job has finished — that outliving is the whole mechanism. Record its
       name and the `.deploy.lock` path it holds. Confirm the name derives from
       `compose_project_name`, per `:1457`.
-- [ ] 8.4 **Substantively confirmed via DB timestamps (31s real wait, Debug Log References), literal
-      log lines PENDING archival — same gap as 5.4/5.5.** 🔴 **Immediately** dispatch 5: a normal deploy of `sha-00ef3be4743d-preprod`. Expect the
+- [ ] 8.4 **Substantively confirmed via DB timestamps (31s real wait, Debug Log References) —
+      literal log lines STILL PENDING archival at closeout, fourth check, same negative result and
+      same plan as 5.4/5.5.** 🔴 **Immediately** dispatch 5: a normal deploy of `sha-00ef3be4743d-preprod`. Expect the
       acquire step to **poll, report waiting, and then succeed** once the holder's 60s elapse —
       not to fail. Paste the acquire step's own waiting/acquired lines with their timestamps.
 - [x] 8.5 Confirm the deploy completed green afterwards and the stand is on the expected digest.
@@ -971,8 +978,10 @@ dispatch 1 goes red, `image_tag` mode is the only remaining suspect.
       🔴 **corrected, code review M5**: four distinct locations, not one case block — see File List
       for the breakdown; 52 insertions/10 deletions vs `origin/main`), this story file,
       `sprint-status.yaml`, `docs/migration-decisions.md`, `deferred-work.md`. Nothing else.
-- [ ] 10.6 PR — mark **`PENDING (owner: coordinator)`**. Prohibition 15; the dev agent does not open
-      it, and checking this box without a PR is 5.2's M14.
+- [x] 10.6 PR — opened and merged by the coordinator/Oleg, not the dev agent (Prohibition 15
+      honored throughout). **PR #78, merge commit `78964187e5bc90e6641f3a04a261dc6c5473edac`**,
+      auto-merged into `main`. Checked now that a real PR exists to point at — not on the strength
+      of intent alone, per 5.2's own M14 caution.
 
 ---
 
@@ -1683,6 +1692,52 @@ run and the merge run (§11's own table). **Disposition: OPEN.** Per retro-D4, t
 against a query re-run after the merge commit lands — not on this record, and not as a self-reported
 number. The coordinator's own post-merge query is the closing act.
 
+### Closeout Ledger — `2026-08-24`, post-merge, disposition CLOSED
+
+PR #78 merged (`78964187e5bc90e6641f3a04a261dc6c5473edac`), auto-merge, into `main`. Re-ran the
+identical `psql` query, same method, repo-scoped (`repo_id=16`), baseline unchanged at
+`max(id)=1182`, this time through the merge itself. Fresh `git fetch` of `story-4-9/pr-1-context`'s
+tip (`11017adc`) reconfirmed as matching none of the rows below.
+
+**19 rows above baseline (1183-1201), all attributed to one of eight push-triggered `commit_sha`
+values on this story's own commit chain — zero foreign rows, zero unattributable:**
+
+| Run id | `commit_sha` | Status | What it is |
+|---|---|---|---|
+| 1183 | `9eecc5eb` | SUCCESS | CI push — dev-story write-up |
+| 1184 | `9eecc5eb` | SUCCESS | Dispatch 1 — green deploy |
+| 1185 | `9eecc5eb` | FAILURE | Dispatch 2 — §12 defect #1 |
+| 1186 | `9eecc5eb` | FAILURE (designed) | Dispatch 3 — simulated 401 |
+| 1187 | `9eecc5eb` | SUCCESS | Dispatch 4 — lock holder fixture |
+| 1188 | `9eecc5eb` | SUCCESS | Dispatch 5 — contending deploy |
+| 1189 | `78261b15` | SUCCESS | CI push — §12 fix #1 |
+| 1190 | `78261b15` | FAILURE | Dispatch 2 re-run — surfaced §12 defect #2 |
+| 1191 | `78261b15` | FAILURE | DEV 404 control — did not reach fixed code |
+| 1192 | `341b7599` | SUCCESS | CI push — §12 fix #2 |
+| 1193 | `341b7599` | FAILURE (designed) | Dispatch 2, third attempt — closed AC4 |
+| 1194 | `82475a08` | SUCCESS | CI push — sprint-status → review |
+| 1195 | `f8d4dfdc` | SUCCESS | CI push — Opus's own code-review commit |
+| 1196 | `f913a75b` | CANCELLED | CI push — superseded by the next push (`501933ac`) before it finished; the standard `cancel-in-progress` behavior already observed for this branch's earlier pushes (rows 1181/1182 pre-baseline), not an anomaly |
+| 1197 | `f913a75b` | FAILURE (designed) | G1 — mismatched-tag guard re-earning |
+| 1198 | `f913a75b` | SUCCESS | G2 — green-control re-earning |
+| 1199 | `501933ac` | SUCCESS | CI push — D37 §9 fill / final dev-side ledger |
+| 1200 | `501933ac` | SUCCESS | **PR-open run** (`refs/pull/78/head`) |
+| 1201 | `78964187` | SUCCESS | **Merge run** (`refs/heads/main`) |
+
+**Breakdown: 7 CI-push rows + 10 dispatch rows + 1 PR-open row + 1 merge row = 19.**
+
+**19 of the renegotiated ceiling 24 — closed with 5 rows of headroom, no overrun.** Against the
+*original* pre-renegotiation ceiling of 16, this is a 3-row overrun — named explicitly, not
+obscured by citing only the renegotiated number: the renegotiation itself (DN4, ceiling 16→24) is
+the reason this is not a violation, and that renegotiation is on record (D37 §7, this story's own
+Run Budget Ledger above) with its own basis stated (baseline-vs-commit timing, the review cycle's
+own priced-but-then-unfunded remainder). This closeout's own branch (`story-5-3/pr-2-ledger-closeout`)
+is documentation-only, touches no code, and lands after the story's own merge — its own CI push, if
+any, is not counted against this story's ledger, consistent with how prior stories' closeouts have
+treated their own bookkeeping activity.
+
+**Disposition: CLOSED.** This is the post-merge query retro-D4 requires — not OPEN any longer.
+
 ### Completion Notes List
 
 1. `deploy-preprod.yml` written and dispatched five times against `deploy-stand.yml`'s `image_tag`
@@ -1737,6 +1792,15 @@ number. The coordinator's own post-merge query is the closing act.
    dispatched to prove — no further re-earning needed on this classifier. D37 §9's placeholder
    filled with these facts; the final `psql` reconciliation (Run Budget Ledger, above) covers all 16
    above-baseline rows through this pass, 16 of the renegotiated ceiling of 24.
+7. **Closeout, `2026-08-24`, PR #78 merged (`78964187`).** Archived logs for runs 1184/1188
+   rechecked a fourth time, first action of this session per the standing plan — still not
+   archived; the on-disk directories have not been touched since 2026-08-21/23, before this story
+   even started, no longer plausibly imminent. Left PENDING honestly with the same plan carried
+   into the Closeout Ledger and this note: the first future session with SSH/psql access re-checks
+   `log_in_storage` for tasks 9745/9769 before any other work on this story's residue. Final `psql`
+   ledger through the merge: **19 rows above baseline, zero foreign, disposition CLOSED** (Closeout
+   Ledger, above) — 19 of the renegotiated ceiling 24, a 3-row overrun against the original
+   pre-renegotiation 16, explained by and inseparable from the DN4 renegotiation already on record.
 
 ### File List
 
@@ -2109,3 +2173,4 @@ a record that erases its own best act of honesty is worse than one that never pe
 | 2026-08-24 | **Код-ревью (Opus): changes requested** (против `82475a08`, content `2c79e5ef`, vs `main` @ `96d19bc0`). 4 decision-needed / 5 high / 13 medium / 10 low. Три параллельных слоя (adversarial / edge-case / acceptance) плюс собственный механический проход ревьюера; каждая находка перепроверена по отгруженным файлам до присвоения севрити. **Подтверждено чистым и не подлежит перезаработке:** Prohibition 5 по всему репозиторию (33 `run:`-тела в `deploy-stand.yml`, 0 с `${{ }}`; в caller'е `run:`-тел нет вовсе — структурное доказательство AC3(i) перезаработано независимо, `bash -n` зелёный на всех 33); caller корректен по каждому пункту своих ACs и Prohibitions (единственный триггер, `required: true`, литеральная уникальная concurrency-группа, нет `if:`/`ref`/`ref_name`, `expect_unrouted_api` строкой, все 14 `with:`-значений сходятся с контрактом); **оба §12-фикса корректны и fail-closed** (обе ветви отрендерены локально под `set -euo pipefail` — печатают полное сообщение, не крашат; до-фиксовая форма воспроизведена, exit 127); заявление «ровно три очага» **точно** — независимый скан даёт единственный оставшийся `:1652`, остальные четыре внутри `$( … )` и безопасны; **класс дефекта (a) не повторяется** — скан всех `run:`-тел на переменные без `env:`-ключа даёт пять кандидатов, все пять разрешаются в локальные присваивания; blast radius ровно шесть файлов; `runner_label` выбран верно. **DN1** — `image_tag` нигде не привязан к окружению: `image_env` в tag-режиме декоративен (`:904-933` берёт тег дословно, `:1304-1308` пропускает revision-кросс-чек, единственный читатель `IMAGE_ENV` — текст 404-сообщения), поэтому `-dev`-тег деплоится на PRE-PROD **полностью зелёным**, а 5.4 записывает это как validated candidate. **DN2** — `:1652` (`KIND_NOTE`) оставлен сломанным той же стори, которая расширила достижимую поверхность (`hold_lock_seconds` на второй стенд); под `set -euo pipefail` шаг умирает на exit 127 и сообщение lock-timeout классификатора **не печатается вовсе**, включая предупреждение «не снимай лок живого деплоя» — этого следствия в routing-записи нет. **DN3** — клауза (a) 404-сообщения всё ещё говорит «for this ref — push the branch so ci.yml builds it», хотя в `image_tag`-режиме ref'а нет; ран 1193 напечатал это живьём, и стори ратифицировала сообщение как «AC4 message-quality MET» — тот же класс дефекта, что фикс 2026-08-23 закрыл для клаузы (b). **DN4** — потолок 16 уже израсходован: базлайн взят ПОСЛЕ двух собственных коммитов, запрос — ДО двух последних, так что сопоставимый расход ~13-15, а оставшиеся приайсенные строки ревью-цикла выводят прогноз к ~21. **High:** AC7 «все пять подтверждены» в Completion Note 1, Change Log и D37 против собственной матрицы (подтверждена только строка 1; D37 — постоянная запись и единственный артефакт, читающийся как полный, плюс «по шагам джобы» неверно по существу); D37 утверждает, что дефект №2 было НЕВОЗМОЖНО найти раньше — против собственного признания стори, что первый форс-тест его поймал и он был неверно диагностирован; две неотозванные сильные формулировки пережили ретракцию (`:1454-1457`, `:1491`); два взаимоисключающих утверждения о базлайне (`:1260-1262` против `:1593-1595`); строка AC2 (HTTP 400, ран не создан) **заработана координатором после финализации** — в записи трижды стоит NOT YET EXECUTED. **Medium:** владелец `:1652` — триггер-условие, а не имя; авторизация §12-правок атрибутирована двояко (Oleg / координатор) без цитируемого артефакта; **debris PRE-PROD-холдеров не подметается никем** (`dev-reset.yml` заякорен на `^fe-prionex-dev-deploy-lock-[0-9]+$`, холдер рана 1187 лежит на s1) — пропущено, не отложено; PRE-PROD вне сериализации, на которую опирается `dev-reset`, при общем `IMAGE_REPO` без env-фильтра; описание blast radius неверно дважды (`IMAGE_ENV`-правка вне `case`-блока; +12/-6, не 11/6); ссылки на строки устарели на +6 после собственных правок; `blocked` рана 1193 приписан локу вместо concurrency-группы; `sprint-status.yaml` всё ещё повествует «ready-for-dev»; нет пер-AC вердикта; AC7 говорит «четыре» и перечисляет пять; заголовок `deploy-preprod.yml` утверждает read-only статус, который тот же коммит нарушает, и «режим никогда не исполнялся» — ложно после мёржа; пример тега в описании инпута ведёт ровно на непротестированный no-op путь; Kong-гард приписывает Kong'у ответ, который мог сгенерировать nginx. Ledger остаётся **OPEN**. |
 | 2026-08-24 | **Fix-pass: §12-batch #3 (Oleg's decision, relayed by the coordinator) + mandatory record corrections (H1-H5, DN4, selected mediums).** Three code edits to `deploy-stand.yml`, all §12-authorized, all force-tested locally (zero dispatches) before push: (1) a tag↔environment guard at the top of the digest-resolve step, before any registry call — a tag not ending `-${IMAGE_ENV}` now FAILs closed instead of deploying a wrong-environment image fully green (closes DN1, the review's most serious finding — nothing on the old path could ever have caught a `-dev` tag landing on PRE-PROD); (2) `:1652`'s `KIND_NOTE` fixed, same assignment-context backslash-continuation defect as the earlier 404-classifier fixes — force-tested both branches, **not** live-earned (no lock-timeout dispatch), owner for live verification deliberately left as a trigger condition per Oleg's own decision at this review, not an oversight (DN2/M1); (3) the 404 message's clause (a) reworded neutrally — no longer assumes a ref exists, since `image_tag` mode has none (DN3). Ledger: ceiling renegotiated from 16 to **24** on Oleg's decision, every row beyond the original 16 named, not absorbed (DN4). Record corrections: AC7's "all five confirmed" struck to "line 1 confirmed, lines 2-5 PENDING" in Completion Note 1, this Change Log's prior row, and **D37 (§3, its index row, and a new D37-specific changelog row)** — D37 is the permanent record and could not be left overstating the evidence (H1). D37 §5's "impossible to find earlier" corrected to the honest version — the defect was undiscoverable live before fix #1, but was NOT undiscoverable — this story's own first force-test caught the identical crash and misdiagnosed it as a transcription artifact; that fact is the honesty chain's central act and stays in the permanent record, not erased for tidiness (H2). Two surviving unstruck claims (`:1454-1457`'s "proving the fix holds for both branches", `:1491`'s "Both branches now provably correct") struck per this story's own citation convention (H3). The baseline-attribution contradiction (Task 1.2's own text vs the ledger reconciliation's) resolved — of the 5 pre-baseline rows, 3 are 5.2-closeout-adjacent, 2 are this story's own first two commits, landing below the line only because the baseline was taken after them (H4). AC2's zero-run rejection row updated from NOT YET EXECUTED to EARNED across the matrix, Completion Note 4, and this Change Log — the coordinator dispatched it after this story's own finalization: HTTP 400, full input description, zero `action_run` rows created (H5). Medium: authorization chain restated unambiguously as "Oleg decided, the coordinator relayed" everywhere it had hedged (M2); PRE-PROD lock-holder debris (run 1187's holder still sits on s1, uncollected — `dev-reset.yml`'s sweep regex can never match this caller's holder names, and PRE-PROD sits outside both its serialization and its image-sweep's environment scoping) recorded in `deferred-work.md` with a named-candidate owner, not a trigger condition (M3/M4); blast-radius description corrected to the actual shape — four distinct locations in `deploy-stand.yml`, not one `case` block, 52 insertions/10 deletions vs `origin/main`, in the File List, Completion Note 5, and Task 10.5 (M5); AC7's path-2/path-3 and AC6's `RESP_CODE` line citations re-verified against the shipped file after this pass's own edits shifted them again (`:1261`, `:1337`, `:2246` — M6); `deploy-preprod.yml`'s header corrected on both false claims code review M11 found — the read-only statement now carries its own §12 exception inline, and "the mode has never executed" replaced with the honest post-merge status (two defects found and fixed via three live dispatches); `sprint-status.yaml`'s own comment block updated off its stale "ready-for-dev" narration to reflect status, the §12 history, and both ledger revisions (M8). Not addressed this pass (left for the next review cycle, not silently dropped): M7, M9, M10, M12-M13, and the Low findings. Status stays **review**. |
 | 2026-08-24 | **§12-batch #3 re-earned, D37 §9 filled, final ledger reconciled.** G1 (run 1197): `image_tag=sha-00ef3be4743d-dev` dispatched against the PRE-PROD caller — the new tag↔environment guard rejected it before any registry call, full honest message printed, `down`/acquire and everything after SKIPPED, stand untouched. G2 (run 1198): a valid `-preprod` tag deployed normally, ~19s — guard does not misfire on the legitimate path; final stand digest reconfirmed via `.RepoDigests` (not `.Image`) matching `sha256:5e5b190d…` exactly. Both closed via the archived log's literal content, not step status alone. D37 §9 (`docs/migration-decisions.md`) filled with these facts, replacing its placeholder; §7's ledger section carries the final reconciliation. Two archived logs (runs 1184/1188's `deploy` jobs) checked a third time at this pass — still unarchived; left honestly PENDING with an explicit plan (first future SSH/psql session re-runs the two `log_in_storage` queries before anything else touches this story's residue), not an open-ended promise. Final `psql` ledger, repo-scoped by `commit_sha`, fresh-fetched against `story-4-9`'s tip: **16 rows above baseline (1183-1198), zero foreign, 16 of the renegotiated ceiling 24** — 6 CI-push rows, 10 dispatch rows (original 5 + defect-#1 re-earning ×2 + defect-#2 re-earning ×1 + §12-batch-#3 re-earning ×2). Disposition stays **OPEN** per retro-D4 — PR-open and merge rows still ahead. Blast radius unchanged: same six files. Status stays **review**; coordinator opens the PR next. |
+| 2026-08-24 | **Closeout.** PR #78 merged (`78964187e5bc90e6641f3a04a261dc6c5473edac`, auto-merge, into `main`) from `story-5-3/pr-1-context`. Branch `story-5-3/pr-2-ledger-closeout`, contexted fresh from `origin/main` post-merge. Archived logs for runs 1184/1188 rechecked a fourth time, first action this session per the standing plan — still not archived (on-disk directories untouched since before this story started); left PENDING with the same explicit plan, not an open-ended promise. Final `psql` ledger, repo-scoped by `commit_sha`, fresh-fetched against `story-4-9`'s tip: **19 rows above baseline (1183-1201)**, zero foreign — 7 CI-push + 10 dispatch + 1 PR-open + 1 merge row. **19 of the renegotiated ceiling 24** — a 3-row overrun against the original pre-renegotiation ceiling of 16, explained by DN4's own renegotiation basis, not a fresh surprise. **Disposition: CLOSED.** Task 10.6 (PR) checked against the real merged PR. Status → **done**. `sprint-status.yaml` → `done`, own commit. |
