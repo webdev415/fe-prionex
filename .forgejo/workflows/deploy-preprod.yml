@@ -2,11 +2,23 @@ name: Deploy PRE-PROD Stand
 
 # Story 5.2 provisioned the PRE-PROD stand; Story 5.3 (this file) is the first CONSUMER of the
 # shared `workflow_call` definition's second mode — deploying a pre-built `image_tag` directly,
-# with no application `ref` anywhere. `.forgejo/workflows/deploy-stand.yml` (Story 4.8) is
-# READ-ONLY to this story (§12) and carries the actual mechanics: compose placement, `down`,
-# fail-fast digest-pinned pull, `up -d`, the parameterized health check, the Story 4.4 lock, and
-# the Kong guard. This file is a THIN caller — its own name, its own dispatch inputs and its own
-# `concurrency:` block, nothing else.
+# with no application `ref` anywhere. `.forgejo/workflows/deploy-stand.yml` (Story 4.8) carries the
+# actual mechanics: compose placement, `down`, fail-fast digest-pinned pull, `up -d`, the
+# parameterized health check, the Story 4.4 lock, and the Kong guard. This file is a THIN caller —
+# its own name, its own dispatch inputs and its own `concurrency:` block, nothing else.
+#
+# ── `deploy-stand.yml` is READ-ONLY to this story — WITH a §12 exception, exercised three times ──
+# 🔴 (code review M11, corrected post-merge: the line above used to state the read-only rule
+# without its own exception, in the file a future operator reads first.) `deploy-stand.yml` is
+# read-only in general; the ONE permitted deviation is §12's priced, escalated, authorized-before-
+# editing exception procedure. This story used it three times, all in the shared digest-resolve
+# step's 404 branch and its neighbours: (1) a missing `IMAGE_ENV` env: key that crashed the 404
+# classifier before it could print (run 1185); (2) a backslash-continued assignment in the same
+# branch that crashed one statement deeper, found only once fix (1) let the code run that far (run
+# 1190); (3) a code-review batch — a tag↔environment guard (a `-dev` tag could otherwise deploy
+# fully green onto PRE-PROD), the same backslash-continuation defect at a third, dormant site
+# (`:1652`), and a neutral rewording of the 404 message's clause (a). See
+# `docs/migration-decisions.md#d37` for the full record.
 #
 # ── The runner label — deliberately NOT the skeleton's `deploy-preprod-preprod` ─────────────────
 # `deploy-stand.yml:216`'s commented caller skeleton suggests `runner_label: deploy-preprod-preprod`.
@@ -35,9 +47,13 @@ name: Deploy PRE-PROD Stand
 # live) and Story 6.4's PRODUCTION caller, where this question is sharper. Not re-litigated here.
 #
 # ── `image_tag` mode's first live execution — this file's own first dispatch ────────────────────
-# The mode this caller consumes has never executed anywhere. Two blockers Story 4.8's own code
-# review found by reading were fixed in the same pass and have never been dispatched — this file's
-# first dispatch is the discriminating event, not a confirmation.
+# 🔴 (code review M11, corrected post-merge — this note described dev-story's own starting
+# condition, which the merge itself falsifies for a later reader.) Before this file's first
+# dispatch, the mode had never executed anywhere — two blockers Story 4.8's own code review found
+# by reading were fixed in the same pass and had never been dispatched. That first dispatch (run
+# 1184) went green immediately; two further dispatches then found two real, previously-
+# undiscoverable defects in the shared 404 classifier (see the exception note above) — the mode is
+# now live-exercised, not merely read-verified, and the defects it exposed are fixed.
 #
 # ── Naming invariants — deliberately NOT claimed for this file ──────────────────────────────────
 # deploy-dev.yml's exact file name and workflow `name:` are load-bearing because `dev-reset.yml`

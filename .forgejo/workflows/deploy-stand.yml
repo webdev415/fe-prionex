@@ -1046,6 +1046,31 @@ jobs:
           IMAGE_ENV: ${{ inputs.image_env }}
         run: |
           set -euo pipefail
+
+          # §12 fix (2026-08-24, code review DN1): nothing on this path previously bound the tag
+          # being deployed to the environment being deployed TO. In `ref` mode this is vacuous —
+          # the tag step above always derives a tag ending "-${IMAGE_ENV}" by construction — but in
+          # `image_tag` mode the caller supplies TAG directly, and IMAGE_ENV was otherwise read
+          # only by this step's own 404 message. A -dev tag deployed onto PRE-PROD (or the
+          # reverse) would previously pass every remaining check — health, the Kong guard, AC6's
+          # own digest match — because build.yml bakes environment config into the image at build
+          # time, making a wrong-environment tag a genuinely different, but structurally healthy,
+          # artifact. Checked here, once, before any registry call or pull — the one place that
+          # protects every caller of this shared definition, present and future (5.3, 6.4).
+          case "$TAG" in
+            *-"$IMAGE_ENV")
+              : ;;
+            *)
+              echo "FAIL: image_tag/derived tag '${TAG}' does not end in '-${IMAGE_ENV}'. Refusing"\
+                   "to deploy a tag that does not name this stand's own environment — build.yml"\
+                   "bakes environment configuration into the image at build time, so this is a"\
+                   "genuinely different artifact, not a naming nitpick. Nothing later on this path"\
+                   "(health check, Kong guard, AC6's digest match) can detect this once the wrong"\
+                   "image is running. If this tag is correct, this stand's own image_env input is"\
+                   "wrong instead — check the caller's own with: block."
+              exit 1
+              ;;
+          esac
           HEADERS_FILE="$(mktemp)"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
@@ -1142,9 +1167,16 @@ jobs:
               else
                 RETENTION_NOTE="(the 14-day retention rule this file also knows about only applies to -dev tags, per build.yml's own keep_pattern — not a likely cause for image_env=${IMAGE_ENV})."
               fi
+              # §12 fix (2026-08-24, review DN3): clause (a) used to say "no image was ever built
+              # for this ref — push the branch", unconditionally — but image_tag mode has no ref;
+              # pushing a branch does not produce an arbitrary caller-supplied tag. Reworded
+              # neutrally to cover both modes instead of adding a second IMAGE_ENV-style branch,
+              # since this clause does not otherwise depend on the environment.
               echo "FAIL: registry returned 404 Not Found resolving ${TAG}. Two possible causes,"\
-                   "both stated because this session cannot tell them apart: (a) no image was ever"\
-                   "built for this ref — push the branch so ci.yml's image job builds it; ${RETENTION_NOTE}"
+                   "both stated because this session cannot tell them apart: (a) no image exists"\
+                   "in the registry under this exact tag — if it was derived from a ref, push that"\
+                   "branch so ci.yml's image job builds it; if it was supplied directly, confirm"\
+                   "it was actually built and pushed; ${RETENTION_NOTE}"
               exit 1
               ;;
             000)
@@ -1647,10 +1679,14 @@ jobs:
               # Code review M5: the [SIMULATED] marker must ride in THIS classifier's own message
               # — a log excerpt or a future Slack notification (Story 4.5) will not necessarily
               # carry `hold-lock`'s separate success line alongside it.
+              # §12 fix (2026-08-24, review DN2): same defect class as the 404 classifier's
+              # RETENTION_NOTE (:1141/:1143) — a backslash-continued assignment whose continuation
+              # line's indentation survives the splice, so bash reads it as two whitespace-
+              # separated words, not one string. In an assignment (not an echo argument) this
+              # crashes with "command not found". Single-line string, deliberately.
               KIND_NOTE=""
               if [ "$HOLDER_SIMULATED" = "true" ]; then
-                KIND_NOTE=" [SIMULATED via hold_lock_seconds=${HOLDER_DURATION:-unknown} — this is"\
-                          " a test fixture, NOT a real concurrent deploy]"
+                KIND_NOTE=" [SIMULATED via hold_lock_seconds=${HOLDER_DURATION:-unknown} — this is a test fixture, NOT a real concurrent deploy]"
               fi
 
               # Code review H4: the run id is already embedded in the holder's own name — free to
