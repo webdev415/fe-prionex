@@ -2502,6 +2502,13 @@
           "tasksToday": "Tasks today",
           "oneOnOneToday": "1-on-1 today"
         },
+        "oneOnOneTodayDialog": {
+          "title": "1-on-1 today",
+          "loading": "Loading sessions…",
+          "loadError": "Could not load the sessions. Try again later.",
+          "empty": "No 1-on-1 sessions scheduled for today.",
+          "duration": "{{minutes}} min"
+        },
         "viewModes": {
           "label": "View mode",
           "inbox": "Inbox",
