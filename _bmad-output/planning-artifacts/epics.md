@@ -3037,3 +3037,117 @@ expires without an owner.
 is a story rather than a `deferred-work.md` line because deferred items in this project have
 repeatedly been read as "someone will notice" — and the whole point of this one is that **nobody
 will notice until production stops.**
+
+### Story 7.7: Replace the E2E Placeholder with Real End-to-End Coverage
+
+As a release engineer,
+I want the critical flows verified by a machine on every PRE-PROD candidate,
+So that "validated" stops costing a person an hour of clicking and stops depending on whether they
+were thorough that day.
+
+🔴 **Added 2026-08-24 by Story 5.5.** 5.5 shipped `docs/release-validation-checklist.md` (`RVC-v1`)
+and the `e2e` placeholder job in `.forgejo/workflows/deploy-preprod.yml`. Both are deliberate
+stopgaps. The project has **no browser or end-to-end tooling of any kind** — `package.json` carries
+Vitest only (229 component test files, jsdom, no driver) — so the placeholder job prints its own
+rationale and exits 0, and every one of `RVC-v1`'s twelve flow items is executed by a human in a
+browser. `docs/forgejo-migration.md:231` planned exactly this split ("на первом этапе — заглушка +
+чек-лист ручной валидации критичных флоу. Автотесты — отдельная задача"); this story is that
+separate task, recorded as a story so it cannot be absorbed into the migration's scope.
+
+⚠️ **This story is blocked on something outside this repository, and that is the point of writing it
+down.** `RVC-v1` marks 8 of its 12 items `BLOCKED — owner: CRM/api-prionex, CORS origin`: PRE-PROD's
+Kong returns an `Access-Control-Allow-Origin` naming an unrelated `localhost` origin, so a browser
+on `crm.preprod.crm-prionex.online` cannot call the API at all. An automated browser test is a
+browser, so automation does not route around this — it inherits it. Any attempt to start this story
+before that fix would produce a suite that can only test the four items a human can already test.
+
+**Acceptance Criteria:**
+
+**Given** the project has no browser test tooling
+**When** a runner is chosen
+**Then** the choice is recorded in `docs/migration-decisions.md` with what it costs — CI minutes,
+image size on the `node-20` runner, and who maintains the suite
+**And** it is installed as a dev dependency with its browsers pinned, so a CI run does not silently
+pick up a different browser build than a developer's.
+
+**Given** `docs/release-validation-checklist.md` enumerates twelve flow items with an explicit pass
+criterion each
+**When** the suite is written
+**Then** each automated test names the `RVC-v1` item id it replaces (`F1`…`F12`)
+**And** the checklist is amended to mark those items as machine-verified rather than deleted, so the
+manual procedure remains executable when the suite is unavailable
+**And** any item that is deliberately not automated is stated, with the reason.
+
+**Given** the PRE-PROD Kong's CORS origin is fixed by `CRM/api-prionex`
+**When** the suite runs against a deployed PRE-PROD candidate
+**Then** the authenticated flows (`F4` login and its six refusal paths, `F5`, `F6`, `F9`) pass
+against a real backend
+**And** a test that cannot reach the API fails loudly rather than being skipped, because a skipped
+test reads as a pass in every summary anyone looks at.
+
+**Given** the placeholder job in `.forgejo/workflows/deploy-preprod.yml`
+**When** the suite exists and has run green at least five consecutive times **in a temporary
+`e2e-trial` job** — a second job in the same workflow, carrying `continue-on-error: true`, deleted
+by the same change that replaces the placeholder
+**Then** the placeholder's `run:` step is replaced by the real suite
+**And** the header comment is rewritten to describe what the job now asserts, replacing the
+placeholder rationale rather than sitting next to it.
+
+🔴 **Why the trial job is named here rather than left to the implementer.** Two constraints that a
+naive reading of "five consecutive green runs" violates. (1) `deploy-preprod.yml` is
+**dispatch-only** — there is no push trigger, so five green runs means five deliberate PRE-PROD
+dispatches. Dispatches in this project are **budget-ledgered per story** (D37 set a ceiling of 24;
+D38 ran an overrun of 3; Story 5.4 closed at overrun 9), and an acceptance criterion that obligates
+five extra dispatches which nothing prices is how a ledger gets blown by its own acceptance text.
+(2) The placeholder is the **only** e2e slot in the workflow, so "run the suite five times, then
+replace the placeholder" is unreachable as written — there is nowhere for the suite to run before
+the replacement. The trial job resolves both: it gives the suite somewhere to live during the trial,
+and it makes the trial's dispatches countable in advance.
+
+**Given** this story dispatches a workflow whose runs are budget-ledgered
+**When** work begins
+**Then** the story declares its own run-ledger **floor and ceiling before the first dispatch**, the
+same way every other story in this project does, and the five trial runs are inside that ceiling
+**And** an overrun is recorded with its cause named, not absorbed silently.
+
+**Given** `deploy-preprod.yml`'s `e2e` job carries `continue-on-error: true` at **job** level, a
+form this repository removed at step level (`dev-reset.yml` code review H4) and records as
+deliberately unused on Forgejo (`ci.yml:190-191`), and which Story 5.5 re-added **unmeasured**
+**When** this story touches that job
+**Then** the flag is either **removed** — the job that now proves something must be able to fail the
+run — or **measured** on this instance and the measurement recorded in
+`docs/migration-decisions.md`, and doing neither is not an option
+**And** whichever is chosen, the job's own comment stops describing the flag as unmeasured.
+
+**Given** a suite that gates a release
+**When** it is flaky
+**Then** a quarantine rule is written down before the first flake, naming who may quarantine a test
+and for how long
+**And** it states plainly that a quarantined test provides no coverage, so a release validated with
+tests in quarantine is validated on a reduced checklist and the `validation_note` must say so.
+
+**Given** the suite replaces manual execution
+**When** a candidate is recorded
+**Then** the suite's own result — not a person's recollection of it — produces the single-line
+`validation_note` that `.forgejo/workflows/record-preprod-candidate.yml` requires
+**And** the note still fits that workflow's existing `validation_note` input unchanged, because that
+input is a one-cell Markdown ledger row and must stay one line.
+
+**Given** the suite runs **inside** `deploy-preprod.yml` while the verdict is a **later, manual**
+`workflow_dispatch` input to `record-preprod-candidate.yml` — two different runs, minutes or hours
+apart, with no channel between them
+**When** the operator dispatches the recorder
+**Then** the handoff path is **defined and named in the workflow itself**: the suite emits its
+ready-to-paste `validation_note` line to `"$GITHUB_STEP_SUMMARY"` **and** to a build artifact the
+operator copies **verbatim** — both, because job logs on this instance have repeatedly failed to
+archive (`log_in_storage=f`, six observations across Stories 5.3 and 5.4) and step-summary
+persistence here was still unverified as of Story 5.4
+**And** the note the operator pastes is required to be that exact line, so "the suite's own result"
+is a transported string rather than a recollection
+**And** the story states what the operator does when neither channel survived — which is to re-run,
+not to reconstruct the note from memory.
+
+> **Sequencing.** Epic 7 otherwise closes the migration; this story does not block it. It cannot
+> start before `CRM/api-prionex` fixes the CORS origin, and it should not start before Story 6.5's
+> promotion guard exists, since the guard is what makes the suite's verdict consequential. If Epic 7
+> closes first, this story survives it — the migration ending is not a reason for it to lapse.

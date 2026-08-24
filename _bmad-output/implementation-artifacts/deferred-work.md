@@ -4035,6 +4035,99 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   - G3's exactly-12 clause specifically (no live dispatch used a hex string of any OTHER length that
     also matched the `{7,64}` shape regex — D5 used a branch-shaped tag, which fails the shape regex
     first, not the length assert).
-  **Owner: whichever story next dispatches this file with a deliberately malformed credential or a
-  wrong-length hex tag** — cheapest candidate is Story 5.5 or 5.6, neither of which is required to
-  do so; recorded so a reader does not mistake "not disclosed" for "does not exist".
+  **Owner: Story 5.6.** (Owner-phrasing corrected 2026-08-24 by Story 5.5 — it read "whichever
+  story next dispatches this file with a deliberately malformed credential or a wrong-length hex
+  tag", which is a trigger condition, not an owner. 🔴 The precedent is **one** entry, not the three
+  this correction first cited: `:3526`, `:3678` and `:3882` were copied out of this file's own
+  stale header and are a *standing* trigger-condition owner, a `log_in_storage` re-check record and
+  a §12-batch annotation respectively — none of them is this class. The exact match is Story 5.4's
+  own **code review L8** entry; find it by searching this file for the string
+  `Corrected, code review L8: named a specific story, not a trigger condition` — a search string
+  and not a line number, because this file's own header says its line citations are unmaintained,
+  and this correction is itself a demonstration of why. The finding is unchanged and nothing is
+  struck. 5.6 and not 5.5: Story 5.5 is documentation plus a placeholder job and dispatches this
+  workflow zero times, whereas 5.6's rehearsal runs the whole cycle **through** the workflows and is
+  the next thing that dispatches the recorder at all. 5.6 is still not *required* to force these
+  eight branches — naming an owner assigns the decision, it does not manufacture a requirement.)
+  **Re-owner rule:** if Story 5.6 closes without exercising these branches, ownership moves to the
+  next story that dispatches this workflow, named explicitly at 5.6's closeout. It does not stay on
+  a closed story, and it is not allowed to lapse back into "whichever story happens to" — that is
+  the phrasing this correction removed.
+  Recorded so a reader does not mistake "not disclosed" for "does not exist".
+
+## Deferred from: Story 5.5 (2026-08-24)
+
+Story 5.5 published `docs/release-validation-checklist.md` (`RVC-v1`), added the non-gating `e2e`
+placeholder job to `.forgejo/workflows/deploy-preprod.yml`, and recorded D39. Four items leave the
+story open; one of them is a genuine collision between two shipped requirements and is not the dev
+agent's to settle.
+
+- 📅 **Real end-to-end coverage is Story 7.7, not a line in this file.** Added to
+  `_bmad-output/planning-artifacts/epics.md` ("Replace the E2E Placeholder with Real End-to-End
+  Coverage", six Given/When/Then criteria) and to `sprint-status.yaml` as
+  `7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog`. It is a story and not a
+  deferred bullet for the reason already recorded for 7.6 (`sprint-status.yaml:1166-1169`): a
+  deferred line reads as "someone will notice", and **nobody notices missing e2e coverage — the
+  placeholder job is green on every single run.** The pointer is filed here so the entry exists in
+  all three places the project actually reads. **Owner: Story 7.7.**
+
+- 🔴 **`RVC-v1` and Story 5.6 collide, and the collision is real rather than a wording problem.**
+  `RVC-v1` says an aggregate verdict of `pass` requires every item to be `pass`, and that a
+  `BLOCKED` item is not a `pass`. Eight of its twelve items are `BLOCKED` on the PRE-PROD Kong's
+  wrong `Access-Control-Allow-Origin` (owner `CRM/api-prionex`, unfixed). So under `RVC-v1` the only
+  honest aggregate verdict available today is `fail` — and `record-preprod-candidate.yml`'s G1
+  refuses `fail` before any registry read, by design, writing nothing. Story 5.6's rehearsal is
+  required to record a candidate. Both requirements are shipped and both are correct; they cannot
+  both be satisfied while CORS is broken. The two exits are: the CORS fix lands first, or 5.6
+  records under an explicitly documented, explicitly time-boxed waiver naming `RVC-v1` and listing
+  the items waived. Silently typing `pass` is ruled out by the checklist and by D39. This is a scope
+  decision, not an implementation one. **Owner: Oleg.**
+
+- ⚠️ **An ordinary job with `needs:` on a `workflow_call` job has no precedent in this repository and
+  was never exercised on this instance.** `ci.yml:498-502` proves the caller may mix job kinds and
+  that a `uses:` job may carry `needs:` on ordinary jobs; `deploy-preprod.yml`'s new `e2e` job is the
+  reverse direction. `yaml.safe_load` parses the file and the run body passes the repo's standing
+  gates (no `${{ }}` in any `run:`, `set -euo pipefail` first, no backslash-continued assignment),
+  but parsing is not scheduling — D21's failure mode is a workflow this instance refuses **before any
+  job exists**, visible only in `action_run.pre_execution_error_details`. The dev agent does not
+  touch the Forgejo API, so the confirming dispatch is written into the spec as
+  `PENDING (owner: coordinator)`. If it is rejected, Story 5.5 HALTs with
+  `e2e job placement requires §12 exception` rather than moving the job into the read-only
+  `deploy-stand.yml`. **Owner: Story 5.5.**
+
+- ⚠️ **`docs/preprod-candidates.md`'s first two rows say `pass` and would not, under `RVC-v1`.**
+  Both rows state in their own note that browser-path validation was not performed and not possible,
+  so they are honest about their scope — but they were written before any checklist existed, against
+  no stated criterion. They are **not** rewritten: that ledger is append-only and this project does
+  not reinterpret rows after the fact (the same rule that keeps decision bodies from being rewritten
+  retroactively). `RVC-v1` governs candidates recorded from its publication onward, and says so in
+  its own text. Recorded here so a later reader comparing the ledger against the checklist does not
+  read the mismatch as an unnoticed defect. **Owner: none needed — closed disposition.**
+
+- ⚠️ **`/dashboard/profile` is the only dashboard route rendered without a `PermissionRoute`
+  wrapper.** `src/routes/index.tsx:277-279` renders it bare —
+  `{ path: 'profile', element: withSuspense(<ProfileSettingsPage />) }` — while every sibling route
+  around it carries a `PermissionRoute requiredPermission={...}`. Pre-existing and
+  application-level; surfaced only because writing `RVC-v1`'s F9 ("every dashboard route is wrapped
+  in a permission check") required checking whether that sentence was true, and it is not. It is
+  **not caused by this story** and is deliberately **not "fixed" here**: whether a user's own
+  profile page should require a permission at all is a product question, and silently adding a
+  wrapper could lock every restricted role out of their own settings. What Story 5.5 did instead is
+  name `profile` as F9's known exception in the checklist, so a validator following F9's own
+  instruction (log in restricted, type URLs directly) does not record a false `fail` on a healthy
+  candidate. **Owner: Oleg.**
+
+- ⚠️ **Job-level `continue-on-error` has never been measured on this Forgejo instance, and
+  `deploy-preprod.yml`'s `e2e` job now depends on it.** The **step**-level form was removed
+  unmeasured by `dev-reset.yml`'s code review H4 (`dev-reset.yml:450-462` — "the only untested
+  platform assumption load-bearing in this file"), and `ci.yml:190-191` records that
+  `continue-on-error` is deliberately NOT used on Forgejo, because in the retired GitHub pipeline it
+  is the exact mechanism that let a never-succeeding coverage step report green for the life of the
+  repository. Story 5.5 re-added it at **job** level — a form less proven than the one H4 removed,
+  with no precedent anywhere in this repository — and the `e2e` job's "cannot fail the run" promise
+  rests on it. The promise is belt over braces (the step body is `echo`s only and cannot fail on its
+  own), so nothing should ever exercise the flag; that is an argument for it being harmless, not for
+  it being measured. It is written into the workflow's own header as the second thing the
+  coordinator's confirming dispatch must observe. **Owner: Story 7.7**, which carries an acceptance
+  criterion to either remove the flag or measure it and record the measurement in
+  `docs/migration-decisions.md`.

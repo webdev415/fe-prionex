@@ -61,6 +61,64 @@ name: Deploy PRE-PROD Stand
 # `deploy-preprod.yml` by name today. If a future PRE-PROD reset or a Story 5.4 recorder starts
 # doing so, this header should be upgraded to say so explicitly, the same way deploy-dev.yml's is.
 #
+# ── The `e2e` job — a PLACEHOLDER that never gates, and why it lives in the CALLER (Story 5.5) ──
+# ⚠️ `e2e` runs no test. The project has NO browser/end-to-end tooling of any kind: `package.json`
+# carries Vitest only (229 component test FILES, jsdom, no driver). The job prints why it exists and
+# exits 0. Adding playwright/cypress/puppeteer here is explicitly out of Story 5.5's scope — real
+# coverage is **Story 7.7** (`_bmad-output/planning-artifacts/epics.md`, `sprint-status.yaml`),
+# recorded as its own story precisely so it cannot be absorbed into this migration. The plan
+# sentence it implements is `docs/forgejo-migration.md:231`; the decision record is
+# `docs/migration-decisions.md#d39`.
+#
+# WHY THE CALLER AND NOT `deploy-stand.yml`. The epic text says "a job after the healthcheck". The
+# healthcheck is `deploy-stand.yml:1907` (`Poll health status, bounded timeout`) — and 🔴 it is NOT
+# the callee's last gating step, which an earlier draft of this header asserted. FOUR more failing
+# steps follow it inside the same terminal `deploy` job: `:1995` (anchored identity assert), `:2035`
+# (fallback HTTP check), `:2098` (AC6 — running image matches the resolved digest), `:2144` (Kong
+# alias guard), plus a recording step at `:2251`.
+#
+# The conclusion survives the correction and is in fact STRONGER. `needs: deploy` places `e2e` after
+# the ENTIRE deploy job — strictly after the healthcheck AND after those four later assertions.
+# "After the whole job" is a superset of "after the healthcheck", so the epic's requirement is
+# satisfied more strongly, not less, and still with no edit to the callee at all.
+#
+# The consequence a future reader needs: there is NO position between the healthcheck and those
+# later steps that a caller-side job can occupy. Reaching one would require editing the read-only
+# callee under its §12 exception. That matters because `deploy-stand.yml` is shared with DEV, is
+# declared READ-ONLY by this very file (see the §12 note above), and sits inside Story 4.9's blast
+# radius. §12 is a priced, escalated procedure — not a permission — and a placeholder that runs no
+# test does not earn one.
+#
+# 🔴 WHAT IS NOT PROVEN HERE, stated before the first dispatch rather than after it. `ci.yml:498-502`
+# proves a caller may mix a `uses:` job with ordinary jobs, and that a `uses:` job may carry
+# `needs:` on ordinary jobs. The REVERSE — an ordinary job with `needs:` on a `uses:` job — has no
+# precedent anywhere in this repository and was never exercised on this instance. If the scheduler
+# rejects it, the failure mode is D21's: no job, no log, only
+# `action_run.pre_execution_error_details`. The first dispatch is therefore a real test of the
+# construct, owned by the coordinator, and its failure HALTs Story 5.5 rather than being worked
+# around by moving the job into the frozen callee.
+#
+# 🔴 `continue-on-error: true` IS A CONSTRUCT THIS REPOSITORY DELIBERATELY REMOVED, and this story
+# re-adds it — stated here rather than left to be discovered. `dev-reset.yml:450-462` records code
+# review H4 removing the STEP-level form as "the only untested platform assumption load-bearing in
+# this file", and `ci.yml:190-191` records that it is deliberately NOT used on Forgejo (in the
+# retired GitHub pipeline, `continue-on-error: true` paired with `fail_ci_if_error: false` is the
+# exact mechanism that let a coverage step which had never once succeeded report green for the life
+# of this repository). What this job carries is the JOB-level form, which is LESS proven than the
+# step-level form H4 removed: it is UNMEASURED on this instance and has no precedent anywhere in
+# this repository.
+#
+# It is kept anyway, as belt over braces: the step body's only statements are `echo`s, so it cannot
+# fail on its own and the flag should never be exercised. Because it is unmeasured, it is the SECOND
+# thing the coordinator's confirming dispatch must observe — alongside whether `needs:` on a `uses:`
+# job is accepted at all (the paragraph above). If the run shows this job failing the run despite
+# the flag, that is a measurement rather than a surprise, and it belongs in
+# `docs/migration-decisions.md#d39`. Removing the flag or measuring it is Story 7.7's, recorded as
+# its own defer entry in `_bmad-output/implementation-artifacts/deferred-work.md`.
+#
+# `needs: deploy` also means a RED deploy SKIPS this job — the run stays red on the deploy's own
+# failure, which is the existing behaviour and is not changed by adding this.
+
 # ── `simulate_bad_credential` / `hold_lock_seconds` — added here, not in the epic's skeleton ────
 # The skeleton omits both. This caller forwards them byte-for-byte in DEV's own dispatch shapes
 # because without them AC4's 401 row and AC3's lock-contention row have no cheap discriminating
@@ -111,3 +169,96 @@ jobs:
       simulate_bad_credential: ${{ inputs.simulate_bad_credential }}
       hold_lock_seconds: ${{ inputs.hold_lock_seconds }}
     secrets: inherit
+
+  # See the `e2e` header section above before editing this job. Three invariants, in order of how
+  # badly they break if ignored: (1) it must never fail a run; (2) it must never gate the deploy;
+  # (3) it must never acquire the stand lock or touch the stand — it now runs ON the deploy runner
+  # (see the `runs-on` note below), so "does not run there" is no longer what protects the stand;
+  # what protects it is that this job's body is `echo`s and opens no SSH, no docker, and no lock.
+  e2e:
+    name: "E2E placeholder (runs no test, never gates)"
+    needs: deploy
+    # `deploy-dev-preprod` — the SAME label the `deploy` job above already passes as its
+    # `runner_label:` input (grep this file for `runner_label:`; no line number, because line
+    # numbers in files this project keeps editing rot — Story 5.4's M11 lesson). Deliberately NOT
+    # `node-20`, and never `ubuntu-latest` (that label resolves to ANOTHER TEAM's idle runner in
+    # this org, `ci.yml:97-99`).
+    #
+    # 🔴 The rule this encodes: a placeholder that asserts nothing must not make a PRE-PROD deploy
+    # depend on a SECOND runner. `node-20` is the shared CI runner. With `needs: deploy` and this
+    # workflow's own `concurrency:` group at `cancel-in-progress: false`, an `e2e` job queued behind
+    # a saturated or offline `node-20` keeps the whole run in-progress and therefore HOLDS the
+    # PRE-PROD concurrency group — blocking the next dispatch, a hotfix included, on a job that by
+    # its own words proves nothing. `timeout-minutes: 5` does NOT cover that: it bounds EXECUTION,
+    # not queue wait. The deploy runner is already required by this run, so reusing it adds no new
+    # dependency of any kind.
+    #
+    # The counterweight, stated rather than hidden: the deploy runner is capacity-1 (D30/D32), so
+    # this job does occupy it briefly after the deploy finishes. That cost is bounded by
+    # `timeout-minutes: 5` and in practice by a body that is only `echo`s, and it is paid on a
+    # runner this run already holds — whereas the `node-20` alternative buys a queue dependency the
+    # concurrency group cannot release.
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    # Kept, UNMEASURED at job level on this instance — see the `continue-on-error` block in the
+    # header for the full provenance and for why the coordinator's first dispatch must observe it.
+    continue-on-error: true
+    steps:
+      # No `${{ }}` anywhere in this body, including inside its comments -- this instance
+      # substitutes inside shell comments too, and one empty token has rejected an entire workflow
+      # with no diagnostic beyond `action_run.pre_execution_error_details` (D21). Values that this
+      # job ever needs must arrive through an `env:` block. It needs none today.
+      - name: State why this job exists and that it proves nothing
+        run: |
+          set -euo pipefail
+          # The text is defined ONCE, as a function, and emitted TWICE: to stdout (the job log) and
+          # to the step summary. Reason: job logs on this instance frequently never archive --
+          # `log_in_storage=f` was observed six times across Stories 5.3 and 5.4 -- and this job's
+          # entire purpose is to be VISIBLE. A rationale that survives only in a log that vanishes
+          # is exactly the invisibility the job was added to prevent. One function, two sinks, so
+          # the two copies cannot drift.
+          #
+          # Honest about the second sink too: whether step summaries persist on THIS instance was
+          # still unverified as of Story 5.4 (docs/preprod-candidates.md says so in its own header).
+          # This is a second best-effort channel, not a proven one. The durable record of why this
+          # job exists is docs/migration-decisions.md#d39 and this file's own header.
+          rationale() {
+            echo "e2e: PLACEHOLDER. No end-to-end test ran, and none exists in this repository."
+            echo ""
+            echo "This job asserts NOTHING about the candidate. It is a named, reserved slot so that"
+            echo "the deploy pipeline has an agreed place for real end-to-end coverage to land, and"
+            echo "so that its absence is visible in every PRE-PROD run instead of being invisible."
+            echo ""
+            echo "What actually validates a PRE-PROD candidate today is a MANUAL checklist:"
+            echo "  docs/release-validation-checklist.md  (version marker RVC-v1)"
+            echo "Its result is compressed into the validation_note that"
+            echo "  .forgejo/workflows/record-preprod-candidate.yml"
+            echo "requires before it will mint preprod-<sha>. A failing item means verdict 'fail',"
+            echo "and that workflow's G1 refuses 'fail' before any registry read -- so nothing is"
+            echo "written and Story 6.5's promotion guard has nothing to match."
+            echo ""
+            echo "Replacing this placeholder with real tests is Story 7.7 -- a separate story, not a"
+            echo "task of this migration. See docs/migration-decisions.md#d39 and"
+            echo "docs/forgejo-migration.md:231."
+            echo ""
+            echo "This job cannot fail the run and does not gate the deploy. Exiting 0 deliberately."
+          }
+
+          rationale
+
+          # Guarded with :- because `set -u` would otherwise abort on an unset GITHUB_STEP_SUMMARY,
+          # and invariant (1) is that this job never fails a run. Fenced so Markdown renders the
+          # block verbatim instead of collapsing its line breaks.
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## e2e placeholder -- runs no test, never gates"
+              echo ""
+              echo '```'
+              rationale
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "OK: rationale also written to the step summary."
+          else
+            echo "NOTE: GITHUB_STEP_SUMMARY is unset -- the rationale exists only in this job log,"
+            echo "which on this instance has repeatedly failed to archive (log_in_storage=f)."
+          fi
