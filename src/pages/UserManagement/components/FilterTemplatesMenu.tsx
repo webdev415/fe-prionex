@@ -33,7 +33,7 @@ export function FilterTemplatesMenu({ currentFilters, onApply }: FilterTemplates
   const [saveOpen, setSaveOpen] = useState(false)
   const [name, setName] = useState('')
 
-  const { data } = useFilterTemplates(open)
+  const { data, isLoading, isError, refetch } = useFilterTemplates(open)
   const saveTemplate = useSaveFilterTemplate()
   const deleteTemplate = useDeleteFilterTemplate()
 
@@ -92,7 +92,19 @@ export function FilterTemplatesMenu({ currentFilters, onApply }: FilterTemplates
             </span>
           </DropdownMenuItem>
 
-          {templates.length === 0 ? (
+          {isLoading ? (
+            <div className="text-muted-foreground px-2 py-2 text-xs">
+              {t('pages.users.filterTemplates.loading')}
+            </div>
+          ) : isError ? (
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="text-destructive hover:text-foreground w-full cursor-pointer px-2 py-2 text-left text-xs"
+            >
+              {t('pages.users.filterTemplates.loadFailed')}
+            </button>
+          ) : templates.length === 0 ? (
             <div className="text-muted-foreground px-2 py-2 text-xs">
               {t('pages.users.filterTemplates.empty')}
             </div>

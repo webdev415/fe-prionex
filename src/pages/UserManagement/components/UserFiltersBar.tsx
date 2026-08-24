@@ -20,6 +20,7 @@ import {
   DEFAULT_USER_FILTERS,
   isUserFilterActive,
   type UserFilterState,
+  type WorkFormatFilter,
 } from '../lib/userFilterDefaults'
 
 interface UserFiltersBarProps {
@@ -322,6 +323,17 @@ export function UserFiltersBar({
               {group.name}
             </SelectItem>
           ))}
+        </FilterSelect>
+
+        <FilterSelect
+          label={t('pages.users.filters.workFormat')}
+          value={filters.workFormat}
+          onValueChange={(value) => onFilterChange({ workFormat: value as WorkFormatFilter })}
+          isActive={isUserFilterActive('workFormat', filters.workFormat)}
+        >
+          <SelectItem value="all">{t('pages.users.filters.all')}</SelectItem>
+          <SelectItem value="office">{t('pages.profileSettings.workFormat.office')}</SelectItem>
+          <SelectItem value="remote">{t('pages.profileSettings.workFormat.remote')}</SelectItem>
         </FilterSelect>
 
         <FilterSelect

@@ -3605,7 +3605,6 @@
           "disabled": "Disabled"
         },
         "workFormat": "Work format",
-        "clearAll": "Clear all",
         "clearFilters": "Clear filters"
       },
       "tableHeaders": {
@@ -3792,7 +3791,9 @@
         "deleted": "Filter template deleted",
         "empty": "No saved templates yet",
         "confirmDeleteTitle": "Delete this template?",
-        "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed."
+        "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed.",
+        "loading": "Loading templates...",
+        "loadFailed": "Could not load templates - tap to retry"
       }
     },
     "ipWhitelist": {

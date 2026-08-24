@@ -581,13 +581,16 @@ export function UserManagementPage() {
       key: 'workFormat',
       header: t('pages.users.tableHeaders.workFormat'),
       align: 'center',
-      render: (user) => (
-        <span className="text-foreground">
-          {user.work_format === 'remote'
-            ? t('pages.profileSettings.workFormat.remote')
-            : t('pages.profileSettings.workFormat.office')}
-        </span>
-      ),
+      render: (user) => {
+        if (user.work_format !== 'office' && user.work_format !== 'remote') {
+          return <span className="text-muted-foreground">—</span>
+        }
+        return (
+          <span className="text-foreground">
+            {t(`pages.profileSettings.workFormat.${user.work_format}`)}
+          </span>
+        )
+      },
     },
     {
       key: 'extension',
@@ -888,6 +891,10 @@ export function UserManagementPage() {
             open={viewUserId !== null}
             userId={viewUserId}
             onClose={handleCloseView}
+            onEdit={() => {
+              setViewUserId(null)
+              setEditUserId(viewUserId)
+            }}
           />
         )}
 

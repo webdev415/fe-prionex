@@ -11,11 +11,18 @@ beforeAll(() => {
 const saveMutate = vi.hoisted(() => vi.fn().mockResolvedValue({}))
 const deleteMutate = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const templates = vi.hoisted(() => ({ value: [] as unknown[] }))
+const query = vi.hoisted(() => ({ isLoading: false, isError: false }))
+const refetch = vi.hoisted(() => vi.fn())
 const toastFns = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
 vi.mock('sonner', () => ({ toast: toastFns }))
 vi.mock('@/features/users/hooks/useFilterTemplates', () => ({
-  useFilterTemplates: () => ({ data: { templates: templates.value } }),
+  useFilterTemplates: () => ({
+    data: { templates: templates.value },
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch,
+  }),
   useSaveFilterTemplate: () => ({ mutateAsync: saveMutate, isPending: false }),
   useUpdateFilterTemplate: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteFilterTemplate: () => ({ mutateAsync: deleteMutate, isPending: false }),
@@ -35,6 +42,8 @@ describe('FilterTemplatesMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     templates.value = []
+    query.isLoading = false
+    query.isError = false
   })
 
   it('says so when nothing has been saved yet', async () => {
@@ -115,5 +124,34 @@ describe('FilterTemplatesMenu', () => {
     fireEvent.click(await screen.findByRole('button', { name: /delete remote/i }))
 
     expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('does not pass a failed load off as an empty list', async () => {
+    // Otherwise the menu invites you to re-save templates you already have.
+    query.isError = true
+    render(<FilterTemplatesMenu currentFilters={CURRENT} onApply={vi.fn()} />)
+    openMenu()
+
+    expect(await screen.findByText(/could not load templates/i)).toBeInTheDocument()
+    expect(screen.queryByText(/no saved templates yet/i)).not.toBeInTheDocument()
+  })
+
+  it('offers a retry when the load failed', async () => {
+    query.isError = true
+    render(<FilterTemplatesMenu currentFilters={CURRENT} onApply={vi.fn()} />)
+    openMenu()
+
+    fireEvent.click(await screen.findByText(/could not load templates/i))
+
+    expect(refetch).toHaveBeenCalled()
+  })
+
+  it('says it is still loading rather than showing nothing', async () => {
+    query.isLoading = true
+    render(<FilterTemplatesMenu currentFilters={CURRENT} onApply={vi.fn()} />)
+    openMenu()
+
+    expect(await screen.findByText(/loading templates/i)).toBeInTheDocument()
+    expect(screen.queryByText(/no saved templates yet/i)).not.toBeInTheDocument()
   })
 })

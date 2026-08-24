@@ -242,6 +242,8 @@ vi.mock('react-i18next', () => ({
         'pages.users.filterTemplates.saved': 'Filter template saved',
         'pages.users.filterTemplates.deleted': 'Filter template deleted',
         'pages.users.filterTemplates.empty': 'No saved templates yet',
+        'pages.users.filterTemplates.loading': 'Loading templates...',
+        'pages.users.filterTemplates.loadFailed': 'Could not load templates - tap to retry',
         'pages.users.filterTemplates.confirmDeleteTitle': 'Delete this template?',
         'pages.users.filterTemplates.confirmDeleteMessage':
           '"{{name}}" is removed from your saved filters. The filters themselves are not changed.',

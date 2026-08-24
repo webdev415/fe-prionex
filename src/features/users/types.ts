@@ -88,6 +88,7 @@ export interface UserListParams {
   role_id?: number
   project_id?: number
   department_id?: number
+  department_ids?: string
   group_id?: number
   work_format?: 'office' | 'remote'
   sort_by?: UserSortField
