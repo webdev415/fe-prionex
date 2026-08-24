@@ -741,33 +741,33 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 1 — Open the story (AC: all)
 
-- [ ] 1.1 Flip `sprint-status.yaml`: `5-4-record-the-validated-candidate-in-the-registry` →
+- [x] 1.1 Flip `sprint-status.yaml`: `5-4-record-the-validated-candidate-in-the-registry` →
       `in-progress`, and **push that commit on its own** before any substantive change. 5.2's H1 is
       why: this is the only checkbox in the file independently falsifiable from the repository, and
       sweeping it into a later commit makes it false.
-- [ ] 1.2 Take the ledger baseline, **repo-scoped**, before any work:
+- [x] 1.2 Take the ledger baseline, **repo-scoped**, before any work:
       `ssh root@10.67.0.1 'docker exec forgejo-postgres psql -U forgejo -d forgejo -tAc "select max(id), count(*), now() at time zone '"'"'utc'"'"' from action_run where repo_id=16"'`
       Confirm `repo_id=16` is `CRM/fe-prionex` yourself
       (`select id,owner_name,name from repository where name='fe-prionex'`). Record the instance-wide
       form too and **say which is which**. Expect `max(id) ≥ 1201`.
-- [ ] 1.3 Declare the ledger in Dev Agent Record: floor **18**, ceiling **22**, disposition
+- [x] 1.3 Declare the ledger in Dev Agent Record: floor **18**, ceiling **22**, disposition
       **OPEN**. §11.
-- [ ] 1.4 `git fetch` every open `story-*` branch and confirm the next free decision number.
+- [x] 1.4 `git fetch` every open `story-*` branch and confirm the next free decision number.
       Expect **D38** — `main` holds D34/D36/D37, `story-4-9/pr-1-context` holds **D35**. *There is a
       `D23` collision in this project's history precisely because someone did not check.*
-- [ ] 1.5 Check the clock against the no-touch window (§11) before planning Task 5's dispatch.
+- [x] 1.5 Check the clock against the no-touch window (§11) before planning Task 5's dispatch.
 
 ### Task 2 — Zero-dispatch preconditions: settle everything that a run would otherwise discover (AC: 1, 2, 4) — **costs 0 runs**
 
-- [ ] 2.1 Re-confirm §2's 🔁 rows on s1 by SSH, read-only: the container is `healthy`; its image's
+- [x] 2.1 Re-confirm §2's 🔁 rows on s1 by SSH, read-only: the container is `healthy`; its image's
       `.RepoDigests` contains `sha256:5e5b190d…`; `curl -s -o /dev/null -w '%{http_code}'
       http://127.0.0.1:8083/` is `200`. Use `.RepoDigests` on the **image**, never `.Image` on the
       container (§2 row o).
-- [ ] 2.2 Force-test the marker derivation locally, as a shell snippet, on four inputs:
+- [x] 2.2 Force-test the marker derivation locally, as a shell snippet, on four inputs:
       `sha-00ef3be4743d-preprod` → `preprod-00ef3be4743d`; `sha-00ef3be4743d-dev` → refused by G2;
       `main-preprod` → refused by G3; `sha-00ef3be4-preprod` (9 hex) → refused by G3's length assert.
       Paste the literal output.
-- [ ] 2.3 Force-test the three guards that can have no live failing row, against deliberately wrong
+- [x] 2.3 Force-test the three guards that can have no live failing row, against deliberately wrong
       values: **G4** (a marker name that does not match `keep_pattern`), **G6** (labels that disagree
       with the derived hex, and an `org.prionex.environment` of `dev`), and **AC8's repoint refusal**
       (`pre_digest != new_digest`). All three are AC7/AC8 rows with **no live dispatch**; the
@@ -782,12 +782,12 @@ is also listed in §10 and Dev Notes §9.
       `keep_pattern` verbatim. Compile it — the stored string, not `build.yml`'s copy — against the
       literals `preprod-current` and `preprod-00ef3be4743d` under `match full name = true`, i.e.
       against `fe-prionex/preprod-current` and `fe-prionex/preprod-00ef3be4743d`. AC4.
-- [ ] 2.6 Confirm the deploy runner's labels have not drifted:
+- [x] 2.6 Confirm the deploy runner's labels have not drifted:
       `select id, name, agent_labels from action_runner where name='s1-deploy-dev-preprod'`.
       Expect `["deploy-dev-preprod"]`. An unmatched `runs-on` queues **silently**.
 - [ ] 2.7 Confirm `secrets.REGISTRY_USER` / `REGISTRY_TOKEN_RW` are visible to this repository
       (org secret list, coordinator, names only — **never values**).
-- [ ] 2.8 🔴 **The standing obligation 5.3 handed to the first session with SSH/psql access, to be
+- [x] 2.8 🔴 **The standing obligation 5.3 handed to the first session with SSH/psql access, to be
       done before other work on this story's residue:** re-check
       `select id, log_in_storage from action_task where id in (9745, 9769)`. If either flipped to
       `t`, read the log and paste the literal `RESP_CODE` line and AC7's lines 2-5 into
@@ -796,25 +796,25 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 3 — Write `.forgejo/workflows/record-preprod-candidate.yml` (AC: 1, 2, 6, 7, 8)
 
-- [ ] 3.1 Header comment, in `deploy-preprod.yml`'s style: what this file is, why it is
+- [x] 3.1 Header comment, in `deploy-preprod.yml`'s style: what this file is, why it is
       dispatch-only rather than a deploy step (§4), the shared concurrency group and why (§9),
       `--prefer-index=false` and why (§6), the write-order argument (§6), the
       `sha-<12hex>-preprod → preprod-<12hex>` derivation rule **spelled out for Story 6.5**, and the
       AC6 honesty paragraph.
-- [ ] 3.2 Triggers: `workflow_dispatch` only. Inputs — `image_tag` (required, string),
+- [x] 3.2 Triggers: `workflow_dispatch` only. Inputs — `image_tag` (required, string),
       `validated` (required, `type: choice`, options `pass` / `fail`, **no default**),
       `validation_note` (required, string: who validated, against what, when).
       **No `push`, no `schedule`, no tag trigger, no `workflow_call`.**
-- [ ] 3.3 `concurrency: group: deploy-preprod-fe-prionex-preprod`, `cancel-in-progress: false`,
+- [x] 3.3 `concurrency: group: deploy-preprod-fe-prionex-preprod`, `cancel-in-progress: false`,
       at workflow level, a literal. §9.
-- [ ] 3.4 Job `verify-on-stand`, `runs-on: deploy-dev-preprod`, `timeout-minutes: 5`. Steps: G1
+- [x] 3.4 Job `verify-on-stand`, `runs-on: deploy-dev-preprod`, `timeout-minutes: 5`. Steps: G1
       (verdict, fail-closed on any third value), G2 (suffix), G3 (shape + 12-char assert), resolve
       the tag's digest via `curl` to `/v2/…/manifests/<tag>` with the **RO** pair
       (`--config -` on stdin, never argv — copy `deploy-stand.yml:1111-1123`'s shape including its
       four `Accept:` headers and its 401/404/000 classifiers), then G5: `docker inspect` the
       container's health and its image's `.RepoDigests`, `grep -F` the digest. Echo
       `validation_note` verbatim into the log — it is the record.
-- [ ] 3.5 Job `record`, `runs-on: node-20`, `needs: verify-on-stand`, `timeout-minutes: 10`.
+- [x] 3.5 Job `record`, `runs-on: node-20`, `needs: verify-on-stand`, `timeout-minutes: 10`.
       Prelude per §5 in that order. Then: re-resolve the candidate digest with
       `imagetools inspect --format '{{.Manifest.Digest}}'` (this doubles as the mechanism smoke test,
       §5); **G6** — read the image's config labels back from the registry and check all three
@@ -829,9 +829,9 @@ is also listed in §10 and Dev Notes §9.
       confirm the field path against the real tag in the first dispatch's read step **before** the
       guard is allowed to fail closed on a parse error, and if the format expression is wrong, fix
       the expression — do not weaken the guard to a substring grep.
-- [ ] 3.6 Final step: list `preprod-*` tags with their digests from `/v2/…/tags/list` (RO pair) and
+- [x] 3.6 Final step: list `preprod-*` tags with their digests from `/v2/…/tags/list` (RO pair) and
       print them. AC5.
-- [ ] 3.7 Mechanical gates, all zero-run: `yaml.safe_load` parses the file; extract every `run:` body
+- [x] 3.7 Mechanical gates, all zero-run: `yaml.safe_load` parses the file; extract every `run:` body
       and scan for the literal `${{` (expect **0**); `bash -n` each extracted body; grep for
       `--prefer-index=false` (expect one occurrence per `create`); grep the whole file for
       `set -euo pipefail` count == number of `run:` bodies. Paste the counts.
@@ -1280,14 +1280,103 @@ _(dev-story: Sonnet, per the standing model split)_
 
 ### Debug Log References
 
-_(Task 2's zero-run evidence, every dispatch's run id, the raw `tags/list` responses, the stored
-`keep_pattern` verbatim, the retro-E5 matrix with its marker-state-after column, and the per-AC
-verdict table go here.)_
+**Task 1.1:** `sprint-status.yaml` flipped `ready-for-dev → in-progress` and pushed as its own
+commit (`48b7434c`), before any other change.
 
-### Run Budget Ledger
+**Task 1.2 — ledger baseline, `2026-08-24T12:05:53Z`:** repo-scoped (`repo_id=16`):
+`select max(id), count(*), now() at time zone 'utc' from action_run where repo_id=16` →
+**`1212 | 475`**. Instance-wide: **`1212 | 1212`** (coincides with the repo-scoped count this time —
+said explicitly, not a filter error: `select id,owner_name,name from repository where
+name='fe-prionex'` → `16|CRM|fe-prionex`, confirming the filter was applied). `max(id) ≥ 1201`
+confirmed (§2 row p).
 
-**Declared before work (Task 1.3):** baseline `max(action_run.id) = ____` at `____Z`, repo-scoped
-(`repo_id = 16`). Floor **18**, ceiling **22**, disposition **OPEN**. §11 is the model.
+**Task 1.3 — ledger declared:** floor **18**, ceiling **22**, disposition **OPEN**. §11.
+
+**Task 1.4 — D-number, verified against every open `story-*` branch, not just `main`:** fresh
+`git fetch origin`. `main` stops at D37 (D32-D34, D36, D37 — no D35, that belongs to `story-4-9`,
+unmerged). Every other open branch checked: `story-4-4/pr-1-context` (D29), `story-4-5/pr-1-context`
+(D30), `story-4-9/pr-1-context` (D35, its own, not rebased past 5.2/5.3's merges). **No branch
+carries D38. D38 is free.**
+
+**Task 1.5:** no-touch window is 2026-08-30 01:45–02:30 UTC. Today is 2026-08-24 — well outside it.
+
+**Task 2.8 — standing obligation from 5.3, done FIRST, before any other work this session (per the
+coordinator's own instruction, since an SSH session was starting anyway):**
+`select id, log_in_storage from action_task where id in (9745, 9769)` → **still `f` for both — the
+FIFTH check across five sessions, all negative.** Timestamp: `2026-08-24T12:0x:xxZ` (same session as
+the Task 1.2 baseline query, run immediately before it). Left PENDING with the same standing plan;
+not silently skipped.
+
+**Task 2.1 — §2's 🔁 rows re-confirmed on s1, read-only:** `docker inspect fe-prionex-preprod
+--format '{{.State.Health.Status}}'` → `healthy`. `.RepoDigests` via the correct method (config
+digest from `.Image`, then `docker image inspect <that digest> --format '{{.RepoDigests}}'`, never
+`.Image` on the container directly) → `[git.crm-prionex.com/crm/fe-prionex@sha256:5e5b190d93c8…]`.
+`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8083/` → `200`.
+
+**Task 2.2 — marker derivation force-tested, byte-exact extraction of the real G2+G3 steps from the
+shipped file (`python3`+`yaml.safe_load`, not hand-retyped — 5.3's own lesson about transcription
+mismatches):**
+```
+IMAGE_TAG=sha-00ef3be4743d-preprod  -> OK: ends in '-preprod'. -> derived_hex=00ef3be4743d
+IMAGE_TAG=sha-00ef3be4743d-dev      -> FAIL(G2): does not end in '-preprod'.
+IMAGE_TAG=main-preprod              -> OK: ends in '-preprod'. -> FAIL(G3): does not match
+                                        ^sha-[0-9a-f]{7,64}-preprod$
+IMAGE_TAG=sha-00ef3be4-preprod      -> OK: ends in '-preprod'. -> FAIL(G3): hex part '00ef3be4'
+                                        is 8 characters, not 12 (🔴 corrected against the story's
+                                        own worked example, which said "9 hex" — counted directly
+                                        from the actual test string rather than trusted)
+```
+
+**Task 2.3 — the three guards with no live failing row, force-tested against deliberately wrong
+values, byte-exact extraction of the real steps:**
+- **G4** (marker name `keep_pattern` does not protect): passing case
+  (`preprod-00ef3be4743d`/`preprod-current`, the story's own real derived names) →
+  `OK(G4): both '…' match keep_pattern.`, exit 0. Failing case (`preprod-runtime`, a deliberately
+  non-hex marker) → `FAIL(G4): marker 'preprod-runtime' does not match this project's own
+  retention keep_pattern…`, exit 1.
+- **G6** (labels disagree with the derived hex): `docker` shadowed via `PATH` with a stub returning
+  controlled JSON (the real registry call cannot run locally). Passing case: all three labels agree
+  → `OK(G6): version='00ef3be4743d' equals derived hex; revision='…' starts with it;
+  environment='preprod'.`, exit 0. Failing case: `org.prionex.environment` stubbed to `dev` →
+  `FAIL(G6): org.prionex.environment='dev', not 'preprod'…`, exit 1 — the D33 §6(b) case this guard
+  exists for.
+- **AC8's repoint refusal**: same stub technique, `docker buildx imagetools inspect` returning a
+  digest DIFFERENT from the candidate's own resolved digest for an already-existing
+  `preprod-<sha>`. Result: `FAIL(AC8): refusing to repoint …/preprod-00ef3be4743d. existing digest
+  (before this run): sha256:1111…1111. this run's candidate digest: sha256:5e5b190d…. …is
+  UNCHANGED — this step exits before touching it.`, exit 1 — confirmed the `imagetools create` call
+  is never reached on this branch (it sits textually after the `exit 1`). The no-op branch (same
+  digest already there) was also force-tested for contrast: `already points at … — nothing to do.`,
+  `history_written=noop`, exit 0.
+
+All three: **disposition UNPROVEN live**, written next to each in AC7's matrix (below) — force-
+tested, not counted as earned, per Prohibition 16 and 5.3's H2 lesson about not erasing which
+guards actually ran.
+
+**Task 2.6 — runner label drift check:** `select id, name, agent_labels from action_runner where
+name='s1-deploy-dev-preprod'` → `14 | s1-deploy-dev-preprod | ["deploy-dev-preprod"]`. No drift.
+
+**Task 3.1-3.7 — `.forgejo/workflows/record-preprod-candidate.yml` written and mechanically
+verified, zero dispatches:**
+- `yaml.safe_load` parses the file cleanly. The `on:` boolean-key trap is present as expected
+  (`True in d` is `True`, `'on' in d` is `False` — YAML 1.1 behaviour, not a defect; handled in
+  every check with `d.get('on', d.get(True))`).
+- Every `run:` body extracted and scanned: **15 total, 0 containing the literal `${{`, 0 `bash -n`
+  syntax errors, 15/15 begin with `set -euo pipefail`** (Prohibitions 8/9).
+- `grep -c -- '--prefer-index=false'` → 4 total in the file; exactly **2 are inside executable
+  `run:` code** (one per `imagetools create` write — confirmed by line number, the other two are
+  header-comment prose). `grep -c 'imagetools create'` → matches (2 real writes).
+- Assignment-context backslash-continuation scan (`="[^"]*"\$`, the 5.3-derived class of defect) →
+  **zero matches** in this new file.
+- Two jobs confirmed structurally: `verify-on-stand` (`runs-on: deploy-dev-preprod`,
+  `timeout-minutes: 5`, plain `run:` steps only — no `uses:` step on the deploy runner, per §2's own
+  table row) and `record` (`runs-on: node-20`, `needs: verify-on-stand`, `timeout-minutes: 10`).
+  Neither job reads the other's `outputs` — each resolves the candidate's digest independently from
+  the same immutable tag (Dev Notes §9 row 6).
+- `concurrency:` is the literal `deploy-preprod-fe-prionex-preprod`, declared at workflow level,
+  outside `jobs:`, no `${{ }}` anywhere in it.
+- Write order confirmed by reading the file: the `preprod-<sha>` write step is textually and
+  therefore execution-order **before** the `preprod-current` write step (§6).
 
 ### Completion Notes List
 

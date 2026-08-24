@@ -1,0 +1,623 @@
+name: Record a validated PRE-PROD candidate
+
+# Story 5.4. Story 5.3 made PRE-PROD a real deploy target; this file makes the registry remember
+# what was validated there. It creates no image and deploys nothing: `docker buildx imagetools
+# create --prefer-index=false` is a registry-side retag — it points a second name at a manifest
+# that is already there (build.yml:1450-1554, the exact pattern this file's write steps copy). Two
+# jobs: `verify-on-stand` (read-only, no lock, no compose) confirms the candidate is what PRE-PROD
+# is demonstrably serving right now; `record` (holding REGISTRY_TOKEN_RW) then points
+# `preprod-<12hex>` (permanent, one per validated commit) and `preprod-current` (moving) at its
+# manifest, each write read back before it is reported.
+#
+# ── `workflow_dispatch`-only, with a required verdict — deliberately NOT a step in a deploy ─────
+# The epic's literal text (FR14, AC1) reads "after a successful PRE-PROD deploy, the recording step
+# runs" — an automatic step appended to deploy-preprod.yml. That would make `preprod-<sha>` mean
+# "this commit was deployed", while Story 6.5 reads it as "this commit was VALIDATED" (FR16). This
+# file is a dispatch-only recorder with a required `validated` input instead, so the two claims are
+# the same claim: `preprod-<sha>` exists if and only if a human asserted validation passed AND the
+# stand was demonstrably serving exactly that artifact when they said so (G5). This is also the only
+# shape in which retro-E5's discriminating row — the marker does NOT move on a failed validation —
+# can exist at all: an automatic-on-deploy recorder has no failure input to supply.
+# Autonomous, subject to Oleg's veto (5-4-…md Dev Notes §9 row 1). If vetoed: this becomes a third
+# job in deploy-preprod.yml instead, and `preprod-<sha>` means "deployed", not "validated" — raise
+# that against Story 6.5's own AC text by name.
+#
+# ── What "validated" covers, and what it does not (AC6) — printed by the workflow itself ────────
+# PRE-PROD's Kong answers a static, wrong Access-Control-Allow-Origin (measured 5.1, re-measured
+# 5.2 from the real origin, unfixed) — no browser can exercise the API path on this stand. This
+# marker asserts: this exact digest resolves in the registry under an immutable, commit-bearing tag;
+# the PRE-PROD container was running that digest and reported healthy at record time; a human
+# asserted a verdict and named what they checked. It does NOT assert: that a rebuild of the same
+# commit would reproduce it (vite.config.ts:8 bakes Date.now(), deferred-work.md:2209-2229); that
+# `healthy` means anything about the backend (the healthcheck probes itself, 5.1's finding); that a
+# BROWSER can call the API — CORS is broken and was never exercised; that any particular checklist
+# was followed (Story 5.5, which does not exist yet).
+#
+# ── The commit-sha derivation, spelled out for Story 6.5 — it must implement the exact inverse ──
+#   input   sha-<12hex>-preprod
+#   strip   leading "sha-" and trailing "-preprod"
+#   assert  ^[0-9a-f]{12}$   -- exactly 12, hard FAIL otherwise (build.yml:707-710, :801 cut -c1-12;
+#                                a length mismatch here fails every legitimate release at 6.5)
+#   emit    preprod-<12hex>
+# The derivation alone is not trusted: D33 §6(b) records that deploy-stand.yml's own image_tag mode
+# deliberately SKIPS the org.opencontainers.image.revision cross-check, so nothing on the deploy
+# path ever establishes a deployed image's actual commit. G6 below reads the candidate's own
+# build-time labels back from the registry and cross-checks them against the derived hex, so
+# `preprod-<sha>` is not a name derived only from a name.
+#
+# ── Write order: preprod-<sha> FIRST, then preprod-current (§6) ─────────────────────────────────
+# If this run dies between the two writes, the history tag exists and the pointer is stale —
+# recoverable by re-running, and Story 6.5 (which reads preprod-<sha>, never preprod-current) is
+# still correct. The reverse order would leave preprod-current naming a candidate with no history
+# entry, which is exactly the state 6.5 would misread.
+#
+# ── --prefer-index=false is not optional, for two reasons ────────────────────────────────────────
+# (1) build.yml:1518-1538: without it, `imagetools create` silently wraps the source manifest in an
+# OCI index whose digest can never equal the source manifest's — build-buildkit-cni-image.yml:373 is
+# the recorded counter-example (D26) and is not copied here. (2) This instance runs a SEPARATE
+# sweeper, cleanup_sha256, independent of package_cleanup_rule: it deletes any sha256:* version no
+# index manifest references, >=24h old (deferred-work.md:613-627). Writing an index would create a
+# second sha256: row governed by a rule this project has never exercised, and the retention clause
+# that would have covered it is recorded as inert on this Forgejo version. Writing the source
+# manifest verbatim keeps the marker inside the model this project has actually reasoned about.
+#
+# ── The check-to-write window is real and is not closed here (deferred-work.md:2288-2301) ───────
+# `imagetools create` offers no compare-and-swap. Two concurrent recorder runs could both read
+# "absent" and both attach. This file narrows the window rather than closing it: the shared
+# concurrency group below serializes recorder runs against each other and against PRE-PROD deploys,
+# and the mandatory read-back after every write is the mitigation the deferred item itself names —
+# the race is narrowed and detected, not eliminated.
+#
+# ── `concurrency:` — the SAME literal group deploy-preprod.yml uses, deliberately ────────────────
+# D30 keys the group on the stand's own identity, and this file reads that stand's live state (G5).
+# A deploy running concurrently would move the digest under the read. This is the one case where
+# Story 5.3's Prohibition 7 ("never copy DEV's group") does not apply — that forbade sharing a group
+# with an INDEPENDENT stand; this file reads the SAME stand deploy-preprod.yml deploys to.
+# Autonomous, subject to Oleg's veto. If vetoed: own literal group
+# `record-preprod-fe-prionex-preprod`; a concurrent deploy can then make G5 fail spuriously (safe,
+# confusing, not corrupting).
+#
+# ── The two jobs deliberately do not pass the digest to each other ───────────────────────────────
+# Each resolves it independently from the same immutable tag (sha-<12hex>-preprod is refused a
+# repoint by build.yml:1476-1516, so the two resolutions must agree). This avoids the only
+# cross-job outputs dependency this file could have had, on an instance where workflow_call/output
+# plumbing has surprised this project four times (D8, D21).
+#
+# ── driver: docker, not build.yml's docker-container block ───────────────────────────────────────
+# build.yml's driver-opts/private-builder/build-network exist for BUILDING with a registry cache;
+# this job builds nothing, it only retags. `imagetools` is a registry client that runs in the job
+# container under either driver. The first step of the `record` job is an `imagetools inspect` of
+# the already-existing candidate tag — a pure read — so a wrong driver, a missing binary, a bad
+# login, or a DNS miss fails before any registry write, with a message that says which.
+#
+# ── Naming invariants — NOT claimed for this file ────────────────────────────────────────────────
+# Nothing dispatches or reads this file back by name today (unlike deploy-dev.yml, which
+# dev-reset.yml both dispatches and reads back by both file name and workflow `name:`). If a future
+# story starts doing so, this header should be upgraded then, the same way deploy-dev.yml's is.
+#
+# ── What this file does NOT do (Story 5.5's and Story 6.5's territory) ──────────────────────────
+# It does not define what "validation" consists of — `validation_note` is free text on purpose,
+# until Story 5.5 ships a checklist. It does not gate PRODUCTION on this tag's presence — that is
+# Story 6.5's `deploy-prod.yml`/promotion check, not built here. It implies no technical approval
+# gate beyond repository write access (NFR9) — this is a deliberate human act, and that is the
+# entire access control, stated rather than implied otherwise.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "The candidate image tag to record, e.g. sha-00ef3be4743d-preprod. Must be an existing sha-<hex>-preprod tag; this workflow creates no image."
+        required: true
+        type: string
+      validated:
+        description: "The validation verdict. 'pass' records the candidate; anything else (including 'fail') writes nothing."
+        required: true
+        type: choice
+        options:
+          - pass
+          - fail
+      validation_note:
+        description: "Free text: who validated, against what, when. Echoed verbatim into the log — it is the record. Story 5.5 may later define a checklist this note references."
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-preprod-fe-prionex-preprod
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
+
+jobs:
+  verify-on-stand:
+    name: "Verify the candidate is what PRE-PROD is demonstrably serving"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      - name: G1 -- verdict must be exactly 'pass'
+        env:
+          VALIDATED: ${{ inputs.validated }}
+        run: |
+          set -euo pipefail
+          case "${VALIDATED}" in
+            pass) : ;;
+            fail)
+              echo "FAIL(G1): validated=fail -- this is a real refusal, not a bug. A failed"\
+                   "validation writes nothing to the registry. Nothing after this step runs."
+              exit 1
+              ;;
+            *)
+              echo "FAIL(G1): validated='${VALIDATED}' is neither 'pass' nor 'fail'. Refusing"\
+                   "to guess whether this candidate passed."
+              exit 1
+              ;;
+          esac
+          echo "OK: validated=pass."
+
+      - name: G2 -- the tag must name the PRE-PROD environment
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          case "${IMAGE_TAG}" in
+            *-preprod) : ;;
+            *)
+              echo "FAIL(G2): image_tag='${IMAGE_TAG}' does not end in '-preprod'. Mirrors"\
+                   "deploy-stand.yml's own tag<->environment guard: build.yml bakes environment"\
+                   "configuration into the image at build time, so a wrong-suffix tag names a"\
+                   "genuinely different artifact, not a naming nitpick."
+              exit 1
+              ;;
+          esac
+          echo "OK: '${IMAGE_TAG}' ends in '-preprod'."
+
+      - name: G3 -- the tag must be commit-extractable, exactly 12 hex
+        id: derive
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${IMAGE_TAG}" | grep -qE '^sha-[0-9a-f]{7,64}-preprod$'; then
+            echo "FAIL(G3): image_tag='${IMAGE_TAG}' does not match ^sha-[0-9a-f]{7,64}-preprod\$."\
+                 "A branch-shaped tag (e.g. main-preprod) carries no commit and is mutable --"\
+                 "Story 5.3's own instruction was not to let a later story generalise"\
+                 "'image_tag mode is safe' past the sha- shape."
+            exit 1
+          fi
+          HEX="${IMAGE_TAG#sha-}"
+          HEX="${HEX%-preprod}"
+          if ! printf '%s' "${HEX}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL(G3): the hex part of '${IMAGE_TAG}' is '${HEX}' (${#HEX} characters),"\
+                 "not exactly 12. build.yml:707-710 addresses this story by name: Stories 5.4"\
+                 "and 6.5 MUST agree on this exact length, or a length mismatch fails every"\
+                 "legitimate release."
+            exit 1
+          fi
+          echo "derived_hex=${HEX}" >> "$GITHUB_OUTPUT"
+          echo "OK: '${IMAGE_TAG}' -> commit hex '${HEX}'."
+
+      - name: Resolve the candidate's digest from the registry (read-only pair)
+        id: digest
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. ORG-level"\
+                 "secrets -- an empty value means the org secret was removed, renamed, or this"\
+                 "repository lost access to it, not a code defect."
+            exit 1
+          fi
+
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused \
+                -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${IMAGE_TAG}" || true)"
+
+          case "$HTTP_CODE" in
+            200)
+              DIGEST="$(grep -i '^docker-content-digest:' "$HEADERS_FILE" | head -n1 | tr -d '\r' | awk '{print $2}' || true)"
+              if ! printf '%s' "$DIGEST" | grep -qE '^sha256:[0-9a-f]{64}$'; then
+                echo "FAIL: registry answered 200 for ${IMAGE_TAG} but the Docker-Content-Digest"\
+                     "header was missing or not a well-formed sha256 digest ('${DIGEST}')."\
+                     "Refusing to guess."
+                exit 1
+              fi
+              echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+              echo "OK: resolved ${IMAGE_TAG} -> ${DIGEST}"
+              ;;
+            401)
+              echo "FAIL: registry returned 401 Unauthorized resolving ${IMAGE_TAG}. This means"\
+                   "the job's OWN registry credential (REGISTRY_USER_RO/REGISTRY_TOKEN_RO) is"\
+                   "missing, wrong, or revoked -- NOT that the image is missing. Check the org"\
+                   "secrets."
+              exit 1
+              ;;
+            404)
+              echo "FAIL: registry returned 404 Not Found resolving ${IMAGE_TAG}. No image"\
+                   "exists under this exact tag -- confirm it was actually built and pushed"\
+                   "(this workflow builds nothing and cannot fix that)."
+              exit 1
+              ;;
+            000)
+              echo "FAIL: transport-level failure resolving ${IMAGE_TAG} -- not an HTTP response"\
+                   "at all (DNS, TLS, connection refused, or timeout). Not a credential or"\
+                   "missing-image problem; a network/registry-availability one."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: registry returned unexpected HTTP ${HTTP_CODE} resolving ${IMAGE_TAG}."\
+                   "Raw status only -- not classified as a known cause."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+
+      - name: G5 -- the stand must be healthy and demonstrably serving this exact digest
+        env:
+          CANDIDATE_DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          HEALTH="$(docker inspect fe-prionex-preprod --format '{{.State.Health.Status}}' 2>/dev/null || true)"
+          if [ "$HEALTH" != "healthy" ]; then
+            echo "FAIL(G5): fe-prionex-preprod's own health status is '${HEALTH:-<unreadable>}',"\
+                 "not 'healthy'. Refusing to record a candidate against a stand that is not"\
+                 "demonstrably up."
+            exit 1
+          fi
+
+          CONFIG_DIGEST="$(docker inspect fe-prionex-preprod --format '{{.Image}}' 2>/dev/null || true)"
+          if [ -z "$CONFIG_DIGEST" ]; then
+            echo "FAIL(G5): could not read fe-prionex-preprod's own config digest via 'docker"\
+                 "inspect'. Tool failure, not a verdict -- refusing to guess."
+            exit 1
+          fi
+
+          RUNNING_DIGESTS="$(docker image inspect "$CONFIG_DIGEST" --format '{{.RepoDigests}}' 2>/dev/null || true)"
+          if [ -z "$RUNNING_DIGESTS" ]; then
+            echo "FAIL(G5): could not read the running image's own .RepoDigests (image-level"\
+                 "field, never the container's .Image). Tool failure, not a verdict."
+            exit 1
+          fi
+
+          if ! printf '%s' "$RUNNING_DIGESTS" | grep -qF "$CANDIDATE_DIGEST"; then
+            echo "FAIL(G5): the stand is healthy but is NOT demonstrably serving the candidate."
+            echo "  candidate's own registry digest: ${CANDIDATE_DIGEST}"
+            echo "  stand's own running .RepoDigests: ${RUNNING_DIGESTS}"
+            echo "  Recording this candidate now would be a claim, not evidence -- refusing."
+            exit 1
+          fi
+          echo "OK: fe-prionex-preprod is healthy and its running .RepoDigests contains"\
+               "${CANDIDATE_DIGEST}."
+
+      - name: Record the validation note verbatim
+        env:
+          VALIDATION_NOTE: ${{ inputs.validation_note }}
+        run: |
+          set -euo pipefail
+          echo "validation_note: ${VALIDATION_NOTE}"
+
+  record:
+    name: "Write preprod-<sha> then preprod-current, each read back before it is reported"
+    runs-on: node-20
+    needs: verify-on-stand
+    timeout-minutes: 10
+    steps:
+      # No checkout: this job reads nothing from the repository (Task 3.5's own reading of §5.1).
+
+      - name: Install docker CLI
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io jq
+
+      - name: Log in to git.crm-prionex.com (write pair, before buildx setup)
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Re-derive the marker names independently (does not trust the other job's outputs)
+        id: derive
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          case "${IMAGE_TAG}" in
+            *-preprod) : ;;
+            *)
+              echo "FAIL: image_tag='${IMAGE_TAG}' does not end in '-preprod'. This job resolves"\
+                   "everything independently from verify-on-stand (no cross-job outputs) -- this"\
+                   "is the same G2 shape, re-checked."
+              exit 1
+              ;;
+          esac
+          if ! printf '%s' "${IMAGE_TAG}" | grep -qE '^sha-[0-9a-f]{7,64}-preprod$'; then
+            echo "FAIL: image_tag='${IMAGE_TAG}' does not match ^sha-[0-9a-f]{7,64}-preprod\$."\
+                 "Same G3 shape, re-checked independently."
+            exit 1
+          fi
+          HEX="${IMAGE_TAG#sha-}"
+          HEX="${HEX%-preprod}"
+          if ! printf '%s' "${HEX}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the hex part of '${IMAGE_TAG}' is '${HEX}' (${#HEX} characters), not"\
+                 "exactly 12."
+            exit 1
+          fi
+          echo "derived_hex=${HEX}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=${IMAGE_REPO}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "history_tag=${IMAGE_REPO}:preprod-${HEX}" >> "$GITHUB_OUTPUT"
+          echo "current_tag=${IMAGE_REPO}:preprod-current" >> "$GITHUB_OUTPUT"
+          echo "OK: derived hex '${HEX}', history tag '${IMAGE_REPO}:preprod-${HEX}',"\
+               "current tag '${IMAGE_REPO}:preprod-current'."
+
+      - name: Re-resolve the candidate's digest independently (also the buildx/imagetools smoke test)
+        id: candidate
+        env:
+          SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$SHA_TAG")"
+          if [ "${#DIGEST}" -ne 71 ] || ! printf '%s' "${DIGEST#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+            echo "FAIL: imagetools resolved ${SHA_TAG}, but '${DIGEST}' is not sha256: plus 64"\
+                 "hex. A parse failure is not the same as absence -- refusing to guess which"\
+                 "one this is. If this is the FIRST dispatch, this is also the buildx/login"\
+                 "smoke test: a wrong driver, a bad login, or a DNS miss fails HERE, before any"\
+                 "registry write."
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "OK: ${SHA_TAG} -> ${DIGEST} (independently re-resolved; must agree with"\
+               "verify-on-stand's own resolution of the same immutable tag)."
+
+      - name: G6 -- the artifact's own labels must agree with the derived commit and environment
+        env:
+          SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
+          DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+        run: |
+          set -euo pipefail
+          # ⚠️ Unverified expression (5-4-…md §5): {{json .Image}} is the documented route to the
+          # image config. The exact field path (config.Labels, OCI image-config convention) is
+          # confirmed against the real tag on the FIRST dispatch's own read here, before this
+          # guard is allowed to fail closed on a genuine label mismatch -- a jq parse failure is a
+          # DIFFERENT failure than "labels disagree" and must say so, not be folded into the same
+          # message.
+          IMAGE_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "$SHA_TAG" 2>&1)" \
+            || { echo "FAIL(G6, tool failure): 'imagetools inspect --format {{json .Image}}'"\
+                      "itself failed for ${SHA_TAG}. Not a label-mismatch verdict -- a command"\
+                      "failure. Raw output: ${IMAGE_JSON:-<none>}"; exit 1; }
+
+          VERSION_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.opencontainers.image.version"] // empty')"
+          REVISION_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.opencontainers.image.revision"] // empty')"
+          ENV_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.prionex.environment"] // empty')"
+
+          if [ -z "$VERSION_LABEL" ] || [ -z "$REVISION_LABEL" ] || [ -z "$ENV_LABEL" ]; then
+            echo "FAIL(G6, tool failure): could not read one or more of"\
+                 "org.opencontainers.image.version / .revision / org.prionex.environment from"\
+                 "${SHA_TAG}'s own config via jq '.config.Labels'. This is a PARSE failure, not"\
+                 "a label-mismatch verdict -- the field path in this step may be wrong and"\
+                 "needs fixing, not the guard weakened to a substring grep. Raw image config:"
+            printf '%s\n' "$IMAGE_JSON"
+            exit 1
+          fi
+
+          FAIL=0
+          if [ "$VERSION_LABEL" != "$DERIVED_HEX" ]; then
+            echo "FAIL(G6): org.opencontainers.image.version='${VERSION_LABEL}' does not EQUAL"\
+                 "the derived hex '${DERIVED_HEX}'."
+            FAIL=1
+          fi
+          case "$REVISION_LABEL" in
+            "${DERIVED_HEX}"*) : ;;
+            *)
+              echo "FAIL(G6): org.opencontainers.image.revision='${REVISION_LABEL}' does not"\
+                   "START WITH the derived hex '${DERIVED_HEX}'."
+              FAIL=1
+              ;;
+          esac
+          if [ "$ENV_LABEL" != "preprod" ]; then
+            echo "FAIL(G6): org.prionex.environment='${ENV_LABEL}', not 'preprod'. The tag says"\
+                 "-preprod but the artifact's own build-time label disagrees -- D33 §6(b): this"\
+                 "is the ONLY place anywhere on the deploy or record path that establishes what"\
+                 "a deployed image actually claims to be, because image_tag mode's own revision"\
+                 "cross-check is deliberately skipped."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            echo "Refusing to record: the tag's name disagrees with the image it points at."
+            exit 1
+          fi
+          echo "OK(G6): version='${VERSION_LABEL}' equals derived hex; revision='${REVISION_LABEL}'"\
+               "starts with it; environment='${ENV_LABEL}'."
+
+      - name: G4 -- both marker names must be protected by this project's own retention rule
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+        run: |
+          set -euo pipefail
+          # Literal copy of build.yml:971's own KEEP_RE -- this workflow cannot query the Forgejo
+          # instance's live cleanup rule at runtime; Task 2.5 separately re-reads the STORED rule
+          # from the database and confirms it still matches this literal, closing the gap between
+          # the copy and the authority (5-4-…md §11, AC4).
+          KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
+          for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
+            MARKER="${FULL_TAG#*:}"
+            if ! printf '%s' "$MARKER" | grep -qE "$KEEP_RE"; then
+              echo "FAIL(G4): marker '${MARKER}' does not match this project's own retention"\
+                   "keep_pattern. Writing it would create a tag the 14-day retention rule can"\
+                   "expire out from under Story 6.5's gate -- refusing before any write, not"\
+                   "after."
+              exit 1
+            fi
+          done
+          echo "OK(G4): both '${HISTORY_TAG#*:}' and '${CURRENT_TAG#*:}' match keep_pattern."
+
+      - name: Assert every write target is this literal repository (Prohibition 3)
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+        run: |
+          set -euo pipefail
+          for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
+            case "$FULL_TAG" in
+              "${IMAGE_REPO}:"*) : ;;
+              *)
+                echo "FAIL: write target '${FULL_TAG}' does not begin with the literal"\
+                     "'${IMAGE_REPO}:'. REGISTRY_TOKEN_RW is org-scope write:package over 87"\
+                     "packages -- refusing anything not composed from this file's own literal"\
+                     "constant."
+                exit 1
+                ;;
+            esac
+          done
+          echo "OK: both write targets begin with '${IMAGE_REPO}:'."
+
+      - name: Write preprod-<sha> -- attach if absent, no-op if identical, REFUSE if different (AC8)
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+        run: |
+          set -euo pipefail
+          ERR_FILE="$(mktemp)"
+          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$HISTORY_TAG" 2>"$ERR_FILE")"; then
+            rm -f "$ERR_FILE"
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: imagetools resolved ${HISTORY_TAG}, but '${OUT}' is not sha256: plus"\
+                   "64 hex. A parse failure is not the same as absence -- refusing to guess."
+              exit 1
+            fi
+            PRE_DIGEST="$OUT"
+            echo "${HISTORY_TAG} already exists at ${OUT}."
+          else
+            ERR="$(cat "$ERR_FILE")"; rm -f "$ERR_FILE"
+            case "$ERR" in
+              *MANIFEST_UNKNOWN*|*": not found"*)
+                PRE_DIGEST=""
+                echo "${HISTORY_TAG} does not exist yet -- nothing to protect."
+                echo "  (imagetools said: ${ERR})"
+                ;;
+              *)
+                echo "FAIL: could not determine whether ${HISTORY_TAG} already exists."
+                echo "  imagetools said: ${ERR}"
+                echo "  Refusing to proceed on an ambiguous read."
+                exit 1
+                ;;
+            esac
+          fi
+
+          if [ -z "$PRE_DIGEST" ]; then
+            echo "${HISTORY_TAG} did not exist before this run -- attaching."
+          elif [ "$PRE_DIGEST" = "$CANDIDATE_DIGEST" ]; then
+            echo "${HISTORY_TAG} already points at ${CANDIDATE_DIGEST} -- nothing to do."
+            echo "history_written=noop" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "FAIL(AC8): refusing to repoint ${HISTORY_TAG}."
+            echo "  existing digest (before this run): ${PRE_DIGEST}"
+            echo "  this run's candidate digest:        ${CANDIDATE_DIGEST}"
+            echo "  ${HISTORY_TAG} is UNCHANGED -- this step exits before touching it. Two"\
+                 "artifacts cannot both be 'the validated build of this commit'."
+            exit 1
+          fi
+
+          IMAGE="${HISTORY_TAG%%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "${HISTORY_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
+
+          ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${HISTORY_TAG}")"
+          if [ "$ATTACHED" != "$CANDIDATE_DIGEST" ]; then
+            echo "FAIL: attached ${HISTORY_TAG} but reading it back gives '${ATTACHED}', not"\
+                 "this run's '${CANDIDATE_DIGEST}'. The attach did not do what it claimed --"\
+                 "refusing to report success."
+            exit 1
+          fi
+          echo "history_written=attached" >> "$GITHUB_OUTPUT"
+          echo "OK: ${HISTORY_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
+
+      - name: Write preprod-current -- create if absent, no-op if identical, MOVE if different (AC3)
+        env:
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+        run: |
+          set -euo pipefail
+          ERR_FILE="$(mktemp)"
+          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$CURRENT_TAG" 2>"$ERR_FILE")"; then
+            rm -f "$ERR_FILE"
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: imagetools resolved ${CURRENT_TAG}, but '${OUT}' is not sha256: plus"\
+                   "64 hex. A parse failure is not the same as absence -- refusing to guess."
+              exit 1
+            fi
+            PRE_DIGEST="$OUT"
+            echo "${CURRENT_TAG} currently points at ${OUT}."
+          else
+            ERR="$(cat "$ERR_FILE")"; rm -f "$ERR_FILE"
+            case "$ERR" in
+              *MANIFEST_UNKNOWN*|*": not found"*)
+                PRE_DIGEST=""
+                echo "${CURRENT_TAG} does not exist yet."
+                echo "  (imagetools said: ${ERR})"
+                ;;
+              *)
+                echo "FAIL: could not determine whether ${CURRENT_TAG} already exists."
+                echo "  imagetools said: ${ERR}"
+                echo "  Refusing to proceed on an ambiguous read."
+                exit 1
+                ;;
+            esac
+          fi
+
+          if [ -z "$PRE_DIGEST" ]; then
+            echo "${CURRENT_TAG} did not exist before this run -- creating."
+            echo "current_written=created" >> "$GITHUB_OUTPUT"
+          elif [ "$PRE_DIGEST" = "$CANDIDATE_DIGEST" ]; then
+            echo "${CURRENT_TAG} already points at ${CANDIDATE_DIGEST} -- nothing to do."
+            echo "current_written=noop" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "${CURRENT_TAG} MOVES: ${PRE_DIGEST} -> ${CANDIDATE_DIGEST}. This is AC3's"\
+                 "intended path, not a refusal -- preprod-current is the one tag this workflow"\
+                 "exists to move."
+            echo "current_written=moved" >> "$GITHUB_OUTPUT"
+          fi
+
+          IMAGE="${CURRENT_TAG%%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "${CURRENT_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
+
+          ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${CURRENT_TAG}")"
+          if [ "$ATTACHED" != "$CANDIDATE_DIGEST" ]; then
+            echo "FAIL: wrote ${CURRENT_TAG} but reading it back gives '${ATTACHED}', not this"\
+                 "run's '${CANDIDATE_DIGEST}'. Refusing to report success."
+            exit 1
+          fi
+          echo "OK: ${CURRENT_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
+
+      - name: List every preprod-* tag with its digest (AC5 -- the registry's own set)
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+        run: |
+          set -euo pipefail
+          RESP="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused \
+                --config - "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/tags/list")"
+          echo "Raw tags/list response:"
+          printf '%s\n' "$RESP"
+          echo "preprod-* subset:"
+          printf '%s' "$RESP" | jq -r '.tags[]? | select(startswith("preprod-"))' || true
