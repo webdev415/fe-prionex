@@ -10,7 +10,7 @@
  * - Click opens a dropdown list with type-specific rendering
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -129,8 +129,11 @@ const NON_TASK_TAB_TYPES: string[] = [
 ]
 
 // Trainer/operator coaching & training assignments — the "Навчання" tab.
+// The 30-min 1-on-1 reminder lives here too (same card as the scheduled
+// event, "1-на-1 скоро" label) — not in "Інше" as a generic row.
 const TRAINING_TAB_TYPES: string[] = [
   NotificationType.ONE_ON_ONE_SCHEDULED,
+  NotificationType.ONE_ON_ONE_REMINDER,
   NotificationType.COURSE_ASSIGNED,
   NotificationType.ASSIGNMENT_TAKEN,
   NotificationType.CORRECTION_TASK_ASSIGNED,
@@ -148,7 +151,6 @@ const KNOWN_MISC_TYPES: string[] = [
   NotificationType.TAG_ASSIGNED,
   NotificationType.TAG_REMOVED,
   NotificationType.TAG_EXPIRED,
-  NotificationType.ONE_ON_ONE_REMINDER,
   NotificationType.CORRECTION_TASK_COMPLETED,
   NotificationType.CORRECTION_TASK_RETURNED,
   NotificationType.FEEDBACK_RECEIVED,
@@ -166,6 +168,40 @@ const KNOWN_MISC_TYPES: string[] = [
 
 // Read-history window for the "Прочитані" tab.
 const READ_HISTORY_DAYS = 30
+
+// ─── Session cache of unknown types ever seen unread ─────────────
+// /unread/count's by_type only reports UNREAD types, so the moment an
+// unknown type is marked read (e.g. «Позначити як прочитані») it
+// vanishes from by_type — and without this cache it would drop out of
+// the misc/read fetches, hiding its trail all over again. Module-level
+// so it survives bell remounts within the session. Known trade-off: in
+// a NEW session an unknown type that is already fully read is not
+// discoverable (the backend has no "distinct read types" endpoint), so
+// its history resurfaces only once the type shows up unread again.
+const seenUnknownTypesStore = {
+  types: [] as string[],
+  listeners: new Set<() => void>(),
+  add(freshTypes: string[]) {
+    const added = freshTypes.filter((notifType) => !this.types.includes(notifType))
+    if (added.length === 0) return
+    this.types = [...this.types, ...added]
+    this.listeners.forEach((listener) => listener())
+  },
+  subscribe: (listener: () => void) => {
+    seenUnknownTypesStore.listeners.add(listener)
+    return () => seenUnknownTypesStore.listeners.delete(listener)
+  },
+  getSnapshot: () => seenUnknownTypesStore.types,
+}
+
+function useSeenUnknownTypes(unknownUnreadKey: string): string[] {
+  useEffect(() => {
+    if (unknownUnreadKey !== '') {
+      seenUnknownTypesStore.add(unknownUnreadKey.split(','))
+    }
+  }, [unknownUnreadKey])
+  return useSyncExternalStore(seenUnknownTypesStore.subscribe, seenUnknownTypesStore.getSnapshot)
+}
 
 function EmptyState({ label }: { t: TFunction; label: string }) {
   return (
@@ -358,7 +394,11 @@ export function NotificationBell() {
   const unknownUnreadTypes = Object.keys(byType ?? {}).filter(
     (notifType) => !tabAssignedTypes.has(notifType) && !KNOWN_MISC_TYPES.includes(notifType)
   )
-  const miscTypes = [...new Set([...KNOWN_MISC_TYPES, ...unknownUnreadTypes])].sort()
+  const unknownUnreadKey = unknownUnreadTypes.join(',')
+  const seenUnknownTypes = useSeenUnknownTypes(unknownUnreadKey)
+  const miscTypes = [
+    ...new Set([...KNOWN_MISC_TYPES, ...unknownUnreadTypes, ...seenUnknownTypes]),
+  ].sort()
 
   // Secondary tabs fetch on open only (no background polling for them).
   const { data: trainingNotifData } = useNotifications(
@@ -372,8 +412,20 @@ export function NotificationBell() {
   // Read history — GET /notifications?read=true (records are never
   // deleted on mark-as-read, only flagged), windowed to the last 30 days
   // client-side. Fetched only while the tab is shown.
+  //
+  // The fetch MUST be type-scoped (``type`` is a repeatable query param,
+  // Notification.type.in_ on the backend): the backend sorts created_at
+  // DESC and pages server-side, so an unscoped page 1×100 gets swallowed
+  // by the noisiest hidden type — ta_chain_created is 11.5K rows for a
+  // single trainer on prod, and «Позначити як прочитані» flips them all
+  // to read at once. The client-side HIDDEN_TYPES filter would then
+  // render the tab almost empty, collapsing the 30-day window to hours —
+  // exactly the lost-trail scenario this tab exists to prevent.
+  const readHistoryTypes = [
+    ...new Set([...TASK_TAB_TYPES, ...NON_TASK_TAB_TYPES, ...TRAINING_TAB_TYPES, ...miscTypes]),
+  ].sort()
   const { data: readNotifData, dataUpdatedAt: readFetchedAt } = useNotifications(
-    { page: 1, page_size: 100, read: true },
+    { page: 1, page_size: 100, read: true, type: readHistoryTypes },
     { enabled: isOpen && activeTab === 'read' }
   )
 
