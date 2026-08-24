@@ -1028,16 +1028,38 @@ is also listed in §10 and Dev Notes §9.
 
 ### Task 9 — D10: the move (AC: 3)
 
-- [ ] 9.1 D10 — dispatch the recorder for **candidate #2**, `validated=pass`, with its own honest
-      `validation_note`.
-- [ ] 9.2 Read `preprod-current` back: must now resolve to candidate #2's digest. The step log must
-      show the **move** branch with old → new, not the create branch.
-- [ ] 9.3 Read `preprod-00ef3be4743d` back: must **still** resolve to `sha256:5e5b190d…`. This is
-      AC3's second clause and it is the one that matters for rollback and audit.
-- [ ] 9.4 Read the new `preprod-<sha2>` back: candidate #2's digest.
+- [x] 9.1 D10 — dispatch the recorder for **candidate #2**, `validated=pass`, with its own honest
+      `validation_note`. **Done, coordinator, run 1229, SUCCESS, `2026-08-24T12:42:12Z`–
+      `12:43:28Z`.** Both jobs `status=1`, all 6+11 steps `status=1`. **The coordinator's own
+      real-time observation: `waiting` ~60s on this run's own concurrency group before it ran** —
+      a second, independent live discriminator (alongside D2's) that
+      `deploy-preprod-fe-prionex-preprod` is a real serializing gate, not merely declared.
+- [x] 9.2 Read `preprod-current` back: must now resolve to candidate #2's digest. The step log must
+      show the **move** branch with old → new, not the create branch. **Independent registry
+      read, direct on s1, not from any log** (neither of D10's own task logs had archived at
+      verification time — evidence is `action_task_step` status/timestamps plus this direct read,
+      per Prohibition 17): `preprod-current` → **`sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26`**
+      — candidate #2's own digest, moved from D1-D9's `5e5b190d…`. Step-level timing corroborates
+      the MOVE branch specifically (not create): step 9 ("Write preprod-current…") ran
+      `1787575405`→`1787575406`, immediately after step 8's own write (`1787575403`→`1787575405`)
+      — both real write durations (~2s and ~1s), consistent with D1's own original attach/create
+      timings, not the ~0s no-op branch D2 showed.
+- [x] 9.3 Read `preprod-00ef3be4743d` back: must **still** resolve to `sha256:5e5b190d…`. This is
+      AC3's second clause and it is the one that matters for rollback and audit. Confirmed:
+      **`sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`** — unchanged
+      through the entire story, including D10's own write elsewhere. **AC3 is now proven on the
+      real tag names, both clauses**: the pointer moved, the history did not.
+- [x] 9.4 Read the new `preprod-<sha2>` back: candidate #2's digest. `preprod-28f7fd36b75e` →
+      **`sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26`** — candidate #2's
+      digest, confirmed as a real manifest via `--raw` (`application/vnd.oci.image.manifest.v1+json`
+      on both `preprod-current` and `preprod-28f7fd36b75e`, neither an OCI index).
 - [ ] 9.5 **Only if 8.1 was vetoed:** run the throwaway-marker fallback instead (AC3's reading), mark
       AC3 **UNPROVEN on the real tag names**, and record the residual explicitly. Never both paths
-      quietly.
+      quietly. **N/A — 8.1 was not vetoed.** Task 8.1's announcement reached Oleg through the
+      coordinator verbatim; per the standing "announce, don't ask twice" convention execution
+      proceeded, and no veto arrived through D7 (the mint), D8 (the deploy), D9 (the G5 refusal
+      proof), or D10 (the move) — four full dispatch cycles across which a veto could have landed.
+      AC3 is proven on the real tag names; this fallback was never exercised.
 
 ### Task 10 — Record, route, decide (AC: 4, 5, 6, 7)
 
