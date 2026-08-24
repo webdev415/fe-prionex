@@ -994,9 +994,17 @@ is also listed in §10 and Dev Notes §9.
       (equals the derived hex), `org.opencontainers.image.revision=28f7fd36b75ee773cd3e7d9d8586b3ac3d1d915b`
       (starts with it — the full 40-char commit SHA), `org.prionex.environment=preprod`. All three
       match exactly what G6 will require when candidate #2 is recorded (D10).
-- [ ] 8.3 D8 — dispatch `deploy-preprod.yml` with the new `image_tag`. Confirm the stand comes up
+- [x] 8.3 D8 — dispatch `deploy-preprod.yml` with the new `image_tag`. Confirm the stand comes up
       healthy on the new digest. **Do not edit `deploy-preprod.yml`.** Timestamp in UTC; the runner
-      is shared with 4.9 at capacity 1.
+      is shared with 4.9 at capacity 1. **Done, coordinator, run 1225, SUCCESS, ~70s.** Verified
+      host-side on s1, independently of the run's own log: `docker inspect fe-prionex-preprod
+      --format '{{.State.Health.Status}}'` → `healthy`. `.RepoDigests` via the correct method
+      (config digest from `.Image`, then `docker image inspect <that digest> --format
+      '{{.RepoDigests}}'`, never `.Image` on the container) →
+      `[git.crm-prionex.com/crm/fe-prionex@sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26]`
+      — matches D7's own newly-minted digest exactly. `curl -s -o /dev/null -w '%{http_code}'
+      http://127.0.0.1:8083/` → `200`. The stand is now genuinely, demonstrably serving candidate
+      #2 — the precondition D9's own G5 test needs.
 - [ ] 8.4 D9 — dispatch the recorder for **candidate #1** while the stand serves candidate #2.
       Expect RED at G5, with a message that names both digests and says which is which. Read both
       markers back: unchanged at `sha256:5e5b190d…`.
