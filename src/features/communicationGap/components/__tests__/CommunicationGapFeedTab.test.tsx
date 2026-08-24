@@ -95,6 +95,10 @@ const paginationFrames = vi.hoisted(() => [] as Array<{ currentPage: number; tot
 vi.mock('@/components/ui/Pagination', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui/Pagination')>()
   return {
+    // Spread first: the module also exports DEFAULT_PAGE_SIZE_OPTIONS, which
+    // the paged-feed shell imports to parse `?gps=` against the very set this
+    // dropdown offers. Only the component is wrapped.
+    ...actual,
     Pagination: (props: import('@/components/ui/Pagination').PaginationProps) => {
       paginationFrames.push({ currentPage: props.currentPage, totalPages: props.totalPages })
       return <actual.Pagination {...props} />
@@ -607,15 +611,29 @@ describe('CommunicationGapFeedTab', () => {
     expect(field.value).toBe(raw)
   })
 
-  it('blocks a gap_min past the int32 ceiling the backend enforces', async () => {
+  it('blocks a gap_min past the int32 ceiling with the CEILING sentence', async () => {
     mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
 
     renderTab(['/?gm=2147483648'])
 
+    // Deliberate wording split: 2147483648 IS "a whole number of 0 or more",
+    // so the malformed-value hint would describe everything except the actual
+    // violation — the ceiling refusal gets its own sentence.
     expect(
-      await screen.findByText('pages.reports.communicationGap.invalidGapMin')
+      await screen.findByText('pages.reports.communicationGap.gapMinTooLarge')
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.reports.communicationGap.invalidGapMin')
+    ).not.toBeInTheDocument()
     expect(mockGetFeed).not.toHaveBeenCalled()
+
+    // Same field-level wiring as every other single-field refusal.
+    const field = gapMinInput()
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    const describedBy = field.getAttribute('aria-describedby')
+    expect(document.getElementById(describedBy as string)).toHaveTextContent(
+      'pages.reports.communicationGap.gapMinTooLarge'
+    )
   })
 
   it('pages through the feed with the right skip and keeps the page in the URL', async () => {

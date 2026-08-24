@@ -8451,6 +8451,7 @@
         "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",
         "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
+        "maxVerifiedTooLarge": "Verifications cap is too large — the highest accepted value is {{max}}",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
@@ -8510,6 +8511,7 @@
         "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",
         "invalidGapMin": "Days of silence must be a whole number of 0 or more",
+        "gapMinTooLarge": "Days-of-silence minimum is too large — the highest accepted value is {{max}}",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {

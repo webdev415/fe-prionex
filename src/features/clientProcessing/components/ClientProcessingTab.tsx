@@ -27,9 +27,11 @@ import {
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { isTransientFailure } from '@/lib/api'
+import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useClientProcessingReport } from '../hooks'
 import {
@@ -38,8 +40,6 @@ import {
   rowDepartmentTabId,
 } from '../utils/departmentTabs'
 import { ProcessingTable } from './ProcessingTable'
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 // Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
 // api-prionex/services/client/app/routers/reports.py: the (end - start) day
@@ -50,6 +50,9 @@ const MAX_RANGE_DAYS = 366
 const MS_PER_DAY = 86_400_000
 
 const TABS_ID_PREFIX = 'client-processing'
+
+/** This tab's slice of the Reports page URL namespace (see the registry). */
+const { from: FROM_KEY, to: TO_KEY, dept: DEPT_KEY } = REPORTS_URL_KEYS.processing
 
 export function ClientProcessingTab() {
   const { t } = useTranslation('common')
@@ -65,11 +68,19 @@ export function ClientProcessingTab() {
   // window is today–today in the user's profile timezone (the backend
   // defaults to the same window, but we always send both dates explicitly,
   // together with the profile timezone for the day-boundary cut).
+  //
+  // `isRealCalendarDate`, not a shape-only regex: V8's Date.parse lazily
+  // reads an impossible day like 2026-02-31 as March 3rd, so a shape check
+  // would wave `?from=2026-02-31` through to the API (and into the 366-day
+  // arithmetic below) as a date nobody typed. An unusable value falls back to
+  // today — this tab's long-standing rule for malformed URL values; the
+  // sibling tabs' louder per-field error treatment is a different design this
+  // report has not adopted.
   const today = getDateStringInTimezone(new Date(), userTimezone)
-  const rawFrom = searchParams.get('from')
-  const rawTo = searchParams.get('to')
-  const dateStart = rawFrom && DATE_RE.test(rawFrom) ? rawFrom : today
-  const dateEnd = rawTo && DATE_RE.test(rawTo) ? rawTo : today
+  const rawFrom = searchParams.get(FROM_KEY)
+  const rawTo = searchParams.get(TO_KEY)
+  const dateStart = rawFrom && isRealCalendarDate(rawFrom) ? rawFrom : today
+  const dateEnd = rawTo && isRealCalendarDate(rawTo) ? rawTo : today
 
   // Filter updates never create history entries (page-tab switches do).
   const setUrlParam = (key: string, value: string) => {
@@ -91,7 +102,7 @@ export function ClientProcessingTab() {
   // profile TZ would shift the day whenever the browser-vs-profile offset
   // spans midnight (IANA offsets span 26h, so a noon anchor doesn't save it).
   const handleDateChange =
-    (key: 'from' | 'to') =>
+    (key: typeof FROM_KEY | typeof TO_KEY) =>
     ({ value }: { value: Date | null }) => {
       // A cleared manual input is not a filter change: the URL keeps the old
       // value and a valid date commits once the user finishes retyping
@@ -99,8 +110,10 @@ export function ClientProcessingTab() {
       if (value) setUrlParam(key, formatPickerDateAsYMD(value))
     }
 
-  // Manual input can bypass the pickers' min/max, so invalid ranges must not
-  // reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
+  // The only guard against an inverted or oversized window: the pickers
+  // deliberately do not bound each other (see the fields below), and manual
+  // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
+  // strings compare correctly as strings.
   const isRangeInverted = dateStart > dateEnd
   const isRangeTooLong =
     !isRangeInverted && (Date.parse(dateEnd) - Date.parse(dateStart)) / MS_PER_DAY > MAX_RANGE_DAYS
@@ -120,7 +133,7 @@ export function ClientProcessingTab() {
 
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
   const departmentTabs = useMemo(() => buildDepartmentTabs(rows), [rows])
-  const rawDept = searchParams.get('dept')
+  const rawDept = searchParams.get(DEPT_KEY)
 
   // Only an EXPLICIT pick pins the department. Writing the auto-selected tab
   // into the URL would freeze the "first non-empty tab" heuristic after the
@@ -164,13 +177,33 @@ export function ClientProcessingTab() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Date range filter */}
+      {/* Date range filter.
+
+          NEITHER picker is bounded by the other (no `min`/`max`), on purpose —
+          the shared rule of the tabs with a DEFAULTED window (this one,
+          operator-promises, searcher; the two feeds with empty optional
+          bounds keep their mutual bounds — no default, no order trap). A mutual bound does not deaden a calendar; what it does is
+          impose an ORDER nothing on screen states. With the today–today
+          default, `max={dateEnd}` would leave «з» open on every day up to
+          today and `min={dateStart}` would leave «по» open on every day from
+          today — so the common request "give me last month" is reachable only
+          by moving «з» first. Reach for «по» first and the whole past is
+          greyed out, with nothing saying why or which field to touch
+          instead. (DateSelect adds
+          no bounds of its own: `minDate`/`maxDate` reach react-datepicker only
+          from these props, so dropping them leaves both calendars fully open.)
+
+          What actually protects the API is the pair guard above
+          (`isRangeInverted` → the alert below, no request), which is needed
+          regardless: manual input and hand-edited URLs bypass picker bounds
+          anyway. So an inverted window can be PICKED, and it is answered in
+          words — "Початкова дата пізніша за кінцеву" — instead of by a
+          calendar the user cannot get past. */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
         <DateSelect
           label={t('pages.reports.processing.dateFrom')}
           value={dateStart}
-          max={dateEnd}
-          onChange={handleDateChange('from')}
+          onChange={handleDateChange(FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
           format="dd.MM.yyyy"
@@ -179,8 +212,7 @@ export function ClientProcessingTab() {
         <DateSelect
           label={t('pages.reports.processing.dateTo')}
           value={dateEnd}
-          min={dateStart}
-          onChange={handleDateChange('to')}
+          onChange={handleDateChange(TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur
           format="dd.MM.yyyy"
@@ -199,7 +231,7 @@ export function ClientProcessingTab() {
         value={activeTab.id}
         onChange={(deptId) => {
           setHasPickedDept(true)
-          setUrlParam('dept', deptId)
+          setUrlParam(DEPT_KEY, deptId)
         }}
         ariaLabel={t('pages.reports.tabs.processing')}
         idPrefix={TABS_ID_PREFIX}

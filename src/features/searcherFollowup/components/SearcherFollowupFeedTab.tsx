@@ -10,14 +10,11 @@
  * All filter state and the current page live in the URL (`?if=`, `?it=`,
  * `?spg=`, `?sps=`) so they survive refresh, bookmarking and switching
  * between the page tabs (panels unmount on switch). Filter updates use
- * `replace` — only page-tab changes create history entries.
- *
- * The URL keys are deliberately NEW: the host page keeps every tab's params
- * in the URL, so this tab must not collide with `?tab` (host),
- * `?from/?to/?dept` (processing), `?sf/?st/?cf/?ct` (verification) or
- * `?pf/?pt/?mv/?pg/?ps` (low-verification feed) — in particular the sibling
- * feed owns `pg`/`ps`, which is why paging here is `spg`/`sps`. A shared key
- * would silently transplant one tab's filter into the other.
+ * `replace` — only page-tab changes create history entries. The URL shell —
+ * composed updates, page/page-size parsing, the page clamp and its self-heal —
+ * is the shared `useUrlPagedFeedFilters`; the keys are this tab's set in the
+ * page-wide registry (`src/lib/reportsUrlKeys.ts`), deliberately NEW so no
+ * sibling tab's filter is silently transplanted into this one.
  *
  * Unlike the sibling feed's optional independent bounds, this window is ONE
  * date pair: the backend accepts both bounds or neither (the card's single
@@ -31,66 +28,41 @@
  * backend caps nothing here because the window cannot widen the query's cost.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
-import { isRealCalendarDate } from '@/lib/calendarDate'
-import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
+import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useSearcherFollowupFeed } from '../hooks'
 import { SEARCHER_FOLLOWUP_COLUMN_COUNT, SearcherFollowupTable } from './SearcherFollowupTable'
 
-/**
- * URL keys, distinct from every other tab of the host page — processing
- * (`from/to/dept`), verification (`sf/st/cf/ct`), the low-verification feed
- * (`pf/pt/mv/pg/ps`) and the host's own `tab`. "if"/"it" = Interaction
- * From/To; "spg"/"sps" = Searcher PaGe / Page Size.
- */
-const DATE_FROM_KEY = 'if'
-const DATE_TO_KEY = 'it'
-const PAGE_KEY = 'spg'
-const PAGE_SIZE_KEY = 'sps'
+/** This tab's slice of the Reports page URL namespace (see the registry). */
+const {
+  dateFrom: DATE_FROM_KEY,
+  dateTo: DATE_TO_KEY,
+  page: PAGE_KEY,
+  pageSize: PAGE_SIZE_KEY,
+} = REPORTS_URL_KEYS.searcherFollowup
 
+/**
+ * The keys this tab may write as FILTERS — handed to the shell so a misspelled
+ * key is a compile error rather than a value written under a name nothing
+ * reads (or, worse, one a sibling tab owns). The paging keys are the shell's
+ * own and are configured, not passed per call.
+ */
 type FilterKey = typeof DATE_FROM_KEY | typeof DATE_TO_KEY
-
-/**
- * Rows per page. The default matches the backend's own (`limit=50`) and every
- * option stays well inside its `limit <= 500` cap; the list is the shared
- * Pagination component's default set.
- */
-const DEFAULT_PAGE_SIZE = 50
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-
-/**
- * Highest page the URL may ask for. The backend caps `skip` at the int32
- * ceiling (`le=2_147_483_647`) and we send `skip = (page - 1) * limit`, so the
- * bound is computed against the LARGEST selectable page size: a page accepted
- * here stays inside the cap for every `?sps=` the user can switch to afterwards.
- */
-const MAX_SKIP = 2_147_483_647
-const MAX_PAGE = Math.floor(MAX_SKIP / Math.max(...PAGE_SIZE_OPTIONS)) + 1
-
-/** A positive integer read from the URL (optionally capped), or the fallback. */
-function parsePositiveInt(
-  raw: string | null,
-  fallback: number,
-  max = Number.MAX_SAFE_INTEGER
-): number {
-  if (!raw || !/^\d+$/.test(raw)) return fallback
-  const parsed = Number(raw)
-  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= max ? parsed : fallback
-}
 
 export function SearcherFollowupFeedTab() {
   const { t } = useTranslation('common')
-  const [searchParams, setSearchParams] = useSearchParams()
 
   // Same project resolution as the Reports dashboard: active project first,
   // then the first assigned project, then 1.
@@ -127,89 +99,41 @@ export function SearcherFollowupFeedTab() {
     return () => window.removeEventListener('focus', refreshToday)
   }, [userTimezone])
 
-  const rawDateFrom = searchParams.get(DATE_FROM_KEY)
-  const rawDateTo = searchParams.get(DATE_TO_KEY)
+  // The shared paged-feed URL shell: composed `replace` updates (the
+  // same-tick-burst ref composition lives there), defensive page/page-size
+  // parsing against the backend's `skip`/`limit` caps, and the page reset on
+  // every filter change. Defaults match the backend's own `limit=50`.
+  const filters = useUrlPagedFeedFilters<FilterKey>({
+    pageKey: PAGE_KEY,
+    pageSizeKey: PAGE_SIZE_KEY,
+  })
+  const { searchParams, pageSize } = filters
 
   // A present-but-unusable bound is NOT silently replaced by the default: the
   // URL would then disagree with both the field and the request. It goes down
   // the same path as an inverted range — inline hint, no request (below).
   // Tracked per bound so the hint can sit on the field holding the bad value.
-  const isDateFromInvalid = !!rawDateFrom && !isRealCalendarDate(rawDateFrom)
-  const isDateToInvalid = !!rawDateTo && !isRealCalendarDate(rawDateTo)
+  const dateFromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
+  const dateToBound = readUrlDateBound(searchParams, DATE_TO_KEY)
+  const isDateFromInvalid = dateFromBound.isInvalid
+  const isDateToInvalid = dateToBound.isInvalid
   const hasInvalidDate = isDateFromInvalid || isDateToInvalid
 
   // An ABSENT bound means "today", not "no bound": the pair is mandatory
   // (both dates always go to the API), so the default fills in per bound.
-  const dateStart = rawDateFrom && !isDateFromInvalid ? rawDateFrom : today
-  const dateEnd = rawDateTo && !isDateToInvalid ? rawDateTo : today
+  const dateStart = dateFromBound.value ?? today
+  const dateEnd = dateToBound.value ?? today
 
-  const pageSizeFromUrl = parsePositiveInt(searchParams.get(PAGE_SIZE_KEY), DEFAULT_PAGE_SIZE)
-  // An unknown page size falls back silently (it is a view preference, not a
-  // filter) — but it must never exceed the backend's `limit <= 500`.
-  const pageSize = PAGE_SIZE_OPTIONS.includes(pageSizeFromUrl) ? pageSizeFromUrl : DEFAULT_PAGE_SIZE
-  // A page whose offset would overflow the backend's int32 `skip` cap falls
-  // back to 1 silently, exactly like an unknown page size: it can only come
-  // from a hand-edited URL, and the 422 it would earn is nothing the user
-  // could act on. No request is ever fired with an out-of-range offset.
-  const page = parsePositiveInt(searchParams.get(PAGE_KEY), 1, MAX_PAGE)
+  // There is no "×" on these fields on purpose — the pair is mandatory
+  // (clearing a bound cannot mean "no bound" when the backend rejects half a
+  // window), and the way back to the default is simply picking today.
+  const handleDateChange = (key: FilterKey) => filters.dateFilterHandler(key)
 
-  // The base every update builds on. It cannot be react-router's own `prev`:
-  // the functional form of `setSearchParams` hands back a clone of the
-  // RENDER-SCOPED params, so two updates fired in the SAME tick each start
-  // from the pre-update URL and the last navigation silently drops the first
-  // one's key. The shared Pagination emits exactly that pair —
-  // `onPageSizeChange` immediately followed by `onPageChange(1)`. Keeping the
-  // composed value in a ref makes such a sequence land as one coherent URL,
-  // while the effect below resyncs it from the committed URL, so an update
-  // whose origin is elsewhere (Back/Forward, a shared link, the ?spg=
-  // self-heal) is never built on a stale base either. The resync belongs in
-  // an effect rather than in render — it only has to be back in step by the
-  // next commit, and by then a same-tick burst is long over. (Precedent:
-  // LowVerificationFeedTab, review standards on setSearchParams.)
-  const paramsRef = useRef(searchParams)
-  useEffect(() => {
-    paramsRef.current = searchParams
-  }, [searchParams])
-
-  // Filter updates never create history entries (page-tab switches do).
-  const setUrlParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const next = new URLSearchParams(paramsRef.current)
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === null) next.delete(key)
-        else next.set(key, value)
-      }
-      paramsRef.current = next
-      setSearchParams(next, { replace: true })
-    },
-    [setSearchParams]
-  )
-
-  /** A changed filter invalidates the current offset — page 1 or the user reads a hole. */
-  const setFilterParam = (key: FilterKey, value: string) =>
-    setUrlParams({ [key]: value, [PAGE_KEY]: null })
-
-  // Timezone policy: a PICKED date is already a calendar day — the picker
-  // hands us a local-midnight Date whose local Y/M/D are exactly the cell the
-  // user clicked, so we read them back verbatim with formatPickerDateAsYMD.
-  // The profile timezone applies to the "today" DEFAULT above and travels to
-  // the backend for the window's day cut.
-  const handleDateChange =
-    (key: FilterKey) =>
-    ({ value }: { value: Date | null }) => {
-      // A cleared manual input is not a filter change: the URL keeps the old
-      // value and a valid date commits once the user finishes retyping
-      // (DateSelect itself resyncs the abandoned text on blur). There is no
-      // "×" here on purpose — the pair is mandatory (clearing a bound cannot
-      // mean "no bound" when the backend rejects half a window), and the way
-      // back to the default is simply picking today.
-      if (value) setFilterParam(key, formatPickerDateAsYMD(value))
-    }
-
-  // Manual input can bypass the pickers' min/max, so an inverted window must
-  // not reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
-  // Both bounds always exist here (default today), so the pair check is
-  // unconditional once both are usable.
+  // The only guard against an inverted window: the pickers deliberately do not
+  // bound each other (see the fields below), and manual input and hand-edited
+  // URLs would bypass such bounds anyway. ISO YYYY-MM-DD strings compare
+  // correctly as strings. Both bounds always exist here (default today), so the
+  // pair check is unconditional once both are usable.
   const isRangeInverted = !hasInvalidDate && dateStart > dateEnd
 
   // Where a message is rendered follows WHAT it is about: a bad date belongs
@@ -227,7 +151,7 @@ export function SearcherFollowupFeedTab() {
     projectId,
     dateStart,
     dateEnd,
-    skip: (page - 1) * pageSize,
+    skip: filters.skip,
     limit: pageSize,
     timezone: userTimezone,
     enabled: !hasFilterError,
@@ -236,25 +160,10 @@ export function SearcherFollowupFeedTab() {
   // Stable identity for the empty fallback — a fresh `[]` every render would
   // defeat SearcherFollowupTable's useMemo over its rows prop.
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
-  const total = query.data?.total ?? 0
-  const totalPages = Math.max(1, query.data?.total_pages ?? 1)
 
-  // The feed drains as operators work it, so a bookmarked `?spg=` can outlive
-  // the rows it pointed at. What the pager shows is the page that actually
-  // exists — "Page 5 of 2" over an empty table is not a state to render. A
-  // drained feed (`total === 0`) keeps its calm empty state and shows no
-  // pager at all, so there is nothing to clamp against.
-  const clampedPage = total > 0 ? Math.min(page, totalPages) : page
-
-  // ...and the URL follows the answer, so a refresh no longer re-requests the
-  // dead offset. `replace` (via setUrlParams) — self-correction is not a
-  // navigation step and must not stack history entries. Page 1 is the
-  // default, hence the key is dropped rather than written.
-  useEffect(() => {
-    if (total > 0 && page > totalPages) {
-      setUrlParams({ [PAGE_KEY]: totalPages <= 1 ? null : String(totalPages) })
-    }
-  }, [total, totalPages, page, setUrlParams])
+  // Totals, the display clamp for a bookmarked page the drained feed no longer
+  // has, and the URL self-heal that follows the answer — shared shell.
+  const { total, totalPages, clampedPage } = usePagedFeedPages(filters, query.data)
 
   // keepPreviousData shows the previous page's rows while a new one loads —
   // they must not look final, hence the busy overlay. Placeholder only: a
@@ -277,15 +186,32 @@ export function SearcherFollowupFeedTab() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Filters: the mandatory find-day window, defaulting to today–today */}
+      {/* Filters: the mandatory find-day window, defaulting to today–today.
+
+          NEITHER picker is bounded by the other (no `min`/`max`), on purpose —
+          the shared rule of the tabs with a DEFAULTED window (this one,
+          processing, operator-promises; the two feeds with empty optional
+          bounds keep their mutual bounds — no default, no order trap). A mutual bound imposes an ORDER nothing on screen states: with
+          the today–today default, «з» opens on days up to today and «по» on
+          days from today, so a window entirely in the PAST can only be reached
+          by moving «з» first — reach for «по» first and every day before today
+          is greyed out, with nothing saying why or which field to touch
+          instead. (DateSelect adds no bounds of its own: `minDate`/`maxDate`
+          reach react-datepicker only from these props, so dropping them leaves
+          both calendars fully open.)
+
+          What actually protects the API is the pair guard below
+          (`isRangeInverted` → the alert, no request), which is needed
+          regardless: manual input and hand-edited URLs bypass picker bounds
+          anyway. So an inverted window can be PICKED, and it is answered in
+          words — "Дата знахідки «з» пізніша за дату «по»" — instead of by a
+          calendar the user cannot get past. */}
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl p-4 shadow-sm sm:gap-4">
         <DateSelect
           label={t('pages.reports.searcherFollowup.dateFrom')}
           // An unusable URL value shows an empty field with the error on it,
           // never the default silently standing in for the bad value.
           value={isDateFromInvalid ? null : dateStart}
-          // Bounded by the other end only while that end is usable.
-          max={isDateToInvalid ? undefined : dateEnd}
           // Only the bound that actually carries the unusable value is marked.
           error={isDateFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
@@ -297,7 +223,6 @@ export function SearcherFollowupFeedTab() {
         <DateSelect
           label={t('pages.reports.searcherFollowup.dateTo')}
           value={isDateToInvalid ? null : dateEnd}
-          min={isDateFromInvalid ? undefined : dateStart}
           error={isDateToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
@@ -348,23 +273,9 @@ export function SearcherFollowupFeedTab() {
               currentPage={clampedPage}
               totalPages={totalPages}
               pageSize={pageSize}
-              pageSizeOptions={PAGE_SIZE_OPTIONS}
-              onPageChange={(nextPage) =>
-                // Page 1 is the default — keep it out of the URL.
-                setUrlParams({ [PAGE_KEY]: nextPage <= 1 ? null : String(nextPage) })
-              }
-              onPageSizeChange={(nextSize) =>
-                // A resized page invalidates the old offset, so the page goes
-                // back to 1 in the SAME update — Pagination does emit its own
-                // onPageChange(1) right after this, but a filter's worth of
-                // URL state must not depend on a shared component's call
-                // order. The default size is the absence of the key, never a
-                // spelled-out `sps=50`.
-                setUrlParams({
-                  [PAGE_SIZE_KEY]: nextSize === DEFAULT_PAGE_SIZE ? null : String(nextSize),
-                  [PAGE_KEY]: null,
-                })
-              }
+              pageSizeOptions={filters.pageSizeOptions}
+              onPageChange={filters.setPage}
+              onPageSizeChange={filters.setPageSize}
             />
           )}
           {isRefreshing && (

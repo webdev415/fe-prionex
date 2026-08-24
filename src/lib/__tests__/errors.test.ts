@@ -67,22 +67,34 @@ describe('hasResponseDetail', () => {
     expect(hasResponseDetail(error)).toBe(false)
   })
 
-  it('accepts a non-empty validation array', () => {
+  it('accepts a validation array with at least one usable item', () => {
     expect(
       hasResponseDetail(makeHttpError(422, { detail: [{ msg: 'value is not a valid date' }] }))
     ).toBe(true)
     expect(hasResponseDetail(makeHttpError(422, { detail: ['plain string item'] }))).toBe(true)
+    // One usable item among garbage is still something to say — and it is
+    // exactly what getErrorMessage renders: the unusable items are dropped, not
+    // stringified alongside it (see the getErrorMessage suite below).
+    expect(hasResponseDetail(makeHttpError(422, { detail: [{}, { msg: 'too long' }] }))).toBe(true)
   })
 
-  it('takes a non-empty array at its word, even when the items are unusable', () => {
-    // Pinning today's behaviour, not endorsing it: `getErrorMessage` stringifies
-    // such an item into raw JSON. Tightening the non-empty-array branch is a
-    // deferred follow-up — the predicate was moved here byte-for-byte on
-    // purpose.
+  it('rejects a non-empty array with no usable item', () => {
+    // The deliberate FLIP of the old byte-for-byte pin (`detail: [{}]` used to
+    // count on array length alone): there is nothing in these items a reader
+    // could use, and getErrorMessage now drops them rather than stringifying
+    // them — so an array of nothing but garbage is an EMPTY array to both, and
+    // both answer accordingly.
     const error = makeHttpError(422, { detail: [{}] })
+    expect(getErrorMessage(error)).toBe('Validation error occurred')
+    expect(hasResponseDetail(error)).toBe(false)
 
-    expect(hasResponseDetail(error)).toBe(true)
-    expect(getErrorMessage(error)).toBe('{}')
+    // The same rule item by item: blank strings, blank msg, msg of a wrong
+    // type, null items — none of them reads as a message.
+    expect(hasResponseDetail(makeHttpError(422, { detail: [''] }))).toBe(false)
+    expect(hasResponseDetail(makeHttpError(422, { detail: ['   '] }))).toBe(false)
+    expect(hasResponseDetail(makeHttpError(422, { detail: [{ msg: '   ' }] }))).toBe(false)
+    expect(hasResponseDetail(makeHttpError(422, { detail: [{ msg: 42 }] }))).toBe(false)
+    expect(hasResponseDetail(makeHttpError(422, { detail: [null] }))).toBe(false)
   })
 
   it('falls back to a `message` field when there is no detail', () => {
@@ -99,6 +111,47 @@ describe('hasResponseDetail', () => {
     // never promised.
     expect(hasResponseDetail(makeHttpError(400, { detail: '  ', message: 'from the proxy' }))).toBe(
       false
+    )
+  })
+
+  it('reads an EMPTY detail string as "no detail" even when `message` holds a usable one', () => {
+    // The documented asymmetry (see the docblock), pinned so it stays a known
+    // shape rather than a surprise: the predicate stops at `detail` once the
+    // key is there, while getErrorMessage falls THROUGH a falsy `detail` to
+    // `message`. A caller gated on the predicate therefore shows its own
+    // localized text and never quotes this sentence. Left as is on purpose —
+    // no backend of ours sends this body, and widening the check would mean a
+    // second definition of "has a detail" to keep in step with getErrorMessage.
+    const error = makeHttpError(400, { detail: '', message: 'Sell window too wide' })
+
+    expect(getErrorMessage(error)).toBe('Sell window too wide')
+    expect(hasResponseDetail(error)).toBe(false)
+  })
+})
+
+describe('getErrorMessage', () => {
+  it('joins the usable items of a validation array and drops the rest', () => {
+    // FastAPI writes `{type, loc, msg, input, ctx}` per item, but a proxy or a
+    // hand-rolled handler can put anything in that array. Only the two shapes
+    // a reader can use survive; the rest are dropped rather than stringified,
+    // so an operator never reads "{}" glued to a real sentence.
+    expect(getErrorMessage(makeHttpError(422, { detail: [{ msg: 'x' }, {}] }))).toBe('x')
+    expect(getErrorMessage(makeHttpError(422, { detail: [{ msg: 'x' }, {}] }))).not.toContain('{}')
+
+    expect(getErrorMessage(makeHttpError(422, { detail: ['first', { msg: 'second' }] }))).toBe(
+      'first. second'
+    )
+    // Numbers, nulls and blanks are not sentences either.
+    expect(getErrorMessage(makeHttpError(422, { detail: [42, null, '  ', { msg: 'only' }] }))).toBe(
+      'only'
+    )
+  })
+
+  it('answers with its own fallback when the array holds nothing usable', () => {
+    // Untranslated and hardcoded — which is exactly why callers gate on
+    // hasResponseDetail (false for this body) and show their own copy instead.
+    expect(getErrorMessage(makeHttpError(422, { detail: [{}, null, 42] }))).toBe(
+      'Validation error occurred'
     )
   })
 })

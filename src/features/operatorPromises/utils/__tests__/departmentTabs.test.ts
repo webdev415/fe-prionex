@@ -285,4 +285,22 @@ describe('filterRowsByTab', () => {
     expect(filterRowsByTab([impostor], 'tp')).toEqual([impostor])
     expect(collectDynamicDepartmentTabs([impostor])).toEqual([])
   })
+
+  it('sums an impostor «ТП» BESIDE the original into the one fixed tab', () => {
+    // Accepted edge, pinned: when the impostor and the original coexist — TWO
+    // departments named «ТП» under DIFFERENT ids — the name-based fixed tab
+    // claims both, so their rows (and therefore the tab's visible subtotals)
+    // are SUMMED into one number, and neither earns a dynamic tab that could
+    // tell them apart. The id-keyed strip cannot help here: the fixed triple
+    // deliberately matches by name (see the module docblock's accepted edges),
+    // and only «Всі» plus the table's own rows show that two departments are
+    // in play. A directory that names two departments identically is the
+    // actual fault; the strip's job is to stay stable, not clever.
+    const original = makeRow({ user_id: 1, department: 'ТП', department_id: 1 })
+    const impostor = makeRow({ user_id: 9, department: 'ТП', department_id: 77 })
+
+    expect(filterRowsByTab([original, impostor], 'tp')).toEqual([original, impostor])
+    // No dynamic tab for either id — the rows appear once, on the fixed tab.
+    expect(collectDynamicDepartmentTabs([original, impostor])).toEqual([])
+  })
 })

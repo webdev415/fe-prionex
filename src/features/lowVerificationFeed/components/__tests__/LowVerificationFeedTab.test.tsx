@@ -441,6 +441,32 @@ describe('LowVerificationFeedTab', () => {
     expect(field.value).toBe(raw)
   })
 
+  it('blocks a max_verified past the int32 ceiling with the CEILING sentence', async () => {
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?mv=2147483648'])
+
+    // Deliberate wording split: 2147483648 IS "a whole number of 0 or more",
+    // so the malformed-value hint would describe everything except the actual
+    // violation — the ceiling refusal gets its own sentence. (Same split as
+    // the sibling feed's gap_min.)
+    expect(
+      await screen.findByText('pages.reports.lowVerification.maxVerifiedTooLarge')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.reports.lowVerification.invalidMaxVerified')
+    ).not.toBeInTheDocument()
+    expect(mockGetFeed).not.toHaveBeenCalled()
+
+    // Same field-level wiring as every other single-field refusal.
+    const field = maxVerifiedInput()
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    const describedBy = field.getAttribute('aria-describedby')
+    expect(document.getElementById(describedBy as string)).toHaveTextContent(
+      'pages.reports.lowVerification.maxVerifiedTooLarge'
+    )
+  })
+
   it('pages through the feed with the right skip and keeps the page in the URL', async () => {
     mockGetFeed.mockResolvedValue(
       makeResponse([makeRow()], { total: 130, page: 1, page_size: 50, total_pages: 3 })
