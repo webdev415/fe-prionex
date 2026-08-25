@@ -4457,9 +4457,25 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   record: **the only artifact pasted anywhere is the one word `Подтверждаю`.** The paraphrase it
   answers — the thing that actually carried the document's content to Oleg — was never pasted, so
   every statement about what it covered is characterisation, which is what Prohibition 9 exists to
-  stop. Routed to Oleg as review decision **D1**: either the coordinator pastes the paraphrase as
-  sent, or Oleg states that he is the development and release team for this project's purposes
-  (epic AC4 says *"teams"*; the record carries one person). (2) The `#d11` quote above was restored
+  stop. Routed to Oleg as review decision **D1** — ✅ **ANSWERED AND CLOSED 2026-08-25, both
+  halves.** The coordinator supplied the paraphrase and it is pasted verbatim at the story's
+  Task 7.3, so the attestation now points at material that exists. And on epic AC4's plural, Oleg
+  stated the composition himself, verbatim: *"Я и есть команда"* — **recorded as the owner's own
+  statement about who the teams are, dated 2026-08-25, not as an assumption and not as a workaround
+  around the word "teams".** AC4 is satisfied because the set it names has exactly one member. (2) The `#d11` quote above was restored
   verbatim — the first rendering silently dropped *"или порядка эпиков"* mid-quote with no ellipsis
   marking the elision. Neither correction changes the acknowledgement's standing; both keep the
   record honest about what it does and does not contain.
+
+- ⚠️ **ACCEPTED RISK, not open work — PROD approval has no delegate.** Code review decision **D2**,
+  answered by Oleg 2026-08-25, verbatim: *"Оставить как есть"*. Every authority path in
+  `docs/production-approval-regulation.md` runs through one named person: granting an approval,
+  breaking the freeze window, and authorising a rollback to a tag that is **not** already in
+  `docs/prod-releases.md`. **Concrete cost, stated so a future reader sees the price rather than a
+  tick-box: while Oleg is unavailable, no production release can be approved AND no emergency
+  rollback to a non-ledger tag can be authorised** — the regulation classifies that second case as a
+  release, so the unplanned incident is exactly the case that is blocked. A rollback to a tag already
+  in the ledger is unaffected: it needs no approval and remains available at any hour. **Risk owner:
+  Oleg. Accepted 2026-08-25.** Filed here as an accepted risk with an owner and a date, and stated on
+  the regulation's own page under "Who approves" — not left as an omission for someone to discover
+  mid-incident. Revisit if a second person ever holds release authority.

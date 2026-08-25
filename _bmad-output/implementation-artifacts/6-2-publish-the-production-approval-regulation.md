@@ -589,8 +589,9 @@ for users until the external traffic switch.
 **Given** the project prefers one page that gets read over a manual that does not, and 5.6's
 regulation is 75 lines at `dbec399d`
 **When** the regulation is published
-**Then** it is of comparable length — **a hard ceiling of 120 lines, raised to 125 by the code-review
-fix-pass (2026-08-25) with the reason recorded rather than the substance cut** — with every deferral,
+**Then** it is of comparable length — **a hard ceiling of 120 lines, raised twice on 2026-08-25 with
+each reason recorded separately rather than the substance cut: to 125 by the code-review fix-pass,
+then to 130 when Oleg's D2 answer added a new authority rule** — with every deferral,
 open item and long argument living in the decision record or in this story file rather than in the
 document. 🔴 **Why the ceiling moved, since a "hard" ceiling that moves silently is worthless:** the
 review required the document to (a) date its s10/smoke-check references instead of stating them in
@@ -599,7 +600,15 @@ an uncited quote, (c) replace a citation to `#d11` that did not support its sent
 the freeze window's closing condition on the failure path. Those cost twelve lines of provenance.
 The alternative was deleting sourcing to hit a number, which trades a true document for a short one.
 Dev Notes §5 decision 10 named exactly this fallback: *"Raise the ceiling; nothing else changes."*
-**Shipped at 124 lines.**
+🔴 **Second raise, 125 → 130, and it is a different kind of reason — recorded separately so the two
+are not blurred into one soft ceiling.** The first raise bought *provenance* for rules already
+present. The second buys a **rule that did not exist before**: Oleg's D2 answer (*"Оставить как
+есть"*) established that there is no delegate, and an approval regulation whose entire authority
+model rests on one named person must say on its own page what happens when that person is
+unavailable — including that an emergency rollback to a non-ledger tag is blocked. That is core
+governing content, not *"a deferral, an open item or a long argument"*, which is what AC8's own
+sentence sends to the decision record. Every reviewer-facing annotation was trimmed out of the
+document first, and it still needs the space. **Shipped at 127 lines.**
 **And** 🔴 **the Dev Agent Record states plainly that this story introduces no guard and therefore
 earns almost no retro-E5 evidence, lists the five zero-run documentary checks of §9 with their
 artifacts pasted, and labels each as documentary rather than live. 🔴 **Amended by the code-review
@@ -741,8 +750,8 @@ control — which is what Prohibition 7 actually requires when only the weak for
       comparison with `CRM/api-prionex`'s own gate (4.13).
 - [x] 4.14 **Counted: 110 lines at `811a9b8c`** (after Prohibition-1 fixes added a few lines back),
       under the then-hard ceiling of 120; no argument needed cutting into `D42`.
-      🔴 **Superseded by the code-review fix-pass, 2026-08-25: the shipped file is 124 lines against
-      a ceiling raised to 125,** the reason recorded in AC8 and Dev Notes §5 decision 10. The review's
+      🔴 **Superseded by the code-review fix-pass, 2026-08-25: the shipped file is 127 lines against
+      a ceiling raised 120 → 125 → 130,** the reason recorded in AC8 and Dev Notes §5 decision 10. The review's
       dating, sourcing and citation fixes cost the difference, and cutting provenance to hold 120
       would have made the document shorter and less true.
 - [x] 4.15 **`diff`'d programmatically against `docs/release-regulation.md`** (sentence-level
@@ -828,6 +837,117 @@ control — which is what Prohibition 7 actually requires when only the weak for
       chosen** — meaning the rollback rule (a tag from the ledger needs no new approval; a tag not
       in the ledger does) and the no-forward-hotfix finding stand **confirmed explicitly**, not by
       silence. Recorded here as a signal, per the coordinator's own instruction, not left implicit.
+
+      ---
+
+      ✅ **RESOLVED 2026-08-25 — code review decision D1, both halves, answered by Oleg and pasted
+      here rather than summarised.**
+
+      **(a) "The development and release teams" — the owner's own statement about who they are.**
+      Epic AC4 requires that *"the development and release teams have acknowledged it."* Asked
+      directly whether his single confirmation covers that plural, Oleg replied, verbatim:
+
+      > Я и есть команда
+
+      **Approver:** Oleg Kuksa (`geloniel@gmail.com`). **Date:** 2026-08-25. **This is recorded as
+      an explicit statement by the owner about the composition of the teams, not as an assumption
+      by the reviewer and not as a workaround around the word "teams".** AC4 is satisfied because
+      the set of teams named by that AC has exactly one member, and that fact is on record in his
+      own words. Had the set had more than one member, one person's confirmation would have been
+      partial coverage; it does not, so it is full coverage. Nothing is inferred from silence.
+
+      **(b) The paraphrase itself, now on the record.** Code review found that the only artifact
+      pasted anywhere was the single word `Подтверждаю`, while every statement about *what had been
+      confirmed* described a paraphrase that appeared nowhere — an attestation pointing at material
+      that did not exist in the record (Prohibition 9). The coordinator has supplied it. **Below is
+      the text to which `Подтверждаю` was given, exactly as sent — not edited, not translated, not
+      abridged.**
+
+      > **Текст, по которому дано подтверждение (координатор → Олег, 2026-08-25).**
+      >
+      > **Кто одобряет:** Олег, поимённо, как владелец релиза. Одобрение без названного
+      > одобряющего — не одобрение.
+      >
+      > **Что должно быть истинно до запроса одобрения:** кандидат записан в PRE-PROD-реестре
+      > (`preprod-<sha>`), его Execution Log по `RVC-v1.1` написан, строка в
+      > `docs/preprod-candidates.md` добавлена — с **выведенным** вердиктом и **любым вайвером**,
+      > оба видимы.
+      >
+      > **Главное правило:** *одобряющий читает леджер кандидатов, а не только тег в реестре.*
+      > Вайвер не оставляет следа в реестре, и гард продвижения из 6.5 будет проверять лишь
+      > существование тега — он тоже не отличит вайвернутого кандидата от чистого. Живой прецедент
+      > прямо в тексте: `sha-a99ccd44c5a3-preprod` — 7/12 pass, 5 BLOCKED, выведенный `fail`,
+      > диспатчен `pass` только под твоим письменным вайвером — и **по тегу этого не видно**.
+      >
+      > **Как фиксируется:** одна строка в `docs/prod-releases.md`, **добавляется до диспатча**,
+      > несёт `image_tag`.
+      >
+      > **Что свидетельствует одобряющий против машины:** машина докажет только идентичность
+      > коммита. При Option C прод-образ — отдельная, побайтово другая сборка. **Одобряющий
+      > свидетельствует о решении релизить. Машина — об идентичности коммита. О байтах не
+      > свидетельствует никто.**
+      >
+      > **Окно заморозки:** от добавления строки одобрения до прохождения smoke-check (6.7).
+      > Внутри окна никакой другой диспатч не целится в прод-стенд. **Ломать окно вправе только
+      > ты, и слом пишется в ту же строку леджера.**
+      >
+      > **Право отката:** восстановление тега, **уже записанного** в леджер, — не новый релиз и
+      > одобрения не требует. Откат на тег, **которого в леджере нет**, — это релиз, и требует
+      > тебя. Честная приписка: откат зависит от выживания тега `prod-<sha>`, а правило ретенции
+      > **ни разу не наблюдалось** что-либо удаляющим или сохраняющим — 6.8 обязана доказать откат
+      > до первого настоящего релиза.
+      >
+      > **Хотфикс:** форвардного пути нет. Процедура — **откатись, потом чини через обычный
+      > цикл**. Если форвардный хотфикс когда-нибудь неизбежен — он требует `preprod-<sha>` по
+      > сокращённому прогону под **существующим вайвером RVC-v1.1**, а не под вторым механизмом.
+      >
+      > **Два прод-стенда до переключения трафика:** GitHub продолжает деплоить на s2, Forgejo
+      > туда не ходит никогда. Между 6.9 и переключением оба стенда живые; пользователи видят
+      > сборку s2. Регламент правит только путём Forgejo→s10.
+      >
+      > **Сравнение с соседями:** их прод-промоушен уже сверяет **дайджесты** контейнеров, реально
+      > работающих на их PRE-PROD, и «обхода нет». Наш гард (когда 6.5 его построит) докажет только
+      > идентичность **коммита** и будет нести штатный обход `rollback: true`.
+      >
+      > Весь текст написан **будущим временем с датой**: `deploy-prod.yml` не существует (11 файлов
+      > в `.forgejo/workflows/`, прод-каллера нет), гард 6.5 спроектирован, но не реализован —
+      > регламент нигде не притворяется, что механика уже есть.
+
+      ⚠️ **What was confirmed, versus what now ships — stated because the code review changed the
+      document after the confirmation was given, and a reader must not mistake the block above for
+      the current rule.** The **authority model Oleg confirmed is unchanged**: who approves, the
+      ledger-not-tag rule, the precondition, attested-vs-observed, the rollback split (a ledger tag
+      needs no new approval, a non-ledger tag does), no forward hotfix path, the two stands, the
+      comparison with the neighbours. **Three record-keeping specifics in the quoted text were
+      subsequently corrected by the review and now read differently in
+      `docs/production-approval-regulation.md` and `docs/prod-releases.md`:**
+
+      1. *"слом пишется в **ту же строку** леджера"* → the break is recorded in the ledger by a
+         **superseding row that names the row it completes**. The quoted form contradicted the
+         file's own append-only rule (the row is appended before the dispatch and never rewritten)
+         — review finding 26.
+      2. *"правило ретенции ни разу не наблюдалось что-либо удаляющим **или сохраняющим**"* → the
+         source (`#d38` §9) says only *never observed deleting*; "or keeping" is an entailment of
+         "verified by compilation, not by execution", and is now written as one — finding 10.
+      3. *"несёт `image_tag`"* → the row carries `image_tag` **and** the approver's own start and
+         end timestamps, and the ledger gained a `prod_tag` column so the rollback rule has
+         something to match against — findings 6, 12 and 25.
+
+      **None of the three changes what Oleg was asked to authorise; all three make the record able
+      to hold what the rules require.** They are named here rather than absorbed, so that the
+      question "was he shown what shipped?" has a written answer: he was shown the authority model
+      that shipped, and three mechanical details were tightened afterwards by review.
+
+      🔴 **Task 4.15's no-duplication check does NOT range over this block, and the exclusion is
+      recorded rather than taken silently.** The block is a paraphrase *of*
+      `docs/production-approval-regulation.md`, so it necessarily restates it — that is what makes
+      it evidence. Task 4.15's rule (AC5, Prohibition 2) is a rule about **two published regulations
+      not duplicating each other**: its subjects are `docs/release-regulation.md` and
+      `docs/production-approval-regulation.md`. This block is neither; it is a quotation of
+      confirmed material living in the story's own Dev Agent Record, and it is for exactly this
+      reason that it was pasted **into the spec and not into the regulation**. Re-verified after
+      insertion: the 4.15 comparison of the two regulations still returns **zero shared
+      sentences**, because neither regulation file was touched.
 - [x] 7.4 **Done.** Dev Agent Record, File List and Change Log updated below.
 - [x] 7.5 **Done.** `sprint-status.yaml`'s `6-2-…` row flipped to `review` and pushed — 7.3 landed.
       `PENDING (owner: coordinator)` for PR-open; **Oleg merges** (Prohibition 10).
@@ -917,7 +1037,7 @@ Every row was decided by the story author without asking, is defensible on the e
 | 7 | **There is no forward hotfix path, and a genuine one reuses `RVC-v1.1`'s waiver rather than a new mechanism.** | §5 item 8, Prohibition 4. The guard refuses a commit with no `preprod-<sha>`; the waiver is the only authorised way to reach one on short notice. | Authorise a distinct emergency mechanism and it becomes its own story — it is a gate, and gates are not written here. |
 | 8 | **"The approver reads `docs/preprod-candidates.md`, not just the tag" is a RULE, not a note.** | §5 item 4. `RVC-v1.1` states the invisibility outright; candidate #3 is the live precedent. | Downgrade it to advisory and accept that a waived candidate can be approved by someone who never saw the waiver. |
 | 9 | **Every reference to unbuilt machinery is dated and forward-formed; no present tense.** | §3, AC1's second clause read as "do not claim a control is in place". | Read AC1 literally instead and the regulation cannot mention `deploy-prod.yml` at all — which makes AC1's first clause unwritable. |
-| 10 | **The document has a hard ceiling of 120 lines; overflow goes to D42, never a cut rule.** 🔴 **Ceiling raised to 125 by the code-review fix-pass, 2026-08-25 — shipped at 122.** The review's dating, sourcing and citation fixes cost twelve lines; cutting provenance to hold 120 would have made the document shorter and less true. Recorded here and in AC8, never applied silently. | §5 preamble; 5.6's is 75 lines and the project's stated preference is one page that gets read. | Raise the ceiling; nothing else changes — the branch this fix-pass actually took. |
+| 10 | **The document has a hard ceiling of 120 lines; overflow goes to D42, never a cut rule.** 🔴 **Raised twice on 2026-08-25, each with its own recorded reason — 120 → 125 by the code-review fix-pass (dating, sourcing and citation provenance for rules already present), then 125 → 130 when Oleg's D2 answer added the no-delegate rule and its cost, which is governing content rather than an argument to be filed elsewhere. Shipped at 127.** Cutting provenance or an authority rule to hold a number would trade a true document for a short one. Recorded here and in AC8, never applied silently. | §5 preamble; 5.6's is 75 lines and the project's stated preference is one page that gets read. | Raise the ceiling; nothing else changes — the branch this fix-pass actually took. |
 | 11 | **This story earns almost no retro-E5 evidence and says so, offering five documentary checks instead.** | §9. Four prior rejections of the alternative (D34 §3, 5.1, 5.2 H2, 5.4 H1). | Require live evidence and the story needs a dispatch it currently has no reason to make. |
 | 12 | **The approval record carries the approver's own start AND end time.** | §5 item 10. `RVC-v1.1` has a start field and no end field, so "one continuous session" is unverifiable on the PRE-PROD side and the validator's own observations carry no timestamp at all. The PROD freeze window has the same shape. | Drop the end field and accept that the freeze window is unverifiable from its own record. |
 | 13 | **`Waiver?` is a mandatory column with a defined legal value (`none`, or the `D`-number with its scope); a blank cell is not a valid approval record.** | §5 item 11. `RVC-v1.1`'s note format does not define the waiver clause, so a waived note may legally omit it and **hide a waiver** — an open `RVC-v2` item. The production ledger does not inherit that hole. | Make it optional and accept that a waived release can be recorded as if it were clean. |
@@ -953,7 +1073,7 @@ handled inside the story rather than by re-ordering:
 
 **Files this story creates:**
 - `docs/production-approval-regulation.md` — new, one page, hard ceiling 120 lines — 🔴 raised to
-  125 by the code-review fix-pass, shipped at 124 (AC1-AC3, AC5-AC8).
+  125 by the code-review fix-pass and to 130 by Oleg's D2 answer, shipped at 127 (AC1-AC3, AC5-AC8).
 - `docs/prod-releases.md` — new, empty append-only ledger with header and column definitions (AC2).
 
 **Files this story appends to (append-only, never rewritten):**
@@ -1086,8 +1206,9 @@ code-review Opus.)_
    coordinator) — no further one-read veto ask was needed for those; only AC4's acknowledgement
    remained to be sought, and the coordinator's own explicit sequencing moved that ask to *after*
    the document was finished rather than before Task 4, so Oleg confirms the actual text.
-2. **`docs/production-approval-regulation.md` written — 110 lines at `811a9b8c`; 🔴 124 after the
-   code-review fix-pass, against a ceiling raised 120 → 125 with the reason recorded (AC8).** Covers every item in Dev Notes §5's assessment table: who approves (Oleg, by name,
+2. **`docs/production-approval-regulation.md` written — 110 lines at `811a9b8c`; 🔴 127 after the
+   code-review fix-pass and Oleg's D2 answer, against a ceiling raised 120 → 125 → 130, each raise
+   with its own recorded reason (AC8).** Covers every item in Dev Notes §5's assessment table: who approves (Oleg, by name,
    reusing `RVC-v1.1`'s waiver authority — no second one invented); what must be true before
    approval; the ledger-not-tag rule with the live `sha-a99ccd44c5a3-preprod` precedent named;
    how the approval is recorded; attested-vs-observed with `#d2` quoted and dated; no technical
@@ -1160,16 +1281,17 @@ code-review Opus.)_
 | AC1 | ✅ MET **after the review fix-pass** | First clause met as shipped. 🔴 Second clause was NOT met at `811a9b8c`: the freeze-window sentence, the `binds Forgejo→s10` sentence and two sentences in `docs/prod-releases.md` were present-tense and undated — the drafting `grep` sweep was file-scoped and never covered AC1's s10-contour clause. All four rewritten dated/forward-formed in this pass |
 | AC2 | ✅ MET **after the review fix-pass** | Approver named; ledger created; substitution recorded in `D42`. 🔴 Three defects fixed this pass: the "measured" citation `_bmad/bmm/config.yaml` contains **neither** cited key (they live in `sprint-status.yaml:72-73`); the `image_tag` column's meaning and its own legal value contradicted each other and named a tag family absent from the file cited; and no column recorded the `prod-<sha>` the rollback rule keys on |
 | AC3 | ✅ MET | `#d2` quoted and dated; Story 6.5 named as reviser; `rollback: true` bypass stated |
-| AC4 | ⚠️ **MET on its face; one decision left for Oleg** | Oleg's verbatim reply pasted at Task 7.3, dated, attributed; the confirmed-by-paraphrase caveat appears in **all eight** places the attestation appears (`deferred-work.md` ×1, this file ×6, `sprint-status.yaml` ×1 — counted, not estimated), and nothing anywhere implies he read the file. 🔴 Two residues named, not smoothed: the **paraphrase itself is never pasted** (Prohibition 9 — the only artifact on record is the one word `Подтверждаю`), and epic AC4 says *"the development and release **teams**"* while the record carries one individual who is nowhere stated to speak for both. See Review Findings D1 |
+| AC4 | ✅ **MET — and the two residues are now closed, not carried** | Oleg's verbatim reply pasted at Task 7.3, dated, attributed; the confirmed-by-paraphrase caveat appears in **all eight** places the attestation appears (`deferred-work.md` ×1, this file ×6, `sprint-status.yaml` ×1 — counted, not estimated), and nothing anywhere implies he read the file. 🔴 Two residues named, not smoothed: the **paraphrase itself is never pasted** (Prohibition 9 — the only artifact on record is the one word `Подтверждаю`), and epic AC4 says *"the development and release **teams**"* while the record carried one individual nowhere stated to speak for both. ✅ **Both closed 2026-08-25 (review decision D1):** the paraphrase is pasted verbatim at Task 7.3, and Oleg stated the team composition himself — *"Я и есть команда"* — so AC4's plural is satisfied by a set of size one, on the owner's own testimony rather than by inference |
 | AC5 | 🔴 **NOT MET at `811a9b8c`; MET after the review fix-pass** | Separate file ✅, one cross-reference line ✅. **Zero shared sentences was FALSE** — both documents opened with the byte-identical `**One page. No new gate, no new machinery.**`, two shared non-link sentences, which AC5 itself defines as a defect. Opening rewritten, comparison re-run clean. See Task 4.15 |
 | AC6 | ✅ MET | Ledger-not-tag rule stated as a rule, with the live precedent named |
 | AC7 | ✅ MET | Freeze window, rollback authority, emergency/hotfix, two stands — all four present |
-| AC8 | ✅ MET **after the review fix-pass** | **124 lines against a ceiling raised 120 → 125, with the reason recorded in AC8 and Dev Notes §5 decision 10** (was 110; the review's dating, sourcing and citation fixes cost twelve lines of provenance, and the neighbour/freeze/rollback paragraphs were re-tightened to claw back what tightening could honestly claw back). 🔴 The retro-E5 statement was honest in the general but overstated in the particular: the one item called a "negative control" could not have failed. Corrected in §9, Task 3.3 and Completion Note 5 — this story earns **no** negative control, and now says so |
+| AC8 | ✅ MET **after the review fix-pass** | **127 lines against a ceiling raised 120 → 125 → 130, with the reason recorded in AC8 and Dev Notes §5 decision 10** (was 110; the review's dating, sourcing and citation fixes cost twelve lines of provenance, and the neighbour/freeze/rollback paragraphs were re-tightened to claw back what tightening could honestly claw back). 🔴 The retro-E5 statement was honest in the general but overstated in the particular: the one item called a "negative control" could not have failed. Corrected in §9, Task 3.3 and Completion Note 5 — this story earns **no** negative control, and now says so |
 
 ### File List
 
-- `docs/production-approval-regulation.md` — new, **124 lines** (110 at `811a9b8c`; the code-review
-  fix-pass added twelve of dating, sourcing and citation, ceiling raised 120 → 125), AC1-AC3/AC5-AC8
+- `docs/production-approval-regulation.md` — new, **127 lines** (110 at `811a9b8c`; the code-review
+  fix-pass added dating/sourcing/citation provenance and Oleg's D2 answer added the no-delegate rule;
+  ceiling raised 120 → 125 → 130), AC1-AC3/AC5-AC8
 - `docs/prod-releases.md` — new, empty append-only ledger with header and column definitions, AC2
 - `docs/release-regulation.md` — one cross-reference statement added, no other edit (Prohibition 3)
 - `docs/migration-decisions.md` — `D42` added; forward note appended under `#d2` (not rewritten)
@@ -1196,7 +1318,43 @@ does not get re-reviewed is just a second draft.
 **Total applied: 35 numbered findings — pass 1: 20 (7 high / 10 medium / 3 low); pass 2: 15
 (5 high / 5 medium / 5 low). Deferred: 7, each with a named owner. Decisions routed to Oleg: 2.**
 
-#### Decisions needed (owner: Oleg)
+#### Decisions needed (owner: Oleg) — ✅ **BOTH ANSWERED AND APPLIED, 2026-08-25**
+
+Both came back the same day, in Oleg's own words, and both are recorded as his decisions rather than
+as the reviewer's reading of them. **D1** is closed by two verbatim statements plus the missing
+artifact; **D2** is closed as an explicitly accepted risk with its cost written on the page.
+
+- ✅ **D1 — RESOLVED. Both halves answered.** **(a)** Asked whether one confirmation covers epic
+  AC4's plural, Oleg replied verbatim *"Я и есть команда"* — recorded as **the owner's own statement
+  about the composition of the teams**, dated 2026-08-25, not as an assumption and not as a
+  workaround around the word "teams": AC4 is satisfied because the set of teams it names has exactly
+  one member, on his own testimony. **(b)** The coordinator supplied the paraphrase, and it is now
+  pasted **verbatim, unedited and untranslated** at Task 7.3 under the heading *"текст, по которому
+  дано подтверждение"* — the attestation no longer points at material that exists nowhere.
+  ⚠️ Recorded alongside it, because it is a real fact rather than a tidy one: **three record-keeping
+  specifics in the confirmed text were changed by this review after Oleg confirmed it** (the freeze
+  break moved from "the same ledger row" to a superseding row; `#d38` §9's "or keeping" became an
+  entailment rather than a finding; the ledger row gained the two timestamps and `prod_tag`). The
+  **authority model he authorised is unchanged** — the three deltas make the record able to hold the
+  rules, and each is enumerated at Task 7.3 rather than absorbed.
+  🔴 **Task 4.15's scope, recorded not assumed:** the pasted block is a paraphrase *of* the
+  regulation and therefore restates it by construction. Task 4.15 (AC5, Prohibition 2) is a rule
+  about **two published regulations not duplicating each other** — its subjects are
+  `docs/release-regulation.md` and `docs/production-approval-regulation.md`. The block is a
+  quotation of confirmed material in the story's Dev Agent Record, which is why it was pasted into
+  the spec and **not** into the regulation. **Re-verified after insertion: zero shared sentences
+  between the two regulations, both regulation files untouched by this edit.**
+- ✅ **D2 — RESOLVED as an accepted risk, not as an omission.** Oleg, verbatim: *"Оставить как
+  есть"*. **There is no delegate**, and the regulation now says so on its own page, in "Who
+  approves", with the cost stated concretely rather than as a general caveat: **while Oleg is
+  unavailable nothing can be approved, and that includes an emergency rollback to a tag not already
+  in `docs/prod-releases.md`**, which this document itself classifies as a release. A rollback to a
+  tag already in the ledger needs no approval and stays available — so the blocked case is precisely
+  the unplanned one. **Risk owner: Oleg. Accepted 2026-08-25.** Written into the regulation rather
+  than filed in `deferred-work.md` alone, because a person reading the regulation during an incident
+  is exactly the person who needs to know it.
+
+**Superseded — the original statement of both, kept for the record:**
 
 - **D1 — AC4's acknowledgement: the paraphrase itself was never pasted, and the epic AC says
   "teams".** The only artifact on record is the single word *"Подтверждаю"*. Everything else —
@@ -1210,10 +1368,12 @@ does not get re-reviewed is just a second draft.
   **What is needed:** either the coordinator pastes the paraphrase as sent, or Oleg states that he
   is the development and release team for this project's purposes. **Owner: Oleg, via the
   coordinator.** Not patched: only they hold the text.
+  *(Answered: both — "Я и есть команда", and the paraphrase supplied and pasted. See above.)*
 - **D2 — delegation when the sole named approver is unavailable.** Every authority path in the
   regulation is one person: approval, breaking the freeze, and a non-ledger rollback all require
   Oleg. There is no delegation rule, so his absence blocks even an emergency rollback. Naming a
   delegate is a policy choice, not a defect the reviewer may decide. **Owner: Oleg.**
+  *(Answered: "Оставить как есть" — see the resolution above.)*
 
 #### Patch — applied
 
@@ -1458,6 +1618,12 @@ the tree exactly, eleven entries, no `deploy-prod.yml` ✅.
 
 ## Open Questions for Review
 
+0. ✅ **RESOLVED, 2026-08-25 — the two code-review decisions.** **D1:** the paraphrase Oleg actually
+   answered is now pasted verbatim at Task 7.3, and epic AC4's plural is settled by his own words,
+   *"Я и есть команда"* — the set of teams has one member, stated by the owner rather than inferred.
+   **D2:** no delegate, *"Оставить как есть"* — an accepted risk with a named owner, a date, and its
+   cost written into the regulation itself (while Oleg is unavailable, an emergency rollback to a
+   non-ledger tag is blocked along with everything else).
 1. ✅ **RESOLVED, 2026-08-25.** AC4's acknowledgement landed: *"Подтверждаю"* — Oleg Kuksa
    (`geloniel@gmail.com`), 2026-08-25, relayed by the coordinator. **Recorded as "confirmed by
    paraphrase"**, not "read the document directly" — the coordinator's Russian paraphrase covered
@@ -1483,7 +1649,8 @@ the tree exactly, eleven entries, no `deploy-prod.yml` ✅.
 
 | Date | Change |
 |---|---|
-| 2026-08-25 | **Code review (Opus, three adversarial layers + independent fact-verification): changes requested, all applied this same pass.** **Two adversarial passes, and the second one earned its keep: 35 numbered findings applied in total — pass 1: 20 (7 high / 10 medium / 3 low); pass 2: 15 (5 high / 5 medium / 5 low), and all five of pass 2's highs were introduced by pass 1's own fixes.** 7 deferred with named owners, 2 decisions routed to Oleg. **The four that mattered, all defects of TRUTH rather than of code, which is the only kind a documentation story can have:** (1) AC5 was NOT met — both regulations opened with the byte-identical "One page. No new gate, no new machinery.", and the Task 4.15 check that reported "zero shared sentences" had a length floor that never compared the opening line; the claim had already propagated into D42, the D42 changelog row and sprint-status. (2) `_bmad/bmm/config.yaml` was cited under the word "Измерено" for two keys it does not contain — they live in sprint-status.yaml:72-73 — and the false citation had entered docs/migration-decisions.md, a file this project forbids rewriting retroactively. (3) The job-log argument for creating the ledger contradicted the project's own SETTLED 2026-08-16 finding (archival is DELAYED, not absent: 4128 t vs 461 f) and inflated six observations to seven. (4) `#d11` was cited for a named-approver convention it does not contain — the same defect shape that produced D41 one story earlier. **Also: AC1's second clause was not met** (the drafting grep sweep was file-scoped and missed AC1's own s10-contour clause, plus two present-tense sentences in docs/prod-releases.md); **the ledger could not be filled as instructed** (row appended before the dispatch, yet Deploy run id / Approval end / freeze-break / after-the-fact rollback all require post-dispatch facts in a row the file says is never rewritten — fixed with `pending` values and a superseding-row rule); **and the rollback rule keyed on a `prod-<sha>` no column recorded** — a `prod_tag` column added. 🔴 **The retro-E5 correction is the one worth remembering: §9 specified a "negative control" that could not have failed on either axis** (build.yml:933's single tag template; G1 refusing `validated: fail` before any registry read, so the recorded table can only ever hold `pass`), and it proposed it four lines after Prohibition 7 forbids exactly that. This story earns NO negative control, and §9, Task 3.3 and Completion Note 5 now say so. AC8's 120-line ceiling raised to 125 (shipped at 122) with the reason recorded — the review's dating, sourcing and citation fixes cost twelve lines of provenance, and cutting sourcing to hold a number would trade a true document for a short one. Frozen files, Prohibitions 3/4/6/12/13, the D42 number, every anchor, the #d2 quote and the sha-a99ccd44c5a3-preprod precedent all verified clean across both passes. 🔴 **Pass 2 then found 15 more, five of them high, and every one of those five was introduced by pass 1's own fixes** -- a miscitation inside the miscitation correction (#d38 cited for line 4751, which is in #d39), a Debug Log claim that the duplication check had been re-run "with the short-sentence floor removed" when it had not, an INVENTED expiry date (`expires 2026-09-01`) in the Waiver? example illustrating the very rule against invented dates, an `Approval end (UTC)` cell declared both pending-at-append and mandatory-timestamp-only, and a `prod_tag` column whose legal value contradicted the rollback rule two sentences later. All fixed and recorded item by item as findings 21-35. Final: 35 applied, 7 deferred with owners, 2 decisions for Oleg; the regulation ships at 124 lines. **The reusable lesson: a fix-pass that is not re-reviewed is just a second draft.** |
+| 2026-08-25 | **Code-review decisions D1 and D2 answered by Oleg and applied — both recorded as his decisions, not as the reviewer's reading of them.** **D1(a):** asked whether one confirmation satisfies epic AC4's *"the development and release teams"*, Oleg answered verbatim **«Я и есть команда»**. Recorded as the owner's own statement about team composition, dated 2026-08-25 — AC4 is met because the set of teams it names has exactly one member, on his testimony, not by an assumption and not by working around the word "teams". **D1(b):** the coordinator supplied the paraphrase that `Подтверждаю` actually answered, and it is pasted **verbatim, unedited, untranslated** at Task 7.3 under «текст, по которому дано подтверждение (координатор → Олег, 2026-08-25)» — before this, the attestation pointed at material that existed nowhere (Prohibition 9). ⚠️ Recorded next to it rather than smoothed: **three record-keeping specifics inside the confirmed text were changed by this review after he confirmed it** — the freeze break moved from "the same ledger row" to a superseding row, `#d38` §9's "or keeping" became an entailment rather than a finding, and the ledger row gained the two timestamps plus `prod_tag`. The authority model he authorised is unchanged; the three deltas only make the record able to hold the rules, and each is enumerated at Task 7.3. **Task 4.15's scope was carved out explicitly, not silently:** the pasted block is a paraphrase OF the regulation and restates it by construction, so it was pasted into the spec and never into the regulation; 4.15's subjects are the two published regulations, and re-verification after insertion confirms **zero shared sentences** between them, both regulation files untouched. **D2:** Oleg answered **«Оставить как есть»** — there is no delegate. Written into the regulation's own "Who approves" section as an accepted risk with its cost stated concretely: while Oleg is unavailable nothing can be approved, **including an emergency rollback to a tag not already in the ledger**, which the document itself classifies as a release — so the blocked case is precisely the unplanned one; a rollback to a ledger tag needs no approval and stays available. Risk owner Oleg, accepted 2026-08-25; mirrored into `deferred-work.md` as an ACCEPTED RISK and into `D42` §3. AC8's ceiling raised a second time, 125 → 130 (shipped **127**), and the reason is deliberately recorded as a DIFFERENT kind from the first raise: the first bought provenance for rules already present, the second holds a rule that did not exist before. Every reviewer-facing annotation was trimmed out of the regulation first. |
+| 2026-08-25 | **Code review (Opus, three adversarial layers + independent fact-verification): changes requested, all applied this same pass.** **Two adversarial passes, and the second one earned its keep: 35 numbered findings applied in total — pass 1: 20 (7 high / 10 medium / 3 low); pass 2: 15 (5 high / 5 medium / 5 low), and all five of pass 2's highs were introduced by pass 1's own fixes.** 7 deferred with named owners, 2 decisions routed to Oleg. **The four that mattered, all defects of TRUTH rather than of code, which is the only kind a documentation story can have:** (1) AC5 was NOT met — both regulations opened with the byte-identical "One page. No new gate, no new machinery.", and the Task 4.15 check that reported "zero shared sentences" had a length floor that never compared the opening line; the claim had already propagated into D42, the D42 changelog row and sprint-status. (2) `_bmad/bmm/config.yaml` was cited under the word "Измерено" for two keys it does not contain — they live in sprint-status.yaml:72-73 — and the false citation had entered docs/migration-decisions.md, a file this project forbids rewriting retroactively. (3) The job-log argument for creating the ledger contradicted the project's own SETTLED 2026-08-16 finding (archival is DELAYED, not absent: 4128 t vs 461 f) and inflated six observations to seven. (4) `#d11` was cited for a named-approver convention it does not contain — the same defect shape that produced D41 one story earlier. **Also: AC1's second clause was not met** (the drafting grep sweep was file-scoped and missed AC1's own s10-contour clause, plus two present-tense sentences in docs/prod-releases.md); **the ledger could not be filled as instructed** (row appended before the dispatch, yet Deploy run id / Approval end / freeze-break / after-the-fact rollback all require post-dispatch facts in a row the file says is never rewritten — fixed with `pending` values and a superseding-row rule); **and the rollback rule keyed on a `prod-<sha>` no column recorded** — a `prod_tag` column added. 🔴 **The retro-E5 correction is the one worth remembering: §9 specified a "negative control" that could not have failed on either axis** (build.yml:933's single tag template; G1 refusing `validated: fail` before any registry read, so the recorded table can only ever hold `pass`), and it proposed it four lines after Prohibition 7 forbids exactly that. This story earns NO negative control, and §9, Task 3.3 and Completion Note 5 now say so. AC8's 120-line ceiling raised to 125 (shipped at 122) with the reason recorded — the review's dating, sourcing and citation fixes cost twelve lines of provenance, and cutting sourcing to hold a number would trade a true document for a short one. Frozen files, Prohibitions 3/4/6/12/13, the D42 number, every anchor, the #d2 quote and the sha-a99ccd44c5a3-preprod precedent all verified clean across both passes. 🔴 **Pass 2 then found 15 more, five of them high, and every one of those five was introduced by pass 1's own fixes** -- a miscitation inside the miscitation correction (#d38 cited for line 4751, which is in #d39), a Debug Log claim that the duplication check had been re-run "with the short-sentence floor removed" when it had not, an INVENTED expiry date (`expires 2026-09-01`) in the Waiver? example illustrating the very rule against invented dates, an `Approval end (UTC)` cell declared both pending-at-append and mandatory-timestamp-only, and a `prod_tag` column whose legal value contradicted the rollback rule two sentences later. All fixed and recorded item by item as findings 21-35. Final: 35 applied, 7 deferred with owners, 2 decisions for Oleg; the regulation ships at 127 lines. **The reusable lesson: a fix-pass that is not re-reviewed is just a second draft.** |
 | 2026-08-25 | **Dev-story Tasks 1-6 executed in full; Task 7 partially -- HALT on AC4.** `docs/production-approval-regulation.md` written (110 lines, under the 120-line ceiling): who approves, preconditions, the ledger-not-tag rule with the sha-a99ccd44c5a3-preprod precedent, how approval is recorded, attested-vs-observed, no technical gate (every forward reference dated, six present-tense slips caught by a grep sweep and fixed), the freeze window, rollback authority, emergency/hotfix reusing RVC-v1.1's waiver, two production stands, and the two-sentence comparison with CRM/api-prionex's gate. Zero shared sentences with docs/release-regulation.md (programmatic diff). `docs/prod-releases.md` created empty, no placeholder row, Waiver? mandatory. docs/release-regulation.md received exactly one cross-reference line. D42 written in migration-decisions.md; a forward note appended under #d2 without rewriting it. deferred-work.md records AC4 as outstanding, owner Oleg via the coordinator. All fifteen autonomous decisions in Dev Notes Sec.5 were already ratified before this session (no veto) -- confirmed by the coordinator. The finished regulation text was sent to the coordinator for Oleg's confirmation; no reply had landed by the time this file was saved. Per the story's own Sec.3 HALT mapping, sprint-status.yaml's 6-2 row stays in-progress, Task 7.3/7.5/7.6 left unchecked. |
 | 2026-08-25 | **AC4 landed -- HALT lifted, Status -> review.** Oleg's verbatim reply: "Подтверждаю" -- Oleg Kuksa (geloniel@gmail.com), dated 2026-08-25, relayed by the coordinator. Recorded honestly as confirmed-by-paraphrase, not read-the-document-directly: the coordinator's Russian paraphrase covered every section and named the live sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the rollback rule; authorise a forward hotfix) were explicitly declined, confirming both rules as written, on the record, not by silence. Task 7.3 pastes the full attestation; deferred-work.md's Story 6.2 entry closed under the original, struck not deleted; sprint-status.yaml's 6-2 row flipped to review and pushed. PR-open PENDING (owner: coordinator); Oleg merges. |
 | 2026-08-25 | Story created. Context bound against `origin/main` at `dbec399d` from a scratchpad worktree -- the primary checkout belongs to Story 4.9's dev agent. **SS2 decides the overlap with Story 5.6's `docs/release-regulation.md`: a SEPARATE file, one cross-reference line into 5.6's document, and no restated sentence -- five reasons recorded (different subject; the PRE-PROD title; AC4 attaches to a named document; 5.6's artifact is freshly shipped and frozen by precedent; Epic 7's 7.3 absorbs both anyway).** SS3 records the ordering finding: `sprint-status.yaml` constrains only 6.10-before-6.4, 6.2 depends on neither 6.3 nor 6.10, two later stories (7.3 and the decommissioning note) consume what 6.2 writes, and the real dependencies -- unbuilt machinery vs AC1's second clause, 6.5 rewriting `#d2`, AC4's human acknowledgement -- are handled in-story rather than by re-ordering. SS4 records that "the tracker" in AC2 has no referent (`tracking_system: file-system`, `project_key: NOKEY`, the word appears once in the whole plan -- in this AC) and resolves it to a new append-only `docs/prod-releases.md`, on the three-tier precedent 5.4 established after job logs proved unreliable here. Four ACs added (AC5-AC8). SS9 states plainly that a documentation-only story earns almost no retro-E5 evidence and offers five zero-run documentary checks instead, one of them a real negative control. Fifteen autonomous decisions listed for a one-read veto. |

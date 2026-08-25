@@ -1280,7 +1280,8 @@ development_status:
   # sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the
   # rollback rule; authorise a forward hotfix) were explicitly declined, confirming both as
   # written, not by silence. docs/production-approval-regulation.md (110 lines at 811a9b8c; 124
-  # after the code-review fix-pass, ceiling raised 120 -> 125 with the reason recorded) and
+  # after the code-review fix-pass and Oleg's D2 answer; ceiling raised 120 -> 125 -> 130, each
+  # raise with its own recorded reason) and
   # docs/prod-releases.md (empty ledger) shipped; docs/release-regulation.md got exactly one
   # cross-reference line; D42 recorded. Row flips to `review`.
   # CODE REVIEW 2026-08-25 (Opus, three adversarial layers + independent fact-verification):
@@ -1312,7 +1313,24 @@ development_status:
   # This story earns NO negative control and now says so. AC8's ceiling 120 -> 125 (shipped 122),
   # reason recorded -- twelve lines of provenance, not padding.
   # Frozen files, Prohibitions 3/4/6/12/13, D42's number, every anchor, the #d2 quote and the
-  # sha-a99ccd44c5a3-preprod precedent all verified clean. Status stays `review`; Oleg merges.
+  # sha-a99ccd44c5a3-preprod precedent all verified clean.
+  # DECISIONS D1/D2 ANSWERED BY OLEG 2026-08-25 AND APPLIED. D1(a): asked whether one confirmation
+  # satisfies epic AC4's "development and release TEAMS", Oleg said verbatim "Я и есть команда" --
+  # recorded as the OWNER'S OWN statement about team composition, so AC4 is met because that set has
+  # exactly one member, not by assumption and not by working around the plural. D1(b): the
+  # coordinator supplied the paraphrase that "Подтверждаю" actually answered; it is pasted verbatim
+  # and unedited at Task 7.3 -- until now the attestation pointed at material that existed nowhere.
+  # Three record-keeping specifics inside that confirmed text were changed by the review AFTER he
+  # confirmed it (freeze break -> superseding row; #d38 §9's "or keeping" -> entailment; the row
+  # gained two timestamps and prod_tag); the authority model is unchanged and all three deltas are
+  # enumerated at Task 7.3 rather than absorbed. Task 4.15's scope carved out EXPLICITLY: the block
+  # is a paraphrase OF the regulation, so it went into the spec and never into the regulation;
+  # re-verified zero shared sentences between the two regulations. D2: "Оставить как есть" -- no
+  # delegate, written into the regulation as an accepted risk with its cost named (while Oleg is
+  # unavailable nothing can be approved, INCLUDING an emergency rollback to a non-ledger tag, which
+  # the document classifies as a release; a ledger-tag rollback stays available). Risk owner Oleg,
+  # accepted 2026-08-25. AC8 ceiling 125 -> 130, shipped 127 -- a different reason from the first
+  # raise, recorded separately. Status stays `review`; Oleg merges.
   6-2-publish-the-production-approval-regulation: review
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
