@@ -21,7 +21,7 @@
     "import": "Import",
     "importClients": "Import Clients",
     "projects": "Projects",
-    "users": "Users",
+    "users": "Employees",
     "ipWhitelist": "IP Whitelist",
     "aiSettings": "AI Settings",
     "sellers": "Sellers",
@@ -3623,7 +3623,7 @@
       }
     },
     "users": {
-      "title": "User Management",
+      "title": "Employees",
       "addNewUser": "New User",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",
@@ -3648,8 +3648,10 @@
         "statusOptions": {
           "all": "All",
           "active": "Active",
-          "disabled": "Disabled"
-        }
+          "inactive": "Disabled"
+        },
+        "workFormat": "Work format",
+        "clearFilters": "Clear filters"
       },
       "tableHeaders": {
         "username": "Username",
@@ -3659,7 +3661,10 @@
         "projectRole": "Project & Role",
         "extension": "Extension / Agent",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "position": "Position",
+        "department": "Department",
+        "workFormat": "Work format"
       },
       "actions": {
         "view": "View",
@@ -3823,6 +3828,18 @@
         "offline": "Offline",
         "busy": "Busy",
         "onCall": "On Call"
+      },
+      "filterTemplates": {
+        "label": "Save as template",
+        "saveCurrent": "Save current filters",
+        "nameLabel": "Template name",
+        "saved": "Filter template saved",
+        "deleted": "Filter template deleted",
+        "empty": "No saved templates yet",
+        "confirmDeleteTitle": "Delete this template?",
+        "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed.",
+        "loading": "Loading templates...",
+        "loadFailed": "Could not load templates - tap to retry"
       }
     },
     "ipWhitelist": {

@@ -129,6 +129,26 @@ describe('UserAvatar', () => {
     expect(loadAvatarObjectUrl).toHaveBeenCalledTimes(2)
   })
 
+  it('wears the same themed disc whether or not there is a photo', async () => {
+    // Without an edge a monogram on a table row is just letters in the cell and
+    // a photo has nothing marking where it ends - neither reads as an avatar.
+    const { container: withPhoto } = render(
+      <UserAvatar fullName="Olena Kovalchuk" avatarUrl="/api/v1/users/avatars/1.png" />
+    )
+    await waitFor(() => expect(withPhoto.querySelector('img')).toBeInTheDocument())
+    const photo = withPhoto.querySelector('img') as HTMLElement
+
+    const { container: withoutPhoto } = render(<UserAvatar firstName="Olena" lastName="K" />)
+    const monogram = withoutPhoto.querySelector('span') as HTMLElement
+
+    for (const element of [photo, monogram]) {
+      expect(element.className).toContain('rounded-full')
+      expect(element.className).toContain('border')
+      expect(element.className).toContain('border-border')
+      expect(element.className).toContain('bg-muted')
+    }
+  })
+
   it('takes its colours from the theme rather than carrying its own', () => {
     const { container } = render(<UserAvatar firstName="Olena" lastName="Kovalchuk" />)
     const monogram = container.querySelector('span')

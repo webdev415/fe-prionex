@@ -250,6 +250,18 @@ vi.mock('react-i18next', () => ({
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
         'actions.delete': 'Delete',
+        'pages.users.filterTemplates.label': 'Save as template',
+        'pages.users.filters.clearFilters': 'Clear filters',
+        'pages.users.filterTemplates.saveCurrent': 'Save current filters',
+        'pages.users.filterTemplates.nameLabel': 'Template name',
+        'pages.users.filterTemplates.saved': 'Filter template saved',
+        'pages.users.filterTemplates.deleted': 'Filter template deleted',
+        'pages.users.filterTemplates.empty': 'No saved templates yet',
+        'pages.users.filterTemplates.loading': 'Loading templates...',
+        'pages.users.filterTemplates.loadFailed': 'Could not load templates - tap to retry',
+        'pages.users.filterTemplates.confirmDeleteTitle': 'Delete this template?',
+        'pages.users.filterTemplates.confirmDeleteMessage':
+          '"{{name}}" is removed from your saved filters. The filters themselves are not changed.',
         // Two-Factor Authentication
         'twoFactor.title': 'Two-Factor Authentication',
         'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',

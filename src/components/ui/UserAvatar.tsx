@@ -6,6 +6,10 @@
  * the container it sits in, in light and dark alike. A photo that cannot be
  * fetched falls back to it too, so a dead link never leaves an empty disc.
  *
+ * Both states wear the same bordered disc. Without it a monogram on a table row
+ * is just letters floating in the cell, and a photo has no edge to mark where
+ * the avatar ends - neither reads as an avatar at a glance.
+ *
  * Our own photo endpoint requires a token, so the bytes cannot be fetched by
  * putting the path in src - the browser would issue that request itself and
  * send no Authorization header. They are fetched through the API client
@@ -104,6 +108,7 @@ export function UserAvatar({
   const initials = monogramInitials(firstName, lastName, fullName)
   const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
   const dimensions = { width: size, height: size }
+  const container = 'border-border bg-muted inline-flex shrink-0 rounded-full border'
 
   if (displaySrc) {
     return (
@@ -111,7 +116,7 @@ export function UserAvatar({
         src={displaySrc}
         alt={label ?? ''}
         style={dimensions}
-        className={cn('inline-flex shrink-0 rounded-full object-cover', className)}
+        className={cn(container, 'object-cover', className)}
         onError={() => {
           // Without this the browser draws its own broken-image icon, which is
           // worse than the initials and says nothing about why.
@@ -129,8 +134,8 @@ export function UserAvatar({
       title={label}
       style={{ ...dimensions, fontSize: Math.max(10, Math.round(size * 0.36)) }}
       className={cn(
-        'bg-muted text-muted-foreground inline-flex shrink-0 items-center justify-center',
-        'rounded-full leading-none font-medium select-none',
+        container,
+        'text-muted-foreground items-center justify-center leading-none font-medium select-none',
         className
       )}
     >

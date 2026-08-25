@@ -5,13 +5,26 @@ import {
   DEFAULT_USER_STATUS_FILTER,
   isUserFilterActive,
   statusFilterToApiStatus,
+  asStatusFilter,
 } from '../userFilterDefaults'
 
 describe('userFilterDefaults', () => {
   it('maps status filter values to API status', () => {
     expect(statusFilterToApiStatus('all')).toBeUndefined()
     expect(statusFilterToApiStatus('active')).toBe('active')
-    expect(statusFilterToApiStatus('disabled')).toBe('inactive')
+    expect(statusFilterToApiStatus('inactive')).toBe('inactive')
+  })
+
+  it('still understands the word a bookmarked link may carry', () => {
+    expect(asStatusFilter('disabled')).toBe('inactive')
+  })
+
+  it.each(['all', 'active', 'inactive'] as const)('keeps %s as it is', (value) => {
+    expect(asStatusFilter(value)).toBe(value)
+  })
+
+  it.each([undefined, null, 42, '', 'nonsense'])('falls back to the default for %s', (value) => {
+    expect(asStatusFilter(value)).toBe(DEFAULT_USER_STATUS_FILTER)
   })
 
   it('defaults status to active', () => {

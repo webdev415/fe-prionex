@@ -12,14 +12,17 @@ import { ViewUserForm } from '@/features/users/components/ViewUserForm'
 import { useUser } from '@/features/users/hooks/useUser'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface UserDetailModalProps {
   open: boolean
   userId: number
   onClose: () => void
+  onEdit?: () => void
 }
 
-export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps) {
+export function UserDetailModal({ open, userId, onClose, onEdit }: UserDetailModalProps) {
   const { t } = useTranslation('common')
   const { data: user, isLoading } = useUser(userId)
 
@@ -53,6 +56,13 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
         >
           {t('actions.close')}
         </Button>
+        {onEdit && (
+          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+            <Button type="button" onClick={onEdit} className="h-[45px] flex-1 text-sm">
+              {t('pages.users.actions.edit')}
+            </Button>
+          </PermissionGuard>
+        )}
       </ModalFooter>
     </Modal>
   )
