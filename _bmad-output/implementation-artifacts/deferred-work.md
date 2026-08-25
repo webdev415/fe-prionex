@@ -2228,6 +2228,24 @@ regression. `VITE_OPERATOR_PHONE_URL_PROD` exists.
 
 **If that ever changes**, adding the environment is a variable and nothing else — no code change.
 
+🔴 **Corroborated 2026-08-25, Story 5.6's Task 2.4, coordinator's own channel — the value itself
+measured for the first time, and the design confirmed clear of cross-environment leakage.**
+`GET /repos/CRM/fe-prionex/actions/variables` → exactly **one** repository variable:
+`VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online`. `GET /orgs/CRM/actions/variables`
+→ empty, no org-level variables at all. **`VITE_OPERATOR_PHONE_URL_PREPROD` does not exist** —
+confirmed absent, not merely unset in some ambiguous sense — which is exactly what `RVC-v1`'s F2
+criterion 5 expects for a `preprod` build (*"For preprod the decided value is EMPTY … so the
+expected observation is no `phone.` URL in the bundle and no operator-phone panel"*). Nothing here
+contradicts the 2026-08-17 decision above; it is the first time the PROD value itself was pasted
+rather than only its existence being asserted. Cross-checked against `build.yml`'s own `case`
+statement (*"Select the operator phone URL for this environment"*): `preprod` reads
+`vars.VITE_OPERATOR_PHONE_URL_PREPROD` and `prod` reads `vars.VITE_OPERATOR_PHONE_URL_PROD` — two
+**distinct** variable names, so there is no mechanism by which a `preprod` build could pick up
+PROD's value. **Owner: Story 6.4** (the PROD cutover) — when that story runs, it inherits a
+`VITE_OPERATOR_PHONE_URL_PROD` that is already provisioned with a real value; it does not need to
+ask Oleg to set one up, but it should re-verify the value is still current at that time (URLs and
+Kong routes have drifted before in this project) rather than assume this measurement still holds.
+
 ---
 
 ## 🔴 MEASURED 2026-08-17 — the `sha-<12>-<env>` repoint is real, and this closes a claim that had been reasoned four times and measured never

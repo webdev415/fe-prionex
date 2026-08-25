@@ -888,7 +888,7 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 | P1 | Nothing — dev agent reads stand state directly | N/A | dev agent | N/A |
 | P2 | Nothing — dev agent reads the served bundle directly | N/A | dev agent | N/A |
 | F1 | Nothing — unauthenticated shell load | N/A | joint (dev agent + Oleg) | N/A |
-| F2 | Read access to `vars.VITE_OPERATOR_PHONE_URL_PREPROD` | UNKNOWN | coordinator (Task 2.4) | `BLOCKED — owner: whoever grants repository-settings read access` |
+| F2 | Read access to `vars.VITE_OPERATOR_PHONE_URL_PREPROD` | **ANSWERED 2026-08-25**: confirmed absent (empty), matching the decided value; PROD's own variable exists with a real value but is a distinct name, unreachable from a preprod build | coordinator (Task 2.4, done) | N/A — resolved `EXECUTABLE`, no blockage |
 | F3 | A normal operator session (to test the 401/stale-token half) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no operator account)` |
 | F4 | (1) normal operator creds; (2) an account with 2FA enabled; (3) a locked account; (4) a login attempt from outside the IP whitelist (a way to trigger it); (5) an account flagged for forced password change | UNKNOWN, all five | Oleg | `BLOCKED — owner: Oleg (fixture accounts not provisioned)`, whole item — F4 has no degraded wording |
 | F5 | Clients with real data on PRE-PROD (debt summary, activity, payment history all populated) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no client data)` |
@@ -910,10 +910,20 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
       telephony, F10 SMS/messaging, F12 EasyPay) — Prohibition 8 in force: none of F7's outbound
       call, F10's campaign send, or F12's payment submission executes without it, regardless of
       whether the fixture itself (2.1) exists.
-- [x] 2.4 **Routed to the coordinator in the same package.** `vars.VITE_OPERATOR_PHONE_URL_PREPROD`
-      read requested; decided value for preprod is EMPTY (Oleg, 2026-08-17) so the expected
-      observation is no `phone.` URL / no operator-phone panel — the coordinator's read confirms
-      this rather than establishing it fresh. `PENDING (owner: coordinator)`.
+- [x] 2.4 **Answered, coordinator's own channel, 2026-08-25.** `GET
+      /repos/CRM/fe-prionex/actions/variables` → exactly one repo variable:
+      `VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online`.
+      `GET /orgs/CRM/actions/variables` → empty. **`VITE_OPERATOR_PHONE_URL_PREPROD` confirmed
+      absent** — not ambiguous, not merely unset-and-unchecked. This is exactly what F2 c5 expects
+      for a `preprod` build (decided value EMPTY, Oleg 2026-08-17): no `phone.` URL in the bundle,
+      no operator-phone panel. 🔴 **New information, not a contradiction:** PROD's variable already
+      carries a real value — previously only its *existence* was on record
+      (`deferred-work.md`'s 2026-08-17 entry), not the value itself. Cross-checked against
+      `build.yml`'s own `case` statement: `preprod` and `prod` read two **distinct** variable names
+      (`_PREPROD` vs `_PROD`), so there is no path by which PROD's value could leak into a preprod
+      build. Recorded with owner **Story 6.4** in `deferred-work.md` (the PROD cutover inherits an
+      already-provisioned value, but should re-verify it is still current at that time). **F2's own
+      expected observation for this rehearsal is unchanged: `preprod` → EMPTY, confirmed.**
 - [x] 2.5 **Ceiling computed now, before anything is dispatched, per retro-E5.** Fixture-independent
       today: P1, P2, F1 (3 items, no fixture, no external answer needed). F2 pending only the
       coordinator's cheap variable read (2.4) — expected to resolve `EXECUTABLE` given the known
@@ -1320,6 +1330,14 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 - **Task 1.6, D-number check:** `git fetch --all`; `git grep -n '^## D[0-9]' <every ref under
   refs/remotes/origin> -- docs/migration-decisions.md` → highest hit `D39` (`main`). `D35` held by
   `story-4-9/pr-1-context`, within range, not a collision. Next free: **D40**.
+- **Task 2.4, F2 c5's repository-variable read, coordinator's channel, 2026-08-25:**
+  `GET /repos/CRM/fe-prionex/actions/variables` → one variable,
+  `VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online`.
+  `GET /orgs/CRM/actions/variables` → empty. `VITE_OPERATOR_PHONE_URL_PREPROD` confirmed absent.
+  Cross-checked against `build.yml:733-773`'s own `case "$ENVIRONMENT"` statement: `preprod` and
+  `prod` read distinct variable names, no leak path. Recorded in `deferred-work.md`'s existing
+  2026-08-17 "no operator phone in dev or preprod" entry (appended, not rewritten), owner Story 6.4
+  for the PROD value's future re-verification.
 
 ### Completion Notes List
 
@@ -1374,6 +1392,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Task 2.4 answered (coordinator's channel).** `VITE_OPERATOR_PHONE_URL_PREPROD` confirmed absent (repo and org level), matching F2 c5's decided-EMPTY expectation exactly. New information surfaced, not a contradiction: `VITE_OPERATOR_PHONE_URL_PROD` already carries a real value (`https://phone.crm-prionex.online`) — previously only its existence was on record. Cross-checked against `build.yml`'s own environment `case` statement: distinct variable names, no cross-environment leak path. Recorded (appended, not rewritten) in `deferred-work.md`'s existing 2026-08-17 entry, owner Story 6.4 for future re-verification of the PROD value. |
 | 2026-08-25 | **Dev-story Tasks 1-2 executed (zero-run).** Story marked `in-progress`. 5.5's `done` gate re-confirmed; branch confirmed already on latest `main` (no rebase needed). Ledger baseline declared: `psql`, `max(id)=1297`, floor 11/ceiling 17, OPEN. Next free D-number checked: D40. Fixture-readiness matrix built for P1/P2/F1-F12 — only P1, P2, F1 fixture-independent; F2 pending a repository-variable read; F3-F12 (9 items) `UNKNOWN`, routed to Oleg with real ownership, never a trigger condition. Oleg's three decisions (Path A for F9, sandbox confirmation required before F7/F10/F12, `docs/release-regulation.md` veto closed), relayed by the coordinator, recorded against Open Questions #1/#2/#3. Single consolidated requirements package composed for Oleg (F9 account + operator creds + F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read) and handed to the coordinator to relay as one message, per explicit instruction not to drip requests. No dispatch made; zero runs spent. |
 | 2026-08-25 | Rebased onto `origin/main` at `a99ccd44` after Story 5.5's closeout (PR #85) merged mid-session. Its independent CORS re-measurement — a fourth channel — agrees with this story's own: eleven of twelve items executable, F9 alone `BLOCKED`, and now on **one** owner (Oleg) rather than two. `RVC-v1`'s marker, aggregation rule and note format are unchanged by that merge, so §3's determination stands verbatim; F9's owner-pair and Path B's quote were rebound to the amended text. |
 | 2026-08-25 | Story created. Context bound against `origin/main` at `0b4fdd99`. CORS fix independently re-verified from this session with a foreign-origin control on both Kongs; the PRE-PROD bundle and every served asset measured directly, correcting `RVC-v1` F2 c1's "3 files" parenthetical and supplying c4's previously-unstated match count. The empty release established by measurement on `main` rather than fabricated. §3 decides the verdict question that `RVC-v1` left to Story 5.6. |
