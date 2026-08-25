@@ -2,11 +2,11 @@
 title: 'Story 5.5: Establish the Release Validation Checklist'
 type: 'feature'
 created: '2026-08-24'
-status: 'review'  # fix-pass (2026-08-25) addressed all 25 patch findings + 3 decisions from code review pass 2; followup_review_recommended stays true since the 3 decisions are recorded, not re-litigated
+status: 'done'  # closeout (2026-08-25): CORS blocker independently re-verified lifted, RVC-v1 recounted (9/12 unblocked, F9 remains BLOCKED on its own precondition), ledger reconciled OPEN pending this PR's own merge
 baseline_revision: '35c1a39e4b9063af272fdb5e980a31ee13b1b92e'
-final_revision: 'afd8d155'
+final_revision: 'fe3e2b90'
 review_loop_iteration: 2
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-5-context.md'
   - '{project-root}/_bmad-output/implementation-artifacts/deferred-work.md'
@@ -295,21 +295,26 @@ on this Forgejo instance.
    Risk 5 below, which replaces the unanswered half of this risk. That the dispatch ran after merge rather
    than before is recorded honestly here rather than silently absorbed — a deviation from the plan, not a
    defect in the result.
-2. 🔴 **`RVC-v1` and Story 5.6 are not simultaneously satisfiable while the CORS origin is wrong.** Eight of
-   twelve items are BLOCKED on the PRE-PROD Kong's `Access-Control-Allow-Origin`, owned by `CRM/api-prionex`.
-   Under `RVC-v1` the only honest aggregate verdict today is `fail`, and G1 refuses `fail` before any registry
-   read — yet 5.6's rehearsal is required to record a candidate. Both requirements are correct, and code
-   review's second pass (2026-08-25) restated rather than re-litigated this. The two exits are the CORS fix
-   landing first, or 5.6 recording under a documented, time-boxed waiver naming `RVC-v1` and listing the
-   waived items. **Owner: Oleg** — a scope decision, not an implementation one. **The "CORS fix lands first"
-   exit is now reachable, not merely theoretical: the ask was sent 23.08.2026** (tracked ASKED in
-   `docs/preprod-infrastructure-requirement.md`'s status block, Oleg's decision 2026-08-25), though no
-   response has arrived yet. Story 5.6 does not start until either the neighbouring team responds and closes
-   the blocker, or Oleg makes an explicit decision to proceed under the waiver exception — whichever comes
-   first is Oleg's call.
-3. `docs/preprod-candidates.md`'s two existing `pass` rows would not qualify under `RVC-v1`. They are
-   deliberately not rewritten; the mismatch is now recorded in both files so a later reader does not read it
-   as an undetected defect.
+2. 🔴 **RESOLVED (CORS half), 2026-08-25 (ledger closeout): `CRM/api-prionex` fixed PRE-PROD's CORS
+   origin.** ~~`RVC-v1` and Story 5.6 are not simultaneously satisfiable while the CORS origin is wrong.
+   Eight of twelve items are BLOCKED on the PRE-PROD Kong's `Access-Control-Allow-Origin`, owned by
+   `CRM/api-prionex`. Under `RVC-v1` the only honest aggregate verdict today is `fail`, and G1 refuses `fail`
+   before any registry read — yet 5.6's rehearsal is required to record a candidate.~~ Independently
+   re-measured this closeout, `2026-08-25T10:48Z`, via a channel separate from the coordinator's own probe
+   (direct outbound HTTPS, not through s1/SSH): `OPTIONS /api/v1/auth/login` with the real PRE-PROD origin →
+   `200` with the correct `Access-Control-Allow-Origin`; a foreign-origin negative control → still the real
+   PRE-PROD origin, confirming non-echo. **Nine of twelve items (F3, F4-F8, F10, F11, F12) are now
+   `EXECUTABLE`.** Only **F9** remains `BLOCKED`, on its own independent second precondition (no
+   restricted-role account on PRE-PROD) — the CORS fix does not and cannot touch that half, exactly as this
+   file's own F9 section always said. **Owner: Oleg**, now scoped to F9's account only — the CORS-side
+   scope decision this risk originally named is moot; there is nothing left on that axis to waive. Story 5.6
+   can record a genuine `12/12 pass` if F9's account exists by the time it runs; otherwise the honest
+   aggregate remains `fail` (or a waiver naming only F9).
+3. `docs/preprod-candidates.md`'s two existing `pass` rows would not qualify under `RVC-v1`, **as it read
+   on the dates they were written (2026-08-24), before the CORS fix.** They are deliberately not rewritten
+   — this ledger is append-only and rows are never re-judged after the fact, even by later events; the
+   mismatch is recorded in both files, and `preprod-candidates.md` now also carries a pointer noting the
+   blocker's removal and that re-validation is possible going forward.
 4. **RESOLVED, 2026-08-25:** `sprint-status.yaml` and this spec's own `status:` field both flip to `review`
    as part of this fix-pass, now that the confirming dispatch (Risk 1) has actually happened and the 25 patch
    findings from code review pass 2 have been addressed. `followup_review_recommended` stays `true` — Oleg's
@@ -606,3 +611,73 @@ canonical line measures 185 characters with no newline and no `|`. AC1, AC3 and 
 the shipped artifacts; AC2 is now satisfied **and proven** by run 1281; AC4 is satisfied by reading
 only; AC6 is satisfied for F4-F11 but not literally for F3/F12, whose `pass (degraded)` class is a
 deliberate and defensible review patch that was never reflected back into the AC text.
+
+---
+
+## Closeout — CORS blocker lifted, 2026-08-25 (own PR, `story-5-5/pr-3-ledger-closeout`)
+
+**News from the coordinator, independently re-verified before acting on it.** `CRM/api-prionex`
+fixed the CORS origin on both DEV and PRE-PROD, and PR #84 (the code-review fix-pass) merged as
+`0b4fdd99`. This closeout re-measures the CORS claim itself via a channel separate from the
+coordinator's own probe — direct outbound HTTPS from this session, not through s1/SSH — rather than
+taking the coordinator's numbers on faith, and reconciles the story's ledger.
+
+**Independent re-measurement, `2026-08-25T10:48Z`:**
+- PRE-PROD: `OPTIONS /api/v1/auth/login` (a real routed endpoint, not the bare root probed earlier
+  in this story) with `Origin: https://crm.preprod.crm-prionex.online` → `200`,
+  `Access-Control-Allow-Origin: https://crm.preprod.crm-prionex.online`,
+  `Access-Control-Allow-Credentials: true`. **Negative control**, same endpoint,
+  `Origin: https://evil.example` → still `200`, but `Access-Control-Allow-Origin` remains the real
+  PRE-PROD origin — not the evil origin, not a wildcard. Confirms non-echo, the strict form. `GET /`
+  (route-miss) with the real origin → `404` as before, now carrying the same CORS headers.
+- DEV: identical shape, `api.crm.dev.crm-prionex.online`, same non-echo confirmation. Not relevant
+  to `RVC-v1` (PRE-PROD only) but checked so the claim about "both environments" is not taken on
+  faith either.
+- DEV frontend vhost/TLS: confirmed **still not fixed** — `curl` to `crm.dev.crm-prionex.online`
+  fails TLS verification (`exit 60`); the served certificate is still `CN=admin.techno-finance.online`,
+  the wrong tenant. Different ask, different owner (`aleksey`), untouched by the CORS fix.
+
+**RVC-v1 recount, this closeout.** Nine of twelve items (F3, F4, F5, F6, F7, F8, F10, F11, F12) move
+from `BLOCKED`/`EXECUTABLE, degraded` to fully `EXECUTABLE` — not eight, because F3 and F12 were
+`degraded` rather than fully `BLOCKED` and both had a CORS-dependent half. **F9 is the only item that
+does not clear**: it carries a second, independent precondition (a restricted-role account on
+PRE-PROD, owner Oleg) that this measurement does not touch and that this closeout did not
+independently verify either way — it is not a network-observable fact. Fully executable as of this
+measurement: **F1, F2, F3, F4, F5, F6, F7, F8, F10, F11, F12 — eleven of twelve.**
+
+**What was updated, and what was deliberately not:**
+- `docs/release-validation-checklist.md`: every affected item's `Executability` line, the
+  executability-values legend, "The CORS blocker" section (full rewrite with the new evidence), and
+  the "What does NOT bump the marker" header paragraph (the predicted event is now a confirmed one).
+  Old claims struck through in place, not silently deleted, per this project's convention.
+- `docs/migration-decisions.md#d39` §6 and its own **Триггер пересмотра**: rewritten the same way —
+  struck, corrected, dated. The trigger fired; a new one (F9's account) takes its place. Index row
+  (`:53`) lightly corrected in place, matching the precedent for prior D-entries. New changelog row
+  appended (never editing a prior one).
+- `_bmad-output/implementation-artifacts/deferred-work.md`: the `RVC-v1`/Story 5.6 collision entry
+  updated — CORS half resolved, F9 half restated as the sole remaining blocker.
+- `docs/preprod-candidates.md`: **the two existing ledger rows were NOT touched** — no cell, no row,
+  no column. They remain exactly as recorded, honest on their own dates, per this project's
+  append-only rule and the coordinator's own explicit instruction not to rewrite verdicts
+  retroactively. A new prose paragraph was added noting the blocker's removal and that
+  re-validation is now possible — the mechanism by which this news reaches that ledger without
+  touching its history.
+- This spec's own Residual Risks 2 and 3: updated in place (struck + corrected), not rewritten
+  silently.
+
+**Ledger reconciliation, `psql`, repo-scoped (`repo_id=16`), by `commit_sha`, baseline `id=1260`**
+(the row for `35c1a39e`, this story's own declared `baseline_revision` — the merge event immediately
+preceding Story 5.5's first commit): **8 rows above baseline through PR #84's merge** (`0b4fdd99`) —
+`1267`/`1268` (push + PR-open, `00aa3533`), `1273` (push, main, merge of PR #83), `1281` (the
+confirming dispatch itself, `deploy-preprod.yml` on `ref=main`, run 1281), `1283`/`1285`/`1286`
+(pushes + PR-open for the review fix-pass), `1290` (push, main, merge of PR #84). Two rows in this id
+range (`1287`, `1289`) belong entirely to `story-4-9/pr-1-context` (confirmed against its own tip,
+`de4c9607`) and are correctly excluded as foreign, not absorbed. No floor or ceiling was declared for
+this story anywhere in `sprint-status.yaml` or this spec — this format (unlike the Task-based ledger
+convention of Stories 4.x-5.4) never carried one, named honestly rather than retrofitted after the
+fact. **This closeout's own commits and eventual push add further rows not yet countable here**;
+per retro-D4, the ledger stays **OPEN** until the coordinator's own merge of this PR is queried —
+this record does not self-close.
+
+**Status → `done`.** `sprint-status.yaml`'s `5-5-...` row → `done`. Own follow-up PR
+(`story-5-5/pr-3-ledger-closeout`), not opened by the dev agent per the coordinator's instruction.

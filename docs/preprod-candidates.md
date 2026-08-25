@@ -20,11 +20,24 @@ of permission this story does not grant).
 plus two preconditions, each with its own pass criterion — and from its publication onward a row's
 verdict is meant to be *derived* from it, with the `Note` cell carrying the `RVC-v1` summary line in
 that file's stated format. The two rows below **predate it** and were therefore written against no
-stated criterion at all; under `RVC-v1` neither would qualify as `pass` (eight of its twelve items
-are `BLOCKED` on PRE-PROD Kong's wrong `Access-Control-Allow-Origin`, owner `CRM/api-prionex`). They
-are deliberately **not** reinterpreted or rewritten — this ledger is append-only and rows are never
-re-judged after the fact. This paragraph exists so a reader comparing the two files sees the
-mismatch as a dated boundary rather than an unnoticed defect.
+stated criterion at all; under `RVC-v1`, as it read on 2026-08-24, neither would have qualified as
+`pass` (eight of its twelve items were `BLOCKED` on PRE-PROD Kong's wrong `Access-Control-Allow-Origin`,
+owner `CRM/api-prionex`). They are deliberately **not** reinterpreted or rewritten — this ledger is
+append-only and rows are never re-judged after the fact, even by later events. This paragraph exists
+so a reader comparing the two files sees the mismatch as a dated boundary rather than an unnoticed
+defect.
+
+🔴 **Update, closeout re-measurement, 2026-08-25: the CORS blocker named above is fixed.**
+`CRM/api-prionex` fixed PRE-PROD's `Access-Control-Allow-Origin`, independently re-measured this
+date (non-echo, negative-controlled — see `docs/release-validation-checklist.md`'s own ["The CORS
+blocker"](release-validation-checklist.md#the-cors-blocker) for the evidence). This does **not**
+retroactively change either row above — they remain exactly as recorded, honest on the date they
+were written. What it changes going forward: eleven of `RVC-v1`'s twelve items (all but F9, which
+still needs a restricted-role account on PRE-PROD, owner Oleg) are now executable, so a real
+browser-path validation is possible for the first time. **Re-validation of a current candidate under
+`RVC-v1` is now possible and is the natural next step** — Story 5.6's rehearsal is the first
+opportunity to actually append a row derived from a fully-executed checklist rather than the
+container-health-only prose these first two rows carry.
 
 | Date (UTC) | Candidate tag | Digest | Verdict | Note | Run id |
 |---|---|---|---|---|---|

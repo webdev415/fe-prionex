@@ -5,13 +5,16 @@ id, or pass criterion changes in a way that alters what "validated" asserts, the
 `RVC-v2` and the old marker keeps meaning what it meant — rows already written are never
 reinterpreted.
 
-**What does NOT bump the marker: a change in what is *executable*.** When `CRM/api-prionex` fixes
-the CORS origin, F4-F11 become executable with **not one criterion changed** — the criteria are
-exactly what `RVC-v1` names, and they named the same thing before and after. So that day does not
-produce `RVC-v2`. The difference between a candidate validated before it and one validated after is
-carried entirely by the `<B>` (blocked) and `<D>` (degraded) counts in the
+**What does NOT bump the marker: a change in what is *executable*.** 🔴 **This predicted event
+actually happened, 2026-08-25 — confirmed here, not merely anticipated anymore.** `CRM/api-prionex`
+fixed the CORS origin; F3, F4-F8, F10, F11 and F12 (nine items, not the originally-estimated
+F4-F11 — F3 and F12 were degraded rather than fully blocked, and both are now fully executable too)
+became executable with **not one criterion changed** — the criteria are exactly what `RVC-v1` names,
+and they named the same thing before and after. This did **not** produce `RVC-v2`, as designed. The
+difference between a candidate validated before the fix and one validated after is carried entirely
+by the `<B>` (blocked) and `<D>` (degraded) counts in the
 [`validation_note`](#the-validation_note-format), which is why those counts are mandatory rather
-than decorative: without them a `2/12` candidate and a `12/12` candidate would both cite `RVC-v1`
+than decorative: without them a `2/12` candidate and an `11/12` candidate would both cite `RVC-v1`
 while asserting very different coverage. Only a change to an item's **text, id, or pass criterion**
 bumps the marker.
 
@@ -133,14 +136,18 @@ checklist the recorder re-verifies on its own.
 
 Each item: what is checked, what constitutes a pass, and whether it can be executed today.
 
-Executability values used below:
+Executability values used below. 🔴 **Updated, closeout re-measurement, 2026-08-25: PRE-PROD's
+CORS origin is now fixed** (see [The CORS blocker](#the-cors-blocker) for the measured evidence),
+so the `CRM/api-prionex, CORS origin` blockage no longer applies to any item today. The row is kept
+below because it is a real label this file used historically and may need again on a regression —
+not because any item currently carries it:
 
 | Value | Meaning |
 |---|---|
 | `EXECUTABLE` | Can be executed today, end to end, as written. |
 | `EXECUTABLE, degraded` | The part that does not touch the API can be executed today; the API-touching part cannot. Its best legal verdict is **`pass (degraded)`**, never `pass`, and the log entry must carry the words the item's own text requires. |
-| `BLOCKED — owner: CRM/api-prionex, CORS origin` | Cannot be executed at all today. See [The CORS blocker](#the-cors-blocker). |
-| `BLOCKED — owners: CRM/api-prionex (CORS origin) AND Oleg (no restricted-role account)` | Used by F9 only. Two independent blockages; fixing either one alone does not make the item executable. |
+| `BLOCKED — owner: CRM/api-prionex, CORS origin` | **Historical as of 2026-08-25 — fixed, no item currently carries this label.** Kept for the regression case. See [The CORS blocker](#the-cors-blocker). |
+| `BLOCKED — owners: CRM/api-prionex (CORS origin) AND Oleg (no restricted-role account)` | Used by F9. Two independent blockages; fixing either one alone does not make the item executable — as of 2026-08-25 the CORS half is closed and F9 is `BLOCKED — owner: Oleg (no restricted-role account)` only. |
 
 ### F1 — Application shell over TLS
 
@@ -283,12 +290,17 @@ keeps measured platform facts.
   `https://crm.preprod.crm-prionex.online/dashboard`.
 - **What constitutes a pass:** the browser lands on `/login`. No dashboard chrome, no client data,
   and no flash of protected content before the redirect.
-- **Executability:** `EXECUTABLE, degraded`. The redirect itself is decided in the browser from the
+- **Executability:** ~~`EXECUTABLE, degraded`. The redirect itself is decided in the browser from the
   absence of a stored session, so it runs today. The *other* half of the same guard — that a
   **stale or revoked** token is rejected by the backend on `401` and forces the same redirect —
   requires an API call and is `BLOCKED`. The best verdict F3 can legally carry today is therefore
   **`pass (degraded)`**, counted in `<D>` and never in `<P>`, and only with the words
-  "guard-only, 401 path not exercised" in the log entry.
+  "guard-only, 401 path not exercised" in the log entry.~~ 🔴 **Updated, closeout re-measurement,
+  2026-08-25: `EXECUTABLE`, no longer degraded.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex`
+  — see [The CORS blocker](#the-cors-blocker) for the measured evidence. The 401 path now reaches
+  the backend like any other authenticated call. Both halves of F3 can now be executed in full; a
+  `pass (degraded)` result on F3 from here on means something went wrong, not that the API half was
+  never reachable.
 
 ### F4 — Login → dashboard, and every way login is allowed to refuse
 
@@ -310,7 +322,7 @@ keeps measured platform facts.
   `401` on any non-`/auth/*` request clears the stored session and hard-redirects to `/login`. If
   you are bounced to the login screen mid-checklist, that is the mechanism; re-authenticate and
   note it.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F5 — Client list → client detail
 
@@ -320,7 +332,7 @@ keeps measured platform facts.
   results consistent with the query; a client opens; each tab shows data or an explicit empty
   state. A tab that spins forever, or that renders an error where the list showed rows, is a
   `fail`.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F6 — Payments on a client: record, edit, cancel, verify, receipt
 
@@ -330,7 +342,7 @@ keeps measured platform facts.
   page reload (i.e. it was persisted, not merely rendered optimistically); the verification queue
   shows the item in the state the action should have produced; the receipt downloads as a PDF that
   opens and carries the payment's own amount and client.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F7 — Telephony: dialer and inbound call handling
 
@@ -343,7 +355,7 @@ keeps measured platform facts.
 - **Note:** this flow depends on `VITE_WS_URL` being correct, which F2 checks statically. F2
   passing does not make F7 pass — F2 proves the value is in the bundle, not that the socket
   connects.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F8 — Client import and the bulk operations
 
@@ -355,7 +367,7 @@ keeps measured platform facts.
   its rejected rows — an import that reports "0 errors" on a file with a deliberately malformed row
   is a `fail`); the run appears in history with the same counts; each bulk page reports success and
   failure per row rather than a single aggregate "done".
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F9 — Permission gating
 
@@ -391,14 +403,17 @@ keeps measured platform facts.
   navigation entry while the URL still renders the page is a `fail`.
 - **Why it is on the list:** this is the item whose failure is widest. Every dashboard route
   depends on it, so a single bad role breaks the whole application rather than one page.
-- **Executability:** `BLOCKED — owners: CRM/api-prionex (CORS origin) AND Oleg (no restricted-role
-  account)`. 🔴 F9 has **two** blockages, and an earlier draft hid the second one inside the first.
-  (a) The CORS origin, like F4-F11. (b) This checklist's own prerequisites require "an account with
-  a restricted role — ask Oleg", and **no evidence exists that such an account is provisioned on
-  PRE-PROD at all.** Fixing CORS alone will **not** unblock F9: without a restricted account there
-  is nothing to log in as, and a permission test run from an unrestricted account tests nothing.
-  Both owners must deliver. Stated explicitly so the dependency does not stay invisible inside
-  somebody else's blocker and get assumed resolved when the CORS ask closes.
+- **Executability:** ~~`BLOCKED — owners: CRM/api-prionex (CORS origin) AND Oleg (no
+  restricted-role account)`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `BLOCKED — owner:
+  Oleg (no restricted-role account)` — ONE owner now, not two.** F9 had **two** blockages, and an
+  earlier draft hid the second one inside the first. (a) The CORS origin, like F4-F11 — **this half
+  is now closed**, see [The CORS blocker](#the-cors-blocker) for the measured evidence, exactly as
+  predicted here: fixing CORS alone does **not** unblock F9 on its own, because (b) remains. (b)
+  This checklist's own prerequisites require "an account with a restricted role — ask Oleg", and
+  **no evidence yet exists that such an account is provisioned on PRE-PROD** — unchanged by the CORS
+  fix, not independently re-verified by this closeout (it is not a network-observable fact). F9
+  stays `BLOCKED` until that account exists; it is the **only** item in `RVC-v1` still blocked for
+  any reason, once CORS is accounted for.
 
 ### F10 — Messaging and SMS campaigns
 
@@ -407,7 +422,7 @@ keeps measured platform facts.
 - **What constitutes a pass:** a campaign saves and reappears after a reload with its content
   intact; a draft round-trips unchanged; a template renders its placeholders; the integrations page
   reports each integration's real state rather than a blank list.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F11 — AI assistant
 
@@ -417,7 +432,7 @@ keeps measured platform facts.
 - **What constitutes a pass:** the response visibly streams; an interrupted stream leaves the UI
   usable rather than stuck; dictation and TTS each produce their output or state plainly that the
   browser denied the permission.
-- **Executability:** `BLOCKED — owner: CRM/api-prionex, CORS origin`.
+- **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
 
 ### F12 — Public payment page `/pay`
 
@@ -426,20 +441,23 @@ keeps measured platform facts.
 - **What constitutes a pass:** the page renders for a signed-out visitor in a private window
   (no redirect to `/login`), its form validates input, and a payment reaches EasyPay and returns a
   result the page displays.
-- **Executability:** `EXECUTABLE, degraded` — but 🔴 **narrower than an earlier draft of this file
-  claimed.** That draft said "the render-and-validate half runs today because it needs no call to
-  our API". The *validate* step **is** a call to our own API:
-  `src/features/easypay/api/easypayApi.ts:17,30` builds its axios client with
-  `baseURL: API_BASE_URL`, imported from `src/lib/api.ts:4-7` — the same absolute
-  `https://api.crm.preprod.crm-prionex.online` base as everything else — so credit validation is
-  CORS-blocked exactly like the rest of the application. Only the **render** half executes today.
-  Both **validate** and **submit** are blocked.
-- **What you may record today:** `pass (degraded)`, counted in `<D>` and never in `<P>`, with the
-  words **"render only; credit validation and payment submission both CORS-blocked"** in the log
-  entry. A CORS failure on the validate step is **not** a `fail` (it is the known blockage) and it
-  is emphatically **not** a `pass` — it is the reason the item is degraded. If the page renders and
-  you then see the validate call fail, that is the expected outcome, and the verdict is still
-  `pass (degraded)`; if the page does not render for a signed-out visitor, that **is** a `fail`.
+- **Executability:** ~~`EXECUTABLE, degraded`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25:
+  `EXECUTABLE`, no longer degraded.** An earlier draft of this file first claimed the render-and-
+  validate half ran with no API call at all — corrected, in code review, to `EXECUTABLE, degraded`,
+  because *validate* **is** a call to our own API: `src/features/easypay/api/easypayApi.ts:17,30`
+  builds its axios client with `baseURL: API_BASE_URL`, imported from `src/lib/api.ts:4-7` — the
+  same absolute `https://api.crm.preprod.crm-prionex.online` base as everything else, so credit
+  validation was CORS-blocked exactly like the rest of the application. PRE-PROD's CORS origin is
+  now fixed (see [The CORS blocker](#the-cors-blocker)), so **validate** is reachable again; **all
+  three** phases — render, validate, submit — can now be executed in full.
+- **What you may record from here on:** a full `pass` if render, validate and submit all meet their
+  criteria. `pass (degraded)`, counted in `<D>` and never in `<P>`, remains available for the older
+  meaning — "render only; credit validation and payment submission both CORS-blocked" — only if a
+  future regression reproduces that exact condition; it should not be the default result anymore. A
+  CORS failure on the validate step is no longer the expected outcome now that PRE-PROD's CORS
+  origin is fixed; if the validate or submit call fails today, treat it as a genuine `fail` on its
+  own merits, not as the known historical blockage. If the page does not render for a signed-out
+  visitor, that **is** a `fail`, unchanged from before.
 
 ---
 
@@ -447,62 +465,77 @@ keeps measured platform facts.
 
 <a id="the-cors-blocker"></a>
 
-PRE-PROD's Kong gateway returns an `Access-Control-Allow-Origin` naming an unrelated `localhost`
+~~PRE-PROD's Kong gateway returns an `Access-Control-Allow-Origin` naming an unrelated `localhost`
 origin. A browser on `https://crm.preprod.crm-prionex.online` therefore refuses every response from
-`https://api.crm.preprod.crm-prionex.online` before the application ever sees it.
+`https://api.crm.preprod.crm-prionex.online` before the application ever sees it.~~
 
-- **Owner: `CRM/api-prionex`.** Kong belongs to the neighbouring backend repository. Nothing in
-  `fe-prionex` can fix it, work around it, or route past it: the API base URL is an absolute URL
-  baked into the bundle (F2), so the browser never traverses the frontend container's own proxy.
-- **The ask has been sent** to that team (23.08.2026, tracked ASKED — see
-  `docs/preprod-infrastructure-requirement.md`'s status block, Редакция 4). 🔴 **Corrected, code
-  review:** an earlier version of this line said "already open" while
-  `docs/preprod-infrastructure-requirement.md` still read "не направлено" in its own header — the
-  same PR shipped both statements, and a reader of this file had no way to know the ask had not
-  actually gone out. That gap is closed: the requirement document's status block is now the single
-  source of truth for whether, when, and to whom this was sent — read it there rather than trusting
-  this line's own wording, which is a pointer, not the record. The defect itself was measured from
-  the real origin and recorded in Story 5.2 (`docs/migration-decisions.md#d36`) and re-stated by
-  Story 5.4's ledger rows.
-- **What it costs this checklist:** 8 of 12 items — F4 through F11 — cannot be executed at all, and
-  two more (F3, F12) can only be executed on a reduced scope, i.e. `pass (degraded)`. Fully
-  executable today: **F1 and F2 only**.
-- **One of the eight would still be blocked if CORS were fixed tomorrow.** F9 additionally needs a
-  restricted-role account on PRE-PROD, which nobody has shown exists. **Owner: Oleg.** See F9. 🔴
-  **This file is the canonical statement of that fact.** `docs/migration-decisions.md#d39`'s own
-  **Триггер пересмотра** and `epics.md` Story 7.7 AC3 both claimed, incorrectly, that fixing CORS
-  alone unblocks F9 — that is the exact mistake this paragraph exists to prevent, and both have been
-  corrected to match this file rather than the reverse.
+🔴 **FIXED, closeout re-measurement, 2026-08-25T10:48Z, independent channel (direct outbound HTTPS,
+not through s1/SSH — a different path than the coordinator's own probe).** `CRM/api-prionex` fixed
+PRE-PROD's CORS origin. Measured directly, not taken on the coordinator's word alone:
 
-**Therefore, while the CORS origin is wrong, no candidate can legitimately be given an aggregate
-verdict of `pass` under `RVC-v1`.** The rule below is not negotiable by an operator in a hurry:
+- `OPTIONS /api/v1/auth/login` (a real routed endpoint, not the bare root probed earlier) with
+  `Origin: https://crm.preprod.crm-prionex.online` → `HTTP/1.1 200`,
+  `Access-Control-Allow-Origin: https://crm.preprod.crm-prionex.online`,
+  `Access-Control-Allow-Credentials: true`, `Access-Control-Allow-Methods: GET,POST,PUT,DELETE,PATCH,OPTIONS`.
+- **Negative control, same endpoint, `Origin: https://evil.example`** → still `HTTP/1.1 200` with
+  `Access-Control-Allow-Origin: https://crm.preprod.crm-prionex.online` — the real PRE-PROD origin,
+  **not** the evil origin and **not** a wildcard. This is not an echo; a browser sent this response
+  under a foreign `Origin` would reject it. The fix is the strict, credential-safe form, not a
+  looser one that happens to pass a same-origin test.
+- `GET /` (route-miss) with the real origin → `HTTP/1.1 404` (expected — no route at `/`) but now
+  **carrying** the same CORS headers, confirming the fix applies Kong-wide, not only to one route.
+
+**Owner was `CRM/api-prionex`.** Kong belongs to the neighbouring backend repository; nothing in
+`fe-prionex` could have fixed it, worked around it, or routed past it — closed by them, not by any
+change in this repository. The defect was originally measured from the real origin and recorded in
+Story 5.2 (`docs/migration-decisions.md#d36`), the ask was sent 23.08.2026
+(`docs/preprod-infrastructure-requirement.md`), and the fix is now independently confirmed here.
+
+**What this restores, for `RVC-v1` specifically:** F3, F4, F5, F6, F7, F8, F10, F11 and F12 — nine
+items — move from `BLOCKED`/degraded to fully `EXECUTABLE`. **F9 does NOT fully clear**: it carries
+a second, independent blockage (no restricted-role account provisioned on PRE-PROD, owner Oleg) that
+this measurement does not touch and that this closeout did not independently verify either way — see
+F9's own section. Fully executable as of this measurement: **F1, F2, F3, F4, F5, F6, F7, F8, F10,
+F11, F12 — eleven of twelve.** Only F9 remains `BLOCKED`.
+
+**Note on DEV:** the same closeout re-measurement confirms `api.crm.dev.crm-prionex.online`'s CORS
+origin is *also* fixed (same evidence shape, non-echo, negative control). This has **no bearing on
+`RVC-v1`**, which is scoped to PRE-PROD only (see ["What this checklist does NOT
+cover"](#what-this-checklist-does-not-cover)) — named here only so a reader does not wonder whether
+it was checked. Separately, `crm.dev.crm-prionex.online`'s own frontend vhost/TLS is confirmed
+**still not fixed** (`curl` to it fails TLS verification, `exit 60`; the served certificate is still
+`CN=admin.techno-finance.online`, the wrong tenant) — a different ask, different owner (`aleksey`),
+untouched by this fix, and irrelevant to PRE-PROD's own `RVC-v1`.
+
+**Therefore, as of this measurement, an aggregate verdict of `pass` under `RVC-v1` is achievable in
+principle for the first time** — if F9's remaining precondition (the restricted-role account) is
+also satisfied. The rule itself is unchanged, restated for clarity:
 
 > An aggregate verdict of `pass` requires **every** item to be `pass` — a full `pass`, not a
-> `pass (degraded)` and not a `BLOCKED`. With 8 items blocked and 2 degraded, the aggregate verdict
-> today is `fail`. This is a rule about F1-F12 only; a failed P1 or P2 aborts before any of them run
-> and forces its own `fail` by a different route — see ["A failed precondition aborts
-> validation"](#how-to-execute-it).
+> `pass (degraded)` and not a `BLOCKED`. As of 2026-08-25, only F9 can still legitimately be
+> `BLOCKED`; every other item's executability blocker traced to CORS is closed. This is a rule about
+> F1-F12 only; a failed P1 or P2 aborts before any of them run and forces its own `fail` by a
+> different route — see ["A failed precondition aborts validation"](#how-to-execute-it).
 
-### Two consequences, stated rather than left to be discovered
+### Two consequences, stated rather than left to be discovered — and their status now
 
 1. **`docs/preprod-candidates.md`'s first two rows are marked `pass` and would not be, under
    `RVC-v1`.** Those rows are honest about their own scope — both say in their own note that
    browser-path validation was not performed and not possible — and they were written before this
-   checklist existed. They are not rewritten: this ledger is append-only, and rows are never
-   reinterpreted after the fact. `RVC-v1` governs candidates recorded from its publication onward.
-2. **Story 5.6's rehearsal cannot record a `pass` under `RVC-v1` either, unless the CORS origin is
-   fixed first.** 5.6's job is to exercise the full cycle through the workflows, and under this
-   checklist the honest verdict is `fail` — which by design writes nothing. That is a real
-   collision between two shipped requirements, and this file does not resolve it unilaterally, and
-   code review's second pass (2026-08-25) restated rather than re-litigated it. **Owner: Oleg**, as
-   the scope decision for Story 5.6: either the CORS fix lands first, or 5.6 records its rehearsal
-   under an explicitly documented, explicitly time-boxed exception that names `RVC-v1` and lists
-   which items were waived. Silently typing `pass` is the one option this file rules out. 🔴 **The
-   "CORS fix lands first" exit is now reachable, not merely theoretical — the ask was sent
-   23.08.2026** (see the CORS-blocker section above), though no response has arrived. **Story 5.6
-   does not start until either the neighbouring team responds and closes the blocker, or Oleg makes
-   an explicit decision to proceed under the waiver exception instead** — whichever comes first is
-   Oleg's call, not a default this file or Story 5.5 sets.
+   checklist existed. They are **not rewritten**: this ledger is append-only, and rows are never
+   reinterpreted after the fact, even now that the blocker that would have prevented a real `RVC-v1`
+   validation on those dates is gone. `RVC-v1` governs candidates recorded from its publication
+   onward, and a **new** row, added by whoever next records a candidate, is how the CORS fix and the
+   possibility of re-validation actually reach that ledger — see `docs/preprod-candidates.md`'s own
+   pointer paragraph, updated by this closeout.
+2. **Story 5.6's rehearsal is no longer blocked from recording a `pass` by CORS.** 5.6's job is to
+   exercise the full cycle through the workflows; the collision this file and D39 described — CORS
+   forces `fail`, but 5.6 must record a candidate — is resolved **for the CORS half**. What remains
+   is F9's own precondition: if a restricted-role account exists on PRE-PROD by the time 5.6 runs,
+   `RVC-v1` can legitimately produce `12/12 pass`; if not, the honest aggregate is still `fail` (or
+   the same documented, time-boxed waiver this file has always allowed), now naming only F9 rather
+   than nine items. **Owner: Oleg** for confirming or provisioning the F9 account; no waiver decision
+   is needed for the CORS half anymore, since there is nothing left to waive on that axis.
 
 ---
 

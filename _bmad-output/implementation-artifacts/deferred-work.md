@@ -4100,17 +4100,23 @@ settle.
   placeholder job is green on every single run.** The pointer is filed here so the entry exists in
   all three places the project actually reads. **Owner: Story 7.7.**
 
-- 🔴 **`RVC-v1` and Story 5.6 collide, and the collision is real rather than a wording problem.**
-  `RVC-v1` says an aggregate verdict of `pass` requires every item to be `pass`, and that a
+- 🔴 **`RVC-v1` and Story 5.6 collided; the CORS half of the collision is now closed.**
+  ~~`RVC-v1` says an aggregate verdict of `pass` requires every item to be `pass`, and that a
   `BLOCKED` item is not a `pass`. Eight of its twelve items are `BLOCKED` on the PRE-PROD Kong's
   wrong `Access-Control-Allow-Origin` (owner `CRM/api-prionex`, unfixed). So under `RVC-v1` the only
-  honest aggregate verdict available today is `fail` — and `record-preprod-candidate.yml`'s G1
-  refuses `fail` before any registry read, by design, writing nothing. Story 5.6's rehearsal is
-  required to record a candidate. Both requirements are shipped and both are correct; they cannot
-  both be satisfied while CORS is broken. The two exits are: the CORS fix lands first, or 5.6
-  records under an explicitly documented, explicitly time-boxed waiver naming `RVC-v1` and listing
-  the items waived. Silently typing `pass` is ruled out by the checklist and by D39. This is a scope
-  decision, not an implementation one. **Owner: Oleg.**
+  honest aggregate verdict available today is `fail`~~ — 🔴 **updated, closeout re-measurement,
+  2026-08-25T10:48Z, independent channel: `CRM/api-prionex` fixed PRE-PROD's CORS origin.** Verified
+  directly (`OPTIONS /api/v1/auth/login`, real origin → correct `Access-Control-Allow-Origin`;
+  negative control with a foreign origin → still the real PRE-PROD origin, not an echo). Nine of
+  the twelve items (F3, F4-F8, F10, F11, F12) are now `EXECUTABLE`; only F9 remains `BLOCKED`, on
+  its own independent second precondition (no restricted-role account on PRE-PROD, owner Oleg —
+  unaffected by the CORS fix and not independently verified either way by this closeout).
+  `record-preprod-candidate.yml`'s G1 still refuses `fail` before any registry read, by design — but
+  a genuine `12/12 pass` is now reachable in principle if F9's account exists. Story 5.6's rehearsal
+  is required to record a candidate; the collision that made this impossible for CORS reasons is
+  resolved. The two original exits (CORS fix first, or a documented time-boxed waiver) no longer
+  both apply to CORS — only F9 might still need a waiver if the account is not provisioned in time.
+  **Owner: Oleg** for F9's account; no CORS-side action remains.
 
 - ⚠️ **An ordinary job with `needs:` on a `workflow_call` job has no precedent in this repository and
   was never exercised on this instance.** `ci.yml:498-502` proves the caller may mix job kinds and
