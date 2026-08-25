@@ -9,9 +9,7 @@
 
 # Story 6.2: Publish the Production Approval Regulation
 
-Status: in-progress
-<!-- HALT: AC4's acknowledgement is outstanding (Task 7.3). Everything else is done. See
-     Dev Agent Record and deferred-work.md's "Deferred from: Story 6.2" entry. -->
+Status: review
 
 ## Story
 
@@ -730,17 +728,34 @@ artifacts pasted, and labels the negative control as documentary rather than liv
       and inventing one would be the vacuity this project has rejected four times. The five checks
       it does have (Task 3) are documentary: file reads and one negative control over
       already-committed files, not a dispatch.
-- [ ] 7.3 **Not yet landed.** The finished regulation text was handed to the coordinator this
-      session for relay to Oleg, with the explicit ask for a quoted, dated, attributed
-      acknowledgement (AC4). **No reply has arrived within this session.** Left unchecked, per the
-      subtask's own instruction — not closed on an inference, not on a merged PR, not on silence
-      (Prohibition 14). §3's HALT mapping applies: `sprint-status.yaml`'s `6-2-…` row **stays
-      `in-progress`**, with the blocking condition named in the comment immediately above it.
+- [x] 7.3 **Landed, 2026-08-25 — pasted below, with the attested-vs-observed distinction this
+      project holds everywhere.** Oleg's reply, verbatim, relayed by the coordinator:
+
+      > Подтверждаю
+
+      **Approver:** Oleg Kuksa (`geloniel@gmail.com`). **Date:** 2026-08-25.
+
+      🔴 **Critical honesty caveat, stated in the record rather than smoothed over
+      (attested vs observed — AC3's own distinction, applied to how this acknowledgement itself was
+      obtained):** Oleg confirmed **on the coordinator's paraphrase**, not by reading
+      `docs/production-approval-regulation.md` directly. The paraphrase was in Russian, covered
+      every section (who approves / what must be true before / ledger-not-tag / how it is recorded
+      / what the approver attests vs the machine / the freeze window / rollback authority with the
+      unobserved-retention caveat / hotfix = roll-back-and-fix / the two stands / the comparison
+      with the neighbouring team), and explicitly carried the live precedent
+      `sha-a99ccd44c5a3-preprod` (7/12 pass, 5 `BLOCKED`, derived `fail`, dispatched `pass` under
+      the waiver, no trace on the tag). **This is recorded as "confirmed by paraphrase", not as
+      "read the document"** — the same register 5.6 held for Oleg's own browser-pass attestation.
+      **The question was put with three options; two were explicitly declined, not defaulted
+      past:** amending the rollback rule, and authorising a forward hotfix path. Both were **not
+      chosen** — meaning the rollback rule (a tag from the ledger needs no new approval; a tag not
+      in the ledger does) and the no-forward-hotfix finding stand **confirmed explicitly**, not by
+      silence. Recorded here as a signal, per the coordinator's own instruction, not left implicit.
 - [x] 7.4 **Done.** Dev Agent Record, File List and Change Log updated below.
-- [ ] 7.5 **Not done — gated on 7.3.** `sprint-status.yaml` stays `in-progress`, not flipped to
-      `review`, per the subtask's own conditional ("only if 7.3 landed").
+- [x] 7.5 **Done.** `sprint-status.yaml`'s `6-2-…` row flipped to `review` and pushed — 7.3 landed.
+      `PENDING (owner: coordinator)` for PR-open; **Oleg merges** (Prohibition 10).
 - [ ] 7.6 **`PENDING (owner: coordinator)`**, against a query re-run after the merge commit lands —
-      no merge has happened yet; this story has not even reached `review`.
+      no merge has happened yet.
 
 ---
 
@@ -1004,15 +1019,16 @@ code-review Opus.)_
    checks this story can honestly earn are documentary (Task 3): a file listing, a quoted status
    line, four cited artifacts, and one negative control comparing three already-committed registry
    tags — labelled as documentary, not live, throughout.
-6. 🚨 **Story cannot close this session — AC4's acknowledgement has not arrived.** Everything else
-   is done: both new documents written and internally consistent, both cross-references and the
-   decision record in place, retro-E5 honestly stated, every AC gradeable against shipped evidence
-   except AC4 itself. Per the story's own §3 HALT mapping and Prohibition 14, `sprint-status.yaml`'s
-   `6-2-…` row **stays `in-progress`**, the blocking condition is named in the comment immediately
-   above it, and Task 7.3/7.5/7.6 are left unchecked rather than closed on an inference. The
-   finished regulation text has been handed to the coordinator for Oleg's confirmation; once his
-   quoted, dated, attributed reply lands, Task 7.3 pastes it, 7.5 flips the row to `review` and
-   pushes, and 7.6 stays `PENDING (owner: coordinator)` for the post-merge ledger close.
+6. ✅ **AC4 landed, 2026-08-25 — HALT lifted, story closes to `review`.** Oleg's reply, verbatim:
+   *"Подтверждаю"* — approver Oleg Kuksa (`geloniel@gmail.com`), dated 2026-08-25, relayed by the
+   coordinator. **Recorded honestly as "confirmed by paraphrase", not "read the document directly"**
+   (Task 7.3's own caveat) — the coordinator's Russian paraphrase covered every section and named
+   the live `sha-a99ccd44c5a3-preprod` precedent explicitly. Two of the three offered options
+   (amend the rollback rule; authorise a forward hotfix) were **explicitly declined**, which
+   confirms the rollback and no-forward-hotfix rules as written, on the record, not by silence.
+   `sprint-status.yaml`'s `6-2-…` row flipped to `review` and pushed. `PENDING (owner:
+   coordinator)` for PR-open; Oleg merges; ledger close stays `PENDING (owner: coordinator)`
+   against a post-merge query.
 
 **AC grading (Task 7.1), against shipped evidence:**
 
@@ -1021,7 +1037,7 @@ code-review Opus.)_
 | AC1 | ✅ MET | Regulation states write-access dispatch plainly; every unbuilt-control reference is dated/forward-formed, checked by `grep` (Completion Note 2) |
 | AC2 | ✅ MET | Approver named; `docs/prod-releases.md` created, `image_tag` mandatory column; tracker substitution recorded in `D42` |
 | AC3 | ✅ MET | `#d2` quoted and dated; Story 6.5 named as reviser; `rollback: true` bypass stated |
-| AC4 | ❌ **NOT MET — acknowledgement outstanding, HALT applies** | Request sent this session (Debug Log); no reply yet |
+| AC4 | ✅ MET | Oleg's verbatim reply pasted at Task 7.3, dated, attributed, confirmed-by-paraphrase caveat stated |
 | AC5 | ✅ MET | Separate file; one cross-reference line; zero shared sentences (programmatic diff) |
 | AC6 | ✅ MET | Ledger-not-tag rule stated as a rule, with the live precedent named |
 | AC7 | ✅ MET | Freeze window, rollback authority, emergency/hotfix, two stands — all four present |
@@ -1048,14 +1064,11 @@ _(populated by the code-review pass: `#### Decisions needed (owner: Oleg)` then 
 
 ## Open Questions for Review
 
-1. ⏳ **STILL OPEN, 2026-08-25 — the finished text has been sent for confirmation, no reply yet.**
-   AC4's acknowledgement — who counts as "the development and release teams"? This project is
-   Oleg plus agent sessions plus two adjacent teams (`CRM/api-prionex`, the hub/`aleksey`). The
-   coordinator's own explicit instruction (relayed before this session) resolved the sequencing
-   question this item originally raised: the finished regulation text is sent for Oleg's own
-   confirmation, and his reply is transcribed verbatim into the Dev Agent Record, in the same
-   register 5.6 used — *"confirmed"*, not *"we observed"*. **`PENDING (owner: Oleg, via
-   coordinator)`, blocking Task 7.3/7.5.**
+1. ✅ **RESOLVED, 2026-08-25.** AC4's acknowledgement landed: *"Подтверждаю"* — Oleg Kuksa
+   (`geloniel@gmail.com`), 2026-08-25, relayed by the coordinator. **Recorded as "confirmed by
+   paraphrase"**, not "read the document directly" — the coordinator's Russian paraphrase covered
+   every section and named the live `sha-a99ccd44c5a3-preprod` precedent explicitly; the same
+   attested-vs-observed register 5.6 held. Full text at Task 7.3.
 2. ✅ **RESOLVED before this session started.** All fifteen autonomous decisions in Dev Notes §5
    were relayed to Oleg and none was vetoed — confirmed by the coordinator's own message at the
    start of this dev-story session. Both §2 (separate file) and §4 (`docs/prod-releases.md`) stand
@@ -1077,4 +1090,5 @@ _(populated by the code-review pass: `#### Decisions needed (owner: Oleg)` then 
 | Date | Change |
 |---|---|
 | 2026-08-25 | **Dev-story Tasks 1-6 executed in full; Task 7 partially -- HALT on AC4.** `docs/production-approval-regulation.md` written (110 lines, under the 120-line ceiling): who approves, preconditions, the ledger-not-tag rule with the sha-a99ccd44c5a3-preprod precedent, how approval is recorded, attested-vs-observed, no technical gate (every forward reference dated, six present-tense slips caught by a grep sweep and fixed), the freeze window, rollback authority, emergency/hotfix reusing RVC-v1.1's waiver, two production stands, and the two-sentence comparison with CRM/api-prionex's gate. Zero shared sentences with docs/release-regulation.md (programmatic diff). `docs/prod-releases.md` created empty, no placeholder row, Waiver? mandatory. docs/release-regulation.md received exactly one cross-reference line. D42 written in migration-decisions.md; a forward note appended under #d2 without rewriting it. deferred-work.md records AC4 as outstanding, owner Oleg via the coordinator. All fifteen autonomous decisions in Dev Notes Sec.5 were already ratified before this session (no veto) -- confirmed by the coordinator. The finished regulation text was sent to the coordinator for Oleg's confirmation; no reply had landed by the time this file was saved. Per the story's own Sec.3 HALT mapping, sprint-status.yaml's 6-2 row stays in-progress, Task 7.3/7.5/7.6 left unchecked. |
+| 2026-08-25 | **AC4 landed -- HALT lifted, Status -> review.** Oleg's verbatim reply: "Подтверждаю" -- Oleg Kuksa (geloniel@gmail.com), dated 2026-08-25, relayed by the coordinator. Recorded honestly as confirmed-by-paraphrase, not read-the-document-directly: the coordinator's Russian paraphrase covered every section and named the live sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the rollback rule; authorise a forward hotfix) were explicitly declined, confirming both rules as written, on the record, not by silence. Task 7.3 pastes the full attestation; deferred-work.md's Story 6.2 entry closed under the original, struck not deleted; sprint-status.yaml's 6-2 row flipped to review and pushed. PR-open PENDING (owner: coordinator); Oleg merges. |
 | 2026-08-25 | Story created. Context bound against `origin/main` at `dbec399d` from a scratchpad worktree -- the primary checkout belongs to Story 4.9's dev agent. **SS2 decides the overlap with Story 5.6's `docs/release-regulation.md`: a SEPARATE file, one cross-reference line into 5.6's document, and no restated sentence -- five reasons recorded (different subject; the PRE-PROD title; AC4 attaches to a named document; 5.6's artifact is freshly shipped and frozen by precedent; Epic 7's 7.3 absorbs both anyway).** SS3 records the ordering finding: `sprint-status.yaml` constrains only 6.10-before-6.4, 6.2 depends on neither 6.3 nor 6.10, two later stories (7.3 and the decommissioning note) consume what 6.2 writes, and the real dependencies -- unbuilt machinery vs AC1's second clause, 6.5 rewriting `#d2`, AC4's human acknowledgement -- are handled in-story rather than by re-ordering. SS4 records that "the tracker" in AC2 has no referent (`tracking_system: file-system`, `project_key: NOKEY`, the word appears once in the whole plan -- in this AC) and resolves it to a new append-only `docs/prod-releases.md`, on the three-tier precedent 5.4 established after job logs proved unreliable here. Four ACs added (AC5-AC8). SS9 states plainly that a documentation-only story earns almost no retro-E5 evidence and offers five zero-run documentary checks instead, one of them a real negative control. Fifteen autonomous decisions listed for a one-read veto. |

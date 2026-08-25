@@ -1274,7 +1274,15 @@ development_status:
   # docs/preprod-candidates.md are READ-ONLY; docs/release-regulation.md takes exactly one line.
   # No host is touched at all, so NFR5 is satisfied by construction. Epic 5's closeout PR #87 may
   # merge mid-session -- rebase.
-  6-2-publish-the-production-approval-regulation: in-progress
+  # AC4 landed 2026-08-25: Oleg's verbatim reply "Подтверждаю" (geloniel@gmail.com), relayed by
+  # the coordinator, confirmed-by-paraphrase (not read-the-document-directly, per this project's
+  # attested-vs-observed convention) -- paraphrase covered every section and named the live
+  # sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the
+  # rollback rule; authorise a forward hotfix) were explicitly declined, confirming both as
+  # written, not by silence. docs/production-approval-regulation.md (110 lines) and
+  # docs/prod-releases.md (empty ledger) shipped; docs/release-regulation.md got exactly one
+  # cross-reference line; D42 recorded. Row flips to `review`.
+  6-2-publish-the-production-approval-regulation: review
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog

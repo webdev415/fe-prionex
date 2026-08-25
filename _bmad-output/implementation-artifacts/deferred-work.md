@@ -4434,7 +4434,7 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
 
 ## Deferred from: Story 6.2 (2026-08-25)
 
-- 🔴 **AC4's acknowledgement is outstanding — the regulation is written, and the request has been
+- ✅ ~~**AC4's acknowledgement is outstanding — the regulation is written, and the request has been
   sent, but no attributed, dated statement has landed yet.** `docs/production-approval-
   regulation.md` and `docs/prod-releases.md` are both complete; the story cannot close on AC4
   without a quoted, dated, attributed statement from Oleg (or a person he names) that the
@@ -4445,4 +4445,11 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   here. **Owner: Oleg, via the coordinator** — not a trigger condition; the ask itself was sent
   2026-08-25 as one consolidated message alongside the finished regulation text. Story 6.2's own
   `sprint-status.yaml` row stays `in-progress` with this entry named as the reason, per the
-  story's own §3 HALT mapping, until the acknowledgement is pasted and Task 7.3/7.5 can run.
+  story's own §3 HALT mapping, until the acknowledgement is pasted and Task 7.3/7.5 can run.~~
+  **CLOSED 2026-08-25.** Oleg's reply, verbatim: *"Подтверждаю"* — Oleg Kuksa
+  (`geloniel@gmail.com`), dated 2026-08-25, relayed by the coordinator. **Recorded honestly as
+  "confirmed by paraphrase, not by reading the document directly"** — the coordinator's Russian
+  paraphrase covered every section and named the live `sha-a99ccd44c5a3-preprod` precedent
+  explicitly. Two of three offered options (amend the rollback rule; authorise a forward hotfix)
+  were explicitly declined, confirming those two rules as written rather than by default. Pasted
+  in full at the story's own Task 7.3. `sprint-status.yaml`'s `6-2-…` row flipped to `review`.
