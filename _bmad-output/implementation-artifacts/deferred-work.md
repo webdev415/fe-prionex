@@ -3572,6 +3572,27 @@ UTC-timestamped at the point of measurement.
    > `-Headers`. The defect is unchanged and confirmed reachable exactly the way a browser would hit
    > it now that the frontend origin is real, not hypothetical. **Still open, still `CRM/api-prionex`,
    > still Story 5.2 as the AC6 consumer that measured it.** Nothing on their side has changed.
+   > **RE-MEASURED, still not closed — Story 5.5, `2026-08-25T08:09:43Z`.** Checked on the report that
+   > the blocker had been removed; it has not been. The novel part of this measurement is that it is the
+   > first one taken against **genuinely routed** endpoints rather than route-misses: `OPTIONS` on
+   > `/api/v1/auth/login` and on `/api/v1/users/me` both return **`HTTP 200`** — and still
+   > `Access-Control-Allow-Origin: http://localhost:8320`, byte-identical to 2026-08-23. That closes the
+   > one remaining escape hatch in the earlier evidence, namely that the wrong header might have been the
+   > global plugin surfacing on a `404` while a per-route fix existed underneath. It does not.
+   > Two negative controls, both run: `Origin: https://evil.example.com` returns the same static value,
+   > and a request with **no** `Origin` header returns it too — the header is static, not reflected.
+   > The frontend origin itself is live and correct (`HTTP 200`, `CN=crm.preprod.crm-prionex.online`,
+   > Let's Encrypt), so the browser-side premise is real, not hypothetical.
+   > ⚠️ **One observation deliberately NOT claimed as progress:** the routed `200` preflight carries
+   > `Access-Control-Allow-Methods`, `-Headers` and `Max-Age`, which the 2026-08-23 note recorded as
+   > absent. This session's own `404` probe also lacks them while its `200` probe has them, so the
+   > difference is explained by route-miss vs. routed and **cannot** be attributed to a config change
+   > without knowing the exact path the earlier probe used. Recorded as indistinguishable rather than as
+   > movement on their side.
+   > **Consequence unchanged:** F4-F11 of `RVC-v1` stay `BLOCKED`, and the `RVC-v1`/Story 5.6 collision
+   > recorded in [D39](../../docs/migration-decisions.md#d39) §6 stands. **Still open, still
+   > `CRM/api-prionex`.** The ask itself (`docs/preprod-infrastructure-requirement.md` §2.5) is still
+   > marked **не направлено**. **Owner: Oleg** for sending it.
 2. ~~**No nginx vhost or certificate for `crm.preprod.crm-prionex.online`.** The name resolves
    (`185.185.49.127`) but TLS falls through to s1's default vhost: `CN=admin.techno-finance.online`,
    issued `2026-08-15T20:01:59Z`. Measured 2026-08-23T18:57Z. **Owner: ours, Story 5.2.**~~
