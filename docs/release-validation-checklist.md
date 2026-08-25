@@ -796,10 +796,40 @@ tie-breaks between the two files then run on dates that do not agree. Not fixed 
 does not edit `record-preprod-candidate.yml` — but named so a later reader comparing the two files'
 dates does not read the offset as an error in one of them.
 
-**This log is empty.** `RVC-v1` is published by Story 5.5, which deliberately does **not** execute
-it — executing the checklist against a real candidate is Story 5.6's rehearsal, and 5.6 writes the
-first section here. See [the two consequences above](#the-cors-blocker) for the verdict problem 5.6
-inherits.
+**First section written 2026-08-25 by Story 5.6's own rehearsal** — the log was empty until this candidate. See [the two consequences above](#the-cors-blocker) for the verdict problem this section resolves via a written waiver (`docs/migration-decisions.md#d40`), not by silently redefining anything above.
+
+### sha-a99ccd44c5a3-preprod — 2026-08-25T13:35Z
+
+- Checklist version: RVC-v1
+- Started (UTC): 2026-08-25T13:35Z
+- Executed by: joint — **dev agent** (P1, P2, F2, and F4's item 6 specifically — see note below)
+  and **Oleg Kuksa** (F1, F3, F4 items 1-5+7, F9, F11, F12)
+- Deploy run id: 1310
+
+| Item | Verdict | Evidence / why |
+|---|---|---|
+| P1 | pass | dev agent, by hand: container `healthy`, running-image `.RepoDigests` contains the candidate digest exactly (`sha256:a62e868786…`) |
+| P2 | pass | dev agent: decoded build epoch `2026-08-25T13:25:21Z`, at or after R1's own `started` (`2026-08-25T13:23:29Z`) |
+| F1 | pass | Oleg Kuksa, per his own aggregate confirmation (all nine browser items reported `pass` as a group; itemized per-item observations were not separately provided — recorded honestly as an aggregate, not invented detail). Corroborated by the dev agent's own measurement of the same item's machine-checkable half: 9/9 referenced assets `200`, TLS `ssl_verify_result=0` |
+| F2 | pass | dev agent, all five criteria measured fresh against this candidate's own served bundle — see Task 6.4 |
+| F3 | pass | Oleg Kuksa, aggregate confirmation (see F1's note on what that means and does not mean) |
+| F4 | pass | **Split evidence, stated precisely.** Items 1-5 and 7 (correct creds, wrong creds, 2FA, already-logged-in-elsewhere, locked, forced-password-change): Oleg Kuksa, aggregate confirmation. **Item 6 (IP-whitelist refusal): dev agent, direct API test, not Oleg's browser** — `auth_settings.ip_whitelist_enforcement_enabled` was found `false` (the gate switched off, item 6 undemonstrable as found) mid-session; escalated to the coordinator rather than silently worked around; confirmed the already-issued admin JWT is not IP-scoped (`get_current_user` never reads the whitelist, only the login path does) before acting. Toggled `PUT /api/v1/admin/settings/ip-whitelist {"enabled": true}` (admin, audited), immediately attempted `rvc-operator` login from a non-whitelisted IP → `403 {"code": "IP_NOT_ALLOWED", "message": "Login not allowed from this IP address."}` — the explicit reason F4's own text requires — then immediately toggled back `{"enabled": false}` with the same token, then confirmed restoration with a successful `rvc-operator` login. Total window with enforcement on: well under one second (`13:55:24.680` to `13:55:25.365`). |
+| F5 | BLOCKED | Waiver `D40` (Oleg, 2026-08-25, written, single-candidate scope). Reclassified from an attempted `fail`: `GET /api/v1/clients/{id}` `500`s for every client, root-caused to `CRM/api-prionex`'s own missing `Debt`-model migration (ten columns, no migration anywhere in their repo) — not a fixture gap, the validator cannot get past the error. Owner: `CRM/api-prionex` |
+| F6 | BLOCKED | Waiver `D40`. No direct debt-creation API endpoint exists (`DebtCreate` is CSV-import-pipeline-only); also inherits F5's bug. Owner: `CRM/api-prionex` |
+| F7 | BLOCKED | Waiver `D40`. Zero telephony infrastructure provisioned on PRE-PROD at any level (no SIM cards, no queues, no operator-extension links, no Asterisk/SIP config on `dialer-service`). Owner: Oleg / telephony infra owner |
+| F8 | BLOCKED | Waiver `D40`. 3 of 7 bulk-operation pages (payment/write-off/reversal import) reference existing loan data and inherit F6's blockage; item has no degraded wording so the whole item does not reach a full pass. Owner: `CRM/api-prionex`, jointly with F6 |
+| F9 | pass | Oleg Kuksa, aggregate confirmation, executed as `rvc-operator` (Operator role, 24 of 141 Admin permissions) |
+| F10 | BLOCKED | Waiver `D40`. `sms_configuration` has zero rows — no real SMS gateway configured at any level; `messaging_integrations`' 5 rows are all `status=unconfigured`. Owner: Oleg / messaging vendor owner |
+| F11 | pass | Oleg Kuksa, aggregate confirmation. Disclosed for the record (not a blocker, not something Oleg was asked to distinguish): the AI assistant runs against `AI_ASSISTANT_PROVIDER=mock` on this stand, not a real LLM provider |
+| F12 | pass | Oleg Kuksa, aggregate confirmation |
+
+- Counts: P=7 D=0 F=0 B=5   (7 + 0 + 0 + 5 == 12 ✓)
+- Aggregate verdict: **`fail` by `RVC-v1`'s own unconditional rule** (`P=7 ≠ 12`) — **recorded as `pass`
+  for dispatch purposes only under Oleg's written waiver, `docs/migration-decisions.md#d40`,
+  single-candidate scope.** The waiver changes what gets dispatched; it does not change this
+  arithmetic, which stays exactly as computed.
+- validation_note submitted: `RVC-v1 sha-a99ccd44c5a3-preprod: 7/12 pass, 5 BLOCKED (F5 F6 F7 F8 F10) (CRM/api-prionex Debt-model migration bug, CRM/api-prionex; no direct debt-creation path, CRM/api-prionex; telephony infrastructure absent, Oleg; 3/7 bulk pages inherit F6, CRM/api-prionex; SMS gateway unconfigured, Oleg) — waiver D40, single-candidate scope — detail in docs/release-validation-checklist.md`
+- Recorder run id: pending R3 (this section written before dispatch, per `RVC-v1`'s own rule and this story's Task 6.7/7.x ordering)
 
 ### Template — copy this block, do not edit it in place
 
