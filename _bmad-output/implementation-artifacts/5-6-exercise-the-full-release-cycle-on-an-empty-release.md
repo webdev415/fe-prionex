@@ -6,7 +6,7 @@
 
 # Story 5.6: Exercise the Full Release Cycle on an Empty Release
 
-Status: review
+Status: done
 
 ## Story
 
@@ -1443,11 +1443,38 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
       would raise it again, named honestly at that point rather than smoothed over here. This
       reconciliation is against the **pre-merge** tree; the required re-run after the merge commit
       lands is `PENDING (owner: coordinator)`.
+
+      ✅ **FINAL, post-merge re-run, 2026-08-25 — closes the `PENDING (owner: coordinator)` above.**
+      PR #86 merged (`dbec399d`). `psql` against `forgejo` (own channel, s1), same query, re-run
+      against the post-merge state: `select id, status, event, ref, commit_sha, started from
+      action_run where repo_id=16 and id>1297 order by id;` → **23 rows total above baseline**
+      (ids 1298-1325, 1339-1341; ids 1301, 1313, 1317-1322 absent — foreign repos, excluded by the
+      `repo_id` filter itself). Attribution by `commit_sha`: **22 rows attributable to Story 5.6**
+      — the 19 already reconciled above, plus **3 new**: id 1339 (push, `fd6f5782`, the fix-pass
+      commit on `story-5-6/pr-2-review-findings`), id 1340 (`pull_request`, same commit, PR #86's
+      own open-triggered run), id 1341 (push, `dbec399d`, the merge commit landing on `main`).
+      **1 row (id 1325) remains genuinely foreign** — `refs/heads/perf/vitest-parallel-workers`, a
+      different branch and commit entirely, correctly excluded, not folded in.
+      **22 attributable rows against the re-declared ceiling of 22 (Task 11.2's own pre-merge
+      arithmetic) is an exact landing — zero further overrun**, because no second fix-pass round
+      was needed: one review, one fix-pass, one PR-open, one merge, exactly as the re-declared
+      ceiling priced. **Cause of the original overrun (17 → 22), stated with reasons, not just a
+      number:** two rounds this story's own §11 budget did not anticipate when it was declared —
+      (1) the fixture-investigation round (Task 2.2): the budget assumed fixtures would simply be
+      *received* from Oleg's browser-fixture package; instead this story had to investigate PRE-PROD's
+      actual state itself (read-only DB survey, env-var checks, two synthetic test clients created)
+      before a path decision was even possible, adding several push rows the flat "context +
+      dev-story write-up" budget line never priced; (2) the waiver-legitimization round (code review
+      D1/D2): `D40`'s waiver was found ungrounded in `RVC-v1`'s actual text, requiring Oleg's own
+      "узаконить" decision, an `RVC-v1.1` amendment, and a full fix-pass round (`fd6f5782`) — a
+      second decision-and-patch cycle the original budget priced no room for at all, only a plain
+      review-then-close. **Ledger CLOSED.** No `PENDING` remains anywhere in this story.
 - [x] 11.3 **Done.** `sprint-status.yaml`'s `5-6-exercise-the-full-release-cycle-on-an-empty-release:`
-      flipped to `review` — no `PENDING (owner: Oleg)` is outstanding; every decision point this
-      story raised for Oleg (Path A/B choice, the sandbox confirmation, the regulation veto, the
-      written waiver, F4.6's conditional test authorisation) returned an answer before this closeout
-      pass began.
+      flipped to `done` (updated at this final closeout from the `review` this subtask originally
+      recorded) — no `PENDING (owner: Oleg)` is outstanding; every decision point this story raised
+      for Oleg (Path A/B choice, the sandbox confirmation, the regulation veto, the written waiver,
+      F4.6's conditional test authorisation, the code review's own waiver-legitimization decision)
+      returned an answer before this closeout pass began.
 - [x] 11.4 **Done — this closeout commit is pushed to `story-5-6/pr-1-context` immediately after
       being written.** No PR opened, per Prohibition 13; the commit hash is reported to the
       coordinator instead, who triggers the Opus code review.
@@ -2537,6 +2564,7 @@ opposite one, an honest aggregate recorded honestly in one file and rounded up i
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Final closeout, ledger CLOSED, Status -> done -- Epic 5's last story.** PR #86 merged (dbec399d). Post-merge psql re-run: 22 rows attributable to Story 5.6 (commit_sha, zero unattributed -- one genuinely foreign row, a different branch entirely, correctly excluded) against the re-declared ceiling of 22 -- an exact landing, zero further overrun. Overrun cause (17 -> 22) named with reasons: two unplanned rounds the original budget never priced -- the fixture-investigation round (Task 2.2, investigating PRE-PROD's real state instead of simply receiving fixtures) and the waiver-legitimization round (code review D1/D2, RVC-v1.1 + D41). sprint-status.yaml's own row flipped review -> done. Epic 5 verified whole: all six stories done, epic-5 flipped to done in the same commit. Epic 6 inheritance block in sprint-status.yaml extended with this story's own findings (RVC-v1.1's waiver mechanism, three recorded candidates, docs/release-regulation.md, docs/preprod-candidates.md as the readable ledger; the mandatory first-decision items for 6.4/6.5; the epic's remaining tails: the CRM/api-prionex Debt-model bug routed to Oleg for relay, the unrotated seed admin password, telephony/SMS/debt-creation infrastructure absence). |
 | 2026-08-25 | **Code review fix-pass -- 5 decisions + 16 patches addressed, all 27 review items checked off.** D1/D2 (Oleg, "узаконить"): RVC-v1 amended to RVC-v1.1 with an explicit waiver section (D41) -- who may issue (Oleg), what it covers (BLOCKED, and now a fail caused solely by an external dependency), mandatory attributes incl. restored time-boxed; D40 legitimized retroactively via its own appended SS8/9, not rewritten; F5 stays fail by its own criterion, covered by the new clause, not reclassified BLOCKED. D3: Oleg's exact scoping quote obtained and used -- nine points pass in total (P1/P2/F1/F2/F3/F4/F9/F11/F12), six browser (his aggregate), three machine (dev agent) -- corrected in the checklist's Execution Log preamble, the ledger prose, and this story's own Task 6.5/Completion Notes 9/13. D4: SS12 amended -- all six writes to CRM/api-prionex's live system named with dates and authorisation, the IP-whitelist toggle's exact conditional go-ahead quoted verbatim. D5: already filed by the review itself (owner Story 6.5), confirmed. H1-H3/M1-M10/L1-L6: ledger prose overstatements fixed, F4.6's deny-all/blast-radius/no-positive-control disclosed (D40 SS8), F12's mock disclosed, F9/F5-F10 Executability lines corrected, sprint-status.yaml's stale forecast corrected, validated:true -> validated:pass fixed in three places, release-regulation.md's dangling pointers fixed, the ledger overrun (19 rows against ceiling 17, already 2 over) stated honestly and the ceiling re-declared at 22, the elapsed-time row relabeled, AC1's second evidence strand run for free (Task 3.8), AC6's second-reader control recorded as not exercised, the Rejected-candidates table's five usability gaps fixed. W1-W3: confirmed already filed/correct, no action needed. Status stays `review`; PR to be opened by the coordinator. |
 | 2026-08-25 | **Code review (Opus, three adversarial layers + reviewer re-derivation). Verdict: CHANGES REQUESTED.** Mechanical gates re-confirmed green: the four frozen workflows are absent from the diff, RVC-v1's only removed lines are the "This log is empty" paragraph (no item text/id/criterion moved, marker correctly unbumped), the shipped note's P+D+F+B==12 was recomputed from the note text itself (7+0+0+5), the per-item table re-tallied to the same, Task 9.1's elapsed table re-added leg by leg (2321 s, matches 13:23:29->14:02:10), and Task 11.2's 17 rows re-derived from the branch. Five decisions routed to Oleg: D1 -- RVC-v1 defines NO waiver mechanism and both sentences D40 attributes to it are the story's own (the one real clause says "time-boxed", which D40 dropped); D2 -- F5's fail->BLOCKED reclassification is the hinge the whole recording hangs on and D40 states outright it was necessary for the waiver; D3 -- Oleg's aggregate attestation is scoped nine/six/five in three artifacts and pasted nowhere, against Prohibition 16 and the story's own §6; D4 -- six writes to another team's live system against a §12 that declared host contact read-only, one of them (the global IP-whitelist toggle) with no recorded authorisation; D5 -- the waiver is invisible at Story 6.5's promotion gate. Sixteen patches (H1-H3, M1-M10, L1-L6) and three defers recorded in §Review Findings. Cross-story items filed in deferred-work.md under a new code-review-of-5.6 section, owners Story 6.4 / Story 6.5 / RVC-v2 / Oleg. Status stays `review` pending the fix-pass. |
 | 2026-08-25 | **Closeout -- R3 verified, story finalized, Status -> review.** Run 1316 independently confirmed: preprod-current MOVED (not created) onto the new digest, preprod-a99ccd44c5a3 created, both prior history markers untouched, all 16 recorder steps green in order. Candidate #3 row and a new empty "Rejected candidates" table (AC11) appended to preprod-candidates.md. GITHUB_STEP_SUMMARY checked a third time, closed definitively UNPROVEN. Task 9.1's elapsed-time table written (machine total 272s, validation leg ~19m52s, wall-clock 38m41s, zero waiting observed). D40 supplemented with a dated Sec.7 (run ids, the 0.69s IP-test window, results) without touching the original body. Both deferred-work.md AC11/AC12 items closed under their originals; M7's eight unexercised recorder branches re-owned to Story 6.4. Task 10.4's three residuals (no-op-redeploy gap, 5.4's H3, RVC-v1 F2 c1 discrepancy) re-stated, none closed. Final pre-merge psql ledger reconciliation: 17 rows, exactly the declared ceiling, zero unattributed by commit_sha -- the required post-merge re-run stays PENDING (owner: coordinator). All Task 1-11 checkboxes closed against evidence. sprint-status.yaml's own entry flipped to review. Pushed; no PR opened per Prohibition 13. |
