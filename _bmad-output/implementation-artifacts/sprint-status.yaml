@@ -1156,6 +1156,19 @@ development_status:
   # unanswered `PENDING (owner: Oleg)` -- the path decision or a fixture confirmation -- this row
   # STAYS `in-progress` and the blocking condition is named in the comment immediately above it.
   # It is not flipped to `done`, not to `backlog`, and not to a value the enum does not define.
+  # 🔴 CLOSEOUT, 2026-08-25 (code review fix-pass, M3 -- the forecast above shipped verbatim and
+  # described an outcome that did not occur; corrected here rather than in place, matching 5.5's
+  # own convention one row above). THE REAL OUTCOME: F9 did NOT stay the sole blocked item --
+  # Story 5.6 provisioned its restricted-role account (rvc-operator) and F9 PASSED. Instead, five
+  # DIFFERENT items came back BLOCKED once actually executed for the first time: F5 (fail on its
+  # own criterion, root-caused to a CRM/api-prionex migration bug, covered by RVC-v1.1's waiver for
+  # an external-dependency fail -- D41), F6, F7, F8, F10 (data/infrastructure absence, owners
+  # CRM/api-prionex and Oleg). Full cycle: R1 (build.yml, run 1308, 151s) -> R2 (deploy-preprod.yml,
+  # run 1310, 53s) -> live validation (P1 to F4.6, ~19m52s) -> R3 (record-preprod-candidate.yml, run
+  # 1316, 68s, validated=pass under the D40/D41 waiver). Wall-clock, dispatch to ledger row: 38 min
+  # 41 s. Aggregate: fail by RVC-v1's own unconditional rule (7/12 pass), dispatched pass only under
+  # the written waiver -- never a disguised 12/12. Row flips to `review`; code review (this same
+  # pass) found 5 decisions + 16 patches, CHANGES REQUESTED, addressed in this fix-pass.
   5-6-exercise-the-full-release-cycle-on-an-empty-release: review
   epic-5-retrospective: optional
 

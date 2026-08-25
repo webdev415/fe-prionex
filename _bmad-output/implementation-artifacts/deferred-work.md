@@ -4112,7 +4112,7 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   Recorded so a reader does not mistake "not disclosed" for "does not exist".
 
   🔴 **Re-owned 2026-08-25, Story 5.6's own closeout (Task 10.3), exactly as this entry required.**
-  Story 5.6 dispatched the recorder exactly once (run 1316, `validated: true`, a clean `pass` under
+  Story 5.6 dispatched the recorder exactly once (run 1316, `validated: pass`, a clean `pass` under
   D40's waiver) — every one of these eight branches needs an unhappy or edge-shaped input this
   story's own single, honest dispatch did not produce: no bad credential, no wrong-length hex tag,
   no simulated digest-resolve failure, no read-back mismatch. None was exercised. **Owner: Story
