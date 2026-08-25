@@ -4229,3 +4229,25 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   while the CORS origin is wrong: for the whole of that period the ledger will be silent, and
   silence is indistinguishable from nobody having tried. **Owner: Story 5.6**, as the next story to
   dispatch the recorder and the one that must decide where a rejected candidate is recorded.
+
+## Deferred from: Story 5.6 (2026-08-25)
+
+- 🔴 **SECURITY FINDING, not this story's to fix — the seeded default admin credential on PRE-PROD
+  has never been rotated, and both the stand and the API are internet-reachable.** Investigating
+  `CRM/api-prionex` (`/Users/olegkuksa/Workspace/api-prionex_f`, read-only: local code plus a
+  read-only `psql` check via `docker exec` on `crm-preprod-postgres-auth`) found that
+  `services/auth`'s seed migration (`20251122_0002_002_seed_initial_data.py`) creates a bootstrap
+  user `admin` / `admin@technofinance.com` with a hardcoded bcrypt hash for the password
+  `Admin@123`, committed in plain sight in that repository's git history. This migration runs
+  automatically (`auth-migrations` container, `depends_on: condition: service_completed_successfully`
+  ahead of `auth-service`) on every stack that has ever come up. A SQL boolean equality check
+  against the stored hash (never printing the hash itself) confirmed PRE-PROD's `admin` row still
+  matches that exact seed value — unrotated, as of 2026-08-25. Oleg independently confirmed the
+  login works (2026-08-25), then authorised this story to provision fixture accounts through it.
+  Both `https://api.crm.preprod.crm-prionex.online` and the PRE-PROD frontend stand are reachable
+  from the open internet (measured repeatedly this epic, e.g. Story 5.5's own CORS probes from an
+  unauthenticated workstation). **Recommendation: rotate the PRE-PROD `admin` password, and check
+  whether PROD carries the same unrotated seed value** (out of this story's own read-only
+  investigation scope — PROD was not probed). **Owner: Oleg.** Not fixed here: rotating it is a
+  write against a live credential store this story has no standing authorization to make outside
+  the narrow, explicitly-authorised fixture-provisioning act above.

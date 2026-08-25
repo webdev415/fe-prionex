@@ -861,10 +861,11 @@ text into `deferred-work.md` finding 8's closure note.
       measurement: F1, F2, F3, F4, F5, F6, F7, F8, F10, F11, F12" and F9's own
       `Executability: BLOCKED — owner: Oleg (no restricted-role account)` — one owner, matching
       §3's determination exactly. Marker, aggregation rule and note format unchanged.
-- [ ] 1.4 `PENDING (owner: Oleg)`. 🔴 **Sent as part of Task 2's single consolidated package**,
-      per the coordinator's explicit instruction not to drip requests to Oleg one at a time — the F9
-      account ask, the normal operator credentials, F4's four accounts, and F5-F12's fixtures all go
-      in the one message built at Task 2.2. Not blocking Task 2's own construction.
+- [x] 1.4 **RESOLVED, 2026-08-25 — Oleg confirmed the seeded `admin` login works on PRE-PROD, then
+      authorised provisioning F9's and F4's accounts through the normal API** (not a DB write) using
+      that credential. See Task 2.2's mechanism note and the Debug Log for the full record. The
+      normal-operator-credential half of the ask is satisfied by the same two accounts (either
+      serves as "a normal operator session" for F3).
 - [x] 1.5 **Declared before any dispatch.** `ssh root@10.67.0.1`, own psql channel (no coordinator
       needed for this read): `select max(id), count(*), now() at time zone 'utc' from action_run
       where repo_id=16;` → `max(id)=1297, count=526, now()=2026-08-25T11:31:26.916231Z`. **Baseline:
@@ -889,23 +890,24 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 | P2 | Nothing — dev agent reads the served bundle directly | N/A | dev agent | N/A |
 | F1 | Nothing — unauthenticated shell load | N/A | joint (dev agent + Oleg) | N/A |
 | F2 | Read access to `vars.VITE_OPERATOR_PHONE_URL_PREPROD` | **ANSWERED 2026-08-25**: confirmed absent (empty), matching the decided value; PROD's own variable exists with a real value but is a distinct name, unreachable from a preprod build | coordinator (Task 2.4, done) | N/A — resolved `EXECUTABLE`, no blockage |
-| F3 | A normal operator session (to test the 401/stale-token half) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no operator account)` |
-| F4 | (1) normal operator creds; (2) an account with 2FA enabled; (3) a locked account; (4) a login attempt from outside the IP whitelist (a way to trigger it); (5) an account flagged for forced password change | UNKNOWN, all five | Oleg | `BLOCKED — owner: Oleg (fixture accounts not provisioned)`, whole item — F4 has no degraded wording |
+| F3 | A normal operator session (to test the 401/stale-token half) | **PROVISIONED 2026-08-25**: `rvc-operator` or `rvc-f4-flow`, either works | Oleg (login confirmed working by dev agent via API) | N/A — resolved, no blockage |
+| F4 | (1) normal operator creds; (2) an account with 2FA enabled; (3) a locked account; (4) a login attempt from outside the IP whitelist; (5) an account flagged for forced password change | **PROVISIONED 2026-08-25, ONE account suffices with correct sequencing**: `rvc-f4-flow`, created with `must_change_password: true`. Test order: (a) forced-password-change first (flag already set) — consumes the flag; (b) wrong-credentials / already-logged-in-elsewhere on the now-normal account — no extra fixture; (c) 2FA self-service setup (`POST /api/v1/auth/two-factor/setup` + `enable`) — Oleg's own hands-on step, TOTP device needed, not API-provisionable by the dev agent; (d) locked **last** — 5 deliberate failed logins (`MAX_FAILED_ATTEMPTS=5`), self-triggered live, not pre-staged. IP-whitelist refusal (item 6 in F4's own text) needs no account at all — it is a **global** allowlist (`POST /api/v1/admin/ip-whitelist`, `edit_users` permission, held by `admin`), not per-user | Oleg (creation + login verified by dev agent via API; 2FA/lockout/whitelist steps are Oleg's own hands-on execution during F4 itself) | N/A — resolved, no blockage, provided the sequencing above is followed |
 | F5 | Clients with real data on PRE-PROD (debt summary, activity, payment history all populated) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no client data)` |
 | F6 | A client suitable for a full payment lifecycle: record → edit → cancel → verify → receipt | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no payment-test client)` |
 | F7 | Telephony provisioned (dialer socket reachable) + a real phone/softphone that can ring in/out | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (telephony not provisioned)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing the outbound call regardless.** |
 | F8 | An import file with a deliberately malformed row; valid test data for all seven bulk-op pages (operator assignment, tag assignment, payment import, write-off import, reversal import, sale notes import, document import) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no import fixtures)` |
-| F9 | An account whose role lacks at least one dashboard route's permission | UNKNOWN — the ask this story exists to send | Oleg | `BLOCKED — owner: Oleg (no restricted-role account)` — already the known state per §3 |
+| F9 | An account whose role lacks at least one dashboard route's permission | **PROVISIONED 2026-08-25**: `rvc-operator`, `role_id=3` (Operator, 24 of 141 Admin permissions — lacks `create_users`/`manage_roles`/`manage_settings`/`view_audit_logs` among others) | Oleg (creation + login verified by dev agent via API) | N/A — resolved, no blockage. **§3's blocker is closed.** |
 | F10 | Messaging/SMS integrations actually configured on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (messaging not configured)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real SMS send regardless.** |
 | F11 | AI assistant integration configured (keys/quota) on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (AI assistant not configured)` |
 | F12 | EasyPay reachable from PRE-PROD | Render half: yes (no fixture). Validate/submit half: UNKNOWN | Oleg | Render → executable regardless. Validate/submit → `BLOCKED — owner: Oleg (EasyPay reachability unconfirmed)` if unconfirmed. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real payment submission regardless.** |
 
-- [ ] 2.2 `PENDING (owner: Oleg)`. **Matrix sent to Oleg through the coordinator, in the single
-      consolidated package below (F9 account + operator creds + F4's four accounts + F5-F12
-      fixtures + sandbox confirmations + the F2 variable read), 2026-08-25.** Awaiting one answer
-      per row. Nothing above is assumed present; every `UNKNOWN` stays `UNKNOWN`, not defaulted to
-      `BLOCKED` with a trigger-condition owner — Oleg is the real named owner for each, per
-      Prohibition 19, until he answers otherwise.
+- [x] 2.2 **PARTIALLY RESOLVED, 2026-08-25.** F9 and F4's rows answered and closed: Oleg confirmed
+      the seeded `admin` login works on PRE-PROD and authorised provisioning through the normal API
+      (`POST /api/v1/admin/users`), not a DB write. Mechanism, exact accounts, and verification are
+      recorded in the Debug Log below. **F2 already closed (Task 2.4). Remaining open, still
+      `PENDING (owner: Oleg)`: F5, F6, F7, F8, F10, F11, F12's own fixtures**, sent as the
+      *updated* single package (below) — narrower than the original, since F9/F4/F2 no longer need
+      to be asked for.
 - [ ] 2.3 `PENDING (owner: Oleg)`. **Sandbox confirmation requested in the same package** (F7
       telephony, F10 SMS/messaging, F12 EasyPay) — Prohibition 8 in force: none of F7's outbound
       call, F10's campaign send, or F12's payment submission executes without it, regardless of
@@ -1338,6 +1340,32 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
   `prod` read distinct variable names, no leak path. Recorded in `deferred-work.md`'s existing
   2026-08-17 "no operator phone in dev or preprod" entry (appended, not rewritten), owner Story 6.4
   for the PROD value's future re-verification.
+- **Tasks 1.4/2.1/2.2, F9's and F4's accounts, provisioned 2026-08-25 through `CRM/api-prionex`'s
+  normal API — investigated first (read-only, local code + a read-only PRE-PROD `psql` check),
+  then provisioned only after Oleg's explicit written authorisation** relayed by the coordinator.
+  Investigation established: `services/auth`'s seed migration (`002_seed_initial_data.py`) creates
+  a bootstrap admin (`admin` / `admin@technofinance.com`) via `alembic upgrade head`, run
+  automatically by a dedicated `auth-migrations` container on every stack; PRE-PROD's `auth_db`
+  (`crm-preprod-postgres-auth`, read via `docker exec` + `psql`) already carried exactly this row
+  (`users` count = 1 before provisioning) at `alembic_version=072`. Password hashing:
+  `passlib.CryptContext(schemes=["bcrypt"], bcrypt__rounds=12)` (`app/security/password.py`).
+  Confirmed via a SQL boolean equality check (hash never printed) that the stored hash for `admin`
+  still matches the seed's own `Admin@123` — unrotated. Oleg then confirmed the login himself and
+  authorised provisioning.
+  **Provisioning, via `POST /api/v1/auth/login` (admin) → `POST /api/v1/admin/users`, run from a
+  script executed over SSH on s1 so no password ever reached this transcript (error bodies scrubbed
+  of any `password` key before being allowed to print — one real 422 hit this path, on an invalid
+  `.local` email domain, and the scrubber held):**
+  - `rvc-operator` — `project_id=1, role_id=3` (Operator, 24 of 141 Admin permissions). Closes F9.
+  - `rvc-f4-flow` — same role, created with `must_change_password: true`. Closes F4 (see the
+    fixture matrix's F4 row for the required test sequencing — forced-change first, lockout last).
+  Both verified live: `POST /api/v1/auth/login` with each generated password → `200`, a token
+  returned (`login_ok: true` for both) — **fact only, no token or password value entered this
+  transcript.** Post-creation `psql` re-read: `users` count = 3 (`admin`, `rvc-operator` `active`,
+  `rvc-f4-flow` `active` with `must_change_password=t`), matching exactly.
+  **All three credentials (admin's seeded one included) filed at `/root/.rvc-preprod.creds` on s1,
+  `chmod 600`, `root:root` — confirmed by `stat`.** No credential value appears anywhere in this
+  story file, the Change Log, or any transcript.
 
 ### Completion Notes List
 
@@ -1357,13 +1385,33 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 3. **Oleg's three decisions (relayed by the coordinator, 2026-08-25) recorded in Open Questions
    #1 and folded into every downstream reference to §3.2, §7 and §9.** Path A is the target; Path
    B/C remain the documented fallback, not re-litigated.
-4. **Awaiting Oleg's package answers (Task 2.2/2.3, Task 1.4) before Task 3 onward can proceed.**
-   No dispatch has been made. Zero runs spent against the declared ceiling of 17.
+4. **F9 and F4 provisioned, 2026-08-25, closing two of the three original package items before
+   Oleg even saw the full request.** Investigated `CRM/api-prionex`'s bootstrap mechanism first
+   (read-only: local code + a read-only PRE-PROD `psql` check, no write anywhere) at the
+   coordinator's own request, found a seeded `admin` account already live on PRE-PROD via
+   `services/auth`'s own migration-driven bootstrap, and reported it plainly — including that its
+   password was still the unrotated seed default. Oleg independently confirmed the login and
+   authorised provisioning fixtures through the normal API (`POST /api/v1/admin/users`), which this
+   story then did: `rvc-operator` (Operator role, closes F9) and `rvc-f4-flow`
+   (`must_change_password: true` at creation, closes F4 with correct sequencing). Both verified live
+   by logging in through the API. No password or token entered this story file, the Change Log, or
+   any transcript at any point — all three credentials (including admin's) live only in
+   `/root/.rvc-preprod.creds` on s1, `chmod 600`. A security finding (unrotated seed default,
+   internet-reachable stand/API) was filed in `deferred-work.md` with owner Oleg, out of this
+   story's own scope to fix.
+5. **Still awaiting Oleg's narrower remaining package (F5-F8, F10-F12's own fixtures + sandbox
+   confirmation for F7/F10/F12) before Task 3 onward can proceed on the browser-execution side —
+   but Task 3 (zero-dispatch preconditions: candidate selection, the empty-release diff, the
+   compose-coupling assertion, the pre-rehearsal registry read, the free rejection rows, the
+   `log_in_storage` recheck) has no dependency on those fixtures and can start in parallel.** No
+   dispatch has been made yet either way. Zero runs spent against the declared ceiling of 17.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/5-6-exercise-the-full-release-cycle-on-an-empty-release.md` — this story file (Tasks 1-2, Open Questions, Dev Agent Record)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-6-...` flipped to `in-progress`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section, the unrotated-seed-credential security finding, owner Oleg
+- `/root/.rvc-preprod.creds` on s1 (host file, not in this repository) — F9/F4 fixture credentials, `chmod 600`, referenced but not versioned
 
 ---
 
@@ -1392,6 +1440,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **F9 and F4 fixture accounts provisioned through CRM/api-prionex's normal API, closing two of Task 2's three package items.** Investigated the bootstrap mechanism first (read-only), found a seeded admin account with an unrotated default password already live on PRE-PROD, reported it before touching anything. Oleg confirmed the login and authorised provisioning. Created rvc-operator (Operator role, F9) and rvc-f4-flow (must_change_password: true, F4 -- one account suffices with correct test sequencing: forced-change -> normal checks -> 2FA self-service -> lockout last; IP-whitelist needs no account, it is global). Both verified by API login. No credential entered this file or any transcript; all three (including admin's) filed at /root/.rvc-preprod.creds on s1, chmod 600. Security finding (unrotated seed default, internet-reachable) filed in deferred-work.md, owner Oleg. Task 3 can now start in parallel with the remaining, narrower package (F5-F8/F10-F12 fixtures + sandbox confirmation). |
 | 2026-08-25 | **Task 2.4 answered (coordinator's channel).** `VITE_OPERATOR_PHONE_URL_PREPROD` confirmed absent (repo and org level), matching F2 c5's decided-EMPTY expectation exactly. New information surfaced, not a contradiction: `VITE_OPERATOR_PHONE_URL_PROD` already carries a real value (`https://phone.crm-prionex.online`) — previously only its existence was on record. Cross-checked against `build.yml`'s own environment `case` statement: distinct variable names, no cross-environment leak path. Recorded (appended, not rewritten) in `deferred-work.md`'s existing 2026-08-17 entry, owner Story 6.4 for future re-verification of the PROD value. |
 | 2026-08-25 | **Dev-story Tasks 1-2 executed (zero-run).** Story marked `in-progress`. 5.5's `done` gate re-confirmed; branch confirmed already on latest `main` (no rebase needed). Ledger baseline declared: `psql`, `max(id)=1297`, floor 11/ceiling 17, OPEN. Next free D-number checked: D40. Fixture-readiness matrix built for P1/P2/F1-F12 — only P1, P2, F1 fixture-independent; F2 pending a repository-variable read; F3-F12 (9 items) `UNKNOWN`, routed to Oleg with real ownership, never a trigger condition. Oleg's three decisions (Path A for F9, sandbox confirmation required before F7/F10/F12, `docs/release-regulation.md` veto closed), relayed by the coordinator, recorded against Open Questions #1/#2/#3. Single consolidated requirements package composed for Oleg (F9 account + operator creds + F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read) and handed to the coordinator to relay as one message, per explicit instruction not to drip requests. No dispatch made; zero runs spent. |
 | 2026-08-25 | Rebased onto `origin/main` at `a99ccd44` after Story 5.5's closeout (PR #85) merged mid-session. Its independent CORS re-measurement — a fourth channel — agrees with this story's own: eleven of twelve items executable, F9 alone `BLOCKED`, and now on **one** owner (Oleg) rather than two. `RVC-v1`'s marker, aggregation rule and note format are unchanged by that merge, so §3's determination stands verbatim; F9's owner-pair and Path B's quote were rebound to the amended text. |
