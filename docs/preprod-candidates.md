@@ -39,10 +39,20 @@ browser-path validation is possible for the first time. **Re-validation of a cur
 opportunity to actually append a row derived from a fully-executed checklist rather than the
 container-health-only prose these first two rows carry.
 
+🔴 **Fulfilled, 2026-08-25: Story 5.6's rehearsal wrote the first row actually derived from a
+fully-executed `RVC-v1` checklist** — candidate #3 below. Seven of twelve items executed and passed
+live (five by Oleg's own browser pass, reported as an aggregate; two — P1/P2 preconditions plus F2
+and F4's item 6 — by the dev agent directly); five items are `BLOCKED` under a written,
+single-candidate waiver, `docs/migration-decisions.md#d40` — the note's own `<B>` clause names
+every one with its real cause and owner, so this row does not overstate coverage the way the first
+two rows (honestly) could not help but predate. Full per-item detail: `docs/release-validation-checklist.md`'s
+own Execution Log, section `sha-a99ccd44c5a3-preprod — 2026-08-25T13:35Z`.
+
 | Date (UTC) | Candidate tag | Digest | Verdict | Note | Run id |
 |---|---|---|---|---|---|
 | 2026-08-24 | `sha-00ef3be4743d-preprod` | `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` | pass | Manual validation, 2026-08-24, against 5.3's run 1198 deploy: container healthy, running .RepoDigests matches sha256:5e5b190d93c8... exactly, TLS serves crm.preprod.crm-prionex.online, Kong resolves by container identity inside the stand's own network (5.2 AC5/D34/D36). Browser-path/API validation NOT performed and not possible — PRE-PROD's Kong CORS is known-broken (static wrong Access-Control-Allow-Origin), external ask to CRM/api-prionex still open. | 1215 |
 | 2026-08-24 | `sha-28f7fd36b75e-preprod` | `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26` | pass | Manual validation, 2026-08-24, candidate #2 (main HEAD 28f7fd36b75e, minted D7): stand deployed via D8, container healthy, running .RepoDigests matches sha256:d2f6aefc7... exactly. Same CORS boundary as candidate #1 — browser-path validation not performed, not possible until CRM/api-prionex fixes Access-Control-Allow-Origin. | 1229 |
+| 2026-08-25 | `sha-a99ccd44c5a3-preprod` | `sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2` | pass | RVC-v1 sha-a99ccd44c5a3-preprod: 7/12 pass, 5 BLOCKED (F5 F6 F7 F8 F10) (CRM/api-prionex Debt-model migration bug, CRM/api-prionex; no direct debt-creation path, CRM/api-prionex; telephony infrastructure absent, Oleg; 3/7 bulk pages inherit F6, CRM/api-prionex; SMS gateway unconfigured, Oleg) — waiver D40, single-candidate scope — detail in docs/release-validation-checklist.md | 1316 |
 
 **These first two rows were entered by the dev session itself, retroactively, as part of Story 5.4's
 own code review fix-pass** (the file did not exist when runs 1215/1229 actually happened — the
@@ -50,3 +60,23 @@ recording convention this file establishes is being applied to this story's own 
 candidates as its first act, not left for the next candidate to originate it). Every row after these
 two should follow the live procedure above: dispatch, confirm green, then append from the run's own
 printed line.
+
+## Rejected candidates
+
+🔴 **New, Story 5.6, AC11.** `record-preprod-candidate.yml`'s G1 refuses `validated: false` (`fail`)
+as the first step of the first job — the `record` job never runs, so the pass table above never
+gets a row and a rejected candidate previously left **no trace anywhere in this file**. This table
+is that home. **Append-only, same as the table above: a row here is never rewritten or reinterpreted
+after the fact, even by later events.** A row is added by hand from the refused run's own
+`action_task_step` read-back (G1's step name and status — never taken from a job log alone, per this
+story's own AC13), since a refused dispatch prints no ready-to-paste line the way a successful one
+does.
+
+This table is empty as of 2026-08-25: Story 5.6's own rehearsal dispatched the recorder once, with
+`validated: true` (a real `pass`, 7/12 executed live, 5 `BLOCKED` under `docs/migration-decisions.md#d40`'s
+waiver) — G1 was never asked to refuse anything, so this story's own candidate is **not** a row here.
+The table exists for the next candidate that is genuinely rejected.
+
+| Date (UTC) | Candidate tag | Digest | Verdict | Note | Recorder run id (refusal) |
+|---|---|---|---|---|---|
+| *(none yet)* | | | | | |

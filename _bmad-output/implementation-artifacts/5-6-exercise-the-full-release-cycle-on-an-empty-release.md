@@ -6,7 +6,7 @@
 
 # Story 5.6: Exercise the Full Release Cycle on an Empty Release
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -1186,29 +1186,56 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 
 ### Task 8 — R3: dispatch the recorder, once (AC: 7, 11) — **1 run**
 
-- [ ] 8.1 Coordinator dispatches `record-preprod-candidate.yml` with the pinned `image_tag`, the
-      derived (or waiver-authorised) `validated`, the composed `validation_note`, and
-      `allow_backwards_move: false`. **Exactly one dispatch for this candidate commit, ever** (§8).
-- [ ] 8.2 **On `pass`:** read both markers back with an independent `imagetools inspect` on s1 — not
-      from the run's own success message (`build.yml:1542-1554` is why: a bare `echo "OK"` claimed
-      success for weeks while writing the wrong thing). Confirm `preprod-<12hex>` and `preprod-current`
-      both resolve to the candidate digest. Then append the row the run's last step printed to
-      `docs/preprod-candidates.md`, verbatim. **Recording is the two steps together, not the dispatch
-      alone.**
-- [ ] 8.3 **On `fail`:** confirm G1 refused as the **first step of the first job**, from
-      `action_task_step.status`. Then read back and paste: `preprod-<12hex>` **does not exist**, and
-      `preprod-current` still resolves to the digest Task 3.5 recorded. "Nothing was written" is a
-      measurement, not an assumption.
-- [ ] 8.4 Add the **"Rejected candidates"** table to `docs/preprod-candidates.md` (AC11), with its
-      own append-only statement, and write this candidate's row into it if the verdict was `fail`.
-- [ ] 8.5 Record the run id, the deciding step name and its status, and `started`/`stopped`.
+- [x] 8.1 **Done.** Coordinator dispatched `record-preprod-candidate.yml` — `image_tag:
+      sha-a99ccd44c5a3-preprod`, `validated: true` (waiver-authorised per D40), the composed
+      `validation_note` (`7/12 pass, 5 BLOCKED (F5 F6 F7 F8 F10)...`), `allow_backwards_move:
+      false`. Run **1316**. Exactly one dispatch for this candidate commit, and it stays exactly
+      one — no repeat is planned or needed.
+- [x] 8.2 **On `pass` — done, independent read-back on s1, not the run's own message.** Python
+      script over SSH read `/root/.docker/config.json`'s decoded basic-auth header and called
+      `imagetools`-equivalent registry reads directly: `preprod-current`, `preprod-a99ccd44c5a3`,
+      and `sha-a99ccd44c5a3-preprod` **all three** resolve to the identical new digest
+      `sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2`. The two prior
+      history markers read in the same pass, for contrast: `preprod-00ef3be4743d` →
+      `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` (unchanged),
+      `preprod-28f7fd36b75e` → `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26`
+      (unchanged) — confirming a genuine **MOVE** of `preprod-current` (not a fresh create), a
+      genuine new creation of `preprod-a99ccd44c5a3`, and zero disturbance to history. Candidate #3
+      row appended verbatim to `docs/preprod-candidates.md` (the run's own last-step line, true
+      counts, D40 reference).
+- [x] 8.3 **N/A — verdict was `pass`, not `fail`.** Named explicitly rather than left blank: G1's
+      refusal path was not exercised this run (that gap is exactly what Task 10.3 re-owns to Story
+      6.4 in `deferred-work.md`'s M7 entry, since none of the eight unexercised recorder branches —
+      including G1's own edge shapes — were forced by this story's single clean dispatch).
+- [x] 8.4 **Done.** `docs/preprod-candidates.md` now carries the "Rejected candidates" table (AC11),
+      header row `Date (UTC) | Candidate tag | Digest | Verdict | Note | Recorder run id
+      (refusal)`, its own append-only statement stated inline, currently empty (`*(none yet)*`) —
+      this story's own verdict was `pass`, so no row was written into it. `deferred-work.md`'s AC11
+      entry closed under the original, struck, not deleted.
+- [x] 8.5 **Done.** Run id **1316**. Deciding step: run 1316 had two jobs, both `SUCCESS`; the
+      `record` job's step 13 ("Write preprod-current") and step 10 ("Write preprod-<sha>") both
+      `SUCCESS`, in the correct order (per-sha marker before the moving pointer); all 16 steps
+      (indices 0-15) `SUCCESS`, including step 15 ("Write the run's own verdict to the job
+      summary"). `started` 2026-08-25 14:01:02 UTC, `stopped` 2026-08-25 14:02:10 UTC — **68 s**.
 
 ### Task 9 — Elapsed time, history order, and the regulation (AC: 8, 10, 12) — **0 runs**
 
-- [ ] 9.1 Produce the split elapsed-time table (AC8) from `action_run.started`/`stopped` — **never
-      from a relayed figure**; Story 5.1's backfill found a run relayed as "~70 s" that measured 49 s.
-      State the machine total and the human total as two separate figures, and report `waiting` time
-      separately from execution.
+- [x] 9.1 **Done — every figure read directly from `action_run.started`/`stopped`, none relayed.**
+
+  | Leg | `started` (UTC) | `stopped` (UTC) | Duration |
+  |---|---|---|---|
+  | R1 — `build.yml`, run 1308 | 13:23:29 | 13:26:00 | **151 s** |
+  | *(gap: coordinator dispatch + dev-agent R1 read-back)* | | | 206 s |
+  | R2 — `deploy-preprod.yml`, run 1310 | 13:29:26 | 13:30:19 | **53 s** |
+  | *(gap: dev-agent R2 read-back + P1/P2/F1-half/F2)* | | | 314 s |
+  | Validation leg — P1's own completion to F4.6's completion (the last item observed) | 13:35:33 | 13:55:25 | **1192 s (~19 min 52 s)** |
+  | *(gap: note composed, second-read, sent, coordinator dispatch)* | | | 337 s |
+  | R3 — `record-preprod-candidate.yml`, run 1316 | 14:01:02 | 14:02:10 | **68 s** |
+
+  **Machine total (R1+R2+R3): 272 s (4 min 32 s). Human/validation total: 1192 s (~19 min 52 s).**
+  **Wall-clock total, R1's `started` to R3's `stopped`: 2321 s (38 min 41 s).** No `waiting` on the
+  `deploy-preprod-fe-prionex-preprod` concurrency group was observed on any of the three runs (each
+  ran promptly on dispatch) — reported explicitly as zero, not omitted.
 - [x] 9.2 **Done, zero-dispatch, in parallel with the outstanding fixture package (only the
       history AS IT EXISTS TODAY — this story's own candidate is not in it yet, that row is Task 8's
       own).** `GET /v2/crm/fe-prionex/tags/list` filtered to `^preprod-[0-9a-f]{12}$` →
@@ -1245,35 +1272,76 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 
 ### Task 10 — Route, record, decide (AC: 9, 13) — **0 runs**
 
-- [ ] 10.1 If Path B was taken, write the decision record in `docs/migration-decisions.md` under the
-      `D` number from Task 1.6: the candidate tag, each waived item and its owner, the expiry date,
-      and that it governs this one candidate only. **Never rewrite an existing D body** — amendments
-      are dated appended blocks.
-- [ ] 10.2 Close the AC11 and AC12 `deferred-work.md` entries **under their originals**, old text
-      struck (`~~…~~`), never deleted.
-- [ ] 10.3 **Re-own M7's eight unexercised recorder branches** (§10(c)) to **Story 6.4**, under the
-      original entry. The entry itself makes this a required closeout action if this story does not
-      force them, and this story deliberately does not.
-- [ ] 10.4 Re-state, do not close: the no-op-redeploy gap (AC4's caveat), 5.4's **H3** digest-comparison
-      residual (AC7's caveat), and the `RVC-v1` F2 c1 "3 files" discrepancy (§2) — the last as a note
-      for whoever writes `RVC-v2`, **not** as an edit to `RVC-v1`.
-- [ ] 10.5 Name every unearned claim explicitly (AC13), using only the four dispositions.
+- [x] 10.1 **Done.** Path B was taken. `docs/migration-decisions.md#d40` written under `D40` (the
+      free number confirmed at Task 1.6), before any dispatch: candidate tag
+      `sha-a99ccd44c5a3-preprod`, each of the five waived items (F5, F6, F7, F8, F10) with its own
+      cause and owner (§3's table), no expiry date stated as a fixed calendar date — the waiver's
+      own scope clause (§2/§4) is the expiry mechanism: single-candidate only, re-evaluated fresh at
+      the next candidate, never re-opened by a later fix landing. Post-run execution facts (run ids,
+      the 0.69 s IP-test window, results) appended 2026-08-25 as a **new §7, a dated block** — the
+      original §1-6 body was not rewritten.
+- [x] 10.2 **Done.** Both `deferred-work.md` entries closed under their originals, old text struck
+      (`~~…~~`), not deleted: the AC11 item ("A `fail` verdict leaves no trace…") closed against the
+      new "Rejected candidates" table (empty, this story's own verdict was `pass`); the AC12 item
+      ("AC5's 'sequence' was narrowed…") closed against Task 9.2's `git log --no-walk=sorted`
+      composition, pasted verbatim in that closure note.
+- [x] 10.3 **Done.** M7's eight unexercised recorder branches re-owned to **Story 6.4**, appended
+      under the original entry (not struck — the branches genuinely remain unexercised, only the
+      owner changes). This story's single dispatch (run 1316) was a clean, honest `pass` with no
+      malformed credential, no wrong-length hex tag, and no simulated failure — none of the eight
+      edge branches were forced, exactly as the entry's own "required action at that story's own
+      closeout" clause anticipated. The re-owning note repeats the earlier code-review fix (a named
+      story, full stop, no standing conditional successor clause) rather than reintroducing the
+      trigger-condition drift Prohibition 19 rules out.
+- [x] 10.4 **Done — re-stated, none of the three closed.** (1) **No-op-redeploy gap** (AC4's
+      caveat): still unobserved — this rehearsal's own empty release still produced a *new* digest
+      (the build is non-reproducible, `vite.config.ts:8`'s `Date.now()`), so a true no-op redeploy
+      (resolved digest already running) was not exercised here either; the `deferred-work.md` item
+      naming this gap stays open. (2) **5.4's H3** (AC7's caveat): the digest G5 proves and the
+      digest the marker records are still resolved independently, with no step comparing them — R3
+      (run 1316) did not change this; resolved by disclosure only, restated here rather than
+      re-closed. (3) **`RVC-v1` F2 c1 "3 files" discrepancy** (§2): recorded as a note for whoever
+      writes `RVC-v2` — the criterion is presence, not a match count, and this story did not fail F2
+      c1 on that basis (F2 passed on all five criteria, Task 5/6.4) nor edit `RVC-v1` itself to
+      "fix" the parenthetical, since changing a criterion bumps the marker (§13).
+- [x] 10.5 **Done, using only the four dispositions, no fifth softer word.** `PENDING (owner:
+      coordinator)`: Task 11.2's post-merge ledger re-run. `OPEN`: the no-op-redeploy gap and 5.4's
+      H3 (Task 10.4, both re-stated not closed); the `deferred-work.md` item on `imagetools create`'s
+      missing compare-and-swap (pre-existing, untouched by this story). `UNPROVEN`: whether
+      `$GITHUB_STEP_SUMMARY` persists on this instance — checked a third time this story (after R2's
+      `e2e` job, again after R3's own summary-write step) and still no summary-shaped file under
+      `/data/gitea`, no summary-shaped DB table beyond the unrelated `commit_status_summary` —
+      closed as **definitively UNPROVEN**, not defaulted either way, not left for a fourth story to
+      re-ask without cause. Not claimed anywhere in this story: a true no-op redeploy, G1's refusal
+      path live, or any of M7's eight branches.
 
 ### Task 11 — Close (AC: all) — **PR-open + review + fix-pass + merge rows**
 
-- [ ] 11.1 Write the Dev Agent Record: files touched, dispatches with run ids, decisions taken, and
-      every `PENDING (owner: …)` still outstanding.
-- [ ] 11.2 Close the run ledger **against a query re-run after the merge commit lands**, attributed
-      per retro-D4's parallel-era method (filter by `repo_id=16`; match each row's `commit_sha`
-      against this story's own commits **and** against any concurrently-active sibling story's branch
-      tips, fetched fresh; a row matching neither is **named as unattributed**, never folded in). If
-      the query cannot be run, close it with the literal word **OPEN**.
-      `PENDING (owner: coordinator)`.
-- [ ] 11.3 Flip `sprint-status.yaml` to `review`. 🔴 **If the story halted on a `PENDING (owner: Oleg)`
-      answer that never arrived, the row STAYS `in-progress` with the blocking condition named in the
-      comment immediately above it** — the enum has no `blocked` value, and an `in-progress` row with
-      no stated reason is exactly the invisibility Task 1.1 exists to prevent.
-- [ ] 11.4 Push. **Do not open the PR** — Prohibition 13.
+- [x] 11.1 **Done** — see Dev Agent Record below (Debug Log References, Completion Notes 14-15,
+      File List all updated this closeout pass).
+- [x] 11.2 **Pre-merge reconciliation done now; the required post-merge re-run stays `PENDING
+      (owner: coordinator)`, exactly as this subtask's own text requires.** `psql` against
+      `forgejo` (own channel, s1): `select id, status, event, ref, commit_sha, started, stopped from
+      action_run where repo_id=16 and id>1297 order by id;` → **17 rows**, ids 1298-1316 with 1301
+      and 1313 absent (those ids belong to a concurrently-active sibling repo/story, not `repo_id=16`
+      — correctly excluded by the `repo_id` filter itself, not folded in). **17 rows exactly matches
+      the declared ceiling (Task 1.5).** Attribution by `commit_sha`, per retro-D4's method: 14 of
+      the 17 are `push` events whose `commit_sha` matches, one-for-one, this story's own 14 commits
+      on `story-5-6/pr-1-context` (`5ca96b8e` … `35bd1e3e`, `git log --oneline` cross-checked); the
+      remaining 3 are `workflow_dispatch` events (ids 1308/1310/1316 — R1/R2/R3) whose `commit_sha`
+      is the pinned candidate `a99ccd44c5a3…`, this story's own dispatches. **Zero unattributed,
+      zero foreign rows.** No concurrently-active sibling branch tip needed checking against because
+      every row already matched cleanly. This reconciliation is against the **pre-merge** tree; the
+      required re-run after the merge commit lands (to catch any row this closeout push itself adds)
+      is `PENDING (owner: coordinator)`.
+- [x] 11.3 **Done.** `sprint-status.yaml`'s `5-6-exercise-the-full-release-cycle-on-an-empty-release:`
+      flipped to `review` — no `PENDING (owner: Oleg)` is outstanding; every decision point this
+      story raised for Oleg (Path A/B choice, the sandbox confirmation, the regulation veto, the
+      written waiver, F4.6's conditional test authorisation) returned an answer before this closeout
+      pass began.
+- [x] 11.4 **Done — this closeout commit is pushed to `story-5-6/pr-1-context` immediately after
+      being written.** No PR opened, per Prohibition 13; the commit hash is reported to the
+      coordinator instead, who triggers the Opus code review.
 
 ---
 
@@ -1571,6 +1639,33 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
   declined to reverse-engineer and drive that pipeline blind. Full findings filed in
   `deferred-work.md`'s new EOF section, each with a real owner (`CRM/api-prionex`, or `Oleg`, or
   "disclosure only").
+- **Task 8.2/8.5, R3 registry read-back and step verification, 2026-08-25, own channel on s1 —
+  not taken from the run's own success message.** Python script over SSH, reading
+  `/root/.docker/config.json`'s decoded basic-auth header directly, three registry reads:
+  `preprod-current`, `preprod-a99ccd44c5a3`, `sha-a99ccd44c5a3-preprod` all resolve to
+  `sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2` (identical). Prior
+  markers re-read in the same pass for contrast: `preprod-00ef3be4743d` →
+  `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c`,
+  `preprod-28f7fd36b75e` → `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26`
+  — both exactly unchanged, confirming zero disturbance to history. `psql`: run 1316 `started`
+  2026-08-25 14:01:02 UTC, `stopped` 14:02:10 UTC (68 s), two jobs both `SUCCESS`;
+  `action_task_step` for the `record` job's task: 16 steps (indices 0-15), all `SUCCESS`, step 10
+  ("Write preprod-<sha>") before step 13 ("Write preprod-current") — the required order.
+- **Task 9's `$GITHUB_STEP_SUMMARY` question, third and final check, 2026-08-25.** Re-checked
+  `select id, log_in_storage from action_task where id in (9745, 9769);` (still `f`/`f`, seventh
+  session, per `deferred-work.md` finding 8) and searched fresh for any summary-shaped artifact
+  from R2's `e2e` job (task 11048) and R3's two jobs (11115, 11117): no summary-shaped file found
+  under `/data/gitea`, no summary-shaped table in the `forgejo` DB schema beyond the pre-existing,
+  unrelated `commit_status_summary`. Same method used consistently across this project's entire
+  prior history of identical-negative checks. **Closed: definitively UNPROVEN**, not defaulted
+  either way, after three independent checks within this story alone.
+- **Task 11.2, final pre-merge ledger reconciliation, 2026-08-25, own psql channel.** `select id,
+  status, event, ref, commit_sha, started, stopped from action_run where repo_id=16 and id>1297
+  order by id;` → 17 rows (ids 1298-1316, 1301/1313 absent — foreign repo, correctly excluded by
+  the filter itself). Matches the declared ceiling of 17 exactly. 14 `push` rows matched
+  one-for-one by `commit_sha` against `git log --oneline story-5-6/pr-1-context` (`5ca96b8e`
+  through `35bd1e3e`); 3 `workflow_dispatch` rows (1308/1310/1316) matched by `commit_sha` against
+  the pinned candidate `a99ccd44c5a3…` — this story's own R1/R2/R3. Zero unattributed.
 
 ### Completion Notes List
 
@@ -1709,15 +1804,38 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
     edit) — `P=7, D=0, F=0, B=5`, invariant holds. Aggregate stated both ways: `fail` by `RVC-v1`'s
     own rule, recorded `pass` for dispatch only under `D40`'s waiver. `validation_note` composed
     and second-read against the Execution Log before use. R3's dispatch body sent next.
+14. **R3 dispatched and verified, 2026-08-25 — run 1316, SUCCESS (68 s).** Full cycle complete:
+    R1 (1308) → R2 (1310) → live validation → R3 (1316). Independently re-verified on my own
+    channel: `preprod-current` **moved** (not freshly created) onto the candidate digest,
+    `preprod-a99ccd44c5a3` created, both prior history markers (`preprod-00ef3be4743d`,
+    `preprod-28f7fd36b75e`) confirmed untouched at their original digests. All 16 recorder steps
+    green in the correct write order. Candidate #3 row appended to `docs/preprod-candidates.md`
+    with the true count and a `docs/migration-decisions.md#d40` cross-reference; the new "Rejected
+    candidates" table (AC11) added alongside it, empty (this run's own verdict was `pass`).
+    `$GITHUB_STEP_SUMMARY` checked a third and final time — closed **definitively UNPROVEN**.
+    Task 9.1's elapsed-time table computed and written: machine total 272 s, validation leg
+    ~19 min 52 s, wall-clock total 38 min 41 s, zero `waiting` observed on any of the three runs.
+15. **Closeout, 2026-08-25.** `docs/migration-decisions.md#d40` supplemented with a dated §7
+    (run ids, the exact 0.69 s IP-whitelist test window, results) — the original §1-6 body
+    untouched. Both `deferred-work.md` AC11/AC12 entries closed under their originals (struck, not
+    deleted); M7's eight unexercised recorder branches re-owned to Story 6.4 (appended, not
+    struck — the branches remain genuinely unexercised). Task 10.4's three residuals (no-op-redeploy
+    gap, 5.4's H3, `RVC-v1` F2 c1's discrepancy) re-stated, none closed. Final pre-merge `psql`
+    ledger reconciliation: 17 rows, exactly the declared ceiling, zero unattributed — the required
+    post-merge re-run stays `PENDING (owner: coordinator)`. Every Task 1-11 checkbox now checked
+    against evidence; `Status:` flipped to `review`; `sprint-status.yaml`'s own entry flipped to
+    `review`. No PR opened, per Prohibition 13 — commit hash reported to the coordinator instead.
 
 ### File List
 
-- `_bmad-output/implementation-artifacts/5-6-exercise-the-full-release-cycle-on-an-empty-release.md` — this story file (Tasks 1-2, Open Questions, Dev Agent Record)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-6-...` flipped to `in-progress`
-- `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section, the unrotated-seed-credential security finding, owner Oleg
+- `_bmad-output/implementation-artifacts/5-6-exercise-the-full-release-cycle-on-an-empty-release.md` — this story file, all Tasks 1-11 complete, `Status: review`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-6-...` flipped `ready-for-dev` → `in-progress` → `review`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section (unrotated-seed-credential finding, owner Oleg; fixture-investigation findings); AC11/AC12 items closed under their originals; M7's eight branches re-owned to Story 6.4
 - `/root/.rvc-preprod.creds` on s1 (host file, not in this repository) — F9/F4 fixture credentials, `chmod 600`, referenced but not versioned
 - `docs/release-regulation.md` — new, AC10's deliverable, one page, no frozen file touched
-- `docs/migration-decisions.md` — D40 added (Oleg's written waiver, single-candidate scope, five items)
+- `docs/migration-decisions.md` — D40 added (Oleg's written waiver, single-candidate scope, five items), §7 execution-facts supplement appended at closeout
+- `docs/release-validation-checklist.md` — first-ever Execution Log section appended (the one permitted edit)
+- `docs/preprod-candidates.md` — candidate #3 row appended (7/12 pass, 5 BLOCKED, D40 reference); new "Rejected candidates" table added (AC11), currently empty
 
 ---
 
@@ -1743,14 +1861,16 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
    message per the coordinator's explicit instruction not to drip requests.
 3. ✅ **RESOLVED by the coordinator's decision #3 above** — `docs/release-regulation.md`, written in
    this story, Oleg's veto now closed.
-4. **Still open, not this task's to close.** §10(c)'s own decision stands: M7's eight branches are
-   not forced here; routed to Story 6.4 at closeout, per the `deferred-work.md` entry's own required
-   re-owning action.
+4. ✅ **RESOLVED at this closeout, Task 10.3.** §10(c)'s own decision stands: M7's eight branches
+   were not forced here (a clean single dispatch, run 1316, no malformed input) — re-owned to
+   **Story 6.4** in `deferred-work.md`'s own entry, appended not struck, repeating the earlier
+   fix (a named story, no standing conditional successor clause).
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Closeout -- R3 verified, story finalized, Status -> review.** Run 1316 independently confirmed: preprod-current MOVED (not created) onto the new digest, preprod-a99ccd44c5a3 created, both prior history markers untouched, all 16 recorder steps green in order. Candidate #3 row and a new empty "Rejected candidates" table (AC11) appended to preprod-candidates.md. GITHUB_STEP_SUMMARY checked a third time, closed definitively UNPROVEN. Task 9.1's elapsed-time table written (machine total 272s, validation leg ~19m52s, wall-clock 38m41s, zero waiting observed). D40 supplemented with a dated Sec.7 (run ids, the 0.69s IP-test window, results) without touching the original body. Both deferred-work.md AC11/AC12 items closed under their originals; M7's eight unexercised recorder branches re-owned to Story 6.4. Task 10.4's three residuals (no-op-redeploy gap, 5.4's H3, RVC-v1 F2 c1 discrepancy) re-stated, none closed. Final pre-merge psql ledger reconciliation: 17 rows, exactly the declared ceiling, zero unattributed by commit_sha -- the required post-merge re-run stays PENDING (owner: coordinator). All Task 1-11 checkboxes closed against evidence. sprint-status.yaml's own entry flipped to review. Pushed; no PR opened per Prohibition 13. |
 | 2026-08-25 | **RVC-v1 executed to completion -- Execution Log's first section written.** Oleg's browser pass returned: all nine points pass, as an aggregate, transcribed honestly (not expanded into invented detail). F4 item 6 required a live decision: ip_whitelist_enforcement_enabled was found false; read the code to confirm the admin JWT would survive the toggle, then executed enable/prove-refusal/disable/confirm-restore in under one second total. First Execution Log section appended: P=7 D=0 F=0 B=5, invariant holds, aggregate fail by RVC-v1's own rule recorded pass only under D40's waiver. validation_note composed and second-read. R3's dispatch body sent. |
 | 2026-08-25 | **R2 dispatched and independently verified -- run 1310, SUCCESS (53s).** deploy-preprod.yml, image_tag=sha-a99ccd44c5a3-preprod. Stand healthy, digest exact match, workspace suffix matches run id, all 25 deploy steps green, e2e ran without gating. GITHUB_STEP_SUMMARY persistence checked again, still unverified, named honestly. P1/P2 executed by hand, both PASS. F1's dev-agent half PASS (9/9 assets 200); F2 all five criteria PASS. Compact browser checklist (F1/F3/F4/F9/F11/F12) composed for Oleg with exact credential mapping and the F4 ordering constraint, handed to the coordinator. |
 | 2026-08-25 | **R1 dispatched and independently verified -- run 1308, SUCCESS (151s).** build.yml, ref=full candidate SHA, environment=preprod. New digest confirmed distinct from both prior candidates; single OCI image manifest (not an index); config-blob labels (revision/version/environment) match, labelled a consistency check per 5.4's M1. Tag shape confirmed exactly 12 hex. Bug report for CRM/api-prionex composed and handed to the coordinator. R2's dispatch body sent. |

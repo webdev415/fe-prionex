@@ -1156,7 +1156,7 @@ development_status:
   # unanswered `PENDING (owner: Oleg)` -- the path decision or a fixture confirmation -- this row
   # STAYS `in-progress` and the blocking condition is named in the comment immediately above it.
   # It is not flipped to `done`, not to `backlog`, and not to a value the enum does not define.
-  5-6-exercise-the-full-release-cycle-on-an-empty-release: in-progress
+  5-6-exercise-the-full-release-cycle-on-an-empty-release: review
   epic-5-retrospective: optional
 
   # Epic 6: Production Release and Verified Rollback

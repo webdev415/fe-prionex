@@ -829,7 +829,7 @@ dates does not read the offset as an error in one of them.
   single-candidate scope.** The waiver changes what gets dispatched; it does not change this
   arithmetic, which stays exactly as computed.
 - validation_note submitted: `RVC-v1 sha-a99ccd44c5a3-preprod: 7/12 pass, 5 BLOCKED (F5 F6 F7 F8 F10) (CRM/api-prionex Debt-model migration bug, CRM/api-prionex; no direct debt-creation path, CRM/api-prionex; telephony infrastructure absent, Oleg; 3/7 bulk pages inherit F6, CRM/api-prionex; SMS gateway unconfigured, Oleg) — waiver D40, single-candidate scope — detail in docs/release-validation-checklist.md`
-- Recorder run id: pending R3 (this section written before dispatch, per `RVC-v1`'s own rule and this story's Task 6.7/7.x ordering)
+- Recorder run id: **1316** (`SUCCESS`, `started` 2026-08-25T14:01:02Z, `stopped` 2026-08-25T14:02:10Z, 68s — this section was written before dispatch, per `RVC-v1`'s own rule and this story's Task 6.7/7.x ordering; this line completed after R3 returned, per Task 8.5)
 
 ### Template — copy this block, do not edit it in place
 

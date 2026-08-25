@@ -4016,7 +4016,7 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   label-writing step or a promotion guard adjacent to `build.yml`'s AC2 repoint refusal; if either
   changes that code, G6/AC8's own dispositions here should be re-examined as part of that story's
   own blast radius, not before.
-- ⚠️ **AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
+- ✅ ~~**AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
   anything.** `GET /v2/crm/fe-prionex/tags/list` yields the **set** of `preprod-*` tags and their
   digests; it is not chronological, and creation timestamps live in the Forgejo package API, not the
   OCI one this workflow's final step reads. The **order** of validation history comes from `git log`
@@ -4026,7 +4026,14 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   the unordered set. 🔴 **Corrected, code review L8: named a specific story, not a trigger
   condition. Owner: Story 5.6** (the full-cycle rehearsal, already the story most likely to need a
   human-facing view of validation history) — should compose the registry's own set with `git log`'s
-  order explicitly, not assume the registry does it.
+  order explicitly, not assume the registry does it.~~ **CLOSED 2026-08-25 by Story 5.6, AC12,
+  Task 9.2.** `tags/list` filtered to `^preprod-[0-9a-f]{12}$` → the two pre-existing markers, stated
+  plainly as an unordered set (`tags/list` orders nothing, not just claimed). Single call
+  `git log --oneline --no-walk=sorted 00ef3be4743d 28f7fd36b75e` composed the order: PR #43 (older)
+  before PR #79 (newer), pasted verbatim in the story's own Task 9.2. This story's own candidate
+  (`a99ccd44c5a3`) is not yet in the registry set at the time 9.2 ran (by design — Task 8 records it
+  after), so the composed history covers the two pre-existing rows only; the method is what AC12
+  discharges, not a claim that this run's own candidate is included in that particular read.
 
 ## Deferred from: code review of story-5.4 (2026-08-24)
 
@@ -4103,6 +4110,16 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   is a **required action at that story's own closeout** — a procedural obligation on 5.6's closeout
   pass, stated here as a reminder, not a mechanism that silently reassigns ownership on its own.
   Recorded so a reader does not mistake "not disclosed" for "does not exist".
+
+  🔴 **Re-owned 2026-08-25, Story 5.6's own closeout (Task 10.3), exactly as this entry required.**
+  Story 5.6 dispatched the recorder exactly once (run 1316, `validated: true`, a clean `pass` under
+  D40's waiver) — every one of these eight branches needs an unhappy or edge-shaped input this
+  story's own single, honest dispatch did not produce: no bad credential, no wrong-length hex tag,
+  no simulated digest-resolve failure, no read-back mismatch. None was exercised. **Owner: Story
+  6.4**, full stop, no standing conditional successor clause (repeating the same fix this entry
+  already applied once, so the next re-owner does not have to re-derive it): if Story 6.4 closes
+  without exercising these branches, re-owning to whatever comes next is a required action at
+  *that* story's own closeout.
 
 ## Deferred from: Story 5.5 (2026-08-24)
 
@@ -4224,7 +4241,7 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   the job list actually shows. Not fixed here: making the signal durable means either measuring
   step-summary persistence or replacing the placeholder. **Owner: Story 7.7.**
 
-- ⚠️ **A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
+- ✅ ~~**A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
   (`record-preprod-candidate.yml:231-249`) refuses `fail` as the first step of the first job, so the
   `record` job never runs and the copy-paste ledger row at `:982` — the only mechanism that carries
   a `validation_note` into the ledger — is never printed. The append-only ledger therefore cannot
@@ -4233,7 +4250,14 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   It becomes visible only now that `RVC-v1` makes `fail` the honest verdict for every candidate
   while the CORS origin is wrong: for the whole of that period the ledger will be silent, and
   silence is indistinguishable from nobody having tried. **Owner: Story 5.6**, as the next story to
-  dispatch the recorder and the one that must decide where a rejected candidate is recorded.
+  dispatch the recorder and the one that must decide where a rejected candidate is recorded.~~
+  **CLOSED 2026-08-25 by Story 5.6, AC11.** `docs/preprod-candidates.md` now carries a second,
+  append-only "Rejected candidates" table (columns: `Date (UTC) | Candidate tag | Digest | Verdict |
+  Note | Recorder run id (refusal)`), with its own append-only statement stated inline. It is empty
+  (headers only) as of this closure: this story's own rehearsal recorded `pass` (7/12 pass, 5
+  `BLOCKED` under D40's waiver), so no `fail` was dispatched and G1 was never asked to refuse. The
+  home now exists for the next candidate that does trigger G1's refusal — this entry closes the
+  design gap, not a live observation of it.
 
 ## Deferred from: Story 5.6 (2026-08-25)
 
