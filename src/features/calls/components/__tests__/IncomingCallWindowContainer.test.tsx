@@ -42,6 +42,30 @@ vi.mock('../../hooks/useCall', () => ({
   useRejectCall: () => rejectCall,
   useHangupCall: () => hangupCall,
 }))
+vi.mock('@/api/clientSearchApi', () => ({
+  searchClients: vi.fn().mockResolvedValue({
+    items: [
+      {
+        id: 25,
+        full_name: 'Кондратюк Наталія',
+        first_name: 'Наталія',
+        last_name: 'Кондратюк',
+        phones: ['380971234567'],
+        email_primary: null,
+        tax_id: '1234567890',
+        priority_score: 0,
+        priority_level: 'low',
+        status: 'new',
+        total_debt: '4000',
+        debt_count: 1,
+        primary_creditor: null,
+      },
+    ],
+    total: 1,
+    query: '',
+    search_type: 'all',
+  }),
+}))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 const setPrimaryClient = vi.fn().mockResolvedValue({ status: 'ok' })
 vi.mock('../../api/callService', () => ({
@@ -188,6 +212,25 @@ describe('IncomingCallWindowContainer', () => {
     // subtype_id is what the backend derives the channel from. Omitted, every
     // interaction filed from this window landed with no channel at all.
     expect(saveInteraction.mutateAsync.mock.calls[0][0].subtypeId).toBe(9)
+  })
+
+  it('lets the operator find the client behind an unknown number', async () => {
+    renderContainer({ answeredAt: Date.now(), noClients: true })
+
+    // Without this the call can be written up nowhere at all: an interaction
+    // always belongs to a client.
+    const search = screen.getByRole('textbox', { name: /searchClient/ })
+    fireEvent.change(search, { target: { value: 'кондратюк' } })
+
+    fireEvent.click(await screen.findByText('Кондратюк Наталія'))
+
+    const [resultTrigger] = screen.getAllByRole('combobox')
+    fireEvent.click(resultTrigger)
+    fireEvent.click(await screen.findByText('Refusal'))
+
+    // Once a client is chosen the window behaves as it does for a caller we
+    // recognised — including being saveable.
+    expect(screen.getByRole('button', { name: /save/i })).toBeEnabled()
   })
 
   it('does not offer to file an interaction for a caller who matched nobody', async () => {

@@ -24,6 +24,7 @@ import { buildMatchedClients } from '../utils/callWindow'
 import { hasUnfiledWriteUp } from '../utils/writeUp'
 import { CallOutcome } from '../types'
 import type { IncomingCallData } from '../types'
+import type { CallMatchedClient } from './CallClientContracts'
 import { IncomingCallWindow } from './IncomingCallWindow'
 import type { CallInteractionDraft, CallInteractionDraftState } from './CallInteractionForm'
 import type { CallPhase } from './CallActions'
@@ -88,7 +89,13 @@ export function IncomingCallWindowContainer({
   onDismiss,
 }: IncomingCallWindowContainerProps) {
   const { t } = useTranslation('common')
-  const clients = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
+  const matched = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
+  // The client an operator found by hand because the number matched nobody.
+  // Carries no contracts: the screen-pop only has those for numbers it
+  // recognised, and the confirmed spec files interactions against clients
+  // rather than contracts, so none are needed to write the call up.
+  const [foundClient, setFoundClient] = useState<CallMatchedClient | null>(null)
+  const clients = matched.length > 0 ? matched : foundClient ? [foundClient] : []
   const { isIncluded, setIncluded, includedClientIds } = useIncludedClients(clients)
   const [interactionSaved, setInteractionSaved] = useState(false)
   // The caller is parked. Tracked here because nothing on the wire reports it
@@ -251,6 +258,18 @@ export function IncomingCallWindowContainer({
       results={asOptions(results)}
       reasons={asOptions(contactTypes)}
       channels={asOptions(channels)}
+      onFindClient={
+        matched.length === 0 && !foundClient
+          ? (result) =>
+              setFoundClient({
+                clientId: result.id,
+                clientName: result.full_name,
+                contactCategory: null,
+                thirdPartyName: null,
+                contracts: [],
+              })
+          : undefined
+      }
       onSaveInteraction={handleSave}
       saveDisabled={!canSaveInteraction}
       interactionSaved={interactionSaved}

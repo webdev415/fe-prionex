@@ -6063,6 +6063,8 @@
           "multipleClientsHint": "Оберіть, хто телефонує — взаємодію буде записано цьому клієнту.",
           "clientNotFound": "Клієнта не знайдено",
           "clientNotFoundHint": "Цей номер не пов’язаний із жодним клієнтом у ваших проєктах.",
+          "searchClient": "Знайти клієнта",
+          "searchClientPlaceholder": "Пошук за іменем, телефоном або ІПН",
           "searchByNumber": "Шукати за цим номером",
           "interaction": {
             "title": "Форма взаємодії",
