@@ -61,6 +61,16 @@ export function useTAHotkeyLaunch(params: {
       // consistently whatever the modal state.
       event.preventDefault()
 
+      // Only now may a repeat be dropped. A held key fires keydown over and
+      // over; the first press is the instruction and the rest would either
+      // stack up "finish or close the open target action first" toasts or,
+      // before the state settles, attempt a second launch. This bails AFTER
+      // preventDefault deliberately — bailing first would let every repeat of
+      // a bound combination through to the browser, so holding Ctrl+1 opened
+      // the modal once and then switched tabs, contradicting the guarantee
+      // stated just above.
+      if (event.repeat) return
+
       const decision = decideHotkeyLaunch({
         template: templateId,
         isExecutorOpen: current.isExecutorOpen,

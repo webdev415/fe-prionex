@@ -80,6 +80,28 @@ describe('hotkeyFromEvent', () => {
   it('ignores an empty key', () => {
     expect(hotkeyFromEvent(evt({ key: '' }))).toBeNull()
   })
+
+  it('refuses keys that already activate the focused control', () => {
+    // The launch path preventDefaults every combination it recognises, so
+    // honouring one of these would break Enter on a button, Space on a
+    // checkbox, or Tab out of a control anywhere on the client card.
+    for (const key of ['Enter', ' ', 'Spacebar', 'Tab', 'Escape', 'Esc']) {
+      expect(hotkeyFromEvent(evt({ key, ctrlKey: true }))).toBeNull()
+      expect(hotkeyFromEvent(evt({ key }))).toBeNull()
+    }
+  })
+
+  it('still reads an activation key back from a stored binding', () => {
+    // Refusing on the read side must not make an already-stored binding
+    // invisible: the settings list has to render it for the operator to
+    // delete it.
+    expect(parseHotkey('Ctrl+Enter')).toEqual({
+      ctrl: true,
+      alt: false,
+      shift: false,
+      key: 'Enter',
+    })
+  })
 })
 
 describe('formatHotkey / parseHotkey', () => {

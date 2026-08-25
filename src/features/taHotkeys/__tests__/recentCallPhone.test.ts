@@ -132,10 +132,68 @@ describe('resolveRecentCallPhone', () => {
     // from an API that broke its own contract — the cast reproduces that
     // without weakening the interface that now guards the call site.
     const calls = [
+      // `customer_number` is required by the type now, so a null one can only
+      // arrive from an API that broke its own contract — the cast reproduces
+      // that without weakening the interface guarding the call site.
       { customer_number: null as unknown as string, ended_at: minutesAgo(1) },
       { customer_number: '+380501234567', ended_at: 'not-a-date' },
       { customer_number: '', ended_at: minutesAgo(1) },
     ]
     expect(resolve(calls)).toBeNull()
+  })
+})
+
+/**
+ * Round-3 review: a colleague can have spoken to the same client inside the
+ * 10-minute window. Their number was being pre-selected into this operator's
+ * interaction log — chosen by nobody, and easy not to notice.
+ */
+describe('resolveRecentCallPhone agent filtering', () => {
+  const MINE = '2099'
+  const THEIRS = '3100'
+  const call = (agent_extension: string | null | undefined) => ({
+    customer_number: '+380501234567',
+    ended_at: minutesAgo(2),
+    agent_extension,
+  })
+
+  const withAgent = (
+    calls: Parameters<typeof resolveRecentCallPhone>[0]['calls'],
+    agentExtension?: string | null
+  ) => resolveRecentCallPhone({ calls, phones: PHONES, nowMs: NOW, agentExtension })
+
+  it('keeps a call this operator handled', () => {
+    expect(withAgent([call(MINE)], MINE)).toEqual(PHONES[0])
+  })
+
+  it("skips a colleague's call to the same client", () => {
+    expect(withAgent([call(THEIRS)], MINE)).toBeNull()
+  })
+
+  it('skips a call the switchboard could not attribute', () => {
+    // '000' is the switchboard's "unknown", not extension zero. It cannot be
+    // shown to be this operator's call, and the module prefers no answer to a
+    // possibly wrong one.
+    expect(withAgent([call('000')], MINE)).toBeNull()
+    expect(withAgent([call(null)], MINE)).toBeNull()
+  })
+
+  it('does not filter when this operator has no extension configured', () => {
+    // Those operators would otherwise lose the feature with no explanation.
+    expect(withAgent([call(THEIRS)], undefined)).toEqual(PHONES[0])
+    expect(withAgent([call(THEIRS)], '000')).toEqual(PHONES[0])
+  })
+
+  it("prefers this operator's older call over a colleague's newer one", () => {
+    // The filter has to run BEFORE "most recent wins", or the colleague's call
+    // still decides the answer by being the latest.
+    const picked = withAgent(
+      [
+        { customer_number: '+380501234567', ended_at: minutesAgo(5), agent_extension: MINE },
+        { customer_number: '+380671112233', ended_at: minutesAgo(1), agent_extension: THEIRS },
+      ],
+      MINE
+    )
+    expect(picked).toEqual(PHONES[0])
   })
 })

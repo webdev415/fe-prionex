@@ -29,19 +29,30 @@ vi.mock('@/stores/authStore', () => ({
 // The real DateSelect drags react-datepicker into jsdom; a functional stub
 // keeps the tests focused while still driving value/onChange like the real
 // component (onChange receives a Date or null, mirroring DateSelect's API).
+// `min`/`max` are surfaced as `data-min`/`data-max` and ONLY when the tab
+// passes them: in the real component they become react-datepicker's
+// minDate/maxDate, i.e. they are what greys days out — mirroring them as
+// data attributes is what lets a test PIN their absence (the dead-calendar
+// rule below), the same probe the operator-promises suite uses.
 vi.mock('@/components/ui/DateSelect', () => ({
   DateSelect: ({
     value,
     onChange,
     label,
+    min,
+    max,
   }: {
     value?: string | Date | null
     onChange?: (args: { value: Date | null }) => void
     label?: string
+    min?: Date | string
+    max?: Date | string
   }) => (
     <input
       data-testid="date-select"
       aria-label={label}
+      data-min={min == null ? undefined : String(min)}
+      data-max={max == null ? undefined : String(max)}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) =>
         // Noon avoids the parsed UTC date rolling into the previous local day
@@ -194,6 +205,47 @@ describe('ClientProcessingTab', () => {
     expect(mockGetReport).toHaveBeenCalledWith(
       expect.objectContaining({ date_start: '2026-01-01', date_end: '2026-01-31' })
     )
+  })
+
+  it('falls back to today for an impossible calendar date in the URL', async () => {
+    // Round-trip validation, not a shape check: V8's Date.parse lazily reads
+    // 2026-02-31 as March 3rd, so a `^\d{4}-\d{2}-\d{2}$` regex would send the
+    // API a date nobody typed and feed NaN-free-but-wrong numbers into the
+    // 366-day arithmetic. An unusable value takes this tab's long-standing
+    // malformed-URL path instead: the today default, in field and request.
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?from=2026-02-31&to=2026-02-31'])
+    await screen.findByText('Іваненко Іван')
+
+    const [startInput] = screen.getAllByTestId('date-select') as HTMLInputElement[]
+    expect(startInput.value).not.toBe('2026-02-31')
+    expect(mockGetReport).toHaveBeenCalledTimes(1)
+    const params = mockGetReport.mock.calls[0][0]
+    expect(params.date_start).toBe(startInput.value)
+    // Neither the raw impossible day nor its lazy V8 reading may go out.
+    expect(params.date_start).not.toBe('2026-02-31')
+    expect(params.date_start).not.toBe('2026-03-03')
+    expect(params.date_end).toBe(params.date_start)
+  })
+
+  it('bounds neither picker by the other — no min/max on either field', async () => {
+    // A mutual bound would not deaden a calendar, but it would impose an ORDER
+    // nothing on screen states: with the today–today default, «з» would open on
+    // days up to today and «по» on days from today, so "give me last month" is
+    // reachable only by moving «з» first — reach for «по» first and the whole
+    // past is greyed out with no explanation. The page-wide rule (same on the
+    // operator-promises and searcher tabs); the inverted-pair GUARD (test
+    // below) is what actually protects the API.
+    mockGetReport.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab()
+    await screen.findByText('Іваненко Іван')
+
+    for (const field of screen.getAllByTestId('date-select')) {
+      expect(field).not.toHaveAttribute('data-min')
+      expect(field).not.toHaveAttribute('data-max')
+    }
   })
 
   it('switches rows when another department sub-tab is selected', async () => {

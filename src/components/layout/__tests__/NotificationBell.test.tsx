@@ -1,0 +1,292 @@
+/**
+ * NotificationBell — visibility of every notification type (Tanya's
+ * 13.08 complaint: types without a renderer inflated the badge, then
+ * «Позначити як прочитані» erased every trace of them).
+ *
+ * Invariants under test:
+ *  1. Previously-invisible types (e.g. one_on_one_scheduled and the
+ *     30-min one_on_one_reminder) render in the «Навчання» tab; unknown
+ *     future types render generically in «Інше» instead of disappearing
+ *     silently.
+ *  2. Badge = sum of unread counts of VISIBLE types only —
+ *     ta_chain_created (11.5K unread system noise on prod) is excluded,
+ *     so the badge always reconciles with the popup.
+ *  3. The «Прочитані» tab lists read=true notifications (the backend
+ *     keeps rows on mark-as-read; the list endpoint filters by read=).
+ *  4. «Позначити як прочитані» does not lose notifications: after
+ *     mark-all-read the item is still reachable in «Прочитані» — even
+ *     an unknown type that no longer appears in unread by_type.
+ *  5. The read-history fetch is TYPE-SCOPED. The mock reproduces the
+ *     real backend contract (created_at DESC + server-side pagination)
+ *     and seeds 120 ta_chain_created rows newer than everything else:
+ *     an unscoped read=true fetch would get a first page of pure noise,
+ *     the client-side HIDDEN_TYPES filter would blank the tab, and the
+ *     trail would be lost again right after mark-all-read.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
+import type { ReactNode } from 'react'
+
+import { NotificationBell } from '../NotificationBell'
+import * as notificationApi from '@/features/notifications/api/notificationApi'
+import type { NotificationItem, UnreadCountResponse } from '@/features/notifications/types'
+
+vi.mock('@/features/notifications/api/notificationApi')
+vi.mock('@/features/notifications/hooks/useNotificationSocket', () => ({
+  useNotificationSocket: () => ({ connected: false, reconnecting: false }),
+}))
+
+const mockGetNotifications = vi.mocked(notificationApi.getNotifications)
+const mockGetUnreadCount = vi.mocked(notificationApi.getUnreadCount)
+const mockMarkAllAsRead = vi.mocked(notificationApi.markAllAsRead)
+const mockMarkAsRead = vi.mocked(notificationApi.markAsRead)
+
+function makeItem(overrides: Partial<NotificationItem>): NotificationItem {
+  return {
+    id: 'n-1',
+    type: 'task_overdue',
+    title: 'Some notification',
+    body: null,
+    metadata: {},
+    read: false,
+    starred: false,
+    created_at: new Date().toISOString(),
+    read_at: null,
+    ...overrides,
+  } as NotificationItem
+}
+
+// Real items are one hour OLDER than the noise below — with created_at
+// DESC ordering they only survive the first page if the fetch filters
+// out the noise server-side (via the repeatable `type` param).
+const HOUR_AGO = new Date(Date.now() - 3_600_000).toISOString()
+
+const oneOnOneItem = makeItem({
+  id: 'n-1on1',
+  type: 'one_on_one_scheduled',
+  title: '1-on-1 scheduled',
+  body: 'Your trainer scheduled a 1-on-1 for 2026-08-25 10:00 UTC (30 min)',
+  metadata: { trainer_id: 7, scheduled_at: '2026-08-25T10:00:00+00:00', duration_minutes: 30 },
+  created_at: HOUR_AGO,
+})
+
+// Shape as published by quality-service ``expire_one_on_ones``: title
+// only, body=None, metadata carries ids but no name/scheduled_at — the
+// training card must still render it (title + "1-на-1 скоро" label).
+const reminderItem = makeItem({
+  id: 'n-1on1-reminder',
+  type: 'one_on_one_reminder',
+  title: 'Upcoming 1-on-1 in 30 minutes',
+  metadata: { trainer_id: 7, operator_id: 12 },
+  created_at: HOUR_AGO,
+})
+
+const unknownTypeItem = makeItem({
+  id: 'n-future',
+  type: 'brand_new_type' as NotificationItem['type'],
+  title: 'Something brand new',
+  body: 'A type this build has never heard of',
+  created_at: HOUR_AGO,
+})
+
+const taskItem = makeItem({
+  id: 'n-task',
+  type: 'task_overdue',
+  title: 'Overdue task',
+  metadata: { task_id: 42, due_date: '2026-08-20T10:00:00Z' },
+  created_at: HOUR_AGO,
+})
+
+// 120 ta_chain_created rows, all newer than the real items — enough to
+// fill the read tab's entire page (page_size=100) whenever a fetch is
+// not type-scoped (prod scale: 11 572 rows for a single trainer).
+const noiseItems: NotificationItem[] = Array.from({ length: 120 }, (_, i) =>
+  makeItem({
+    id: `n-noise-${i}`,
+    type: 'ta_chain_created',
+    title: `TA chain ${i}`,
+    created_at: new Date(Date.now() - i * 1000).toISOString(),
+  })
+)
+
+// Stateful backend double: mark-all-read flips every item to read, so
+// the read=true listing afterwards proves nothing was lost.
+let allRead = false
+let unread: UnreadCountResponse
+
+function installApiMocks() {
+  allRead = false
+  unread = {
+    total: 11577,
+    by_type: {
+      ta_chain_created: 11572,
+      task_overdue: 2,
+      one_on_one_scheduled: 1,
+      one_on_one_reminder: 1,
+      brand_new_type: 1,
+    },
+  }
+
+  mockGetUnreadCount.mockImplementation(async () => (allRead ? { total: 0, by_type: {} } : unread))
+
+  mockGetNotifications.mockImplementation(async (params) => {
+    const types = Array.isArray(params.type) ? params.type : params.type ? [params.type] : []
+    let all = [taskItem, oneOnOneItem, reminderItem, unknownTypeItem, ...noiseItems].map((n) =>
+      allRead ? { ...n, read: true, read_at: new Date().toISOString() } : n
+    )
+    if (params.read !== undefined) {
+      all = all.filter((n) => n.read === params.read)
+    }
+    if (types.length > 0) {
+      all = all.filter((n) => types.includes(n.type))
+    }
+    // Real backend contract the client must survive: created_at DESC
+    // ordering + server-side pagination. Without them the stateful mock
+    // could not catch an unscoped fetch drowning in ta_chain_created.
+    all = [...all].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    const page = params.page ?? 1
+    const pageSize = params.page_size ?? 50
+    const start = (page - 1) * pageSize
+    return {
+      items: all.slice(start, start + pageSize),
+      total: all.length,
+      page,
+      page_size: pageSize,
+    }
+  })
+
+  mockMarkAllAsRead.mockImplementation(async () => {
+    allRead = true
+  })
+  mockMarkAsRead.mockResolvedValue(undefined)
+}
+
+function renderBell() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  )
+  return render(<NotificationBell />, { wrapper })
+}
+
+async function openBell(user: ReturnType<typeof userEvent.setup>) {
+  const bellButton = await screen.findByLabelText(/notificationBell\.ariaLabel/)
+  await user.click(bellButton)
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  installApiMocks()
+  // jsdom has no scrollIntoView; the tab strip calls it on tab change.
+  Element.prototype.scrollIntoView = vi.fn()
+})
+
+describe('NotificationBell — visibility of all types', () => {
+  it('renders a previously-invisible type (one_on_one_scheduled) in the training tab', async () => {
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.training'))
+
+    expect(await screen.findByText('1-on-1 scheduled')).toBeInTheDocument()
+    // 1-on-1 card surfaces "when" from metadata (formatted date, not raw ISO).
+    expect(screen.getByText(/25-08-2026/)).toBeInTheDocument()
+
+    // The 30-min reminder is a training event too: same tab, training
+    // card with its own type label — not a generic row buried in «Інше».
+    expect(await screen.findByText('Upcoming 1-on-1 in 30 minutes')).toBeInTheDocument()
+    expect(
+      screen.getByText('notificationBell.trainingTypes.one_on_one_reminder')
+    ).toBeInTheDocument()
+    const trainingCall = mockGetNotifications.mock.calls.find(([params]) => {
+      const types = Array.isArray(params.type) ? params.type : []
+      return types.includes('one_on_one_scheduled')
+    })
+    expect(trainingCall).toBeDefined()
+    expect(trainingCall![0].type).toContain('one_on_one_reminder')
+  })
+
+  it('renders an unknown future type generically in the "other" tab', async () => {
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.other'))
+
+    expect(await screen.findByText('Something brand new')).toBeInTheDocument()
+    // The dynamic type discovered from by_type must be part of the fetch.
+    await waitFor(() => {
+      const calledWithUnknown = mockGetNotifications.mock.calls.some(([params]) => {
+        const types = Array.isArray(params.type) ? params.type : []
+        return types.includes('brand_new_type')
+      })
+      expect(calledWithUnknown).toBe(true)
+    })
+  })
+
+  it('badge counts only visible types — ta_chain_created noise is excluded', async () => {
+    renderBell()
+    // 2 (task_overdue) + 1 (one_on_one_scheduled) + 1 (one_on_one_reminder)
+    // + 1 (brand_new_type) = 5; 11 572 ta_chain_created unread must NOT
+    // leak into the badge.
+    expect(await screen.findByText('5')).toBeInTheDocument()
+    expect(screen.queryByText('99+')).not.toBeInTheDocument()
+  })
+
+  it('the read tab lists read=true notifications, type-scoped so hidden noise cannot fill the page', async () => {
+    allRead = true // backend already has everything read — incl. 120 ta_chain rows
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.read'))
+
+    // The real item survives even though 120 newer ta_chain_created rows
+    // would otherwise occupy the whole created_at-DESC first page.
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText(/TA chain/)).not.toBeInTheDocument()
+    await waitFor(() => {
+      const readCall = mockGetNotifications.mock.calls.find(([params]) => params.read === true)
+      expect(readCall).toBeDefined()
+      const types = Array.isArray(readCall![0].type) ? readCall![0].type : []
+      expect(types.length).toBeGreaterThan(0)
+      expect(types).toContain('task_overdue')
+      expect(types).not.toContain('ta_chain_created')
+    })
+  })
+
+  it('mark-all-read does not lose notifications — they remain in the read tab', async () => {
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    // The one_on_one item is visible before mark-all-read.
+    await user.click(await screen.findByText('notificationBell.tabs.training'))
+    expect(await screen.findByText('1-on-1 scheduled')).toBeInTheDocument()
+
+    await user.click(screen.getByText('notificationBell.markAllRead'))
+    await waitFor(() => expect(mockMarkAllAsRead).toHaveBeenCalledTimes(1))
+
+    // The trace survives: the same notification is now in «Прочитані» —
+    // Tanya's exact scenario: 120 freshly-read ta_chain rows are newer
+    // and would fill the whole page were the read fetch not type-scoped.
+    await user.click(screen.getByText('notificationBell.tabs.read'))
+    expect(await screen.findByText('1-on-1 scheduled')).toBeInTheDocument()
+
+    // The unknown type ALSO survives: it is gone from unread by_type
+    // after mark-all-read, but the session cache of ever-seen unknown
+    // types keeps it in the read fetch's type list.
+    expect(await screen.findByText('Something brand new')).toBeInTheDocument()
+    expect(screen.queryByText(/TA chain/)).not.toBeInTheDocument()
+  })
+})

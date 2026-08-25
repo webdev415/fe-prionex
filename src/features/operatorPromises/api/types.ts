@@ -72,7 +72,9 @@ export interface OperatorPromisesReportParams {
  * `is_active` mirrors the directory's employment status at REQUEST time, not at
  * any point inside the window: a dismissed operator KEEPS their row by default
  * (business decision 2026-08-19 — «деньги не должны исчезать из отчёта»; the
- * card hid 859 523.80 ₴ this way). It is display-only and never a filter here.
+ * card hid 859 523.80 ₴ this way — July 2026 window, probe 2026-08-18, see
+ * docs/operator-promises-report.md in api-prionex). It is display-only and
+ * never a filter here.
  *
  * Money is exact `Decimal` server-side and therefore serialises as JSON
  * STRINGS ("112062.00"); the union with `number` covers a payload that ever

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirm } from '@/components/ui/useConfirm'
@@ -11,7 +12,8 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem, ScorecardCategory, TelephonyType } from '@/features/training'
 import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching/hooks'
-import { useClientNames } from '@/features/clients/hooks/useClients'
+import { useClientDebts, useClientNames } from '@/features/clients/hooks/useClients'
+import type { DebtDetail } from '@/features/clients/api/types'
 import { useScopedUserIds } from '../../lib/scope'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { DepartmentMultiSelect } from './DepartmentMultiSelect'
@@ -71,6 +73,38 @@ function formatDateTime(iso: string, language: string): string {
 }
 function categoryOf(call: CallMonitoringItem): ScorecardCategory {
   return call.has_scorecard ? (call.scorecard_category ?? 'unscored') : 'unscored'
+}
+
+// Same semantics as the client card's «Кредити» tab (LoansCardList):
+// open/active = any status but 'closed'.
+function isActiveLoan(debt: DebtDetail): boolean {
+  return debt.status !== 'closed'
+}
+function loanRecency(debt: DebtDetail): number {
+  const iso = debt.credit_issued_date ?? debt.debt_start_date ?? debt.purchase_date
+  const ts = iso ? Date.parse(iso) : Number.NaN
+  return Number.isNaN(ts) ? 0 : ts
+}
+/**
+ * The loan the row shows: the freshest ACTIVE loan (with a "+N more" badge
+ * when there are several active ones), falling back to the freshest loan of
+ * any status when none is active. There is no per-call loan link in the data
+ * (the call record carries only the client), so this is a display heuristic —
+ * the cell links to the client card where every loan is listed.
+ */
+function pickDisplayLoan(
+  debts: DebtDetail[] | undefined
+): { loan: DebtDetail; moreActive: number } | null {
+  if (!debts || debts.length === 0) return null
+  const active = debts.filter(isActiveLoan)
+  const pool = active.length > 0 ? active : debts
+  const loan = pool.reduce((best, d) => {
+    const a = loanRecency(d)
+    const b = loanRecency(best)
+    if (a !== b) return a > b ? d : best
+    return d.id > best.id ? d : best
+  })
+  return { loan, moreActive: Math.max(0, active.length - 1) }
 }
 
 interface Selected {
@@ -301,6 +335,8 @@ export function DialogsListTab() {
     [calls]
   )
   const clientNames = useClientNames(clientIds)
+  // Same clientKeys.detail queries as useClientNames — no extra requests.
+  const clientDebts = useClientDebts(clientIds)
 
   const selectCall = (call: CallMonitoringItem, operatorId: number) => {
     setSelected({
@@ -507,6 +543,7 @@ export function DialogsListTab() {
               operatorByExtension={operatorByExtension}
               trainerByOperator={trainerByOperator}
               clientNames={clientNames}
+              clientDebts={clientDebts}
               selectedCallId={selected?.callId}
               onSelect={handleSelectRow}
             />
@@ -549,11 +586,45 @@ function EmptyBox({ children, tone }: { children: ReactNode; tone?: 'error' }) {
   )
 }
 
+/**
+ * Loan-number cell: the freshest active loan as a link to the client card
+ * (a real <Link>, so ctrl/middle-click opens a new tab), plus a "+N more"
+ * badge when other active loans exist. stopPropagation keeps a plain click
+ * from also selecting the row for review.
+ */
+function LoanCell({ clientId, debts }: { clientId: number | null; debts?: DebtDetail[] }) {
+  const { t } = useTranslation('common')
+  const picked = clientId != null ? pickDisplayLoan(debts) : null
+  if (clientId == null || !picked) return <>—</>
+  return (
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
+      <Link
+        to={`/dashboard/clients/${clientId}`}
+        onClick={(e) => e.stopPropagation()}
+        className="text-primary-600 hover:underline"
+      >
+        {picked.loan.contract_number}
+      </Link>
+      {picked.moreActive > 0 ? (
+        <span
+          data-testid="more-loans-badge"
+          className="rounded-full bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-medium text-[#4B5563]"
+        >
+          {t('pages.training.dialogue.list.moreLoans', '+{{count}} more', {
+            count: picked.moreActive,
+          })}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function DialogsTable({
   calls,
   operatorByExtension,
   trainerByOperator,
   clientNames,
+  clientDebts,
   selectedCallId,
   onSelect,
 }: {
@@ -561,6 +632,7 @@ function DialogsTable({
   operatorByExtension: Map<string, { id: number; name: string }>
   trainerByOperator: Map<number, string>
   clientNames: Map<number, string>
+  clientDebts: Map<number, DebtDetail[]>
   selectedCallId?: string
   onSelect: (call: CallMonitoringItem, operatorId: number) => void
 }) {
@@ -580,6 +652,9 @@ function DialogsTable({
           </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.client', 'Client')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.loanNumber', 'Loan number')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.callType', 'Call type')}
@@ -634,6 +709,12 @@ function DialogsTable({
               </td>
               <td className={ANALYTICS_TABLE_TD}>
                 {clientName ?? (call.client_id != null ? `#${call.client_id}` : '—')}
+              </td>
+              <td className={ANALYTICS_TABLE_TD} data-testid="loan-cell">
+                <LoanCell
+                  clientId={call.client_id}
+                  debts={call.client_id != null ? clientDebts.get(call.client_id) : undefined}
+                />
               </td>
               <td className={ANALYTICS_TABLE_TD}>
                 <span

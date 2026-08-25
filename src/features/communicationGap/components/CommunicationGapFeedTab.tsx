@@ -11,15 +11,13 @@
  * All filter state and the current page live in the URL (`?gf=`, `?gt=`,
  * `?gm=`, `?gpg=`, `?gps=`) so they survive refresh, bookmarking and switching
  * between the page tabs (panels unmount on switch). Filter updates use
- * `replace` — only page-tab changes create history entries.
- *
- * The URL keys are deliberately NEW: the host page keeps every tab's params in
- * the URL, so this tab must not collide with `?tab` (host), `?from/?to/?dept`
- * (processing), `?sf/?st/?cf/?ct` (verification), `?pf/?pt/?mv/?pg/?ps` (the
- * low-verification feed) or `?if/?it/?spg/?sps` (the searcher feed) — in
- * particular the two sibling feeds own `pg`/`ps` and `spg`/`sps`, which is why
- * paging here is `gpg`/`gps`. A shared key would silently transplant one tab's
- * filter into the other.
+ * `replace` — only page-tab changes create history entries. The URL shell —
+ * composed updates, page/page-size parsing, the page clamp and its self-heal —
+ * is the shared `useUrlPagedFeedFilters`; the keys are this tab's set in the
+ * page-wide registry (`src/lib/reportsUrlKeys.ts`), deliberately NEW so no
+ * sibling tab's filter is silently transplanted into this one (in particular
+ * the sibling feeds own `pg`/`ps` and `spg`/`sps`, which is why paging here is
+ * `gpg`/`gps`).
  *
  * There is NO default window: both sell bounds start EMPTY and are INDEPENDENT
  * (the card's two separate Metabase `[[…]]` blocks — either may be set alone,
@@ -32,70 +30,47 @@
  * 400 with "request a narrower sell window", passed straight through below.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
-import { isRealCalendarDate } from '@/lib/calendarDate'
-import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
+import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useCommunicationGapFeed } from '../hooks'
-import { parseGapMin } from '../utils/gapMin'
+import { GAP_MIN_CEILING, parseGapMin } from '../utils/gapMin'
 import { COMMUNICATION_GAP_COLUMN_COUNT, CommunicationGapTable } from './CommunicationGapTable'
 
 /**
- * URL keys, distinct from every other tab of the host page — processing
- * (`from/to/dept`), verification (`sf/st/cf/ct`), the low-verification feed
- * (`pf/pt/mv/pg/ps`), the searcher feed (`if/it/spg/sps`) and the host's own
- * `tab`. "gf"/"gt" = Gap-tab sell From/To; "gm" = Gap Min; "gpg"/"gps" = Gap
- * PaGe / Page Size.
+ * This tab's slice of the Reports page URL namespace (see the registry).
+ * "gf"/"gt" = Gap-tab sell From/To; "gm" = Gap Min; "gpg"/"gps" = Gap PaGe /
+ * Page Size.
  */
-const SELL_FROM_KEY = 'gf'
-const SELL_TO_KEY = 'gt'
-const GAP_MIN_KEY = 'gm'
-const PAGE_KEY = 'gpg'
-const PAGE_SIZE_KEY = 'gps'
+const {
+  sellFrom: SELL_FROM_KEY,
+  sellTo: SELL_TO_KEY,
+  gapMin: GAP_MIN_KEY,
+  page: PAGE_KEY,
+  pageSize: PAGE_SIZE_KEY,
+} = REPORTS_URL_KEYS.communicationGap
 
+/**
+ * The keys this tab may write as FILTERS — handed to the shell so a misspelled
+ * key is a compile error rather than a value written under a name nothing
+ * reads (or, worse, one a sibling tab owns). The paging keys are the shell's
+ * own and are configured, not passed per call.
+ */
 type FilterKey = typeof SELL_FROM_KEY | typeof SELL_TO_KEY | typeof GAP_MIN_KEY
-
-/**
- * Rows per page. The default matches the backend's own (`limit=50`) and every
- * option stays well inside its `limit <= 500` cap; the list is the shared
- * Pagination component's default set.
- */
-const DEFAULT_PAGE_SIZE = 50
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-
-/**
- * Highest page the URL may ask for. The backend caps `skip` at the int32
- * ceiling (`le=2_147_483_647`) and we send `skip = (page - 1) * limit`, so the
- * bound is computed against the LARGEST selectable page size: a page accepted
- * here stays inside the cap for every `?gps=` the user can switch to afterwards.
- */
-const MAX_SKIP = 2_147_483_647
-const MAX_PAGE = Math.floor(MAX_SKIP / Math.max(...PAGE_SIZE_OPTIONS)) + 1
-
-/** A positive integer read from the URL (optionally capped), or the fallback. */
-function parsePositiveInt(
-  raw: string | null,
-  fallback: number,
-  max = Number.MAX_SAFE_INTEGER
-): number {
-  if (!raw || !/^\d+$/.test(raw)) return fallback
-  const parsed = Number(raw)
-  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= max ? parsed : fallback
-}
 
 export function CommunicationGapFeedTab() {
   const { t } = useTranslation('common')
-  const [searchParams, setSearchParams] = useSearchParams()
 
   // Same project resolution as the Reports dashboard: active project first,
   // then the first assigned project, then 1.
@@ -103,87 +78,38 @@ export function CommunicationGapFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  const rawSellFrom = searchParams.get(SELL_FROM_KEY)
-  const rawSellTo = searchParams.get(SELL_TO_KEY)
-  const rawGapMin = searchParams.get(GAP_MIN_KEY) ?? ''
+  // The shared paged-feed URL shell: composed `replace` updates (the
+  // same-tick-burst ref composition lives there), defensive page/page-size
+  // parsing against the backend's `skip`/`limit` caps, and the page reset on
+  // every filter change. Defaults match the backend's own `limit=50`.
+  const filters = useUrlPagedFeedFilters<FilterKey>({
+    pageKey: PAGE_KEY,
+    pageSizeKey: PAGE_SIZE_KEY,
+  })
+  const { searchParams, pageSize, setFilterParam } = filters
 
   // A present-but-unusable bound is NOT silently replaced: the URL would then
   // disagree with both the field and the request. It goes down the same path
   // as an inverted range — inline hint, no request (below). Tracked per bound
   // so the hint can sit on the field that actually holds the bad value.
-  const isSellFromInvalid = !!rawSellFrom && !isRealCalendarDate(rawSellFrom)
-  const isSellToInvalid = !!rawSellTo && !isRealCalendarDate(rawSellTo)
+  const sellFromBound = readUrlDateBound(searchParams, SELL_FROM_KEY)
+  const sellToBound = readUrlDateBound(searchParams, SELL_TO_KEY)
+  const isSellFromInvalid = sellFromBound.isInvalid
+  const isSellToInvalid = sellToBound.isInvalid
   const hasInvalidSellDate = isSellFromInvalid || isSellToInvalid
 
   // No defaults: an unset bound means "no bound", not "today" (the card's own
   // default is the whole population — see the module comment).
-  const sellFrom = rawSellFrom && isRealCalendarDate(rawSellFrom) ? rawSellFrom : undefined
-  const sellTo = rawSellTo && isRealCalendarDate(rawSellTo) ? rawSellTo : undefined
+  const sellFrom = sellFromBound.value
+  const sellTo = sellToBound.value
+
+  const rawGapMin = searchParams.get(GAP_MIN_KEY) ?? ''
 
   // Whatever the field or a hand-edited URL carries is validated here and gets
   // an inline hint rather than the 422 the backend would answer with.
   const gapMin = parseGapMin(rawGapMin)
 
-  const pageSizeFromUrl = parsePositiveInt(searchParams.get(PAGE_SIZE_KEY), DEFAULT_PAGE_SIZE)
-  // An unknown page size falls back silently (it is a view preference, not a
-  // filter) — but it must never exceed the backend's `limit <= 500`.
-  const pageSize = PAGE_SIZE_OPTIONS.includes(pageSizeFromUrl) ? pageSizeFromUrl : DEFAULT_PAGE_SIZE
-  // A page whose offset would overflow the backend's int32 `skip` cap falls
-  // back to 1 silently, exactly like an unknown page size: it can only come
-  // from a hand-edited URL, and the 422 it would earn is nothing the user could
-  // act on. No request is ever fired with an out-of-range offset.
-  const page = parsePositiveInt(searchParams.get(PAGE_KEY), 1, MAX_PAGE)
-
-  // The base every update builds on. It cannot be react-router's own `prev`:
-  // the functional form of `setSearchParams` hands back a clone of the
-  // RENDER-SCOPED params, so two updates fired in the SAME tick each start from
-  // the pre-update URL and the last navigation silently drops the first one's
-  // key. The shared Pagination emits exactly that pair — `onPageSizeChange`
-  // immediately followed by `onPageChange(1)`. Keeping the composed value in a
-  // ref makes such a sequence land as one coherent URL, while the effect below
-  // resyncs it from the committed URL, so an update whose origin is elsewhere
-  // (Back/Forward, a shared link, the ?gpg= self-heal) is never built on a stale
-  // base either. The resync belongs in an effect rather than in render — it only
-  // has to be back in step by the next commit, and by then a same-tick burst is
-  // long over. (Precedent: LowVerificationFeedTab, review standards on
-  // setSearchParams.)
-  const paramsRef = useRef(searchParams)
-  useEffect(() => {
-    paramsRef.current = searchParams
-  }, [searchParams])
-
-  // Filter updates never create history entries (page-tab switches do).
-  const setUrlParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const next = new URLSearchParams(paramsRef.current)
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === null) next.delete(key)
-        else next.set(key, value)
-      }
-      paramsRef.current = next
-      setSearchParams(next, { replace: true })
-    },
-    [setSearchParams]
-  )
-
-  /** A changed filter invalidates the current offset — page 1 or the user reads a hole. */
-  const setFilterParam = (key: FilterKey, value: string | null) =>
-    setUrlParams({ [key]: value, [PAGE_KEY]: null })
-
-  // Timezone policy: a PICKED date is already a calendar day — the picker hands
-  // us a local-midnight Date whose local Y/M/D are exactly the cell the user
-  // clicked, so we read them back verbatim with formatPickerDateAsYMD. The
-  // profile timezone only travels to the backend, where it decides the
-  // reference "today", the assignment/promise day cuts and the payment window.
-  const handleDateChange =
-    (key: FilterKey) =>
-    ({ value }: { value: Date | null }) => {
-      // A cleared manual input is not a filter change: the URL keeps the old
-      // value and a valid date commits once the user finishes retyping
-      // (DateSelect itself resyncs the abandoned text on blur). Removing a
-      // bound is an explicit action — the "×" button.
-      if (value) setFilterParam(key, formatPickerDateAsYMD(value))
-    }
+  const handleDateChange = (key: FilterKey) => filters.dateFilterHandler(key)
 
   // The numeric filter is committed on blur/Enter rather than per keystroke:
   // this endpoint enriches and sorts the whole candidate population (tens of
@@ -219,11 +145,7 @@ export function CommunicationGapFeedTab() {
     setFilterParam(GAP_MIN_KEY, next)
   }
 
-  // Manual input can bypass the pickers' min/max, so an inverted window must
-  // not reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
-  // Only a FULLY specified window can be inverted — a single bound is a
-  // legitimate open-ended filter (backend rule, same branch).
-  const isSellInverted = !hasInvalidSellDate && !!sellFrom && !!sellTo && sellFrom > sellTo
+  const isSellInverted = !hasInvalidSellDate && isDatePairInverted(sellFrom, sellTo)
 
   // Where a message is rendered follows WHAT it is about.
   //
@@ -241,7 +163,19 @@ export function CommunicationGapFeedTab() {
     ? t('pages.reports.communicationGap.invalidSellDate')
     : undefined
   const gapMinError = gapMin.isInvalid
-    ? t('pages.reports.communicationGap.invalidGapMin')
+    ? t(
+        // The two refusals get different sentences: a value past the backend's
+        // int32 ceiling IS "a whole number of 0 or more", so that hint would
+        // describe everything except the actual violation.
+        gapMin.isTooLarge
+          ? 'pages.reports.communicationGap.gapMinTooLarge'
+          : 'pages.reports.communicationGap.invalidGapMin',
+        // The ceiling is INTERPOLATED, never spelled out in the locale files:
+        // the number the hint quotes and the number the parser enforces are the
+        // same constant, so a backend bound change cannot leave two translations
+        // quoting a limit that no longer exists.
+        { max: GAP_MIN_CEILING }
+      )
     : undefined
   const sellRangeError = isSellInverted
     ? t('pages.reports.communicationGap.invalidSellRange')
@@ -254,7 +188,7 @@ export function CommunicationGapFeedTab() {
     sellFrom,
     sellTo,
     gapMin: gapMin.value,
-    skip: (page - 1) * pageSize,
+    skip: filters.skip,
     limit: pageSize,
     timezone: userTimezone,
     enabled: !hasFilterError,
@@ -263,26 +197,10 @@ export function CommunicationGapFeedTab() {
   // Stable identity for the empty fallback — a fresh `[]` every render would
   // defeat CommunicationGapTable's useMemo over its rows prop.
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
-  const total = query.data?.total ?? 0
-  const totalPages = Math.max(1, query.data?.total_pages ?? 1)
 
-  // The feed drains as operators work it, so a bookmarked `?gpg=` can outlive
-  // the rows it pointed at. What the pager shows is the page that actually
-  // exists — "Page 5 of 2" over an empty table, with Prev walking down one empty
-  // page at a time, is not a state to render. A drained feed (`total === 0`)
-  // keeps its calm empty state and shows no pager at all, so there is nothing to
-  // clamp against.
-  const clampedPage = total > 0 ? Math.min(page, totalPages) : page
-
-  // ...and the URL follows the answer, so a refresh no longer re-requests the
-  // dead offset. `replace` (via setUrlParams) — self-correction is not a
-  // navigation step and must not stack history entries. Page 1 is the default,
-  // hence the key is dropped rather than written.
-  useEffect(() => {
-    if (total > 0 && page > totalPages) {
-      setUrlParams({ [PAGE_KEY]: totalPages <= 1 ? null : String(totalPages) })
-    }
-  }, [total, totalPages, page, setUrlParams])
+  // Totals, the display clamp for a bookmarked page the drained feed no longer
+  // has, and the URL self-heal that follows the answer — shared shell.
+  const { total, totalPages, clampedPage } = usePagedFeedPages(filters, query.data)
 
   // keepPreviousData shows the previous page's rows while a new one loads —
   // they must not look final, hence the busy overlay. Placeholder only: a
@@ -420,23 +338,9 @@ export function CommunicationGapFeedTab() {
               currentPage={clampedPage}
               totalPages={totalPages}
               pageSize={pageSize}
-              pageSizeOptions={PAGE_SIZE_OPTIONS}
-              onPageChange={(nextPage) =>
-                // Page 1 is the default — keep it out of the URL.
-                setUrlParams({ [PAGE_KEY]: nextPage <= 1 ? null : String(nextPage) })
-              }
-              onPageSizeChange={(nextSize) =>
-                // A resized page invalidates the old offset, so the page goes
-                // back to 1 in the SAME update — Pagination does emit its own
-                // onPageChange(1) right after this, but a filter's worth of URL
-                // state must not depend on a shared component's call order. The
-                // default size is the absence of the key, never a spelled-out
-                // `gps=50`.
-                setUrlParams({
-                  [PAGE_SIZE_KEY]: nextSize === DEFAULT_PAGE_SIZE ? null : String(nextSize),
-                  [PAGE_KEY]: null,
-                })
-              }
+              pageSizeOptions={filters.pageSizeOptions}
+              onPageChange={filters.setPage}
+              onPageSizeChange={filters.setPageSize}
             />
           )}
           {isRefreshing && (

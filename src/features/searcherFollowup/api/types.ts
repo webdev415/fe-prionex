@@ -14,7 +14,8 @@
  * SEARCHER interaction and must be given together or not at all — the card's
  * date filter is a single Metabase `[[…]]` block, unlike the low-verification
  * feed's two independent bounds; half a window answers 400. Omitting both
- * returns the whole history (~560 rows on the production probe). The tab
+ * returns the whole history (~560 rows on the production probe of
+ * 2026-08-13, see docs/searcher-followup-feed.md in api-prionex). The tab
  * always sends both — its default window is today–today in the profile
  * timezone (Techno-Finance parity) — so the omission branch exists here only
  * because the API supports it.
@@ -52,7 +53,7 @@ export interface SearcherFollowupFeedParams {
  * `last_call_at`/`last_call_outcome` semantics (probe-driven, the card
  * conflates all three states):
  * - BOTH null — no call at all (never called, or the responsible employee has
- *   no telephony seat — ~27 % of production rows);
+ *   no telephony seat — ~27 % of production rows, probe 2026-08-13);
  * - `last_call_at` set, `last_call_outcome` null — a call happened but the
  *   agent never recorded an outcome;
  * - both set — a call with a known result.

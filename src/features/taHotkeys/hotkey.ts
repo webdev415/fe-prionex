@@ -24,6 +24,23 @@ export interface Hotkey {
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta', 'AltGraph', 'CapsLock'])
 
 /**
+ * Keys that already carry universal activation semantics.
+ *
+ * The launch path calls ``preventDefault`` on any combination it recognises, so
+ * honouring a binding on one of these would stop it working everywhere focus is
+ * not a text field: Enter on a focused button, Space on a checkbox, Tab out of
+ * a control, Escape out of a popover. Refused here on the READ side, so such a
+ * binding can never be honoured even if one reaches the client — the assign UI
+ * in KAN-975 should refuse to record them too, but that guard has to hold
+ * independently of a screen that does not ship yet.
+ *
+ * ``parseHotkey`` deliberately still reads them back: a stored binding that
+ * should never have existed has to stay visible in the settings list, or the
+ * operator cannot see it to delete it.
+ */
+const ACTIVATION_KEYS = new Set(['Enter', ' ', 'Spacebar', 'Tab', 'Escape', 'Esc'])
+
+/**
  * Normalise a raw ``KeyboardEvent.key`` into the form we store and compare.
  *
  * Single printable characters are upper-cased so ``a`` and ``A`` are the same
@@ -48,6 +65,23 @@ export function normalizeKey(key: string): string {
  * * anything with Meta held. Cmd is out of scope, and silently dropping the
  *   modifier would make Cmd+1 fire a plain ``1`` binding on a Mac — a
  *   keystroke the operator never assigned.
+ *
+ * Reads ``event.key``, not ``event.code``, so a binding follows the printed
+ * legend rather than the physical position: on a French AZERTY keyboard the
+ * key an operator sees as ``A`` matches a binding recorded as ``A``, where
+ * ``event.code`` would report ``KeyQ``. The trade-off is that a binding does
+ * not survive the operator switching layout mid-session, which ``event.code``
+ * would give us.
+ *
+ * Deliberately deferred rather than overlooked (KAN-973 review, round 1 and 2).
+ * Bindings are persisted server-side as the formatted string this produces
+ * (``TAHotkeyBinding.hotkey``, matched by lookup with no parsing), so moving to
+ * ``event.code`` rewrites every stored binding — ``Ctrl+1`` becomes
+ * ``Ctrl+Digit1`` — and silently breaks every shortcut already saved unless a
+ * migration ships with it. That belongs with the KAN-975 Profile Settings tab:
+ * it owns the write side (assign / clear) and is where a combination is
+ * recorded in the first place, so the switch and the migration of existing
+ * bindings can land together with the screen that produces them.
  */
 export function hotkeyFromEvent(event: {
   key: string
@@ -57,6 +91,7 @@ export function hotkeyFromEvent(event: {
   metaKey: boolean
 }): Hotkey | null {
   if (MODIFIER_KEYS.has(event.key)) return null
+  if (ACTIVATION_KEYS.has(event.key)) return null
   if (event.metaKey) return null
   if (!event.key) return null
 
@@ -93,6 +128,9 @@ export function parseHotkey(value: string): Hotkey | null {
   // dropping empties made '+' unparseable — `formatHotkey` produces 'Ctrl++'
   // for it, which collapsed to ['Ctrl'] and returned null, so a combination
   // this module can write it could not read back.
+  // dropping the empties made '+' unparseable — `formatHotkey` writes it as
+  // 'Ctrl++', which collapsed to ['Ctrl'] and returned null, so this module
+  // could produce a combination it was unable to read back.
   const lastSeparator = value.lastIndexOf('+')
   const key = lastSeparator === -1 ? value : value.slice(lastSeparator + 1) || '+'
   const modifiers =

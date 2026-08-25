@@ -1462,6 +1462,12 @@ export function ClientDetailPage() {
         calls: recentCalls ?? [],
         phones: client?.phones ?? [],
         nowMs: Date.now(),
+        // Only THIS operator's calls may drive the pre-selection. A colleague
+        // can have spoken to the same client inside the window, and their
+        // number would otherwise be seeded into this operator's log without
+        // anyone choosing it. Operators with no extension configured keep the
+        // unfiltered behaviour rather than silently losing the feature.
+        agentExtension: user?.asterisk_extension,
       })
 
       // Only the prefill source — NOT contactSource, which would filter the

@@ -222,6 +222,35 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['trigger_tag_code'],
             })
           }
+          // The API rejects both of these too, so without a branch here the
+          // operator only learns after submitting, from a 422 phrased for API
+          // consumers rather than for the person filling in the form.
+          if (data.action_type === 'replace_tag' && !data.replace_tag_code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagRequired',
+                'Tag to be replaced is required for replace rules'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
+          // Removing and adding the same tag is a guaranteed no-op: the engine
+          // unassigns it, then assigns it straight back.
+          if (
+            data.action_type === 'replace_tag' &&
+            data.replace_tag_code &&
+            data.replace_tag_code === data.target_tag_code
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagSameAsTarget',
+                'Tag to be replaced must differ from the tag to add'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
         }),
     [t]
   )
@@ -356,6 +385,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     }
   }
   const actionType = watch('action_type')
+  const targetTagCode = watch('target_tag_code')
+  const replaceTagCode = watch('replace_tag_code')
   const cronValue = watch('cron_expression')
 
   // Reset form when modal opens
@@ -439,6 +470,12 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         label: tag.name,
       })),
     [tags]
+  )
+  // Same source as the selects, so the effect line names tags exactly as the
+  // operator sees them in the dropdowns.
+  const tagLabelByCode = useMemo(
+    () => new Map(tagCodeOptions.map((o) => [o.value, o.label])),
+    [tagCodeOptions]
   )
 
   return (
@@ -854,9 +891,21 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 />
               </div>
 
-              {/* Target Tag Code */}
+              {/* Target Tag Code.
+                  For replace_tag this is the tag that gets ADDED, and the
+                  field below is the one that gets REMOVED. "Target Tag" read
+                  as "the tag being replaced", which is the opposite of what
+                  the engine does, so operators filled the pair backwards and
+                  the rule silently did nothing: it looked for a client holding
+                  the tag they wanted to end up with, found none, and skipped.
+                  Named by effect here, and only for replace, so add_tag and
+                  remove_tag keep the label they have always had. */}
               <div className="space-y-1.5">
-                <Label required>{t('pages.tags.rules.targetTag', 'Target Tag')}</Label>
+                <Label required>
+                  {actionType === 'replace_tag'
+                    ? t('pages.tags.rules.tagToAdd', 'Tag to add')
+                    : t('pages.tags.rules.targetTag', 'Target Tag')}
+                </Label>
                 <Controller
                   name="target_tag_code"
                   control={control}
@@ -887,7 +936,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Replace Tag Code (if replace_tag) */}
             {actionType === 'replace_tag' && (
               <div className="space-y-1.5">
-                <Label>{t('pages.tags.rules.replaceTag', 'Replace With Tag')}</Label>
+                <Label required>{t('pages.tags.rules.tagToReplace', 'Tag to be replaced')}</Label>
                 <Controller
                   name="replace_tag_code"
                   control={control}
@@ -909,6 +958,23 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
+                {/* Rendered from the current selections, so a rule saved with
+                    the pair swapped can be spotted by opening it. Suppressed
+                    when the two match: the sentence would read "replaces X with
+                    X", contradicting the validation error shown beside it. */}
+                {replaceTagCode && targetTagCode && replaceTagCode !== targetTagCode && (
+                  <p className="text-xs text-gray-500">
+                    {t('pages.tags.rules.replaceEffect', {
+                      defaultValue:
+                        'This rule replaces "{{remove}}" with "{{add}}" for clients that have "{{remove}}".',
+                      remove: tagLabelByCode.get(replaceTagCode) ?? replaceTagCode,
+                      add: tagLabelByCode.get(targetTagCode) ?? targetTagCode,
+                    })}
+                  </p>
+                )}
+                {errors.replace_tag_code && (
+                  <p className="text-error-500 text-xs">{errors.replace_tag_code.message}</p>
+                )}
               </div>
             )}
 

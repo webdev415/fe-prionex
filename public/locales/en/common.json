@@ -394,18 +394,37 @@
     "tabs": {
       "tasks": "Tasks",
       "starred": "Starred",
+      "training": "Training",
       "payments": "Pending Payments",
       "calls": "Inbound Calls",
       "rrPayments": "RR Payments",
-      "ubki": "UBKI"
+      "ubki": "UBKI",
+      "other": "Other",
+      "read": "Read"
     },
     "empty": {
       "tasks": "No overdue tasks",
       "starred": "No starred tasks",
+      "training": "No training notifications",
       "payments": "No pending payments",
       "calls": "No inbound calls",
       "rrPayments": "No RR payments due",
-      "ubki": "No UBKI alerts"
+      "ubki": "No UBKI alerts",
+      "other": "No other notifications",
+      "read": "No read notifications in the last 30 days"
+    },
+    "trainingTypes": {
+      "one_on_one_scheduled": "1-on-1",
+      "one_on_one_reminder": "1-on-1 soon",
+      "course_assigned": "Course",
+      "assignment_taken": "Assignment",
+      "correction_task_assigned": "Correction task",
+      "drill_assigned": "Drill"
+    },
+    "training": {
+      "withTrainer": "With: {{name}}",
+      "durationMin_one": "{{count}} min",
+      "durationMin_other": "{{count}} min"
     },
     "taskActions": {
       "completeAria": "Complete task",
@@ -1747,6 +1766,9 @@
       "openClientCard": "Open client card"
     },
     "training": {
+      "actionAnalysis": {
+        "updating": "Updating data…"
+      },
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",
       "tabs": {
@@ -2212,7 +2234,9 @@
           "callType": "Call type",
           "duration": "Duration",
           "dispute": "dispute",
-          "disputeHint": "The trainer disagreed with the AI review"
+          "disputeHint": "The trainer disagreed with the AI review",
+          "loanNumber": "Loan number",
+          "moreLoans": "+{{count}} more"
         },
         "view": {
           "list": "Scorecards",
@@ -2496,6 +2520,13 @@
           "teamPlan": "Team plan",
           "tasksToday": "Tasks today",
           "oneOnOneToday": "1-on-1 today"
+        },
+        "oneOnOneTodayDialog": {
+          "title": "1-on-1 today",
+          "loading": "Loading sessions…",
+          "loadError": "Could not load the sessions. Try again later.",
+          "empty": "No 1-on-1 sessions scheduled for today.",
+          "duration": "{{minutes}} min"
         },
         "viewModes": {
           "label": "View mode",
@@ -2790,7 +2821,7 @@
         },
         "loading": "Loading…",
         "loadFailed": "Failed to load. Please retry.",
-        "empty": "No promises or callbacks match the filters."
+        "empty": "No data for the selected filters in this period."
       },
       "assign": {
         "courses": "Published courses",
@@ -2920,7 +2951,7 @@
           "operator": "Operator",
           "status": "Status in CRM"
         },
-        "empty": "No closures match the filters.",
+        "empty": "No data for the selected filters in this period.",
         "filters": {
           "allOperators": "All operators",
           "allStatuses": "All statuses",
@@ -3296,7 +3327,7 @@
           "returned": "Returned to the client",
           "thirdPartyPhone": "Third party phone"
         },
-        "empty": "No third-party calls match the filters.",
+        "empty": "No data for the selected filters in this period.",
         "export": "Export",
         "exporting": "Exporting…",
         "filters": {
@@ -5259,6 +5290,10 @@
           "duration": "Duration",
           "phone": "Phone",
           "loadFailed": "Could not load this recording. Try again or download if the problem persists.",
+          "loadTruncated": "The recording did not download completely. Retry?",
+          "loadTimeout": "The server is taking too long — the recording was not loaded. Please try again.",
+          "retry": "Retry",
+          "downloading": "Downloading the recording…",
           "audioProgress": "Audio progress",
           "pause": "Pause",
           "play": "Play",
@@ -7727,7 +7762,9 @@
         "priority": "Priority",
         "targetTag": "Target Tag",
         "triggerTag": "Expired Tag",
-        "replaceTag": "Replace With Tag",
+        "tagToAdd": "Tag to add",
+        "tagToReplace": "Tag to be replaced",
+        "replaceEffect": "This rule replaces \"{{remove}}\" with \"{{add}}\" for clients that have \"{{remove}}\".",
         "selectTag": "Select tag",
         "empty": "No rules found. Create a rule to automate tag assignments.",
         "editRule": "Edit Rule",
@@ -7869,7 +7906,9 @@
           "targetRequired": "Target tag is required",
           "triggerTagRequired": "Trigger tag is required for tag expiry triggers",
           "eventRequired": "Event name is required for event triggers",
-          "cronRequired": "Cron expression is required for schedule triggers"
+          "cronRequired": "Cron expression is required for schedule triggers",
+          "replaceTagRequired": "Tag to be replaced is required for replace rules",
+          "replaceTagSameAsTarget": "Tag to be replaced must differ from the tag to add"
         },
         "useTemplate": "Use Template",
         "selectTemplate": "Select a debt collection template...",
@@ -8476,6 +8515,7 @@
         "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",
         "invalidMaxVerified": "Verifications must be a whole number of 0 or more",
+        "maxVerifiedTooLarge": "Verifications cap is too large — the highest accepted value is {{max}}",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
@@ -8535,6 +8575,7 @@
         "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",
         "invalidGapMin": "Days of silence must be a whole number of 0 or more",
+        "gapMinTooLarge": "Days-of-silence minimum is too large — the highest accepted value is {{max}}",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {

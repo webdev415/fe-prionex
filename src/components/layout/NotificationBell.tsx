@@ -10,7 +10,7 @@
  * - Click opens a dropdown list with type-specific rendering
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -93,9 +93,115 @@ function formatRelativeTime(isoDate: string, t: TFunction): string {
 // Tab structure for the bell dropdown. Order matters: this is the
 // rendered order in the horizontal tab strip. Extending the system to
 // support new notification types in the future = add a new tab key
-// here + a new render branch in the tab-content panel.
-const TABS = ['tasks', 'starred', 'payments', 'calls', 'rrPayments', 'ubki'] as const
+// here + a new render branch in the tab-content panel. Types with no
+// dedicated tab fall into the generic "other" tab automatically, so a
+// new backend type can never silently disappear from the bell again
+// (Tanya's 13.08 complaint: unseen types inflated the badge, then
+// "mark all read" erased every trace of them).
+const TABS = [
+  'tasks',
+  'starred',
+  'training',
+  'payments',
+  'calls',
+  'rrPayments',
+  'ubki',
+  'other',
+  'read',
+] as const
 type Tab = (typeof TABS)[number]
+
+// ─── Type routing ────────────────────────────────────────────────
+
+const TASK_TAB_TYPES: string[] = [
+  NotificationType.TASK_OVERDUE,
+  NotificationType.CORRECTION_TASK_OVERDUE,
+]
+
+const NON_TASK_TAB_TYPES: string[] = [
+  NotificationType.PAYMENT_PENDING,
+  NotificationType.INCOMING_CALL,
+  NotificationType.CALLBACK_REQUESTED,
+  NotificationType.RR_PAYMENT_DUE,
+  NotificationType.UBKI_FAILURE_ALERT,
+  NotificationType.UBKI_CONNECTION_DOWN,
+  NotificationType.UBKI_DAILY_SUMMARY,
+]
+
+// Trainer/operator coaching & training assignments — the "Навчання" tab.
+// The 30-min 1-on-1 reminder lives here too (same card as the scheduled
+// event, "1-на-1 скоро" label) — not in "Інше" as a generic row.
+const TRAINING_TAB_TYPES: string[] = [
+  NotificationType.ONE_ON_ONE_SCHEDULED,
+  NotificationType.ONE_ON_ONE_REMINDER,
+  NotificationType.COURSE_ASSIGNED,
+  NotificationType.ASSIGNMENT_TAKEN,
+  NotificationType.CORRECTION_TASK_ASSIGNED,
+  NotificationType.DRILL_ASSIGNED,
+]
+
+// System-noise types: never rendered and excluded from the badge.
+// ta_chain_created fires on every logged chain (11.5K unread rows for a
+// single trainer on prod) — pure feed noise with no per-item action.
+const HIDDEN_TYPES: ReadonlySet<string> = new Set([NotificationType.TA_CHAIN_CREATED])
+
+// Known types with no dedicated tab — fetched for and rendered
+// generically in the "other" tab.
+const KNOWN_MISC_TYPES: string[] = [
+  NotificationType.TAG_ASSIGNED,
+  NotificationType.TAG_REMOVED,
+  NotificationType.TAG_EXPIRED,
+  NotificationType.CORRECTION_TASK_COMPLETED,
+  NotificationType.CORRECTION_TASK_RETURNED,
+  NotificationType.FEEDBACK_RECEIVED,
+  NotificationType.FEEDBACK_REPLIED,
+  NotificationType.SCORECARD_SENT,
+  NotificationType.SCORE_DROP_DETECTED,
+  NotificationType.SCORE_GROWTH_DETECTED,
+  NotificationType.LEGAL_TASK_DUE_TOMORROW,
+  NotificationType.LEGAL_TASK_DUE_TODAY,
+  NotificationType.DRILL_COMPLETED,
+  NotificationType.DRILL_CONFIRMED,
+  NotificationType.DRILL_RETURNED,
+  NotificationType.DRILL_OVERDUE,
+]
+
+// Read-history window for the "Прочитані" tab.
+const READ_HISTORY_DAYS = 30
+
+// ─── Session cache of unknown types ever seen unread ─────────────
+// /unread/count's by_type only reports UNREAD types, so the moment an
+// unknown type is marked read (e.g. «Позначити як прочитані») it
+// vanishes from by_type — and without this cache it would drop out of
+// the misc/read fetches, hiding its trail all over again. Module-level
+// so it survives bell remounts within the session. Known trade-off: in
+// a NEW session an unknown type that is already fully read is not
+// discoverable (the backend has no "distinct read types" endpoint), so
+// its history resurfaces only once the type shows up unread again.
+const seenUnknownTypesStore = {
+  types: [] as string[],
+  listeners: new Set<() => void>(),
+  add(freshTypes: string[]) {
+    const added = freshTypes.filter((notifType) => !this.types.includes(notifType))
+    if (added.length === 0) return
+    this.types = [...this.types, ...added]
+    this.listeners.forEach((listener) => listener())
+  },
+  subscribe: (listener: () => void) => {
+    seenUnknownTypesStore.listeners.add(listener)
+    return () => seenUnknownTypesStore.listeners.delete(listener)
+  },
+  getSnapshot: () => seenUnknownTypesStore.types,
+}
+
+function useSeenUnknownTypes(unknownUnreadKey: string): string[] {
+  useEffect(() => {
+    if (unknownUnreadKey !== '') {
+      seenUnknownTypesStore.add(unknownUnreadKey.split(','))
+    }
+  }, [unknownUnreadKey])
+  return useSyncExternalStore(seenUnknownTypesStore.subscribe, seenUnknownTypesStore.getSnapshot)
+}
 
 function EmptyState({ label }: { t: TFunction; label: string }) {
   return (
@@ -245,33 +351,93 @@ export function NotificationBell() {
   const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
+  const [isOpen, setIsOpen] = useState(false)
+
+  // Tab state — Tasks is the default (operators' most-frequent action).
+  const [activeTab, setActiveTab] = useState<Tab>('tasks')
+
   const { data: taskNotifData } = useNotifications({
     page: 1,
     page_size: 200,
-    type: [NotificationType.TASK_OVERDUE, NotificationType.CORRECTION_TASK_OVERDUE],
+    type: TASK_TAB_TYPES,
   })
   const { data: otherNotifData } = useNotifications({
     page: 1,
     page_size: 50,
-    type: [
-      NotificationType.PAYMENT_PENDING,
-      NotificationType.INCOMING_CALL,
-      NotificationType.CALLBACK_REQUESTED,
-      NotificationType.RR_PAYMENT_DUE,
-      NotificationType.UBKI_FAILURE_ALERT,
-      NotificationType.UBKI_CONNECTION_DOWN,
-      NotificationType.UBKI_DAILY_SUMMARY,
-    ],
+    type: NON_TASK_TAB_TYPES,
   })
   const { data: unreadData } = useUnreadCount()
+
+  // Badge = unread of VISIBLE types only. /unread/count has no type
+  // filter, but returns per-type counts — sum them minus the hidden
+  // (never-rendered) types so the badge always reconciles with what the
+  // popup can actually show.
+  const byType = unreadData?.by_type
+  const count = byType
+    ? Object.entries(byType).reduce(
+        (sum, [notifType, typeCount]) =>
+          HIDDEN_TYPES.has(notifType) ? sum : sum + (typeCount || 0),
+        0
+      )
+    : (unreadData?.total ?? 0)
+
+  // "Other" tab types: every known-but-untabbed type PLUS any type the
+  // backend reports unread that the frontend doesn't know yet. The
+  // dynamic part is what guarantees future types surface (generically)
+  // instead of silently inflating the badge.
+  const tabAssignedTypes = new Set<string>([
+    ...TASK_TAB_TYPES,
+    ...NON_TASK_TAB_TYPES,
+    ...TRAINING_TAB_TYPES,
+    ...HIDDEN_TYPES,
+  ])
+  const unknownUnreadTypes = Object.keys(byType ?? {}).filter(
+    (notifType) => !tabAssignedTypes.has(notifType) && !KNOWN_MISC_TYPES.includes(notifType)
+  )
+  const unknownUnreadKey = unknownUnreadTypes.join(',')
+  const seenUnknownTypes = useSeenUnknownTypes(unknownUnreadKey)
+  const miscTypes = [
+    ...new Set([...KNOWN_MISC_TYPES, ...unknownUnreadTypes, ...seenUnknownTypes]),
+  ].sort()
+
+  // Secondary tabs fetch on open only (no background polling for them).
+  const { data: trainingNotifData } = useNotifications(
+    { page: 1, page_size: 50, type: TRAINING_TAB_TYPES },
+    { enabled: isOpen }
+  )
+  const { data: miscNotifData } = useNotifications(
+    { page: 1, page_size: 50, type: miscTypes },
+    { enabled: isOpen }
+  )
+  // Read history — GET /notifications?read=true (records are never
+  // deleted on mark-as-read, only flagged), windowed to the last 30 days
+  // client-side. Fetched only while the tab is shown.
+  //
+  // The fetch MUST be type-scoped (``type`` is a repeatable query param,
+  // Notification.type.in_ on the backend): the backend sorts created_at
+  // DESC and pages server-side, so an unscoped page 1×100 gets swallowed
+  // by the noisiest hidden type — ta_chain_created is 11.5K rows for a
+  // single trainer on prod, and «Позначити як прочитані» flips them all
+  // to read at once. The client-side HIDDEN_TYPES filter would then
+  // render the tab almost empty, collapsing the 30-day window to hours —
+  // exactly the lost-trail scenario this tab exists to prevent.
+  const readHistoryTypes = [
+    ...new Set([...TASK_TAB_TYPES, ...NON_TASK_TAB_TYPES, ...TRAINING_TAB_TYPES, ...miscTypes]),
+  ].sort()
+  const { data: readNotifData, dataUpdatedAt: readFetchedAt } = useNotifications(
+    { page: 1, page_size: 100, read: true, type: readHistoryTypes },
+    { enabled: isOpen && activeTab === 'read' }
+  )
+
   const dismissMutation = useDismissNotification()
   const markAllReadMutation = useMarkAllAsRead()
 
   const taskNotifs = taskNotifData?.items ?? []
   const otherNotifs = otherNotifData?.items ?? []
-  const count = unreadData?.total ?? 0
+  const trainingNotifs = trainingNotifData?.items ?? []
+  const miscNotifs = miscNotifData?.items ?? []
+  const readNotifs = readNotifData?.items ?? []
 
-  const [isOpen, setIsOpen] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
   const prevCountRef = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -313,10 +479,6 @@ export function NotificationBell() {
 
   const hasNotifications = count > 0
 
-  // Tab state — Tasks / Starred / Pending Payments / Inbound Calls.
-  // Tasks-tab default matches operators' most-frequent action.
-  const [activeTab, setActiveTab] = useState<Tab>('tasks')
-
   // Per-tab filtered slices. Task-based tabs read from ``taskNotifs``
   // (the dedicated 200-cap fetch) so the per-user task cap is fully
   // exposed; non-task tabs read from ``otherNotifs`` (the 50-cap fetch
@@ -334,6 +496,17 @@ export function NotificationBell() {
       n.type === NotificationType.UBKI_FAILURE_ALERT ||
       n.type === NotificationType.UBKI_CONNECTION_DOWN ||
       n.type === NotificationType.UBKI_DAILY_SUMMARY
+  )
+  const trainingTabItems = trainingNotifs
+  // Defensive re-filter: the misc fetch already excludes hidden types
+  // server-side, but never let a hidden type slip into the panel.
+  const miscTabItems = miscNotifs.filter((n) => !HIDDEN_TYPES.has(n.type))
+  // "Now" for the 30-day window = the fetch timestamp (render must stay
+  // pure; the cutoff naturally advances with every refetch of the tab).
+  const readCutoffMs = readFetchedAt - READ_HISTORY_DAYS * 86_400_000
+  const readTabItems = readNotifs.filter(
+    (n) =>
+      !HIDDEN_TYPES.has(n.type) && new Date(n.read_at ?? n.created_at).getTime() >= readCutoffMs
   )
 
   const markAsReadMutation = useMarkAsRead()
@@ -470,10 +643,13 @@ export function NotificationBell() {
             tabCounts={{
               tasks: tasksTabItems.length,
               starred: starredTabItems.length,
+              training: trainingTabItems.length,
               payments: paymentsTabItems.length,
               calls: callsTabItems.length,
               rrPayments: rrPaymentsTabItems.length,
               ubki: ubkiTabItems.length,
+              other: miscTabItems.length,
+              read: readTabItems.length,
             }}
             t={t}
           />
@@ -574,6 +750,60 @@ export function NotificationBell() {
                     notification={n}
                     onNotificationClick={handleNotificationClick}
                     onDismiss={handleDismiss}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'training' &&
+              (trainingTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.training', 'No training notifications')}
+                />
+              ) : (
+                trainingTabItems.map((n) => (
+                  <TrainingNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNotificationClick={handleNotificationClick}
+                    onDismiss={handleDismiss}
+                    userTimezone={userTimezone}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'other' &&
+              (miscTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.other', 'No other notifications')}
+                />
+              ) : (
+                miscTabItems.map((n) => (
+                  <GenericNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNotificationClick={handleNotificationClick}
+                    onDismiss={handleDismiss}
+                  />
+                ))
+              ))}
+
+            {/* Read history — the last 30 days of read notifications.
+                Deliberately non-destructive: no dismiss button, so
+                "Позначити як прочитані" can never erase the trail again. */}
+            {activeTab === 'read' &&
+              (readTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.read', 'No read notifications')}
+                />
+              ) : (
+                readTabItems.map((n) => (
+                  <GenericNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNotificationClick={handleNotificationClick}
                   />
                 ))
               ))}
@@ -999,6 +1229,160 @@ function RRPaymentNotificationItem({
       >
         <Icons.Cancel01 size={12} strokeWidth={2} />
       </button>
+    </div>
+  )
+}
+
+// ─── Training notification item ──────────────────────────────────
+// Coaching & training assignments (1-on-1s, courses, drills,
+// correction tasks). 1-on-1 cards surface who/when from metadata when
+// the publisher provided them; every other case falls back to the
+// stored title/body so the card is never blank.
+
+function TrainingNotificationItem({
+  notification: n,
+  onNotificationClick,
+  onDismiss,
+  userTimezone,
+}: {
+  notification: NotificationItem
+  onNotificationClick: NotificationClickFn
+  onDismiss: DismissFn
+  userTimezone?: string
+}) {
+  const { t, i18n } = useTranslation('common')
+  const meta = n.metadata
+  const typeLabel = t(`notificationBell.trainingTypes.${n.type}`, { defaultValue: '' })
+  const isOneOnOne =
+    n.type === NotificationType.ONE_ON_ONE_SCHEDULED ||
+    n.type === NotificationType.ONE_ON_ONE_REMINDER
+  const trainerName =
+    typeof meta.trainer_name === 'string'
+      ? meta.trainer_name
+      : typeof meta.trainer_full_name === 'string'
+        ? meta.trainer_full_name
+        : undefined
+  const scheduledAt = typeof meta.scheduled_at === 'string' ? meta.scheduled_at : undefined
+  const durationMinutes =
+    typeof meta.duration_minutes === 'number' ? meta.duration_minutes : undefined
+  return (
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
+      <button
+        type="button"
+        onClick={(e) => onNotificationClick(e, n.id, n.read)}
+        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left"
+      >
+        <div className="flex flex-wrap items-center gap-1.5 pr-5">
+          {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          {typeLabel && (
+            <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
+              {typeLabel}
+            </span>
+          )}
+        </div>
+        {isOneOnOne && trainerName && (
+          <p className="text-foreground line-clamp-1 w-full min-w-0 text-xs">
+            {t('notificationBell.training.withTrainer', { name: trainerName })}
+          </p>
+        )}
+        {isOneOnOne && scheduledAt ? (
+          <div className="text-foreground flex items-center gap-1">
+            <Icons.Clock01 size={11} strokeWidth={1.5} />
+            <span className="text-[11px]">
+              {formatDateTime(scheduledAt, userTimezone, i18n.language)}
+              {durationMinutes !== undefined && (
+                <span className="text-muted-foreground ml-1">
+                  · {t('notificationBell.training.durationMin', { count: durationMinutes })}
+                </span>
+              )}
+            </span>
+          </div>
+        ) : (
+          n.body && (
+            <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+          )
+        )}
+        <span className="text-muted-foreground text-[11px]">
+          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label={t('notificationBell.dismissAria')}
+        onClick={(e) => onDismiss(e, n.id)}
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Generic notification item ───────────────────────────────────
+// Fallback card for any type without a dedicated renderer — including
+// backend types this build doesn't know yet. Guarantees a new type can
+// never inflate the badge while staying invisible in the popup. Also
+// used (without dismiss) by the read-history tab.
+
+function GenericNotificationItem({
+  notification: n,
+  onNotificationClick,
+  onDismiss,
+}: {
+  notification: NotificationItem
+  onNotificationClick: NotificationClickFn
+  onDismiss?: DismissFn
+}) {
+  const { t } = useTranslation('common')
+  const meta = n.metadata
+  const body = (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5 pr-5">
+        {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+        <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title || n.type}</p>
+      </div>
+      {n.body && (
+        <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs whitespace-normal">
+          {n.body}
+        </p>
+      )}
+      <span className="text-muted-foreground text-[11px]">
+        {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
+      </span>
+    </>
+  )
+  const cardClassName = 'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left'
+  return (
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
+      {meta.client_id ? (
+        <Link
+          to={clientHref(meta.client_id)}
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          onAuxClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </button>
+      )}
+      {onDismiss && (
+        <button
+          type="button"
+          aria-label={t('notificationBell.dismissAria')}
+          onClick={(e) => onDismiss(e, n.id)}
+          className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          <Icons.Cancel01 size={12} strokeWidth={2} />
+        </button>
+      )}
     </div>
   )
 }

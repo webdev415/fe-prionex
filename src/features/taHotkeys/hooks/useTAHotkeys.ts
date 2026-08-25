@@ -48,6 +48,10 @@ export function useTAHotkeyBindings(): Record<string, number> {
     // it. A longer window than the app default therefore costs nothing and
     // saves a request each time the client card remounts, which is every client
     // an operator opens. (Focus refetching is already off globally in main.tsx,
+    // yet — KAN-975 adds that screen and will invalidate this key from it. A
+    // longer window than the app default therefore costs nothing and saves a
+    // request each time the client card remounts, which is every client an
+    // operator opens. (Focus refetching is already off globally in main.tsx,
     // so that is not what this is for.)
     staleTime: 5 * 60 * 1000,
   })

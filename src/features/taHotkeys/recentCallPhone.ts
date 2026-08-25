@@ -49,7 +49,22 @@ export function normalizePhoneKey(value: string): string {
 export interface RecentCallLike {
   customer_number: string
   ended_at?: string | null
+  /**
+   * Which extension handled the call. Optional because the switchboard does not
+   * always attribute one — see ``isKnownExtension``.
+   */
+  agent_extension?: string | null
 }
+
+/**
+ * The switchboard reports ``'000'`` for a call it could not attribute to an
+ * extension, so that value means "unknown", not "extension zero". Treating it
+ * as a real extension would make every unattributed call belong to nobody and
+ * compare unequal to everybody — which is the right answer here, but only by
+ * accident, and the opposite answer wherever this is reused.
+ */
+const isKnownExtension = (value: string | null | undefined): value is string =>
+  !!value && value !== '000'
 
 /**
  * The client contact matching the most recent call, or `null`.
@@ -73,19 +88,38 @@ export interface RecentCallLike {
  * * A timestamp slightly in the future still counts. Server and browser clocks
  *   disagree by seconds routinely, and treating that as "not yet ended" would
  *   drop exactly the just-hung-up call this feature exists for.
+ * * Only calls this operator handled count, when ``agentExtension`` says who
+ *   that is. A colleague may have spoken to the same client inside the window,
+ *   and pre-selecting their number into this operator's log is precisely the
+ *   silent wrong answer the window exists to avoid — the operator did not
+ *   choose it and has no reason to check it. A call the switchboard did not
+ *   attribute cannot be shown to be theirs, so it is skipped too.
+ * * When ``agentExtension`` is absent the filter is skipped entirely rather
+ *   than matching nothing: operators with no configured extension would
+ *   otherwise lose the feature without being told why.
  */
 export function resolveRecentCallPhone<T extends { number: string }>(params: {
   calls: RecentCallLike[]
   phones: T[]
   nowMs: number
   windowMinutes?: number
+  /** This operator's extension, when known — see the note above. */
+  agentExtension?: string | null
 }): T | null {
-  const { calls, phones, nowMs, windowMinutes = RECENT_CALL_WINDOW_MINUTES } = params
+  const {
+    calls,
+    phones,
+    nowMs,
+    windowMinutes = RECENT_CALL_WINDOW_MINUTES,
+    agentExtension,
+  } = params
+  const restrictToAgent = isKnownExtension(agentExtension)
   const windowMs = windowMinutes * 60_000
 
   let best: { endedMs: number; number: string } | null = null
   for (const call of calls) {
     if (!call.ended_at || !call.customer_number) continue
+    if (restrictToAgent && call.agent_extension !== agentExtension) continue
 
     const endedMs = Date.parse(call.ended_at)
     if (Number.isNaN(endedMs)) continue
