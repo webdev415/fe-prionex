@@ -851,59 +851,80 @@ text into `deferred-work.md` finding 8's closure note.
 - [x] 1.1 **Done, own commit, pushed first.** Flipped `sprint-status.yaml`'s
       `5-6-exercise-the-full-release-cycle-on-an-empty-release` from `ready-for-dev` to
       `in-progress`, and this story's own `Status:` field to `in-progress` too.
-- [ ] 1.2 Confirm the gate: `5-5-establish-the-release-validation-checklist` reads **`done`**.
-      ✅ **Satisfied at story-writing time** — PR #85 merged as `a99ccd44` while this context was
-      being written, flipping 5.5 to `done` and amending `RVC-v1`'s executability lines in place.
-      Stories 5.1-5.5 are all `done`, so the epic's AC1 (*"Given all preceding Epic 5 stories are
-      complete"*) holds. Re-confirm rather than assume; if anything reopens 5.5, **HALT and say so**.
-- [ ] 1.3 Rebase this branch onto fresh `origin/main` and re-read `docs/release-validation-checklist.md`
-      **from the rebased tree**, not from memory. This context was already rebased once, from
-      `0b4fdd99` to `a99ccd44`, when PR #85 merged mid-session — and that merge amended nine of
-      `RVC-v1`'s executability lines in place. **The marker, the aggregation rule and the note format
-      were unchanged by it, so §3's determination survived**; a future amendment might not be so
-      kind. Re-read before quoting.
-- [ ] 1.4 🔴 **Send the F9 ask on day one — this is the longest-lead item in the story.** Ask Oleg,
-      via the coordinator, for: **an account on PRE-PROD whose role lacks at least one dashboard
-      route's permission, plus its credentials**, and for the normal operator credentials `RVC-v1`
-      also requires. State plainly that without it F9 is `BLOCKED`, the aggregate is `fail`, and the
-      registry write leg cannot run (§3). Mark `PENDING (owner: Oleg)`; do not block Task 2 on it.
-- [ ] 1.5 Declare the run ledger (§11) **before any dispatch**, with the baseline from
-      `select max(id), count(*), now() at time zone 'utc' from action_run where repo_id=16;`.
-      Mark the query `PENDING (owner: coordinator)` if the dev agent has no psql channel.
-- [ ] 1.6 Record the next free `D` number, verified with `git fetch --all` and a `git grep` for
-      `^## D[0-9]` across **every** ref, not just `main` — `D35` is held by Story 4.9 on an unmerged
-      branch and *"there is a `D23` collision in this project's history precisely because someone did
-      not"* check. Needed only if Path B is taken.
+- [x] 1.2 **Re-confirmed, this session, not assumed.** `sprint-status.yaml:1135` reads
+      `5-5-establish-the-release-validation-checklist: done`; `spec-5-5-...md`'s own frontmatter
+      reads `status: 'done'`. Stories 5.1-5.5 all `done`. Nothing reopened 5.5. No HALT.
+- [x] 1.3 **Confirmed already based on latest `origin/main` — no rebase needed.**
+      `git merge-base --is-ancestor origin/main HEAD` → true; `git merge-base HEAD origin/main`
+      == `a99ccd44` == `git rev-parse origin/main`. Re-read `docs/release-validation-checklist.md`
+      from this tree (not memory): confirms the amended text — "Fully executable as of this
+      measurement: F1, F2, F3, F4, F5, F6, F7, F8, F10, F11, F12" and F9's own
+      `Executability: BLOCKED — owner: Oleg (no restricted-role account)` — one owner, matching
+      §3's determination exactly. Marker, aggregation rule and note format unchanged.
+- [ ] 1.4 `PENDING (owner: Oleg)`. 🔴 **Sent as part of Task 2's single consolidated package**,
+      per the coordinator's explicit instruction not to drip requests to Oleg one at a time — the F9
+      account ask, the normal operator credentials, F4's four accounts, and F5-F12's fixtures all go
+      in the one message built at Task 2.2. Not blocking Task 2's own construction.
+- [x] 1.5 **Declared before any dispatch.** `ssh root@10.67.0.1`, own psql channel (no coordinator
+      needed for this read): `select max(id), count(*), now() at time zone 'utc' from action_run
+      where repo_id=16;` → `max(id)=1297, count=526, now()=2026-08-25T11:31:26.916231Z`. **Baseline:
+      id 1297. Declared floor 11, ceiling 17** (§11), above this baseline, disposition **OPEN** —
+      closes only against a post-merge query (retro-D4).
+- [x] 1.6 **Checked now, zero-cost, ready if Path B is taken.** `git fetch --all`, then
+      `git grep -n '^## D[0-9]' <every ref under refs/remotes/origin> -- docs/migration-decisions.md`
+      → highest is `D39` (`main`, Story 5.5's own D39). `D35` remains held by
+      `story-4-9/pr-1-context`, within range, not a collision. **Next free number: D40.**
 
 ### Task 2 — 🔴 Fixture readiness, and the two decisions that gate everything (AC: 5) — **costs 0 runs**
 
 **The highest-value task in this story.** `RVC-v1` forbids partial runs, so a fixture discovered
 missing at F7 costs the entire session and, under AC9, a rebuild.
 
-- [ ] 2.1 Build the fixture matrix: one row per item F1…F12, columns `what it needs` / `does it
-      exist on PRE-PROD` / `who confirms` / `verdict if absent`. Populate F4's row with all four of
-      its separately-provisioned accounts (2FA-enabled, locked, IP-whitelist-refused,
-      forced-password-change) — F4 has **no degraded wording**, so a missing fixture makes the whole
-      item `BLOCKED`, not partially passed.
-- [ ] 2.2 Take the matrix to Oleg through the coordinator, in one message, and get one answer per
-      row. Everything absent becomes `BLOCKED` with **Oleg**, or whoever genuinely owns it, named —
-      never a trigger condition (Prohibition 19).
-- [ ] 2.3 🚨 Get the side-effect confirmations in writing (Prohibition 8): is telephony (F7),
-      SMS/messaging (F10) and EasyPay (F12) in a **non-production mode** on PRE-PROD? An unanswered
-      row is `BLOCKED` with a real owner — which is legal and honest — not an item executed anyway.
-- [ ] 2.4 Route F2 criterion 5's repository-variable read to the coordinator:
-      `vars.VITE_OPERATOR_PHONE_URL_PREPROD`. The decided value for preprod is **EMPTY** (Oleg,
-      2026-08-17), so the expected observation is no `phone.` URL in the bundle and no
-      operator-phone panel in the UI. `RVC-v1`: *"check the variable, do not guess"* — and if the
-      read is unavailable, F2 is `BLOCKED — owner: whoever grants repository-settings read access`,
-      because F2 carries no degraded wording either. Mark `PENDING (owner: coordinator)`.
-- [ ] 2.5 **Compute the reachable ceiling from the matrix and write it down before anything is
-      dispatched**, exactly as `retro-E5` requires discriminators to be named before they run: how
-      many full passes are reachable, which items are `BLOCKED` and by whom, and therefore which of
-      §3.2's paths this rehearsal is on. **If the ceiling is below 12, do not "see how it goes" —
-      escalate the path decision to Oleg now**, while it is still free.
-- [ ] 2.6 Schedule the validation session against the no-touch window: no dispatch and no live lock
-      holder across **01:45–02:30 UTC**, next tick **2026-08-30**.
+- [x] 2.1 **Fixture matrix built** (F4's four separately-provisioned accounts populated as its own
+      row, since F4 has no degraded wording and a missing fixture blocks the whole item):
+
+| Item | What it needs | Exists on PRE-PROD? | Who confirms | Verdict if absent |
+|---|---|---|---|---|
+| P1 | Nothing — dev agent reads stand state directly | N/A | dev agent | N/A |
+| P2 | Nothing — dev agent reads the served bundle directly | N/A | dev agent | N/A |
+| F1 | Nothing — unauthenticated shell load | N/A | joint (dev agent + Oleg) | N/A |
+| F2 | Read access to `vars.VITE_OPERATOR_PHONE_URL_PREPROD` | UNKNOWN | coordinator (Task 2.4) | `BLOCKED — owner: whoever grants repository-settings read access` |
+| F3 | A normal operator session (to test the 401/stale-token half) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no operator account)` |
+| F4 | (1) normal operator creds; (2) an account with 2FA enabled; (3) a locked account; (4) a login attempt from outside the IP whitelist (a way to trigger it); (5) an account flagged for forced password change | UNKNOWN, all five | Oleg | `BLOCKED — owner: Oleg (fixture accounts not provisioned)`, whole item — F4 has no degraded wording |
+| F5 | Clients with real data on PRE-PROD (debt summary, activity, payment history all populated) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no client data)` |
+| F6 | A client suitable for a full payment lifecycle: record → edit → cancel → verify → receipt | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no payment-test client)` |
+| F7 | Telephony provisioned (dialer socket reachable) + a real phone/softphone that can ring in/out | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (telephony not provisioned)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing the outbound call regardless.** |
+| F8 | An import file with a deliberately malformed row; valid test data for all seven bulk-op pages (operator assignment, tag assignment, payment import, write-off import, reversal import, sale notes import, document import) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no import fixtures)` |
+| F9 | An account whose role lacks at least one dashboard route's permission | UNKNOWN — the ask this story exists to send | Oleg | `BLOCKED — owner: Oleg (no restricted-role account)` — already the known state per §3 |
+| F10 | Messaging/SMS integrations actually configured on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (messaging not configured)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real SMS send regardless.** |
+| F11 | AI assistant integration configured (keys/quota) on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (AI assistant not configured)` |
+| F12 | EasyPay reachable from PRE-PROD | Render half: yes (no fixture). Validate/submit half: UNKNOWN | Oleg | Render → executable regardless. Validate/submit → `BLOCKED — owner: Oleg (EasyPay reachability unconfirmed)` if unconfirmed. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real payment submission regardless.** |
+
+- [ ] 2.2 `PENDING (owner: Oleg)`. **Matrix sent to Oleg through the coordinator, in the single
+      consolidated package below (F9 account + operator creds + F4's four accounts + F5-F12
+      fixtures + sandbox confirmations + the F2 variable read), 2026-08-25.** Awaiting one answer
+      per row. Nothing above is assumed present; every `UNKNOWN` stays `UNKNOWN`, not defaulted to
+      `BLOCKED` with a trigger-condition owner — Oleg is the real named owner for each, per
+      Prohibition 19, until he answers otherwise.
+- [ ] 2.3 `PENDING (owner: Oleg)`. **Sandbox confirmation requested in the same package** (F7
+      telephony, F10 SMS/messaging, F12 EasyPay) — Prohibition 8 in force: none of F7's outbound
+      call, F10's campaign send, or F12's payment submission executes without it, regardless of
+      whether the fixture itself (2.1) exists.
+- [x] 2.4 **Routed to the coordinator in the same package.** `vars.VITE_OPERATOR_PHONE_URL_PREPROD`
+      read requested; decided value for preprod is EMPTY (Oleg, 2026-08-17) so the expected
+      observation is no `phone.` URL / no operator-phone panel — the coordinator's read confirms
+      this rather than establishing it fresh. `PENDING (owner: coordinator)`.
+- [x] 2.5 **Ceiling computed now, before anything is dispatched, per retro-E5.** Fixture-independent
+      today: P1, P2, F1 (3 items, no fixture, no external answer needed). F2 pending only the
+      coordinator's cheap variable read (2.4) — expected to resolve `EXECUTABLE` given the known
+      decided value. **F3-F12 (9 of 12) are `UNKNOWN` pending Oleg's answers to 2.1-2.3** — the
+      reachable ceiling **cannot honestly be stated as 12 today**, so per this task's own
+      instruction the path decision is escalated to Oleg now, bundled into the one package below,
+      rather than discovered expensively at dispatch time.
+- [x] 2.6 **Scheduled.** No-touch window: no dispatch, no live lock holder, **01:45–02:30 UTC**,
+      next tick **2026-08-30**. Story opened 2026-08-25 — validation session to be scheduled once
+      Oleg's package answers land, well clear of that window regardless of when in the interim it
+      falls.
 
 ### Task 3 — Zero-dispatch preconditions (AC: 1, 2, 3, 4) — **costs 0 runs**
 
@@ -1290,31 +1311,69 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 ### Debug Log References
 
+- **Task 1.3, `git merge-base` check:** `git merge-base --is-ancestor origin/main HEAD` → true (exit
+  0); `git merge-base HEAD origin/main` == `git rev-parse origin/main` == `a99ccd44c5a39345fa65eb7
+  4e87343b187e129e9`. No rebase needed; branch already sits on latest `main`.
+- **Task 1.5, ledger baseline, `ssh root@10.67.0.1`, own psql channel:**
+  `select max(id), count(*), now() at time zone 'utc' from action_run where repo_id=16;` →
+  `1297|526|2026-08-25 11:31:26.916231`.
+- **Task 1.6, D-number check:** `git fetch --all`; `git grep -n '^## D[0-9]' <every ref under
+  refs/remotes/origin> -- docs/migration-decisions.md` → highest hit `D39` (`main`). `D35` held by
+  `story-4-9/pr-1-context`, within range, not a collision. Next free: **D40**.
+
 ### Completion Notes List
 
+1. **Tasks 1-2 executed this session (zero-run, as instructed).** Task 1: story marked
+   `in-progress` (own commit, pushed first, per 1.1's own lesson); 5.5's `done` gate re-confirmed;
+   branch confirmed already based on latest `main` (no rebase needed) and `RVC-v1` re-read from the
+   rebased tree, confirming §3's determination survives verbatim; ledger baseline declared (id
+   1297, floor 11/ceiling 17, OPEN); next free D-number checked (D40, needed only for Path B).
+2. **Task 2 executed in full.** Fixture matrix built for all 12 items (F1-F12) plus P1/P2; only
+   P1, P2 and F1 are fixture-independent today, F2 pending a cheap repository-variable read, and
+   **F3-F12 (9 of 12 items) are `UNKNOWN`, not assumed present** — every unknown routed to Oleg as a
+   real named owner, never a trigger condition (Prohibition 19). The reachable ceiling could not
+   honestly be stated as 12 before this package returns, so the path decision was escalated now
+   rather than discovered expensively at dispatch time — matching Task 2.5's own instruction, and
+   overtaken favourably by the coordinator's message relaying Oleg's Path A decision before this
+   task even finished.
+3. **Oleg's three decisions (relayed by the coordinator, 2026-08-25) recorded in Open Questions
+   #1 and folded into every downstream reference to §3.2, §7 and §9.** Path A is the target; Path
+   B/C remain the documented fallback, not re-litigated.
+4. **Awaiting Oleg's package answers (Task 2.2/2.3, Task 1.4) before Task 3 onward can proceed.**
+   No dispatch has been made. Zero runs spent against the declared ceiling of 17.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/5-6-exercise-the-full-release-cycle-on-an-empty-release.md` — this story file (Tasks 1-2, Open Questions, Dev Agent Record)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-6-...` flipped to `in-progress`
 
 ---
 
 ## Open Questions for Review
 
-1. **The verdict path (§3.2) — Oleg's, and it is the one blocking question.** With the CORS origin
-   fixed and F9 still blocked on a restricted-role account, `RVC-v1` produces `fail` and the recorder
-   writes nothing. Path A (provision the account), Path B (authorise a documented, time-boxed waiver
-   for this one candidate), or Path C (record the honest `fail` and close with epic AC2 unmet and
-   routed)? Task 7.5 escalates with the Execution Log and the composed note attached, so the decision
-   is made against real counts rather than a hypothetical.
-2. **Fixture and sandbox-mode confirmations (§7).** Four items may be blocked for reasons that have
-   nothing to do with CORS, and one of them (F4) needs four separately-configured accounts. Task 2
-   asks for all of it in one message, before anything is dispatched.
-3. **Is `docs/release-regulation.md` the right home for the scope-freeze clause**, or should it wait
-   for Epic 7's Deployment Process document? Veto row 8.
-4. **Should M7's eight recorder branches be forced here after all?** Veto row 10 routes them to
-   Story 6.4; forcing them would cost roughly eight dispatches on top of the repeat reserve.
+1. ✅ **RESOLVED, 2026-08-25 — Oleg's decision, relayed by the coordinator, all three of that
+   message's decision points closed.** (a) **Path A** — Oleg provisions the PRE-PROD restricted-role
+   account for F9; target is 12/12 executable, an honest aggregate `pass`, markers written, epic AC2
+   met in full. The account is awaited via Task 2's own package (below), not asked for separately.
+   (b) **Sandbox** — Oleg will confirm in writing, before F7/F10/F12 are executed, that calls/SMS/
+   payments do not leave the sandbox; Prohibition 8 stays enforced until that confirmation lands.
+   (c) **Regulation** — `docs/release-regulation.md` is written in this story (§9's own autonomous
+   decision), now with Oleg's veto closed rather than open. Path B/Path C remain the documented
+   fallbacks if Path A's account does not materialise in time — not re-litigated, just no longer the
+   default expectation.
+2. ✅ **Folded into the single consolidated package built at Task 2** (F9 account + operator creds +
+   F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read), sent as one
+   message per the coordinator's explicit instruction not to drip requests.
+3. ✅ **RESOLVED by the coordinator's decision #3 above** — `docs/release-regulation.md`, written in
+   this story, Oleg's veto now closed.
+4. **Still open, not this task's to close.** §10(c)'s own decision stands: M7's eight branches are
+   not forced here; routed to Story 6.4 at closeout, per the `deferred-work.md` entry's own required
+   re-owning action.
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Dev-story Tasks 1-2 executed (zero-run).** Story marked `in-progress`. 5.5's `done` gate re-confirmed; branch confirmed already on latest `main` (no rebase needed). Ledger baseline declared: `psql`, `max(id)=1297`, floor 11/ceiling 17, OPEN. Next free D-number checked: D40. Fixture-readiness matrix built for P1/P2/F1-F12 — only P1, P2, F1 fixture-independent; F2 pending a repository-variable read; F3-F12 (9 items) `UNKNOWN`, routed to Oleg with real ownership, never a trigger condition. Oleg's three decisions (Path A for F9, sandbox confirmation required before F7/F10/F12, `docs/release-regulation.md` veto closed), relayed by the coordinator, recorded against Open Questions #1/#2/#3. Single consolidated requirements package composed for Oleg (F9 account + operator creds + F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read) and handed to the coordinator to relay as one message, per explicit instruction not to drip requests. No dispatch made; zero runs spent. |
 | 2026-08-25 | Rebased onto `origin/main` at `a99ccd44` after Story 5.5's closeout (PR #85) merged mid-session. Its independent CORS re-measurement — a fourth channel — agrees with this story's own: eleven of twelve items executable, F9 alone `BLOCKED`, and now on **one** owner (Oleg) rather than two. `RVC-v1`'s marker, aggregation rule and note format are unchanged by that merge, so §3's determination stands verbatim; F9's owner-pair and Path B's quote were rebound to the amended text. |
 | 2026-08-25 | Story created. Context bound against `origin/main` at `0b4fdd99`. CORS fix independently re-verified from this session with a foreign-origin control on both Kongs; the PRE-PROD bundle and every served asset measured directly, correcting `RVC-v1` F2 c1's "3 files" parenthetical and supplying c4's previously-unstated match count. The empty release established by measurement on `main` rather than fabricated. §3 decides the verdict question that `RVC-v1` left to Story 5.6. |
