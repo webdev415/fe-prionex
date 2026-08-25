@@ -1070,38 +1070,81 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 
 ### Task 5 — R2: put the candidate on the stand (AC: 4) — **1 run**
 
-- [ ] 5.1 Coordinator dispatches `deploy-preprod.yml` with `image_tag: sha-<12hex>-preprod` and
-      nothing else. `PENDING (owner: coordinator)`.
-- [ ] 5.2 Record run id, `started`/`stopped`, and any `waiting` time on the
-      `deploy-preprod-fe-prionex-preprod` group separately (run 1229 spent ~60 s there; that is not
-      a hang).
-- [ ] 5.3 Read `action_task_step.status` for both jobs. Confirm `deploy` succeeded and the `e2e`
-      placeholder **ran, printed and exited 0 without gating**. Match step names on a **stable
-      prefix, never the full string** — 4.8's refactor stripped every `(Task N)` suffix.
-- [ ] 5.4 🔴 **Check whether `$GITHUB_STEP_SUMMARY` persisted** (AC13). This is the first dispatch
-      since 5.5 added the writer. Record the answer either way; it closes a standing unknown for free.
-- [ ] 5.5 Confirm from the stand that the running image's `.RepoDigests` contains the candidate
-      digest. Container `.Image` → `docker image inspect <id> --format '{{range .RepoDigests}}{{.}} {{end}}'`.
-      🔴 A container has no `.RepoDigests`; a bare `{{.RepoDigests}}` renders `[]` for an empty slice,
-      which is non-empty. Both are recorded defects.
+- [x] 5.1 **Done — run 1310, SUCCESS (~53 s).** Coordinator dispatched `deploy-preprod.yml`,
+      `image_tag: sha-a99ccd44c5a3-preprod`, `simulate_bad_credential: false`, `hold_lock_seconds: 0`
+      — nothing else.
+- [x] 5.2 **Recorded, own psql channel.** `action_run` `1310`: `started` `2026-08-25T13:29:26Z`,
+      `stopped` `2026-08-25T13:30:19Z`, **53 s total**. Deploy task `11046`: `13:29:48`→`13:30:12`
+      (24 s). `e2e` task `11048`: `13:30:16`→`13:30:19` (3 s). The 22 s between run start and the
+      deploy task's own start is accounted for by the preceding hold-lock/preflight/clone-test/
+      digest-resolve steps (job list confirms all four ran, all `status=1`) — **no unexplained gap,
+      no evidence of `waiting` on the concurrency group** this time (contrast run 1229's ~60 s,
+      which was a real observed wait; this run shows none).
+- [x] 5.3 **Read, own psql channel — every step, both jobs, all green (one correct skip).**
+      Deploy task `11046`, 25 steps, matched by stable prefix: `status=1` for all of them **except**
+      step 21 (*"Restore the previous digest if this job failed after down"*) — `status=4`
+      (skipped), correctly, since the job did not fail. Confirms every guard passed live: step 15
+      *"Poll health status"*, step 16 *"Assert the healthy container is THIS project's, anchored"*,
+      step 18 *"AC6 — running image matches the resolved digest"*, step 19 *"Kong alias guard"* —
+      all `status=1`. `e2e` task `11048`'s one step, *"State why this job exists and that it proves
+      nothing"* — `status=1`, ran, did not gate (job 11730's own status is `1`, and the run overall
+      is `1`).
+- [x] 5.4 🔴 **Checked, still genuinely unverified — named honestly, not defaulted either way.**
+      Searched `/data/gitea` on the host for anything summary-shaped (none), the DB schema for any
+      summary-shaped table (only the unrelated `commit_status_summary`, same as every prior check
+      this project has made), the runner container's own logs around the job's execution window
+      (`docker logs forgejo-runner-fe-prionex --since 30m`, no `summary`/`11048`/`1310` hits), and
+      any leftover task-shaped file under `/data` (none). The step itself succeeded (`status=1`,
+      §5.3) and its log is not yet archived (`log_in_storage=f` for task `11048`, consistent with
+      this instance's own established pattern) to read its literal echo output. **Persistence
+      remains unverified — not proven present, not proven absent** — closing this exactly the way
+      it has been closed every prior time it was checked, rather than guessing.
+- [x] 5.5 **Confirmed — new digest running, correctly.** `docker inspect fe-prionex-preprod
+      --format '{{.Image}}'` → `sha256:a62e868786…`; `docker image inspect
+      sha256:a62e868786… --format '{{range .RepoDigests}}{{.}} {{end}}'` →
+      `git.crm-prionex.com/crm/fe-prionex@sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2`
+      — matches R1's own digest exactly, read via `.RepoDigests` (the manifest digest), never the
+      bare `.Image` (the config digest) — the two recorded defects this task names are both avoided
+      here. **Workspace-suffix confirmed too**: `com.docker.compose.project.working_dir =
+      /workspace/CRM/fe-prionex/stand-checkout-1310` — matches run `1310` exactly, confirming the
+      checkout this deploy actually used, not a stale one.
 
 ### Task 6 — Execute `RVC-v1`, once, end to end (AC: 5) — **0 runs, and the story's longest leg**
 
-- [ ] 6.1 **P1, by hand, at the start.** Container health `healthy` **and** running-image
-      `.RepoDigests` contains the digest `image_tag` resolves to, both true **at this moment**. Record
-      the UTC minute — it becomes the Execution Log section's heading and its `Started (UTC)`.
-      **If P1 fails: stop. Do not execute F1-F12.** Use the precondition-failure note shape and the
-      short template.
-- [ ] 6.2 **P2.** Hard reload, fetch the served `assets/index-*.js`, extract the single quoted
-      13-digit integer, decode as ms epoch, require **at or after R1's `started`**. §2 shows the
-      commands and a worked current value.
-- [ ] 6.3 **F1**, joint: dev agent `curl`s every asset referenced by `index.html` for `200` plus
-      `ssl_verify_result=0`; Oleg confirms padlock, no interstitial, login screen renders, and no
-      uncaught console error outside the exempted `api.crm.preprod.crm-prionex.online` family.
-- [ ] 6.4 **F2**, dev agent, all five criteria, per-asset `grep -cF`. 🔴 **Do not fail c1 because the
-      count is not "3 files"** — that parenthetical was measured from a local `npx vite build` and the
-      served bundle has it in one file (§2). The criterion is presence. Record the observed count as
-      evidence. c5 uses Task 2.4's variable read.
+- [x] 6.1 **P1 — PASS.** Executed by hand, own SSH channel, immediately after R2's own
+      verification (Task 5.5): `docker inspect fe-prionex-preprod --format
+      '{{.State.Health.Status}}'` → `healthy`. Running image `.RepoDigests` →
+      `sha256:a62e868786…` — contains the candidate digest exactly (Task 5.5). Both true at
+      **2026-08-25T13:35:33Z** (this check, immediately post-R2). **`Started (UTC)` for the
+      Execution Log heading: `2026-08-25T13:35Z`** (the minute this P1 check itself completed —
+      the true start of the continuous validation session, distinct from R2's own earlier
+      timestamp).
+- [x] 6.2 **P2 — PASS.** Hard-fetched (fresh `curl`, no cache) `assets/index-q_lCzNRu.js` (the
+      asset actually referenced by the served `index.html` at this moment — confirmed by fetching
+      `index.html` fresh first, not reusing a stale asset name). Extracted the single quoted
+      13-digit integer: `"1787664321138"`. Decoded as ms epoch → `2026-08-25T13:25:21Z`. Required
+      **at or after R1's `started`** (`2026-08-25T13:23:29Z`, Task 4.2) — **`13:25:21Z ≥
+      13:23:29Z` — passes**, decoded value is ~112 s after R1's start, consistent with the bundle
+      config being read partway through the ~151 s build.
+- [x] 6.3 **F1 — dev-agent half done, PASS; Oleg's half still pending (browser checklist below).**
+      All 8 assets referenced by `index.html` (`index-q_lCzNRu.js`, `state-BWvvj1Ko.js`,
+      `react-D76_0ipt.js`, `i18n-Cm_nhCcZ.js`, `misc-B9bL8Hs2.js`, `ui-uJMPUR_E.js`,
+      `forms-Bj-jX80p.js`, `index-B6SPVtuY.css`, plus `prionex-logo-tiUamW4S.svg`) → **9/9 `200`**.
+      `curl -o /dev/null -w '%{http_code} %{ssl_verify_result}'` on `/` → `200 0`. Padlock/
+      interstitial/console-error observation is Oleg's own half — see the compact checklist handed
+      to the coordinator.
+- [x] 6.4 **F2 — PASS, all five criteria, measured fresh against THIS candidate's own served
+      bundle, not the story's earlier §2 worked example.**
+      1. PRE-PROD API base (`https://api.crm.preprod.crm-prionex.online`) — present, **1 file**
+         (`index-q_lCzNRu.js`). 🔴 Not failed for being "1" rather than "3 files" — presence is the
+         criterion, per this task's own instruction and §2's own correction.
+      2. Forbidden strings, all absent across all 8 code/style assets: `api.crm.dev.crm-prionex.online`
+         → 0 files; `http://localhost:8000` → 0 files; `http://localhost:8005` → 0 files.
+      3. Literal expected WS value `wss://api.crm.preprod.crm-prionex.online` — present, 1 file.
+      4. Build epoch — present and validates at-or-after R1's start (Task 6.2, same measurement).
+      5. Operator-phone: `phone.crm` → 0 files, `http://localhost:5173` → 0 files — matches the
+         decided-EMPTY value for preprod (Task 2.4's variable read, re-confirmed here by absence in
+         the actual served bundle, not merely by the repository-variable read alone).
 - [ ] 6.5 **F3 through F12**, executed by Oleg in a browser, transcribed verbatim by the dev agent,
       with **his** name in `Executed by:`. Each item gets exactly one of the four verdicts. Every
       `pass (degraded)` carries the exact words its item's text requires; every `BLOCKED` names a real
@@ -1626,6 +1669,20 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
     independent one). `action_run` `started`/`stopped` read directly: 151 s. Bug report for
     `CRM/api-prionex` composed and handed to the coordinator to relay, maximally self-contained
     (root cause, live confirmation, git-blame provenance, suggested fix). R2's body sent next.
+12. **R2 dispatched and verified, 2026-08-25 — run 1310, SUCCESS (53 s).** `deploy-preprod.yml`,
+    `image_tag: sha-a99ccd44c5a3-preprod`. Independently re-verified: stand `healthy`, running
+    digest exact match via `.RepoDigests` (never the bare `.Image`), workspace suffix
+    `stand-checkout-1310` matching the run id, every one of deploy's 25 steps green (one correct
+    skip on the failure-only restore path), `e2e` ran/printed/exited 0 without gating.
+    **`$GITHUB_STEP_SUMMARY` persistence checked again — still genuinely unverified**, named
+    honestly rather than guessed either way, using the same method every prior check in this
+    project has used. **P1 and P2 executed by hand — both PASS.** **F1's dev-agent half done (9/9
+    assets `200`, TLS clean) — Oleg's half (padlock, console) still pending.** **F2 — all five
+    criteria PASS**, measured fresh against this candidate's own bundle. Compact browser checklist
+    for F1/F3/F4/F9/F11/F12 composed and handed to the coordinator, with exact credentials-to-item
+    mapping and the F4 ordering constraint spelled out. No F3-F12 verdict recorded by the dev agent
+    itself (Prohibition 2) — those are Oleg's own observations, transcribed with his name once they
+    come back.
 
 ### File List
 
@@ -1668,6 +1725,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **R2 dispatched and independently verified -- run 1310, SUCCESS (53s).** deploy-preprod.yml, image_tag=sha-a99ccd44c5a3-preprod. Stand healthy, digest exact match, workspace suffix matches run id, all 25 deploy steps green, e2e ran without gating. GITHUB_STEP_SUMMARY persistence checked again, still unverified, named honestly. P1/P2 executed by hand, both PASS. F1's dev-agent half PASS (9/9 assets 200); F2 all five criteria PASS. Compact browser checklist (F1/F3/F4/F9/F11/F12) composed for Oleg with exact credential mapping and the F4 ordering constraint, handed to the coordinator. |
 | 2026-08-25 | **R1 dispatched and independently verified -- run 1308, SUCCESS (151s).** build.yml, ref=full candidate SHA, environment=preprod. New digest confirmed distinct from both prior candidates; single OCI image manifest (not an index); config-blob labels (revision/version/environment) match, labelled a consistency check per 5.4's M1. Tag shape confirmed exactly 12 hex. Bug report for CRM/api-prionex composed and handed to the coordinator. R2's dispatch body sent. |
 | 2026-08-25 | **Oleg's written waiver recorded (D40) BEFORE any dispatch.** Five items -- F5 (reclassified BLOCKED: a live CRM/api-prionex bug, not a fixture gap, blocks the validator from getting past a 500), F6, F7, F8, F10 (BLOCKED on infrastructure/data absence). Single-candidate scope (sha-a99ccd44c5a3-preprod), true count preserved in the future validation_note (7/12 pass, 5 BLOCKED), no RVC-v1 marker bump. F11/F12 explicitly not waived -- join the live seven; a live failure on either widens the waiver, never gets massaged into the note. Ready for R1. |
 | 2026-08-25 | **Fixture investigation complete -- a genuine CRM/api-prionex bug found, path calculus changed, recommendation: do not proceed to Task 4.** Sandbox confirmed by Oleg (F7/F10/F12 side effects unblocked); Oleg stated he had not prepared fixtures. Investigated PRE-PROD's real state read-only across seven service DBs; created two synthetic test clients via the normal API (F5). Found GET /api/v1/clients/{id} 500s for every client -- a real migration gap in CRM/api-prionex's own repository (ten Debt-model columns with no migration), not a fixture gap, filed in deferred-work.md with owner CRM/api-prionex. This makes F5 very likely a genuine fail rather than BLOCKED, which matters because RVC-v1's waiver mechanism only covers BLOCKED items -- so even a full waiver on the four cleanly-BLOCKED items (F6, F7, F8, F10) would not reach pass unless F5 is also reclassified BLOCKED. Ceiling recomputed: 7 of 12 solid (P1/P2/F1/F2/F3/F4/F9), F6/F7 hard-blocked, F8/F10 cannot reach full pass, F5 pivotal, F11/F12 uncertain but immaterial to the conclusion. No dispatch made; full map handed to the coordinator for Oleg's path decision. |
