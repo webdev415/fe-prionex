@@ -4152,3 +4152,42 @@ agent's to settle.
   coordinator's confirming dispatch must observe. **Owner: Story 7.7**, which carries an acceptance
   criterion to either remove the flag or measure it and record the measurement in
   `docs/migration-decisions.md`.
+
+## Deferred from: code review of spec-5-5-establish-the-release-validation-checklist.md (2026-08-25)
+
+Code review pass 2 ran against the **merged** state (`35c1a39e..9faceae2`, PR #83). Three findings
+are deferred as not caused by this change or not actionable now; the remaining 25 are recorded as
+action items in the spec's own `## Review Findings` section and 3 more are decisions owned by Oleg.
+
+- ⚠️ **Story 7.7's first acceptance criterion prices the wrong runner.** It requires the E2E tooling
+  choice to be recorded "with what it costs — CI minutes, **image size on the `node-20` runner**"
+  (`_bmad-output/planning-artifacts/epics.md`, Story 7.7). Story 5.5 spent a whole comment block in
+  `.forgejo/workflows/deploy-preprod.yml` establishing that a job carrying `needs: deploy` in that
+  workflow must **not** run on `node-20`, because a queue behind the shared CI runner holds the
+  PRE-PROD concurrency group (`cancel-in-progress: false`) and blocks the next dispatch. 7.7's own
+  trial job lives in the same workflow with the same dependency shape, so the successor story bakes
+  in the hazard its predecessor declared unacceptable. Not fixed here because 7.7's runner choice is
+  the story's own scope. **Owner: Story 7.7.**
+
+- ⚠️ **The `e2e` placeholder's two output channels are both documented as unreliable, leaving a
+  permanently green job as its only durable signal.** The job's stated purpose is that the absence
+  of e2e coverage "is visible in every PRE-PROD run". Its own comments concede that job logs on this
+  instance "frequently never archive" (`log_in_storage=f`, six observations across Stories 5.3 and
+  5.4) and that step-summary persistence "was still unverified as of Story 5.4 … a second
+  best-effort channel, not a proven one". What survives reliably is a green row in the job list —
+  the same shape `ci.yml:190-191` records this repository as having removed, where a coverage step
+  that had never once succeeded reported green for the life of the repository. Mitigated here only
+  by the job's name, "E2E placeholder (runs no test, never gates)", which run 1281 confirms is what
+  the job list actually shows. Not fixed here: making the signal durable means either measuring
+  step-summary persistence or replacing the placeholder. **Owner: Story 7.7.**
+
+- ⚠️ **A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
+  (`record-preprod-candidate.yml:231-249`) refuses `fail` as the first step of the first job, so the
+  `record` job never runs and the copy-paste ledger row at `:982` — the only mechanism that carries
+  a `validation_note` into the ledger — is never printed. The append-only ledger therefore cannot
+  distinguish "validated and rejected" from "never validated at all". This is a property of what
+  Story 5.4 shipped, not of Story 5.5, and it is deliberate (a failed validation writes nothing).
+  It becomes visible only now that `RVC-v1` makes `fail` the honest verdict for every candidate
+  while the CORS origin is wrong: for the whole of that period the ledger will be silent, and
+  silence is indistinguishable from nobody having tried. **Owner: Story 5.6**, as the next story to
+  dispatch the recorder and the one that must decide where a rejected candidate is recorded.
