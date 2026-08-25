@@ -6,10 +6,10 @@ function toContract(loan: LoanInfo): CallContract {
     id: String(loan.loan_id),
     number: loan.contract_number,
     status: loan.status,
-    // The design shows RR / PP chips beside the status, but the payload carries
-    // nothing that identifies a restructuring or a payment plan. Left absent
-    // rather than guessed: a wrong marker on a debt card is worse than none.
-    marker: null,
+    // The debt's latest restructuring status, whatever it is — PM's rule, and
+    // deliberately unfiltered. "PP" in the design turned out to be a slip for
+    // "RR": there is only one marker.
+    marker: loan.restructuring_status ?? null,
     counterparty: loan.seller_name ?? '',
     loanPrincipal: Number(loan.principal_amount ?? loan.remaining_debt) || 0,
     debt: Number(loan.remaining_debt) || 0,

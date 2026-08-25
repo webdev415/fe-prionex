@@ -164,6 +164,8 @@ export interface LoanInfo {
   status: string
   seller_name?: string | null
   purchase_date?: string | null
+  /** Latest restructuring status for this debt, whatever it is. */
+  restructuring_status?: string | null
 }
 
 export interface IncomingCallInteraction {

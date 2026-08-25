@@ -11,7 +11,11 @@ export interface CallContract {
   number: string
   /** Free-form: the backend records more dispositions than the UI enumerates. */
   status: string
-  /** Short marker beside the status, e.g. RR (restructuring) or PP (payment plan). */
+  /**
+   * The debt's latest restructuring status, shown beside the contract status.
+   * Whatever the system holds — a violated or cancelled restructuring is
+   * exactly what an operator wants to know before they start talking.
+   */
   marker?: string | null
   counterparty: string
   loanPrincipal: number
