@@ -156,6 +156,37 @@ class CallService {
     })
     return response.data
   }
+
+  /**
+   * Take a ringing inbound call.
+   *
+   * The operator's extension identifies which of the queue's ringing legs is
+   * being answered — a queue rings every member at once, so without it the
+   * backend can only fall back to the extension recorded on the call, which is
+   * the first operator rung rather than necessarily this one.
+   */
+  async answerCall(
+    callId: string,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/answer`, {
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /** Park the caller, or take them back off hold. */
+  async holdCall(
+    callId: string,
+    hold: boolean,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/hold`, {
+      hold,
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
 }
 
 export const callService = new CallService()

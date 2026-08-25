@@ -59,8 +59,15 @@ vi.mock('../NotificationBell', () => ({ NotificationBell: () => null }))
 vi.mock('../ThemeModeToggle', () => ({ ThemeModeToggle: () => null }))
 vi.mock('../MinimizedCallBubble', () => ({ MinimizedCallBubble: () => null }))
 vi.mock('../MinimizedChainExecutorBubble', () => ({ MinimizedChainExecutorBubble: () => null }))
+// Phase 2 replaced the incoming branch of CallDialogModal with a purpose-built
+// window, so the popup this file is about is now the container. CallDialogModal
+// is still reached for a restored *outbound* call, which these tests do not set
+// up — keeping the id on it would assert nothing about the incoming popup.
+vi.mock('@/features/calls/components/IncomingCallWindowContainer', () => ({
+  IncomingCallWindowContainer: () => <div data-testid="incoming-call-modal" />,
+}))
 vi.mock('@/pages/ClientManagement/components/CallDialogModal', () => ({
-  CallDialogModal: () => <div data-testid="incoming-call-modal" />,
+  CallDialogModal: () => null,
 }))
 vi.mock('@/pages/ClientManagement/components/CallRecordingModal', () => ({
   CallRecordingModal: () => null,

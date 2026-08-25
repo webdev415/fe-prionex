@@ -5375,6 +5375,7 @@
           "seconds": "seconds",
           "mute": "Mute",
           "hold": "Hold",
+          "resume": "Resume",
           "hangUp": "Hang Up",
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
@@ -5389,7 +5390,37 @@
           "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
           "clientNotFound": "Client not found",
           "clientNotFoundHint": "This number is not linked to any client in your projects.",
-          "searchByNumber": "Search by this number"
+          "searchByNumber": "Search by this number",
+          "interaction": {
+            "title": "Interaction Form",
+            "result": "Result",
+            "selectResult": "Select a result",
+            "reason": "Reason for contact",
+            "selectReason": "Select a reason",
+            "channel": "Communication channel",
+            "comment": "Comment",
+            "commentPlaceholder": "Add a comment to the interaction...",
+            "save": "Save Interaction",
+            "saved": "Interaction saved"
+          },
+          "accept": "Accept",
+          "ignoreInteraction": "Ignore Interaction",
+          "unknownContact": "Unknown contact",
+          "callDuration": "Call Duration",
+          "contracts": {
+            "client": "Client by contracts",
+            "thirdParty": "Third party by contracts",
+            "guarantor": "Guarantor by contracts",
+            "unknown": "Contracts",
+            "view": "View",
+            "open": "Open",
+            "closed": "Closed"
+          },
+          "minimize": "Minimize",
+          "cancel": "Cancel",
+          "close": "Close",
+          "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
+          "restore": "Return to the call"
         },
         "callLogCard": {
           "message": "Message",
