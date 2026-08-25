@@ -1091,7 +1091,19 @@ development_status:
   # unarchived. STEP_SUMMARY persistence still unverified post-merge (the step has not yet been
   # exercised by a real dispatch). Status: done.
   5-4-record-the-validated-candidate-in-the-registry: done
-  5-5-establish-the-release-validation-checklist: backlog
+  # dev-auto started 2026-08-24 from spec-5-5-establish-the-release-validation-checklist.md,
+  # baseline 35c1a39e. Status flipped BEFORE any implementation edit (Story 5.4 Task 1.1's
+  # lesson: a story worked while its row still reads `backlog` is invisible to anyone reading
+  # sprint status). Documentation- and workflow-only story: no `src/` file is touched.
+  # STATUS MAPPING FOR A HALT, stated because the enum above has no `blocked` value: if the
+  # coordinator's confirming dispatch is rejected (an ordinary job with `needs:` on a `uses:` job
+  # has no precedent on this instance -- D21's failure mode is a workflow refused BEFORE any job
+  # exists), Story 5.5 HALTs and this row STAYS `in-progress`. It is not flipped to `done`, not to
+  # `backlog`, and not to a value the enum does not define. The blocking condition is named in the
+  # comment immediately above this line at the moment of the HALT, so the row is never
+  # `in-progress` with no stated reason -- which is the exact invisibility the early flip exists to
+  # prevent.
+  5-5-establish-the-release-validation-checklist: in-progress
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional
 
@@ -1168,6 +1180,16 @@ development_status:
   # A story rather than a deferred line because a deferred line reads as "someone will notice", and
   # the point of this one is that nobody will until production stops building.
   7-6-give-the-production-openbao-credential-an-expiry-owner: backlog
+  # Added 2026-08-24 by Story 5.5, which shipped the two stopgaps this story retires: the manual
+  # checklist docs/release-validation-checklist.md (RVC-v1, twelve flow items, executed by a
+  # human in a browser) and the e2e placeholder job in deploy-preprod.yml (prints, exits 0,
+  # continue-on-error). The project has NO browser test tooling at all -- Vitest only, jsdom.
+  # A story rather than a deferred line because a deferred line reads as "someone will notice",
+  # and nobody notices missing e2e coverage: the placeholder is green on every run.
+  # BLOCKED at birth, outside this repo: RVC-v1 marks 8 of 12 items BLOCKED on PRE-PROD Kong's
+  # wrong Access-Control-Allow-Origin (owner CRM/api-prionex). An automated browser inherits
+  # that blockage rather than routing around it, so this cannot start before the CORS fix.
+  7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog
   epic-7-retrospective: optional
 
 # Appended by epic-3 retrospective 2026-08-18 (epic-3-retro-2026-08-18.md).

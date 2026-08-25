@@ -15,6 +15,17 @@ is the two steps together, not the dispatch alone. This workflow does not write 
 holds no repository-write credential, and giving it one is a separate, unopened decision (a new class
 of permission this story does not grant).
 
+**What `pass` in the Verdict column is asserted against, as of 2026-08-24.** Story 5.5 published
+`docs/release-validation-checklist.md`, version marker **`RVC-v1`** — twelve numbered flow items
+plus two preconditions, each with its own pass criterion — and from its publication onward a row's
+verdict is meant to be *derived* from it, with the `Note` cell carrying the `RVC-v1` summary line in
+that file's stated format. The two rows below **predate it** and were therefore written against no
+stated criterion at all; under `RVC-v1` neither would qualify as `pass` (eight of its twelve items
+are `BLOCKED` on PRE-PROD Kong's wrong `Access-Control-Allow-Origin`, owner `CRM/api-prionex`). They
+are deliberately **not** reinterpreted or rewritten — this ledger is append-only and rows are never
+re-judged after the fact. This paragraph exists so a reader comparing the two files sees the
+mismatch as a dated boundary rather than an unnoticed defect.
+
 | Date (UTC) | Candidate tag | Digest | Verdict | Note | Run id |
 |---|---|---|---|---|---|
 | 2026-08-24 | `sha-00ef3be4743d-preprod` | `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` | pass | Manual validation, 2026-08-24, against 5.3's run 1198 deploy: container healthy, running .RepoDigests matches sha256:5e5b190d93c8... exactly, TLS serves crm.preprod.crm-prionex.online, Kong resolves by container identity inside the stand's own network (5.2 AC5/D34/D36). Browser-path/API validation NOT performed and not possible — PRE-PROD's Kong CORS is known-broken (static wrong Access-Control-Allow-Origin), external ask to CRM/api-prionex still open. | 1215 |
