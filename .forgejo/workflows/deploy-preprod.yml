@@ -89,14 +89,18 @@ name: Deploy PRE-PROD Stand
 # radius. §12 is a priced, escalated procedure — not a permission — and a placeholder that runs no
 # test does not earn one.
 #
-# 🔴 WHAT IS NOT PROVEN HERE, stated before the first dispatch rather than after it. `ci.yml:498-502`
-# proves a caller may mix a `uses:` job with ordinary jobs, and that a `uses:` job may carry
-# `needs:` on ordinary jobs. The REVERSE — an ordinary job with `needs:` on a `uses:` job — has no
-# precedent anywhere in this repository and was never exercised on this instance. If the scheduler
-# rejects it, the failure mode is D21's: no job, no log, only
-# `action_run.pre_execution_error_details`. The first dispatch is therefore a real test of the
-# construct, owned by the coordinator, and its failure HALTs Story 5.5 rather than being worked
-# around by moving the job into the frozen callee.
+# 🔴 WHAT WAS NOT PROVEN BEFORE THE FIRST DISPATCH, and what run 1281 settled. `ci.yml:498-502`
+# proved a caller may mix a `uses:` job with ordinary jobs, and that a `uses:` job may carry
+# `needs:` on ordinary jobs. The REVERSE — an ordinary job with `needs:` on a `uses:` job — had no
+# precedent anywhere in this repository and was never exercised on this instance until the
+# coordinator's confirming dispatch. **Settled: run 1281 (`ref=main`, `image_tag=sha-28f7fd36b75e-
+# preprod`), dispatched AFTER this PR's merge rather than before it as the PR description required
+# — that deviation is recorded honestly in `docs/migration-decisions.md#d39` §4 and is not hidden
+# here.** Job `10719` "Deploy PRE-PROD via the shared definition" then job `10720` "E2E placeholder
+# (runs no test, never gates)" — both SUCCESS. D21's rejection mode (no job, no log, only
+# `action_run.pre_execution_error_details`) did NOT occur; the HALT condition never triggered. **An
+# ordinary job with `needs:` on a `uses:` job schedules on this instance. Proven, not merely
+# parsed, not merely hoped.**
 #
 # 🔴 `continue-on-error: true` IS A CONSTRUCT THIS REPOSITORY DELIBERATELY REMOVED, and this story
 # re-adds it — stated here rather than left to be discovered. `dev-reset.yml:450-462` records code
@@ -105,16 +109,19 @@ name: Deploy PRE-PROD Stand
 # retired GitHub pipeline, `continue-on-error: true` paired with `fail_ci_if_error: false` is the
 # exact mechanism that let a coverage step which had never once succeeded report green for the life
 # of this repository). What this job carries is the JOB-level form, which is LESS proven than the
-# step-level form H4 removed: it is UNMEASURED on this instance and has no precedent anywhere in
-# this repository.
+# step-level form H4 removed.
 #
-# It is kept anyway, as belt over braces: the step body's only statements are `echo`s, so it cannot
-# fail on its own and the flag should never be exercised. Because it is unmeasured, it is the SECOND
-# thing the coordinator's confirming dispatch must observe — alongside whether `needs:` on a `uses:`
-# job is accepted at all (the paragraph above). If the run shows this job failing the run despite
-# the flag, that is a measurement rather than a surprise, and it belongs in
-# `docs/migration-decisions.md#d39`. Removing the flag or measuring it is Story 7.7's, recorded as
-# its own defer entry in `_bmad-output/implementation-artifacts/deferred-work.md`.
+# 🔴 **PERMANENTLY UNMEASURED BY DESIGN, and that is now the honest and final disposition — code
+# review's own decision, Oleg's veto open.** Run 1281 answered whether `needs:` on a `uses:` job
+# schedules (above) and could NOT answer whether this flag is honoured, because the step body was
+# `echo`s plus a guarded redirect that could not fail on a green run — the instruction to "observe
+# this as the dispatch's second purpose" asked the same dispatch to measure a flag the job's own
+# body makes unreachable, and it is REMOVED, not repeated. The redirect below now carries `|| true`,
+# which makes "the step body cannot fail on its own" literally true rather than an argument resting
+# on the very flag being described — so invariant (1) ("must never fail a run") no longer depends on
+# this flag at all, and the flag is genuinely redundant belt-over-braces, not a load-bearing one.
+# Measuring it deliberately (on a throwaway workflow, not this one) or removing it outright remains
+# Story 7.7's own AC, recorded in `_bmad-output/implementation-artifacts/deferred-work.md`.
 #
 # `needs: deploy` also means a RED deploy SKIPS this job — the run stays red on the deploy's own
 # failure, which is the existing behaviour and is not changed by adding this.
@@ -179,10 +186,13 @@ jobs:
     name: "E2E placeholder (runs no test, never gates)"
     needs: deploy
     # `deploy-dev-preprod` — the SAME label the `deploy` job above already passes as its
-    # `runner_label:` input (grep this file for `runner_label:`; no line number, because line
-    # numbers in files this project keeps editing rot — Story 5.4's M11 lesson). Deliberately NOT
-    # `node-20`, and never `ubuntu-latest` (that label resolves to ANOTHER TEAM's idle runner in
-    # this org, `ci.yml:97-99`).
+    # `runner_label:` input (grep this file for `      runner_label: deploy-dev-preprod` — the
+    # leading whitespace and value both included, since a bare `runner_label:` search also hits
+    # this file's own header comment quoting `deploy-stand.yml:216`'s DECOY skeleton value
+    # `runner_label: deploy-preprod-preprod`, a label that does not exist on any runner; code
+    # review, corrected. No line number, because line numbers in files this project keeps editing
+    # rot — Story 5.4's M11 lesson). Deliberately NOT `node-20`, and never `ubuntu-latest` (that
+    # label resolves to ANOTHER TEAM's idle runner in this org, `ci.yml:97-99`).
     #
     # 🔴 The rule this encodes: a placeholder that asserts nothing must not make a PRE-PROD deploy
     # depend on a SECOND runner. `node-20` is the shared CI runner. With `needs: deploy` and this
@@ -190,18 +200,28 @@ jobs:
     # a saturated or offline `node-20` keeps the whole run in-progress and therefore HOLDS the
     # PRE-PROD concurrency group — blocking the next dispatch, a hotfix included, on a job that by
     # its own words proves nothing. `timeout-minutes: 5` does NOT cover that: it bounds EXECUTION,
-    # not queue wait. The deploy runner is already required by this run, so reusing it adds no new
-    # dependency of any kind.
+    # not queue wait.
     #
-    # The counterweight, stated rather than hidden: the deploy runner is capacity-1 (D30/D32), so
-    # this job does occupy it briefly after the deploy finishes. That cost is bounded by
-    # `timeout-minutes: 5` and in practice by a body that is only `echo`s, and it is paid on a
-    # runner this run already holds — whereas the `node-20` alternative buys a queue dependency the
-    # concurrency group cannot release.
+    # 🔴 Code review, corrected: the two sentences that used to stand here — "the deploy runner is
+    # already required by this run, so reusing it adds no new dependency of any kind" and "paid on a
+    # runner this run already holds" — are FALSE AS WRITTEN. A run does not hold a runner across job
+    # boundaries; `deploy-dev-preprod` is shared by `deploy-dev.yml:75`, `dev-reset.yml:166` and
+    # `record-preprod-candidate.yml:227`, all under DIFFERENT concurrency groups from this one. The
+    # reachable path the corrected argument must own, not hide: `deploy` finishes and releases the
+    # capacity-1 slot → a DEV deploy or a recorder run claims it first → this `e2e` job queues behind
+    # it → `timeout-minutes: 5` bounds its own execution once scheduled, not the queue wait before
+    # that → the run stays in-progress → `cancel-in-progress: false` holds THIS workflow's own
+    # PRE-PROD group regardless → the next PRE-PROD dispatch, a hotfix included, is blocked. That is
+    # verbatim the failure this comment block rejects `node-20` for, reachable on `deploy-dev-preprod`
+    # too. The CHOICE is still defensible — `node-20` is the busier, more contended runner in this
+    # org, so `deploy-dev-preprod` is the lower-probability queue, not a zero-probability one — but
+    # the argument for it must say so, not claim the dependency does not exist.
     runs-on: deploy-dev-preprod
     timeout-minutes: 5
-    # Kept, UNMEASURED at job level on this instance — see the `continue-on-error` block in the
-    # header for the full provenance and for why the coordinator's first dispatch must observe it.
+    # Kept, PERMANENTLY UNMEASURED BY DESIGN at job level on this instance — see the
+    # `continue-on-error` block in the header for the full provenance. The body cannot fail (the
+    # `|| true` below makes that literally true, not merely argued), so this flag is genuinely
+    # redundant belt-over-braces, not a load-bearing observation any future dispatch is asked to make.
     continue-on-error: true
     steps:
       # No `${{ }}` anywhere in this body, including inside its comments -- this instance
@@ -249,6 +269,15 @@ jobs:
           # Guarded with :- because `set -u` would otherwise abort on an unset GITHUB_STEP_SUMMARY,
           # and invariant (1) is that this job never fails a run. Fenced so Markdown renders the
           # block verbatim instead of collapsing its line breaks.
+          #
+          # 🔴 Code review, fixed: `${GITHUB_STEP_SUMMARY:-}` only guards UNSET/EMPTY -- it does
+          # nothing for set-but-unwritable, a missing directory, or a full disk, any of which exits
+          # this redirect non-zero under `set -euo pipefail` and would have failed the step on a
+          # directly reachable path, resting invariant (1) entirely on the job-level
+          # `continue-on-error` flag this file names UNMEASURED above. `|| true` on the redirect
+          # below makes "the step body's only statements are echos, so it cannot fail on its own"
+          # literally true, not an argument that quietly depended on the very flag it was arguing
+          # was unnecessary.
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
               echo "## e2e placeholder -- runs no test, never gates"
@@ -256,8 +285,8 @@ jobs:
               echo '```'
               rationale
               echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "OK: rationale also written to the step summary."
+            } >> "$GITHUB_STEP_SUMMARY" || true
+            echo "OK: rationale also written to the step summary (or the write failed harmlessly -- see the || true above)."
           else
             echo "NOTE: GITHUB_STEP_SUMMARY is unset -- the rationale exists only in this job log,"
             echo "which on this instance has repeatedly failed to archive (log_in_storage=f)."

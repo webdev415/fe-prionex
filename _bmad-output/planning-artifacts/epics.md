@@ -3080,10 +3080,17 @@ manual procedure remains executable when the suite is unavailable
 
 **Given** the PRE-PROD Kong's CORS origin is fixed by `CRM/api-prionex`
 **When** the suite runs against a deployed PRE-PROD candidate
-**Then** the authenticated flows (`F4` login and its six refusal paths, `F5`, `F6`, `F9`) pass
-against a real backend
+**Then** the authenticated flows (`F4` login and its six refusal paths, `F5`, `F6`) pass against a
+real backend
 **And** a test that cannot reach the API fails loudly rather than being skipped, because a skipped
-test reads as a pass in every summary anyone looks at.
+test reads as a pass in every summary anyone looks at
+**And** 🔴 `F9` is explicitly excluded from "unblocked by the CORS fix alone" — corrected, code
+review of Story 5.5's own fix-pass (2026-08-25): an earlier version of this criterion listed `F9`
+alongside `F4`/`F5`/`F6` here, which is the exact misattribution
+`docs/release-validation-checklist.md`'s own F9 section and `docs/migration-decisions.md#d39` §6
+were written to prevent — F9 carries a **second**, independent blockage (no restricted-role account
+provisioned on PRE-PROD, owner Oleg) that the CORS fix does not touch. This story's own suite for
+F9 needs both fixed before it can run against a real restricted account.
 
 **Given** the placeholder job in `.forgejo/workflows/deploy-preprod.yml`
 **When** the suite exists and has run green at least five consecutive times **in a temporary

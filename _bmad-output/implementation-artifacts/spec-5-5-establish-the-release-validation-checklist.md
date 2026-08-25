@@ -2,10 +2,10 @@
 title: 'Story 5.5: Establish the Release Validation Checklist'
 type: 'feature'
 created: '2026-08-24'
-status: 'in-progress'  # code review pass 2 (2026-08-25) left 25 patch findings as action items; 3 decisions are Oleg's
+status: 'review'  # fix-pass (2026-08-25) addressed all 25 patch findings + 3 decisions from code review pass 2; followup_review_recommended stays true since the 3 decisions are recorded, not re-litigated
 baseline_revision: '35c1a39e4b9063af272fdb5e980a31ee13b1b92e'
-final_revision: '472c03c7'
-review_loop_iteration: 1
+final_revision: '9338edf1'  # will be updated to this fix-pass's own final content commit below, before push
+review_loop_iteration: 2
 followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-5-context.md'
@@ -47,7 +47,7 @@ warnings: ['multiple-goals', 'oversized']
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| All items pass | Every checklist item verified green against a deployed `image_tag` | Verdict `pass`; note `RVC-v1 <tag>: N/N pass — see docs/release-validation-checklist.md`; recorder writes both markers | No error expected |
+| All items pass | Every checklist item verified green against a deployed `image_tag` | Verdict `pass`; note `RVC-v1 <tag>: 12/12 pass — detail in docs/release-validation-checklist.md` (🔴 corrected, code review of this fix-pass: this row's own placeholder `N/N pass — see …` predates the shipped canonical format — `12` is the fixed item count for `RVC-v1`, never a variable `N`, and the shipped connector is `— detail in`, not `— see`); recorder writes both markers | No error expected |
 | One item fails | Any item fails its stated pass criterion | Verdict `fail`; operator dispatches with `validated=fail`; G1 refuses before any registry read, nothing is written, no `preprod-<sha>` exists, so Story 6.5's promotion guard has nothing to match | Refusal is the designed outcome, not an error |
 | Item blocked | An item's dependency is unavailable (CORS origin unfixed) | Item recorded BLOCKED with owner in the execution log; it counts as neither pass nor fail and the aggregate verdict cannot be `pass` | Verdict must be `fail` or the candidate is not recorded at all |
 | Deploy runs | `deploy-preprod.yml` dispatched | `e2e` job runs after `deploy`, prints its placeholder rationale, exits 0 | Job must not fail; if it errors it must not fail the workflow |
@@ -83,7 +83,7 @@ warnings: ['multiple-goals', 'oversized']
 - [x] `_bmad-output/implementation-artifacts/sprint-status.yaml` -- register the new Epic 7 story as `backlog` with a comment block naming this story as its origin -- so it is discoverable where sprint work is read
 - [x] `_bmad-output/implementation-artifacts/deferred-work.md` -- append at EOF: a pointer to the new story, and a re-owner of the `:4020-4040` M7 item from its trigger-condition owner to a story number -- the file's own owner convention
 - [x] `docs/migration-decisions.md` -- write D39 (Russian) recording what "validated" is asserted against, the caller-side placement of the placeholder and why, and the disclosure that no browser-path item is executable until the CORS origin is fixed; all four edits -- the project's decision-record convention
-- [ ] `.forgejo/workflows/deploy-preprod.yml` -- `PENDING (owner: coordinator)`: dispatch once and confirm the `e2e` job ran after `deploy` and did not gate it; if the platform rejects `needs:` on the `uses:` job, HALT per Block If -- the dev agent does not touch the Forgejo API
+- [x] `.forgejo/workflows/deploy-preprod.yml` -- **Done, run 1281** (coordinator, post-merge — dispatched after PR #83 merged rather than before, a deviation from the plan recorded honestly in D39 §4 and the workflow's own header). `ref=main`, `image_tag=sha-28f7fd36b75e-preprod`. Jobs 10719 "Deploy PRE-PROD via the shared definition" then 10720 "E2E placeholder (runs no test, never gates)" — both SUCCESS. `e2e` ran after `deploy` and did not gate it; the platform accepted `needs:` on the `uses:` job (no HALT, D21's rejection mode did not occur).
 
 **Acceptance Criteria:**
 - Given the project has no end-to-end tests and only vitest, when the validation approach is defined, then `docs/release-validation-checklist.md` exists with a numbered item per critical flow, and each item states both what is checked and what constitutes a pass.
@@ -142,10 +142,12 @@ warnings: ['multiple-goals', 'oversized']
 
 The `e2e` job goes in `deploy-preprod.yml`, not `deploy-stand.yml`. The callee is shared with DEV, is declared read-only by its own caller (`deploy-preprod.yml:10-21`), and sits inside Story 4.9's blast radius (`:32`); its §12 exception is a procedure, not a permission. "After the health check" is still satisfied, and by a superset: `needs: deploy` runs after the **entire** terminal `deploy` job, so it lands strictly after the health check `:1907` *and* after the four assertions that still follow it (`:1995` anchored identity, `:2035` fallback HTTP, `:2098` digest match, `:2144` Kong alias guard). The corollary a later reader needs: no caller-side job can occupy a position *between* the health check and those four — reaching one would require editing the read-only callee under its §12 exception. `ci.yml:498-502` proves a caller may mix a `uses:` job with ordinary jobs; the untested half is a normal job depending on a `uses:` job, which is why the live dispatch is a task and its failure is a Block If.
 
-Shape of the note the checklist must produce (one line, no newline):
+Shape of the note the checklist must produce (one line, no newline). 🔴 **Corrected, code review of
+this fix-pass: `6/9` below is a pre-implementation placeholder that violates the shipped checklist's
+own invariant (`P + D + F + B == 12`, not 9) — replaced with the shipped canonical shape:**
 
 ```
-RVC-v1 sha-28f7fd36b75e-preprod: 6/9 pass, 3 BLOCKED (CORS, CRM/api-prionex) — detail in docs/release-validation-checklist.md
+RVC-v1 sha-28f7fd36b75e-preprod: 2/12 pass, 2 degraded (F3 F12), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
 ```
 
 A `fail` needs no new machinery: G1 already refuses it before any registry read, so "a failed item blocks promotion" is a property of what is already shipped. The checklist's job is to make the verdict *derived* rather than *asserted* — state that explicitly rather than adding a gate.
@@ -157,21 +159,22 @@ A `fail` needs no new machinery: G1 already refuses it before any registry read,
 
 **D39 number check, actually performed.** `git fetch --all`, then `git grep -n -iE 'id="d39"|## D39\.|#d39' <ref> -- docs/migration-decisions.md` over **every** ref in the repository (all local branches and all `refs/remotes/origin/*`), not only `story-*`. Zero hits. Maxima observed: `origin/main` and the working tree stop at `d38`; `story-4-9/pr-1-context` holds `d35`; `story-7-6/pr-1-add-story` stops at `d19`. Local `refs/heads/main` is stale at `62e2ff8d` and stops at `d27` — noted so a later reader does not treat it as evidence. **No collision; D39 taken.**
 
-**`RVC-v1` is twelve flow items plus two preconditions.** F1 shell over TLS, F2 bundle carries the PRE-PROD env values, F3 unauthenticated route guard, F4 login and its six refusal paths, F5 client list → detail, F6 payments, F7 telephony, F8 import + bulk ops, F9 permission gating, F10 messaging/SMS, F11 AI assistant, F12 public `/pay`. P1 (stand serves this digest and is healthy) is asserted by the recorder's own G4/G5, so it is listed rather than executed twice; P2 (you are not looking at a cached bundle) is a condition on the validator. `N` in the note format is **12** — preconditions are not counted, and the checklist says so explicitly.
+**`RVC-v1` is twelve flow items plus two preconditions.** F1 shell over TLS, F2 bundle carries the PRE-PROD env values, F3 unauthenticated route guard, F4 login and its six refusal paths, F5 client list → detail, F6 payments, F7 telephony, F8 import + bulk ops, F9 permission gating, F10 messaging/SMS, F11 AI assistant, F12 public `/pay`. ~~P1 (stand serves this digest and is healthy) is asserted by the recorder's own G4/G5, so it is listed rather than executed twice~~ 🔴 **Corrected, code review of this fix-pass (2026-08-25): this is the falsified claim P1's own text was written specifically to correct, and this triage-log paragraph never caught up.** The shipped checklist's P1 section says, in its own words, "**Who checks it: you do**", and gives two reasons the G4/G5 delegation is wrong: G4/G5 run at *record* time, after the checklist is already finished, and on a `fail` verdict G1 refuses before G4/G5 ever run at all — so on exactly the runs where something went wrong, the precondition would never be checked by anyone under the delegated reading. P1 is executed BY HAND, at the start of validation. P2 (you are not looking at a cached bundle) is a condition on the validator. `N` in the note format is **12** — preconditions are not counted, and the checklist says so explicitly.
 
-Today's executability split: `EXECUTABLE` F1, F2; `EXECUTABLE, degraded` F3, F12; `BLOCKED — owner: CRM/api-prionex, CORS origin` F4-F11 (eight). So the concrete note today is `RVC-v1 <tag>: 4/12 pass, 8 BLOCKED (CORS, CRM/api-prionex) — detail in docs/release-validation-checklist.md`, and it accompanies `validated=fail`, not `pass`.
+Today's executability split: `EXECUTABLE` F1, F2; `EXECUTABLE, degraded` F3, F12; `BLOCKED — owner: CRM/api-prionex, CORS origin` F4-F11 (eight). ~~So the concrete note today is `RVC-v1 <tag>: 4/12 pass, 8 BLOCKED (CORS, CRM/api-prionex) — detail in docs/release-validation-checklist.md`, and it accompanies `validated=fail`, not `pass`.~~ 🔴 **Corrected, code review of this fix-pass: this triage paragraph's own arithmetic is wrong against the shipped checklist and repeats the exact overstatement the checklist's own review removed.** F3 and F12 are `pass (degraded)`, not `pass` — counting them as whole passes is the overstatement `<D>` exists to prevent. The shipped checklist's own worked example is
+`RVC-v1 <tag>: 2/12 pass, 2 degraded (F3 F12), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex) — detail in docs/release-validation-checklist.md`, and it accompanies `validated=fail`, not `pass`.
 
-**F2 is the item worth having.** It needs no API call at all, so the CORS defect does not reach it, and it is the only check anywhere in the pipeline that can catch a wrong baked-in URL: `src/lib/api.ts:4-7` resolves an absolute `VITE_API_BASE_URL` into the bundle, so a wrong hostname builds green, deploys green and passes the container health check. Its pass criterion includes the absence of the `http://localhost:8005` `VITE_WS_URL` fallback, which is falsifiable by construction.
+**F2 is the item worth having.** It needs no API call at all, so the CORS defect does not reach it, and it is the only check anywhere in the pipeline that can catch a wrong baked-in URL: `src/lib/api.ts:4-7` resolves an absolute `VITE_API_BASE_URL` into the bundle, so a wrong hostname builds green, deploys green and passes the container health check. ~~Its pass criterion includes the absence of the `http://localhost:8005` `VITE_WS_URL` fallback, which is falsifiable by construction.~~ 🔴 **Corrected, code review of this fix-pass: `localhost:8005` is not the `VITE_WS_URL` fallback — it never was.** `src/lib/api.ts:7` and `useDialerSocket.ts:9` both fall back to `localhost:8000`; `localhost:8005` belongs to four *other* hooks (`useCallWebSocket.ts:14`, `useCallStateUpdates.ts:13`, `useIncomingCall.ts:8`, `useNotificationSocket.ts:8`) — this triage paragraph attributed the wrong string to the wrong mechanism, the same misattribution the checklist's own text was rewritten to correct. Both strings are required absent, for different reasons, and the checklist's own F2 criterion 2 states both correctly.
 
 🔴 **A collision this story found and did NOT settle.** `RVC-v1` says an aggregate `pass` requires every item to be `pass` and that `BLOCKED` is not a `pass`; eight items are `BLOCKED`; therefore the only honest aggregate verdict today is `fail`; and G1 refuses `fail` before any registry read, writing nothing. **Story 5.6 is required to record a candidate.** Both requirements are shipped and both are correct, and they are not simultaneously satisfiable while the CORS origin is wrong. Two exits: the CORS fix lands first, or 5.6 records under an explicitly documented, explicitly time-boxed waiver naming `RVC-v1` and listing the waived items. Silently typing `pass` is ruled out by the checklist and by D39 §6. **Owner: Oleg** — it is a scope decision, not an implementation one. Filed in `deferred-work.md` at EOF, in D39 §6, and in the checklist itself.
 
 `docs/preprod-candidates.md`'s two existing rows say `pass` and would not under `RVC-v1`. They are **not** rewritten (append-only ledger; rows are never reinterpreted), and no column and no row was added by this story. `RVC-v1` governs candidates recorded from its publication onward and says so in its own text.
 
-**The `e2e` job.** `deploy-preprod.yml` gained a header section and a sibling `e2e:` job — 72 added lines, **zero removed lines** (`git diff` shows no `-` line): the existing `deploy:` job body is byte-identical. `needs: deploy`, `runs-on: node-20`, `timeout-minutes: 5`, `continue-on-error: true`, one `run:` step of nothing but `echo`. `node-20` and not `deploy-dev-preprod` deliberately: the job has nothing to do on the stand, and the deploy runner is capacity-1 (D30/D32), so parking a no-op there would serialize it against real deploys for no benefit.
+**The `e2e` job.** `deploy-preprod.yml` gained a header section and a sibling `e2e:` job — ~~72 added lines~~ 🔴 **Corrected, code review of this fix-pass: the actual shipped diff is `+151 -0`, not `72 0` — this triage paragraph understated its own diff by half.** **zero removed lines** (`git diff` shows no `-` line): the existing `deploy:` job body is byte-identical. `needs: deploy`, ~~`runs-on: node-20`~~ 🔴 **Corrected: the shipped file uses `runs-on: deploy-dev-preprod`, not `node-20` — and the rationale below is the one the checklist's own code review REVERSED, not confirmed.** `timeout-minutes: 5`, `continue-on-error: true`, one `run:` step of nothing but `echo` plus a guarded step-summary write. ~~`node-20` and not `deploy-dev-preprod` deliberately: the job has nothing to do on the stand, and the deploy runner is capacity-1 (D30/D32), so parking a no-op there would serialize it against real deploys for no benefit.~~ The shipped choice is `deploy-dev-preprod`, not `node-20`: a placeholder queued behind the shared, busier `node-20` CI runner would hold this workflow's own `cancel-in-progress: false` PRE-PROD concurrency group and block the next dispatch — a hotfix included — which is the actual rationale; see `deploy-preprod.yml`'s own header and `docs/migration-decisions.md#d39` §4 for the corrected argument (including this fix-pass's own correction of a second false claim in that same rationale, that reusing the deploy runner "adds no new dependency").
 
 **Task 11 is `PENDING (owner: coordinator)` and was not attempted.** The dev agent did not touch the Forgejo API, dispatch anything, or SSH anywhere. The exact status: *the confirming dispatch of `deploy-preprod.yml` — verifying that `e2e` ran after `deploy` and did not gate it — is `PENDING (owner: coordinator)`; if the instance rejects an ordinary job carrying `needs:` on a `uses:` job, HALT with `e2e job placement requires §12 exception` rather than moving the job into the read-only `deploy-stand.yml`.* Parsing is not scheduling: `yaml.safe_load` succeeding says nothing about whether this instance's scheduler accepts the construct, and D21's failure mode is a rejection **before any job exists**, visible only in `action_run.pre_execution_error_details`. Also filed as an open ⚠️ in `deferred-work.md`.
 
-**Follow-up story is 7.7**, "Replace the E2E Placeholder with Real End-to-End Coverage" — `epics.md` (six Given/When/Then criteria, appended after 7.6) and `sprint-status.yaml` (`7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog`, with an eight-line comment naming Story 5.5 as origin and mirroring 7.6's "a deferred line reads as 'someone will notice'" reasoning). One of its criteria requires that removing `continue-on-error: true` happen in the **same** change that installs real tests, so the job that finally proves something is also the job that can fail the run.
+**Follow-up story is 7.7**, "Replace the E2E Placeholder with Real End-to-End Coverage" — `epics.md` (~~six~~ 🔴 **corrected, code review of this fix-pass: the shipped story carries `nine` `**Given**` blocks, not six — counted directly in `epics.md`** — nine Given/When/Then criteria, appended after 7.6) and `sprint-status.yaml` (`7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog`, with an eight-line comment naming Story 5.5 as origin and mirroring 7.6's "a deferred line reads as 'someone will notice'" reasoning). One of its criteria requires that removing `continue-on-error: true` happen in the **same** change that installs real tests, so the job that finally proves something is also the job that can fail the run.
 
 **`deferred-work.md`**: the M7 entry's owner was re-phrased in place from a trigger condition to **Story 5.6** (5.6, not 5.5 — 5.5 dispatches that workflow zero times; 5.6's rehearsal runs the whole cycle through the workflows and is the next thing that dispatches the recorder at all). Nothing was struck: this is an owner-phrasing correction, the same class the file records at `:3526`, `:3678`, `:3882`, not a closure. A new `## Deferred from: Story 5.5 (2026-08-24)` section was appended at EOF with four entries.
 
@@ -196,15 +199,15 @@ Today's executability split: `EXECUTABLE` F1, F2; `EXECUTABLE, degraded` F3, F12
 
 **Actual output, dev-auto run 2026-08-24:**
 
-- `python3 -c "import yaml,sys; yaml.safe_load(open('.forgejo/workflows/deploy-preprod.yml'))"` → no output, **exit 0**. Parsed shape: `jobs = ['deploy', 'e2e']`; `e2e.needs = deploy`, `runs-on = node-20`, `continue-on-error = True`, `timeout-minutes = 5`; `deploy.uses = ./.forgejo/workflows/deploy-stand.yml` with its `with:` block intact.
-- Run-body gate heredoc → `run bodies checked: 1`, **exit 0**. The one `run:` body in the file contains no `$`+`{{`, begins with `set -euo pipefail`, and has no backslash-continued assignment.
-- `grep -c '^' docs/release-validation-checklist.md` → **413** (file exists, non-zero).
-- `grep -n 'd39' docs/migration-decisions.md` → hits at **`:8`** (header anchor range widened `#d38` → `#d39`), **`:53`** (index-table row, one physical line), **`:4647`** (`<a id="d39"></a>`), **`:4649`** (`## D39. …`), **`:4658`** (§1's own re-check text), **`:4896`** (change-log row). All four required edit sites present.
+- ~~`python3 -c "import yaml,sys; yaml.safe_load(open('.forgejo/workflows/deploy-preprod.yml'))"` → no output, **exit 0**. Parsed shape: `jobs = ['deploy', 'e2e']`; `e2e.needs = deploy`, `runs-on = node-20`, `continue-on-error = True`, `timeout-minutes = 5`; `deploy.uses = ./.forgejo/workflows/deploy-stand.yml` with its `with:` block intact.~~ 🔴 **Corrected, code review of this fix-pass: `runs-on` in the shipped, parsed file is `deploy-dev-preprod`, not `node-20`.** This "Actual output" line asserted a value that does not match the file it claims to have parsed — presented as measured output, it was not. Re-run: no output, **exit 0**. Parsed shape: `jobs = ['deploy', 'e2e']`; `e2e.needs = deploy`, `runs-on = deploy-dev-preprod`, `continue-on-error = True`, `timeout-minutes = 5`; `deploy.uses = ./.forgejo/workflows/deploy-stand.yml` with its `with:` block intact.
+- Run-body gate heredoc → `run bodies checked: 2` (both `deploy`'s inherited step-shape and `e2e`'s own), **exit 0**. Every `run:` body in the file contains no `$`+`{{`, begins with `set -euo pipefail`, and has no backslash-continued assignment.
+- ~~`grep -c '^' docs/release-validation-checklist.md` → **413** (file exists, non-zero).~~ 🔴 **Corrected, code review of this fix-pass: 413 does not match the shipped file at any point in this story's history.** The file the story actually shipped (before this fix-pass's own further edits) was **653** lines; after this fix-pass's own patches to the checklist (P1/P2 abort shape, invariant disclosure, F2 reference-instant pin, item-id traceability for `<D>`/`<B>`, and others) it is **818** lines. Both later numbers are honest re-counts, not a claim that the file has always been this size.
+- `grep -n 'd39' docs/migration-decisions.md` → hits at the header anchor range (`#d38` → `#d39`), the index-table row, `<a id="d39"></a>`, the `## D39. …` heading, §1's own re-check text, and the change-log row(s). 🔴 **Corrected, code review of this fix-pass:** the specific line numbers previously cited here (`:4658`, `:4896`) had already drifted before this fix-pass even started — this file's own edits above shift them further still. Cited by search string, not line number, per Dev Notes §8's own instruction not to add a third stale citation.
 - `npm run lint` → **exit 0**. `npm run typecheck` → **exit 0**. No `src/` file was touched, so this proves only that nothing regressed.
 
 **Manual checks:**
 
-- `git diff --name-only HEAD` filtered for `deploy-stand.yml`, `record-preprod-candidate.yml`, `preprod-candidates.md`, `build.yml`, `deploy-dev.yml`, `dev-reset.yml`, `src/`, `package.json` → **no matches.** None of the frozen files changed.
+- `git diff --name-only HEAD` filtered for `deploy-stand.yml`, `record-preprod-candidate.yml`, `build.yml`, `deploy-dev.yml`, `dev-reset.yml`, `src/`, `package.json` → **no matches.** None of the frozen files changed. 🔴 **Corrected, code review of this fix-pass: an earlier version of this line also listed `preprod-candidates.md` in this "no matches" set — false, and contradicted two paragraphs below by the story's own "Actual output" (`11 0`).** `preprod-candidates.md` is not frozen and was never claimed to be structurally frozen — the story adds a prose paragraph to it, deliberately no row and no column. Removed from this list; its own diff is checked separately below.
 - `git diff .forgejo/workflows/deploy-preprod.yml` → 72 insertions, **0 deletions**; the existing `deploy:` job body is untouched.
 - `docs/preprod-candidates.md` gained no column and no row.
 - No playwright / cypress / puppeteer / webdriver dependency was added; `package.json` is unmodified.
@@ -281,22 +284,44 @@ on this Forgejo instance.
 
 ### Residual risks
 
-1. 🔴 **The confirming dispatch is not done, and it is the coordinator's.** Nothing in this repository has ever
-   run an ordinary job carrying `needs:` on a `workflow_call` job; `ci.yml:498-502` proves only the opposite
-   direction. `yaml.safe_load` parsing is not scheduling. If the instance rejects it, Story 5.5 HALTs with
-   `e2e job placement requires §12 exception` rather than moving the job into the read-only callee. The same
-   dispatch must also observe whether job-level `continue-on-error` is honoured here.
+1. 🔴 **RESOLVED, 2026-08-25 (code review fix-pass): the confirming dispatch happened, after the merge, not
+   before it as this story's own PR description required.** Coordinator dispatch: `deploy-preprod.yml`,
+   `ref=main`, `image_tag=sha-28f7fd36b75e-preprod` — **run 1281, SUCCESS**. Jobs `10719` "Deploy PRE-PROD
+   via the shared definition" then `10720` "E2E placeholder (runs no test, never gates)", both SUCCESS. D21's
+   rejection mode (no job, no log, only `action_run.pre_execution_error_details`) did **not** occur; the HALT
+   condition never triggered. **An ordinary job carrying `needs:` on a `workflow_call` job schedules on this
+   instance — proven, not merely parsed.** The dispatch's second purpose — observing whether job-level
+   `continue-on-error` is honoured — was **not** and **could not** be answered by this echo-only body; see
+   Risk 5 below, which replaces the unanswered half of this risk. That the dispatch ran after merge rather
+   than before is recorded honestly here rather than silently absorbed — a deviation from the plan, not a
+   defect in the result.
 2. 🔴 **`RVC-v1` and Story 5.6 are not simultaneously satisfiable while the CORS origin is wrong.** Eight of
    twelve items are BLOCKED on the PRE-PROD Kong's `Access-Control-Allow-Origin`, owned by `CRM/api-prionex`.
    Under `RVC-v1` the only honest aggregate verdict today is `fail`, and G1 refuses `fail` before any registry
-   read — yet 5.6's rehearsal is required to record a candidate. Both requirements are correct. The two exits
-   are the CORS fix landing first, or 5.6 recording under a documented, time-boxed waiver naming `RVC-v1` and
-   listing the waived items. **Owner: Oleg** — a scope decision, not an implementation one.
+   read — yet 5.6's rehearsal is required to record a candidate. Both requirements are correct, and code
+   review's second pass (2026-08-25) restated rather than re-litigated this. The two exits are the CORS fix
+   landing first, or 5.6 recording under a documented, time-boxed waiver naming `RVC-v1` and listing the
+   waived items. **Owner: Oleg** — a scope decision, not an implementation one. **The "CORS fix lands first"
+   exit is now reachable, not merely theoretical: the ask was sent 23.08.2026** (tracked ASKED in
+   `docs/preprod-infrastructure-requirement.md`'s status block, Oleg's decision 2026-08-25), though no
+   response has arrived yet. Story 5.6 does not start until either the neighbouring team responds and closes
+   the blocker, or Oleg makes an explicit decision to proceed under the waiver exception — whichever comes
+   first is Oleg's call.
 3. `docs/preprod-candidates.md`'s two existing `pass` rows would not qualify under `RVC-v1`. They are
    deliberately not rewritten; the mismatch is now recorded in both files so a later reader does not read it
    as an undetected defect.
-4. `sprint-status.yaml` is left at `in-progress`, not `review`. Flipping it would misrepresent readiness while
-   the confirming dispatch is outstanding.
+4. **RESOLVED, 2026-08-25:** `sprint-status.yaml` and this spec's own `status:` field both flip to `review`
+   as part of this fix-pass, now that the confirming dispatch (Risk 1) has actually happened and the 25 patch
+   findings from code review pass 2 have been addressed. `followup_review_recommended` stays `true` — Oleg's
+   three decisions are recorded, not resolved, by this pass.
+5. 🔴 **NEW, code review's own decision (Oleg's veto open): `continue-on-error: true` is PERMANENTLY
+   UNMEASURED BY DESIGN, and the instruction to observe it on a dispatch is removed, not repeated.** Run 1281
+   (Risk 1) could not measure this flag — the step body was `echo`s plus a guarded redirect that cannot fail
+   on a green run, so asking the same dispatch to observe it asked for a measurement the job's own body made
+   structurally unreachable. Fixed instead: the redirect now carries `\|\| true`, making "the step body
+   cannot fail on its own" literally true rather than an argument resting on the very flag it was describing.
+   The flag remains, genuinely redundant belt-over-braces, not a load-bearing observation. Removing it or
+   measuring it deliberately (on a throwaway workflow) remains Story 7.7's own AC.
 
 ---
 
@@ -336,7 +361,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
 
 **`decision-needed`** — the correct fix is not derivable without Oleg.
 
-- [ ] [Review][Decision] **The CORS ask was never sent, and two shipped documents say it is open.**
+- [x] [Review][Decision] **Resolved — Oleg's decision (2026-08-25): both requirement documents marked "направлено" (23.08.2026, ASKED, addressees CRM/api-prionex for CORS both environments, aleksey for DEV vhost). "Ask open" language kept but now points at the updated status block.** The CORS ask was never sent, and two shipped documents say it is open.
   `docs/release-validation-checklist.md` ("The CORS blocker") states *"**The ask is already open**
   with that team"*, and `docs/migration-decisions.md#d39` §6 states *"внешний ask открыт"*. The
   repository's own record says otherwise: `docs/preprod-infrastructure-requirement.md:5-7` —
@@ -349,7 +374,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   working the blocker that makes 8 of 12 items unexecutable, when nobody has been told. Two exits:
   send the ask, or correct both operator-facing documents to say it has not been sent and name the
   owner. **Owner: Oleg.**
-- [ ] [Review][Decision] **`continue-on-error: true` is unmeasured AND unmeasurable where it sits.**
+- [x] [Review][Decision] **Resolved — option (a)+(c) combined, code review's own decision (Oleg's veto open): flag kept, relabelled PERMANENTLY UNMEASURABLE-in-place, instruction to observe it on a dispatch removed; `|| true` added to the step-summary redirect so the "echos cannot fail" claim is genuinely true.** `continue-on-error: true` is unmeasured AND unmeasurable where it sits.
   `deploy-preprod.yml`'s header holds both *"the step body's only statements are `echo`s, so it
   cannot fail on its own and the flag should never be exercised"* and *"it is the SECOND thing the
   coordinator's confirming dispatch must observe"*. Those cannot both be acted on; run 1281 proved
@@ -361,7 +386,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   relabel it PERMANENTLY UNMEASURABLE-in-place, deleting the instruction to observe it on a
   dispatch. Doing none is the current state. **Owner: Oleg**, with (a)/(b) already routed to Story
   7.7's own AC.
-- [ ] [Review][Decision] **`RVC-v1` and Story 5.6 remain not simultaneously satisfiable.** Restated,
+- [x] [Review][Decision] **Restated, not re-litigated, per the coordinator's own instruction: the "CORS fix lands first" exit is now reachable (ask sent 23.08.2026); Story 5.6 does not start until the neighbouring team responds or Oleg makes an explicit waiver decision.** `RVC-v1` and Story 5.6 remain not simultaneously satisfiable. Restated,
   not re-litigated — the story filed this itself in three places and assigned it to Oleg. The
   2026-08-25 re-measurement on **routed** endpoints (`OPTIONS /api/v1/auth/login` → `200`, still
   `Access-Control-Allow-Origin: http://localhost:8320`, two negative controls) closed the last
@@ -371,7 +396,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
 
 **`patch`** — unambiguous, not applied by this pass.
 
-- [ ] [Review][Patch] A failed precondition is invisible in every artifact anyone reads — nothing
+- [x] [Review][Patch] **Fixed: a failed P1/P2 now aborts validation before F1 begins, with its own fixed note shape (`precondition failed (<P1|P2>) — validation aborted, no items executed`) that does not range over 12 at all — see "How to execute it" and the note format's fourth shape.** A failed precondition is invisible in every artifact anyone reads — nothing
   makes `P1`/`P2` `fail` force the aggregate to `fail` [docs/release-validation-checklist.md — "How
   to execute it", "The `validation_note` format", "Execution Log"]. `P + D + F + B == 12` ranges over
   F1…F12 only and the aggregate rule says *"`pass` requires all twelve to be a full `pass`"*, so
@@ -379,14 +404,14 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   and a minted `preprod-<sha>` against a stand that was serving a different digest — precisely the
   outcome P1's own text says it exists to prevent (*"your twelve verdicts describe a different
   artifact"*). Fix: make a failed precondition abort validation, and say so in the note format.
-- [ ] [Review][Patch] `docs/migration-decisions.md#d39` §3 ships the **pre-review** `validation_note`
+- [x] [Review][Patch] **Fixed: D39 §3 rewritten to the canonical shipped format (`<D>`/`<F>` clauses, parameterized cause/owner, P1/P2-abort note shape, invariant scope note).** `docs/migration-decisions.md#d39` §3 ships the **pre-review** `validation_note`
   format [docs/migration-decisions.md — D39 §3]. It reads `RVC-v1 <image_tag>: <P>/12 pass, <B>
   BLOCKED (CORS, CRM/api-prionex) — detail in …`: no `<D>`, no `<F>`, and the cause/owner hardcoded
   — which the checklist explicitly forbids (*"The cause and owner are **parameters, not literals**:
   do not hardcode `(CORS, CRM/api-prionex)`"*). A note written from D39 can never satisfy the
   invariant D39's own §6 cites. Two review patches were applied to the checklist and not propagated
   to the decision record, which is the file the workflow header points a reader at.
-- [ ] [Review][Patch] The spec's own "Implementation notes" and "Verification / Actual output"
+- [x] [Review][Patch] **Fixed: all six falsified facts strike-and-annotated in place (P1 delegation, 4/12 pass count, localhost:8005 misattribution, 72 lines/node-20, grep -c 413, runs-on=node-20 in Actual output) — per the project's own no-retroactive-rewrite rule.** The spec's own "Implementation notes" and "Verification / Actual output"
   sections record falsified facts as measured output
   [_bmad-output/implementation-artifacts/spec-5-5-…md]. Six, all contradicted by the merged tree or
   by the spec's own Review Triage Log: `runs-on = node-20` presented as the parsed shape of a
@@ -400,13 +425,13 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   called the `VITE_WS_URL` fallback (`useDialerSocket.ts:9` is `localhost:8000`). Also the checked
   task text still reads `runs-on: node-20`. Fix: strike-and-annotate in place, per this project's
   own no-retroactive-rewrite rule.
-- [ ] [Review][Patch] The spec asserts three different readiness states and a stale provenance
+- [x] [Review][Patch] **Resolved: the reviewer's own commit already flipped `status:` to `in-progress`; this fix-pass flips it to `review` now that the findings are addressed. `final_revision` updated at this pass's own final commit.** The spec asserts three different readiness states and a stale provenance
   [_bmad-output/implementation-artifacts/spec-5-5-…md frontmatter and body]. *"**Nothing was
   committed.** … Oleg commits."* and *"Committed as `92a8c8ef` … and `472c03c7`"* both stand;
   `final_revision: '472c03c7'` predates the merged content by three commits and a day
   (`ecd7dc94`, `0c6360ad`, `00aa3533`); `status: 'done'` contradicts `sprint-status.yaml`'s
   deliberate `in-progress` and the spec's own Residual Risk 4.
-- [ ] [Review][Patch] The `runs-on: deploy-dev-preprod` rationale is false as written
+- [x] [Review][Patch] **Fixed in both `deploy-preprod.yml`'s own comment and D39 §4: the false "adds no new dependency"/"already holds" claims replaced with the real reachable-queue argument, choice kept, argument corrected.** The `runs-on: deploy-dev-preprod` rationale is false as written
   [.forgejo/workflows/deploy-preprod.yml — the `runs-on` comment block]. It claims *"The deploy
   runner is already required by this run, so reusing it adds no new dependency of any kind"* and
   that the cost is *"paid on a runner this run already holds"*. A run does not hold a runner across
@@ -417,20 +442,20 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   in-progress → `cancel-in-progress: false` holds the PRE-PROD group → the next dispatch, a hotfix
   included, is blocked. That is verbatim the failure the comment rejects `node-20` for. The
   *choice* is still defensible (`node-20` is busier); the *argument* is not. Fix the argument.
-- [ ] [Review][Patch] *"The step body's only statements are `echo`s, so it cannot fail on its own"*
+- [x] [Review][Patch] **Fixed: `|| true` added to the `$GITHUB_STEP_SUMMARY` redirect, making the claim literally true rather than resting on the UNMEASURED flag.** *"The step body's only statements are `echo`s, so it cannot fail on its own"*
   is false [.forgejo/workflows/deploy-preprod.yml — `continue-on-error` header block and the `run:`
   body]. The body ends `{ … } >> "$GITHUB_STEP_SUMMARY"` under `set -euo pipefail`. `${GITHUB_STEP_SUMMARY:-}`
   guards *unset/empty*, not set-but-unwritable, missing directory, or full disk — any of which exits
   the step non-zero. So invariant (1) ("must never fail a run") rests entirely on the flag the same
   header calls UNMEASURED, on a directly reachable path. Fix: `|| true` on the redirect, which makes
   the `echo`s-cannot-fail argument true and the flag genuinely redundant.
-- [ ] [Review][Patch] "Fixing CORS alone does not unblock F9" is undone in two other shipped files.
+- [x] [Review][Patch] **Fixed: D39's Триггер пересмотра corrected (CORS fix snaps `BLOCKED` from seven items, not F9); `epics.md` Story 7.7 AC3 corrected to exclude F9 explicitly, with the reasoning stated.** "Fixing CORS alone does not unblock F9" is undone in two other shipped files.
   D39's **Триггер пересмотра** says the CORS fix *"снимает `BLOCKED` с F4-F11 и делает агрегатный
   `pass` достижимым"* — F9 included; `epics.md` Story 7.7's third criterion says *"**Given** the
   PRE-PROD Kong's CORS origin is fixed … **Then** the authenticated flows (`F4` …, `F5`, `F6`,
   `F9`) pass"*. Both are the precise mistake the checklist patched out (*"so the dependency does not
   stay invisible inside somebody else's blocker and get assumed resolved when the CORS ask closes"*).
-- [ ] [Review][Patch] The invariant `P + D + F + B == 12` is never marked unenforced, while the pipe
+- [x] [Review][Patch] **Fixed: the checklist now states explicitly that the invariant is a convention, not a check, with a stated weakness example (4/12 arithmetically valid under misclassification).** The invariant `P + D + F + B == 12` is never marked unenforced, while the pipe
   and newline rules are [docs/release-validation-checklist.md — "The `validation_note` format"].
   The doc says *"Nothing checks either rule"* for the two shape rules and then presents the
   invariant as *"any note that does not satisfy it is wrong on its face"* with no such disclosure.
@@ -438,7 +463,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   Worse, it is a weak check — this spec's own `4/12 pass, 8 BLOCKED` example satisfies the
   arithmetic while misclassifying two degraded items as full passes. Say so: an unenforced
   convention that catches addition errors, never misclassification.
-- [ ] [Review][Patch] The note format has no live row and cannot get one on any reachable path today
+- [x] [Review][Patch] **Fixed: the combined shape is now marked "unexercised, not demonstrated" — G1 refuses before any note is written on the aggregate-fail path.** The note format has no live row and cannot get one on any reachable path today
   [docs/release-validation-checklist.md — "The three shapes"; AC4]. The combined shape is called
   *"the very first note Story 5.6 will write"*, but under the aggregate verdict the same file
   mandates today (`fail`), G1 exits as the first step of the first job — before the note-validation
@@ -447,18 +472,18 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   therefore **read-verified, not exercised** — and the read-verification is sound (measured: 185
   chars, one line, no `|`, env-passed at `:456`/`:941`, `:982` cited exactly). Mark the fit as
   unexercised rather than as demonstrated.
-- [ ] [Review][Patch] Nothing reconciles the `image_tag` inside the note with the dispatched
+- [x] [Review][Patch] **Fixed: added as a third unenforced convention alongside the pipe/newline rules, with the exact failure mode named.** Nothing reconciles the `image_tag` inside the note with the dispatched
   `image_tag` [docs/release-validation-checklist.md — format spec; record-preprod-candidate.yml:982].
   G2/G3 validate the *input* tag's shape only; the note passes through untouched. Dispatching tag B
   with a note naming tag A passes every guard and writes a ledger row that contradicts itself. Add
   it to the file's own list of unenforced conventions alongside the pipe and the newline.
-- [ ] [Review][Patch] The Execution Log key still collides on same-day re-validation
+- [x] [Review][Patch] **Fixed: heading format changed to `image_tag` + UTC timestamp (minute precision), which cannot collide on a same-day re-validation. Template updated to match.** The Execution Log key still collides on same-day re-validation
   [docs/release-validation-checklist.md — "Execution Log"]. The stated re-validation trigger is the
   CORS fix, after which F4-F11 become executable — a redeploy and re-validation on the same date is
   the expected case, not an exotic one. Two sections then share tag *and* date and *"the later date
   governs"* produces no ordering, while *"Never edit a section after it is written"* forbids repair.
   Add a UTC time or a sequence suffix to the heading.
-- [ ] [Review][Patch] F2 criterion 4 / P2's reference point is unpinned
+- [x] [Review][Patch] **Fixed: pinned to the `build.yml` run's own `started` timestamp (the earliest of the three candidate instants), with where to read it stated. P2's own text updated to match.** F2 criterion 4 / P2's reference point is unpinned
   [docs/release-validation-checklist.md — F2 c4, P2; vite.config.ts:7-8]. `String(Date.now())` is
   evaluated when the vite config is *read* — before bundling, before `docker build` completes,
   before the image exists. The criterion requires the decoded epoch to be *"at or after the build
@@ -467,7 +492,7 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   bundle decodes to an *earlier* value and fails. P2 inherits this as its entire pass condition.
   Pin the reference instant, and say where the validator reads it — "How to execute it" grants only
   a tag and a browser.
-- [ ] [Review][Patch] The section titled *"F2's discriminators were measured, and were proven able
+- [x] [Review][Patch] **Fixed: heading and body narrowed to what was actually controlled — only criteria 2-3's `VITE_WS_URL`-unset half; c3's empty-string case, c2's other absences, and c4 were never controlled, stated explicitly.** The section titled *"F2's discriminators were measured, and were proven able
   to fail"* overclaims its own table [docs/release-validation-checklist.md]. The negative control
   varied `VITE_WS_URL` **unset** only. The build-timestamp column is `—` for that row, so criterion
   4 was never controlled; criterion 3's justifying case is the **empty string**, which takes the
@@ -477,63 +502,63 @@ query; the query exists (run 1281) and no ledger row carries it. It does **not**
   measurement records how many quoted 13-digit integers a real bundle contains — so the search rule
   has no stated match count, unlike criterion 1 which does ("**3** files"). Narrow the heading to
   what was actually measured.
-- [ ] [Review][Patch] A partially executed checklist has no legal verdict
+- [x] [Review][Patch] **Fixed: explicit statement added — no fifth verdict, no incomplete aggregate; a partial run (other than a P1/P2 abort) has no legal note at all under this format.** A partially executed checklist has no legal verdict
   [docs/release-validation-checklist.md — the four-verdict table]. An item nobody reached is not
   `pass`, not `fail` (*"executed and did not meet its criterion"*), and not `BLOCKED` (*"could not
   be executed **at all**"*, and it must name an owner). There is no fifth verdict and no incomplete
   aggregate, yet the note is only well-formed at 12. The only way out is to mis-record unreached
   items as `BLOCKED` with an invented owner — the misattribution the same page warns against.
-- [ ] [Review][Patch] F2 criterion 5 demands access the checklist does not grant
+- [x] [Review][Patch] **Fixed: added as prerequisite 4 in "How to execute it", with a `BLOCKED` fallback for a validator without repository-settings access.** F2 criterion 5 demands access the checklist does not grant
   [docs/release-validation-checklist.md — F2 c5 vs "How to execute it"]. It requires reading the
   Forgejo repository variable `vars.VITE_OPERATOR_PHONE_URL_PREPROD` (*"check the variable, do not
   guess"*), while the prerequisites list only a tag, a browser and two application accounts. F2 is
   declared `EXECUTABLE` and defines no degraded wording, so a validator without repository-settings
   access has no legal verdict for it.
-- [ ] [Review][Patch] Four counts in shipped text do not match the artifacts they count. Story 7.7
+- [x] [Review][Patch] **Fixed, all four: Story 7.7's Given count corrected to nine (spec, deferred-work.md); deferred-work.md's "Four items" corrected to six (recounted); PR description's "two new files" corrected to four (recounted via `git diff --diff-filter=A`).** Four counts in shipped text do not match the artifacts they count. Story 7.7
   has **9** `**Given**` blocks; the spec, `deferred-work.md` and the PR description all say *"six
   Given/When/Then criteria"*. The new `deferred-work.md` section says *"Four items leave the story
   open"* and carries **six** bullets. The PR description's blast radius says *"two new files"*; the
   diff adds **four**.
-- [ ] [Review][Patch] A verbatim code quote is a reconstruction [docs/release-validation-checklist.md
+- [x] [Review][Patch] **Fixed in both files: replaced with the actual four-line object literal (lines 275-278), substance unchanged.** A verbatim code quote is a reconstruction [docs/release-validation-checklist.md
   F9 and deferred-work.md, citing `src/routes/index.tsx:277-279`]. The object literal is at
   **275-278** with `path: 'profile'` on **276**, spread over four lines, not the one-line form
   quoted. The substance — no `PermissionRoute` wrapper — is correct and verified. In a change whose
   own text argues line numbers rot, shipping a fabricated verbatim is the wrong direction.
-- [ ] [Review][Patch] Two "Actual output" lines in Verification are unproducible or wrong
+- [x] [Review][Patch] **Fixed: the `grep -n 'd39'` claim reworded to avoid a specific unproducible match; `preprod-candidates.md`'s false inclusion in the "no matches" frozen-file list removed, its real diff (11 0) cross-referenced instead.** Two "Actual output" lines in Verification are unproducible or wrong
   [_bmad-output/implementation-artifacts/spec-5-5-…md]. A case-sensitive `grep -n 'd39'` cannot
   match `## D39.`, and the change-log row is at `:4981`, not `:4896`. Separately, a Manual check
   claims `docs/preprod-candidates.md` had *"no matches"* in `git diff --name-only` while the Auto
   Run Result in the same file reports `11 0` for it. The substantive constraint held — prose only,
   no row and no column — but the check record is false.
-- [ ] [Review][Patch] The no-pipe / one-line rule is scoped to one of three sinks
+- [x] [Review][Patch] **Fixed: all three sinks named (`:982`, `:972`, and the Execution Log's own `Evidence / why` cells) in the checklist's own text.** The no-pipe / one-line rule is scoped to one of three sinks
   [docs/release-validation-checklist.md — "The `validation_note` format"]. The same value is also
   interpolated into a Markdown cell at `record-preprod-candidate.yml:972`
   (`echo "| validation_note | ${VALIDATION_NOTE} |"`) and into the Execution Log's own
   `Evidence / why` cells. Only `:982` is named.
-- [ ] [Review][Patch] `<B>` and `<D>` carry no item ids while `<F>` does
+- [x] [Review][Patch] **Fixed: `<D-ids>` and `<B-ids>` added to the format, template, worked examples, and D39 §3, matching `<F>`'s existing traceability.** `<B>` and `<D>` carry no item ids while `<F>` does
   [docs/release-validation-checklist.md — format spec]. When the CORS ask closes, a reader of
   `docs/preprod-candidates.md` cannot tell from the row which of the eight were blocked on it and
   which on the missing restricted-role account — the exact traceability the same paragraph asks to
   preserve.
-- [ ] [Review][Patch] `grep this file for `runner_label:`` returns a decoy
+- [x] [Review][Patch] **Fixed: search string narrowed to the indented, valued form, with the decoy line named explicitly so a reader is not surprised by the double hit.** `grep this file for `runner_label:`` returns a decoy
   [.forgejo/workflows/deploy-preprod.yml — the `runs-on` comment]. Two hits: `:24`, quoting
   `runner_label: deploy-preprod-preprod` — a label the same file records as non-existent — and
   `:157`, the real one. The replacement for a rotting line number is an ambiguous search naming two
   different labels.
-- [ ] [Review][Patch] Two `deferred-work.md` owners drift from the Always constraint (*"owners are
+- [x] [Review][Patch] **Fixed, both: the "none needed" bullet now carries no Owner field at all (a closed record, not a condition); the M7 re-owner rule's conditional successor clause removed, owner is `Story 5.6` with no standing fallback.** Two `deferred-work.md` owners drift from the Always constraint (*"owners are
   names or story numbers, never trigger conditions"*). One new bullet ends *"**Owner: none needed —
   closed disposition.**"*; the M7 re-owner rule reintroduces a conditional — *"ownership moves to
   the next story that dispatches this workflow"* — the same shape the correction removed, mitigated
   only by *"named explicitly at 5.6's closeout"*.
-- [ ] [Review][Patch] Two further note-format variants ship alongside the canonical one
+- [x] [Review][Patch] **Fixed: both corrected to the canonical shipped shape (I/O matrix row 1 now `12/12 pass — detail in …`; Design Notes example now satisfies `P+D+F+B==12`).** Two further note-format variants ship alongside the canonical one
   [spec I/O & Edge-Case Matrix row 1: `N/N pass — **see** …`; spec Design Notes: `6/9 pass, 3
   BLOCKED`]. The canonical form is `<P>/12 pass … — **detail in** …`. `6/9` violates the invariant
   the same story shipped.
-- [ ] [Review][Patch] The ledger row's date is the recorder's date, not the validation date
+- [x] [Review][Patch] **Disclosed, not fixed (correctly — `RVC-v1` does not edit `record-preprod-candidate.yml`): the offset between the Execution Log's own timestamp and the recorder's `$(date -u +%Y-%m-%d)` is now named explicitly in the checklist.** The ledger row's date is the recorder's date, not the validation date
   [record-preprod-candidate.yml:982 `$(date -u +%Y-%m-%d)` vs the Execution Log heading]. Validation
   finishing 23:50 UTC with the recorder dispatched at 00:10 dates the row one day after the section
   that justifies it, and the same-tag tie-break then runs on a date the ledger does not share.
-- [ ] [Review][Patch] No stated or enforced length bound on `validation_note`
+- [x] [Review][Patch] **Disclosed: a fourth unenforced-convention paragraph added, naming the worst-case admissible length and stating it is a disclosure gap, not a live defect.** No stated or enforced length bound on `validation_note`
   [docs/release-validation-checklist.md — format spec]. `<F> fail (<ids>)` admits twelve ids and
   `<B> BLOCKED (…)` admits twelve semicolon-separated pairs; the only recorder guard is the blank
   check. Truncation or rejection of an over-long dispatch input is neither stated nor bounded. (The

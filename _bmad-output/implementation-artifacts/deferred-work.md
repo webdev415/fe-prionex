@@ -4070,22 +4070,30 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   workflow zero times, whereas 5.6's rehearsal runs the whole cycle **through** the workflows and is
   the next thing that dispatches the recorder at all. 5.6 is still not *required* to force these
   eight branches — naming an owner assigns the decision, it does not manufacture a requirement.)
-  **Re-owner rule:** if Story 5.6 closes without exercising these branches, ownership moves to the
-  next story that dispatches this workflow, named explicitly at 5.6's closeout. It does not stay on
-  a closed story, and it is not allowed to lapse back into "whichever story happens to" — that is
-  the phrasing this correction removed.
+  🔴 **Corrected, code review of Story 5.5's own fix-pass (2026-08-25): the "re-owner rule" above
+  reintroduced the same drift this entry's own correction had just removed.** "Ownership moves to
+  the next story that dispatches this workflow" is a trigger condition, not an owner, in the exact
+  shape Prohibition 19 rules out — appending "named explicitly at 5.6's closeout" softened it but
+  did not fix it, because until that naming happens the live value of "Owner" is still a condition,
+  not a name. **Fixed: the owner is `Story 5.6`, full stop, with no standing conditional successor
+  clause.** If Story 5.6 closes without exercising these branches, re-owning to whatever comes next
+  is a **required action at that story's own closeout** — a procedural obligation on 5.6's closeout
+  pass, stated here as a reminder, not a mechanism that silently reassigns ownership on its own.
   Recorded so a reader does not mistake "not disclosed" for "does not exist".
 
 ## Deferred from: Story 5.5 (2026-08-24)
 
 Story 5.5 published `docs/release-validation-checklist.md` (`RVC-v1`), added the non-gating `e2e`
-placeholder job to `.forgejo/workflows/deploy-preprod.yml`, and recorded D39. Four items leave the
-story open; one of them is a genuine collision between two shipped requirements and is not the dev
-agent's to settle.
+placeholder job to `.forgejo/workflows/deploy-preprod.yml`, and recorded D39. ~~Four items leave the
+story open~~ 🔴 **Corrected, code review of this fix-pass (2026-08-25): this section carries six
+bullets, not four — recounted directly against the list below.** Six items leave the story open; one
+of them is a genuine collision between two shipped requirements and is not the dev agent's to
+settle.
 
 - 📅 **Real end-to-end coverage is Story 7.7, not a line in this file.** Added to
   `_bmad-output/planning-artifacts/epics.md` ("Replace the E2E Placeholder with Real End-to-End
-  Coverage", six Given/When/Then criteria) and to `sprint-status.yaml` as
+  Coverage", ~~six~~ nine Given/When/Then criteria — 🔴 corrected, code review of this fix-pass:
+  counted directly against `epics.md`, nine `**Given**` blocks, not six) and to `sprint-status.yaml` as
   `7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog`. It is a story and not a
   deferred bullet for the reason already recorded for 7.6 (`sprint-status.yaml:1166-1169`): a
   deferred line reads as "someone will notice", and **nobody notices missing e2e coverage — the
@@ -4123,7 +4131,13 @@ agent's to settle.
   not reinterpret rows after the fact (the same rule that keeps decision bodies from being rewritten
   retroactively). `RVC-v1` governs candidates recorded from its publication onward, and says so in
   its own text. Recorded here so a later reader comparing the ledger against the checklist does not
-  read the mismatch as an unnoticed defect. **Owner: none needed — closed disposition.**
+  read the mismatch as an unnoticed defect. 🔴 **Corrected, code review of Story 5.5's own
+  fix-pass (2026-08-25): "Owner: none needed — closed disposition" was itself flagged as drifting
+  from the Always constraint.** There genuinely is no future action here — the two rows are
+  permanent, append-only, and this paragraph is the entire disposition — so **no owner field is
+  recorded at all**, rather than filling it with a phrase that reads as a condition. This entry
+  carries no `**Owner:**` line by design; it is a closed, no-action record, not an open item
+  awaiting anyone.
 
 - ⚠️ **`/dashboard/profile` is the only dashboard route rendered without a `PermissionRoute`
   wrapper.** `src/routes/index.tsx:277-279` renders it bare —

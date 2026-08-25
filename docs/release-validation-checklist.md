@@ -41,9 +41,25 @@ You do not need to have read the application's source. You need:
 2. A browser on `https://crm.preprod.crm-prionex.online`.
 3. Working credentials for a normal operator account **and** for an account with a restricted role
    (needed by F9). Ask Oleg; this checklist does not carry credentials.
+4. 🔴 **Read access to this repository's Forgejo repository variables** (needed by F2 criterion 5,
+   which checks `vars.VITE_OPERATOR_PHONE_URL_PREPROD` directly — "check the variable, do not
+   guess"). Without it you have no legal verdict for F2 c5; F2 carries no degraded wording for this
+   case, so treat the item as `BLOCKED — owner: whoever grants repository-settings read access` if
+   you lack it, rather than guessing from the UI alone.
 
 **Execute P1 by hand before starting F1** — see [P1](#p1) for why it cannot be delegated to the
 recorder.
+
+**A failed precondition aborts validation before F1 begins.** P1 or P2 failing is not one more
+verdict folded into the `P + D + F + B == 12` count (which ranges over F1…F12 only, deliberately —
+see [the note format](#the-validation_note-format)): it means the twelve flow verdicts you are about
+to collect would describe an artifact other than the one `image_tag` names, or would describe it at
+a stale moment. **If P1 or P2 fails, stop. Do not execute F1-F12 at all.** The aggregate verdict is
+`fail`, `validated=fail` on the dispatch, and the `validation_note` is the fixed sentence
+`RVC-v1 <image_tag>: precondition failed (<P1|P2>) — validation aborted, no items executed` — no
+`<P>/<D>/<F>/<B>` counts, because none were collected. This is the one note shape this file
+mandates that does **not** range over 12; the invariant in [the note format](#the-validation_note-format)
+applies only once you are past this gate.
 
 Work through F1 → F12 in order. For each item write exactly one of **four** legal verdicts into the
 [Execution Log](#execution-log):
@@ -104,9 +120,11 @@ checklist the recorder re-verifies on its own.
   UI at all, so there is nothing on screen for a human to compare. The pass criterion is
   **[F2 criterion 4](#f2)'s decodable build epoch**, executed after a hard reload
   (Ctrl/Cmd+Shift+R): find the quoted 13-digit integer in the served `assets/index-*.js`, decode it
-  as a Unix epoch in milliseconds, and require it to be **at or after** the candidate image's own
-  build time. That is a criterion that can actually fail — a cached bundle from a previous deploy
-  decodes to an *earlier* epoch, and that is exactly the situation P2 exists to catch.
+  as a Unix epoch in milliseconds, and require it to be **at or after the `build.yml` run's own
+  `started` timestamp** (see F2 c4 for exactly which instant this is and where to read it — the
+  image's own `created` time is a different, later instant and the wrong one to compare against).
+  That is a criterion that can actually fail — a cached bundle from a previous deploy decodes to an
+  *earlier* epoch, and that is exactly the situation P2 exists to catch.
 - **Executability:** `EXECUTABLE` (it is F2 criterion 4, run once at the start).
 
 ---
@@ -193,10 +211,19 @@ health check, and fails only in a browser. Nothing upstream of this item can cat
      What survives in the bundle is a bare **quoted 13-digit integer**, e.g. `"1787604128392"`.
      Search for a quoted 13-digit number, decode it as a Unix epoch in **milliseconds** —
      `date -u -r 1787604128` (macOS) or `date -u -d @1787604128` (Linux), i.e. the value with its
-     last three digits dropped — and require the result to be **at or after** the build time of the
-     candidate image (the `build.yml` run that produced `image_tag`). A value **older** than the
-     candidate's build means you are looking at a cached or stale bundle, which is exactly what P2
-     exists to catch.
+     last three digits dropped.
+
+     🔴 **The reference instant is pinned, and it matters which one.** `Date.now()` is evaluated when
+     the vite config is *read* — before bundling, before `docker build` completes, before the image
+     exists. Run start, run end, and the image's own `created` timestamp are three different
+     instants, and comparing against anything later than run start can fail a genuinely correct
+     bundle (the config is read early inside the run). **The pin: require the decoded epoch to be
+     at or after the `build.yml` run's own `started` timestamp** — the earliest of the three, so a
+     stamp taken during that same run is always at or after it by construction, and it is the value
+     a stale/cached bundle (stamped during an *earlier* run) will fail. **Where to read it:** the
+     Forgejo Actions tab, filtered to `build.yml`, the run whose dispatch produced `image_tag` — its
+     "Started" timestamp on the run's own page. A value **older** than that run's start means you are
+     looking at a cached or stale bundle, which is exactly what P2 exists to catch.
   5. `VITE_OPERATOR_PHONE_URL` — **the authority is `build.yml`, not your expectation.** The
      selecting step is `build.yml`'s *"Select the operator phone URL for this environment"*, which
      reads the Forgejo repository variable `vars.VITE_OPERATOR_PHONE_URL_PREPROD`. For **preprod
@@ -210,10 +237,10 @@ health check, and fails only in a browser. Nothing upstream of this item can cat
 - **Executability:** `EXECUTABLE`. This item needs no API call at all, so the CORS defect does not
   reach it — it is the single most valuable item in the list today.
 
-#### F2's discriminators were measured, and were proven able to fail
+#### One of F2's discriminators was measured and proven able to fail; the rest are narrower claims than an earlier version of this heading made
 
-🔴 Stated here because this project has rejected checks that could not fail, and F2's criteria 2-4
-are **negative** assertions — the kind most likely to be vacuous. They were measured, not assumed.
+🔴 **Corrected, code review.** The earlier heading here — "F2's discriminators were measured, and
+were proven able to fail" — overclaimed against its own table. Restated narrowly, per discriminator:
 
 The real bundle was built twice with `npx vite build` (vite 6.4.2, node 22.23.1) on 2026-08-24 and
 `assets/` was grepped:
@@ -221,18 +248,30 @@ The real bundle was built twice with `npx vite build` (vite 6.4.2, node 22.23.1)
 | Build | `localhost:8000` | `localhost:8005` | literal `VITE_BUILD_TS` | `import.meta.env` | `api.crm.preprod.crm-prionex.online` |
 |---|---|---|---|---|---|
 | `VITE_API_BASE_URL` + `VITE_WS_URL` both set to the PRE-PROD values | 0 files | 0 files | 0 files | 0 files | 3 files |
-| **Negative control** — same build, `VITE_WS_URL` unset | **1 file** | **2 files** | — | — | — |
+| **Negative control** — same build, `VITE_WS_URL` **unset only** | **1 file** | **2 files** | — | — | — |
 
-Two conclusions:
+**What this table actually controls, and what it does not:**
 
-1. **esbuild's constant-folding of the `!== undefined ? … : …` guard is confirmed on this
-   toolchain.** A correctly configured build genuinely carries zero occurrences of either fallback,
-   so criteria 2-3 are valid — and the negative control proves they are **falsifiable**: unset one
-   variable and the strings reappear. This is a discriminator that was demonstrated able to fail,
-   not one assumed to work.
-2. **Any instruction to search the bundle for the identifier `VITE_BUILD_TS` is unexecutable** —
-   0 hits on a correct build, because of the `define` substitution above. Hence criterion 4's
-   rewrite to the decodable epoch. The measured example value was `"1787604128392"`.
+1. **Criteria 2-3's `VITE_WS_URL`-fallback half is genuinely measured and falsifiable.** The negative
+   control varied `VITE_WS_URL` unset, and the fallback strings reappeared — a discriminator
+   demonstrated able to fail, not assumed to work. esbuild's constant-folding of the
+   `!== undefined ? … : …` guard is confirmed on this toolchain for this one variant.
+2. **Criterion 3's own justifying case — the empty string — was never built or controlled.** The
+   negative control unset the variable; it did not set `VITE_WS_URL=""`, which is the specific case
+   criterion 3's own text names as the trap (`!== undefined` passes on `""`). That case is asserted,
+   not measured, here.
+3. **Criterion 2's other halves — the absence of `api.crm.dev.crm-prionex.online` and of
+   `http://localhost:5173` — were never controlled either.** The table has no column for either
+   string; their absence in the real build is observed, not proven falsifiable by a negative control.
+4. **Criterion 4 (the build-timestamp epoch) was never controlled at all — the `—` cells above are
+   honest, not filler.** No build was made with a stale or absent timestamp to confirm the check can
+   fail. Separately: `VITE_BUILD_TS` reaches the bundle through exactly **one** reference
+   (`src/lib/i18n.ts:9`), and unlike criterion 1's "**3** files", no measurement here states how many
+   quoted 13-digit integers a real bundle contains, so there is no stated match count to verify
+   against.
+5. **Any instruction to search the bundle for the identifier `VITE_BUILD_TS` remains unexecutable** —
+   0 hits on a correct build, because of the `define` substitution described under criterion 4. The
+   measured example value was `"1787604128392"`.
 
 The same facts are recorded in `docs/migration-decisions.md#d39` §9, which is where this project
 keeps measured platform facts.
@@ -325,9 +364,20 @@ keeps measured platform facts.
   wrapped in a permission check". That is **false**, and a validator following F9's own instruction
   (log in restricted, type URLs directly) would have recorded a `fail` on a healthy candidate
   because of it.
-- **The known exception: `/dashboard/profile`.** `src/routes/index.tsx:277-279` renders
-  `ProfileSettingsPage` **bare** — `{ path: 'profile', element: withSuspense(<ProfileSettingsPage />) }`
-  — with no `PermissionRoute` wrapper, unlike every sibling route around it. So a restricted role
+- **The known exception: `/dashboard/profile`.** `src/routes/index.tsx:275-278` renders
+  `ProfileSettingsPage` **bare**, with no `PermissionRoute` wrapper, unlike every sibling route
+  around it:
+  ```
+  {
+    path: 'profile',
+    element: withSuspense(<ProfileSettingsPage />),
+  },
+  ```
+  🔴 **Corrected, code review:** an earlier version of this file quoted this as a one-line form,
+  `{ path: 'profile', element: withSuspense(<ProfileSettingsPage />) }` — a reconstruction, not a
+  verbatim quote; the real object literal spans four lines as shown above, with `path: 'profile'`
+  on line 276. The substance was always correct — no `PermissionRoute` wrapper — only the quoted
+  text was fabricated. So a restricted role
   **will** see `/dashboard/profile` render, and that is the current, pre-existing behaviour of the
   application, not a defect introduced by the candidate. Do **not** record F9 `fail` for `profile`
   alone. Whether that bareness is intentional (a user's own profile arguably needs no permission)
@@ -404,20 +454,34 @@ origin. A browser on `https://crm.preprod.crm-prionex.online` therefore refuses 
 - **Owner: `CRM/api-prionex`.** Kong belongs to the neighbouring backend repository. Nothing in
   `fe-prionex` can fix it, work around it, or route past it: the API base URL is an absolute URL
   baked into the bundle (F2), so the browser never traverses the frontend container's own proxy.
-- **The ask is already open** with that team; it was measured from the real origin and recorded in
-  Story 5.2 (`docs/migration-decisions.md#d36`) and re-stated by Story 5.4's ledger rows.
+- **The ask has been sent** to that team (23.08.2026, tracked ASKED — see
+  `docs/preprod-infrastructure-requirement.md`'s status block, Редакция 4). 🔴 **Corrected, code
+  review:** an earlier version of this line said "already open" while
+  `docs/preprod-infrastructure-requirement.md` still read "не направлено" in its own header — the
+  same PR shipped both statements, and a reader of this file had no way to know the ask had not
+  actually gone out. That gap is closed: the requirement document's status block is now the single
+  source of truth for whether, when, and to whom this was sent — read it there rather than trusting
+  this line's own wording, which is a pointer, not the record. The defect itself was measured from
+  the real origin and recorded in Story 5.2 (`docs/migration-decisions.md#d36`) and re-stated by
+  Story 5.4's ledger rows.
 - **What it costs this checklist:** 8 of 12 items — F4 through F11 — cannot be executed at all, and
   two more (F3, F12) can only be executed on a reduced scope, i.e. `pass (degraded)`. Fully
   executable today: **F1 and F2 only**.
 - **One of the eight would still be blocked if CORS were fixed tomorrow.** F9 additionally needs a
-  restricted-role account on PRE-PROD, which nobody has shown exists. **Owner: Oleg.** See F9.
+  restricted-role account on PRE-PROD, which nobody has shown exists. **Owner: Oleg.** See F9. 🔴
+  **This file is the canonical statement of that fact.** `docs/migration-decisions.md#d39`'s own
+  **Триггер пересмотра** and `epics.md` Story 7.7 AC3 both claimed, incorrectly, that fixing CORS
+  alone unblocks F9 — that is the exact mistake this paragraph exists to prevent, and both have been
+  corrected to match this file rather than the reverse.
 
 **Therefore, while the CORS origin is wrong, no candidate can legitimately be given an aggregate
 verdict of `pass` under `RVC-v1`.** The rule below is not negotiable by an operator in a hurry:
 
 > An aggregate verdict of `pass` requires **every** item to be `pass` — a full `pass`, not a
 > `pass (degraded)` and not a `BLOCKED`. With 8 items blocked and 2 degraded, the aggregate verdict
-> today is `fail`.
+> today is `fail`. This is a rule about F1-F12 only; a failed P1 or P2 aborts before any of them run
+> and forces its own `fail` by a different route — see ["A failed precondition aborts
+> validation"](#how-to-execute-it).
 
 ### Two consequences, stated rather than left to be discovered
 
@@ -429,11 +493,16 @@ verdict of `pass` under `RVC-v1`.** The rule below is not negotiable by an opera
 2. **Story 5.6's rehearsal cannot record a `pass` under `RVC-v1` either, unless the CORS origin is
    fixed first.** 5.6's job is to exercise the full cycle through the workflows, and under this
    checklist the honest verdict is `fail` — which by design writes nothing. That is a real
-   collision between two shipped requirements, and this file does not resolve it unilaterally.
-   **Owner: Oleg**, as the scope decision for Story 5.6: either the CORS fix lands first, or 5.6
-   records its rehearsal under an explicitly documented, explicitly time-boxed exception that names
-   `RVC-v1` and lists which items were waived. Silently typing `pass` is the one option this file
-   rules out.
+   collision between two shipped requirements, and this file does not resolve it unilaterally, and
+   code review's second pass (2026-08-25) restated rather than re-litigated it. **Owner: Oleg**, as
+   the scope decision for Story 5.6: either the CORS fix lands first, or 5.6 records its rehearsal
+   under an explicitly documented, explicitly time-boxed exception that names `RVC-v1` and lists
+   which items were waived. Silently typing `pass` is the one option this file rules out. 🔴 **The
+   "CORS fix lands first" exit is now reachable, not merely theoretical — the ask was sent
+   23.08.2026** (see the CORS-blocker section above), though no response has arrived. **Story 5.6
+   does not start until either the neighbouring team responds and closes the blocker, or Oleg makes
+   an explicit decision to proceed under the waiver exception instead** — whichever comes first is
+   Oleg's call, not a default this file or Story 5.5 sets.
 
 ---
 
@@ -442,7 +511,12 @@ verdict of `pass` under `RVC-v1`.** The rule below is not negotiable by an opera
 ## The `validation_note` format
 
 `record-preprod-candidate.yml` prints `validation_note` verbatim into a **single Markdown table
-cell** of `docs/preprod-candidates.md` (`record-preprod-candidate.yml:982`).
+cell** of `docs/preprod-candidates.md` (`record-preprod-candidate.yml:982`). 🔴 **Corrected, code
+review: that is not the only sink.** The same value is also interpolated into a Markdown table cell
+inside the run's own log at `record-preprod-candidate.yml:972`
+(`echo "| validation_note | ${VALIDATION_NOTE} |"`), and — if you use this file's own Execution Log
+template below — into that section's `Evidence / why` cells too. Both rules below apply everywhere
+the note is rendered as a table cell, not only at `:982`.
 
 **Two shape rules, and both are conventions YOU must keep — not guards the workflow applies.** The
 workflow rejects only a blank or whitespace-only note (`record-preprod-candidate.yml:454-467`). It
@@ -455,24 +529,50 @@ does **not** reject a newline and it does **not** reject a pipe. So:
 
 Nothing checks either rule. If you break one, the ledger is wrong and no run turns red.
 
+**A third rule, unenforced the same way: nothing reconciles the `image_tag` named inside the note
+with the `image_tag` actually dispatched.** G2/G3 in `record-preprod-candidate.yml` validate the
+shape of the *dispatched* tag only; the note's own text passes through untouched. Dispatching tag B
+while the note names tag A satisfies every guard and writes a ledger row that contradicts itself —
+double-check the tag in the note matches the tag in the dispatch form before submitting.
+
+**A fourth: no stated or enforced length bound.** `<F> fail (<ids>)` admits up to twelve ids and
+`<B> BLOCKED (…)` admits up to twelve semicolon-separated `(cause, owner)` pairs; the only recorder
+guard is the blank check above. This is a disclosure, not a known live defect — the realistic worst
+case is well under any plausible limit — but truncation or rejection of an over-long dispatch input
+is neither stated nor bounded anywhere.
+
 **Format:**
 
 ```
-RVC-v1 <image_tag>: <P>/12 pass, <D> degraded, <F> fail (<ids>), <B> BLOCKED (<cause>, <owner>) — detail in docs/release-validation-checklist.md
+RVC-v1 <image_tag>: <P>/12 pass, <D> degraded (<D-ids>), <F> fail (<F-ids>), <B> BLOCKED (<B-ids>) (<cause>, <owner>; <cause>, <owner>) — detail in docs/release-validation-checklist.md
 ```
 
-- `<image_tag>` — the exact tag validated, e.g. `sha-28f7fd36b75e-preprod`.
+- `<image_tag>` — the exact tag validated, e.g. `sha-28f7fd36b75e-preprod`, and it MUST be the same
+  tag actually dispatched — see the reconciliation note above this Format block; nothing checks the
+  two match.
 - `<P>` — items recorded `pass` **in full**. `12` is the item count for `RVC-v1` — F1…F12. The
   preconditions P1/P2 are not counted: P2 is a condition on the validator, and P1 is a condition on
-  the stand, neither is a property of the candidate's behaviour.
-- `<D>` — items recorded `pass (degraded)`.
-- `<F>` — items recorded `fail`, followed by their ids in parentheses, space-separated: `(F6 F9)`.
-- `<B>` — items recorded `BLOCKED`. Each blocked item is counted **exactly once**, and the
-  parenthetical lists **every distinct `(cause, owner)` pair** blocking at least one item,
-  semicolon-separated — e.g. `8 BLOCKED (CORS, CRM/api-prionex; restricted-role account, Oleg)`.
-  The cause and owner are **parameters, not literals**: do not hardcode `(CORS, CRM/api-prionex)`,
-  because not every blockage is CORS (F9 already has a second one) and a misattributed blocker gets
-  assumed fixed when somebody else's ask closes.
+  the stand, neither is a property of the candidate's behaviour. A failed P1/P2 does not produce a
+  `<P>` count at all — see ["A failed precondition aborts validation"](#how-to-execute-it).
+- `<D>` — items recorded `pass (degraded)`, followed by `<D-ids>`: their ids in parentheses,
+  space-separated, e.g. `(F3 F12)`. 🔴 **Corrected, code review:** an earlier version of this line
+  carried no ids, unlike `<F>` below — a reader of `docs/preprod-candidates.md` had no way to tell
+  which items degraded without opening the Execution Log. Fixed for the same traceability reason
+  `<F>` already had it.
+- `<F>` — items recorded `fail`, followed by `<F-ids>`: their ids in parentheses, space-separated,
+  e.g. `(F6 F9)`.
+- `<B>` — items recorded `BLOCKED`, followed by `<B-ids>`: their ids in parentheses,
+  space-separated, e.g. `(F4 F5 F6 F7 F8 F9 F10 F11)`. 🔴 **Corrected, code review:** same gap as
+  `<D>` above — without item ids here, a reader cannot tell which of the eight blocked items cleared
+  once the CORS ask closes and which (F9) needs a second, independent fix; that is the exact
+  traceability this paragraph exists to preserve. Each blocked item is counted **exactly once** in
+  `<B>`'s own count. Separately, the trailing parenthetical lists **every distinct `(cause, owner)`
+  pair** blocking at least one item, semicolon-separated — e.g.
+  `8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg)` —
+  two parentheticals, `<B-ids>` then `(cause, owner; …)`, never merged into one. The cause and owner
+  are **parameters, not literals**: do not hardcode `(CORS, CRM/api-prionex)`, because not every
+  blockage is CORS (F9 already has a second one) and a misattributed blocker gets assumed fixed when
+  somebody else's ask closes.
 
 **The invariant — check every note by addition:**
 
@@ -481,34 +581,63 @@ P + D + F + B == 12
 ```
 
 Any note that does not satisfy it is wrong on its face and can be caught without opening this file.
+This invariant applies **only** once P1/P2 have both passed and F1-F12 were actually executed — see
+["A failed precondition aborts validation"](#how-to-execute-it), which has its own fixed note shape
+and does not range over 12 at all.
+
+🔴 **This invariant is a convention YOU must keep, exactly like the pipe and newline rules above —
+not a check anything runs.** `record-preprod-candidate.yml:454-467` rejects only a blank note; it
+does not parse the counts, does not add them, and does not compare the sum to 12. Worse: even kept
+perfectly, it is a **weak** check — it catches arithmetic errors, never misclassification. A note
+reading `4/12 pass, 0 degraded, 0 fail, 8 BLOCKED` satisfies `4 + 0 + 0 + 8 == 12` exactly as well
+whether those four `pass`es are genuine full passes or whether two of them were actually
+`pass (degraded)` items misrecorded as `pass` — the arithmetic cannot tell the difference, only a
+human re-reading the Execution Log against this file's own verdict definitions can.
+
+**Every item you executed gets exactly one of the four verdicts above — there is no fifth verdict
+and no "did not reach it".** An item nobody reached during a partial or aborted run is not `pass`
+(never executed), not `fail` (that means executed and did not meet its criterion), and not
+`BLOCKED` either — `BLOCKED` means "could not be executed at all" and requires naming a real owner,
+so recording an unreached item as `BLOCKED` with an invented owner is the exact misattribution this
+file warns against elsewhere. **If validation stops partway through F1-F12 for any reason other than
+a P1/P2 abort, the run has no legal note under this format at all** — do not force one; re-run from
+the start, or from a point you can honestly justify skipping from, before writing any note.
 
 **Dropping empty clauses.** Drop a clause only when its count is 0, and drop the **exact** literal
 including its leading comma and space:
 
-- `B` is 0 → drop `, <B> BLOCKED (<cause>, <owner>)`
-- `D` is 0 → drop `, <D> degraded`
-- `F` is 0 → drop `, <F> fail (<ids>)`
+- `B` is 0 → drop `, <B> BLOCKED (<B-ids>) (<cause>, <owner>)`
+- `D` is 0 → drop `, <D> degraded (<D-ids>)`
+- `F` is 0 → drop `, <F> fail (<F-ids>)`
 
 `<P>/12 pass` is never dropped. The invariant still holds over the dropped counts — a clause that
 is absent means that count is 0, not that it is unknown.
 
-### The three shapes, with the arithmetic checked
+### The four shapes, with the arithmetic checked
 
 **Combined (failing items AND blocked items in the same note).** This is not an exotic case: it is
-the **only** shape any note can have until the CORS origin is fixed, and it is therefore the very
-first note Story 5.6 will write.
+the **only** shape any note can have until the CORS origin is fixed. 🔴 **Corrected, code review: an
+earlier version of this file called this "the very first note Story 5.6 will write" — that is
+unexercised, not demonstrated.** Under the aggregate verdict this file itself mandates today
+(`fail`, see [the CORS blocker](#the-cors-blocker)), `validated=fail` is what gets dispatched, and
+`record-preprod-candidate.yml`'s G1 exits as the **first step of the first job** — before the
+note-shape-validation step at `:454-467` and long before the ledger-row write at `:982`. **No note
+is written at all on that path.** The shape below is legal and correctly formed; whether the
+recorder actually accepts a note of this exact shape once F/B are both non-zero has not been
+exercised by any real dispatch, because G1 refuses before that check runs:
 
 ```
-RVC-v1 sha-28f7fd36b75e-preprod: 1/12 pass, 1 degraded, 2 fail (F2 F3), 8 BLOCKED (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
+RVC-v1 sha-28f7fd36b75e-preprod: 1/12 pass, 1 degraded (F3), 2 fail (F2 F3), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
 ```
 
-`1 + 1 + 2 + 8 == 12`. ✅
+`1 + 1 + 2 + 8 == 12`. ✅ (illustrative counts and ids only, not derived from a real run)
 
 **Today's honest headline, if a candidate were validated right now** — F1 and F2 pass in full, F3
-and F12 are degraded, F4-F11 are blocked. Note that this accompanies `validated=fail`, not `pass`:
+and F12 are degraded, F4-F11 are blocked. Note that this accompanies `validated=fail`, not `pass`,
+and — per the paragraph above — G1 refuses before this note is ever written to the ledger:
 
 ```
-RVC-v1 sha-28f7fd36b75e-preprod: 2/12 pass, 2 degraded, 8 BLOCKED (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
+RVC-v1 sha-28f7fd36b75e-preprod: 2/12 pass, 2 degraded (F3 F12), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
 ```
 
 `2 + 2 + 0 + 8 == 12`. ✅ (the `fail` clause is dropped because `F` is 0)
@@ -520,6 +649,16 @@ RVC-v1 sha-28f7fd36b75e-preprod: 12/12 pass — detail in docs/release-validatio
 ```
 
 `12 + 0 + 0 + 0 == 12`. ✅
+
+**A failed precondition — the fourth shape, and the only one that does not range over 12 at all:**
+
+```
+RVC-v1 sha-28f7fd36b75e-preprod: precondition failed (P1) — validation aborted, no items executed
+```
+
+See ["A failed precondition aborts validation"](#how-to-execute-it). No `<P>/<D>/<F>/<B>` counts,
+because none were collected — this is not an omission of the invariant, it is a note shape the
+invariant does not apply to.
 
 The note is a **pointer, not the record**. The per-item verdicts live in the Execution Log below;
 the note exists so the ledger row is legible without opening this file — which is exactly why it
@@ -599,18 +738,30 @@ Stated so nobody reads a green `RVC-v1` as more than it is:
 
 <a id="execution-log"></a>
 
-**Append-only, one section per `image_tag` AND date.** 🔴 The key is both, not the tag alone: the
-same `image_tag` **will** be re-validated once the CORS origin is fixed — that is the whole point
-of F4-F11 becoming executable — and keying by tag alone would produce two identical headings with
-no rule saying which one governs. Heading format: `### <image_tag> — <YYYY-MM-DD>`. Where two
-sections share a tag, **the later date governs**; the earlier one is kept because it is the record
-of what was knowable then.
+**Append-only, one section per `image_tag` AND UTC timestamp.** 🔴 **Corrected, code review: the key
+was originally `image_tag` + date, and a same-day re-validation collides.** The stated re-validation
+trigger is exactly a same-day event — the CORS fix landing, after which F4-F11 become executable —
+so a redeploy and re-validation on the same calendar date is the **expected** case, not an exotic
+one, and two sections sharing both tag and date with "the later date governs" produces no ordering
+between them at all, while "never edit a section after it is written" forbids repairing the
+collision after the fact. **Fixed: heading format is `### <image_tag> — <YYYY-MM-DDTHH:MMZ>`** (UTC,
+minute precision — the start time of validation, i.e. when P1 is executed), which cannot collide
+within the same tag on the same day. Where two sections share a tag, **the later timestamp governs**;
+the earlier one is kept because it is the record of what was knowable then.
 
 Never edit a section after it is written — a re-validation is a new section, not a rewrite. This is
 the same rule `docs/preprod-candidates.md` follows, for the same reason.
 
-Each section carries: the checklist version, the date, who executed it, the per-item verdicts, the
-aggregate, the `validation_note` that was submitted, and the recorder run id if one was dispatched.
+Each section carries: the checklist version, the UTC timestamp, who executed it, the per-item
+verdicts, the aggregate, the `validation_note` that was submitted, and the recorder run id if one
+was dispatched. 🔴 **A related date mismatch, disclosed rather than fixed:** the ledger row's own
+date in `docs/preprod-candidates.md` (`record-preprod-candidate.yml:982`,
+`$(date -u +%Y-%m-%d)`) is the date the **recorder ran**, not the date validation happened. A
+validation session that finishes at 23:50 UTC with the recorder dispatched at 00:10 UTC the next day
+dates the ledger row one day after the Execution Log section that justifies it, and same-tag
+tie-breaks between the two files then run on dates that do not agree. Not fixed here — `RVC-v1`
+does not edit `record-preprod-candidate.yml` — but named so a later reader comparing the two files'
+dates does not read the offset as an error in one of them.
 
 **This log is empty.** `RVC-v1` is published by Story 5.5, which deliberately does **not** execute
 it — executing the checklist against a real candidate is Story 5.6's rehearsal, and 5.6 writes the
@@ -620,10 +771,10 @@ inherits.
 ### Template — copy this block, do not edit it in place
 
 ```
-### <image_tag> — <YYYY-MM-DD>
+### <image_tag> — <YYYY-MM-DDTHH:MMZ>
 
 - Checklist version: RVC-v1
-- Date (UTC): YYYY-MM-DD
+- Started (UTC): YYYY-MM-DDTHH:MMZ
 - Executed by: <name>
 - Deploy run id: <run id of deploy-preprod.yml>
 
@@ -632,7 +783,7 @@ Verdict column — one of exactly four values: `pass`, `pass (degraded)`, `fail`
 | Item | Verdict | Evidence / why |
 |---|---|---|
 | P1 | pass / fail | executed BY HAND at the start of validation, not delegated to the recorder |
-| P2 | pass / fail | decoded build epoch, and it is at or after the candidate's build time |
+| P2 | pass / fail | decoded build epoch, and it is at or after the `build.yml` run's own `started` timestamp |
 | F1 | pass / pass (degraded) / fail / BLOCKED | |
 | F2 | pass / pass (degraded) / fail / BLOCKED | |
 | F3 | pass / pass (degraded) / fail / BLOCKED | |
@@ -646,8 +797,22 @@ Verdict column — one of exactly four values: `pass`, `pass (degraded)`, `fail`
 | F11 | pass / pass (degraded) / fail / BLOCKED | |
 | F12 | pass / pass (degraded) / fail / BLOCKED | |
 
-- Counts: P=<P> D=<D> F=<F> B=<B>   (must satisfy P + D + F + B == 12)
+- Counts: P=<P> D=<D> F=<F> B=<B>   (must satisfy P + D + F + B == 12; if P1 or P2 failed, skip
+  straight to the precondition-failure note shape below instead of filling F1-F12 at all)
 - Aggregate verdict: pass / fail   (`pass` requires all twelve to be a full `pass`)
-- validation_note submitted: `RVC-v1 <image_tag>: <P>/12 pass, <D> degraded, <F> fail (<ids>), <B> BLOCKED (<cause>, <owner>) — detail in docs/release-validation-checklist.md`
+- validation_note submitted: `RVC-v1 <image_tag>: <P>/12 pass, <D> degraded (<D-ids>), <F> fail (<F-ids>), <B> BLOCKED (<B-ids>) (<cause>, <owner>) — detail in docs/release-validation-checklist.md`
 - Recorder run id: <run id, or "not dispatched — verdict was fail">
+```
+
+**If P1 or P2 failed, use this shorter block instead — no per-item table, no counts:**
+
+```
+### <image_tag> — <YYYY-MM-DDTHH:MMZ>
+
+- Checklist version: RVC-v1
+- Started (UTC): YYYY-MM-DDTHH:MMZ
+- Executed by: <name>
+- Precondition failed: P1 / P2
+- validation_note submitted: `RVC-v1 <image_tag>: precondition failed (<P1 or P2>) — validation aborted, no items executed`
+- Recorder run id: not dispatched — verdict was fail
 ```
