@@ -5267,6 +5267,7 @@
           "minimize": "Minimize",
           "cancel": "Cancel",
           "close": "Close",
+          "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
           "restore": "Return to the call"
         },
         "callLogCard": {

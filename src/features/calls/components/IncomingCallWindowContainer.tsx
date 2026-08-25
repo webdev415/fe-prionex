@@ -20,6 +20,7 @@ import { extensionOf } from '../hooks/useIncomingCall'
 import { useIncludedClients } from '../hooks/useIncludedClients'
 import { useCallStore } from '@/stores/callStore'
 import { buildMatchedClients } from '../utils/callWindow'
+import { hasUnfiledWriteUp } from '../utils/writeUp'
 import { CallOutcome } from '../types'
 import type { IncomingCallData } from '../types'
 import { IncomingCallWindow } from './IncomingCallWindow'
@@ -54,6 +55,12 @@ interface IncomingCallWindowContainerProps {
    * the call can still be filed. Nothing here may hang up any more.
    */
   ended?: boolean
+  /**
+   * Whether this window is holding a write-up that has not been filed. Reported
+   * upward because the window is remounted per call, so only the parent is
+   * still around to say anything once the next one replaces it.
+   */
+  onUnsavedChange?: (unsaved: boolean) => void
   /** Called once the call is over from this operator's point of view. */
   onDismiss: () => void
 }
@@ -76,6 +83,7 @@ export function IncomingCallWindowContainer({
   minimized,
   onMinimize,
   ended = false,
+  onUnsavedChange,
   onDismiss,
 }: IncomingCallWindowContainerProps) {
   const { t } = useTranslation('common')
@@ -112,6 +120,11 @@ export function IncomingCallWindowContainer({
       if (!store.minimizedCall) store.setOpenCallModal(null)
     }
   }, [])
+
+  const hasUnsavedWriteUp = hasUnfiledWriteUp(draft, interactionSaved)
+  useEffect(() => {
+    onUnsavedChange?.(hasUnsavedWriteUp)
+  }, [hasUnsavedWriteUp, onUnsavedChange])
 
   const isEnded = ended || endedByOperator
   const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'
