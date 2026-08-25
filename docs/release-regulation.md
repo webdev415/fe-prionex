@@ -5,6 +5,10 @@ workflow legs, already shipped) and one agreement between people (scope freeze) 
 this repository enforces. Written by Story 5.6, AC4/AC10; absorbed later by Epic 7's own
 Deployment Process document, not the reverse.
 
+**PROD has its own, separate regulation — see `docs/production-approval-regulation.md` (Story 6.2)
+for who may approve a production release, how the approval is recorded, and the PROD freeze/rollback/
+emergency rules; nothing below extends to PROD.**
+
 ## The five legs
 
 | # | Leg | Workflow | What it does |

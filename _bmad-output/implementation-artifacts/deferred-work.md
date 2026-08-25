@@ -4431,3 +4431,51 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   enforcement is on) to demonstrate anything beyond deny-all. **Owner: Oleg / `CRM/api-prionex`.**
   Related and separately filed above: the unrotated seed admin credential on the same internet-reachable
   stand.
+
+## Deferred from: Story 6.2 (2026-08-25)
+
+- ✅ ~~**AC4's acknowledgement is outstanding — the regulation is written, and the request has been
+  sent, but no attributed, dated statement has landed yet.** `docs/production-approval-
+  regulation.md` and `docs/prod-releases.md` are both complete; the story cannot close on AC4
+  without a quoted, dated, attributed statement from Oleg (or a person he names) that the
+  development and release teams have acknowledged the regulation — pasted into the Dev Agent
+  Record, not inferred from silence or from a merged PR (Prohibition 14). Per this project's own
+  convention for an unanswered dependency of this shape (`#d11`: *"Обязательство по дате:
+  отсутствует… Дата, выведенная из сроков спринта или порядка эпиков, была бы выдуманной"*), no
+  date is invented here. **Owner: Oleg, via the coordinator** — not a trigger condition; the ask itself was sent
+  2026-08-25 as one consolidated message alongside the finished regulation text. Story 6.2's own
+  `sprint-status.yaml` row stays `in-progress` with this entry named as the reason, per the
+  story's own §3 HALT mapping, until the acknowledgement is pasted and Task 7.3/7.5 can run.~~
+  **CLOSED 2026-08-25.** Oleg's reply, verbatim: *"Подтверждаю"* — Oleg Kuksa
+  (`geloniel@gmail.com`), dated 2026-08-25, relayed by the coordinator. **Recorded honestly as
+  "confirmed by paraphrase, not by reading the document directly"** — the coordinator's Russian
+  paraphrase covered every section and named the live `sha-a99ccd44c5a3-preprod` precedent
+  explicitly. Two of three offered options (amend the rollback rule; authorise a forward hotfix)
+  were explicitly declined, confirming those two rules as written rather than by default. The reply
+  is pasted at the story's own Task 7.3. `sprint-status.yaml`'s `6-2-…` row flipped to `review`.
+  🔴 **Two corrections, code review 2026-08-25.** (1) *"Pasted in full"* overstated what is on
+  record: **the only artifact pasted anywhere is the one word `Подтверждаю`.** The paraphrase it
+  answers — the thing that actually carried the document's content to Oleg — was never pasted, so
+  every statement about what it covered is characterisation, which is what Prohibition 9 exists to
+  stop. Routed to Oleg as review decision **D1** — ✅ **ANSWERED AND CLOSED 2026-08-25, both
+  halves.** The coordinator supplied the paraphrase and it is pasted verbatim at the story's
+  Task 7.3, so the attestation now points at material that exists. And on epic AC4's plural, Oleg
+  stated the composition himself, verbatim: *"Я и есть команда"* — **recorded as the owner's own
+  statement about who the teams are, dated 2026-08-25, not as an assumption and not as a workaround
+  around the word "teams".** AC4 is satisfied because the set it names has exactly one member. (2) The `#d11` quote above was restored
+  verbatim — the first rendering silently dropped *"или порядка эпиков"* mid-quote with no ellipsis
+  marking the elision. Neither correction changes the acknowledgement's standing; both keep the
+  record honest about what it does and does not contain.
+
+- ⚠️ **ACCEPTED RISK, not open work — PROD approval has no delegate.** Code review decision **D2**,
+  answered by Oleg 2026-08-25, verbatim: *"Оставить как есть"*. Every authority path in
+  `docs/production-approval-regulation.md` runs through one named person: granting an approval,
+  breaking the freeze window, and authorising a rollback to a tag that is **not** already in
+  `docs/prod-releases.md`. **Concrete cost, stated so a future reader sees the price rather than a
+  tick-box: while Oleg is unavailable, no production release can be approved AND no emergency
+  rollback to a non-ledger tag can be authorised** — the regulation classifies that second case as a
+  release, so the unplanned incident is exactly the case that is blocked. A rollback to a tag already
+  in the ledger is unaffected: it needs no approval and remains available at any hour. **Risk owner:
+  Oleg. Accepted 2026-08-25.** Filed here as an accepted risk with an owner and a date, and stated on
+  the regulation's own page under "Who approves" — not left as an omission for someone to discover
+  mid-incident. Revisit if a second person ever holds release authority.

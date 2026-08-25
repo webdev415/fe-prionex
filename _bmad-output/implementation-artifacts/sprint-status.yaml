@@ -1289,9 +1289,130 @@ development_status:
   #     single clean dispatch forced none of them. Re-owned to Story 6.4 in `deferred-work.md`'s M7
   #     entry (a named story, not a trigger condition — required action at 6.4's own closeout if it
   #     doesn't force them either).
-  epic-6: backlog
+  # 🔀 MERGE RESOLUTION 2026-08-25 (story 6.2 <- origin/main aae711b1, PR 87 = Epic 5 closeout).
+  # BOTH SIDES KEPT WHOLE, neither absorbed: the 5.6 block above arrives verbatim from main, and
+  # the VALUE below is story 6.2's `in-progress`, not main's `backlog`. They are not in conflict on
+  # the merits -- main wrote that block while epic-6 had not started, and 6.2 (Epic 6's first story,
+  # 6.1 cancelled) started it. The block's own `backlog` value is superseded by this line, not by an
+  # edit to the block, which is left exactly as 5.6's closeout wrote it.
+  epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
-  6-2-publish-the-production-approval-regulation: backlog
+  # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
+  # origin/main at dbec399d -- the primary checkout is Story 4.9's dev agent's. Epic 6's FIRST story
+  # (6.1 is cancelled), so this row also flips epic-6 backlog -> in-progress. Documentation-only:
+  # no workflow code, no dispatch, no host contact. Floor 4 / ceiling 8 push+PR+merge rows, OPEN.
+  # 🔴 THE OVERLAP DECISION, recorded here so it is visible without opening the story file: Story
+  # 5.6 shipped docs/release-regulation.md 2026-08-25 (PR #86) for Epic 5's AC4. It is titled
+  # "PRE-PROD Release Regulation" and is PRE-PROD by scope. Story 6.2 writes a SEPARATE file,
+  # docs/production-approval-regulation.md, and edits 5.6's document by EXACTLY ONE cross-reference
+  # line. Five reasons, all in the story's SS2: different subject (authority, not machinery); the
+  # title is where nobody would look for a PROD rule; AC4's acknowledgement attaches to a named
+  # document with a stable scope; 5.6's artifact is freshly shipped and frozen by the same
+  # precedent 5.6 applied to 5.5's checklist; and Epic 7's Story 7.3 absorbs BOTH anyway, so two
+  # single-scope inputs beat one document with two identities. The other half of the instruction is
+  # equally binding: the new document CITES 5.6's and RVC-v1.1 by link and RESTATES NOTHING -- a
+  # diff of the two files finding a shared sentence that is not a link is a defect.
+  # 🔴 ORDERING, checked because sprint-status records 6.10 MUST complete before 6.4 and the
+  # question was whether anything similar binds 6.2. IT DOES NOT. 6.10-before-6.4 is the ONLY
+  # ordering constraint stated inside Epic 6, and 6.2 has NO dependency on 6.3 or 6.10 -- neither
+  # the s10 contour nor the rebuilt cutover image changes who may approve a release or how the
+  # approval is recorded. 6.2 stays FIRST, and two later stories consume it (epics.md:2903, Story
+  # 7.3's own Given clause; epics.md:2849's decommissioning note). What IS real and is handled
+  # in-story rather than by re-ordering: (a) almost everything the regulation describes --
+  # deploy-prod.yml, the promotion guard, rollback: true, the s10 contour -- DOES NOT EXIST on
+  # 2026-08-25 (measured: ls .forgejo/workflows/ returns 11 files, no deploy-prod.yml; #d2's own
+  # status header reads "спроектировано, не реализовано"), while 6.2's own AC1 forbids describing
+  # "any technical control that does not exist" -- held by a dated, forward-formed, never-present-
+  # tense rule (story Prohibition 1); (b) Story 6.5's last AC REWRITES #d2, the source 6.2's AC3
+  # quotes -- held by dating the citation, naming 6.5 as its reviser, and appending a forward note
+  # under #d2 itself; (c) AC4's "the teams have acknowledged it" is a human dependency with no
+  # technical substitute -- asked day one, and if it does not arrive this row STAYS in-progress.
+  # 🔴 AC2's "the tracker" HAS NO REFERENT. tracking_system: file-system, project_key: NOKEY, and
+  # the word "tracker" appears exactly ONCE in the whole of epics.md -- in Story 6.2's own AC. Nor
+  # can the record live in a run log: log_in_storage='f' on seven consecutive checks across six
+  # sessions, and STEP_SUMMARY persistence is still UNPROVEN. Resolved to a NEW append-only file,
+  # docs/prod-releases.md, created EMPTY with its emptiness stated in prose and no placeholder row
+  # -- 5.4's three-tier model and 5.6's Rejected-candidates precedent, applied rather than
+  # reinvented. The substitution for #d5's word "трекер" is recorded in D42, not made silently.
+  # 🔴 THE DOCUMENT'S CENTRAL RULE, and the reason this story is worth its four runs: RVC-v1.1's
+  # waiver "carries no signal at the registry", so a promotion gate reading only the registry
+  # cannot tell a waived candidate from a clean one. That gap is filed against Story 6.5 and 6.2
+  # does NOT try to fix it technically -- it writes the policy half: THE APPROVER READS
+  # docs/preprod-candidates.md, NOT JUST THE TAG. Live precedent already on record:
+  # sha-a99ccd44c5a3-preprod, 7/12 pass, 5 BLOCKED, derived fail, dispatched pass under D40/D41 --
+  # and its registry tag carries no trace of any of that.
+  # STATUS MAPPING FOR A HALT (the enum above has no `blocked` value): if AC4's acknowledgement has
+  # not arrived when everything else is done, this row STAYS `in-progress` and the blocking
+  # condition is named in the comment immediately above it. Not `done`, not `backlog`, not a value
+  # the enum does not define.
+  # Decision number is D42 (main holds D41; story-4-9 still holds D35 unmerged) -- re-verify by
+  # git fetch across every open story-* branch at Task 1.5, not just main.
+  # Blast radius: every .forgejo/workflows/*.yml, docs/release-validation-checklist.md and
+  # docs/preprod-candidates.md are READ-ONLY; docs/release-regulation.md takes exactly one line.
+  # No host is touched at all, so NFR5 is satisfied by construction.
+  # ✅ CORRECTED 2026-08-25: this block originally ended "Epic 5's closeout PR #87 may merge
+  # mid-session -- rebase." PR #87 HAS since merged (aae711b1); Epic 5 is `done`, 6/6; origin/main
+  # moved dbec399d -> aae711b1. Taken into this branch by MERGE, not rebase -- PR 88 was already
+  # open and code-reviewed, so rewriting its history was not available. One conflict
+  # (this file, at the `epic-6:` line), resolved keeping both sides whole; see the marker above it.
+  # AC4 landed 2026-08-25: Oleg's verbatim reply "Подтверждаю" (geloniel@gmail.com), relayed by
+  # the coordinator, confirmed-by-paraphrase (not read-the-document-directly, per this project's
+  # attested-vs-observed convention) -- paraphrase covered every section and named the live
+  # sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the
+  # rollback rule; authorise a forward hotfix) were explicitly declined, confirming both as
+  # written, not by silence. docs/production-approval-regulation.md (110 lines at 811a9b8c; 124
+  # after the code-review fix-pass and Oleg's D2 answer; ceiling raised 120 -> 125 -> 130, each
+  # raise with its own recorded reason) and
+  # docs/prod-releases.md (empty ledger) shipped; docs/release-regulation.md got exactly one
+  # cross-reference line; D42 recorded. Row flips to `review`.
+  # CODE REVIEW 2026-08-25 (Opus, three adversarial layers + independent fact-verification):
+  # changes requested, all applied. TWO adversarial passes: pass 1 found 20 (7 high / 10 medium /
+  # 3 low); pass 2, run against the patched tree, found 15 more (5 high / 5 medium / 5 low) and ALL
+  # FIVE of its highs were defects pass 1's own fixes introduced -- a miscitation inside the
+  # miscitation correction (#d38 vs #d39), a Debug Log claim that the duplication check was re-run
+  # "with the floor removed" when it was not, an INVENTED expiry date in the Waiver? example, an
+  # Approval-end pending/mandatory contradiction, and prod_tag naming a tag shape the rollback rule
+  # contradicts two sentences later. 35 applied in total, 7 deferred with owners, 2 decisions to
+  # Oleg. The lesson, recorded because it is the reusable one: a fix-pass that is not re-reviewed
+  # is just a second draft. Every high was a defect of TRUTH, which is
+  # the only kind a documentation story can have: (1) AC5 was NOT met -- both regulations opened
+  # with the byte-identical "One page. No new gate, no new machinery.", and the check reporting
+  # "zero shared sentences" had a length floor that never compared the opening line; the false
+  # claim had already reached D42 and this file. (2) `_bmad/bmm/config.yaml` was cited under
+  # "Измерено" for two keys it does not contain (they are at sprint-status.yaml:72-73), and the
+  # miscitation had entered migration-decisions.md. (3) The job-log argument contradicted the
+  # project's own SETTLED 2026-08-16 finding -- archival is DELAYED, not absent (4128 t vs 461 f)
+  # -- and inflated six observations to seven. (4) #d11 was cited for a named-approver convention
+  # it does not contain, the same shape that produced D41 one story earlier. Also: AC1's second
+  # clause was unmet (the grep sweep was file-scoped, missing AC1's own s10 clause and two
+  # present-tense sentences in prod-releases.md); the ledger could not be filled as instructed
+  # (row precedes the dispatch, yet three cells and two rules need post-dispatch facts in a
+  # never-rewritten row -- fixed with `pending` values and a superseding-row rule); the rollback
+  # rule keyed on a prod-<sha> no column recorded (prod_tag added).
+  # 🔴 retro-E5: §9 specified a "negative control" that COULD NOT HAVE FAILED on either axis
+  # (build.yml:933's single tag template; G1 refusing validated=fail before any registry read).
+  # This story earns NO negative control and now says so. AC8's ceiling 120 -> 125 (shipped 122),
+  # reason recorded -- twelve lines of provenance, not padding.
+  # Frozen files, Prohibitions 3/4/6/12/13, D42's number, every anchor, the #d2 quote and the
+  # sha-a99ccd44c5a3-preprod precedent all verified clean.
+  # DECISIONS D1/D2 ANSWERED BY OLEG 2026-08-25 AND APPLIED. D1(a): asked whether one confirmation
+  # satisfies epic AC4's "development and release TEAMS", Oleg said verbatim "Я и есть команда" --
+  # recorded as the OWNER'S OWN statement about team composition, so AC4 is met because that set has
+  # exactly one member, not by assumption and not by working around the plural. D1(b): the
+  # coordinator supplied the paraphrase that "Подтверждаю" actually answered; it is pasted verbatim
+  # and unedited at Task 7.3 -- until now the attestation pointed at material that existed nowhere.
+  # Three record-keeping specifics inside that confirmed text were changed by the review AFTER he
+  # confirmed it (freeze break -> superseding row; #d38 §9's "or keeping" -> entailment; the row
+  # gained two timestamps and prod_tag); the authority model is unchanged and all three deltas are
+  # enumerated at Task 7.3 rather than absorbed. Task 4.15's scope carved out EXPLICITLY: the block
+  # is a paraphrase OF the regulation, so it went into the spec and never into the regulation;
+  # re-verified zero shared sentences between the two regulations. D2: "Оставить как есть" -- no
+  # delegate, written into the regulation as an accepted risk with its cost named (while Oleg is
+  # unavailable nothing can be approved, INCLUDING an emergency rollback to a non-ledger tag, which
+  # the document classifies as a release; a ledger-tag rollback stays available). Risk owner Oleg,
+  # accepted 2026-08-25. AC8 ceiling 125 -> 130, shipped 127 -- a different reason from the first
+  # raise, recorded separately. Status stays `review`; Oleg merges.
+  6-2-publish-the-production-approval-regulation: review
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
