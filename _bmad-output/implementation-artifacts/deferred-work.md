@@ -2228,6 +2228,24 @@ regression. `VITE_OPERATOR_PHONE_URL_PROD` exists.
 
 **If that ever changes**, adding the environment is a variable and nothing else — no code change.
 
+🔴 **Corroborated 2026-08-25, Story 5.6's Task 2.4, coordinator's own channel — the value itself
+measured for the first time, and the design confirmed clear of cross-environment leakage.**
+`GET /repos/CRM/fe-prionex/actions/variables` → exactly **one** repository variable:
+`VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online`. `GET /orgs/CRM/actions/variables`
+→ empty, no org-level variables at all. **`VITE_OPERATOR_PHONE_URL_PREPROD` does not exist** —
+confirmed absent, not merely unset in some ambiguous sense — which is exactly what `RVC-v1`'s F2
+criterion 5 expects for a `preprod` build (*"For preprod the decided value is EMPTY … so the
+expected observation is no `phone.` URL in the bundle and no operator-phone panel"*). Nothing here
+contradicts the 2026-08-17 decision above; it is the first time the PROD value itself was pasted
+rather than only its existence being asserted. Cross-checked against `build.yml`'s own `case`
+statement (*"Select the operator phone URL for this environment"*): `preprod` reads
+`vars.VITE_OPERATOR_PHONE_URL_PREPROD` and `prod` reads `vars.VITE_OPERATOR_PHONE_URL_PROD` — two
+**distinct** variable names, so there is no mechanism by which a `preprod` build could pick up
+PROD's value. **Owner: Story 6.4** (the PROD cutover) — when that story runs, it inherits a
+`VITE_OPERATOR_PHONE_URL_PROD` that is already provisioned with a real value; it does not need to
+ask Oleg to set one up, but it should re-verify the value is still current at that time (URLs and
+Kong routes have drifted before in this project) rather than assume this measurement still holds.
+
 ---
 
 ## 🔴 MEASURED 2026-08-17 — the `sha-<12>-<env>` repoint is real, and this closes a claim that had been reasoned four times and measured never
@@ -3703,6 +3721,11 @@ UTC-timestamped at the point of measurement.
    other work touching either residue) is still the right cadence, or whether these two logs should
    simply be accepted as permanently unarchived on this instance. Not decided here — named for
    whoever picks this up next.
+   🔴 **Story 5.6's own Task 3.7, 2026-08-25 — the standing obligation's own AC (AC13).** Same
+   query, same two ids → **still `f` for both — the SEVENTH check across seven sessions, all
+   negative.** Recorded before other psql work, per the story's own instruction. The trend named
+   above (six checks, no movement) now extends to seven; still not decided here whether the cadence
+   should change or the logs accepted as permanently unarchived.
 9. Story 4.8's open backfill (`## Deferred from: story-4.8 closeout (2026-08-23)`, the entry
    immediately above this one — 🔴 **citation corrected 2026-08-24, BMAD reconciliation: this read
    `deferred-work.md:3374-3399`, which is the *story-4.8 implementation* section's throwaway-probe-branch
@@ -3993,7 +4016,7 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   label-writing step or a promotion guard adjacent to `build.yml`'s AC2 repoint refusal; if either
   changes that code, G6/AC8's own dispositions here should be re-examined as part of that story's
   own blast radius, not before.
-- ⚠️ **AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
+- ✅ ~~**AC5's "sequence" was narrowed, and the registry's own `tags/list` still does not order
   anything.** `GET /v2/crm/fe-prionex/tags/list` yields the **set** of `preprod-*` tags and their
   digests; it is not chronological, and creation timestamps live in the Forgejo package API, not the
   OCI one this workflow's final step reads. The **order** of validation history comes from `git log`
@@ -4003,7 +4026,14 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   the unordered set. 🔴 **Corrected, code review L8: named a specific story, not a trigger
   condition. Owner: Story 5.6** (the full-cycle rehearsal, already the story most likely to need a
   human-facing view of validation history) — should compose the registry's own set with `git log`'s
-  order explicitly, not assume the registry does it.
+  order explicitly, not assume the registry does it.~~ **CLOSED 2026-08-25 by Story 5.6, AC12,
+  Task 9.2.** `tags/list` filtered to `^preprod-[0-9a-f]{12}$` → the two pre-existing markers, stated
+  plainly as an unordered set (`tags/list` orders nothing, not just claimed). Single call
+  `git log --oneline --no-walk=sorted 00ef3be4743d 28f7fd36b75e` composed the order: PR #43 (older)
+  before PR #79 (newer), pasted verbatim in the story's own Task 9.2. This story's own candidate
+  (`a99ccd44c5a3`) is not yet in the registry set at the time 9.2 ran (by design — Task 8 records it
+  after), so the composed history covers the two pre-existing rows only; the method is what AC12
+  discharges, not a claim that this run's own candidate is included in that particular read.
 
 ## Deferred from: code review of story-5.4 (2026-08-24)
 
@@ -4080,6 +4110,16 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   is a **required action at that story's own closeout** — a procedural obligation on 5.6's closeout
   pass, stated here as a reminder, not a mechanism that silently reassigns ownership on its own.
   Recorded so a reader does not mistake "not disclosed" for "does not exist".
+
+  🔴 **Re-owned 2026-08-25, Story 5.6's own closeout (Task 10.3), exactly as this entry required.**
+  Story 5.6 dispatched the recorder exactly once (run 1316, `validated: pass`, a clean `pass` under
+  D40's waiver) — every one of these eight branches needs an unhappy or edge-shaped input this
+  story's own single, honest dispatch did not produce: no bad credential, no wrong-length hex tag,
+  no simulated digest-resolve failure, no read-back mismatch. None was exercised. **Owner: Story
+  6.4**, full stop, no standing conditional successor clause (repeating the same fix this entry
+  already applied once, so the next re-owner does not have to re-derive it): if Story 6.4 closes
+  without exercising these branches, re-owning to whatever comes next is a required action at
+  *that* story's own closeout.
 
 ## Deferred from: Story 5.5 (2026-08-24)
 
@@ -4201,7 +4241,7 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   the job list actually shows. Not fixed here: making the signal durable means either measuring
   step-summary persistence or replacing the placeholder. **Owner: Story 7.7.**
 
-- ⚠️ **A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
+- ✅ ~~**A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
   (`record-preprod-candidate.yml:231-249`) refuses `fail` as the first step of the first job, so the
   `record` job never runs and the copy-paste ledger row at `:982` — the only mechanism that carries
   a `validation_note` into the ledger — is never printed. The append-only ledger therefore cannot
@@ -4210,4 +4250,184 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   It becomes visible only now that `RVC-v1` makes `fail` the honest verdict for every candidate
   while the CORS origin is wrong: for the whole of that period the ledger will be silent, and
   silence is indistinguishable from nobody having tried. **Owner: Story 5.6**, as the next story to
-  dispatch the recorder and the one that must decide where a rejected candidate is recorded.
+  dispatch the recorder and the one that must decide where a rejected candidate is recorded.~~
+  **CLOSED 2026-08-25 by Story 5.6, AC11.** `docs/preprod-candidates.md` now carries a second,
+  append-only "Rejected candidates" table (columns: `Date (UTC) | Candidate tag | Digest | Verdict |
+  Note | Recorder run id (refusal)`), with its own append-only statement stated inline. It is empty
+  (headers only) as of this closure: this story's own rehearsal recorded `pass` (7/12 pass, 5
+  `BLOCKED` under D40's waiver), so no `fail` was dispatched and G1 was never asked to refuse. The
+  home now exists for the next candidate that does trigger G1's refusal — this entry closes the
+  design gap, not a live observation of it.
+
+## Deferred from: Story 5.6 (2026-08-25)
+
+- 🔴 **SECURITY FINDING, not this story's to fix — the seeded default admin credential on PRE-PROD
+  has never been rotated, and both the stand and the API are internet-reachable.** Investigating
+  `CRM/api-prionex` (`/Users/olegkuksa/Workspace/api-prionex_f`, read-only: local code plus a
+  read-only `psql` check via `docker exec` on `crm-preprod-postgres-auth`) found that
+  `services/auth`'s seed migration (`20251122_0002_002_seed_initial_data.py`) creates a bootstrap
+  user `admin` / `admin@technofinance.com` with a hardcoded bcrypt hash for the password
+  `Admin@123`, committed in plain sight in that repository's git history. This migration runs
+  automatically (`auth-migrations` container, `depends_on: condition: service_completed_successfully`
+  ahead of `auth-service`) on every stack that has ever come up. A SQL boolean equality check
+  against the stored hash (never printing the hash itself) confirmed PRE-PROD's `admin` row still
+  matches that exact seed value — unrotated, as of 2026-08-25. Oleg independently confirmed the
+  login works (2026-08-25), then authorised this story to provision fixture accounts through it.
+  Both `https://api.crm.preprod.crm-prionex.online` and the PRE-PROD frontend stand are reachable
+  from the open internet (measured repeatedly this epic, e.g. Story 5.5's own CORS probes from an
+  unauthenticated workstation). **Recommendation: rotate the PRE-PROD `admin` password, and check
+  whether PROD carries the same unrotated seed value** (out of this story's own read-only
+  investigation scope — PROD was not probed). **Owner: Oleg.** Not fixed here: rotating it is a
+  write against a live credential store this story has no standing authorization to make outside
+  the narrow, explicitly-authorised fixture-provisioning act above.
+
+## Deferred from: Story 5.6, fixture investigation (2026-08-25)
+
+- 🔴 **CRITICAL BUG FINDING, `CRM/api-prionex`, not this story's or Oleg's to fix — `GET
+  /api/v1/clients/{id}` returns HTTP 500 for every client, on PRE-PROD, root-caused to a genuine
+  model/migration drift in the `client` service's own repository.** Found while investigating F5's
+  fixture readiness: two synthetic test clients were created via the normal API
+  (`POST /api/v1/clients/`, `RVC TestClient` id=1 / `RVC SecondClient` id=2, obviously-synthetic
+  10-digit test TINs) — the list endpoint (`GET /api/v1/clients/`) correctly returned both, `200`,
+  but opening either one (`GET /api/v1/clients/{id}`) 500'd for both. `docker logs
+  crm-preprod-client-service` traced the exception to
+  `asyncpg.exceptions.UndefinedColumnError: column debts.principal_paid does not exist`.
+  Confirmed by reading `/Users/olegkuksa/Workspace/api-prionex_f/services/client/app/models/debt.py`
+  and every file under `services/client/alembic/versions/`: the `Debt` ORM model defines a full
+  "Payment Tracking (paid amounts)" block — `principal_paid`, `principal_written_off`,
+  `interest_paid`, `interest_written_off`, `penalties_paid`, `penalties_written_off`, `fines_paid`,
+  `fines_written_off`, `fees_paid`, `fees_written_off` (ten columns) — and **no migration anywhere
+  in the repository creates any of them.** PRE-PROD's live `debts` table (checked via read-only
+  `psql`, `alembic_version=157`) confirms all ten are genuinely absent. This is not a PRE-PROD-
+  specific deployment drift (the migration is not merely unapplied — it does not exist), so it is
+  very likely present on every environment running this exact commit of `services/client`,
+  including PROD, though PROD was not checked (out of this story's own scope). **Owner:
+  `CRM/api-prionex`** — relay through Oleg; this repository (`fe-prionex_f`) has no standing to fix
+  another team's migration gap, and this story does not attempt to (no `ALTER TABLE`, no schema
+  write of any kind was made or considered).
+  **Consequence for `RVC-v1`'s F5**: this makes F5 very likely `fail`, not merely `BLOCKED` — F5's
+  own text names *"a tab that spins forever, or that renders an error where the list showed rows,
+  is a `fail`"* as an explicit condition, and a `500` on the client-detail endpoint is exactly that
+  class of error. Not claimed as an observed verdict here (Prohibition 2: the dev agent does not
+  record F3-F12 verdicts), but named as a pre-flight technical fact material to the path decision.
+  **Consequence for F6/F8**: F6 (full payment lifecycle) and F8's payment/write-off/reversal-import
+  sub-items likely touch the same broken columns and inherit the blockage; F8's client-referencing
+  sub-items (operator/tag-assignment, document import) do not, and now have real client targets.
+- 🔴 **F6's debt-creation path was investigated and found to have no safe, direct route for this
+  story to use.** `services/client` exposes no `POST /debts`-shaped endpoint for an admin to create
+  a single debt directly; `DebtCreate` (`app/schemas/debt.py`) is documented "from CSV import" and
+  is driven only through a bulk loan-book/factoring import pipeline this story did not reverse-
+  engineer and drive blind, to avoid producing malformed fixture data under time pressure. **Owner:
+  CRM/api-prionex** (the import pipeline's own domain) if this needs unblocking beyond the F5 bug
+  above, which would block it regardless.
+- ⚠️ **F10's messaging integrations exist only as unconfigured stubs; the SMS gateway itself has
+  zero connection config.** `messaging_integrations` (5 rows: turbosms, omnicell, vodafone_obm,
+  my2_viber, intel_tele) are all `status=unconfigured`, `enabled_channels=[]`, no credentials.
+  `sms_configuration` has 0 rows. `sms_templates` has 5 real rows. A real SMS send is not
+  achievable without a real gateway account — a business/infra decision, not a fixture. **Owner:
+  Oleg** / whoever owns the messaging vendor relationship.
+- ⚠️ **F11's AI assistant runs against a mock provider on PRE-PROD, not a real LLM.**
+  `assistant_settings.assistant_enabled=true`, but `ai-assistant-service`'s own
+  `AI_ASSISTANT_PROVIDER=mock` with empty `AI_PROVIDER_BASE_URL`/`AI_PROVIDER_TOKEN`. Not a
+  blocker — the mock may satisfy `RVC-v1`'s black-box behavioural criteria — but disclosed so a
+  validator does not mistake a mock-provider pass for having tested the real integration. **Owner:
+  none needed — disclosure only**, unless Oleg decides real-provider testing is required, in which
+  case the owner would be whoever manages that provider account.
+
+## Deferred from: code review of story-5.6 (2026-08-25)
+
+Opus code review of Story 5.6 (Epic 5's final story — the first end-to-end rehearsal of the PRE-PROD
+release cycle). **Verdict: CHANGES REQUESTED.** Five decisions were routed to Oleg and sixteen
+patches to the fix-pass; those live in the story's own `### Review Findings` section and are **not**
+duplicated here. What follows are the items that outlive Story 5.6 and need an owner elsewhere.
+
+- 🔴 **A waived candidate is indistinguishable from a `12/12` one at the gate that consumes it.**
+  `docs/preprod-candidates.md`'s own header states the interface: *"the registry's own
+  `preprod-<sha>`/`preprod-current` tags carry identity and permanence (**Story 6.5 reads those, not
+  this file**)"*. Story 5.6 recorded `sha-a99ccd44c5a3-preprod` under `docs/migration-decisions.md#d40`'s
+  waiver — a run whose `RVC-v1` aggregate was **`fail`** (`7/12 pass, 5 BLOCKED`) and which was
+  dispatched `pass` on the waiver alone. `preprod-a99ccd44c5a3` now exists and carries **no waiver
+  signal of any kind**; Story 5.4's own D1 already established that the `validation_note` does not
+  reach the registry, so nothing 6.5 can read distinguishes this candidate from a clean one. `D40`'s
+  assurance that *"Story 6.4/6.5 **не наследуют** вайвер"* is true of the **next** candidate and says
+  nothing about this one. **Owner: Story 6.5** — it must decide what a waived marker means at its
+  promotion gate, and whether the rehearsal candidate (an empty release, never intended for
+  promotion) needs to be positively excluded rather than merely unlikely to be chosen. Not a defect
+  in 5.6's execution; a consequence of the waiver mechanism that 5.6 correctly did not invent a fix
+  for on its own.
+
+- ⚠️ **`RVC-v1` has no waiver mechanism to point at, and the first waiver was authorised by text the
+  story wrote for itself.** `grep -i 'waiver'` over `docs/release-validation-checklist.md` returns
+  exactly **one** pre-existing hit — a nine-word parenthetical, *"(or the same documented,
+  **time-boxed** waiver this file has always allowed)"* — with no procedure, no authority, no scope
+  rule and no stated effect on the aggregate behind it. There is no *"Path B"* in `RVC-v1` and
+  `RVC-v1` has no numbered sections; both sentences `D40` §1 quotes as *"`RVC-v1`'s собственный
+  текст"* are from **Story 5.6's own §3.2**. **Owner: whoever writes `RVC-v2`** — the waiver
+  mechanics (who may waive, what may be waived, what the aggregate becomes, whether the box is a date
+  or a scope) belong in the checklist that defines what `validated` means, not in the story that
+  needed them. Story 5.6's own §3.2 and `D40` are a serviceable first draft to lift from. **Note the
+  one substantive constraint the real `RVC-v1` clause imposes — `time-boxed` — is the one `D40`
+  dropped**, substituting a single-candidate scope; that substitution is Decision D1 in 5.6's review
+  and its outcome should govern what `RVC-v2` writes down.
+
+- ⚠️ **`RVC-v1`'s format block, Execution Log template and first real run disagree in four places.**
+  Found by executing the file for the first time; none is a defect in what Story 5.6 shipped, all
+  four are traps for the next validator, and Prohibition 5 correctly prevented 5.6 from fixing any of
+  them in place. **Owner: `RVC-v2`**, alongside the F2 c1 *"3 files"* item already queued there.
+  (a) The shipped note carries `— waiver <Dnn>, <scope> —`, a clause **the Format block does not
+  define**, so the next waived note may legally omit it and hide a waiver.
+  (b) The template's `- Aggregate verdict: pass / fail` offers **no shape for a waived run**; the
+  shipped section had to invent *"`fail` … recorded as `pass` for dispatch purposes only under a
+  written waiver"* — which is the right answer and should become the template's.
+  (c) The template's `- Counts:` line says *"must satisfy `P + D + F + B == 12`"* while the per-item
+  table above it **includes the P1 and P2 rows**; the P1/P2 exclusion is stated only in the
+  note-format section. A validator tallying the shipped table's `pass` rows gets **9**, and
+  `9 + 0 + 0 + 5 = 14`. Story 5.6's own Completion Note 9 fell into a version of this
+  (*"7 of 12 (P1, P2, F1, F2, F3, F4, F9)"* — a different seven from the seven that passed).
+  (d) `- Recorder run id: <run id, or "not dispatched — verdict was fail">` has **no legal value for
+  "dispatched, verdict `fail`, refused by G1"** — which is precisely the case the new
+  "Rejected candidates" table exists to record.
+
+- ⚠️ **`RVC-v1`'s Execution Log has a `Started (UTC)` field and no end-time field, so *"one
+  continuous session"* is unverifiable from the record that governs it.** Story 5.6's validation leg
+  is bounded at both ends by dev-agent actions (`13:35:33` → `13:55:25`) and reported as
+  *"Human/validation total"*, while the human validator's own observations carry **no timestamp
+  anywhere in the change set**. That also means the six items he observed cannot be placed inside the
+  `P1`-to-recorder bracket that `docs/release-regulation.md`'s scope-freeze agreement is defined
+  over — they almost certainly were, but by inference, and AC13 asks for a state read. **Owner:
+  `RVC-v2`** — add an end-time field and a line asking the human validator for their own start and
+  end. One sentence, and it closes a hole in the only leg of this cycle a machine cannot verify.
+
+- ⚠️ **The "Rejected candidates" table cannot yet be filled in, and nobody is named to fill it.**
+  Story 5.6's AC11 created the home (`docs/preprod-candidates.md`) and closed the original
+  `deferred-work.md` entry against it, correctly describing that as *"the design gap, not a live
+  observation of it"*. Five things block first use: the mandatory **`Digest` column has no source**
+  (G1 refuses before any registry read, and the prescribed `action_task_step` read-back carries
+  neither digest nor note); the placeholder `| *(none yet)* | … |` **is itself a row** in a table
+  whose own rule forbids rewriting rows; the table is **scoped to G1 only**, so a `pass`-verdict run
+  refused at **G2-G6** lands in neither table (a G5 refusal has already happened once — Story 5.4's
+  live matrix); the instruction is **passive, with no owner and no trigger**, and unlike the pass path
+  no printed paste-line prompts it; and the file header still reads *"one row per **successful**
+  `record-preprod-candidate.yml` run"*. **Owner: Story 6.4**, folded into the M7 entry above, since
+  it is the next story to dispatch the recorder and the one most likely to produce a real refusal.
+
+- ⚠️ **Two more unexercised paths for the M7 entry above.** Story 5.6's Task 10.5 names, correctly,
+  *"Not claimed anywhere in this story: a true no-op redeploy, G1's refusal path live, or any of M7's
+  eight branches."* Two belong on the same list and are not there: **epic AC3 / Story 5.6's AC9's
+  restart clause** (*"the rehearsal restarts from a new `build.yml` dispatch"* — no workflow defect
+  surfaced, so AC9 is **vacuously** satisfied and AC13 requires it be named as such rather than
+  counted), and the **Rejected-candidates row-writing procedure** in the item above. **Owner: Story
+  6.4**, appended to the existing M7 entry — not a new entry, and not a standing conditional
+  successor clause.
+
+- 🔴 **Security, carried forward and still open: `CRM/api-prionex`'s PRE-PROD `ip_whitelist` table has
+  zero rows, so enabling enforcement denies every login on the stand.** Recorded here because Story
+  5.6's F4 item 6 discovered it and the fact outlives the story. `auth_settings.ip_whitelist_enforcement_enabled`
+  was found `false`; a dev agent toggled it on for `0.685 s` to demonstrate F4's refusal branch, and
+  during that window **every** login to PRE-PROD would have been refused, not merely the test
+  account's — the allowlist being empty means no address is inside it. Two consequences for whoever
+  owns that setting: the gate **cannot be turned on** in its present state without locking everyone
+  out, and any future test of it needs a positive control (a whitelisted address admitted while
+  enforcement is on) to demonstrate anything beyond deny-all. **Owner: Oleg / `CRM/api-prionex`.**
+  Related and separately filed above: the unrotated seed admin credential on the same internet-reachable
+  stand.

@@ -1,9 +1,28 @@
-# PRE-PROD Release Validation Checklist — `RVC-v1`
+# PRE-PROD Release Validation Checklist — `RVC-v1.1`
 
-**Version marker: `RVC-v1`.** Quote this marker in every `validation_note`. When any item's text,
-id, or pass criterion changes in a way that alters what "validated" asserts, the marker becomes
-`RVC-v2` and the old marker keeps meaning what it meant — rows already written are never
-reinterpreted.
+**Version marker: `RVC-v1.1`.** Quote this marker in every `validation_note` **from this amendment
+onward** — a note already recorded against `RVC-v1` stays correct as `RVC-v1` and is never rewritten
+(see the dated candidate row in `docs/preprod-candidates.md`, still marked `RVC-v1`, honest for its
+date). When any item's text, id, or pass criterion changes in a way that alters what "validated"
+asserts, the marker becomes `RVC-v2` and the old marker keeps meaning what it meant — rows already
+written are never reinterpreted.
+
+🔴 **Amended 2026-08-25 (`RVC-v1` → `RVC-v1.1`), code review fix-pass of Story 5.6, on Oleg's own
+written decision as the release's owner — decision record `docs/migration-decisions.md#d41`.** This
+is a **second class** of change that bumps the marker, next to the text/id/criterion class above:
+**adding or amending the waiver mechanism itself** — because a waiver changes what a `pass`
+dispatched under it is allowed to mean, which is exactly the kind of thing this paragraph exists to
+gate. `RVC-v1` had never defined a waiver at all beyond one nine-word parenthetical (["The CORS
+blocker"](#the-cors-blocker) still carries it, unedited, as history); Story 5.6 needed one, wrote its
+own mechanics into its own story file and its decision record (`D40`) rather than into this file, and
+those mechanics are ratified here, in [The waiver](#the-waiver), as `RVC-v1.1`'s own text — not
+attributed back to `RVC-v1` as though they had always been here. **What this amendment does NOT do:**
+it does not touch any F-item's text, id, or pass criterion (a `RVC-v2` change, unaffected); it does
+not retroactively change `D40` or the candidate already recorded under it (`D41` amends by addition,
+same convention as `D40` §7 below — the original body is never rewritten); and it does not imply the
+waiver mechanism is now exercised for the first time — it was already used, once, by `D40`, before
+this file said so explicitly. This amendment is the checklist catching up to what the story and
+Oleg had already decided, not a new decision.
 
 **What does NOT bump the marker: a change in what is *executable*.** 🔴 **This predicted event
 actually happened, 2026-08-25 — confirmed here, not merely anticipated anymore.** `CRM/api-prionex`
@@ -16,12 +35,14 @@ by the `<B>` (blocked) and `<D>` (degraded) counts in the
 [`validation_note`](#the-validation_note-format), which is why those counts are mandatory rather
 than decorative: without them a `2/12` candidate and an `11/12` candidate would both cite `RVC-v1`
 while asserting very different coverage. Only a change to an item's **text, id, or pass criterion**
-bumps the marker.
+bumps the marker to `RVC-v2`; only a change to the waiver mechanism bumps it to a `.1`-class
+amendment like this one.
 
 **Established by Story 5.5, 2026-08-24.** The plan sentence this executes is
 `docs/forgejo-migration.md:231` ("Место под E2E: job `e2e` после healthcheck … на первом этапе —
 заглушка + чек-лист ручной валидации критичных флоу"); the decision record is
-`docs/migration-decisions.md#d39`.
+`docs/migration-decisions.md#d39`. **Amended by Story 5.6, 2026-08-25 — `D41`, adding [The
+waiver](#the-waiver).**
 
 ## Why this file exists
 
@@ -333,6 +354,16 @@ keeps measured platform facts.
   state. A tab that spins forever, or that renders an error where the list showed rows, is a
   `fail`.
 - **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
+  🔴 **Further updated, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`): still
+  `EXECUTABLE`, and now known to produce a live `fail` on this item's own criterion.** `GET
+  /api/v1/clients/{id}` returns `500` for every client on PRE-PROD, root-caused to a genuine
+  `CRM/api-prionex` migration gap (the `Debt` model's ORM defines ten "paid"/"written_off" columns
+  with no migration anywhere in that repository — commit `f489058c…`, six months old). The list
+  renders; the detail page errors — **that is this item's own named `fail` condition, not
+  `BLOCKED`**: the item was reached and executed, not prevented from running at all. **This `fail`
+  is exactly the shape [The waiver](#the-waiver)'s second clause exists for** — caused solely by a
+  dependency outside this repository, root-caused and evidenced, not merely suspected. Owner:
+  `CRM/api-prionex`.
 
 ### F6 — Payments on a client: record, edit, cancel, verify, receipt
 
@@ -343,6 +374,12 @@ keeps measured platform facts.
   shows the item in the state the action should have produced; the receipt downloads as a PDF that
   opens and carries the payment's own amount and client.
 - **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
+  🔴 **Further updated, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`):
+  `BLOCKED — owner: CRM/api-prionex` (a new, unrelated blockage — CORS is not it).** A full payment
+  cycle needs a client with a real debt; `services/client` has no direct single-`POST` endpoint to
+  create one (`DebtCreate` is documented CSV-import-only, driven by a bulk pipeline this checklist
+  does not exercise blind). Also inherits F5's migration-gap bug. **This item was never reached —
+  `BLOCKED` is correct as originally recorded, not the fail-and-waive shape F5 uses.**
 
 ### F7 — Telephony: dialer and inbound call handling
 
@@ -356,6 +393,12 @@ keeps measured platform facts.
   passing does not make F7 pass — F2 proves the value is in the bundle, not that the socket
   connects.
 - **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
+  🔴 **Further updated, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`):
+  `BLOCKED — owner: Oleg / telephony infrastructure owner` (a new, unrelated blockage).** Zero
+  telephony infrastructure is provisioned on PRE-PROD at any level: no SIM cards, no dialer queues,
+  no operator-extension links, no Asterisk/SIP/AMI configuration on `dialer-service`. Assigning a
+  phone number through the admin API does not create a real telephone behind it. **Never reached —
+  `BLOCKED` is correct.**
 
 ### F8 — Client import and the bulk operations
 
@@ -368,6 +411,13 @@ keeps measured platform facts.
   is a `fail`); the run appears in history with the same counts; each bulk page reports success and
   failure per row rather than a single aggregate "done".
 - **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
+  🔴 **Further updated, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`):
+  `BLOCKED — owner: CRM/api-prionex, jointly with F6` (a new, unrelated blockage).** 3 of the 7 bulk
+  pages (payment import, write-off import, reversal import) reference an existing `loan_number`/
+  `tin` and inherit F6's blockage; the item has no degraded wording, so the whole item does not
+  reach a full `pass` while any sub-page cannot be exercised. **Partly reached (4 of 7 sub-pages have
+  real targets via the two test clients created this rehearsal), but the item as a whole never
+  completed — `BLOCKED` is correct, not a partial `pass`.**
 
 ### F9 — Permission gating
 
@@ -404,7 +454,7 @@ keeps measured platform facts.
 - **Why it is on the list:** this is the item whose failure is widest. Every dashboard route
   depends on it, so a single bad role breaks the whole application rather than one page.
 - **Executability:** ~~`BLOCKED — owners: CRM/api-prionex (CORS origin) AND Oleg (no
-  restricted-role account)`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `BLOCKED — owner:
+  restricted-role account)`~~ ~~🔴 **Updated, closeout re-measurement, 2026-08-25: `BLOCKED — owner:
   Oleg (no restricted-role account)` — ONE owner now, not two.** F9 had **two** blockages, and an
   earlier draft hid the second one inside the first. (a) The CORS origin, like F4-F11 — **this half
   is now closed**, see [The CORS blocker](#the-cors-blocker) for the measured evidence, exactly as
@@ -413,7 +463,15 @@ keeps measured platform facts.
   **no evidence yet exists that such an account is provisioned on PRE-PROD** — unchanged by the CORS
   fix, not independently re-verified by this closeout (it is not a network-observable fact). F9
   stays `BLOCKED` until that account exists; it is the **only** item in `RVC-v1` still blocked for
-  any reason, once CORS is accounted for.
+  any reason, once CORS is accounted for.~~
+  🔴 **Corrected, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`): `EXECUTABLE`,
+  no longer blocked.** Story 5.6 provisioned `rvc-operator` (Operator role, 24 of 141 Admin
+  permissions) through `CRM/api-prionex`'s normal API, closing (b) above; (a) was already closed.
+  F9 passed live under this account. **This paragraph's own former claim — "the only item in
+  `RVC-v1` still blocked for any reason" — was already wrong the moment it was written and stayed
+  uncorrected through this file's first Execution Log entry; see [the CORS section's own summary
+  below](#the-cors-blocker) for the same correction.** As of this rehearsal, `BLOCKED` items are
+  F5 (`fail`, waiverable — see [The waiver](#the-waiver)), F6, F7, F8, F10 — not F9.
 
 ### F10 — Messaging and SMS campaigns
 
@@ -423,6 +481,11 @@ keeps measured platform facts.
   intact; a draft round-trips unchanged; a template renders its placeholders; the integrations page
   reports each integration's real state rather than a blank list.
 - **Executability:** ~~`BLOCKED — owner: CRM/api-prionex, CORS origin`~~ 🔴 **Updated, closeout re-measurement, 2026-08-25: `EXECUTABLE`.** PRE-PROD's CORS origin was fixed by `CRM/api-prionex` — see [The CORS blocker](#the-cors-blocker) for the measured evidence. This item can now be executed in full.
+  🔴 **Further updated, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass, `RVC-v1.1`):
+  `BLOCKED — owner: Oleg / SMS-provider owner` (a new, unrelated blockage).** `sms_configuration`
+  has zero rows; `messaging_integrations`' 5 rows are all `status=unconfigured` with no credentials.
+  No real SMS gateway is configured at any level — a business/infrastructure decision, not a
+  fixture gap reachable through the admin API. **Never reached — `BLOCKED` is correct.**
 
 ### F11 — AI assistant
 
@@ -497,6 +560,18 @@ a second, independent blockage (no restricted-role account provisioned on PRE-PR
 this measurement does not touch and that this closeout did not independently verify either way — see
 F9's own section. Fully executable as of this measurement: **F1, F2, F3, F4, F5, F6, F7, F8, F10,
 F11, F12 — eleven of twelve.** Only F9 remains `BLOCKED`.
+
+🔴 **Superseded for the "only F9" headline, Story 5.6's rehearsal, 2026-08-25 (code review fix-pass,
+`RVC-v1.1`) — the paragraph above is accurate for what CORS alone accounted for and is left as
+written; it is not a live claim about blockage anymore.** "Executable" (reachable at all) and
+"passes" are different claims: this rehearsal executed F5-F10 for the first time and found F5
+produces a genuine `fail` (waiverable, see [The waiver](#the-waiver)) and F6/F7/F8/F10 are
+`BLOCKED` for reasons unrelated to CORS (see each item's own further-updated Executability line).
+F9 itself is **no longer blocked at all** — Story 5.6 provisioned the missing account. So, as of
+2026-08-25's rehearsal: **F9 passed; F5 is `fail` (waived); F6, F7, F8, F10 are `BLOCKED`.** The
+inverse of what this section's own headline still implied at the moment the Execution Log's first
+entry was written — named here explicitly (code review M2) rather than left for a reader to notice
+the contradiction between this section and the log below.
 
 **Note on DEV:** the same closeout re-measurement confirms `api.crm.dev.crm-prionex.online`'s CORS
 origin is *also* fixed (same evidence shape, non-echo, negative control). This has **no bearing on
@@ -722,6 +797,86 @@ individually fail) rather than **asserted** (from whatever the operator felt). T
 what this file changes, and overstating it would be the same vacuity this project has rejected
 before.
 
+**One exit exists from the block above, and until this amendment it was undefined.** See
+[The waiver](#the-waiver), immediately below.
+
+---
+
+## The waiver
+
+<a id="the-waiver"></a>
+
+🔴 **New in `RVC-v1.1`, 2026-08-25 — `docs/migration-decisions.md#d41`.** Before this amendment the
+only clause in this file naming a waiver was a nine-word parenthetical in [The CORS
+blocker](#the-cors-blocker) — *"the same documented, time-boxed waiver this file has always
+allowed"* — with no procedure, no stated authority, and no rule for what it does to the aggregate.
+Story 5.6 needed one, before it existed in writing, and its own story file and `D40` supplied the
+mechanics under the honest belief that they were restating this file. They were not: `D40`'s own §1
+quotes two sentences as *"`RVC-v1`'s собственный текст"* that were in fact the story's own §3.2. Code
+review caught the circularity; Oleg, as the checklist's owner, chose to make the mechanics real
+rather than treat the recording as ungrounded — this section is that mechanics, made explicit and
+retroactively covering `D40` (`#d41`).
+
+**Who may issue a waiver.** Only **Oleg, as the release's owner** — the same authority `D40` and
+every prior decision record in this file already assumed, now stated as a rule rather than implied
+by precedent. A waiver issued by anyone else, including the dev agent that executes this checklist,
+has no effect: the agent's role is to derive the verdict and escalate, never to waive.
+
+**What a waiver may cover.**
+1. Any item recorded `BLOCKED` — unchanged from what this file always meant by "could not be
+   executed at all."
+2. **A `fail` that arose *solely* from a broken external dependency unrelated to the artifact being
+   validated** — code or infrastructure outside `fe-prionex`'s own bundle, where the validator
+   reached the item, observed its named `fail` condition, and root-caused it to the outside system,
+   not to anything this repository shipped. This is new: `RVC-v1` previously waived only `BLOCKED`,
+   which forced `D40` to reclassify F5's genuine `fail` (client-detail `500`, root-caused to
+   `CRM/api-prionex`'s own missing `Debt`-model migration — see F5's own section) into `BLOCKED` to
+   make it reachable at all, even though F5's own pass criterion names that exact observation a
+   `fail`. **F5 stays `fail`, by its own criterion, and is waiverable under this clause instead** —
+   see the correction at F5's own section below. This clause exists precisely for that shape of
+   defect: real, reached, correctly identified as `fail` by the item's own words, and caused entirely
+   by a dependency this repository does not own and cannot fix.
+   **What this clause does NOT cover:** a `fail` in this repository's own code, a `fail` whose cause
+   is disputed or unconfirmed, or a `fail` where the external dependency is merely *involved* rather
+   than *solely* responsible (if `fe-prionex`'s own code contributed to the failure, this clause does
+   not apply and the `fail` stands).
+
+**Mandatory attributes of a waiver — all required, none optional:**
+- **Date** it was granted.
+- **Author** — must be Oleg (see above); the decision record names him explicitly, not by role.
+- **Every covered item**, listed individually, each with its own **cause** and **owner** — the same
+  granularity the `validation_note`'s own `<B>` clause already requires, so the waiver and the note
+  never disagree about who owns what.
+- **Scope: time-boxed AND single-candidate.** Both, not either. `RVC-v1`'s original clause said only
+  `time-boxed`; `D40` supplied a single-candidate scope but dropped the calendar date, and code
+  review named that drop as the one place `D40` departed from a real constraint rather than merely
+  inventing one. A waiver under `RVC-v1.1` states **both**: a calendar expiry (after which the waiver
+  no longer authorises a dispatch, full stop, regardless of whether a new candidate exists) **and**
+  that it governs one named candidate commit only. `D41` supplies both retroactively for `D40` — see
+  that decision record.
+- **True counts preserved in the `validation_note`.** A waiver changes what gets *dispatched*
+  (`validated=pass` instead of the honest `fail`); it never changes the arithmetic the note reports.
+  `<P>/<D>/<F>/<B>` must still sum to 12 and must still reflect what was actually observed — a waived
+  `fail` is still counted in `<F>`, not silently moved into `<B>` or `<P>`. (`D40`'s own note
+  under-counted this exact case by reclassifying F5 into `<B>` rather than leaving it in `<F>` — see
+  F5's own corrected section; `D41` does not rewrite the already-dispatched note, since the note was
+  honest for what `D40` actually decided at the time, but it corrects the record going forward.)
+
+**Effect on the aggregate.** Identical to what `D40` already stated and this file now confirms as its
+own rule: **the waiver changes what gets dispatched, never what is derived.** The aggregate verdict
+computed from the twelve items stays exactly what the criteria produce — `fail`, if any item is
+`fail` or `BLOCKED` — and is stated as such in the Execution Log. The waiver is a separate, explicit
+authorisation to dispatch `pass` **despite** that derived `fail`, not a rule that changes the
+derivation. Both the derived verdict and the dispatched one belong in the note and the log, never
+only one.
+
+**What a waiver does not do:** it does not bump this file's marker (a waiver decision is a
+per-candidate act, not a change to what an item means — see the marker-bump rule at the top of this
+file); it does not exempt the candidate from any other item's criterion; and it carries no signal at
+the registry — `docs/preprod-candidates.md`'s own header states the registry tags carry no waiver
+information, so a promotion gate reading only the registry cannot tell a waived candidate from a
+clean one (filed as a cross-story item, owner Story 6.5, in `deferred-work.md`).
+
 ---
 
 ## What this checklist does NOT cover
@@ -796,10 +951,92 @@ tie-breaks between the two files then run on dates that do not agree. Not fixed 
 does not edit `record-preprod-candidate.yml` — but named so a later reader comparing the two files'
 dates does not read the offset as an error in one of them.
 
-**This log is empty.** `RVC-v1` is published by Story 5.5, which deliberately does **not** execute
-it — executing the checklist against a real candidate is Story 5.6's rehearsal, and 5.6 writes the
-first section here. See [the two consequences above](#the-cors-blocker) for the verdict problem 5.6
-inherits.
+**First section written 2026-08-25 by Story 5.6's own rehearsal** — the log was empty until this candidate. See [the two consequences above](#the-cors-blocker) for the verdict problem this section resolves via a written waiver (`docs/migration-decisions.md#d40`), not by silently redefining anything above.
+
+🔴 **Reconciliation note, code review fix-pass, 2026-08-25 — corrections to the section below,
+written here rather than in place, per Prohibition 5/"never edit a section after it is written."**
+Four points, in the order code review raised them (D3, H2, H3, M8):
+
+1. **D3 — what the aggregate confirmation actually covers, resolved by asking Oleg directly rather
+   than reconstructing it.** Three artifacts previously scoped it three ways (nine / six / five).
+   **Oleg's own words, quoted verbatim, 2026-08-25:** first, *"все ок"*; then, on a clarifying
+   question asking him to choose among the possible scopes, he selected the option *"Прошёл всё,
+   все девять pass"*. The correct reading: **nine points carry a `pass` verdict in this candidate in
+   total — P1, P2, F1, F2, F3, F4, F9, F11, F12** (the twelve F-items minus the five `BLOCKED`, plus
+   both preconditions) — **of which six are browser items** (F1, F3, F4, F9, F11, F12, the `Executed
+   by:` line below is and was correct) **and three are machine items the dev agent executed directly**
+   (P1, P2, F2 — F4's item 6 is a sub-point of F4, not a fourth machine item, and is disclosed
+   separately in F4's own row). The table's **F1 cell** below, which reads *"all nine browser
+   items"*, should read **"all six browser items"** — left uncorrected in place per Prohibition 5,
+   corrected here. `docs/preprod-candidates.md`'s ledger prose (*"five … two"*) is corrected in that
+   file directly (a prose paragraph there, not a row). **This remains an aggregate attestation, not
+   itemized observations** — Oleg confirmed the count and the scope, not each item's own evidence;
+   that limit is unchanged by this correction.
+2. **H2 — F4 item 6's evidence, supplemented (full detail: `docs/migration-decisions.md#d40` §8).**
+   The `ip_whitelist` table was **empty (0 rows)** when enforcement was toggled on, so the observed
+   `403 IP_NOT_ALLOWED` proves **deny-all**, not a discriminating allow/deny — no positive control
+   (a whitelisted address admitted) was run. Blast radius: **the entire shared PRE-PROD stand**, for
+   the full **0.685 s** enforcement was on, not only the test account — the setting is global on
+   `CRM/api-prionex`'s own service.
+3. **H3 — F12's cell does not disclose its own known mock, one row after F11 discloses exactly the
+   same class of fact.** `payment-service` carries `EASYPAY_MOCK_MODE` in its env block (measured
+   this rehearsal, recorded in `docs/migration-decisions.md#d40` §5) — F12 exercises a **mock**
+   EasyPay integration, not a live one, symmetrically with F11's disclosed mock AI provider. Which of
+   F12's three phases (render / validate / submit) the aggregate actually covers cannot be
+   determined beyond what D3's reconciliation already states — recorded as a limit, not filled in
+   with invented detail.
+4. **M8 — four disagreements between this file's own format/template and this section, none a
+   defect in what shipped, filed with owner `RVC-v2` in `deferred-work.md`, restated here per the
+   patch's own routing instruction:** (a) this section's `— waiver D40, single-candidate scope —`
+   clause is not defined by [the note format](#the-validation_note-format); (b) the template's
+   `Aggregate verdict: pass / fail` has no shape for a waived run — this section's own wording
+   (*"`fail` … recorded as `pass` for dispatch purposes only"*) should become the template's; (c) the
+   template's counts line and this section's own table disagree on whether P1/P2 belong in the
+   tally (they do not; the table includes them for readability only); (d) `Recorder run id: <run id,
+   or "not dispatched — verdict was fail">` has no legal value for "dispatched, refused by G1" — the
+   exact [Rejected candidates](../preprod-candidates.md#rejected-candidates) case.
+5. **M1's own two self-disclosed literal deviations, named and accepted rather than left
+   unremarked:** this section's own `Recorder run id` line was completed *after* the section was
+   first written (filling in run 1316 once R3 returned) — a deviation from "never edit a section
+   after it is written" that the section itself flagged inline as intentional at the time; and this
+   preamble paragraph is itself a **second** edit to a file whose header states Story 5.6 is
+   permitted **one** Execution Log edit (Prohibition 5) — justified because the one impermissible
+   thing (rewriting a written verdict) is not what either edit does: one completed a
+   forward-declared placeholder, the other adds a preamble note above the frozen section rather than
+   touching it.
+
+### sha-a99ccd44c5a3-preprod — 2026-08-25T13:35Z
+
+- Checklist version: RVC-v1
+- Started (UTC): 2026-08-25T13:35Z
+- Executed by: joint — **dev agent** (P1, P2, F2, and F4's item 6 specifically — see note below)
+  and **Oleg Kuksa** (F1, F3, F4 items 1-5+7, F9, F11, F12)
+- Deploy run id: 1310
+
+| Item | Verdict | Evidence / why |
+|---|---|---|
+| P1 | pass | dev agent, by hand: container `healthy`, running-image `.RepoDigests` contains the candidate digest exactly (`sha256:a62e868786…`) |
+| P2 | pass | dev agent: decoded build epoch `2026-08-25T13:25:21Z`, at or after R1's own `started` (`2026-08-25T13:23:29Z`) |
+| F1 | pass | Oleg Kuksa, per his own aggregate confirmation (all nine browser items reported `pass` as a group; itemized per-item observations were not separately provided — recorded honestly as an aggregate, not invented detail). Corroborated by the dev agent's own measurement of the same item's machine-checkable half: 9/9 referenced assets `200`, TLS `ssl_verify_result=0` |
+| F2 | pass | dev agent, all five criteria measured fresh against this candidate's own served bundle — see Task 6.4 |
+| F3 | pass | Oleg Kuksa, aggregate confirmation (see F1's note on what that means and does not mean) |
+| F4 | pass | **Split evidence, stated precisely.** Items 1-5 and 7 (correct creds, wrong creds, 2FA, already-logged-in-elsewhere, locked, forced-password-change): Oleg Kuksa, aggregate confirmation. **Item 6 (IP-whitelist refusal): dev agent, direct API test, not Oleg's browser** — `auth_settings.ip_whitelist_enforcement_enabled` was found `false` (the gate switched off, item 6 undemonstrable as found) mid-session; escalated to the coordinator rather than silently worked around; confirmed the already-issued admin JWT is not IP-scoped (`get_current_user` never reads the whitelist, only the login path does) before acting. Toggled `PUT /api/v1/admin/settings/ip-whitelist {"enabled": true}` (admin, audited), immediately attempted `rvc-operator` login from a non-whitelisted IP → `403 {"code": "IP_NOT_ALLOWED", "message": "Login not allowed from this IP address."}` — the explicit reason F4's own text requires — then immediately toggled back `{"enabled": false}` with the same token, then confirmed restoration with a successful `rvc-operator` login. Total window with enforcement on: well under one second (`13:55:24.680` to `13:55:25.365`). |
+| F5 | BLOCKED | Waiver `D40` (Oleg, 2026-08-25, written, single-candidate scope). Reclassified from an attempted `fail`: `GET /api/v1/clients/{id}` `500`s for every client, root-caused to `CRM/api-prionex`'s own missing `Debt`-model migration (ten columns, no migration anywhere in their repo) — not a fixture gap, the validator cannot get past the error. Owner: `CRM/api-prionex` |
+| F6 | BLOCKED | Waiver `D40`. No direct debt-creation API endpoint exists (`DebtCreate` is CSV-import-pipeline-only); also inherits F5's bug. Owner: `CRM/api-prionex` |
+| F7 | BLOCKED | Waiver `D40`. Zero telephony infrastructure provisioned on PRE-PROD at any level (no SIM cards, no queues, no operator-extension links, no Asterisk/SIP config on `dialer-service`). Owner: Oleg / telephony infra owner |
+| F8 | BLOCKED | Waiver `D40`. 3 of 7 bulk-operation pages (payment/write-off/reversal import) reference existing loan data and inherit F6's blockage; item has no degraded wording so the whole item does not reach a full pass. Owner: `CRM/api-prionex`, jointly with F6 |
+| F9 | pass | Oleg Kuksa, aggregate confirmation, executed as `rvc-operator` (Operator role, 24 of 141 Admin permissions) |
+| F10 | BLOCKED | Waiver `D40`. `sms_configuration` has zero rows — no real SMS gateway configured at any level; `messaging_integrations`' 5 rows are all `status=unconfigured`. Owner: Oleg / messaging vendor owner |
+| F11 | pass | Oleg Kuksa, aggregate confirmation. Disclosed for the record (not a blocker, not something Oleg was asked to distinguish): the AI assistant runs against `AI_ASSISTANT_PROVIDER=mock` on this stand, not a real LLM provider |
+| F12 | pass | Oleg Kuksa, aggregate confirmation |
+
+- Counts: P=7 D=0 F=0 B=5   (7 + 0 + 0 + 5 == 12 ✓)
+- Aggregate verdict: **`fail` by `RVC-v1`'s own unconditional rule** (`P=7 ≠ 12`) — **recorded as `pass`
+  for dispatch purposes only under Oleg's written waiver, `docs/migration-decisions.md#d40`,
+  single-candidate scope.** The waiver changes what gets dispatched; it does not change this
+  arithmetic, which stays exactly as computed.
+- validation_note submitted: `RVC-v1 sha-a99ccd44c5a3-preprod: 7/12 pass, 5 BLOCKED (F5 F6 F7 F8 F10) (CRM/api-prionex Debt-model migration bug, CRM/api-prionex; no direct debt-creation path, CRM/api-prionex; telephony infrastructure absent, Oleg; 3/7 bulk pages inherit F6, CRM/api-prionex; SMS gateway unconfigured, Oleg) — waiver D40, single-candidate scope — detail in docs/release-validation-checklist.md`
+- Recorder run id: **1316** (`SUCCESS`, `started` 2026-08-25T14:01:02Z, `stopped` 2026-08-25T14:02:10Z, 68s — this section was written before dispatch, per `RVC-v1`'s own rule and this story's Task 6.7/7.x ordering; this line completed after R3 returned, per Task 8.5)
 
 ### Template — copy this block, do not edit it in place
 

@@ -1133,7 +1133,43 @@ development_status:
   # zero foreign rows absorbed (two story-4-9 rows in-range correctly excluded). No floor/ceiling
   # was ever declared for this story -- named honestly, not retrofitted. Row flips to `done`.
   5-5-establish-the-release-validation-checklist: done
-  5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
+  # create-story ran 2026-08-25 (Opus), from a scratchpad worktree off origin/main at 0b4fdd99 --
+  # the primary checkout belongs to Story 4.9's dev agent. Context bound against Epic 5's ACs,
+  # stories 5.1-5.5 incl. their Review Findings, RVC-v1, D33-D39 and deferred-work.md.
+  # 🔴 THE STORY'S CENTRAL FINDING, recorded here so it is visible without opening the file: the
+  # PRE-PROD (and DEV) Kong CORS origin is FIXED -- re-verified independently from the create-story
+  # session on 2026-08-25 with a foreign-origin control proving an allowlist, not an echo. Nine of
+  # RVC-v1's twelve items became executable (F4-F8, F10, F11 unblocked; F3 and F12 promoted from
+  # degraded to full). F9 alone stays BLOCKED, on its second and independent precondition: no
+  # restricted-role account exists on PRE-PROD. Owner: Oleg.
+  # 🔴 CONSEQUENCE, decided in the story's §3 rather than left to the dev agent: under RVC-v1 an
+  # aggregate `pass` requires ALL TWELVE items to be a full `pass`, and there is no aggregate
+  # `pass (degraded)` -- that is an ITEM verdict, and the recorder's `validated` input is a
+  # two-option choice. So an 11-of-12 run yields aggregate `fail`, G1 refuses before any registry
+  # read, and the epic's AC2 (`preprod-current` and `preprod-<sha> exist`) cannot be met. Three
+  # paths are specified: A -- provision the restricted-role account (asked on day one, Task 1.4);
+  # B -- RVC-v1's own named documented, time-boxed waiver, requiring Oleg's WRITTEN go-ahead before
+  # the dispatch; C -- record the honest `fail` and close with epic AC2 unmet and routed. The story
+  # is completable on C, because the registry-write leg is the one leg already live-exercised
+  # (Story 5.4, runs 1215/1229) while the CONTINUITY -- which every path exercises -- is not.
+  # STATUS MAPPING FOR A HALT (the enum has no `blocked` value): if the story stops on an
+  # unanswered `PENDING (owner: Oleg)` -- the path decision or a fixture confirmation -- this row
+  # STAYS `in-progress` and the blocking condition is named in the comment immediately above it.
+  # It is not flipped to `done`, not to `backlog`, and not to a value the enum does not define.
+  # 🔴 CLOSEOUT, 2026-08-25 (code review fix-pass, M3 -- the forecast above shipped verbatim and
+  # described an outcome that did not occur; corrected here rather than in place, matching 5.5's
+  # own convention one row above). THE REAL OUTCOME: F9 did NOT stay the sole blocked item --
+  # Story 5.6 provisioned its restricted-role account (rvc-operator) and F9 PASSED. Instead, five
+  # DIFFERENT items came back BLOCKED once actually executed for the first time: F5 (fail on its
+  # own criterion, root-caused to a CRM/api-prionex migration bug, covered by RVC-v1.1's waiver for
+  # an external-dependency fail -- D41), F6, F7, F8, F10 (data/infrastructure absence, owners
+  # CRM/api-prionex and Oleg). Full cycle: R1 (build.yml, run 1308, 151s) -> R2 (deploy-preprod.yml,
+  # run 1310, 53s) -> live validation (P1 to F4.6, ~19m52s) -> R3 (record-preprod-candidate.yml, run
+  # 1316, 68s, validated=pass under the D40/D41 waiver). Wall-clock, dispatch to ledger row: 38 min
+  # 41 s. Aggregate: fail by RVC-v1's own unconditional rule (7/12 pass), dispatched pass only under
+  # the written waiver -- never a disguised 12/12. Row flips to `review`; code review (this same
+  # pass) found 5 decisions + 16 patches, CHANGES REQUESTED, addressed in this fix-pass.
+  5-6-exercise-the-full-release-cycle-on-an-empty-release: review
   epic-5-retrospective: optional
 
   # Epic 6: Production Release and Verified Rollback
