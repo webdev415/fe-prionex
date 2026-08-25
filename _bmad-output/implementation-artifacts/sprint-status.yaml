@@ -1218,9 +1218,63 @@ development_status:
   #     Kong, NOT that the APPLICATION does. 6.7's smoke check must not repeat that mistake.
   #   • The static-CORS defect was found on PRE-PROD, then found again on DEV when someone finally
   #     looked. PROD's Kong has never been probed. Probe it before 6.4, not after.
-  epic-6: backlog
+  epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
-  6-2-publish-the-production-approval-regulation: backlog
+  # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
+  # origin/main at dbec399d -- the primary checkout is Story 4.9's dev agent's. Epic 6's FIRST story
+  # (6.1 is cancelled), so this row also flips epic-6 backlog -> in-progress. Documentation-only:
+  # no workflow code, no dispatch, no host contact. Floor 4 / ceiling 8 push+PR+merge rows, OPEN.
+  # 🔴 THE OVERLAP DECISION, recorded here so it is visible without opening the story file: Story
+  # 5.6 shipped docs/release-regulation.md 2026-08-25 (PR #86) for Epic 5's AC4. It is titled
+  # "PRE-PROD Release Regulation" and is PRE-PROD by scope. Story 6.2 writes a SEPARATE file,
+  # docs/production-approval-regulation.md, and edits 5.6's document by EXACTLY ONE cross-reference
+  # line. Five reasons, all in the story's SS2: different subject (authority, not machinery); the
+  # title is where nobody would look for a PROD rule; AC4's acknowledgement attaches to a named
+  # document with a stable scope; 5.6's artifact is freshly shipped and frozen by the same
+  # precedent 5.6 applied to 5.5's checklist; and Epic 7's Story 7.3 absorbs BOTH anyway, so two
+  # single-scope inputs beat one document with two identities. The other half of the instruction is
+  # equally binding: the new document CITES 5.6's and RVC-v1.1 by link and RESTATES NOTHING -- a
+  # diff of the two files finding a shared sentence that is not a link is a defect.
+  # 🔴 ORDERING, checked because sprint-status records 6.10 MUST complete before 6.4 and the
+  # question was whether anything similar binds 6.2. IT DOES NOT. 6.10-before-6.4 is the ONLY
+  # ordering constraint stated inside Epic 6, and 6.2 has NO dependency on 6.3 or 6.10 -- neither
+  # the s10 contour nor the rebuilt cutover image changes who may approve a release or how the
+  # approval is recorded. 6.2 stays FIRST, and two later stories consume it (epics.md:2903, Story
+  # 7.3's own Given clause; epics.md:2849's decommissioning note). What IS real and is handled
+  # in-story rather than by re-ordering: (a) almost everything the regulation describes --
+  # deploy-prod.yml, the promotion guard, rollback: true, the s10 contour -- DOES NOT EXIST on
+  # 2026-08-25 (measured: ls .forgejo/workflows/ returns 11 files, no deploy-prod.yml; #d2's own
+  # status header reads "спроектировано, не реализовано"), while 6.2's own AC1 forbids describing
+  # "any technical control that does not exist" -- held by a dated, forward-formed, never-present-
+  # tense rule (story Prohibition 1); (b) Story 6.5's last AC REWRITES #d2, the source 6.2's AC3
+  # quotes -- held by dating the citation, naming 6.5 as its reviser, and appending a forward note
+  # under #d2 itself; (c) AC4's "the teams have acknowledged it" is a human dependency with no
+  # technical substitute -- asked day one, and if it does not arrive this row STAYS in-progress.
+  # 🔴 AC2's "the tracker" HAS NO REFERENT. tracking_system: file-system, project_key: NOKEY, and
+  # the word "tracker" appears exactly ONCE in the whole of epics.md -- in Story 6.2's own AC. Nor
+  # can the record live in a run log: log_in_storage='f' on seven consecutive checks across six
+  # sessions, and STEP_SUMMARY persistence is still UNPROVEN. Resolved to a NEW append-only file,
+  # docs/prod-releases.md, created EMPTY with its emptiness stated in prose and no placeholder row
+  # -- 5.4's three-tier model and 5.6's Rejected-candidates precedent, applied rather than
+  # reinvented. The substitution for #d5's word "трекер" is recorded in D42, not made silently.
+  # 🔴 THE DOCUMENT'S CENTRAL RULE, and the reason this story is worth its four runs: RVC-v1.1's
+  # waiver "carries no signal at the registry", so a promotion gate reading only the registry
+  # cannot tell a waived candidate from a clean one. That gap is filed against Story 6.5 and 6.2
+  # does NOT try to fix it technically -- it writes the policy half: THE APPROVER READS
+  # docs/preprod-candidates.md, NOT JUST THE TAG. Live precedent already on record:
+  # sha-a99ccd44c5a3-preprod, 7/12 pass, 5 BLOCKED, derived fail, dispatched pass under D40/D41 --
+  # and its registry tag carries no trace of any of that.
+  # STATUS MAPPING FOR A HALT (the enum above has no `blocked` value): if AC4's acknowledgement has
+  # not arrived when everything else is done, this row STAYS `in-progress` and the blocking
+  # condition is named in the comment immediately above it. Not `done`, not `backlog`, not a value
+  # the enum does not define.
+  # Decision number is D42 (main holds D41; story-4-9 still holds D35 unmerged) -- re-verify by
+  # git fetch across every open story-* branch at Task 1.5, not just main.
+  # Blast radius: every .forgejo/workflows/*.yml, docs/release-validation-checklist.md and
+  # docs/preprod-candidates.md are READ-ONLY; docs/release-regulation.md takes exactly one line.
+  # No host is touched at all, so NFR5 is satisfied by construction. Epic 5's closeout PR #87 may
+  # merge mid-session -- rebase.
+  6-2-publish-the-production-approval-regulation: ready-for-dev
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
