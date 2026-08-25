@@ -996,14 +996,25 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
   `preprod-current` == `preprod-28f7fd36b75e` (candidate #2, Story 5.4's D10 move) — confirms
   `preprod-current` has not moved since. Current `sha-*-preprod` set: exactly the two above. This
   is the **before** half of AC7's read-back.
-- [ ] 3.6 `PENDING (owner: coordinator)`. **The free rejection rows — requested, bodies below.**
-      Both must return HTTP 400 with zero `action_run` rows created (`max(id)`, currently **1302**
-      for `repo_id=16`, unchanged around each call):
-      1. `deploy-preprod.yml`, `workflow_dispatch`, **omit `image_tag` entirely** (do not send an
-         empty string — omit the key).
-      2. `record-preprod-candidate.yml`, `workflow_dispatch`, **omit `validated` entirely** (supply
-         `image_tag: sha-a99ccd44c5a3-preprod` and `validation_note: "zero-run rejection probe"` so
-         the *only* missing required field is `validated`).
+- [x] 3.6 **Both free rejection rows earned, 2026-08-25 ~12:1x UTC (coordinator's API channel),
+      zero `action_run` rows created — confirmed independently against this session's own `psql`.**
+      1. `deploy-preprod.yml`, `image_tag` omitted → **HTTP 400**, body verbatim:
+         `input required for 'A pre-built image tag to deploy directly (e.g.
+         sha-00ef3be4743d-preprod). Required — there is no git ref for PRE-PROD deploys; the tag
+         names the exact artifact being validated.'`
+      2. `record-preprod-candidate.yml`, `image_tag: sha-a99ccd44c5a3-preprod` and
+         `validation_note: "zero-run rejection probe"` supplied, `validated` omitted →
+         **HTTP 400**, body verbatim: `input required for 'The validation verdict. 'pass' records
+         the candidate; anything else (including 'fail') writes nothing.''`
+      **Independent confirmation, this session's own `ssh root@10.67.0.1` psql channel:**
+      `select id, status, ref, commit_sha from action_run where repo_id=16 and id > 1297 order by
+      id;` → six rows, `1298`-`1303`, every single one attributable to this story's own six pushes
+      so far (`5ca96b8e`, `955a6523`, `c15d968d`, `a82ba937`, `792fcab5` — the sixth, id `1303`,
+      status `6` running at query time, is the CI-push row for commit `792fcab5`, this story's own
+      Task-3 commit, exactly as the coordinator suspected). **Neither rejection probe created a row
+      of any kind** — the free-row claim (`retro-E5`) holds, not merely asserted by the platform's
+      own HTTP code but independently re-derived from `action_run` itself. `max(id)` for `repo_id=16`
+      is `1303`, all still attributable, zero foreign rows.
 - [x] 3.7 **Re-run, seventh check across seven sessions, all negative.**
       `select id, log_in_storage from action_task where id in (9745, 9769);` →
       `9745|f`, `9769|f`. Recorded honestly, standing plan continues — see
@@ -1107,12 +1118,39 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
       from a relayed figure**; Story 5.1's backfill found a run relayed as "~70 s" that measured 49 s.
       State the machine total and the human total as two separate figures, and report `waiting` time
       separately from execution.
-- [ ] 9.2 Compose the ordered validation history (AC12): enumerate `^preprod-[0-9a-f]{12}$` from
-      `tags/list`, map each to its commit, order with one `git log` call, paste the result, and state
-      plainly that `tags/list` orders nothing.
-- [ ] 9.3 Write `docs/release-regulation.md` (AC10): the five legs of §5 with their workflow names;
-      the scope-freeze clause with all four of §9's points, **including G5's honest hole**; pointers
-      to `RVC-v1` and `docs/preprod-candidates.md`. One page. No new gate.
+- [x] 9.2 **Done, zero-dispatch, in parallel with the outstanding fixture package (only the
+      history AS IT EXISTS TODAY — this story's own candidate is not in it yet, that row is Task 8's
+      own).** `GET /v2/crm/fe-prionex/tags/list` filtered to `^preprod-[0-9a-f]{12}$` →
+      `preprod-00ef3be4743d`, `preprod-28f7fd36b75e` — the registry's own set, unordered (confirmed:
+      the JSON array's order is not chronological, it is whatever the registry backend returns, and
+      nothing in the API contract promises otherwise — **`tags/list` orders nothing**, stated
+      plainly, not just claimed). Each maps directly to its commit (the marker names it literally).
+      **Single `git log` call**: `git log --oneline --no-walk=sorted 00ef3be4743d 28f7fd36b75e` →
+
+      ```
+      28f7fd36 Merge pull request 'Story 5.3 closeout: ledger 19/24 closed, the never-archiving
+                logs named as a fact' (#79) from story-5-3/pr-2-ledger-closeout into main
+      00ef3be4 Merge pull request 'docs(story-3.5): close — verified in production, and the
+                budget lesson' (#43) from story-3-5/pr-5-close into main
+      ```
+
+      `--no-walk=sorted` orders the given commits by commit date without walking history between
+      them — exactly the composition AC12 asks for (registry's set + git's order, one call).
+      **Composed, ordered history: `preprod-00ef3be4743d` (PR #43, older) validated before
+      `preprod-28f7fd36b75e` (PR #79, newer).** This matches the independently-known dispatch order
+      (candidate #1 recorded at run 1215, candidate #2 at run 1229) — a sanity cross-check, not the
+      source of truth; the source of truth is this `git log` composition itself, per AC12.
+- [x] 9.3 **Done, zero-dispatch, in parallel with the outstanding fixture package.**
+      `docs/release-regulation.md` written — one page (58 lines), new file, touches no frozen file.
+      Five legs table (workflow names + what each does). Scope-freeze clause, all four of §9's
+      points verbatim in substance: (1) nothing technically prevents a mid-validation redeploy, no
+      gate added; (2) the agreement itself — no `deploy-preprod.yml` dispatch between P1 and the
+      recorder; (3) `G5`'s honest hole — brackets the window, does not cover it, a deploy-then-
+      revert mid-session passes `G5` while the verdicts describe a stand that briefly served
+      something else, only the agreement closes that gap; (4) the recorder is not an approval gate
+      — NFR9, verdict *derived* not *enforced*. Pointers to `RVC-v1`, `docs/preprod-candidates.md`,
+      and `docs/migration-decisions.md#d39`. Oleg's veto stays open per §9's own framing (decided
+      autonomously there, not re-opened here).
 
 ### Task 10 — Route, record, decide (AC: 9, 13) — **0 runs**
 
@@ -1467,6 +1505,23 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 6. **Oleg's browser-fixture package (F5-F8, F10-F12 + sandbox confirmation for F7/F10/F12) is still
    outstanding**, sent by the coordinator directly to Oleg. Task 4 onward (the actual dispatches)
    waits for it; Task 3 did not.
+7. **Task 3.6 closed, 2026-08-25, both free rejection rows earned by the coordinator and
+   independently re-verified against this session's own `psql`, not taken on the platform's HTTP
+   code alone.** `deploy-preprod.yml` without `image_tag` and `record-preprod-candidate.yml`
+   without `validated` both returned HTTP 400 with their exact response bodies pasted verbatim.
+   `action_run` re-queried for `repo_id=16, id > 1297`: six rows, every one attributable to this
+   story's own six pushes (`5ca96b8e` through `792fcab5`) — **neither rejection probe created a
+   row**, confirming the free-row claim independently rather than trusting the coordinator's own
+   report alone.
+8. **Tasks 9.2 and 9.3 pulled forward and executed, zero-dispatch, in parallel with the still-
+   outstanding fixture package** — the coordinator's own invitation to move anything else
+   zero-dispatch while waiting. 9.2: the *existing* validation history (candidates #1/#2, this
+   story's own row is not in it yet) composed from the registry's set plus a single `git log
+   --no-walk=sorted` call, with `tags/list`'s own non-ordering stated plainly rather than assumed.
+   9.3: `docs/release-regulation.md` written in full — five legs, the scope-freeze clause with all
+   four required points including `G5`'s honest hole, pointers to `RVC-v1` and the ledger. **Task 9
+   now has only 9.1 (elapsed time) left, which genuinely cannot run before Tasks 4-8's own
+   dispatches exist** — not pulled forward, correctly gated.
 
 ### File List
 
@@ -1474,6 +1529,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `5-6-...` flipped to `in-progress`
 - `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section, the unrotated-seed-credential security finding, owner Oleg
 - `/root/.rvc-preprod.creds` on s1 (host file, not in this repository) — F9/F4 fixture credentials, `chmod 600`, referenced but not versioned
+- `docs/release-regulation.md` — new, AC10's deliverable, one page, no frozen file touched
 
 ---
 
@@ -1502,6 +1558,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Task 3.6 closed (both free rejection rows earned, bodies pasted verbatim, independently re-verified against this session's own psql -- zero action_run rows from either probe). Tasks 9.2 and 9.3 pulled forward, zero-dispatch, per the coordinator's invitation to move anything else while the fixture package is outstanding: 9.2 composed the existing validation history from the registry set plus one git log call; 9.3 wrote docs/release-regulation.md in full (five legs, all four scope-freeze points, no new gate). Only 9.1 (elapsed time) remains correctly gated on Tasks 4-8's own dispatches. |
 | 2026-08-25 | **Task 3 executed in parallel with the outstanding browser-fixture package.** Candidate pinned (main HEAD, a99ccd44c5a3), confirmed never recorded. AC2's diff and negative control executed and pasted verbatim (empty path-filtered, 37 commits / 13 files unfiltered). Compose-coupling assertion passed (empty diff, exact sha256). Pre-rehearsal registry state tabulated -- preprod-current confirmed unmoved since Story 5.4. log_in_storage re-checked (seventh time, still f/f). Only the two free HTTP-400 rejection rows remain, PENDING (owner: coordinator), bodies specified in Task 3.6. No dispatch made. |
 | 2026-08-25 | **F9 and F4 fixture accounts provisioned through CRM/api-prionex's normal API, closing two of Task 2's three package items.** Investigated the bootstrap mechanism first (read-only), found a seeded admin account with an unrotated default password already live on PRE-PROD, reported it before touching anything. Oleg confirmed the login and authorised provisioning. Created rvc-operator (Operator role, F9) and rvc-f4-flow (must_change_password: true, F4 -- one account suffices with correct test sequencing: forced-change -> normal checks -> 2FA self-service -> lockout last; IP-whitelist needs no account, it is global). Both verified by API login. No credential entered this file or any transcript; all three (including admin's) filed at /root/.rvc-preprod.creds on s1, chmod 600. Security finding (unrotated seed default, internet-reachable) filed in deferred-work.md, owner Oleg. Task 3 can now start in parallel with the remaining, narrower package (F5-F8/F10-F12 fixtures + sandbox confirmation). |
 | 2026-08-25 | **Task 2.4 answered (coordinator's channel).** `VITE_OPERATOR_PHONE_URL_PREPROD` confirmed absent (repo and org level), matching F2 c5's decided-EMPTY expectation exactly. New information surfaced, not a contradiction: `VITE_OPERATOR_PHONE_URL_PROD` already carries a real value (`https://phone.crm-prionex.online`) — previously only its existence was on record. Cross-checked against `build.yml`'s own environment `case` statement: distinct variable names, no cross-environment leak path. Recorded (appended, not rewritten) in `deferred-work.md`'s existing 2026-08-17 entry, owner Story 6.4 for future re-verification of the PROD value. |
