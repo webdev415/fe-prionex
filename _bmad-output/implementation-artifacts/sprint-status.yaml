@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-24
+# last_updated: 2026-08-25
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -67,7 +67,7 @@
 # taken here. Until then: for what an AC actually requires today, read the story file, not the epic.
 
 generated: 2026-08-07
-last_updated: 2026-08-24
+last_updated: 2026-08-25
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -1103,7 +1103,22 @@ development_status:
   # comment immediately above this line at the moment of the HALT, so the row is never
   # `in-progress` with no stated reason -- which is the exact invisibility the early flip exists to
   # prevent.
-  5-5-establish-the-release-validation-checklist: in-progress
+  # Code review pass 2 ran 2026-08-25 against the MERGED state (35c1a39e..9faceae2, PR #83) and left
+  # 25 patch findings as action items plus 3 decisions owned by Oleg -- see the spec's own
+  # `## Review Findings` section. The row STAYED `in-progress` after that pass, for a second,
+  # different reason than the HALT-mapping paragraph above: the confirming dispatch was no longer
+  # outstanding (it ran post-merge from main -- run 1281, SUCCESS, jobs 10719 deploy then 10720 e2e,
+  # so an ordinary job with `needs:` on a `uses:` job DOES schedule on this instance and the HALT
+  # condition never triggered), but the review findings were.
+  # Fix-pass, 2026-08-25, own follow-up PR (5.5 itself already merged as PR #83): all 25 patch
+  # findings verified fixed against the shipped code/docs and checked off in the spec's own
+  # `## Review Findings` section, not rubber-stamped. All 3 decisions addressed per Oleg's/the
+  # coordinator's explicit instructions -- CORS ask documents corrected to "направлено" (23.08.2026,
+  # Oleg's decision), continue-on-error made permanently unmeasured by design with `|| true` on its
+  # redirect (coordinator's decision, Oleg's veto open), RVC-v1/5.6 collision restated with the
+  # "CORS fix first" exit now reachable. Row flips to `review` -- this fix-pass is its own PR, not
+  # done, pending a fresh review round (`followup_review_recommended` stays true in the spec).
+  5-5-establish-the-release-validation-checklist: review
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional
 

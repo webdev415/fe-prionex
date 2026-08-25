@@ -4070,22 +4070,30 @@ items 1-5 below. Both counts are correct; they are counts of different things. A
   workflow zero times, whereas 5.6's rehearsal runs the whole cycle **through** the workflows and is
   the next thing that dispatches the recorder at all. 5.6 is still not *required* to force these
   eight branches — naming an owner assigns the decision, it does not manufacture a requirement.)
-  **Re-owner rule:** if Story 5.6 closes without exercising these branches, ownership moves to the
-  next story that dispatches this workflow, named explicitly at 5.6's closeout. It does not stay on
-  a closed story, and it is not allowed to lapse back into "whichever story happens to" — that is
-  the phrasing this correction removed.
+  🔴 **Corrected, code review of Story 5.5's own fix-pass (2026-08-25): the "re-owner rule" above
+  reintroduced the same drift this entry's own correction had just removed.** "Ownership moves to
+  the next story that dispatches this workflow" is a trigger condition, not an owner, in the exact
+  shape Prohibition 19 rules out — appending "named explicitly at 5.6's closeout" softened it but
+  did not fix it, because until that naming happens the live value of "Owner" is still a condition,
+  not a name. **Fixed: the owner is `Story 5.6`, full stop, with no standing conditional successor
+  clause.** If Story 5.6 closes without exercising these branches, re-owning to whatever comes next
+  is a **required action at that story's own closeout** — a procedural obligation on 5.6's closeout
+  pass, stated here as a reminder, not a mechanism that silently reassigns ownership on its own.
   Recorded so a reader does not mistake "not disclosed" for "does not exist".
 
 ## Deferred from: Story 5.5 (2026-08-24)
 
 Story 5.5 published `docs/release-validation-checklist.md` (`RVC-v1`), added the non-gating `e2e`
-placeholder job to `.forgejo/workflows/deploy-preprod.yml`, and recorded D39. Four items leave the
-story open; one of them is a genuine collision between two shipped requirements and is not the dev
-agent's to settle.
+placeholder job to `.forgejo/workflows/deploy-preprod.yml`, and recorded D39. ~~Four items leave the
+story open~~ 🔴 **Corrected, code review of this fix-pass (2026-08-25): this section carries six
+bullets, not four — recounted directly against the list below.** Six items leave the story open; one
+of them is a genuine collision between two shipped requirements and is not the dev agent's to
+settle.
 
 - 📅 **Real end-to-end coverage is Story 7.7, not a line in this file.** Added to
   `_bmad-output/planning-artifacts/epics.md` ("Replace the E2E Placeholder with Real End-to-End
-  Coverage", six Given/When/Then criteria) and to `sprint-status.yaml` as
+  Coverage", ~~six~~ nine Given/When/Then criteria — 🔴 corrected, code review of this fix-pass:
+  counted directly against `epics.md`, nine `**Given**` blocks, not six) and to `sprint-status.yaml` as
   `7-7-replace-the-e2e-placeholder-with-real-end-to-end-coverage: backlog`. It is a story and not a
   deferred bullet for the reason already recorded for 7.6 (`sprint-status.yaml:1166-1169`): a
   deferred line reads as "someone will notice", and **nobody notices missing e2e coverage — the
@@ -4123,7 +4131,13 @@ agent's to settle.
   not reinterpret rows after the fact (the same rule that keeps decision bodies from being rewritten
   retroactively). `RVC-v1` governs candidates recorded from its publication onward, and says so in
   its own text. Recorded here so a later reader comparing the ledger against the checklist does not
-  read the mismatch as an unnoticed defect. **Owner: none needed — closed disposition.**
+  read the mismatch as an unnoticed defect. 🔴 **Corrected, code review of Story 5.5's own
+  fix-pass (2026-08-25): "Owner: none needed — closed disposition" was itself flagged as drifting
+  from the Always constraint.** There genuinely is no future action here — the two rows are
+  permanent, append-only, and this paragraph is the entire disposition — so **no owner field is
+  recorded at all**, rather than filling it with a phrase that reads as a condition. This entry
+  carries no `**Owner:**` line by design; it is a closed, no-action record, not an open item
+  awaiting anyone.
 
 - ⚠️ **`/dashboard/profile` is the only dashboard route rendered without a `PermissionRoute`
   wrapper.** `src/routes/index.tsx:277-279` renders it bare —
@@ -4152,3 +4166,42 @@ agent's to settle.
   coordinator's confirming dispatch must observe. **Owner: Story 7.7**, which carries an acceptance
   criterion to either remove the flag or measure it and record the measurement in
   `docs/migration-decisions.md`.
+
+## Deferred from: code review of spec-5-5-establish-the-release-validation-checklist.md (2026-08-25)
+
+Code review pass 2 ran against the **merged** state (`35c1a39e..9faceae2`, PR #83). Three findings
+are deferred as not caused by this change or not actionable now; the remaining 25 are recorded as
+action items in the spec's own `## Review Findings` section and 3 more are decisions owned by Oleg.
+
+- ⚠️ **Story 7.7's first acceptance criterion prices the wrong runner.** It requires the E2E tooling
+  choice to be recorded "with what it costs — CI minutes, **image size on the `node-20` runner**"
+  (`_bmad-output/planning-artifacts/epics.md`, Story 7.7). Story 5.5 spent a whole comment block in
+  `.forgejo/workflows/deploy-preprod.yml` establishing that a job carrying `needs: deploy` in that
+  workflow must **not** run on `node-20`, because a queue behind the shared CI runner holds the
+  PRE-PROD concurrency group (`cancel-in-progress: false`) and blocks the next dispatch. 7.7's own
+  trial job lives in the same workflow with the same dependency shape, so the successor story bakes
+  in the hazard its predecessor declared unacceptable. Not fixed here because 7.7's runner choice is
+  the story's own scope. **Owner: Story 7.7.**
+
+- ⚠️ **The `e2e` placeholder's two output channels are both documented as unreliable, leaving a
+  permanently green job as its only durable signal.** The job's stated purpose is that the absence
+  of e2e coverage "is visible in every PRE-PROD run". Its own comments concede that job logs on this
+  instance "frequently never archive" (`log_in_storage=f`, six observations across Stories 5.3 and
+  5.4) and that step-summary persistence "was still unverified as of Story 5.4 … a second
+  best-effort channel, not a proven one". What survives reliably is a green row in the job list —
+  the same shape `ci.yml:190-191` records this repository as having removed, where a coverage step
+  that had never once succeeded reported green for the life of the repository. Mitigated here only
+  by the job's name, "E2E placeholder (runs no test, never gates)", which run 1281 confirms is what
+  the job list actually shows. Not fixed here: making the signal durable means either measuring
+  step-summary persistence or replacing the placeholder. **Owner: Story 7.7.**
+
+- ⚠️ **A `fail` verdict leaves no trace in `docs/preprod-candidates.md`.** G1
+  (`record-preprod-candidate.yml:231-249`) refuses `fail` as the first step of the first job, so the
+  `record` job never runs and the copy-paste ledger row at `:982` — the only mechanism that carries
+  a `validation_note` into the ledger — is never printed. The append-only ledger therefore cannot
+  distinguish "validated and rejected" from "never validated at all". This is a property of what
+  Story 5.4 shipped, not of Story 5.5, and it is deliberate (a failed validation writes nothing).
+  It becomes visible only now that `RVC-v1` makes `fail` the honest verdict for every candidate
+  while the CORS origin is wrong: for the whole of that period the ledger will be silent, and
+  silence is indistinguishable from nobody having tried. **Owner: Story 5.6**, as the next story to
+  dispatch the recorder and the one that must decide where a rejected candidate is recorded.

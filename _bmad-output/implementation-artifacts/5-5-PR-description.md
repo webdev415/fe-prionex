@@ -124,8 +124,12 @@ Ledger: this is 1 dispatch plus the CI-push rows for this branch.
 
 ## Blast radius
 
-Touched: `deploy-preprod.yml` (additive only), five documentation/bookkeeping files, two new files.
-Confirmed untouched: `deploy-stand.yml`, `record-preprod-candidate.yml`, `build.yml`, `deploy-dev.yml`,
+Touched: `deploy-preprod.yml` (additive only), five documentation/bookkeeping files, **four** new
+files (🔴 corrected, code review of the follow-up fix-pass — this line previously said "two"; the
+actual `git diff --diff-filter=A` count over the merged range is four: `docs/release-validation-checklist.md`
+and `epic-5-context.md`, the product- and planning-relevant new files this line meant to name, plus
+the spec file itself and this PR-description file, both process bookkeeping rather than shipped
+product surface). Confirmed untouched: `deploy-stand.yml`, `record-preprod-candidate.yml`, `build.yml`, `deploy-dev.yml`,
 `dev-reset.yml`, `ci.yml`, all of `src/`, `package.json`. The pre-commit hook ran full CI parity on
 every commit: `format:check`, `lint --max-warnings=0`, `typecheck`, and **229 test files / 1924
 tests**, green each time.
