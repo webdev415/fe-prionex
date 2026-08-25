@@ -9,7 +9,7 @@
 
 # Story 6.2: Publish the Production Approval Regulation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -387,11 +387,66 @@ row below is a `ci.yml` run caused by a git push, not by any deliberate dispatch
 | **Declared floor** (context + dev-story + PR-open + merge) | **4** above baseline |
 | **Declared ceiling** (with one review round and one fix-pass) | **8** |
 
-**Disposition: OPEN.** Closed only by the coordinator, against a query re-run **after** the merge
-commit lands, attributing each row by `commit_sha`/`ref` — never by id range, and never by
-self-report. Filter `action_run` to `repo_id=16` (`fe-prionex`) first; Story 4.9 is pushing to the
-same instance concurrently and **its rows are named and excluded, never absorbed** (the method is
-Story 5.1's closeout; it has held cleanly three times).
+~~**Disposition: OPEN.**~~ ✅ **CLOSED 2026-08-25, by query.** Closed by the coordinator against
+`GET /api/v1/repos/CRM/fe-prionex/actions/tasks`, grouped by `run_number`, attributing each row by
+**`commit_sha`** — never by id range, never by self-report (retro-D4; the parallel-era method is
+Story 5.1's closeout, and it has now held cleanly four times).
+
+### Measured result — 10 runs, **zero dispatches**
+
+**The story's central budget claim is confirmed by measurement rather than asserted:** it declared
+*"every row below is a `ci.yml` run caused by a git push, not by any deliberate dispatch"*, and the
+query returns **no dispatch rows at all**. For a story whose entire thesis is that it touches no
+machinery, that is the one number worth having.
+
+| Attributed to | Event | Runs | Commits |
+|---|---|---|---|
+| `story-6-2/pr-1-context` | `push` | **7** | `797f4576`, `d05d71b9`, `9b6fa4ac`, `811a9b8c`, `d39151b6`, `fc3287e0`, `7eabd41e` — exactly one per branch commit |
+| PR **#88** | `pull_request` | **2** | `fc3287e0`, `7eabd41e` |
+| `main` | `push` (`build-main.yml`) | **1** | `1cdb0f35`, the merge commit |
+| **Total** | — | **10** | **dispatches: 0** |
+
+By workflow: `ci.yml` **9**, `build-main.yml` **1**. By event: `push` **8**, `pull_request` **2**.
+
+**Declared ceiling 8 → measured 10. Overrun: 2, named and not absorbed**, per the standing rule that
+an overrun is renegotiated explicitly rather than quietly re-baselined. **Where the model was wrong,
+because that is the reusable part:** it budgeted *"Push: dev-story write-up | 1"*, and the dev-story
+phase actually landed **three** commits (`d05d71b9` — the `sprint-status` flip on its own commit, per
+Task 1.1's own lesson; `9b6fa4ac` — the regulation; `811a9b8c` — AC4 landing after the HALT lifted).
+It also had no line at all for **two events that happened**: the D1/D2 decision commit (`fc3287e0`)
+and the `origin/main` merge commit (`7eabd41e`), one push row each. Partly offsetting, the model
+**over**-predicted the PR side — it assumed five PR-related rows and the real number was two, because
+PR #88 opened *after* `d39151b6` was pushed, so only the last two commits fired both events.
+**Corrected ceiling for a documentation story of this shape: 10.** The lesson is not "add two"; it is
+that *"dev-story = one push"* is the line that breaks, and that a review round can add a decision
+commit and an integration merge that no prior model has carried.
+
+### Three things recorded honestly rather than smoothed
+
+1. 🔴 **The `main` run is counted, and it is listed on its own line.** `build-main.yml` on
+   `1cdb0f35` is a row on the **`main`** branch, not on the story branch — so it is named separately
+   rather than folded into the story-branch total, the same way Epic 5 named a foreign row instead of
+   absorbing it. **Decision, taken explicitly rather than left ambiguous: it COUNTS as this story's.**
+   The reason is not judgement but the story's own declared model, which carries `Merge run
+   (build-main.yml) | 1` as a budgeted line inside **both** the floor and the ceiling. Having budgeted
+   it, the story owns it. Reclassifying it as merely "adjacent" would shrink the overrun from 2 to 1
+   by relabelling — which is exactly the smoothing this project forbids.
+2. 🔴 **`run_number` spans 552–562 — eleven numbers for ten runs. One number inside the range belongs
+   to someone else's work**, and is excluded because its `commit_sha` matches none of this story's
+   commits. **This is the attribution rule earning its keep on a live example:** an id-range close
+   would have reported 11 and silently billed this story for a run it did not cause. Recorded because
+   the rule has until now been justified in principle; here is the case.
+3. 🔴 **Do not read this as "all green" — it is a state as of the query, 2026-08-25.** Two runs were
+   **cancelled**: `11575` (Unit Tests, `797f4576`) and `11685` (Build and Push, `d39151b6`). Both were
+   evicted by later pushes through ordinary `concurrency` cancellation — **not failures**, and they
+   are counted as runs because they consumed a row. Two `Build and Push` runs were still **`running`**
+   when the query was taken: `11947` (`7eabd41e`) and `11950` (`1cdb0f35`). **No terminal verdict is
+   claimed for those two.** A final figure needs a re-query; it is available on request and is not
+   asserted here.
+
+**Baseline method retained for the record:** filter `action_run` to `repo_id=16` (`fe-prionex`)
+first; Story 4.9 was pushing to the same instance concurrently and **its rows are named and excluded,
+never absorbed**.
 
 🔴 **A floor, not a ceiling, and this instance has no cancel endpoint.** Nothing here should ever
 need a dispatch — **if a task appears to require one, that is a scope error, not a budget question.**
@@ -409,10 +464,10 @@ from D34 to D36, deliberately. **This story runs from a scratchpad worktree; the
 4.9's.** ✅ **RESOLVED 2026-08-25: PR #87 merged, and this branch took it by MERGE, not rebase.**
 Epic 5's closeout landed as `aae711b1` (`522ac5f3` + the PR merge commit), moving `origin/main` from
 `dbec399d` to `aae711b1` and closing Epic 5 at 6/6. **The instruction above said "rebase"; it was
-written before this branch had a PR.** PR 88 is open and its history has already been code-reviewed,
-so rewriting it was not available — `origin/main` was merged in instead, one conflict
-(`sprint-status.yaml`), resolved by keeping both sides whole. Recorded in the Change Log, as the
-instruction required.
+written before this branch had a PR.** PR 88 was open at that moment and its history had already
+been code-reviewed, so rewriting it was not available — `origin/main` was merged in instead, one
+conflict (`sprint-status.yaml`), resolved by keeping both sides whole. Recorded in the Change Log,
+as the instruction required. ✅ **PR #88 has since merged, 2026-08-25, as `1cdb0f35`.**
 
 **This story must not modify, and must not push any change to:**
 
@@ -637,13 +692,16 @@ control — which is what Prohibition 7 actually requires when only the weak for
       Change Log and §11.** Epic 5 is now `done` (6/6). **Taken by MERGE rather than the rebase this
       subtask anticipated** — PR 88 was already open and reviewed by then, so its history could not
       be rewritten.
-- [ ] 1.3 **`PENDING (owner: coordinator)`** — unchecked by code review 2026-08-25, per
+- [x] 1.3 ✅ **DISCHARGED BY ITS OWNER 2026-08-25 — the coordinator closed the ledger, so the
+      `PENDING` this subtask carried is spent and the box is checked at closeout, not before.**
+      It was unchecked by code review 2026-08-25, per
       Prohibition 10 (a coordinator-owned subtask is marked PENDING, never `[x]`; Story 5.2's M14).
       **Declared by the dev agent, to be closed by the coordinator** — the dev agent does not query
-      the API or touch a host (Prohibition 10/12). Floor **4**, ceiling **8**, disposition **OPEN**
-      (§10). 🔴 The fix-pass that cleared this checkbox left the sentence truncated ("Declared: —");
-      repaired on the second review pass.
-- [ ] 1.4 **Superseded by the coordinator's own explicit sequencing, relayed before this session
+      the API or touch a host (Prohibition 10/12). Floor **4**, ceiling **8**, disposition ~~OPEN~~
+      ✅ **CLOSED by the coordinator 2026-08-25 against a query — measured 10 runs, zero dispatches;
+      ceiling exceeded by 2, named not absorbed (§10).** 🔴 The fix-pass that cleared this checkbox
+      left the sentence truncated ("Declared: —"); repaired on the second review pass.
+- [x] 1.4 **Superseded by the coordinator's own explicit sequencing, relayed before this session
       began: all fifteen autonomous decisions (Dev Notes §5) are already ratified — Oleg did not
       veto.** The §2 separate-file decision and the §4 `docs/prod-releases.md` decision therefore
       needed no further one-read veto ask; both were built as specified. **AC4's acknowledgement
@@ -651,7 +709,11 @@ control — which is what Prohibition 7 actually requires when only the weak for
       regulation is complete, as the finished text itself, rather than before Task 4 as this
       subtask originally specified** — the coordinator asked for the final text so Oleg reads and
       confirms the actual document, not a plan for one. See Task 7.3 and the Debug Log for the
-      message as sent. `PENDING (owner: Oleg, via coordinator)`. 🔴 **Checkbox cleared by code
+      message as sent. ~~`PENDING (owner: Oleg, via coordinator)`~~ ✅ **DISCHARGED 2026-08-25:**
+      Oleg's `Подтверждаю` landed (Task 7.3), and code-review decision **D1** then put the
+      paraphrase he answered on the record verbatim and settled epic AC4's plural in his own words
+      (*"Я и есть команда"*). Nothing is left pending on this subtask, so it is checked at closeout.
+      🔴 **Checkbox cleared by code
       review 2026-08-25 — a subtask whose own body reads `PENDING` may not also be `[x]`
       (Prohibition 10, Story 5.2's M14). The acknowledgement itself landed; it is recorded at Task
       7.3, which is where it belongs.**
@@ -959,9 +1021,17 @@ control — which is what Prohibition 7 actually requires when only the weak for
       sentences**, because neither regulation file was touched.
 - [x] 7.4 **Done.** Dev Agent Record, File List and Change Log updated below.
 - [x] 7.5 **Done.** `sprint-status.yaml`'s `6-2-…` row flipped to `review` and pushed — 7.3 landed.
-      `PENDING (owner: coordinator)` for PR-open; **Oleg merges** (Prohibition 10).
-- [ ] 7.6 **`PENDING (owner: coordinator)`**, against a query re-run after the merge commit lands —
-      no merge has happened yet.
+      ✅ **Both coordinator/Oleg halves have since happened, 2026-08-25:** PR **#88** was opened by
+      the coordinator and **merged by Oleg as `1cdb0f35`**. `6-2-…` → `done` in this closeout.
+- [x] 7.6 ✅ **LEDGER CLOSED 2026-08-25 — by query, not by self-report (retro-D4).** Closed by the
+      coordinator against `GET /api/v1/repos/CRM/fe-prionex/actions/tasks`, grouped by `run_number`,
+      attributed **by `commit_sha`** per the parallel-era rule Story 5.1's closeout introduced —
+      never by id range. Full measurement and its three honest caveats are in §10 below.
+
+      **Measured: 10 runs. Dispatches: ZERO** — the story's declared footprint (*"every row below is
+      a `ci.yml` run caused by a git push, not by any deliberate dispatch"*) is **confirmed by
+      measurement**, not asserted. **Declared ceiling was 8; the overrun of 2 is named, not
+      absorbed** (§10).
 
 ---
 
@@ -1216,7 +1286,9 @@ code-review Opus.)_
 
 1. **Tasks 1-6 executed in full this session.** Ledger baseline and PR-open/merge/ledger-close
    subtasks correctly left `PENDING (owner: coordinator)` per Prohibition 10 — this story touches
-   no host and queries no API (Prohibition 12). D-number re-verified independently (`D42` free
+   no host and queries no API (Prohibition 12). ✅ **All three have since been discharged by their
+   owners, 2026-08-25: PR #88 opened by the coordinator, merged by Oleg as `1cdb0f35`, and the
+   ledger closed by query at 10 runs / zero dispatches (§10, Task 7.6).** D-number re-verified independently (`D42` free
    across every open branch, not merely trusted from context). The fifteen autonomous decisions in
    Dev Notes §5 were already ratified by Oleg before this session started (relayed by the
    coordinator) — no further one-read veto ask was needed for those; only AC4's acknowledgement
@@ -1288,7 +1360,9 @@ code-review Opus.)_
    confirms the rollback and no-forward-hotfix rules as written, on the record, not by silence.
    `sprint-status.yaml`'s `6-2-…` row flipped to `review` and pushed. `PENDING (owner:
    coordinator)` for PR-open; Oleg merges; ledger close stays `PENDING (owner: coordinator)`
-   against a post-merge query.
+   against a post-merge query. ✅ **All three closed 2026-08-25:** PR **#88** opened, **merged by
+   Oleg as `1cdb0f35`**, ledger **closed by query** — 10 runs, **zero dispatches**, overrun of 2
+   against the declared ceiling named rather than absorbed (§10). `6-2-…` → `done`.
 
 **AC grading (Task 7.1), against shipped evidence:**
 
@@ -1665,6 +1739,7 @@ the tree exactly, eleven entries, no `deploy-prod.yml` ✅.
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **CLOSEOUT — PR #88 merged as `1cdb0f35`; ledger CLOSED by query; Status → `done`.** Oleg merged Story 6.2; this closeout runs from a fresh worktree off `origin/main` at `1cdb0f35`. **Ledger closed against `GET /api/v1/repos/CRM/fe-prionex/actions/tasks`, grouped by `run_number` and attributed by `commit_sha` — retro-D4, never a self-report, never an id range. Measured: 10 runs, DISPATCHES ZERO.** The story's own declared footprint (*"every row is a `ci.yml` run caused by a git push, not by any deliberate dispatch"*) is therefore **confirmed by measurement, not asserted** — the number worth having for a story whose whole thesis is that it touches no machinery. Breakdown: **7** `push` rows on `story-6-2/pr-1-context`, exactly one per branch commit (`797f4576`, `d05d71b9`, `9b6fa4ac`, `811a9b8c`, `d39151b6`, `fc3287e0`, `7eabd41e`); **2** `pull_request` rows from PR #88 (`fc3287e0`, `7eabd41e`); **1** `push` row on `main` (`1cdb0f35`, `build-main.yml`). By workflow `ci.yml` 9 / `build-main.yml` 1; by event `push` 8 / `pull_request` 2. **Declared ceiling 8 → measured 10; the overrun of 2 is NAMED, not absorbed,** and the model's defect is recorded for reuse: it budgeted *"dev-story = 1 push"* where three commits actually landed, and carried no line at all for the D1/D2 decision commit or the `origin/main` integration merge; it simultaneously **over**-predicted the PR side (five rows assumed, two real, because #88 opened after `d39151b6` was already pushed). Corrected ceiling for this shape of story: **10**. **Three things recorded rather than smoothed.** (1) **The `main` run counts, and is listed on its own line** — it is a `main`-branch row, named separately the way Epic 5 named a foreign row instead of absorbing it, but it COUNTS as this story's because the story's own declared model carries `Merge run (build-main.yml) | 1` inside both floor and ceiling; reclassifying it as merely "adjacent" would shrink the overrun from 2 to 1 by relabelling, which is exactly the smoothing this project forbids. (2) **`run_number` spans 552–562 — eleven numbers for ten runs; one number inside the range is someone else's work** and is excluded because its `commit_sha` matches none of this story's commits. **This is the `commit_sha` attribution rule earning its keep on a live example:** an id-range close would have billed this story for 11. (3) **Not "all green" — a state as of the query, 2026-08-25.** Two runs were **cancelled** by ordinary `concurrency` eviction from later pushes, not failures (`11575` Unit Tests on `797f4576`; `11685` Build and Push on `d39151b6`), and are counted because they consumed a row; two `Build and Push` runs were still **`running`** at query time (`11947` on `7eabd41e`, `11950` on `1cdb0f35`) and **no terminal verdict is claimed for them** — a final figure needs a re-query. Also swept, using the same check that caught five stale PR-#87 claims during review: every remaining future-tense statement about PR-open, the merge and the ledger close is now written as what happened (§11, Task 1.3, Task 7.5, Completion Notes 1 and 6). **Epic 6 stays `in-progress`: 6.2 is its FIRST completed story** (6.1 `cancelled`), 6.3–6.10 still `backlog` — 1 done + 1 cancelled of 10. |
 | 2026-08-25 | **`origin/main` merged in after Epic 5 closed — recorded here because §11 required the integration to be recorded, and because the instruction it supersedes said "rebase".** PR #87 (Story 5.6's ledger-closeout) merged while this story was in code review, moving `origin/main` `dbec399d` → **`aae711b1`** and closing **Epic 5 at 6/6**. §11, Task 1.2, Dev Notes §2, Project Structure Notes and `sprint-status.yaml` all said "rebase when it merges" — written before this branch had a PR. **PR 88 was already open and its history already code-reviewed, so rewriting it was not available: `origin/main` was taken by `git merge --no-ff`, not by rebase.** All five stale instructions corrected in place rather than left to read as unfollowed. **One conflict, `sprint-status.yaml` at the `epic-6:` line, resolved by keeping BOTH sides whole and neither absorbed:** `main`'s new "UPDATE FROM STORY 5.6" comment block is preserved verbatim as 5.6's closeout wrote it, and the *value* is this story's `in-progress` rather than `main`'s `backlog` — the two are not in conflict on the merits, since `main` wrote that block while Epic 6 had not started and Story 6.2 (Epic 6's first, 6.1 cancelled) started it. A merge-resolution comment records that reasoning at the line itself instead of leaving a block that ends in `backlog` sitting above a value of `in-progress`. Story 5.6's own spec file merged clean (only `main` touched it). Verified after the merge: YAML parses, `epic-5` `done` with all six 5-x rows `done`, `5-6` `done`, `epic-6` `in-progress`, `6-2` `review`, and the merge brought nothing into this story's seven files beyond the conflict resolution itself. |
 | 2026-08-25 | **Code-review decisions D1 and D2 answered by Oleg and applied — both recorded as his decisions, not as the reviewer's reading of them.** **D1(a):** asked whether one confirmation satisfies epic AC4's *"the development and release teams"*, Oleg answered verbatim **«Я и есть команда»**. Recorded as the owner's own statement about team composition, dated 2026-08-25 — AC4 is met because the set of teams it names has exactly one member, on his testimony, not by an assumption and not by working around the word "teams". **D1(b):** the coordinator supplied the paraphrase that `Подтверждаю` actually answered, and it is pasted **verbatim, unedited, untranslated** at Task 7.3 under «текст, по которому дано подтверждение (координатор → Олег, 2026-08-25)» — before this, the attestation pointed at material that existed nowhere (Prohibition 9). ⚠️ Recorded next to it rather than smoothed: **three record-keeping specifics inside the confirmed text were changed by this review after he confirmed it** — the freeze break moved from "the same ledger row" to a superseding row, `#d38` §9's "or keeping" became an entailment rather than a finding, and the ledger row gained the two timestamps plus `prod_tag`. The authority model he authorised is unchanged; the three deltas only make the record able to hold the rules, and each is enumerated at Task 7.3. **Task 4.15's scope was carved out explicitly, not silently:** the pasted block is a paraphrase OF the regulation and restates it by construction, so it was pasted into the spec and never into the regulation; 4.15's subjects are the two published regulations, and re-verification after insertion confirms **zero shared sentences** between them, both regulation files untouched. **D2:** Oleg answered **«Оставить как есть»** — there is no delegate. Written into the regulation's own "Who approves" section as an accepted risk with its cost stated concretely: while Oleg is unavailable nothing can be approved, **including an emergency rollback to a tag not already in the ledger**, which the document itself classifies as a release — so the blocked case is precisely the unplanned one; a rollback to a ledger tag needs no approval and stays available. Risk owner Oleg, accepted 2026-08-25; mirrored into `deferred-work.md` as an ACCEPTED RISK and into `D42` §3. AC8's ceiling raised a second time, 125 → 130 (shipped **127**), and the reason is deliberately recorded as a DIFFERENT kind from the first raise: the first bought provenance for rules already present, the second holds a rule that did not exist before. Every reviewer-facing annotation was trimmed out of the regulation first. |
 | 2026-08-25 | **Code review (Opus, three adversarial layers + independent fact-verification): changes requested, all applied this same pass.** **Two adversarial passes, and the second one earned its keep: 35 numbered findings applied in total — pass 1: 20 (7 high / 10 medium / 3 low); pass 2: 15 (5 high / 5 medium / 5 low), and all five of pass 2's highs were introduced by pass 1's own fixes.** 7 deferred with named owners, 2 decisions routed to Oleg. **The four that mattered, all defects of TRUTH rather than of code, which is the only kind a documentation story can have:** (1) AC5 was NOT met — both regulations opened with the byte-identical "One page. No new gate, no new machinery.", and the Task 4.15 check that reported "zero shared sentences" had a length floor that never compared the opening line; the claim had already propagated into D42, the D42 changelog row and sprint-status. (2) `_bmad/bmm/config.yaml` was cited under the word "Измерено" for two keys it does not contain — they live in sprint-status.yaml:72-73 — and the false citation had entered docs/migration-decisions.md, a file this project forbids rewriting retroactively. (3) The job-log argument for creating the ledger contradicted the project's own SETTLED 2026-08-16 finding (archival is DELAYED, not absent: 4128 t vs 461 f) and inflated six observations to seven. (4) `#d11` was cited for a named-approver convention it does not contain — the same defect shape that produced D41 one story earlier. **Also: AC1's second clause was not met** (the drafting grep sweep was file-scoped and missed AC1's own s10-contour clause, plus two present-tense sentences in docs/prod-releases.md); **the ledger could not be filled as instructed** (row appended before the dispatch, yet Deploy run id / Approval end / freeze-break / after-the-fact rollback all require post-dispatch facts in a row the file says is never rewritten — fixed with `pending` values and a superseding-row rule); **and the rollback rule keyed on a `prod-<sha>` no column recorded** — a `prod_tag` column added. 🔴 **The retro-E5 correction is the one worth remembering: §9 specified a "negative control" that could not have failed on either axis** (build.yml:933's single tag template; G1 refusing `validated: fail` before any registry read, so the recorded table can only ever hold `pass`), and it proposed it four lines after Prohibition 7 forbids exactly that. This story earns NO negative control, and §9, Task 3.3 and Completion Note 5 now say so. AC8's 120-line ceiling raised to 125 (shipped at 122) with the reason recorded — the review's dating, sourcing and citation fixes cost twelve lines of provenance, and cutting sourcing to hold a number would trade a true document for a short one. Frozen files, Prohibitions 3/4/6/12/13, the D42 number, every anchor, the #d2 quote and the sha-a99ccd44c5a3-preprod precedent all verified clean across both passes. 🔴 **Pass 2 then found 15 more, five of them high, and every one of those five was introduced by pass 1's own fixes** -- a miscitation inside the miscitation correction (#d38 cited for line 4751, which is in #d39), a Debug Log claim that the duplication check had been re-run "with the short-sentence floor removed" when it had not, an INVENTED expiry date (`expires 2026-09-01`) in the Waiver? example illustrating the very rule against invented dates, an `Approval end (UTC)` cell declared both pending-at-append and mandatory-timestamp-only, and a `prod_tag` column whose legal value contradicted the rollback rule two sentences later. All fixed and recorded item by item as findings 21-35. Final: 35 applied, 7 deferred with owners, 2 decisions for Oleg; the regulation ships at 127 lines. **The reusable lesson: a fix-pass that is not re-reviewed is just a second draft.** |
