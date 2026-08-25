@@ -1110,15 +1110,29 @@ development_status:
   # outstanding (it ran post-merge from main -- run 1281, SUCCESS, jobs 10719 deploy then 10720 e2e,
   # so an ordinary job with `needs:` on a `uses:` job DOES schedule on this instance and the HALT
   # condition never triggered), but the review findings were.
-  # Fix-pass, 2026-08-25, own follow-up PR (5.5 itself already merged as PR #83): all 25 patch
-  # findings verified fixed against the shipped code/docs and checked off in the spec's own
-  # `## Review Findings` section, not rubber-stamped. All 3 decisions addressed per Oleg's/the
-  # coordinator's explicit instructions -- CORS ask documents corrected to "направлено" (23.08.2026,
-  # Oleg's decision), continue-on-error made permanently unmeasured by design with `|| true` on its
-  # redirect (coordinator's decision, Oleg's veto open), RVC-v1/5.6 collision restated with the
-  # "CORS fix first" exit now reachable. Row flips to `review` -- this fix-pass is its own PR, not
-  # done, pending a fresh review round (`followup_review_recommended` stays true in the spec).
-  5-5-establish-the-release-validation-checklist: review
+  # Fix-pass, 2026-08-25, own follow-up PR (5.5 itself already merged as PR #83, this fix-pass as
+  # PR #84): all 25 patch findings verified fixed against the shipped code/docs and checked off in
+  # the spec's own `## Review Findings` section, not rubber-stamped. All 3 decisions addressed per
+  # Oleg's/the coordinator's explicit instructions -- CORS ask documents corrected to "направлено"
+  # (23.08.2026, Oleg's decision), continue-on-error made permanently unmeasured by design with
+  # `|| true` on its redirect (coordinator's decision, Oleg's veto open), RVC-v1/5.6 collision
+  # restated with the "CORS fix first" exit now reachable. PR #84 merged.
+  # Closeout, 2026-08-25, own follow-up PR (`story-5-5/pr-3-ledger-closeout`): **CORS blocker
+  # lifted** -- CRM/api-prionex fixed PRE-PROD's (and DEV's) CORS origin. Independently
+  # re-measured, a channel separate from the coordinator's own probe (direct outbound HTTPS, not
+  # s1/SSH): OPTIONS on a real routed endpoint returns the correct Access-Control-Allow-Origin, a
+  # foreign-origin negative control confirms non-echo, route-miss now carries the same headers.
+  # RVC-v1 recount: nine items (F3, F4-F8, F10, F11, F12), not the earlier estimate of seven,
+  # move to fully EXECUTABLE -- F3 and F12 were degraded rather than fully BLOCKED and both had a
+  # CORS-dependent half. Only F9 remains BLOCKED, on its own independent precondition (restricted-
+  # role account on PRE-PROD, owner Oleg), unaffected by the CORS fix. DEV's own frontend vhost/TLS
+  # confirmed still NOT fixed (different ask, owner aleksey) -- irrelevant to RVC-v1 (PRE-PROD
+  # only), checked and named so a reader does not wonder. docs/preprod-candidates.md's two existing
+  # ledger rows NOT rewritten -- append-only, honest on their own dates; a new pointer paragraph
+  # added instead. psql ledger reconciled: 8 rows above baseline (id 1260) through PR #84's merge,
+  # zero foreign rows absorbed (two story-4-9 rows in-range correctly excluded). No floor/ceiling
+  # was ever declared for this story -- named honestly, not retrofitted. Row flips to `done`.
+  5-5-establish-the-release-validation-checklist: done
   5-6-exercise-the-full-release-cycle-on-an-empty-release: backlog
   epic-5-retrospective: optional
 
