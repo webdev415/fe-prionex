@@ -763,7 +763,34 @@ development_status:
   #     nobody has taken that call. `$GITHUB_STEP_SUMMARY` persistence here is UNPROVEN — the step
   #     has not yet been exercised by a real dispatch. Consequence, and it is why
   #     `docs/preprod-candidates.md` exists at all: a claim that survives only in a job log may not.
-  epic-5: in-progress
+  # 🔴 EPIC 5 CLOSED, 2026-08-25 — Story 5.6 was the last story; all six now `done` below, verified
+  # by this comment. FIRST STANDING CONSTRAINT ABOVE IS NOW STALE, corrected here rather than in
+  # place: "BROWSER-PATH VALIDATION IS IMPOSSIBLE" was true when written (2026-08-24) and stopped
+  # being true the next day — `CRM/api-prionex` fixed both Kongs' CORS origin, independently
+  # re-measured (non-echo, negative-controlled) by both 5.5's closeout and 5.6's own rehearsal.
+  # Story 5.6 then executed the browser path for the first time in the project's history: nine of
+  # RVC-v1's twelve items on Oleg's own browser confirmation, three (P1/P2/F2) by the dev agent
+  # directly. The other two standing constraints (leaked registry tokens, unreliable job-log
+  # archival) remain genuinely open and are NOT closed by this epic — carried forward as-is, see
+  # deferred-work.md and the Epic 6 inheritance block below.
+  # ✅ WHAT THIS EPIC SHIPPED, IN ONE LINE: a repeatable, workflow-driven PRE-PROD release cycle
+  # (build -> deploy -> validate by hand against a versioned checklist -> record, or refuse) that
+  # was actually exercised end-to-end exactly once (Story 5.6, candidate `sha-a99ccd44c5a3-preprod`)
+  # and produced a genuine, honestly-counted 7/12 pass with five items validly waived under a real,
+  # documented mechanism — not a disguised 12/12 and not a silent `fail`.
+  # 🧵 TAILS THIS EPIC LEAVES OPEN, none fixable inside it, none silently dropped:
+  #   • CRM/api-prionex Debt-model migration bug (services/client/app/models/debt.py:146-155 defines
+  #     ten "paid"/"written_off" columns with NO migration anywhere in their repo, six months old,
+  #     `500`s every client-detail page on PRE-PROD) — a standalone bug report was written and
+  #     handed to the coordinator to relay to Oleg, for forwarding to CRM/api-prionex. NOT this
+  #     repository's to fix. Owner: CRM/api-prionex, relay: Oleg.
+  #   • The seeded PRE-PROD admin credential (`admin`/`Admin@123`, CRM/api-prionex's own migration
+  #     default) has never been rotated, on an internet-reachable stand and API. Owner: Oleg.
+  #   • Telephony (F7), SMS (F10), and direct debt-creation (F6, and F8 partially) remain
+  #     infrastructure/data blockers with no fixture path through the admin API — not fixable by
+  #     provisioning, genuine BLOCKED items in RVC-v1.1's terms. Owners: Oleg / telephony infra
+  #     owner, Oleg / SMS provider owner, CRM/api-prionex.
+  epic-5: done
   5-1-stand-up-the-isolated-pre-prod-backend-network: done
   # dev-story complete 2026-08-23: SSH rung 1 (root@10.67.0.1) worked this session — three
   # discriminators (N1, N4, N5; N2 is a standing DNS falsification, N3 a negative control, neither
@@ -1169,7 +1196,17 @@ development_status:
   # 41 s. Aggregate: fail by RVC-v1's own unconditional rule (7/12 pass), dispatched pass only under
   # the written waiver -- never a disguised 12/12. Row flips to `review`; code review (this same
   # pass) found 5 decisions + 16 patches, CHANGES REQUESTED, addressed in this fix-pass.
-  5-6-exercise-the-full-release-cycle-on-an-empty-release: review
+  # 🔴 FINAL CLOSEOUT, 2026-08-25 -- PR #86 merged (dbec399d), fix-pass (5 decisions + 16 patches)
+  # addressed in full: RVC-v1 amended to RVC-v1.1 with an explicit waiver mechanism (D41, "узаконить"
+  # not revert -- Oleg's own decision as release owner), F5 stays `fail`-by-criterion covered by the
+  # new external-dependency clause rather than reclassified BLOCKED, Oleg's exact browser-scope quote
+  # used to fix a 9/6/5 three-way mismatch, six live-system writes named with dates+authorisation.
+  # Post-merge psql: 22 rows attributable by commit_sha, zero unattributed, against a re-declared
+  # ceiling of 22 -- an EXACT landing, no further overrun. Overrun cause (17->22), named: two rounds
+  # the original budget never priced -- investigating PRE-PROD's real fixture state instead of simply
+  # receiving it, and legitimizing the waiver after code review found it ungrounded. Row flips to
+  # `done`.
+  5-6-exercise-the-full-release-cycle-on-an-empty-release: done
   epic-5-retrospective: optional
 
   # Epic 6: Production Release and Verified Rollback
@@ -1218,6 +1255,46 @@ development_status:
   #     Kong, NOT that the APPLICATION does. 6.7's smoke check must not repeat that mistake.
   #   • The static-CORS defect was found on PRE-PROD, then found again on DEV when someone finally
   #     looked. PROD's Kong has never been probed. Probe it before 6.4, not after.
+  # 📦 UPDATE FROM STORY 5.6 (Epic 5's closeout, 2026-08-25) — the block above predates 5.6 and is
+  # left as written; this is what changed once the full cycle was actually exercised.
+  # ✅ FURTHER ARRIVES WORKING:
+  #   • `preprod-current` -> `sha-a99ccd44c5a3-preprod` (digest `sha256:a62e868786cd…`) — a real,
+  #     genuinely-executed candidate, not a container-health-only one like the first two rows.
+  #   • THREE recorded candidates with a real git-log-ordered history in `docs/preprod-candidates.md`
+  #     (AC12's method: registry gives the SET, `git log --no-walk=sorted` gives the ORDER — proven
+  #     live, not just designed). `docs/preprod-candidates.md` is the readable, authoritative ledger
+  #     — Story 6.5 reads the registry tags for identity/permanence, not this file.
+  #   • `docs/release-validation-checklist.md`, marker `RVC-v1.1` — now carries an EXPLICIT waiver
+  #     mechanism (who may issue: Oleg as release owner; what it covers: `BLOCKED`, and now a `fail`
+  #     caused solely by an external dependency; mandatory time-boxed + single-candidate scope; true
+  #     counts preserved in the note). `docs/migration-decisions.md#d41` is the amendment record.
+  #   • `docs/release-regulation.md` — the scope-freeze agreement (no `deploy-preprod.yml` dispatch
+  #     between P1 and the recorder) is written down, one page, no new gate.
+  #   • The shared callee, `image_tag` mode, and the tag<->environment guard were all exercised
+  #     LIVE through a real R1->R2->R3 cycle for the first time (previously proven only piecemeal).
+  # 🔴 WHAT EPIC 6 MUST DECIDE FIRST, elevated here so 6.4 does not rediscover it mid-story:
+  #   • `secrets: inherit` for a cross-repo/cross-host caller is Story 4.8's own named structural
+  #     pre-6.4 decision (see above) — THIS IS THE MANDATORY FIRST DECISION at 6.4, not one of many.
+  #   • `KONG_PORT=8330` on PROD (published host port or in-network listener?) is STILL OPEN —
+  #     PRE-PROD never sets a non-default value, so nothing in Epic 5 discriminates the two
+  #     hypotheses; carried forward unresolved, owner Story 6.4 (`deferred-work.md:934-937`).
+  #   • A WAIVED CANDIDATE IS INVISIBLE AT THE PROMOTION GATE — `preprod-a99ccd44c5a3` carries no
+  #     waiver signal on its registry tag (5.4's own D1: the `validation_note` never reaches the
+  #     registry). Story 6.5 MUST read `docs/preprod-candidates.md`/`docs/migration-decisions.md`,
+  #     not just the tag's existence, or it cannot tell a waived candidate from a clean `12/12` one.
+  #     Filed in deferred-work.md, owner Story 6.5.
+  #   • EIGHT UNEXERCISED BRANCHES in `record-preprod-candidate.yml` (digest-resolve 401/000/
+  #     empty-credential classifiers, G5's non-happy branches, both write steps' ambiguous-read and
+  #     read-back-mismatch branches, G6's parse-failure branch, G3's exactly-12 clause) — Story 5.6's
+  #     single clean dispatch forced none of them. Re-owned to Story 6.4 in `deferred-work.md`'s M7
+  #     entry (a named story, not a trigger condition — required action at 6.4's own closeout if it
+  #     doesn't force them either).
+  # 🔀 MERGE RESOLUTION 2026-08-25 (story 6.2 <- origin/main aae711b1, PR 87 = Epic 5 closeout).
+  # BOTH SIDES KEPT WHOLE, neither absorbed: the 5.6 block above arrives verbatim from main, and
+  # the VALUE below is story 6.2's `in-progress`, not main's `backlog`. They are not in conflict on
+  # the merits -- main wrote that block while epic-6 had not started, and 6.2 (Epic 6's first story,
+  # 6.1 cancelled) started it. The block's own `backlog` value is superseded by this line, not by an
+  # edit to the block, which is left exactly as 5.6's closeout wrote it.
   epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
   # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
@@ -1272,8 +1349,12 @@ development_status:
   # git fetch across every open story-* branch at Task 1.5, not just main.
   # Blast radius: every .forgejo/workflows/*.yml, docs/release-validation-checklist.md and
   # docs/preprod-candidates.md are READ-ONLY; docs/release-regulation.md takes exactly one line.
-  # No host is touched at all, so NFR5 is satisfied by construction. Epic 5's closeout PR #87 may
-  # merge mid-session -- rebase.
+  # No host is touched at all, so NFR5 is satisfied by construction.
+  # ✅ CORRECTED 2026-08-25: this block originally ended "Epic 5's closeout PR #87 may merge
+  # mid-session -- rebase." PR #87 HAS since merged (aae711b1); Epic 5 is `done`, 6/6; origin/main
+  # moved dbec399d -> aae711b1. Taken into this branch by MERGE, not rebase -- PR 88 was already
+  # open and code-reviewed, so rewriting its history was not available. One conflict
+  # (this file, at the `epic-6:` line), resolved keeping both sides whole; see the marker above it.
   # AC4 landed 2026-08-25: Oleg's verbatim reply "Подтверждаю" (geloniel@gmail.com), relayed by
   # the coordinator, confirmed-by-paraphrase (not read-the-document-directly, per this project's
   # attested-vs-observed convention) -- paraphrase covered every section and named the live
