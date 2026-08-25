@@ -32,6 +32,14 @@ ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
 ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
 
+# Fail the image build rather than ship a bundle with no phone origin. Without
+# it the operator phone silently never mounts, which looks identical to the
+# feature being switched off.
+RUN test -n "$VITE_OPERATOR_PHONE_URL" || { \
+      echo "VITE_OPERATOR_PHONE_URL build-arg is required (e.g. https://webrtc.crm-prionex.online)"; \
+      exit 1; \
+    }
+
 # Build the application
 RUN npm run build
 

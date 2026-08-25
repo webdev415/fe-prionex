@@ -52,9 +52,15 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
+            # No default on purpose. The one softphone deployment
+            # (webrtc.crm-prionex.online) is currently built with
+            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
+            # postMessage from production. Defaulting to it would ship a phone
+            # that silently never leaves "Connecting".
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              PHONE_URL="https://webrtc.crm-prionex.online"
+              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
+              exit 1
             fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             # Development environment
@@ -66,6 +72,10 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.dev.crm-prionex.online"
             fi
+            # There is no separate dev softphone host; the single deployment at
+            # webrtc.crm-prionex.online is built with VITE_CRM_PARENT_ORIGIN set
+            # to the dev CRM, so it is the correct target here. The secret exists
+            # to repoint dev once a second deployment lands.
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_DEV }}"
             if [ -z "$PHONE_URL" ]; then
               PHONE_URL="https://webrtc.crm-prionex.online"
@@ -80,9 +90,15 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
+            # No default on purpose. The one softphone deployment
+            # (webrtc.crm-prionex.online) is currently built with
+            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
+            # postMessage from production. Defaulting to it would ship a phone
+            # that silently never leaves "Connecting".
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              PHONE_URL="https://webrtc.crm-prionex.online"
+              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
+              exit 1
             fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
