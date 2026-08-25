@@ -22,6 +22,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
+import { KeyboardShortcutsSettings } from '@/features/taHotkeys/components/KeyboardShortcutsSettings'
 
 const TRIGGER_CLASS =
   'text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between rounded-lg border px-4 py-2 text-sm font-light'
@@ -37,6 +38,10 @@ export function ProfileSettingsPage() {
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
   const [isChangingLocal, setIsChangingLocal] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
+  // KAN-975 — the right-hand column is now two tabs. The left column
+  // (identity, password, 2FA) is not tabbed: it is about the account itself
+  // rather than about either set of settings.
+  const [activeTab, setActiveTab] = useState<'account' | 'shortcuts'>('account')
 
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
@@ -417,218 +422,143 @@ export function ProfileSettingsPage() {
         </div>
 
         <div className="bg-card/50 flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl p-4 sm:gap-8 sm:p-6">
-          <AppearanceSettings />
-
-          <form
-            onSubmit={handleSave}
-            className="border-border flex w-full flex-col items-center gap-4 self-stretch border-t pt-6 sm:gap-6"
+          {/* A tab widget is a contract, not a set of roles: the panel has to
+              be findable from the tab (`aria-controls`), only the selected tab
+              may hold a tab stop, and the arrows must move between them —
+              otherwise a screen-reader user is told "tab 1 of 2" and then has
+              no way to reach tab 2. */}
+          <div
+            className="border-border flex w-full items-center gap-1 self-stretch border-b"
+            role="tablist"
           >
-            <span className="text-foreground self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
-              {t('pages.users.modals.edit.title')}
-            </span>
-            <div className="flex w-full flex-col items-center gap-6 self-stretch">
-              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                <Input
-                  label={t('pages.users.forms.username')}
-                  value={form.username}
-                  disabled
-                  onChange={() => {}}
-                  helperText={t('pages.users.editForm.usernameCannotBeChanged')}
-                  className="w-full"
-                />
-                <Input
-                  label={t('pages.users.forms.email')}
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                <Input
-                  label={t('pages.users.forms.firstName')}
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  required
-                  className="w-full"
-                />
+            {(
+              [
+                ['account', t('pages.profile.tabs.account', 'Account')],
+                ['shortcuts', t('pages.profile.tabs.shortcuts', 'Keyboard Shortcuts')],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`profile-tab-${id}`}
+                // Only the selected panel is mounted, so pointing the inactive
+                // tab at it would leave a dangling IDREF — worse than omitting
+                // the attribute, which ARIA permits.
+                aria-controls={activeTab === id ? `profile-tabpanel-${id}` : undefined}
+                aria-selected={activeTab === id}
+                tabIndex={activeTab === id ? 0 : -1}
+                onClick={() => setActiveTab(id)}
+                // On the tab rather than the tablist: only the selected tab is
+                // focusable, so it is the element that actually receives the
+                // key, and a container listener would need a tab stop of its
+                // own to be reachable at all.
+                onKeyDown={(e) => {
+                  const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+                  if (step === 0) return
+                  e.preventDefault()
+                  const order = ['account', 'shortcuts'] as const
+                  const next =
+                    order[(order.indexOf(activeTab) + step + order.length) % order.length]
+                  setActiveTab(next)
+                  // Roving focus follows the selection, or the arrow moves the
+                  // highlight while the keyboard stays on the tab left behind.
+                  document.getElementById(`profile-tab-${next}`)?.focus()
+                }}
+                className={
+                  activeTab === id
+                    ? 'text-foreground border-primary-500 -mb-px border-b-2 px-3 py-2 text-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-                <Input
-                  label={t('pages.users.forms.lastName')}
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                <Input
-                  label={t('pages.users.forms.middleName')}
-                  value={form.middle_name}
-                  onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
-                  className="w-full"
-                />
+          {activeTab === 'shortcuts' ? (
+            <div
+              role="tabpanel"
+              id="profile-tabpanel-shortcuts"
+              aria-labelledby="profile-tab-shortcuts"
+              className="flex w-full flex-col self-stretch"
+            >
+              <KeyboardShortcutsSettings />
+            </div>
+          ) : (
+            <div
+              role="tabpanel"
+              id="profile-tabpanel-account"
+              aria-labelledby="profile-tab-account"
+              className="flex w-full flex-col items-start gap-6 self-stretch sm:gap-8"
+            >
+              <AppearanceSettings />
 
-                <Input
-                  label={t('pages.users.forms.phone')}
-                  placeholder={t('pages.users.forms.placeholders.phone')}
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                <div className="flex w-full flex-col gap-2 self-stretch">
-                  <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <button id="language" type="button" className={TRIGGER_CLASS}>
-                        <span className="text-left">{LANGUAGE_NAMES[form.language]}</span>
-                        <Icons.ArrowDown
-                          size={16}
-                          strokeWidth={1.5}
-                          className="text-muted-foreground shrink-0"
-                        />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
-                      {SUPPORTED_LANGUAGES.map((lang) => (
-                        <DropdownMenuItem
-                          key={lang}
-                          className="cursor-pointer"
-                          onClick={() => void handleLanguageChange(lang)}
-                        >
-                          <span className="flex w-full items-center justify-between gap-2">
-                            <span>{LANGUAGE_NAMES[lang]}</span>
-                            {form.language === lang ? (
-                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
-                            ) : null}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+              <form
+                onSubmit={handleSave}
+                className="border-border flex w-full flex-col items-center gap-4 self-stretch border-t pt-6 sm:gap-6"
+              >
+                <span className="text-foreground self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+                  {t('pages.users.modals.edit.title')}
+                </span>
+                <div className="flex w-full flex-col items-center gap-6 self-stretch">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <Input
+                      label={t('pages.users.forms.username')}
+                      value={form.username}
+                      disabled
+                      onChange={() => {}}
+                      helperText={t('pages.users.editForm.usernameCannotBeChanged')}
+                      className="w-full"
+                    />
+                    <Input
+                      label={t('pages.users.forms.email')}
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <Input
+                      label={t('pages.users.forms.firstName')}
+                      value={form.first_name}
+                      onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                      required
+                      className="w-full"
+                    />
 
-                <div className="flex w-full flex-col gap-2 self-stretch">
-                  <Label htmlFor="work-format">
-                    {t('pages.profileSettings.workFormat.label', 'Work format')}
-                  </Label>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <button id="work-format" type="button" className={TRIGGER_CLASS}>
-                        <span className="text-left">
-                          {workFormatOptions.find((o) => o.value === form.work_format)?.label}
-                        </span>
-                        <Icons.ArrowDown
-                          size={16}
-                          strokeWidth={1.5}
-                          className="text-muted-foreground shrink-0"
-                        />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
-                      {workFormatOptions.map((option) => (
-                        <DropdownMenuItem
-                          key={option.value}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setWorkFormatTouched(true)
-                            setForm({ ...form, work_format: option.value })
-                          }}
-                        >
-                          <span className="flex w-full items-center justify-between gap-2">
-                            <span>{option.label}</span>
-                            {form.work_format === option.value ? (
-                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
-                            ) : null}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                    <Input
+                      label={t('pages.users.forms.lastName')}
+                      value={form.last_name}
+                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <Input
+                      label={t('pages.users.forms.middleName')}
+                      value={form.middle_name}
+                      onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
+                      className="w-full"
+                    />
 
-                <div className="flex w-full flex-col gap-2 self-stretch">
-                  <Label htmlFor="timezone">{t('pages.users.forms.timezone')}</Label>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <button id="timezone" type="button" className={TRIGGER_CLASS}>
-                        <span className="line-clamp-1 text-left">
-                          {timezoneOptions.find((o) => o.value === form.timezone)?.label ??
-                            form.timezone}
-                        </span>
-                        <Icons.ArrowDown
-                          size={16}
-                          strokeWidth={1.5}
-                          className="text-muted-foreground shrink-0"
-                        />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className={CONTENT_CLASS}>
-                      {timezoneOptions.map((option) => (
-                        <DropdownMenuItem
-                          key={option.value}
-                          className="cursor-pointer"
-                          onClick={() => setForm({ ...form, timezone: option.value })}
-                        >
-                          <span className="flex w-full items-center justify-between gap-2">
-                            <span>{option.label}</span>
-                            {form.timezone === option.value ? (
-                              <Icons.Tick02 size={14} strokeWidth={2} className="text-primary" />
-                            ) : null}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              {/* Call Settings Section - Only visible for agents */}
-              {user?.is_agent && (
-                <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                  <Input
-                    label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
-                    value={user?.asterisk_extension || ''}
-                    disabled
-                    onChange={() => {}}
-                    placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
-                    className="w-full"
-                  />
-                  <Input
-                    label={t('pages.users.forms.dialerExtension') || 'Predictive Dialer Extension'}
-                    value={user?.dialer_extension || ''}
-                    disabled
-                    onChange={() => {}}
-                    placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
-                    className="w-full"
-                  />
-                  {user?.agent_status !== undefined && (
-                    <div className="w-full">
-                      <label
-                        htmlFor="agent-status"
-                        className="text-foreground mb-1.5 block text-sm font-light"
-                      >
-                        {t('pages.users.forms.agentStatus') || 'Agent Status'}
-                      </label>
-                      <DropdownMenu>
+                    <Input
+                      label={t('pages.users.forms.phone')}
+                      placeholder={t('pages.users.forms.placeholders.phone')}
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <div className="flex w-full flex-col gap-2 self-stretch">
+                      <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
-                          <button id="agent-status" type="button" className={TRIGGER_CLASS}>
-                            <span className="flex items-center gap-2 text-left">
-                              <span
-                                className={`h-2 w-2 rounded-full ${
-                                  agentStatusOptions.find((o) => o.value === form.agent_status)
-                                    ?.dot ?? 'bg-gray-400'
-                                }`}
-                              />
-                              <span>
-                                {
-                                  agentStatusOptions.find((o) => o.value === form.agent_status)
-                                    ?.label
-                                }
-                              </span>
-                            </span>
+                          <button id="language" type="button" className={TRIGGER_CLASS}>
+                            <span className="text-left">{LANGUAGE_NAMES[form.language]}</span>
                             <Icons.ArrowDown
                               size={16}
                               strokeWidth={1.5}
@@ -637,18 +567,15 @@ export function ProfileSettingsPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className={CONTENT_CLASS}>
-                          {agentStatusOptions.map((option) => (
+                          {SUPPORTED_LANGUAGES.map((lang) => (
                             <DropdownMenuItem
-                              key={option.value}
+                              key={lang}
                               className="cursor-pointer"
-                              onClick={() => setForm({ ...form, agent_status: option.value })}
+                              onClick={() => void handleLanguageChange(lang)}
                             >
                               <span className="flex w-full items-center justify-between gap-2">
-                                <span className="flex items-center gap-2">
-                                  <span className={`h-2 w-2 rounded-full ${option.dot}`} />
-                                  <span>{option.label}</span>
-                                </span>
-                                {form.agent_status === option.value ? (
+                                <span>{LANGUAGE_NAMES[lang]}</span>
+                                {form.language === lang ? (
                                   <Icons.Tick02
                                     size={14}
                                     strokeWidth={2}
@@ -661,35 +588,199 @@ export function ProfileSettingsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+
+                    <div className="flex w-full flex-col gap-2 self-stretch">
+                      <Label htmlFor="work-format">
+                        {t('pages.profileSettings.workFormat.label', 'Work format')}
+                      </Label>
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <button id="work-format" type="button" className={TRIGGER_CLASS}>
+                            <span className="text-left">
+                              {workFormatOptions.find((o) => o.value === form.work_format)?.label}
+                            </span>
+                            <Icons.ArrowDown
+                              size={16}
+                              strokeWidth={1.5}
+                              className="text-muted-foreground shrink-0"
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                          {workFormatOptions.map((option) => (
+                            <DropdownMenuItem
+                              key={option.value}
+                              className="cursor-pointer"
+                              onClick={() => {
+                                setWorkFormatTouched(true)
+                                setForm({ ...form, work_format: option.value })
+                              }}
+                            >
+                              <span className="flex w-full items-center justify-between gap-2">
+                                <span>{option.label}</span>
+                                {form.work_format === option.value ? (
+                                  <Icons.Tick02
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-primary"
+                                  />
+                                ) : null}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="flex w-full flex-col gap-2 self-stretch">
+                      <Label htmlFor="timezone">{t('pages.users.forms.timezone')}</Label>
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <button id="timezone" type="button" className={TRIGGER_CLASS}>
+                            <span className="line-clamp-1 text-left">
+                              {timezoneOptions.find((o) => o.value === form.timezone)?.label ??
+                                form.timezone}
+                            </span>
+                            <Icons.ArrowDown
+                              size={16}
+                              strokeWidth={1.5}
+                              className="text-muted-foreground shrink-0"
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                          {timezoneOptions.map((option) => (
+                            <DropdownMenuItem
+                              key={option.value}
+                              className="cursor-pointer"
+                              onClick={() => setForm({ ...form, timezone: option.value })}
+                            >
+                              <span className="flex w-full items-center justify-between gap-2">
+                                <span>{option.label}</span>
+                                {form.timezone === option.value ? (
+                                  <Icons.Tick02
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-primary"
+                                  />
+                                ) : null}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Call Settings Section - Only visible for agents */}
+                  {user?.is_agent && (
+                    <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                      <Input
+                        label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
+                        value={user?.asterisk_extension || ''}
+                        disabled
+                        onChange={() => {}}
+                        placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
+                        className="w-full"
+                      />
+                      <Input
+                        label={
+                          t('pages.users.forms.dialerExtension') || 'Predictive Dialer Extension'
+                        }
+                        value={user?.dialer_extension || ''}
+                        disabled
+                        onChange={() => {}}
+                        placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
+                        className="w-full"
+                      />
+                      {user?.agent_status !== undefined && (
+                        <div className="w-full">
+                          <label
+                            htmlFor="agent-status"
+                            className="text-foreground mb-1.5 block text-sm font-light"
+                          >
+                            {t('pages.users.forms.agentStatus') || 'Agent Status'}
+                          </label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button id="agent-status" type="button" className={TRIGGER_CLASS}>
+                                <span className="flex items-center gap-2 text-left">
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${
+                                      agentStatusOptions.find((o) => o.value === form.agent_status)
+                                        ?.dot ?? 'bg-gray-400'
+                                    }`}
+                                  />
+                                  <span>
+                                    {
+                                      agentStatusOptions.find((o) => o.value === form.agent_status)
+                                        ?.label
+                                    }
+                                  </span>
+                                </span>
+                                <Icons.ArrowDown
+                                  size={16}
+                                  strokeWidth={1.5}
+                                  className="text-muted-foreground shrink-0"
+                                />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className={CONTENT_CLASS}>
+                              {agentStatusOptions.map((option) => (
+                                <DropdownMenuItem
+                                  key={option.value}
+                                  className="cursor-pointer"
+                                  onClick={() => setForm({ ...form, agent_status: option.value })}
+                                >
+                                  <span className="flex w-full items-center justify-between gap-2">
+                                    <span className="flex items-center gap-2">
+                                      <span className={`h-2 w-2 rounded-full ${option.dot}`} />
+                                      <span>{option.label}</span>
+                                    </span>
+                                    {form.agent_status === option.value ? (
+                                      <Icons.Tick02
+                                        size={14}
+                                        strokeWidth={2}
+                                        className="text-primary"
+                                      />
+                                    ) : null}
+                                  </span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+                {hasProfileChanges && (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+                    <Button
+                      type="button"
+                      variant="cancel"
+                      onClick={handleCancel}
+                      className="h-12 w-48 rounded-full px-10"
+                    >
+                      {t('actions.cancel')}
+                    </Button>
+                    <DoubleButton
+                      type="submit"
+                      icon={<Icons.Tick02 size={28} />}
+                      iconPosition="left"
+                      disabled={isUpdatingLocal || isChangingLocal}
+                      className="h-12 w-48"
+                      onClick={() => {
+                        // Handle double button click
+                      }}
+                    >
+                      {t('pages.profile.saveChanges')}
+                    </DoubleButton>
+                  </div>
+                )}
+              </form>
             </div>
-            {hasProfileChanges && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
-                <Button
-                  type="button"
-                  variant="cancel"
-                  onClick={handleCancel}
-                  className="h-12 w-48 rounded-full px-10"
-                >
-                  {t('actions.cancel')}
-                </Button>
-                <DoubleButton
-                  type="submit"
-                  icon={<Icons.Tick02 size={28} />}
-                  iconPosition="left"
-                  disabled={isUpdatingLocal || isChangingLocal}
-                  className="h-12 w-48"
-                  onClick={() => {
-                    // Handle double button click
-                  }}
-                >
-                  {t('pages.profile.saveChanges')}
-                </DoubleButton>
-              </div>
-            )}
-          </form>
+          )}
         </div>
       </div>
     </div>

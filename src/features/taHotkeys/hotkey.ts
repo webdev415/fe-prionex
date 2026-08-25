@@ -125,6 +125,9 @@ export function parseHotkey(value: string): Hotkey | null {
   if (!value) return null
 
   // Split on the LAST separator, not every one. Splitting on all of them and
+  // dropping empties made '+' unparseable — `formatHotkey` produces 'Ctrl++'
+  // for it, which collapsed to ['Ctrl'] and returned null, so a combination
+  // this module can write it could not read back.
   // dropping the empties made '+' unparseable — `formatHotkey` writes it as
   // 'Ctrl++', which collapsed to ['Ctrl'] and returned null, so this module
   // could produce a combination it was unable to read back.
@@ -177,14 +180,27 @@ const TEXT_ENTRY_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
  * marked ``role="dialog"`` is off-limits, including its buttons, not just its
  * inputs. A hotkey pressed while a dialog is up should never reach the page
  * behind it.
+ *
+ * Popup widgets are checked through {@link ownsItsKeystrokes} for the same
+ * reason the exempt-dialog path checks them: a keystroke belongs to the
+ * control the operator is looking at. The dialog rule alone does not reach
+ * them — a Radix ``Select`` portals its listbox to the body, so on the client
+ * card it sits outside every dialog. Without this a bare-key binding such as
+ * ``P`` is taken from the dropdown's type-ahead and opens the TA modal
+ * instead of choosing the option the operator was aiming at.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  if (isTextEntryTarget(target)) return true
+  if (ownsItsKeystrokes(target)) return true
   if (!target || !(target instanceof Element)) return false
   return target.closest('[role="dialog"], [contenteditable="true"]') !== null
 }
 
-/** The narrower half of {@link isTypingTarget}: the element itself takes text. */
+/**
+ * The narrower half of {@link isTypingTarget}: the element itself takes text.
+ *
+ * Split out so a dialog can be exempted from the "inside a dialog counts as
+ * typing" rule without also un-protecting the inputs within it.
+ */
 export function isTextEntryTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof Element)) return false
   if (TEXT_ENTRY_TAGS.has(target.tagName)) return true
@@ -192,13 +208,17 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Controls inside an exempt dialog that consume plain keys themselves.
+ * Controls that consume plain keys themselves.
  *
- * Text fields are the obvious case but not the only one: a Radix dropdown
- * trigger is a ``button[role="combobox"]`` whose list uses type-ahead, so a
- * bare-key binding would be stolen from the widget — the operator types to jump
- * to an option and gets a toast instead. Dropdowns are the main interaction in
- * the TA modal, so the exemption has to stop at them.
+ * Text fields are the obvious case, but not the only one: a Radix dropdown
+ * trigger is a ``button[role="combobox"]`` and its list uses type-ahead, so a
+ * bare-key binding like ``P`` would be stolen from the widget — the operator
+ * types to jump to an option and gets a toast instead.
+ *
+ * Used on both sides of the dialog rule. Inside an exempt dialog it is what
+ * stops the exemption at the widgets (dropdowns are the main interaction in
+ * the TA modal); outside one it is reached through {@link isTypingTarget},
+ * because a portalled listbox on the client card belongs to no dialog at all.
  */
 export function ownsItsKeystrokes(target: EventTarget | null): boolean {
   if (isTextEntryTarget(target)) return true
@@ -229,14 +249,15 @@ export function resolveHotkeyTarget<T>(
   bindings: Record<string, T>,
   options?: {
     /**
-     * A dialog this feature owns, which therefore should not silence a bound
+     * Dialogs this feature owns, which therefore should not silence a bound
      * key. Selector matched against the target's ancestors.
      *
-     * ``isTypingTarget`` treats everything inside a ``role="dialog"`` as
-     * typing, and the TA modal traps focus inside itself — so without an
-     * exemption a hotkey pressed while that modal is open was dropped here,
-     * the single-modal guard never ran, and the operator got silence where the
-     * ticket asks for an explanation.
+     * Needed because ``isTypingTarget`` treats everything inside a
+     * ``role="dialog"`` as typing, and the TA modal traps focus inside itself.
+     * With no exemption a hotkey pressed while that modal is open was
+     * swallowed here, so the "one modal at a time" toast the ticket asks for
+     * could never fire — the operator pressed their key and got silence, which
+     * is the exact outcome the guard exists to prevent.
      */
     exemptDialogSelector?: string
   }
@@ -248,7 +269,8 @@ export function resolveHotkeyTarget<T>(
 
   if (!exempt && isTypingTarget(event.target ?? null)) return null
   // Even inside an exempt dialog, a key aimed at a control that consumes keys
-  // still belongs to that control.
+  // still belongs to that control. The exemption is about the dialog wrapper,
+  // not the widgets inside it.
   if (exempt && ownsItsKeystrokes(event.target ?? null)) return null
 
   const hotkey = hotkeyFromEvent(event)

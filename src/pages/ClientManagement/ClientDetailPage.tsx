@@ -444,6 +444,7 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhoneSource, setChainExecutorPrefilledPhoneSource] = useState<
     'client' | 'recommender' | null
   >(null)
+  // KAN-973 — the quick-pick a hotkey asked the executor to start on open.
   const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
     number | null
   >(null)
@@ -705,14 +706,14 @@ export function ClientDetailPage() {
     showAllCalls
   )
   // KAN-973 §4 — answers "did a call to this client just end?" at the moment a
-  // hotkey is pressed. Separate from the Call/SMS history above, which loads
-  // only while its tab is open (and the default tab is Loans) and returns
-  // display-mapped records.
+  // hotkey is pressed. Separate from the Call/SMS history above, which only
+  // loads while its tab is open and returns display-mapped records.
   //
-  // Fetched only for operators who have a shortcut bound; the answer is used at
-  // one moment, so for everyone else this would be a request per client card
-  // serving nothing. Reading the bindings is free — useTAHotkeyLaunch below
-  // already subscribes to the same query.
+  // Only fetched for operators who actually have a shortcut bound. The answer
+  // is used at one moment — a hotkey press — so for everyone else this would be
+  // a request per client card serving nothing, on the most-visited page in the
+  // app. Reading the bindings here is free: `useTAHotkeyLaunch` below already
+  // subscribes to the same query.
   const hotkeyBindings = useTAHotkeyBindings()
   const hasHotkeyBindings = Object.keys(hotkeyBindings).length > 0
   const { data: recentCalls } = useClientRecentCalls(clientId, isValidClientId && hasHotkeyBindings)
@@ -1471,20 +1472,8 @@ export function ClientDetailPage() {
 
       // Only the prefill source — NOT contactSource, which would filter the
       // chain list and could hide the very template this hotkey launches.
-      //
-      // Gated on the id actually being in the map. `classifyContactSource`
-      // coerces anything it cannot find to 'recommender', and
-      // `contactTypesById` is still empty while `useContactTypes('all')` is in
-      // flight — a hotkey can be pressed seconds after mount, unlike the phone
-      // row below which fires long after. Defaulting there would seed only
-      // 'recommender' contact steps and silently drop a client phone, so leave
-      // the source unset: ChainExecutor then seeds nothing rather than seeding
-      // into the wrong step class.
-      const prefillContactTypeId = recentPhone?.contactTypeId
       setChainExecutorPrefilledPhoneSource(
-        prefillContactTypeId != null && contactTypesById.has(prefillContactTypeId)
-          ? classifyContactSource(prefillContactTypeId)
-          : null
+        recentPhone ? classifyContactSource(recentPhone.contactTypeId) : null
       )
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(recentPhone?.number ?? null)

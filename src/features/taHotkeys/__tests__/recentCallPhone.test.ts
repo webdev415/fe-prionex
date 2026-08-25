@@ -128,6 +128,9 @@ describe('resolveRecentCallPhone', () => {
   })
 
   it('survives malformed records', () => {
+    // `customer_number` is required by the type, so a null one can only arrive
+    // from an API that broke its own contract — the cast reproduces that
+    // without weakening the interface that now guards the call site.
     const calls = [
       // `customer_number` is required by the type now, so a null one can only
       // arrive from an API that broke its own contract — the cast reproduces

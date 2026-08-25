@@ -42,10 +42,10 @@ export function useTAHotkeyLaunch(params: {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const current = latest.current
-      // The executor's own dialog is exempt from the "inside a dialog counts as
-      // typing" rule: otherwise the press is dropped here, the single-modal
-      // guard below never runs, and the operator gets silence where the ticket
-      // asks for an explanation.
+      // The executor's own dialog is exempt from the "inside a dialog counts
+      // as typing" rule: otherwise the press is dropped here and the
+      // single-modal guard below never runs, leaving the operator with silence
+      // where the ticket asks for an explanation.
       const templateId = resolveHotkeyTarget(event, current.bindings, {
         exemptDialogSelector: TA_EXECUTOR_DIALOG_SELECTOR,
       })

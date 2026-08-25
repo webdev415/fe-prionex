@@ -75,6 +75,12 @@ import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 import { pickSingleContactCandidate } from './taChainAutoSelect'
 import { applyStepEdits, collectFromSnapshot, type StepEdit } from './taChainSaveData'
+import {
+  decideEnterSave,
+  isPressForPanel,
+  NOTES_FIELD_ATTR,
+  resolveEnterSaveMode,
+} from './decideEnterSave'
 
 interface Props {
   clientId: number
@@ -108,10 +114,10 @@ interface Props {
    *
    * The two were one prop, and that quietly broke hotkey launches: a phone
    * resolved from a recent call always has a source, and setting
-   * ``contactSource`` filters the chain list — and with it the quick picks — to
-   * chains touching that source. A template bound to a chain that does not
-   * match simply vanished, so the modal opened and started nothing, which looks
-   * exactly like a broken shortcut.
+   * ``contactSource`` filters the chain list — and with it the quick picks —
+   * to chains touching that source. A template bound to a chain that does not
+   * match simply vanished, so the modal opened and started nothing, which
+   * looks exactly like a broken shortcut.
    *
    * Entry points that mean "show me only this phone's chains" keep passing
    * ``contactSource``. The hotkey path passes this instead: pre-select the
@@ -279,11 +285,11 @@ export function ChainExecutor({
     return all.filter((c) => (c.steps ?? []).some((s) => s.contact_source === contactSource))
   }, [chainsData, contactSource])
 
-  // Full TA data (for dropdown values + flags)
   // The source the prefilled phone belongs to. Distinct from `contactSource`,
   // which additionally narrows the chain list — see the prop docs.
   const prefillSource = prefilledPhoneSource ?? contactSource
 
+  // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
   const taById = useMemo(() => {
     const m = new Map<number, TargetAction>()
@@ -1555,9 +1561,91 @@ export function ChainExecutor({
     return branched
   }, [builderData])
 
+  // KAN-974 — Enter saves the interaction, as an alias for clicking Save.
+  //
+  // `canSave` mirrors what actually puts an enabled Save button on screen, in
+  // both modes: the wizard renders one only on the last step and only while
+  // nothing is finalising, auto-advancing or delay-blocked, and both modes
+  // disable it while their save is in flight. Enter must not reach further
+  // than the button, or it would submit from a step that has no Save at all.
+  //
+  // The ticket describes the wizard; instant mode is included because a
+  // hotkey launch lands in whichever mode the chain implies, and an Enter that
+  // worked for one template and silently did nothing for the next would look
+  // like a bug rather than a rule.
+  const enterSaveMode = resolveEnterSaveMode({
+    hasChain: Boolean(effectiveChain),
+    hasActiveInstance: Boolean(activeInstance),
+    isInstantMode,
+  })
+  // The panel body itself is behind two guards — a loading skeleton and a
+  // "no chains" message — and neither is implied by the wizard state below.
+  // `activeChain` can resolve from `activeChainById` while the chain LIST is
+  // still loading, so without this Enter could finalise an interaction from a
+  // screen showing a spinner.
+  const isPanelBodyRendered = !isLoadingChains && manualChains.length > 0
+
+  const canSaveOnEnter = !isPanelBodyRendered
+    ? false
+    : enterSaveMode === 'instant'
+      ? !instantSubmitting
+      : enterSaveMode === 'wizard' &&
+        Boolean(activeChain) &&
+        isLastStep &&
+        // An inline edit on a completed step is uncommitted work held in the
+        // form, not in `editedStepsRef` — only handleSaveEditStep writes
+        // there. Saving now would finalise the interaction with the old
+        // value and discard the edit, with no undo in the UI. Enter inside
+        // that form is exactly what an operator would press to commit it.
+        editingStep === null &&
+        !isFinalizing &&
+        !isAutoAdvancing &&
+        !isDelayBlocked &&
+        !createIntMut.isPending &&
+        !advanceMut.isPending
+
+  // Listens on the document, not on the panel: when the modal opens Radix puts
+  // focus on the dialog's content wrapper, which contains this panel rather
+  // than sitting inside it, so a panel-mounted handler sees nothing until the
+  // operator happens to tab into a field. `isPressForPanel` supplies the scope
+  // — the dialog this panel lives in, or the panel alone when there is no
+  // dialog (the dialer renders this executor inline).
+  //
+  // The listener is attached once and reads current values through a ref.
+  // Re-attaching on every change would be correct but noisy, and a stale
+  // closure over `canSaveOnEnter` would let Enter save from the wrong step.
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const enterSaveRef = useRef({ canSaveOnEnter, enterSaveMode, handleSave, handleInstantSave })
+  useEffect(() => {
+    enterSaveRef.current = { canSaveOnEnter, enterSaveMode, handleSave, handleInstantSave }
+  })
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Cheapest guard first, and not just for tidiness: `isPressForPanel`
+      // reads `offsetParent` and falls back to `getClientRects()`, both of
+      // which force a synchronous layout — and the fallback is the normal path
+      // here, since the modal's content is `position: fixed`. Without this line
+      // every character typed into the notes field would reflow the page.
+      if (event.key !== 'Enter') return
+      if (!isPressForPanel(event.target, panelRef.current)) return
+
+      const current = enterSaveRef.current
+      if (!decideEnterSave({ event, canSave: current.canSaveOnEnter })) return
+
+      event.preventDefault()
+      void (current.enterSaveMode === 'instant'
+        ? current.handleInstantSave()
+        : current.handleSave())
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // --- Unified panel: chain selector at top, body below adapts ---
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div ref={panelRef} className="flex w-full flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-foreground text-base font-semibold">
@@ -2424,6 +2512,8 @@ export function ChainExecutor({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder={t('pages.clientChains.notesPlaceholder')}
+                      // KAN-974: the one field where Enter stays a line break.
+                      {...{ [NOTES_FIELD_ATTR]: true }}
                     />
                   </div>
                 )}
@@ -2627,6 +2717,8 @@ export function ChainExecutor({
                   value={instantNotes}
                   onChange={(e) => setInstantNotes(e.target.value)}
                   placeholder={t('pages.clientChains.notesPlaceholder')}
+                  // KAN-974: the one field where Enter stays a line break.
+                  {...{ [NOTES_FIELD_ATTR]: true }}
                 />
               </div>
               {showNotifyResponsibleCheckbox && (
