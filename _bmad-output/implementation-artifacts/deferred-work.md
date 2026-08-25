@@ -4431,3 +4431,18 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   enforcement is on) to demonstrate anything beyond deny-all. **Owner: Oleg / `CRM/api-prionex`.**
   Related and separately filed above: the unrotated seed admin credential on the same internet-reachable
   stand.
+
+## Deferred from: Story 6.2 (2026-08-25)
+
+- 🔴 **AC4's acknowledgement is outstanding — the regulation is written, and the request has been
+  sent, but no attributed, dated statement has landed yet.** `docs/production-approval-
+  regulation.md` and `docs/prod-releases.md` are both complete; the story cannot close on AC4
+  without a quoted, dated, attributed statement from Oleg (or a person he names) that the
+  development and release teams have acknowledged the regulation — pasted into the Dev Agent
+  Record, not inferred from silence or from a merged PR (Prohibition 14). Per this project's own
+  convention for an unanswered dependency of this shape (`#d11`: *"обязательство по дате
+  отсутствует… дата, выведенная из сроков спринта, была бы выдуманной"*), no date is invented
+  here. **Owner: Oleg, via the coordinator** — not a trigger condition; the ask itself was sent
+  2026-08-25 as one consolidated message alongside the finished regulation text. Story 6.2's own
+  `sprint-status.yaml` row stays `in-progress` with this entry named as the reason, per the
+  story's own §3 HALT mapping, until the acknowledgement is pasted and Task 7.3/7.5 can run.

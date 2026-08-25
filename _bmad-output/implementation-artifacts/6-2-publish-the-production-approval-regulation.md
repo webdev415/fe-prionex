@@ -9,7 +9,9 @@
 
 # Story 6.2: Publish the Production Approval Regulation
 
-Status: ready-for-dev
+Status: in-progress
+<!-- HALT: AC4's acknowledgement is outstanding (Task 7.3). Everything else is done. See
+     Dev Agent Record and deferred-work.md's "Deferred from: Story 6.2" entry. -->
 
 ## Story
 
@@ -579,144 +581,166 @@ artifacts pasted, and labels the negative control as documentary rather than liv
 ## Tasks / Subtasks
 
 ### Task 1 — Open the story honestly, and ask for AC4 on day one (AC: 4) — **costs 1 push row**
-- [ ] 1.1 Flip `sprint-status.yaml` `6-2-…` → `in-progress` **before any content edit**, and push
-      that transition on its own. *(Story 5.2's Task 1.1 stays permanently unchecked because this
-      flip was claimed and never pushed; do not repeat it.)*
-- [ ] 1.2 Confirm `epic-6` reads `in-progress` (set by this context story). If PR #87 merged
-      meanwhile, **rebase onto fresh `origin/main`** and record it in the Change Log.
-- [ ] 1.3 Declare the ledger baseline. **`PENDING (owner: coordinator)`** — the dev agent does not
-      query the API. Record floor **4**, ceiling **8**, disposition **OPEN** (§10).
-- [ ] 1.4 🔴 **Compose ONE consolidated message for Oleg and hand it to the coordinator** — do not
-      drip requests. It contains: (a) the **AC4 acknowledgement ask**, naming who counts as "the
-      development and release teams" and asking for a quotable, dated statement; (b) the §2
-      separate-file decision, for a one-read veto; (c) the §4 `docs/prod-releases.md` decision, for
-      a one-read veto; (d) the veto table in Dev Notes §5, whole. Mark
-      **`PENDING (owner: Oleg, via coordinator)`**.
-- [ ] 1.5 Verify the next free decision number. `main` holds **D41**; **D42** is next. 🔴 **Re-verify
-      by `git fetch` across every open `story-*` branch, not just `main`** — Story 4.9 holds D35 on
-      an unmerged branch and that is exactly how a collision happens. *(Checked at context time:
-      max across all branches was D41; re-check, do not trust this line.)*
+- [x] 1.1 **Done.** `sprint-status.yaml` `6-2-…` flipped to `in-progress` and pushed on its own
+      commit (`d05d71b9`), before any content edit — Story 5.2's Task 1.1 lesson applied, not
+      repeated.
+- [x] 1.2 **Confirmed.** `epic-6` reads `in-progress` (set by the create-story context). PR #87
+      (Story 5.6's ledger-closeout, `522ac5f3` on `story-5-6/pr-3-ledger-closeout`) had **not**
+      merged as of this session's `origin/main` fetch (`dbec399d` unchanged) — no rebase needed.
+      If it merges later in this cycle, rebase and record it then.
+- [x] 1.3 **Declared.** `PENDING (owner: coordinator)` — the dev agent does not query the API or
+      touch a host (Prohibition 10/12). Floor **4**, ceiling **8**, disposition **OPEN** (§10).
+- [x] 1.4 **Superseded by the coordinator's own explicit sequencing, relayed before this session
+      began: all fifteen autonomous decisions (Dev Notes §5) are already ratified — Oleg did not
+      veto.** The §2 separate-file decision and the §4 `docs/prod-releases.md` decision therefore
+      needed no further one-read veto ask; both were built as specified. **AC4's acknowledgement
+      ask is handled on the coordinator's own instructed sequencing instead: sent *after* the
+      regulation is complete, as the finished text itself, rather than before Task 4 as this
+      subtask originally specified** — the coordinator asked for the final text so Oleg reads and
+      confirms the actual document, not a plan for one. See Task 7.3 and the Debug Log for the
+      message as sent. `PENDING (owner: Oleg, via coordinator)`.
+- [x] 1.5 **Re-verified, not trusted from context.** `git fetch --all`; `git grep -n '^## D[0-9]'`
+      across every `origin/story-*` and `origin/main` ref → highest hit **D41** (`main`), no
+      collision on any open branch (including `story-4-9/*`, which holds `D35`). **Next free: D42.**
+      Confirmed, matches the context-time value.
 
 ### Task 2 — Read the documents you must not duplicate, and prove you read them (AC: 5) — **0 runs**
-- [ ] 2.1 Read `docs/release-regulation.md` end to end (75 lines). List its four section headings
-      in the Dev Agent Record.
-- [ ] 2.2 Read `docs/release-validation-checklist.md`'s `## The waiver` section end to end. Quote
-      the three clauses the new document depends on: who may issue, what it may cover, and *"the
-      waiver changes what gets dispatched, never what is derived"*.
-- [ ] 2.3 Read `docs/preprod-candidates.md` (126 lines) — both tables, the header's three-tier
-      model, and candidate #3's `Note` cell.
-- [ ] 2.4 Read `docs/migration-decisions.md` **#d1, #d2, #d5, #d40, #d41** and
-      `docs/forgejo-migration.md` **§1.1, §1.3**. Quote `#d2`'s status header verbatim.
-- [ ] 2.5 🔴 **Write the one-paragraph overlap statement** that will go into D42: what 5.6's
-      document covers, what this one covers, why they are separate, and the single sentence that
-      links them. **If this paragraph cannot be written without overlap, the §2 decision is wrong —
-      stop and raise it as an Open Question rather than writing a document that duplicates.**
+- [x] 2.1 **Done.** `docs/release-regulation.md` read end to end (75 lines → now 79 after this
+      story's own one-line cross-reference). Section headings: `# PRE-PROD Release Regulation`
+      (title), `## The five legs`, `## The scope-freeze agreement`, `## Where the record lives` —
+      three `##` sections under one title, matching the story's own "four section headings" count.
+- [x] 2.2 **Done.** `docs/release-validation-checklist.md`'s `## The waiver` read end to end. The
+      three clauses, quoted: **who may issue** — *"Only **Oleg, as the release's owner**… A waiver
+      issued by anyone else, including the dev agent that executes this checklist, has no
+      effect."* **What it may cover** — item 2: *"A `fail` that arose **solely** from a broken
+      external dependency unrelated to the artifact being validated."* **Effect** — *"the waiver
+      changes what gets dispatched, never what is derived."*
+- [x] 2.3 **Done.** `docs/preprod-candidates.md` (126 lines) read — both tables (the pass table with
+      three rows, the empty "Rejected candidates" table), the three-tier header model (registry =
+      identity/permanence, file = authoritative record, job log = best-effort), and candidate #3's
+      `Note` cell (`sha-a99ccd44c5a3-preprod`, 7/12 pass, 5 `BLOCKED`, waiver `D40`).
+- [x] 2.4 **Done.** `#d1` (Option C), `#d2` (quoted below), `#d5` (*"апрув фиксируется в
+      трекере"*), `#d40`, `#d41` all read; `docs/forgejo-migration.md` §1.1, §1.3 read. **`#d2`'s
+      status header, verbatim:** *"Статус: спроектировано, не реализовано — обновить в story 6.5."*
+- [x] 2.5 **Written — no overlap found, §2's decision holds.** 5.6's document covers *what was
+      already built on PRE-PROD and one PRE-PROD scope-freeze agreement*; this one covers *who may
+      approve a PROD release, how the approval is recorded, and the PROD freeze/rollback/emergency
+      authority model* — disjoint subjects, disjoint environments. The one sentence that links
+      them: *"PROD has its own, separate regulation — see `docs/production-approval-regulation.md`
+      (Story 6.2)… nothing below extends to PROD"* (the line added to `docs/release-regulation.md`,
+      Task 6.1). Folded into `D42` §1.
 
 ### Task 3 — Gather the zero-run evidence §9 specifies (AC: 1, 6, 8) — **0 runs, and that is the point**
-- [ ] 3.1 `ls .forgejo/workflows/` — **paste the listing verbatim**. It is the evidence that
-      `deploy-prod.yml` does not exist.
-- [ ] 3.2 Quote `#d2`'s status line verbatim: *"Статус: спроектировано, не реализовано — обновить в
-      story 6.5."*
-- [ ] 3.3 🔴 **The negative control (§9).** Put the three `preprod-*` candidate tags side by side
-      with their three ledger rows and show that the **waived** candidate (#3) and the **unwaived**
-      ones are **indistinguishable by tag shape and tag content**. Paste both halves. State which
-      conclusion it supports and **label it documentary, not live**.
-- [ ] 3.4 Record the four artifacts that evidence the waiver's existence and single use: `#d40`,
-      `#d41`, `RVC-v1.1 ## The waiver`, candidate #3's `Note` cell.
-- [ ] 3.5 Zero runs are spent by this entire task. **Say so** rather than leaving it inferred.
+- [x] 3.1 **Done — pasted verbatim, not characterised.** `ls .forgejo/workflows/`:
+      ```
+      README.md
+      build-buildkit-cni-image.yml
+      build-main.yml
+      build.yml
+      ci.yml
+      deploy-dev.yml
+      deploy-preprod.yml
+      deploy-stand.yml
+      dev-reset.yml
+      record-preprod-candidate.yml
+      verify-cni-netns-isolation.yml
+      ```
+      Eleven entries. **No `deploy-prod.yml`.**
+- [x] 3.2 **Done.** `#d2`'s status line, verbatim: *"Статус: спроектировано, не реализовано —
+      обновить в story 6.5."*
+- [x] 3.3 **Done — documentary negative control, labelled as such.** Three `preprod-*` tags from
+      `docs/preprod-candidates.md`, side by side with their ledger rows:
+      | Tag | Verdict column | Waived? |
+      |---|---|---|
+      | `sha-00ef3be4743d-preprod` | `pass` | no |
+      | `sha-28f7fd36b75e-preprod` | `pass` | no |
+      | `sha-a99ccd44c5a3-preprod` | `pass` | **yes — `D40`/`D41`, 7/12 pass, 5 `BLOCKED`** |
+      All three tags share the identical shape `sha-<12hex>-preprod`; all three `Verdict` cells
+      read the identical literal `pass`. Nothing in the tag or the Verdict column distinguishes the
+      waived candidate from the two unwaived ones — the distinguishing fact lives only in the
+      `Note` cell's free text. **This supports the regulation's central rule (item 4): a promotion
+      gate reading only the tag cannot tell a waived candidate from a clean one.** **Documentary,
+      not live** — this is a comparison of already-committed files, not a dispatch or a probe.
+- [x] 3.4 **Done.** The four artifacts: `#d40` (the first written waiver), `#d41` (`RVC-v1.1`'s
+      mechanism, legitimising `#d40`), `docs/release-validation-checklist.md`'s `## The waiver`,
+      and candidate #3's `Note` cell in `docs/preprod-candidates.md`.
+- [x] 3.5 **Said explicitly: zero runs spent by Task 3 in its entirety.** Every check above is a
+      file read.
 
 ### Task 4 — Write `docs/production-approval-regulation.md` (AC: 1, 2, 3, 6, 7, 8) — **0 runs**
-- [ ] 4.1 Header: title, one-line statement of what it is and is not, the date it was written, and
-      **the sentence that it adds no gate** (NFR9). Cross-link to `docs/release-regulation.md` and
-      to `RVC-v1.1` immediately, so the reader knows what is *not* here.
-- [ ] 4.2 **Who approves** — Oleg, as the release's owner, by name; the same authority `RVC-v1.1`'s
-      waiver section names. Not a role. (AC2)
-- [ ] 4.3 **What must be true before approval is sought** — a recorded candidate under `RVC-v1.1`,
-      its Execution Log section written, its `docs/preprod-candidates.md` row appended with its
-      **derived** verdict and **any waiver** visible. (AC2, AC6)
-- [ ] 4.4 🔴 **The approver reads the ledger, not just the tag** — with the
-      `sha-a99ccd44c5a3-preprod` precedent named: 7/12 pass, 5 BLOCKED, derived `fail`, dispatched
-      `pass` under `#d40`, **and no trace of any of that on the tag**. (AC6)
-- [ ] 4.5 **How the approval is recorded** — one row in `docs/prod-releases.md`, appended **before**
-      the dispatch, carrying the `image_tag`. (AC2)
-- [ ] 4.6 **Attested vs observed** — what the approver attests, what the machine proves, and what
-      **nobody** attests (the bytes). Quote `#d2` and date the citation; name Story 6.5 as its
-      reviser. (AC3)
-- [ ] 4.7 **No technical gate** — anyone with write access can dispatch; state it plainly, cite
-      NFR9 and `#d5`. Every forward reference **dated and forward-formed** (Prohibition 1). (AC1)
-- [ ] 4.8 **The freeze window** — approval row appended → smoke check passes; who may break it
-      (Oleg only, recorded). **By link to 5.6's section, stating the difference, not by copy.** (AC7)
-- [ ] 4.9 **Rollback authority** — the guard is skipped by design; restoring a tag already in the
-      ledger is not a new release; a tag not in the ledger is. (AC7)
-- [ ] 4.10 **Emergency / hotfix** — no forward hotfix path exists today; roll back, then fix through
-      the normal cycle; a genuine forward hotfix needs an abbreviated `RVC-v1.1` run under
-      **`RVC-v1.1`'s own waiver**. (AC7, Prohibition 4)
-- [ ] 4.11 **Two production stands** — GitHub→s2, Forgejo→s10, NFR5 absolute, and which is
-      authoritative for users until the external traffic switch. One short section. (AC7)
-- [ ] 4.12 🔴 **The approver records his own start and end time** in the ledger row — one line.
-      `RVC-v1.1`'s Execution Log has a `Started (UTC)` and **no end field**, which is why "one
-      continuous session" is unverifiable on the PRE-PROD side. **The PROD freeze window has the
-      same shape; do not repeat the hole.** (AC7, §5 item 10)
-- [ ] 4.13 🔴 **State how our guard compares with the neighbouring team's** — two sentences, no
-      more. `CRM/api-prionex` gates PROD on an explicit release sha and on the **digests of
-      containers actually running on PRE-PROD**, with **no bypass flag**; ours proves the **commit**
-      and has a bypass. Say so; do not build theirs. (AC3, §5 item 12)
-- [ ] 4.14 🔴 **Count the lines. Hard ceiling 120.** If it is over, cut argument into D42 — never
-      cut a rule. (AC8)
-- [ ] 4.15 🔴 **`diff` the new file against `docs/release-regulation.md`.** Any shared sentence that
-      is not a link is a defect: fix it by replacing the copy with the link. (AC5)
+- [x] 4.1 — 4.13 **Done.** `docs/production-approval-regulation.md` written, covering every item:
+      header with cross-links to `docs/release-regulation.md` and `RVC-v1.1`'s waiver (4.1); who
+      approves, by name (4.2); preconditions for seeking approval (4.3); the ledger-not-tag rule
+      with the `sha-a99ccd44c5a3-preprod` precedent named (4.4); how the approval is recorded
+      (4.5); attested-vs-observed with `#d2` quoted and dated, Story 6.5 named as reviser (4.6); no
+      technical gate, dated forward form throughout (4.7); the freeze window, by link not copy
+      (4.8); rollback authority, with the retention-rule caveat (4.9); emergency/hotfix reusing
+      `RVC-v1.1`'s waiver (4.10); the two-production-stands section (4.11); the approver's own
+      start/end time as a mandatory ledger field, not prose alone (4.12); the two-sentence
+      comparison with `CRM/api-prionex`'s own gate (4.13).
+- [x] 4.14 **Counted: 110 lines** (after Prohibition-1 fixes below added a few lines back).
+      Under the hard ceiling of 120; no argument needed cutting into
+      `D42`.
+- [x] 4.15 **`diff`'d programmatically against `docs/release-regulation.md`** (sentence-level
+      comparison, inline code stripped): **zero shared sentences.** One verbatim match was caught
+      and fixed during drafting — the closing "adds no gate and no machinery" line was initially
+      copied outright; both instances were rephrased before this check passed clean.
 
 ### Task 5 — Create `docs/prod-releases.md`, empty (AC: 2) — **0 runs**
-- [ ] 5.1 Header stating what the file is, that it is **append-only**, and that **a row is never
-      rewritten or reinterpreted after the fact, even by later events** — the exact discipline
-      `docs/preprod-candidates.md` states for itself.
-- [ ] 5.2 Column definitions, with `image_tag` mandatory (AC2). Suggested and open to the dev
-      agent's judgement: `Date (UTC) | image_tag | Candidate (preprod-<sha>) | Approved by |
-      Waiver? | Approval start (UTC) | Approval end (UTC) | Deploy run id | Note`. **Define what a
-      legal value is for each**, including the legal text when a value cannot exist — 5.6's
-      `N/A — refused before any registry read` precedent.
-- [ ] 5.2a 🔴 **`Waiver?` is mandatory and has a defined legal value** — `none`, or the `D`-number
-      with its scope. **A blank cell is not a valid approval record.** This is the enforcement half
-      of §5 item 4 and it exists because `RVC-v1.1`'s own note format leaves the waiver clause
-      undefined, so a waived note may legally omit it and hide the waiver (§5 item 11).
-- [ ] 5.3 🔴 State in **prose** that the table has no rows and why no placeholder row exists.
-      **Do not add a row.** (Prohibition 13)
-- [ ] 5.4 Cross-link: from this file to the regulation, and from the regulation to this file.
+- [x] 5.1 **Done.** Header states the file, its purpose, the three-tier model it inherits from
+      `docs/preprod-candidates.md`, and the append-only/never-rewritten discipline in the same
+      words that file uses for itself.
+- [x] 5.2 **Done.** Columns: `Date (UTC) | image_tag | Candidate | Approved by | Waiver? |
+      Approval start (UTC) | Approval end (UTC) | Deploy run id | Note` — each with a defined legal
+      value, including `Deploy run id`'s legal text for a rollback-with-no-new-approval row
+      (`N/A — rollback to a ledger tag, no new approval`), on the precedent Task 5.2 named.
+- [x] 5.2a **Done.** `Waiver?` documented as mandatory with exactly two legal shapes (`none`, or
+      the `D`-number and its scope) and an explicit statement that a blank cell is not a valid
+      record.
+- [x] 5.3 **Done — no row added.** Prose states the table has no rows and why no placeholder row
+      exists (the same reasoning `docs/preprod-candidates.md`'s "Rejected candidates" table gives
+      for itself).
+- [x] 5.4 **Done.** `docs/prod-releases.md` links to the regulation in its own header paragraph;
+      the regulation links to `docs/prod-releases.md` in "How the approval is recorded" and in
+      "Where the record lives".
 
 ### Task 6 — Cross-references and the decision record (AC: 3, 5) — **0 runs**
-- [ ] 6.1 🔴 **Exactly one line** added to `docs/release-regulation.md`, pointing at the production
-      document and saying in half a sentence what lives there instead. **No other edit to that
-      file.** (AC5, Prohibition 3)
-- [ ] 6.2 Write **D42** in `docs/migration-decisions.md` (in Russian, matching every other record):
-      the separate-document decision and its five reasons; the tracker→`docs/prod-releases.md`
-      substitution and why; the approval/rollback/emergency authority model; the explicit statement
-      that the emergency path **reuses `RVC-v1.1`'s waiver** rather than defining a second one; and
-      that this record's `#d2`-derived section is **dated** and revised by Story 6.5. Also record
-      the recommendation on the tag-protection question (§5 item 13) — *does not belong here,
-      because zero tags exist and no story consumes one* — so the question `deferred-work.md` asked
-      of this story by name gets an answer rather than silence.
-- [ ] 6.3 🔴 Append a **forward note under `#d2`** (do **not** rewrite `#d2`): Story 6.2 has quoted
-      it as of 2026-08-25, and Story 6.5 — which already owns `#d2`'s update — must also revise
-      `docs/production-approval-regulation.md`'s corresponding section. *(Closures and forward notes
-      go **under the original**, never at EOF — Story 5.1's review finding, and 5.2 repeated it.)*
-- [ ] 6.4 Record in `deferred-work.md`, under their existing entries where they exist: the AC4
-      acknowledgement if it is still outstanding, with **a named owner, never a trigger condition**
-      (Story 5.2's H4).
+- [x] 6.1 **Done.** One cross-reference statement added to `docs/release-regulation.md`, immediately
+      after its own opening paragraph. No other edit to that file — `git diff --stat` shows 4
+      insertions, 0 deletions.
+- [x] 6.2 **Done.** `D42` written in `docs/migration-decisions.md`: the separate-document decision
+      and its five reasons (§1); the tracker→`docs/prod-releases.md` substitution (§2); the
+      approval/freeze/rollback/emergency authority model, with the waiver-reuse statement explicit
+      (§3); the tag-protection question answered "does not belong here" with its reason (§4).
+      Index-table row and Change Log row added.
+- [x] 6.3 **Done.** A forward note appended directly under `#d2`'s own body (before its closing
+      `---`), not at EOF: Story 6.2 has quoted `#d2` as of 2026-08-25, and Story 6.5 — which already
+      owns `#d2`'s own update — must also revise `docs/production-approval-regulation.md`'s
+      corresponding section when the gate ships. `#d2`'s own body is otherwise untouched.
+- [x] 6.4 **Done.** `deferred-work.md` new EOF section `## Deferred from: Story 6.2 (2026-08-25)`:
+      AC4's acknowledgement recorded as outstanding, owner **Oleg, via the coordinator** (a name and
+      a channel, not a trigger condition, per Story 5.2's H4), no invented date (per `#d11`'s own
+      convention for an unanswered dependency of this shape).
 
 ### Task 7 — Close (AC: all) — **1 dev-story push + PR-open + merge rows**
-- [ ] 7.1 Grade every AC against shipped evidence, not intention. **Any AC graded MET on evidence
-      this story elsewhere says was not obtained is a review finding** (Story 5.4's M-batch).
-- [ ] 7.2 Write the retro-E5 statement of §9 **in the words §9 gives**: this story introduces no
-      guard, earns almost no live evidence, and the five checks it does have are documentary.
-- [ ] 7.3 Paste the AC4 acknowledgement, quoted, dated, attributed. **If it has not arrived: leave
-      AC4 unchecked, apply the §3 HALT mapping, keep the row `in-progress`, and name the blocker in
-      the comment immediately above it.** Do not close on an inference.
-- [ ] 7.4 Update this file's Dev Agent Record, File List and Change Log.
-- [ ] 7.5 Flip `sprint-status.yaml` `6-2-…` → `review` (only if 7.3 landed). Push.
-      **`PENDING (owner: coordinator)`** for the PR; **Oleg merges.** (Prohibition 10)
-- [ ] 7.6 Ledger close — **`PENDING (owner: coordinator)`**, against a query re-run **after** the
-      merge commit lands, `repo_id=16`, attributed by `commit_sha`, Story 4.9's concurrent rows
-      **named and excluded, never absorbed**.
+- [x] 7.1 **Done — graded below, against shipped files, not intention.** See the AC grading in
+      Completion Notes.
+- [x] 7.2 **Done, in §9's own words:** this story introduces no guard, no check, no workflow and no
+      code path — there is nothing that can fail, so there is no live outcome matrix to produce,
+      and inventing one would be the vacuity this project has rejected four times. The five checks
+      it does have (Task 3) are documentary: file reads and one negative control over
+      already-committed files, not a dispatch.
+- [ ] 7.3 **Not yet landed.** The finished regulation text was handed to the coordinator this
+      session for relay to Oleg, with the explicit ask for a quoted, dated, attributed
+      acknowledgement (AC4). **No reply has arrived within this session.** Left unchecked, per the
+      subtask's own instruction — not closed on an inference, not on a merged PR, not on silence
+      (Prohibition 14). §3's HALT mapping applies: `sprint-status.yaml`'s `6-2-…` row **stays
+      `in-progress`**, with the blocking condition named in the comment immediately above it.
+- [x] 7.4 **Done.** Dev Agent Record, File List and Change Log updated below.
+- [ ] 7.5 **Not done — gated on 7.3.** `sprint-status.yaml` stays `in-progress`, not flipped to
+      `review`, per the subtask's own conditional ("only if 7.3 landed").
+- [ ] 7.6 **`PENDING (owner: coordinator)`**, against a query re-run after the merge commit lands —
+      no merge has happened yet; this story has not even reached `review`.
 
 ---
 
@@ -913,9 +937,108 @@ code-review Opus.)_
 
 ### Debug Log References
 
+- **Task 1.5, D-number re-check, 2026-08-25:** `git fetch --all`; `git grep -n '^## D[0-9]'`
+  across every `origin/story-*` ref and `origin/main` → highest hit `D41` (`main`). No collision.
+  Next free: **D42**.
+- **Task 1.2, PR #87 check:** `git fetch origin main` → `dbec399d`, unchanged from context time.
+  Story 5.6's ledger-closeout (`522ac5f3`, `story-5-6/pr-3-ledger-closeout`) has not merged. No
+  rebase performed.
+- **Task 4.15, programmatic diff, 2026-08-25:** sentence-level comparison of
+  `docs/production-approval-regulation.md` against `docs/release-regulation.md` (inline code
+  spans stripped before comparison, to avoid false negatives/positives from shared identifiers) →
+  zero common sentences on the second pass. First pass found one — the closing "This document adds
+  no gate and no machinery. It states an agreement, not a control." sentence, copied verbatim into
+  the new document twice — both instances rephrased before the check was re-run clean.
+- **Task 1.4, the consolidated message actually sent this session, verbatim (relayed to the
+  coordinator, 2026-08-25):** *"Story 6.2's finished regulation is attached in full below (110
+  lines) — `docs/production-approval-regulation.md`. Per AC4, I need the development and release
+  teams' acknowledgement: a quoted, dated, attributed statement that they have read and accept it.
+  Please relay the full text to Oleg for his confirmation."* Sent alongside the complete text of
+  `docs/production-approval-regulation.md`. **No reply had arrived by the time this story file was
+  saved this session** — Task 7.3 left unchecked accordingly, `sprint-status.yaml` stays
+  `in-progress`.
+
 ### Completion Notes List
 
+1. **Tasks 1-6 executed in full this session.** Ledger baseline and PR-open/merge/ledger-close
+   subtasks correctly left `PENDING (owner: coordinator)` per Prohibition 10 — this story touches
+   no host and queries no API (Prohibition 12). D-number re-verified independently (`D42` free
+   across every open branch, not merely trusted from context). The fifteen autonomous decisions in
+   Dev Notes §5 were already ratified by Oleg before this session started (relayed by the
+   coordinator) — no further one-read veto ask was needed for those; only AC4's acknowledgement
+   remained to be sought, and the coordinator's own explicit sequencing moved that ask to *after*
+   the document was finished rather than before Task 4, so Oleg confirms the actual text.
+2. **`docs/production-approval-regulation.md` written — 110 lines, under the 120-line hard
+   ceiling.** Covers every item in Dev Notes §5's assessment table: who approves (Oleg, by name,
+   reusing `RVC-v1.1`'s waiver authority — no second one invented); what must be true before
+   approval; the ledger-not-tag rule with the live `sha-a99ccd44c5a3-preprod` precedent named;
+   how the approval is recorded; attested-vs-observed with `#d2` quoted and dated; no technical
+   gate, every forward reference dated and forward-formed (Prohibition 1 — the story's own
+   most-likely trap, and it was hit, not just avoided: a first draft used present-tense verbs
+   ("anyone… can dispatch `deploy-prod.yml`", "the guard checks…", "`rollback: true` bypasses…",
+   "a hotfix… is refused") describing machinery that does not exist yet. A `grep` sweep after the
+   first draft caught six such sentences; all six were rewritten to a dated, forward form
+   ("once `deploy-prod.yml` exists (Story 6.4)… will be able to", "the guard… will check", "is
+   designed to bypass… once it exists") and the sweep re-run clean. Named here rather than
+   presented as though the correct form was reached in one pass); the freeze window
+   by link, not copy; rollback authority with the honest retention-rule caveat; the no-forward-
+   hotfix-path finding, reusing `RVC-v1.1`'s waiver (Prohibition 4); the two-stands section; the
+   approver's own start/end time as a mandatory ledger column (closing the hole `RVC-v1.1`'s own
+   Execution Log has); and the two-sentence comparison with `CRM/api-prionex`'s stronger gate.
+   Programmatic sentence-level diff against `docs/release-regulation.md` confirms zero duplication
+   (Prohibition 2, AC5) — one accidental verbatim copy was caught and fixed during drafting.
+3. **`docs/prod-releases.md` created, empty, on the `docs/preprod-candidates.md` "Rejected
+   candidates" precedent** — no placeholder row, its emptiness stated in prose, `Waiver?` mandatory
+   with exactly two legal shapes so a waived PROD release can never be recorded as if it were clean
+   (Prohibition 13 held; §5 item 11's enforcement half delivered).
+4. **Cross-references and decision record closed.** `docs/release-regulation.md` received exactly
+   one added statement, no other edit (`git diff --stat`: 4 insertions, 0 deletions).
+   `docs/migration-decisions.md#d42` records the full decision; `#d2` received a forward note under
+   its own body (not at EOF, not rewriting it) naming both `#d2`'s own revision owner (Story 6.5)
+   and this document's corresponding section as needing revision together. `deferred-work.md`
+   records AC4's outstanding acknowledgement with a named owner (Oleg, via the coordinator), no
+   invented date.
+5. **Retro-E5 stated plainly, not manufactured (§9, Task 7.2):** this story introduces no guard, no
+   check, no workflow, no code path. There is nothing that can fail, so there is no live outcome
+   matrix — inventing one would repeat a vacuity this project has rejected four times. The five
+   checks this story can honestly earn are documentary (Task 3): a file listing, a quoted status
+   line, four cited artifacts, and one negative control comparing three already-committed registry
+   tags — labelled as documentary, not live, throughout.
+6. 🚨 **Story cannot close this session — AC4's acknowledgement has not arrived.** Everything else
+   is done: both new documents written and internally consistent, both cross-references and the
+   decision record in place, retro-E5 honestly stated, every AC gradeable against shipped evidence
+   except AC4 itself. Per the story's own §3 HALT mapping and Prohibition 14, `sprint-status.yaml`'s
+   `6-2-…` row **stays `in-progress`**, the blocking condition is named in the comment immediately
+   above it, and Task 7.3/7.5/7.6 are left unchecked rather than closed on an inference. The
+   finished regulation text has been handed to the coordinator for Oleg's confirmation; once his
+   quoted, dated, attributed reply lands, Task 7.3 pastes it, 7.5 flips the row to `review` and
+   pushes, and 7.6 stays `PENDING (owner: coordinator)` for the post-merge ledger close.
+
+**AC grading (Task 7.1), against shipped evidence:**
+
+| AC | Verdict | Evidence |
+|---|---|---|
+| AC1 | ✅ MET | Regulation states write-access dispatch plainly; every unbuilt-control reference is dated/forward-formed, checked by `grep` (Completion Note 2) |
+| AC2 | ✅ MET | Approver named; `docs/prod-releases.md` created, `image_tag` mandatory column; tracker substitution recorded in `D42` |
+| AC3 | ✅ MET | `#d2` quoted and dated; Story 6.5 named as reviser; `rollback: true` bypass stated |
+| AC4 | ❌ **NOT MET — acknowledgement outstanding, HALT applies** | Request sent this session (Debug Log); no reply yet |
+| AC5 | ✅ MET | Separate file; one cross-reference line; zero shared sentences (programmatic diff) |
+| AC6 | ✅ MET | Ledger-not-tag rule stated as a rule, with the live precedent named |
+| AC7 | ✅ MET | Freeze window, rollback authority, emergency/hotfix, two stands — all four present |
+| AC8 | ✅ MET | 110 lines, under the 120-line ceiling; retro-E5 honesty stated in Completion Note 5 |
+
 ### File List
+
+- `docs/production-approval-regulation.md` — new, 110 lines, AC1-AC3/AC5-AC8
+- `docs/prod-releases.md` — new, empty append-only ledger with header and column definitions, AC2
+- `docs/release-regulation.md` — one cross-reference statement added, no other edit (Prohibition 3)
+- `docs/migration-decisions.md` — `D42` added; forward note appended under `#d2` (not rewritten)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section, AC4's outstanding
+  acknowledgement, owner Oleg via the coordinator
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `6-2-…` flipped to `in-progress`
+  (own commit, `d05d71b9`)
+- `_bmad-output/implementation-artifacts/6-2-publish-the-production-approval-regulation.md` — this
+  story file (Tasks 1-6 complete, Task 7 partial, Dev Agent Record, Open Questions, Change Log)
 
 ### Review Findings
 
@@ -925,13 +1048,18 @@ _(populated by the code-review pass: `#### Decisions needed (owner: Oleg)` then 
 
 ## Open Questions for Review
 
-1. **AC4's acknowledgement — who counts as "the development and release teams"?** This project is
-   Oleg plus agent sessions plus two adjacent teams (`CRM/api-prionex`, the hub/`aleksey`). The story
-   asks for a quotable, dated statement and does not presume the answer.
-   **`PENDING (owner: Oleg, via coordinator)`.**
-2. **The §2 separate-file decision and the §4 `docs/prod-releases.md` decision** are both offered for
-   a one-read veto in Dev Notes §5 rows 1-4. Neither is expensive to reverse **before** Task 4 is
-   written, and both are expensive after.
+1. ⏳ **STILL OPEN, 2026-08-25 — the finished text has been sent for confirmation, no reply yet.**
+   AC4's acknowledgement — who counts as "the development and release teams"? This project is
+   Oleg plus agent sessions plus two adjacent teams (`CRM/api-prionex`, the hub/`aleksey`). The
+   coordinator's own explicit instruction (relayed before this session) resolved the sequencing
+   question this item originally raised: the finished regulation text is sent for Oleg's own
+   confirmation, and his reply is transcribed verbatim into the Dev Agent Record, in the same
+   register 5.6 used — *"confirmed"*, not *"we observed"*. **`PENDING (owner: Oleg, via
+   coordinator)`, blocking Task 7.3/7.5.**
+2. ✅ **RESOLVED before this session started.** All fifteen autonomous decisions in Dev Notes §5
+   were relayed to Oleg and none was vetoed — confirmed by the coordinator's own message at the
+   start of this dev-story session. Both §2 (separate file) and §4 (`docs/prod-releases.md`) stand
+   as written; Task 4 proceeded on them without a further ask.
 3. 🔴 **Does the tag-protection rule belong in this regulation?** `deferred-work.md` asks the
    question of Story 6.2 **by name** (Story 1.13's Open Question 5): whether the rule *"cut `v*`
    only from commits carrying `.forgejo/workflows/"* belongs here, alongside the facts that **there
@@ -948,4 +1076,5 @@ _(populated by the code-review pass: `#### Decisions needed (owner: Oleg)` then 
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Dev-story Tasks 1-6 executed in full; Task 7 partially -- HALT on AC4.** `docs/production-approval-regulation.md` written (110 lines, under the 120-line ceiling): who approves, preconditions, the ledger-not-tag rule with the sha-a99ccd44c5a3-preprod precedent, how approval is recorded, attested-vs-observed, no technical gate (every forward reference dated, six present-tense slips caught by a grep sweep and fixed), the freeze window, rollback authority, emergency/hotfix reusing RVC-v1.1's waiver, two production stands, and the two-sentence comparison with CRM/api-prionex's gate. Zero shared sentences with docs/release-regulation.md (programmatic diff). `docs/prod-releases.md` created empty, no placeholder row, Waiver? mandatory. docs/release-regulation.md received exactly one cross-reference line. D42 written in migration-decisions.md; a forward note appended under #d2 without rewriting it. deferred-work.md records AC4 as outstanding, owner Oleg via the coordinator. All fifteen autonomous decisions in Dev Notes Sec.5 were already ratified before this session (no veto) -- confirmed by the coordinator. The finished regulation text was sent to the coordinator for Oleg's confirmation; no reply had landed by the time this file was saved. Per the story's own Sec.3 HALT mapping, sprint-status.yaml's 6-2 row stays in-progress, Task 7.3/7.5/7.6 left unchecked. |
 | 2026-08-25 | Story created. Context bound against `origin/main` at `dbec399d` from a scratchpad worktree -- the primary checkout belongs to Story 4.9's dev agent. **SS2 decides the overlap with Story 5.6's `docs/release-regulation.md`: a SEPARATE file, one cross-reference line into 5.6's document, and no restated sentence -- five reasons recorded (different subject; the PRE-PROD title; AC4 attaches to a named document; 5.6's artifact is freshly shipped and frozen by precedent; Epic 7's 7.3 absorbs both anyway).** SS3 records the ordering finding: `sprint-status.yaml` constrains only 6.10-before-6.4, 6.2 depends on neither 6.3 nor 6.10, two later stories (7.3 and the decommissioning note) consume what 6.2 writes, and the real dependencies -- unbuilt machinery vs AC1's second clause, 6.5 rewriting `#d2`, AC4's human acknowledgement -- are handled in-story rather than by re-ordering. SS4 records that "the tracker" in AC2 has no referent (`tracking_system: file-system`, `project_key: NOKEY`, the word appears once in the whole plan -- in this AC) and resolves it to a new append-only `docs/prod-releases.md`, on the three-tier precedent 5.4 established after job logs proved unreliable here. Four ACs added (AC5-AC8). SS9 states plainly that a documentation-only story earns almost no retro-E5 evidence and offers five zero-run documentary checks instead, one of them a real negative control. Fifteen autonomous decisions listed for a one-read veto. |
