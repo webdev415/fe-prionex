@@ -6,7 +6,7 @@
 
 # Story 5.6: Exercise the Full Release Cycle on an Empty Release
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -848,10 +848,9 @@ text into `deferred-work.md` finding 8's closure note.
 
 ### Task 1 — Open the story (AC: all) — **costs 1 push row**
 
-- [ ] 1.1 Flip `sprint-status.yaml`'s `5-6-exercise-the-full-release-cycle-on-an-empty-release` from
-      `ready-for-dev` to `in-progress` and **push that commit on its own, first**. This is the one
-      falsifiable checkbox in the whole story — Story 5.2's **H1** found it checked `[x]` while
-      `git log -p` proved `in-progress` was never written. Do not batch it.
+- [x] 1.1 **Done, own commit, pushed first.** Flipped `sprint-status.yaml`'s
+      `5-6-exercise-the-full-release-cycle-on-an-empty-release` from `ready-for-dev` to
+      `in-progress`, and this story's own `Status:` field to `in-progress` too.
 - [ ] 1.2 Confirm the gate: `5-5-establish-the-release-validation-checklist` reads **`done`**.
       ✅ **Satisfied at story-writing time** — PR #85 merged as `a99ccd44` while this context was
       being written, flipping 5.5 to `done` and amending `RVC-v1`'s executability lines in place.
