@@ -183,8 +183,20 @@ export function ImportTypeBadge({
     },
   }
 
-  if (importType === 'tag_assignment') {
+  // Client tags and contact tags share the assign/remove badge shape but name
+  // different entities, so the label depends on both the import type and the
+  // mode.
+  if (importType === 'tag_assignment' || importType === 'contact_tag_assignment') {
     const isRemove = tagMode === 'remove'
+    const isContact = importType === 'contact_tag_assignment'
+    const label = isRemove
+      ? isContact
+        ? t('pages.imports.history.importTypes.contactTagRemoval', 'Contact tag removal')
+        : t('pages.imports.history.importTypes.tagRemoval', 'Tag removal')
+      : isContact
+        ? t('pages.imports.history.importTypes.contactTagAssignment', 'Contact tag assignment')
+        : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')
+
     return (
       <span
         className={cn(
@@ -192,9 +204,7 @@ export function ImportTypeBadge({
           isRemove ? 'bg-error-50 text-error-600' : 'bg-success-50 text-success-600'
         )}
       >
-        {isRemove
-          ? t('pages.imports.history.importTypes.tagRemoval', 'Tag removal')
-          : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
+        {label}
       </span>
     )
   }

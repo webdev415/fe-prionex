@@ -477,6 +477,9 @@ export function ImportHistoryPage() {
       case 'tag_assignment':
         navigate('/dashboard/import/bulk-tag-assignment')
         return
+      case 'contact_tag_assignment':
+        navigate('/dashboard/import/bulk-contact-tag-assignment')
+        return
       case 'operator_assignment':
         navigate('/dashboard/import/bulk-operator-assignment')
         return

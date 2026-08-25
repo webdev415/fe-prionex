@@ -777,6 +777,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.CLIENTS.ASSIGN_TAGS,
           },
           {
+            path: '/dashboard/import/bulk-contact-tag-assignment',
+            label: t('navigation.bulkContactTagAssignment', 'Bulk Contact Tag Assignment'),
+            // `user-multiple` rather than `tag-01`: these tag a client's
+            // contacts, not the client, and the two entries sit next to
+            // each other in this menu.
+            icon: 'user-multiple',
+            requiredPermission: PERMISSIONS.CONTACT_TAGS.ASSIGN,
+          },
+          {
             path: '/dashboard/import/bulk-payment-import',
             label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
