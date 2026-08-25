@@ -60,7 +60,7 @@ interface IncomingCallWindowContainerProps {
    * upward because the window is remounted per call, so only the parent is
    * still around to say anything once the next one replaces it.
    */
-  onUnsavedChange?: (unsaved: boolean) => void
+  onUnsavedChange?: (callId: string, unfiled: boolean) => void
   /** Called once the call is over from this operator's point of view. */
   onDismiss: () => void
 }
@@ -123,8 +123,9 @@ export function IncomingCallWindowContainer({
 
   const hasUnsavedWriteUp = hasUnfiledWriteUp(draft, interactionSaved)
   useEffect(() => {
-    onUnsavedChange?.(hasUnsavedWriteUp)
-  }, [hasUnsavedWriteUp, onUnsavedChange])
+    // Named, so the report cannot be mistaken for the next call's answer.
+    onUnsavedChange?.(incomingCall.call_id, hasUnsavedWriteUp)
+  }, [incomingCall.call_id, hasUnsavedWriteUp, onUnsavedChange])
 
   const isEnded = ended || endedByOperator
   const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'

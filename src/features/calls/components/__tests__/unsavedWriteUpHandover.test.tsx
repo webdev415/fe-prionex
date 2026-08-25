@@ -59,7 +59,7 @@ const call: IncomingCallData = {
   loans: [],
 }
 
-function renderWith(draftReported: (unsaved: boolean) => void, ended = false) {
+function renderWith(draftReported: (callId: string, unfiled: boolean) => void, ended = false) {
   return render(
     <IncomingCallWindowContainer
       incomingCall={call}
@@ -82,8 +82,8 @@ describe('reporting an unfiled write-up', () => {
     const reported = vi.fn()
     renderWith(reported)
 
-    expect(reported).toHaveBeenCalledWith(false)
-    expect(reported).not.toHaveBeenCalledWith(true)
+    expect(reported).toHaveBeenCalledWith(call.call_id, false)
+    expect(reported).not.toHaveBeenCalledWith(call.call_id, true)
   })
 
   it('reports work the operator has actually entered', async () => {
@@ -92,7 +92,7 @@ describe('reporting an unfiled write-up', () => {
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Promised Friday' } })
 
-    await waitFor(() => expect(reported).toHaveBeenCalledWith(true))
+    await waitFor(() => expect(reported).toHaveBeenCalledWith(call.call_id, true))
   })
 })
 

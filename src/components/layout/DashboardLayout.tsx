@@ -37,6 +37,7 @@ import {
   type UseIncomingCallOptions,
 } from '@/features/calls/hooks/useIncomingCall'
 import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
+import { useUnfiledWriteUpWarning } from '@/features/calls/hooks/useUnfiledWriteUpWarning'
 import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
 import { MinimizedCallPill } from '@/features/calls/components/MinimizedCallPill'
 import {
@@ -527,42 +528,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // for why the popup may not render before then.
   const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
-  // Whether the window on screen is holding a write-up nobody has filed, and
-  // which call it belongs to. A queue can replace one call with the next while
-  // the operator is still writing the previous one up: the window is keyed per
-  // call, so it remounts empty and the write-up goes with it. The queue's
-  // wrap-up time is a few seconds — far less than a write-up takes — so this is
-  // ordinary rather than exceptional, and the operator has to be told rather
-  // than left to assume it saved.
-  const unsavedWriteUpRef = useRef(false)
-  const handleUnsavedChange = useCallback((unsaved: boolean) => {
-    unsavedWriteUpRef.current = unsaved
-  }, [])
-
   // A new call always arrives expanded, never inheriting the last one's state.
   const [callMinimized, setCallMinimized] = useState(false)
   useEffect(() => {
     setCallMinimized(false)
   }, [incomingCall?.call_id])
 
-  const shownCallRef = useRef<string | null>(null)
-  useEffect(() => {
-    const nextCall = incomingCall?.call_id ?? null
-    const previousCall = shownCallRef.current
-    shownCallRef.current = nextCall
-    // Only a *replacement* — one call giving way directly to another. Closing
-    // a window yourself is a decision, and does not deserve to be reported
-    // back to you as a loss.
-    if (!nextCall || !previousCall || nextCall === previousCall) return
-    if (!unsavedWriteUpRef.current) return
-    unsavedWriteUpRef.current = false
-    toast.warning(
-      t(
-        'pages.clients.modals.callDialog.previousWriteUpLost',
-        'The previous call was not written up — that interaction was not saved.'
-      )
-    )
-  }, [incomingCall?.call_id, t])
+  const reportUnfiledWriteUp = useUnfiledWriteUpWarning(incomingCall?.call_id)
 
   // Last in the header, after the user menu, per the design. Defined once
   // because the desktop and mobile header variants render the same pill.
@@ -1341,7 +1313,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             agentExtension={agentExtension}
             minimized={callMinimized}
             onMinimize={() => setCallMinimized(true)}
-            onUnsavedChange={handleUnsavedChange}
+            onUnsavedChange={reportUnfiledWriteUp}
             onDismiss={dismissIncomingCall}
           />
         )}
