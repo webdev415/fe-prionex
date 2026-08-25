@@ -67,6 +67,12 @@
     "contactTags": "Теги контактів"
   },
   "dialer": {
+    "phone": {
+      "offline": "Офлайн",
+      "connecting": "Підключення",
+      "ready": "Готово",
+      "error": "Помилка телефону"
+    },
     "title": "Дайлер",
     "comingSoon": "{{section}} — незабаром",
     "tabs": {
