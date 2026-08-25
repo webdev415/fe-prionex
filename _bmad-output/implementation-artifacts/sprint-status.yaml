@@ -1295,6 +1295,14 @@ development_status:
   # the merits -- main wrote that block while epic-6 had not started, and 6.2 (Epic 6's first story,
   # 6.1 cancelled) started it. The block's own `backlog` value is superseded by this line, not by an
   # edit to the block, which is left exactly as 5.6's closeout wrote it.
+  # 📍 EPIC 6 as of 2026-08-25: 6.2 is the epic's FIRST COMPLETED story (6.1 is `cancelled`, no
+  # action taken on GitHub). 1 done + 1 cancelled of 10; 6.3-6.10 remain `backlog`, so the epic
+  # stays `in-progress`. Ordering constraint still standing: 6.10 (the s10 contour) MUST complete
+  # before 6.4. What 6.2 leaves behind for them: docs/production-approval-regulation.md (the
+  # organizational control that exists INSTEAD of a technical gate, NFR9), docs/prod-releases.md
+  # (the approval ledger, empty, ten defined columns), and D42. Story 6.5 owns updating #d2 AND the
+  # regulation's corresponding section when the promotion guard ships -- a forward note sits under
+  # #d2 itself so the dated citation cannot go stale silently.
   epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
   # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
@@ -1412,7 +1420,33 @@ development_status:
   # the document classifies as a release; a ledger-tag rollback stays available). Risk owner Oleg,
   # accepted 2026-08-25. AC8 ceiling 125 -> 130, shipped 127 -- a different reason from the first
   # raise, recorded separately. Status stays `review`; Oleg merges.
-  6-2-publish-the-production-approval-regulation: review
+  # ✅ CLOSEOUT 2026-08-25 (story-6-2/pr-2-ledger-closeout, from a fresh worktree off origin/main
+  # at 1cdb0f35). PR #88 merged by Oleg as 1cdb0f35. LEDGER CLOSED BY QUERY, not self-report
+  # (retro-D4): GET /api/v1/repos/CRM/fe-prionex/actions/tasks, grouped by run_number, attributed by
+  # commit_sha -- never by id range. MEASURED 10 RUNS, DISPATCHES ZERO -- the story's declared
+  # footprint ("every row is a ci.yml run caused by a push, not a deliberate dispatch") is CONFIRMED
+  # BY MEASUREMENT, not asserted. 7 push rows on pr-1-context (one per commit: 797f4576, d05d71b9,
+  # 9b6fa4ac, 811a9b8c, d39151b6, fc3287e0, 7eabd41e), 2 pull_request rows from PR #88 (fc3287e0,
+  # 7eabd41e), 1 push row on main (1cdb0f35, build-main.yml). ci.yml 9 / build-main.yml 1;
+  # push 8 / pull_request 2.
+  # 🔴 DECLARED CEILING 8 -> MEASURED 10. Overrun 2, NAMED not absorbed. Model defect, recorded for
+  # reuse: it budgeted "dev-story = 1 push" but three commits landed, and carried NO line for the
+  # D1/D2 decision commit or the origin/main integration merge; it also OVER-predicted the PR side
+  # (5 assumed, 2 real -- #88 opened after d39151b6 was already pushed). Corrected ceiling: 10.
+  # 🔴 THE main RUN COUNTS, and is listed on its own line -- a main-branch row, named separately the
+  # way Epic 5 named a foreign row, but it is this story's because the declared model carries
+  # "Merge run (build-main.yml) | 1" inside both floor and ceiling. Calling it merely "adjacent"
+  # would shrink the overrun 2 -> 1 by relabelling; that is the smoothing this project forbids.
+  # 🔴 run_number spans 552-562 -- ELEVEN numbers for TEN runs. One number inside the range is
+  # someone else's work, excluded because its commit_sha matches none of this story's commits. The
+  # commit_sha attribution rule earning its keep on a live example: an id-range close would have
+  # billed 11.
+  # 🔴 NOT "all green" -- state as of the query, 2026-08-25. Two runs CANCELLED by ordinary
+  # concurrency eviction from later pushes, not failures (11575 Unit Tests on 797f4576; 11685 Build
+  # and Push on d39151b6), counted because they consumed a row. Two Build and Push still RUNNING at
+  # query time (11947 on 7eabd41e, 11950 on 1cdb0f35) -- no terminal verdict claimed; a final figure
+  # needs a re-query.
+  6-2-publish-the-production-approval-regulation: done
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
