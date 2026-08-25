@@ -1274,7 +1274,7 @@ development_status:
   # docs/preprod-candidates.md are READ-ONLY; docs/release-regulation.md takes exactly one line.
   # No host is touched at all, so NFR5 is satisfied by construction. Epic 5's closeout PR #87 may
   # merge mid-session -- rebase.
-  6-2-publish-the-production-approval-regulation: ready-for-dev
+  6-2-publish-the-production-approval-regulation: in-progress
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
