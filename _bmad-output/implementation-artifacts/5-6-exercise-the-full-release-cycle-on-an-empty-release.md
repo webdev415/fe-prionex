@@ -1049,15 +1049,24 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 
 ### Task 4 — R1: mint the candidate (AC: 3) — **1 run**
 
-- [ ] 4.1 Coordinator dispatches `build.yml` with `ref: <candidate commit>`, `environment: preprod`.
-      Mark `PENDING (owner: coordinator)` until the run id comes back.
-- [ ] 4.2 Record the run id, and **`started` and `stopped` from `action_run`**. `started` is the
-      reference instant for P2 and F2 c4 — not the image's `created` time.
-- [ ] 4.3 Read the new tag back from the registry: digest, and
-      `imagetools inspect --format '{{json .Image}}'` labels. **Label the label read as a consistency
-      check, not an independent one** — 5.4's M1: all three of G6's clauses are identities here.
-- [ ] 4.4 Assert the tag shape is exactly `sha-<12 hex>-preprod`. G3 requires **exactly 12**; a
-      length mismatch fails every legitimate release and would be discovered at R3 otherwise.
+- [x] 4.1 **Done — run 1308, SUCCESS.** Coordinator dispatched `build.yml`,
+      `ref: a99ccd44c5a39345fa65eb74e87343b187e129e9`, `environment: preprod`.
+- [x] 4.2 **Recorded, own psql channel.** `action_run` id `1308`: `started` `2026-08-25T13:23:29Z`,
+      `stopped` `2026-08-25T13:26:00Z`, duration **151 s** (~2.5 min). `ref` and `commit_sha` both
+      the full candidate SHA — confirms the dispatch targeted the pinned commit exactly, not a
+      moved branch tip. **`started = 2026-08-25T13:23:29Z` is the reference instant P2 and F2 c4
+      will compare the bundle epoch against.**
+- [x] 4.3 **Read back, own credential-safe channel on s1 — new digest, single manifest, labels
+      match.** `sha-a99ccd44c5a3-preprod` → `Docker-Content-Digest:
+      sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2` — genuinely new,
+      distinct from both prior candidates (`5e5b190d…`, `d2f6aefc…`). `Content-Type:
+      application/vnd.oci.image.manifest.v1+json`, no `manifests` key present — **single image
+      manifest, not an index** (matches `--prefer-index=false`'s own intent). Config blob labels:
+      `org.opencontainers.image.revision = a99ccd44c5a39345fa65eb74e87343b187e129e9`,
+      `org.opencontainers.image.version = a99ccd44c5a3`, `org.prionex.environment = preprod` — all
+      three match. **Labelled as a consistency check, not an independent one** — 5.4's M1: for a
+      `build.yml`-produced artifact, all three of G6's clauses are identities.
+- [x] 4.4 **Confirmed.** `sha-a99ccd44c5a3-preprod` — `a99ccd44c5a3` is exactly 12 hex characters.
 
 ### Task 5 — R2: put the candidate on the stand (AC: 4) — **1 run**
 
@@ -1608,6 +1617,15 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
     holds), no marker bump. **F11 and F12 explicitly excluded from the waiver** — no proven
     blockage for either, both join the live seven; a live failure on either **widens** the waiver
     before R3, never gets massaged into the note. Ready for R1.
+11. **R1 dispatched and verified, 2026-08-25 — run 1308, SUCCESS.** Coordinator dispatched
+    `build.yml` (`ref` = full candidate SHA, `environment: preprod`). Independently re-verified
+    on my own channel, not taken on the coordinator's report alone: new digest
+    (`sha256:a62e868786…`, distinct from both prior candidates), single OCI image manifest (no
+    `manifests` index key), config-blob labels match the candidate exactly
+    (`revision`/`version`/`environment`, labelled as a consistency check per 5.4's M1, not an
+    independent one). `action_run` `started`/`stopped` read directly: 151 s. Bug report for
+    `CRM/api-prionex` composed and handed to the coordinator to relay, maximally self-contained
+    (root cause, live confirmation, git-blame provenance, suggested fix). R2's body sent next.
 
 ### File List
 
@@ -1650,6 +1668,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **R1 dispatched and independently verified -- run 1308, SUCCESS (151s).** build.yml, ref=full candidate SHA, environment=preprod. New digest confirmed distinct from both prior candidates; single OCI image manifest (not an index); config-blob labels (revision/version/environment) match, labelled a consistency check per 5.4's M1. Tag shape confirmed exactly 12 hex. Bug report for CRM/api-prionex composed and handed to the coordinator. R2's dispatch body sent. |
 | 2026-08-25 | **Oleg's written waiver recorded (D40) BEFORE any dispatch.** Five items -- F5 (reclassified BLOCKED: a live CRM/api-prionex bug, not a fixture gap, blocks the validator from getting past a 500), F6, F7, F8, F10 (BLOCKED on infrastructure/data absence). Single-candidate scope (sha-a99ccd44c5a3-preprod), true count preserved in the future validation_note (7/12 pass, 5 BLOCKED), no RVC-v1 marker bump. F11/F12 explicitly not waived -- join the live seven; a live failure on either widens the waiver, never gets massaged into the note. Ready for R1. |
 | 2026-08-25 | **Fixture investigation complete -- a genuine CRM/api-prionex bug found, path calculus changed, recommendation: do not proceed to Task 4.** Sandbox confirmed by Oleg (F7/F10/F12 side effects unblocked); Oleg stated he had not prepared fixtures. Investigated PRE-PROD's real state read-only across seven service DBs; created two synthetic test clients via the normal API (F5). Found GET /api/v1/clients/{id} 500s for every client -- a real migration gap in CRM/api-prionex's own repository (ten Debt-model columns with no migration), not a fixture gap, filed in deferred-work.md with owner CRM/api-prionex. This makes F5 very likely a genuine fail rather than BLOCKED, which matters because RVC-v1's waiver mechanism only covers BLOCKED items -- so even a full waiver on the four cleanly-BLOCKED items (F6, F7, F8, F10) would not reach pass unless F5 is also reclassified BLOCKED. Ceiling recomputed: 7 of 12 solid (P1/P2/F1/F2/F3/F4/F9), F6/F7 hard-blocked, F8/F10 cannot reach full pass, F5 pivotal, F11/F12 uncertain but immaterial to the conclusion. No dispatch made; full map handed to the coordinator for Oleg's path decision. |
 | 2026-08-25 | **Task 3.6 closed (both free rejection rows earned, bodies pasted verbatim, independently re-verified against this session's own psql -- zero action_run rows from either probe). Tasks 9.2 and 9.3 pulled forward, zero-dispatch, per the coordinator's invitation to move anything else while the fixture package is outstanding: 9.2 composed the existing validation history from the registry set plus one git log call; 9.3 wrote docs/release-regulation.md in full (five legs, all four scope-freeze points, no new gate). Only 9.1 (elapsed time) remains correctly gated on Tasks 4-8's own dispatches. |
