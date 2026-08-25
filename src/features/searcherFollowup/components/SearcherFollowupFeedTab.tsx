@@ -37,7 +37,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus } from '@/lib/errors'
+import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { readUrlDateBound } from '@/lib/urlDateBound'
@@ -172,17 +172,39 @@ export function SearcherFollowupFeedTab() {
 
   const errorStatus = getErrorStatus(query.error)
   const isForbidden = errorStatus === 403
-  const errorMessage = isTransientFailure(query.error)
-    ? // Covers the endpoint's own 503 too: it fails loud when EITHER the
-      // auth-service directory or the call-service is down (never a partial
-      // feed — a missing "last call" would read as "never called").
+  const isUnavailable = isTransientFailure(query.error)
+  const errorMessage = isUnavailable
+    ? // Covers all FOUR of the endpoint's own 503s — the auth-service directory
+      // being down, the call-service being down, the call-service throttling
+      // past one retry, and the two lookups together blowing the fan-out
+      // deadline. The operator's move is the same in all four (wait and retry),
+      // and none may degrade to a partial feed: a silently missing "last call"
+      // would read as "never called" and send an operator to re-dial somebody
+      // who was called an hour ago.
       t('pages.reports.searcherFollowup.unavailable')
     : isForbidden
       ? t('pages.reports.searcherFollowup.forbidden')
-      : errorStatus === 400
-        ? // Backend date/timezone validation answers 400 with a human-readable detail
-          getErrorMessage(query.error)
+      : // Backend date/timezone validation answers 400 with a human-readable
+        // detail — and so does the candidate cap, whose detail names the count,
+        // the maximum and the remedy ("ask for a narrower window"). Passing it
+        // through verbatim is what makes that refusal actionable; a generic
+        // message would leave the operator with no idea which knob to turn.
+        // Only when the answer HAS a detail, though: a 400 whose body never
+        // arrived would otherwise show axios' own untranslated "Request failed
+        // with status code 400" (see hasResponseDetail), so it joins every
+        // other unexplained failure under the localized generic title.
+        errorStatus === 400 && hasResponseDetail(query.error)
+        ? getErrorMessage(query.error)
         : t('pages.reports.searcherFollowup.error.title')
+
+  // The four 503s are worded distinctly by the backend on purpose — the
+  // remedies differ and monitoring must tell an outage from a timeout from
+  // throttling — so the server's own sentence is shown UNDER the localized one
+  // rather than instead of it: the operator reads their language, and whoever
+  // is asked "what does it say?" can tell which dependency failed. Absent for a
+  // transport-level failure (a 502/504 or a dropped connection carries no body).
+  const errorDetail =
+    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -249,6 +271,9 @@ export function SearcherFollowupFeedTab() {
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />
           <p className="text-foreground text-center text-sm font-medium">{errorMessage}</p>
+          {errorDetail && (
+            <p className="text-muted-foreground text-center text-xs">{errorDetail}</p>
+          )}
           {/* Retrying cannot fix missing permissions — no button on 403 */}
           {!isForbidden && (
             <Button variant="secondary" size="sm" onClick={() => query.refetch()}>

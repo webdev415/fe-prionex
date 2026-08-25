@@ -48,6 +48,13 @@ export const REPORTS_URL_KEYS = {
   communicationGap: { sellFrom: 'gf', sellTo: 'gt', gapMin: 'gm', page: 'gpg', pageSize: 'gps' },
   /** «Обіцянки по операторах» (operatorPromises). */
   operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+  /**
+   * «Вхід без відпрацювання» feed (inboundFollowup). `n` for iNbound: the
+   * obvious `i…` spellings are the searcher feed's (`if`/`it`), and this feed
+   * is its closest sibling — sharing a prefix is exactly how a transplant gets
+   * written by accident.
+   */
+  inboundFollowup: { dateFrom: 'nf', dateTo: 'nt', page: 'npg', pageSize: 'nps' },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

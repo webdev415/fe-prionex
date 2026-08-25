@@ -52,6 +52,7 @@ describe('REPORTS_URL_KEYS', () => {
         pageSize: 'gps',
       },
       operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+      inboundFollowup: { dateFrom: 'nf', dateTo: 'nt', page: 'npg', pageSize: 'nps' },
     })
   })
 })

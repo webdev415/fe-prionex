@@ -371,19 +371,29 @@ describe('useUrlPagedFeedFilters', () => {
   it('neither consumes nor clobbers any other tab’s registered URL keys', async () => {
     // The host page keeps every tab's params in the URL at once. For EACH
     // paged feed's registered key set, mount the shell on a URL carrying every
-    // OTHER registered key (host, processing, verification, both sibling
+    // OTHER registered key (host, processing, verification, the other paged
     // feeds, operator-promises — whatever the registry holds now or grows
     // next) and drive every kind of write the shell can make. Each foreign key
     // must survive verbatim. One sweep here replaces a per-tab backfill every
     // time a new tab's keys join the registry.
-    const feeds = [
-      REPORTS_URL_KEYS.lowVerificationFeed,
-      REPORTS_URL_KEYS.searcherFollowup,
-      REPORTS_URL_KEYS.communicationGap,
-    ]
+    //
+    // The set is DERIVED from the registry rather than listed: a paged feed is
+    // exactly a registered owner declaring both a `page` and a `pageSize` key,
+    // so a new feed's set is swept the moment it is declared — a hand-kept list
+    // would have silently skipped it, and the docblock above promises "whatever
+    // the registry holds now or grows next".
+    const feeds = Object.values(REPORTS_URL_KEYS).flatMap((set) => {
+      const keys: Record<string, string> = set
+      return keys.page && keys.pageSize
+        ? [{ page: keys.page, pageSize: keys.pageSize, own: Object.values(keys) }]
+        : []
+    })
+    // Guards the derivation itself: a predicate that stopped matching would
+    // make the loop below vacuous and still pass.
+    expect(feeds.length).toBeGreaterThanOrEqual(4)
 
     for (const feed of feeds) {
-      const own = new Set<string>(Object.values(feed))
+      const own = new Set<string>(feed.own)
       const foreign = allReportsUrlKeys()
         .filter(({ key }) => !own.has(key))
         .map(({ key }, index) => [key, `v${index}`] as const)
