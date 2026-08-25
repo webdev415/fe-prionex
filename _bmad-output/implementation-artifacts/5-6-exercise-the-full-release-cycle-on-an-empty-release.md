@@ -1596,6 +1596,18 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
    No dispatch made. The complete map — fixture matrix plus `deferred-work.md`'s new section — is
    what goes to Oleg now, not a further fixture request; the remaining decision is his alone
    (waiver naming which items, or an honest `fail` closing the story on Path C).
+10. 🚨 **Oleg's written waiver, 2026-08-25, recorded BEFORE any dispatch, per `RVC-v1`'s own rule
+    and the coordinator's explicit instruction.** Quoted precisely: a waiver on five items —
+    **F5** (reclassified `BLOCKED`: the dependency is a live `CRM/api-prionex` bug, not a fixture
+    gap — the validator cannot physically get past the `500` to test anything else in F5, which is
+    the actual definition of `BLOCKED`, distinct from a genuine `fail` that `RVC-v1`'s waiver
+    mechanism cannot cover), **F6, F7, F8, F10** (`BLOCKED` on infrastructure/data absence, causes
+    and owners exactly as the fixture matrix and `deferred-work.md` record them). Formal record:
+    `docs/migration-decisions.md#d40` — single-candidate scope (`sha-a99ccd44c5a3-preprod` only),
+    the true count preserved in the future `validation_note` (`7/12 pass, 5 BLOCKED`, `P+D+F+B==12`
+    holds), no marker bump. **F11 and F12 explicitly excluded from the waiver** — no proven
+    blockage for either, both join the live seven; a live failure on either **widens** the waiver
+    before R3, never gets massaged into the note. Ready for R1.
 
 ### File List
 
@@ -1604,21 +1616,27 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 - `_bmad-output/implementation-artifacts/deferred-work.md` — new EOF section, the unrotated-seed-credential security finding, owner Oleg
 - `/root/.rvc-preprod.creds` on s1 (host file, not in this repository) — F9/F4 fixture credentials, `chmod 600`, referenced but not versioned
 - `docs/release-regulation.md` — new, AC10's deliverable, one page, no frozen file touched
+- `docs/migration-decisions.md` — D40 added (Oleg's written waiver, single-candidate scope, five items)
 
 ---
 
 ## Open Questions for Review
 
-1. ✅ **RESOLVED, 2026-08-25 — Oleg's decision, relayed by the coordinator, all three of that
-   message's decision points closed.** (a) **Path A** — Oleg provisions the PRE-PROD restricted-role
-   account for F9; target is 12/12 executable, an honest aggregate `pass`, markers written, epic AC2
-   met in full. The account is awaited via Task 2's own package (below), not asked for separately.
-   (b) **Sandbox** — Oleg will confirm in writing, before F7/F10/F12 are executed, that calls/SMS/
-   payments do not leave the sandbox; Prohibition 8 stays enforced until that confirmation lands.
-   (c) **Regulation** — `docs/release-regulation.md` is written in this story (§9's own autonomous
-   decision), now with Oleg's veto closed rather than open. Path B/Path C remain the documented
-   fallbacks if Path A's account does not materialise in time — not re-litigated, just no longer the
-   default expectation.
+1. ✅ **FULLY RESOLVED, 2026-08-25 — final shape: Path A succeeded for F9 alone; Path B (a written
+   waiver) covers five further items found genuinely blocked during fixture investigation.**
+   (a) **Path A** — F9 provisioned and closed via the normal API (`rvc-operator`, Operator role);
+   this half reached its target. (b) **Sandbox** — Oleg confirmed in writing (quoted verbatim in
+   Task 2.3): *"песочница подтверждена — звонки/SMS/платежи на PRE-PROD не уходят наружу"* —
+   Prohibition 8 lifted for F7/F10/F12. (c) **Regulation** — `docs/release-regulation.md` written,
+   veto closed. **What changed after that:** the fixture investigation (Task 2.2) found F5, F6, F7,
+   F8, F10 genuinely blocked — F5 by a real `CRM/api-prionex` bug (not a fixture gap), the other
+   four by missing infrastructure/data this story cannot provision. **Oleg's final decision,
+   2026-08-25, written**: a Path B waiver naming exactly these five, recorded as
+   `docs/migration-decisions.md#d40` before any dispatch, per `RVC-v1`'s own rule. `validation_note`
+   will carry the true count — `7/12 pass, 5 BLOCKED`, not a disguised `12/12`. F11 and F12 are
+   explicitly **not** waived — no proven blockage exists for either, so both join the seven items
+   executed live; if either fails to pass when actually attempted, the waiver must be **widened**
+   before R3, not the verdict adjusted to fit.
 2. ✅ **Folded into the single consolidated package built at Task 2** (F9 account + operator creds +
    F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read), sent as one
    message per the coordinator's explicit instruction not to drip requests.
@@ -1632,6 +1650,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Oleg's written waiver recorded (D40) BEFORE any dispatch.** Five items -- F5 (reclassified BLOCKED: a live CRM/api-prionex bug, not a fixture gap, blocks the validator from getting past a 500), F6, F7, F8, F10 (BLOCKED on infrastructure/data absence). Single-candidate scope (sha-a99ccd44c5a3-preprod), true count preserved in the future validation_note (7/12 pass, 5 BLOCKED), no RVC-v1 marker bump. F11/F12 explicitly not waived -- join the live seven; a live failure on either widens the waiver, never gets massaged into the note. Ready for R1. |
 | 2026-08-25 | **Fixture investigation complete -- a genuine CRM/api-prionex bug found, path calculus changed, recommendation: do not proceed to Task 4.** Sandbox confirmed by Oleg (F7/F10/F12 side effects unblocked); Oleg stated he had not prepared fixtures. Investigated PRE-PROD's real state read-only across seven service DBs; created two synthetic test clients via the normal API (F5). Found GET /api/v1/clients/{id} 500s for every client -- a real migration gap in CRM/api-prionex's own repository (ten Debt-model columns with no migration), not a fixture gap, filed in deferred-work.md with owner CRM/api-prionex. This makes F5 very likely a genuine fail rather than BLOCKED, which matters because RVC-v1's waiver mechanism only covers BLOCKED items -- so even a full waiver on the four cleanly-BLOCKED items (F6, F7, F8, F10) would not reach pass unless F5 is also reclassified BLOCKED. Ceiling recomputed: 7 of 12 solid (P1/P2/F1/F2/F3/F4/F9), F6/F7 hard-blocked, F8/F10 cannot reach full pass, F5 pivotal, F11/F12 uncertain but immaterial to the conclusion. No dispatch made; full map handed to the coordinator for Oleg's path decision. |
 | 2026-08-25 | **Task 3.6 closed (both free rejection rows earned, bodies pasted verbatim, independently re-verified against this session's own psql -- zero action_run rows from either probe). Tasks 9.2 and 9.3 pulled forward, zero-dispatch, per the coordinator's invitation to move anything else while the fixture package is outstanding: 9.2 composed the existing validation history from the registry set plus one git log call; 9.3 wrote docs/release-regulation.md in full (five legs, all four scope-freeze points, no new gate). Only 9.1 (elapsed time) remains correctly gated on Tasks 4-8's own dispatches. |
 | 2026-08-25 | **Task 3 executed in parallel with the outstanding browser-fixture package.** Candidate pinned (main HEAD, a99ccd44c5a3), confirmed never recorded. AC2's diff and negative control executed and pasted verbatim (empty path-filtered, 37 commits / 13 files unfiltered). Compose-coupling assertion passed (empty diff, exact sha256). Pre-rehearsal registry state tabulated -- preprod-current confirmed unmoved since Story 5.4. log_in_storage re-checked (seventh time, still f/f). Only the two free HTTP-400 rejection rows remain, PENDING (owner: coordinator), bodies specified in Task 3.6. No dispatch made. |
