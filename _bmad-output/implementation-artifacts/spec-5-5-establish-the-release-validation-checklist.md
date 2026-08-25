@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-08-24'
 status: 'done'  # closeout (2026-08-25): CORS blocker independently re-verified lifted, RVC-v1 recounted (9/12 unblocked, F9 remains BLOCKED on its own precondition), ledger reconciled OPEN pending this PR's own merge
 baseline_revision: '35c1a39e4b9063af272fdb5e980a31ee13b1b92e'
-final_revision: 'PLACEHOLDER_CLOSEOUT_COMMIT'
+final_revision: 'fe3e2b90'
 review_loop_iteration: 2
 followup_review_recommended: false
 context:
