@@ -4256,3 +4256,56 @@ action items in the spec's own `## Review Findings` section and 3 more are decis
   investigation scope — PROD was not probed). **Owner: Oleg.** Not fixed here: rotating it is a
   write against a live credential store this story has no standing authorization to make outside
   the narrow, explicitly-authorised fixture-provisioning act above.
+
+## Deferred from: Story 5.6, fixture investigation (2026-08-25)
+
+- 🔴 **CRITICAL BUG FINDING, `CRM/api-prionex`, not this story's or Oleg's to fix — `GET
+  /api/v1/clients/{id}` returns HTTP 500 for every client, on PRE-PROD, root-caused to a genuine
+  model/migration drift in the `client` service's own repository.** Found while investigating F5's
+  fixture readiness: two synthetic test clients were created via the normal API
+  (`POST /api/v1/clients/`, `RVC TestClient` id=1 / `RVC SecondClient` id=2, obviously-synthetic
+  10-digit test TINs) — the list endpoint (`GET /api/v1/clients/`) correctly returned both, `200`,
+  but opening either one (`GET /api/v1/clients/{id}`) 500'd for both. `docker logs
+  crm-preprod-client-service` traced the exception to
+  `asyncpg.exceptions.UndefinedColumnError: column debts.principal_paid does not exist`.
+  Confirmed by reading `/Users/olegkuksa/Workspace/api-prionex_f/services/client/app/models/debt.py`
+  and every file under `services/client/alembic/versions/`: the `Debt` ORM model defines a full
+  "Payment Tracking (paid amounts)" block — `principal_paid`, `principal_written_off`,
+  `interest_paid`, `interest_written_off`, `penalties_paid`, `penalties_written_off`, `fines_paid`,
+  `fines_written_off`, `fees_paid`, `fees_written_off` (ten columns) — and **no migration anywhere
+  in the repository creates any of them.** PRE-PROD's live `debts` table (checked via read-only
+  `psql`, `alembic_version=157`) confirms all ten are genuinely absent. This is not a PRE-PROD-
+  specific deployment drift (the migration is not merely unapplied — it does not exist), so it is
+  very likely present on every environment running this exact commit of `services/client`,
+  including PROD, though PROD was not checked (out of this story's own scope). **Owner:
+  `CRM/api-prionex`** — relay through Oleg; this repository (`fe-prionex_f`) has no standing to fix
+  another team's migration gap, and this story does not attempt to (no `ALTER TABLE`, no schema
+  write of any kind was made or considered).
+  **Consequence for `RVC-v1`'s F5**: this makes F5 very likely `fail`, not merely `BLOCKED` — F5's
+  own text names *"a tab that spins forever, or that renders an error where the list showed rows,
+  is a `fail`"* as an explicit condition, and a `500` on the client-detail endpoint is exactly that
+  class of error. Not claimed as an observed verdict here (Prohibition 2: the dev agent does not
+  record F3-F12 verdicts), but named as a pre-flight technical fact material to the path decision.
+  **Consequence for F6/F8**: F6 (full payment lifecycle) and F8's payment/write-off/reversal-import
+  sub-items likely touch the same broken columns and inherit the blockage; F8's client-referencing
+  sub-items (operator/tag-assignment, document import) do not, and now have real client targets.
+- 🔴 **F6's debt-creation path was investigated and found to have no safe, direct route for this
+  story to use.** `services/client` exposes no `POST /debts`-shaped endpoint for an admin to create
+  a single debt directly; `DebtCreate` (`app/schemas/debt.py`) is documented "from CSV import" and
+  is driven only through a bulk loan-book/factoring import pipeline this story did not reverse-
+  engineer and drive blind, to avoid producing malformed fixture data under time pressure. **Owner:
+  CRM/api-prionex** (the import pipeline's own domain) if this needs unblocking beyond the F5 bug
+  above, which would block it regardless.
+- ⚠️ **F10's messaging integrations exist only as unconfigured stubs; the SMS gateway itself has
+  zero connection config.** `messaging_integrations` (5 rows: turbosms, omnicell, vodafone_obm,
+  my2_viber, intel_tele) are all `status=unconfigured`, `enabled_channels=[]`, no credentials.
+  `sms_configuration` has 0 rows. `sms_templates` has 5 real rows. A real SMS send is not
+  achievable without a real gateway account — a business/infra decision, not a fixture. **Owner:
+  Oleg** / whoever owns the messaging vendor relationship.
+- ⚠️ **F11's AI assistant runs against a mock provider on PRE-PROD, not a real LLM.**
+  `assistant_settings.assistant_enabled=true`, but `ai-assistant-service`'s own
+  `AI_ASSISTANT_PROVIDER=mock` with empty `AI_PROVIDER_BASE_URL`/`AI_PROVIDER_TOKEN`. Not a
+  blocker — the mock may satisfy `RVC-v1`'s black-box behavioural criteria — but disclosed so a
+  validator does not mistake a mock-provider pass for having tested the real integration. **Owner:
+  none needed — disclosure only**, unless Oleg decides real-provider testing is required, in which
+  case the owner would be whoever manages that provider account.

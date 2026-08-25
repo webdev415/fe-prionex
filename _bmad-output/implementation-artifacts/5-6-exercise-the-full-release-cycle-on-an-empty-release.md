@@ -892,26 +892,40 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 | F2 | Read access to `vars.VITE_OPERATOR_PHONE_URL_PREPROD` | **ANSWERED 2026-08-25**: confirmed absent (empty), matching the decided value; PROD's own variable exists with a real value but is a distinct name, unreachable from a preprod build | coordinator (Task 2.4, done) | N/A — resolved `EXECUTABLE`, no blockage |
 | F3 | A normal operator session (to test the 401/stale-token half) | **PROVISIONED 2026-08-25**: `rvc-operator` or `rvc-f4-flow`, either works | Oleg (login confirmed working by dev agent via API) | N/A — resolved, no blockage |
 | F4 | (1) normal operator creds; (2) an account with 2FA enabled; (3) a locked account; (4) a login attempt from outside the IP whitelist; (5) an account flagged for forced password change | **PROVISIONED 2026-08-25, ONE account suffices with correct sequencing**: `rvc-f4-flow`, created with `must_change_password: true`. Test order: (a) forced-password-change first (flag already set) — consumes the flag; (b) wrong-credentials / already-logged-in-elsewhere on the now-normal account — no extra fixture; (c) 2FA self-service setup (`POST /api/v1/auth/two-factor/setup` + `enable`) — Oleg's own hands-on step, TOTP device needed, not API-provisionable by the dev agent; (d) locked **last** — 5 deliberate failed logins (`MAX_FAILED_ATTEMPTS=5`), self-triggered live, not pre-staged. IP-whitelist refusal (item 6 in F4's own text) needs no account at all — it is a **global** allowlist (`POST /api/v1/admin/ip-whitelist`, `edit_users` permission, held by `admin`), not per-user | Oleg (creation + login verified by dev agent via API; 2FA/lockout/whitelist steps are Oleg's own hands-on execution during F4 itself) | N/A — resolved, no blockage, provided the sequencing above is followed |
-| F5 | Clients with real data on PRE-PROD (debt summary, activity, payment history all populated) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no client data)` |
-| F6 | A client suitable for a full payment lifecycle: record → edit → cancel → verify → receipt | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no payment-test client)` |
-| F7 | Telephony provisioned (dialer socket reachable) + a real phone/softphone that can ring in/out | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (telephony not provisioned)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing the outbound call regardless.** |
-| F8 | An import file with a deliberately malformed row; valid test data for all seven bulk-op pages (operator assignment, tag assignment, payment import, write-off import, reversal import, sale notes import, document import) | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (no import fixtures)` |
+| F5 | Clients with real data on PRE-PROD | **INVESTIGATED 2026-08-25, dev agent: was empty (0 rows), now 2 synthetic test clients created via `POST /api/v1/clients/` (`RVC TestClient` id=1, tax_id `0000000001`; `RVC SecondClient` id=2, tax_id `0000000002` — obviously-synthetic TINs, same fixture-naming precedent as `rvc-operator`). List endpoint confirmed `200`, real rows returned. But `GET /api/v1/clients/{id}` (needed to open a client) returns `500` for both — a genuine `CRM/api-prionex` code bug, not a fixture gap, see the new finding below** | dev agent (creation + list verified; the 500 is a pre-existing bug, not this story's or Oleg's to fix) | Very likely `fail`, not `BLOCKED` — F5's own text names "renders an error where the list showed rows" as an explicit fail condition, and that is exactly what the underlying API does |
+| F6 | A client suitable for a full payment lifecycle: record → edit → cancel → verify → receipt | **INVESTIGATED**: no direct single-POST debt-creation endpoint exists in `services/client` — `DebtCreate` is documented "from CSV import" and used only inside a bulk loan-book import pipeline, which the dev agent did not attempt to drive blind (real risk of malformed data). Also inherits F5's client-detail `500` | CRM/api-prionex (the import pipeline is theirs; not reverse-engineered here) | `BLOCKED — owner: CRM/api-prionex (no debt-creation path safely usable by this story, plus the F5 bug)` |
+| F7 | Telephony provisioned (dialer socket reachable) + a real phone/softphone that can ring in/out | **INVESTIGATED 2026-08-25**: `dialer_sim_cards`, `dialer_queues`, `operator_dialer_links` all 0 rows on PRE-PROD; no user (`admin`, `rvc-operator`, `rvc-f4-flow`) has `asterisk_extension`/`dialer_extension` set; the `dialer-service` container carries no Asterisk/SIP/AMI env vars at all (`call-service` does have AMI credentials configured, but that alone provisions no reachable phone). Setting an extension via the admin API (the field exists and is settable) would not make a real phone exist behind it — hard infrastructure gap, not a data fixture | Oleg / telephony infra owner — genuinely outside this story's or the dev agent's reach | `BLOCKED — owner: Oleg (telephony infrastructure not provisioned)`. **Sandbox confirmed 2026-08-25 (Oleg, written, relayed by coordinator) — Prohibition 8 is no longer the blocker here, the missing infrastructure is.** |
+| F8 | An import file with a deliberately malformed row; valid test data for all seven bulk-op pages (operator assignment, tag assignment, payment import, write-off import, reversal import, sale notes import, document import) | **INVESTIGATED 2026-08-25**: operator-assignment, tag-assignment and document-import reference existing `client_id`s — the two test clients created for F5 unblock these three in principle (the malformed-row file itself is trivial to construct once a real target exists). Payment-import, write-off-import and reversal-import reference an existing `loan_number`/`tin` — blocked on the same debt-creation gap as F6 | dev agent (client-referencing imports); CRM/api-prionex (debt-referencing imports, via F6) | `PARTIALLY BLOCKED — operator/tag/document imports now have a real target; payment/write-off/reversal imports blocked with F6` |
 | F9 | An account whose role lacks at least one dashboard route's permission | **PROVISIONED 2026-08-25**: `rvc-operator`, `role_id=3` (Operator, 24 of 141 Admin permissions — lacks `create_users`/`manage_roles`/`manage_settings`/`view_audit_logs` among others) | Oleg (creation + login verified by dev agent via API) | N/A — resolved, no blockage. **§3's blocker is closed.** |
-| F10 | Messaging/SMS integrations actually configured on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (messaging not configured)`. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real SMS send regardless.** |
-| F11 | AI assistant integration configured (keys/quota) on PRE-PROD | UNKNOWN | Oleg | `BLOCKED — owner: Oleg (AI assistant not configured)` |
-| F12 | EasyPay reachable from PRE-PROD | Render half: yes (no fixture). Validate/submit half: UNKNOWN | Oleg | Render → executable regardless. Validate/submit → `BLOCKED — owner: Oleg (EasyPay reachability unconfirmed)` if unconfirmed. **Also gated on Prohibition 8/§7: sandbox confirmation required before executing a real payment submission regardless.** |
+| F10 | Messaging/SMS integrations actually configured on PRE-PROD | **INVESTIGATED 2026-08-25**: `messaging_integrations` has 5 rows (turbosms, omnicell, vodafone_obm, my2_viber, intel_tele), every one `status=unconfigured`, `enabled_channels=[]`, no credentials — the settings page itself would show real, honest state (not blank), so that one sub-check may pass as-is. `sms_templates` has 5 real rows (template page has content). But `sms_configuration` (the gateway's own connection) has 0 rows — no real SMS gateway configured at all, so an actual send would fail | Oleg / messaging infra owner — a real gateway account is a business/infra decision, not an admin-API fixture | `BLOCKED — owner: Oleg (no SMS gateway configured)` for the send half; templates/integrations-page sub-checks likely executable as-is. **Sandbox confirmed 2026-08-25 — Prohibition 8 is no longer the blocker, the missing gateway is.** |
+| F11 | AI assistant integration configured (keys/quota) on PRE-PROD | **INVESTIGATED 2026-08-25**: `assistant_settings.assistant_enabled = true` (1 row) — enabled at the app level. But the `ai-assistant-service` container's own env: `AI_ASSISTANT_PROVIDER=mock`, `AI_PROVIDER_BASE_URL` empty, `AI_PROVIDER_TOKEN` empty — it is running against a **mock** backend, not a real LLM provider | dev agent (config read); disclosure only, not a blocker per se | **Not `BLOCKED` — technically executable, but testing the mock's behaviour, not a real AI integration. Flagged so Oleg does not mistake a mock-provider pass for testing the real thing; worth attempting live to see what the mock actually does (streaming, dictation, TTS may or may not be implemented in mock mode — unknown without trying).** |
+| F12 | EasyPay reachable from PRE-PROD | **INVESTIGATED 2026-08-25**: `payment-service` carries a full EasyPay env block (project/app/service IDs, callback URLs, secret/portal keys — presence only checked, no value read), **including `EASYPAY_MOCK_MODE=<set>`** — matches the sandbox requirement well. Render half needs no fixture. Validate/submit likely needs a resolvable debt/loan reference for the public `/pay` page's lookup — the same class of dependency as F6, unconfirmed without a live try | dev agent (config presence); live behaviour unconfirmed | **Looks genuinely well-positioned — best-configured of the six remaining items — but validate/submit's exact dependency on a real debt is unconfirmed, not yet BLOCKED, not yet proven clear either. Sandbox confirmed 2026-08-25.** |
 
-- [x] 2.2 **PARTIALLY RESOLVED, 2026-08-25.** F9 and F4's rows answered and closed: Oleg confirmed
-      the seeded `admin` login works on PRE-PROD and authorised provisioning through the normal API
-      (`POST /api/v1/admin/users`), not a DB write. Mechanism, exact accounts, and verification are
-      recorded in the Debug Log below. **F2 already closed (Task 2.4). Remaining open, still
-      `PENDING (owner: Oleg)`: F5, F6, F7, F8, F10, F11, F12's own fixtures**, sent as the
-      *updated* single package (below) — narrower than the original, since F9/F4/F2 no longer need
-      to be asked for.
-- [ ] 2.3 `PENDING (owner: Oleg)`. **Sandbox confirmation requested in the same package** (F7
-      telephony, F10 SMS/messaging, F12 EasyPay) — Prohibition 8 in force: none of F7's outbound
-      call, F10's campaign send, or F12's payment submission executes without it, regardless of
-      whether the fixture itself (2.1) exists.
+- [x] 2.2 **CLOSED, 2026-08-25 — investigated by the dev agent rather than asked of Oleg, per his
+      own written statement that he had not prepared fixtures and did not know the database's
+      state.** F9/F4/F2 already closed. **F5**: was empty, 2 synthetic test clients created via
+      the normal API — but client-detail (`GET /api/v1/clients/{id}`) `500`s for both, a genuine
+      `CRM/api-prionex` bug (missing migration for the `Debt` model's own "paid amounts" columns —
+      see `deferred-work.md`), not a fixture gap. **F6**: no safe direct debt-creation path exists
+      for this story to use (CSV/bulk pipeline only); also inherits F5's bug. **F7**: hard
+      infrastructure gap, zero telephony provisioned, not fixable by any API call. **F8**:
+      partially unblocked (client-referencing sub-pages now have real targets), partially blocked
+      (debt-referencing sub-pages inherit F6). **F10**: SMS gateway has zero connection config —
+      real send unreachable; templates/integrations-page sub-checks likely fine as-is. **F11**:
+      not blocked, but running against a `mock` AI provider, not a real one — disclosed. **F12**:
+      best-positioned (EasyPay fully configured including its own mock mode) but validate/submit's
+      dependency on a real debt is unconfirmed. **Full evidence and owners: the fixture matrix
+      below and the new `deferred-work.md` section.** No fixture ask goes back to Oleg for F5-F8/
+      F10-F12 individually — the map itself is the answer; what goes to him now is a **path
+      decision** (Task 2.5's own ceiling computation, below), not a fixture request.
+- [x] 2.3 **RESOLVED, 2026-08-25 — Oleg's written confirmation, relayed by the coordinator, quoted
+      verbatim: "песочница подтверждена — звонки/SMS/платежи на PRE-PROD не уходят наружу."**
+      Prohibition 8 is lifted: F7's outbound call, F10's campaign send and F12's payment submission
+      may now be executed, once their own fixtures (2.1) exist. **Oleg also stated plainly that he
+      did not prepare fixtures and does not know what is already in the database** — Task 2's own
+      fixture ask is therefore not answered by row-by-row confirmation from him; it is redirected to
+      a dev-agent investigation (below) before it goes back to him at all, since that is cheaper than
+      asking.
 - [x] 2.4 **Answered, coordinator's own channel, 2026-08-25.** `GET
       /repos/CRM/fe-prionex/actions/variables` → exactly one repo variable:
       `VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online`.
@@ -926,13 +940,26 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
       build. Recorded with owner **Story 6.4** in `deferred-work.md` (the PROD cutover inherits an
       already-provisioned value, but should re-verify it is still current at that time). **F2's own
       expected observation for this rehearsal is unchanged: `preprod` → EMPTY, confirmed.**
-- [x] 2.5 **Ceiling computed now, before anything is dispatched, per retro-E5.** Fixture-independent
-      today: P1, P2, F1 (3 items, no fixture, no external answer needed). F2 pending only the
-      coordinator's cheap variable read (2.4) — expected to resolve `EXECUTABLE` given the known
-      decided value. **F3-F12 (9 of 12) are `UNKNOWN` pending Oleg's answers to 2.1-2.3** — the
-      reachable ceiling **cannot honestly be stated as 12 today**, so per this task's own
-      instruction the path decision is escalated to Oleg now, bundled into the one package below,
-      rather than discovered expensively at dispatch time.
+- [x] 2.5 **Ceiling RECOMPUTED, 2026-08-25, after the fixture investigation — 🚨 12/12 is NOT
+      reachable today, and no waiver can currently reach `pass` either.** Solid: P1, P2, F1, F2,
+      F3, F4, F9 — **7 items**. Definitively `BLOCKED`, no path this story can unblock: **F6**
+      (no safe debt-creation route + inherits the bug below), **F7** (zero telephony
+      infrastructure). **F8** cannot reach a full pass (no degraded wording; 3 of 7 bulk pages
+      inherit F6's blockage). **F10** cannot reach a full pass on the send half (zero SMS gateway
+      config). **F5 is the pivotal finding**: a genuine `CRM/api-prionex` bug (`GET
+      /api/v1/clients/{id}` `500`s for every client — missing migration, not a fixture gap) makes
+      F5 **very likely `fail` if actually executed**, not `BLOCKED` — and `RVC-v1`'s waiver
+      mechanism (§3.2 Path B) only covers `BLOCKED` items, **not genuine fails**. 🚨 **This means
+      even a full documented waiver on F6/F7/F8/F10 would NOT produce a `pass`, because a real
+      `fail` on F5 cannot be waived away under `RVC-v1`'s own rule — only if F5 is instead
+      classified `BLOCKED` (owner `CRM/api-prionex`, on the grounds that its dependency is known
+      broken and no scenario lets a validator get past the error to test the rest of its
+      criteria) does a waiver-based `pass` become reachable at all, and even then it would need to
+      name five items (F5, F6, F7, F8, F10), not one.** F11 and F12 are uncertain but do not change
+      this conclusion either way. **Escalated to Oleg now, per this task's own instruction, with
+      the full map (fixture matrix + `deferred-work.md`'s new bug finding) rather than a fixture
+      request** — the investigation itself is the answer to what was asked; what remains is a path
+      decision only Oleg can make.
 - [x] 2.6 **Scheduled.** No-touch window: no dispatch, no live lock holder, **01:45–02:30 UTC**,
       next tick **2026-08-30**. Story opened 2026-08-25 — validation session to be scheduled once
       Oleg's package answers land, well clear of that window regardless of when in the interim it
@@ -1452,6 +1479,34 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
   **All three credentials (admin's seeded one included) filed at `/root/.rvc-preprod.creds` on s1,
   `chmod 600`, `root:root` — confirmed by `stat`.** No credential value appears anywhere in this
   story file, the Change Log, or any transcript.
+- **Task 2.2, fixture investigation, 2026-08-25 — Oleg's sandbox confirmation and his own
+  statement that fixtures were unprepared, both relayed by the coordinator.** Read-only DB survey
+  across all relevant PRE-PROD service databases (`crm-preprod-postgres-{client,payment,dialer,
+  call,sms,messaging,ai-assistant}`, `docker exec` + `psql`, no write): `client_db` and
+  `payment_db` fully empty (0 rows in every table checked); `dialer_db` fully empty
+  (`dialer_sim_cards`/`dialer_queues`/`operator_dialer_links` all 0); `sms_configuration` 0 rows,
+  `sms_templates` 5 rows; `messaging_integrations` 5 rows all `status=unconfigured`; `ai_assistant_
+  db.assistant_settings` 1 row, `assistant_enabled=true`. Env-var presence checked (names/booleans
+  only, never values) on the live containers: `ai-assistant-service`'s `AI_ASSISTANT_PROVIDER=mock`
+  (read directly, not a secret); `AI_PROVIDER_TOKEN` presence-only checked, empty; `payment-service`
+  carries a full EasyPay env block including `EASYPAY_MOCK_MODE`, presence-only; `call-service` has
+  Asterisk AMI credentials configured (presence-only), `dialer-service` has none.
+  **Created via the normal API, admin token obtained the same credential-safe way as `rvc-operator`
+  (script over SSH on s1, no password/token ever reaching this transcript):** two synthetic test
+  clients, `POST /api/v1/clients/` — `RVC TestClient` id=1 tax_id `0000000001`, `RVC SecondClient`
+  id=2 tax_id `0000000002` (obviously-synthetic 10-digit test TINs, never a real person's). List
+  endpoint confirmed `200` with both rows. Client-detail endpoint (`GET /api/v1/clients/{id}`)
+  confirmed `500` for both — traced via `docker logs crm-preprod-client-service` to
+  `asyncpg.exceptions.UndefinedColumnError: column debts.principal_paid does not exist`, then
+  confirmed as a genuine repository-level gap (not a PRE-PROD deployment drift) by reading
+  `services/client/app/models/debt.py` (ten "paid"/"written_off" columns defined) against every
+  file in `services/client/alembic/versions/` (none of the ten is ever created) and the live
+  `debts` table's own column list (`information_schema.columns`, none of the ten present).
+  **No debt, payment, import file, or other fixture was created** — `services/client` has no
+  direct single-POST debt-creation endpoint (`DebtCreate` is CSV-import-only), and this story
+  declined to reverse-engineer and drive that pipeline blind. Full findings filed in
+  `deferred-work.md`'s new EOF section, each with a real owner (`CRM/api-prionex`, or `Oleg`, or
+  "disclosure only").
 
 ### Completion Notes List
 
@@ -1522,6 +1577,25 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
    four required points including `G5`'s honest hole, pointers to `RVC-v1` and the ledger. **Task 9
    now has only 9.1 (elapsed time) left, which genuinely cannot run before Tasks 4-8's own
    dispatches exist** — not pulled forward, correctly gated.
+9. 🚨 **Fixture investigation complete, 2026-08-25 — recommendation: do not proceed to Task 4 yet.**
+   Investigated PRE-PROD's actual state (read-only DB survey across seven service databases,
+   env-var presence checks, no write) before asking Oleg anything further, per his own statement
+   that fixtures were unprepared. Created two synthetic test clients via the normal API where safe
+   to do so (F5). **Found a genuine `CRM/api-prionex` bug in the process**: client-detail `500`s
+   for every client, root-caused to a real migration gap (ten "paid"/"written_off" columns the
+   `Debt` model defines but no migration ever creates) — not fixable by this story, filed in
+   `deferred-work.md` with owner `CRM/api-prionex`. **This changes the path calculus materially**:
+   `RVC-v1`'s waiver mechanism (§3.2 Path B) only covers `BLOCKED` items, not genuine `fail`s, and
+   F5 is now very likely a genuine `fail` rather than a `BLOCKED` item — meaning even a full waiver
+   on the four cleanly-`BLOCKED` items (F6, F7, F8, F10) would not reach `pass` unless F5 is
+   *also* classified `BLOCKED` (defensible: its dependency is known broken, no validator can get
+   past the error). **Solid today: 7 of 12 (P1, P2, F1, F2, F3, F4, F9). Hard-blocked, no path
+   this story can unblock: F6, F7. Cannot reach a full pass: F8, F10 (no degraded wording, partial
+   sub-item blockage). Pivotal: F5 (bug, likely fail unless reclassified). Uncertain, doesn't
+   change the conclusion: F11 (mock provider), F12 (best-positioned, one unconfirmed dependency).**
+   No dispatch made. The complete map — fixture matrix plus `deferred-work.md`'s new section — is
+   what goes to Oleg now, not a further fixture request; the remaining decision is his alone
+   (waiver naming which items, or an honest `fail` closing the story on Path C).
 
 ### File List
 
@@ -1558,6 +1632,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Fixture investigation complete -- a genuine CRM/api-prionex bug found, path calculus changed, recommendation: do not proceed to Task 4.** Sandbox confirmed by Oleg (F7/F10/F12 side effects unblocked); Oleg stated he had not prepared fixtures. Investigated PRE-PROD's real state read-only across seven service DBs; created two synthetic test clients via the normal API (F5). Found GET /api/v1/clients/{id} 500s for every client -- a real migration gap in CRM/api-prionex's own repository (ten Debt-model columns with no migration), not a fixture gap, filed in deferred-work.md with owner CRM/api-prionex. This makes F5 very likely a genuine fail rather than BLOCKED, which matters because RVC-v1's waiver mechanism only covers BLOCKED items -- so even a full waiver on the four cleanly-BLOCKED items (F6, F7, F8, F10) would not reach pass unless F5 is also reclassified BLOCKED. Ceiling recomputed: 7 of 12 solid (P1/P2/F1/F2/F3/F4/F9), F6/F7 hard-blocked, F8/F10 cannot reach full pass, F5 pivotal, F11/F12 uncertain but immaterial to the conclusion. No dispatch made; full map handed to the coordinator for Oleg's path decision. |
 | 2026-08-25 | **Task 3.6 closed (both free rejection rows earned, bodies pasted verbatim, independently re-verified against this session's own psql -- zero action_run rows from either probe). Tasks 9.2 and 9.3 pulled forward, zero-dispatch, per the coordinator's invitation to move anything else while the fixture package is outstanding: 9.2 composed the existing validation history from the registry set plus one git log call; 9.3 wrote docs/release-regulation.md in full (five legs, all four scope-freeze points, no new gate). Only 9.1 (elapsed time) remains correctly gated on Tasks 4-8's own dispatches. |
 | 2026-08-25 | **Task 3 executed in parallel with the outstanding browser-fixture package.** Candidate pinned (main HEAD, a99ccd44c5a3), confirmed never recorded. AC2's diff and negative control executed and pasted verbatim (empty path-filtered, 37 commits / 13 files unfiltered). Compose-coupling assertion passed (empty diff, exact sha256). Pre-rehearsal registry state tabulated -- preprod-current confirmed unmoved since Story 5.4. log_in_storage re-checked (seventh time, still f/f). Only the two free HTTP-400 rejection rows remain, PENDING (owner: coordinator), bodies specified in Task 3.6. No dispatch made. |
 | 2026-08-25 | **F9 and F4 fixture accounts provisioned through CRM/api-prionex's normal API, closing two of Task 2's three package items.** Investigated the bootstrap mechanism first (read-only), found a seeded admin account with an unrotated default password already live on PRE-PROD, reported it before touching anything. Oleg confirmed the login and authorised provisioning. Created rvc-operator (Operator role, F9) and rvc-f4-flow (must_change_password: true, F4 -- one account suffices with correct test sequencing: forced-change -> normal checks -> 2FA self-service -> lockout last; IP-whitelist needs no account, it is global). Both verified by API login. No credential entered this file or any transcript; all three (including admin's) filed at /root/.rvc-preprod.creds on s1, chmod 600. Security finding (unrotated seed default, internet-reachable) filed in deferred-work.md, owner Oleg. Task 3 can now start in parallel with the remaining, narrower package (F5-F8/F10-F12 fixtures + sandbox confirmation). |
