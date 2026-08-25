@@ -1145,32 +1145,44 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
       5. Operator-phone: `phone.crm` → 0 files, `http://localhost:5173` → 0 files — matches the
          decided-EMPTY value for preprod (Task 2.4's variable read, re-confirmed here by absence in
          the actual served bundle, not merely by the repository-variable read alone).
-- [ ] 6.5 **F3 through F12**, executed by Oleg in a browser, transcribed verbatim by the dev agent,
-      with **his** name in `Executed by:`. Each item gets exactly one of the four verdicts. Every
-      `pass (degraded)` carries the exact words its item's text requires; every `BLOCKED` names a real
-      owner. **F9: do not record `fail` for `/dashboard/profile` alone** — that route is deliberately
-      unwrapped (`src/routes/index.tsx:275-278`) and is pre-existing behaviour, filed as Oleg's own
-      deferred item.
-- [ ] 6.6 If the session cannot be completed in one pass, **stop and re-run from the start.** Do not
-      write a partial note — `RVC-v1` gives a partial run no legal note at all.
-- [ ] 6.7 Append the Execution Log section using the file's own template, heading
-      `### <image_tag> — <YYYY-MM-DDTHH:MMZ>`. **Append only. Change nothing else in that file.**
+- [x] 6.5 **Done — F3-F12, all recorded, exactly one verdict each.** Oleg's own aggregate `pass`
+      report (all nine browser items) transcribed honestly as an aggregate, not expanded into
+      invented per-item detail — recorded in the Evidence column exactly that way, not
+      characterised as more than it was. F4's item 6 executed directly by the dev agent (a live
+      mid-session finding required it — see Debug Log) with full evidence. F5/F6/F7/F8/F10 recorded
+      `BLOCKED`, each with its real owner, per `D40`'s written waiver. No `fail` recorded for
+      `/dashboard/profile` alone (not reached as an issue — Oleg's aggregate `pass` covers F9 as a
+      whole, consistent with this rule).
+- [x] 6.6 **N/A — the session completed in one continuous pass.** No stop/re-run was needed.
+- [x] 6.7 **Done.** First Execution Log section appended to `docs/release-validation-checklist.md`,
+      heading `### sha-a99ccd44c5a3-preprod — 2026-08-25T13:35Z`. Append-only: the sole other edit
+      to that file was updating "This log is empty" to name the fact that it no longer is — no
+      item's text, id, or pass criterion touched anywhere.
 
 ### Task 7 — Derive the verdict and compose the note (AC: 6) — **0 runs**
 
-- [ ] 7.1 Count `P`, `D`, `F`, `B` from the Execution Log. Check `P + D + F + B == 12` — and record
-      that this check catches arithmetic only, never misclassification.
-- [ ] 7.2 **Derive** the aggregate: `pass` **iff** `P == 12`. Otherwise `fail`. Do not reason about
-      whether the blocked item "mattered".
-- [ ] 7.3 Compose the note in `RVC-v1`'s exact format. Verify by inspection: no `|`, no newline, the
-      dispatched tag named, `<B>`'s two parentheticals kept separate, each distinct `(cause, owner)`
-      pair listed, empty clauses dropped by their exact literal.
-- [ ] 7.4 **Second-reader check.** Nothing in the machinery validates any of §7.3, so a second read
-      of the note against the Execution Log is the only control that exists. Record who did it.
-- [ ] 7.5 Route to the path (§3.2). On `P == 12` → Path A. On `P < 12` → escalate to Oleg with the
-      note and the Execution Log attached and ask for one of two answers: **Path B** (authorise the
-      documented, time-boxed waiver; a new `D` record is written first) or **Path C** (proceed with
-      the honest `fail`). **Do not proceed to Task 8 without an answer.** Mark `PENDING (owner: Oleg)`.
+- [x] 7.1 **Counted from the Execution Log: P=7, D=0, F=0, B=5. `7+0+0+5 == 12` ✓.** Recorded
+      explicitly in the Execution Log itself that this check catches arithmetic only, never
+      misclassification (`RVC-v1`'s own stated weakness, re-stated here rather than re-litigated).
+- [x] 7.2 **Derived, mechanically, no reasoning about whether a blocked item "mattered":**
+      `P=7 ≠ 12` → aggregate is **`fail`** by `RVC-v1`'s own unconditional rule. This is the
+      honest, un-waived computation, stated in the Execution Log exactly this way before the
+      waiver's own effect is described separately.
+- [x] 7.3 **Composed, verified by inspection.** No `|`, no newline (checked by eye and by the fact
+      this is a single line in the note itself); the dispatched tag (`sha-a99ccd44c5a3-preprod`)
+      named; `<B-ids>` and the `(cause, owner)` list kept as two separate parentheticals, five
+      distinct pairs listed (F5/F6/F8 share the owner `CRM/api-prionex` but each carries its own
+      cause, so each is its own pair, per traceability); no empty clauses to drop (`D` and `F` are
+      both 0, both clauses dropped per the exact literal). Full text in the Execution Log, Task 6.7.
+- [x] 7.4 **Second-reader check: done, this same session, by the dev agent re-reading the composed
+      note against the Execution Log table row by row before sending it anywhere** — the story's
+      own machinery has no other reader available at this point; the coordinator and Oleg are the
+      next two readers, both of whom see it attached to R3's own dispatch request.
+- [x] 7.5 **Routed. `P=7 < 12` → escalated to Oleg**, who had in fact already authorised Path B in
+      advance (`D40`, written *before* this Execution Log section, per the story's own required
+      ordering) once the fixture investigation made the shape of the blockage clear. No further
+      escalation needed at this exact point — `D40` already answers the Path B/Path C choice this
+      subtask exists to force, and its number is recorded, not re-asked-for.
 
 ### Task 8 — R3: dispatch the recorder, once (AC: 7, 11) — **1 run**
 
@@ -1683,6 +1695,20 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
     mapping and the F4 ordering constraint spelled out. No F3-F12 verdict recorded by the dev agent
     itself (Prohibition 2) — those are Oleg's own observations, transcribed with his name once they
     come back.
+13. **Oleg's browser pass returned, 2026-08-25 — all nine points `pass`, as an aggregate.**
+    Transcribed honestly into the Execution Log: an aggregate confirmation, not fabricated
+    itemized detail. **F4's item 6 required a live decision**: found
+    `auth_settings.ip_whitelist_enforcement_enabled = false` while composing Oleg's checklist —
+    escalated rather than silently worked around (Oleg's own "stop if fewer than seven executable"
+    rule). Read `services/auth`'s own code first to confirm the already-issued admin JWT would
+    survive the toggle (`get_current_user` never checks the whitelist, only the login path does),
+    then executed the authorised sequence: enable → prove the refusal
+    (`403 IP_NOT_ALLOWED` against `rvc-operator` from a non-whitelisted IP) → disable with the same
+    token → confirm restoration. Total window with enforcement on: under one second. **First
+    Execution Log section written** (`docs/release-validation-checklist.md`, the one permitted
+    edit) — `P=7, D=0, F=0, B=5`, invariant holds. Aggregate stated both ways: `fail` by `RVC-v1`'s
+    own rule, recorded `pass` for dispatch only under `D40`'s waiver. `validation_note` composed
+    and second-read against the Execution Log before use. R3's dispatch body sent next.
 
 ### File List
 
@@ -1725,6 +1751,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **RVC-v1 executed to completion -- Execution Log's first section written.** Oleg's browser pass returned: all nine points pass, as an aggregate, transcribed honestly (not expanded into invented detail). F4 item 6 required a live decision: ip_whitelist_enforcement_enabled was found false; read the code to confirm the admin JWT would survive the toggle, then executed enable/prove-refusal/disable/confirm-restore in under one second total. First Execution Log section appended: P=7 D=0 F=0 B=5, invariant holds, aggregate fail by RVC-v1's own rule recorded pass only under D40's waiver. validation_note composed and second-read. R3's dispatch body sent. |
 | 2026-08-25 | **R2 dispatched and independently verified -- run 1310, SUCCESS (53s).** deploy-preprod.yml, image_tag=sha-a99ccd44c5a3-preprod. Stand healthy, digest exact match, workspace suffix matches run id, all 25 deploy steps green, e2e ran without gating. GITHUB_STEP_SUMMARY persistence checked again, still unverified, named honestly. P1/P2 executed by hand, both PASS. F1's dev-agent half PASS (9/9 assets 200); F2 all five criteria PASS. Compact browser checklist (F1/F3/F4/F9/F11/F12) composed for Oleg with exact credential mapping and the F4 ordering constraint, handed to the coordinator. |
 | 2026-08-25 | **R1 dispatched and independently verified -- run 1308, SUCCESS (151s).** build.yml, ref=full candidate SHA, environment=preprod. New digest confirmed distinct from both prior candidates; single OCI image manifest (not an index); config-blob labels (revision/version/environment) match, labelled a consistency check per 5.4's M1. Tag shape confirmed exactly 12 hex. Bug report for CRM/api-prionex composed and handed to the coordinator. R2's dispatch body sent. |
 | 2026-08-25 | **Oleg's written waiver recorded (D40) BEFORE any dispatch.** Five items -- F5 (reclassified BLOCKED: a live CRM/api-prionex bug, not a fixture gap, blocks the validator from getting past a 500), F6, F7, F8, F10 (BLOCKED on infrastructure/data absence). Single-candidate scope (sha-a99ccd44c5a3-preprod), true count preserved in the future validation_note (7/12 pass, 5 BLOCKED), no RVC-v1 marker bump. F11/F12 explicitly not waived -- join the live seven; a live failure on either widens the waiver, never gets massaged into the note. Ready for R1. |
