@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-08-24'
 status: 'review'  # fix-pass (2026-08-25) addressed all 25 patch findings + 3 decisions from code review pass 2; followup_review_recommended stays true since the 3 decisions are recorded, not re-litigated
 baseline_revision: '35c1a39e4b9063af272fdb5e980a31ee13b1b92e'
-final_revision: '9338edf1'  # will be updated to this fix-pass's own final content commit below, before push
+final_revision: 'afd8d155'
 review_loop_iteration: 2
 followup_review_recommended: true
 context:
