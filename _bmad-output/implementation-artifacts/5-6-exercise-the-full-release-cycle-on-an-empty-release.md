@@ -940,26 +940,74 @@ missing at F7 costs the entire session and, under AC9, a rebuild.
 
 ### Task 3 — Zero-dispatch preconditions (AC: 1, 2, 3, 4) — **costs 0 runs**
 
-- [ ] 3.1 Choose the candidate commit and record it in full and as 12 hex. Prefer `main` HEAD at
-      rehearsal time; if `main` moves during the story, **pin the sha and use it everywhere** — the
-      note, the dispatch and the Execution Log must all name the same artifact, and nothing checks
-      that they do.
-- [ ] 3.2 Confirm the candidate commit has **never been recorded**: `preprod-<12hex>` must not exist
-      in `tags/list`. If it does, choose a different commit — §8's dead end is reachable from here
-      and its only exit is Oleg deleting a package version by hand.
-- [ ] 3.3 Execute AC2's diff **and its negative control**; paste both verbatim.
-- [ ] 3.4 Assert the compose coupling: `git diff origin/main -- docker-compose.stand.yml` empty, and
-      `sha256sum docker-compose.stand.yml` == `7f449dacce163fed898b06d3d3d204656b0f485fdbad1827c03c7aac9b1932ec`.
-- [ ] 3.5 Read the pre-rehearsal registry state and paste it: the digests behind `preprod-current`,
-      `preprod-00ef3be4743d`, `preprod-28f7fd36b75e`, and the current `sha-*-preprod` set. This is
-      the **before** half of AC7's read-back; without it "nothing was written" is unfalsifiable.
-- [ ] 3.6 **The free rejection rows** (`retro-E5`, and they are free so they are not optional): the
-      coordinator dispatches `deploy-preprod.yml` with `image_tag` **omitted**, and
-      `record-preprod-candidate.yml` with `validated` **omitted**. Both must return **HTTP 400 with
-      zero `action_run` rows created** — confirmed by `max(id)` being unchanged around each call.
-      Mark `PENDING (owner: coordinator)`.
-- [ ] 3.7 Re-run `select id, log_in_storage from action_task where id in (9745, 9769);` (AC13's
-      standing obligation) and record the answer before other psql work.
+- [x] 3.1 **Candidate: `main` HEAD at this moment, pinned.** Full:
+      `a99ccd44c5a39345fa65eb74e87343b187e129e9`. **12 hex: `a99ccd44c5a3`.** This is the same commit
+      as PR #85's own merge (Story 5.5's closeout) — `main` has not moved since. Pinned here and
+      used identically in the dispatch, the note and the Execution Log heading.
+- [x] 3.2 **Confirmed never recorded.** `GET /v2/crm/fe-prionex/tags/list` (credential-safe script,
+      s1, `auths` key read via `python3 -c "...json.load(...)['auths'].keys()"`, never `cat`) →
+      285 tags total; `preprod-` set is exactly `preprod-00ef3be4743d`, `preprod-28f7fd36b75e`,
+      `preprod-current` — **`preprod-a99ccd44c5a3` is absent.** Safe to use.
+- [x] 3.3 **AC2's diff, executed against the pinned candidate, and its negative control — both
+      pasted verbatim:**
+
+  ```
+  $ git diff --name-only 28f7fd36b75e..a99ccd44 -- src public index.html vite.config.ts       package.json package-lock.json Dockerfile Dockerfile.prod nginx.conf tailwind.config.ts       postcss.config.js components.json 'tsconfig*.json' .env.example .env.stand.example       .env.production.example
+  (empty — exit 0)
+
+  $ git diff --name-only 28f7fd36b75e..a99ccd44
+  .forgejo/workflows/deploy-preprod.yml
+  .forgejo/workflows/record-preprod-candidate.yml
+  _bmad-output/implementation-artifacts/5-4-record-the-validated-candidate-in-the-registry.md
+  _bmad-output/implementation-artifacts/5-5-PR-description.md
+  _bmad-output/implementation-artifacts/deferred-work.md
+  _bmad-output/implementation-artifacts/epic-5-context.md
+  _bmad-output/implementation-artifacts/spec-5-5-establish-the-release-validation-checklist.md
+  _bmad-output/implementation-artifacts/sprint-status.yaml
+  _bmad-output/planning-artifacts/epics.md
+  docs/migration-decisions.md
+  docs/preprod-candidates.md
+  docs/preprod-infrastructure-requirement.md
+  docs/release-validation-checklist.md
+
+  $ git log --oneline 28f7fd36b75e..a99ccd44 | wc -l
+  37
+  ```
+
+  Negative control is non-empty (13 files, 37 commits) — the command reports changes when there
+  are any, so the path-filtered empty result above is not a mistyped/vacuous command. Per §4:
+  **not** byte-identical to candidate #2 (`vite.config.ts:8` bakes `Date.now()`); `.forgejo/` **did**
+  change (`deploy-preprod.yml`, `record-preprod-candidate.yml` — Story 5.5's own shipped changes),
+  so this rehearsal exercises the *current* workflow definitions, which is the point.
+- [x] 3.4 **Compose coupling asserted.** `git diff origin/main -- docker-compose.stand.yml` → empty
+      (exit 0). `sha256sum docker-compose.stand.yml` →
+      `7f449dacce163fed898b06d3d3d204656b0f485fdbad1827c03c7aac9b1932ec` — exact match.
+- [x] 3.5 **Pre-rehearsal registry state, read via `docker buildx imagetools inspect`-equivalent
+      manifest HEAD requests (Docker-Content-Digest header), s1, credential-safe script:**
+
+  | Tag | Digest |
+  |---|---|
+  | `preprod-current` | `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26` |
+  | `preprod-00ef3be4743d` | `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` |
+  | `preprod-28f7fd36b75e` | `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26` |
+  | `sha-00ef3be4743d-preprod` | `sha256:5e5b190d93c8aaec50f0d50c7e108f502c3d366d14f8a13aee081f0ee396dc8c` |
+  | `sha-28f7fd36b75e-preprod` | `sha256:d2f6aefc780d6684bd86418298d4068131b7442bf93c3f17de965f40c82f6f26` |
+
+  `preprod-current` == `preprod-28f7fd36b75e` (candidate #2, Story 5.4's D10 move) — confirms
+  `preprod-current` has not moved since. Current `sha-*-preprod` set: exactly the two above. This
+  is the **before** half of AC7's read-back.
+- [ ] 3.6 `PENDING (owner: coordinator)`. **The free rejection rows — requested, bodies below.**
+      Both must return HTTP 400 with zero `action_run` rows created (`max(id)`, currently **1302**
+      for `repo_id=16`, unchanged around each call):
+      1. `deploy-preprod.yml`, `workflow_dispatch`, **omit `image_tag` entirely** (do not send an
+         empty string — omit the key).
+      2. `record-preprod-candidate.yml`, `workflow_dispatch`, **omit `validated` entirely** (supply
+         `image_tag: sha-a99ccd44c5a3-preprod` and `validation_note: "zero-run rejection probe"` so
+         the *only* missing required field is `validated`).
+- [x] 3.7 **Re-run, seventh check across seven sessions, all negative.**
+      `select id, log_in_storage from action_task where id in (9745, 9769);` →
+      `9745|f`, `9769|f`. Recorded honestly, standing plan continues — see
+      `deferred-work.md`'s finding 8.
 
 ### Task 4 — R1: mint the candidate (AC: 3) — **1 run**
 
@@ -1399,12 +1447,26 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
    `/root/.rvc-preprod.creds` on s1, `chmod 600`. A security finding (unrotated seed default,
    internet-reachable stand/API) was filed in `deferred-work.md` with owner Oleg, out of this
    story's own scope to fix.
-5. **Still awaiting Oleg's narrower remaining package (F5-F8, F10-F12's own fixtures + sandbox
-   confirmation for F7/F10/F12) before Task 3 onward can proceed on the browser-execution side —
-   but Task 3 (zero-dispatch preconditions: candidate selection, the empty-release diff, the
-   compose-coupling assertion, the pre-rehearsal registry read, the free rejection rows, the
-   `log_in_storage` recheck) has no dependency on those fixtures and can start in parallel.** No
-   dispatch has been made yet either way. Zero runs spent against the declared ceiling of 17.
+5. **Task 3 executed in parallel, 2026-08-25, per the coordinator's explicit instruction — the
+   fixture package remains outstanding but does not block zero-dispatch preconditions.**
+   Candidate pinned: `a99ccd44c5a39345fa65eb74e87343b187e129e9` / `a99ccd44c5a3` (`main` HEAD,
+   unmoved since PR #85). Confirmed never recorded (`preprod-a99ccd44c5a3` absent from `tags/list`,
+   285 tags total). AC2's diff executed against the pinned candidate: path-filtered result empty,
+   negative control non-empty (37 commits, 13 files, all `.forgejo`/`_bmad-output`/`docs` — none of
+   them frozen files this story would need a §12 exception to explain), both pasted verbatim in
+   Task 3.3. Compose coupling asserted: empty diff against `origin/main`, exact sha256 match.
+   Pre-rehearsal registry state read and tabulated (Task 3.5) — the **before** half of AC7's
+   read-back, without which "nothing was written" would be unfalsifiable; confirms `preprod-current`
+   still resolves to candidate #2's digest, unmoved since Story 5.4's D10. `log_in_storage` for
+   9745/9769 re-checked (seventh time, seven sessions, still `f`/`f` — recorded in `deferred-work.md`
+   finding 8). **Only 3.6 (the two free HTTP-400 rejection rows) remains, `PENDING (owner:
+   coordinator)`** — the exact dispatch bodies are in Task 3.6 itself. No dispatch has been made by
+   this session. Zero runs spent against the declared ceiling of 17; `max(id)` for `repo_id=16` is
+   now 1302 (was 1297 at Task 1.5's baseline — five rows from this story's own four pushes so far,
+   not yet reconciled against the ledger, which stays open until closeout).
+6. **Oleg's browser-fixture package (F5-F8, F10-F12 + sandbox confirmation for F7/F10/F12) is still
+   outstanding**, sent by the coordinator directly to Oleg. Task 4 onward (the actual dispatches)
+   waits for it; Task 3 did not.
 
 ### File List
 
@@ -1440,6 +1502,7 @@ _(dev-story: Sonnet, per the standing model split — create-story Opus, dev-sto
 
 | Date | Change |
 |---|---|
+| 2026-08-25 | **Task 3 executed in parallel with the outstanding browser-fixture package.** Candidate pinned (main HEAD, a99ccd44c5a3), confirmed never recorded. AC2's diff and negative control executed and pasted verbatim (empty path-filtered, 37 commits / 13 files unfiltered). Compose-coupling assertion passed (empty diff, exact sha256). Pre-rehearsal registry state tabulated -- preprod-current confirmed unmoved since Story 5.4. log_in_storage re-checked (seventh time, still f/f). Only the two free HTTP-400 rejection rows remain, PENDING (owner: coordinator), bodies specified in Task 3.6. No dispatch made. |
 | 2026-08-25 | **F9 and F4 fixture accounts provisioned through CRM/api-prionex's normal API, closing two of Task 2's three package items.** Investigated the bootstrap mechanism first (read-only), found a seeded admin account with an unrotated default password already live on PRE-PROD, reported it before touching anything. Oleg confirmed the login and authorised provisioning. Created rvc-operator (Operator role, F9) and rvc-f4-flow (must_change_password: true, F4 -- one account suffices with correct test sequencing: forced-change -> normal checks -> 2FA self-service -> lockout last; IP-whitelist needs no account, it is global). Both verified by API login. No credential entered this file or any transcript; all three (including admin's) filed at /root/.rvc-preprod.creds on s1, chmod 600. Security finding (unrotated seed default, internet-reachable) filed in deferred-work.md, owner Oleg. Task 3 can now start in parallel with the remaining, narrower package (F5-F8/F10-F12 fixtures + sandbox confirmation). |
 | 2026-08-25 | **Task 2.4 answered (coordinator's channel).** `VITE_OPERATOR_PHONE_URL_PREPROD` confirmed absent (repo and org level), matching F2 c5's decided-EMPTY expectation exactly. New information surfaced, not a contradiction: `VITE_OPERATOR_PHONE_URL_PROD` already carries a real value (`https://phone.crm-prionex.online`) — previously only its existence was on record. Cross-checked against `build.yml`'s own environment `case` statement: distinct variable names, no cross-environment leak path. Recorded (appended, not rewritten) in `deferred-work.md`'s existing 2026-08-17 entry, owner Story 6.4 for future re-verification of the PROD value. |
 | 2026-08-25 | **Dev-story Tasks 1-2 executed (zero-run).** Story marked `in-progress`. 5.5's `done` gate re-confirmed; branch confirmed already on latest `main` (no rebase needed). Ledger baseline declared: `psql`, `max(id)=1297`, floor 11/ceiling 17, OPEN. Next free D-number checked: D40. Fixture-readiness matrix built for P1/P2/F1-F12 — only P1, P2, F1 fixture-independent; F2 pending a repository-variable read; F3-F12 (9 items) `UNKNOWN`, routed to Oleg with real ownership, never a trigger condition. Oleg's three decisions (Path A for F9, sandbox confirmation required before F7/F10/F12, `docs/release-regulation.md` veto closed), relayed by the coordinator, recorded against Open Questions #1/#2/#3. Single consolidated requirements package composed for Oleg (F9 account + operator creds + F4's four accounts + F5-F12 fixtures + sandbox confirmations + the F2 variable read) and handed to the coordinator to relay as one message, per explicit instruction not to drip requests. No dispatch made; zero runs spent. |

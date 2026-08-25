@@ -3721,6 +3721,11 @@ UTC-timestamped at the point of measurement.
    other work touching either residue) is still the right cadence, or whether these two logs should
    simply be accepted as permanently unarchived on this instance. Not decided here — named for
    whoever picks this up next.
+   🔴 **Story 5.6's own Task 3.7, 2026-08-25 — the standing obligation's own AC (AC13).** Same
+   query, same two ids → **still `f` for both — the SEVENTH check across seven sessions, all
+   negative.** Recorded before other psql work, per the story's own instruction. The trend named
+   above (six checks, no movement) now extends to seven; still not decided here whether the cadence
+   should change or the logs accepted as permanently unarchived.
 9. Story 4.8's open backfill (`## Deferred from: story-4.8 closeout (2026-08-23)`, the entry
    immediately above this one — 🔴 **citation corrected 2026-08-24, BMAD reconciliation: this read
    `deferred-work.md:3374-3399`, which is the *story-4.8 implementation* section's throwaway-probe-branch
