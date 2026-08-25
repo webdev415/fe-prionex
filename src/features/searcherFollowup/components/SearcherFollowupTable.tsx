@@ -28,9 +28,9 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { resolveCallOutcomeDisplay } from '@/lib/feedCallOutcome'
 import { formatDateTime } from '@/lib/formatters'
 import type { SearcherFollowupRow } from '../types'
-import { resolveCallOutcomeDisplay } from '../utils/callOutcome'
 
 export interface SearcherFollowupTableProps {
   rows: SearcherFollowupRow[]
@@ -162,7 +162,7 @@ export function SearcherFollowupTable({
             case 'raw':
               // A future telephony outcome the classifier has no label for:
               // verbatim beats "Unknown" (which means "no outcome recorded")
-              // and infinitely beats a crash — see utils/callOutcome.ts.
+              // and infinitely beats a crash — see lib/feedCallOutcome.ts.
               return display.value
           }
         },

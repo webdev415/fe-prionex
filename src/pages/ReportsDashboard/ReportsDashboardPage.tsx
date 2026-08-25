@@ -1,12 +1,14 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts seven tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts eight tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
  * "Мало верифікацій" client work list, the "Серчер без відпрацювання"
- * searcher follow-up work list, the "Великий розрив" communication-gap
+ * searcher follow-up work list, the "Вхід без відпрацювання" inbound
+ * follow-up work list (its semantic twin — same source column shape, hence
+ * its neighbour in the strip), the "Великий розрив" communication-gap
  * work list, and the "Обіцянки по операторах" operator promises report.
  */
 
@@ -46,6 +48,7 @@ import { ClientProcessingTab } from '@/features/clientProcessing'
 import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
 import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
 import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
+import { InboundFollowupFeedTab } from '@/features/inboundFollowup'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
@@ -447,6 +450,9 @@ const REPORT_TABS = [
   'verification',
   'low-verification',
   'searcher-followup',
+  // Right after the searcher feed on purpose: the two migrate the SAME
+  // nine-column source shape and read as a pair to the operators who work them.
+  'inbound-followup',
   'communication-gap',
   'operator-promises',
 ] as const
@@ -560,6 +566,8 @@ export function ReportsDashboardPage() {
           <LowVerificationFeedTab />
         ) : activeTab === 'searcher-followup' ? (
           <SearcherFollowupFeedTab />
+        ) : activeTab === 'inbound-followup' ? (
+          <InboundFollowupFeedTab />
         ) : activeTab === 'communication-gap' ? (
           <CommunicationGapFeedTab />
         ) : activeTab === 'operator-promises' ? (

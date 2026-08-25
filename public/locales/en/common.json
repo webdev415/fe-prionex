@@ -8541,6 +8541,7 @@
         "verification": "Third-party verification",
         "low-verification": "Low verifications",
         "searcher-followup": "Unworked searcher finds",
+        "inbound-followup": "Inbound without follow-up",
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises"
       },
@@ -8658,6 +8659,33 @@
           "unknown": "Unknown"
         },
         "empty": "No searcher finds in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "inboundFollowup": {
+        "dateFrom": "Request date from",
+        "dateTo": "Request date to",
+        "invalidDate": "The request date is not a valid calendar date — pick a date to replace it",
+        "invalidRange": "Request date from is later than request date to",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionAt": "Request date",
+          "interactionType": "Reasons for the request",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastCall": "Last call",
+          "lastCallOutcome": "Call outcome"
+        },
+        "outcome": {
+          "unknown": "Unknown"
+        },
+        "empty": "No unworked inbound requests in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
         "error": {

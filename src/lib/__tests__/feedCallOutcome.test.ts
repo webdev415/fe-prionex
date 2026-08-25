@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { resolveCallOutcomeDisplay } from '../callOutcome'
+import { resolveCallOutcomeDisplay } from '../feedCallOutcome'
 
+/**
+ * The resolver is SHARED by the two follow-up feed tabs (Card 123's «Серчер без
+ * відпрацювання» and Card 122's «Вхід без відпрацювання»), which is why it
+ * lives in `src/lib` rather than inside either feature — hence this suite sits
+ * next to the classifier it delegates to.
+ */
 describe('resolveCallOutcomeDisplay', () => {
   it('resolves a fully-null pair to "none" (never called — render "—")', () => {
     expect(resolveCallOutcomeDisplay(null, null)).toEqual({ kind: 'none' })

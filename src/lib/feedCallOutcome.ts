@@ -1,7 +1,14 @@
 /**
- * Display resolution for the feed's `last_call_*` pair.
+ * Display resolution for the `last_call_at` / `last_call_outcome` pair the
+ * report FEEDS carry.
  *
- * The Metabase card conflated three different states into one column (its
+ * Shared by the «Серчер без відпрацювання» (Card 123) and «Вхід без
+ * відпрацювання» (Card 122) tabs: both migrate the SAME nine-column source
+ * shape, both get their pair from the same call-service endpoint, and both must
+ * name the three states identically — a second copy could only drift. (The
+ * backend made the same extraction for the guards these two feeds share.)
+ *
+ * The Metabase cards conflated three different states into one column (their
  * Ukrainian CASE collapsed NULL to an empty string); the API keeps them apart
  * and this helper is where the UI names each one:
  *
@@ -13,23 +20,24 @@
  *   localised "Unknown" label;
  * - a recognised outcome → the label of the app-wide classifier
  *   (`classifyCallOutcome`, src/lib/callOutcome.ts) — the same i18n keys the
- *   call log and monitoring tables already use, so the feed speaks the same
- *   language as the rest of the app and inherits labels for every outcome
+ *   call log and monitoring tables already use, so the feeds speak the same
+ *   language as the rest of the app and inherit labels for every outcome
  *   call-service emits (missed, rejected, unavailable, failed, …), not just
  *   the ones observed on a production probe;
  * - an UNRECOGNISED non-blank outcome → the raw value, verbatim (the
  *   classifier's own fallback contract). The backend deliberately does not
- *   enum-validate the column, so a future value must neither crash the tab
+ *   enum-validate the column, so a future value must neither crash a tab
  *   nor masquerade as "Unknown" — "Unknown" means "a call with no recorded
  *   outcome", and stamping it on a real (just untranslated) outcome would be
  *   a lie an operator acts on. A raw `voicemail` is ugly but truthful.
  *
- * The feed carries no call direction, so the direction-sensitive outcomes
+ * The feeds carry no call direction, so the direction-sensitive outcomes
  * (`cancel`, `no_answer`) get the classifier's outbound wording — its
  * documented default for calls of unknown provenance.
  *
- * Pure data → decision here; the component maps the decision to `t()` keys.
- * The edge the contract calls impossible — an outcome WITHOUT `last_call_at`
+ * Pure data → decision here; the component maps the decision to `t()` keys, so
+ * each feed keeps its own "unknown" string in its own i18n subtree.
+ * The edge the contracts call impossible — an outcome WITHOUT `last_call_at`
  * — still renders the outcome (showing data beats hiding it).
  */
 
