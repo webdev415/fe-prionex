@@ -1279,9 +1279,40 @@ development_status:
   # attested-vs-observed convention) -- paraphrase covered every section and named the live
   # sha-a99ccd44c5a3-preprod precedent explicitly. Two of three offered options (amend the
   # rollback rule; authorise a forward hotfix) were explicitly declined, confirming both as
-  # written, not by silence. docs/production-approval-regulation.md (110 lines) and
+  # written, not by silence. docs/production-approval-regulation.md (110 lines at 811a9b8c; 124
+  # after the code-review fix-pass, ceiling raised 120 -> 125 with the reason recorded) and
   # docs/prod-releases.md (empty ledger) shipped; docs/release-regulation.md got exactly one
   # cross-reference line; D42 recorded. Row flips to `review`.
+  # CODE REVIEW 2026-08-25 (Opus, three adversarial layers + independent fact-verification):
+  # changes requested, all applied. TWO adversarial passes: pass 1 found 20 (7 high / 10 medium /
+  # 3 low); pass 2, run against the patched tree, found 15 more (5 high / 5 medium / 5 low) and ALL
+  # FIVE of its highs were defects pass 1's own fixes introduced -- a miscitation inside the
+  # miscitation correction (#d38 vs #d39), a Debug Log claim that the duplication check was re-run
+  # "with the floor removed" when it was not, an INVENTED expiry date in the Waiver? example, an
+  # Approval-end pending/mandatory contradiction, and prod_tag naming a tag shape the rollback rule
+  # contradicts two sentences later. 35 applied in total, 7 deferred with owners, 2 decisions to
+  # Oleg. The lesson, recorded because it is the reusable one: a fix-pass that is not re-reviewed
+  # is just a second draft. Every high was a defect of TRUTH, which is
+  # the only kind a documentation story can have: (1) AC5 was NOT met -- both regulations opened
+  # with the byte-identical "One page. No new gate, no new machinery.", and the check reporting
+  # "zero shared sentences" had a length floor that never compared the opening line; the false
+  # claim had already reached D42 and this file. (2) `_bmad/bmm/config.yaml` was cited under
+  # "Измерено" for two keys it does not contain (they are at sprint-status.yaml:72-73), and the
+  # miscitation had entered migration-decisions.md. (3) The job-log argument contradicted the
+  # project's own SETTLED 2026-08-16 finding -- archival is DELAYED, not absent (4128 t vs 461 f)
+  # -- and inflated six observations to seven. (4) #d11 was cited for a named-approver convention
+  # it does not contain, the same shape that produced D41 one story earlier. Also: AC1's second
+  # clause was unmet (the grep sweep was file-scoped, missing AC1's own s10 clause and two
+  # present-tense sentences in prod-releases.md); the ledger could not be filled as instructed
+  # (row precedes the dispatch, yet three cells and two rules need post-dispatch facts in a
+  # never-rewritten row -- fixed with `pending` values and a superseding-row rule); the rollback
+  # rule keyed on a prod-<sha> no column recorded (prod_tag added).
+  # 🔴 retro-E5: §9 specified a "negative control" that COULD NOT HAVE FAILED on either axis
+  # (build.yml:933's single tag template; G1 refusing validated=fail before any registry read).
+  # This story earns NO negative control and now says so. AC8's ceiling 120 -> 125 (shipped 122),
+  # reason recorded -- twelve lines of provenance, not padding.
+  # Frozen files, Prohibitions 3/4/6/12/13, D42's number, every anchor, the #d2 quote and the
+  # sha-a99ccd44c5a3-preprod precedent all verified clean. Status stays `review`; Oleg merges.
   6-2-publish-the-production-approval-regulation: review
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
