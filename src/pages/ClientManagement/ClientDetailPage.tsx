@@ -5803,6 +5803,17 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           projectId={1}
           onClose={() => setIsTagModalOpen(false)}
+          onTagsChanged={() => {
+            // A tag change may fire a "Tag change" trigger that launches a chain
+            // asynchronously, exactly as closing a debt does. Snapshot the chains
+            // that already exist so only the NEW one pops, then arm fast-poll +
+            // auto-open for THIS operator (other viewers never arm, so they get
+            // no pop-up).
+            preCloseInstanceIdsRef.current = new Set(
+              (clientChainInstances ?? []).map((inst) => inst.id)
+            )
+            setChainAutoOpenArmed(true)
+          }}
         />
 
         {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}
