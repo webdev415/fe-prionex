@@ -1487,6 +1487,11 @@ development_status:
   # query time (11947 on 7eabd41e, 11950 on 1cdb0f35) -- no terminal verdict claimed; a final figure
   # needs a re-query.
   6-2-publish-the-production-approval-regulation: done
+  # 🔀 MERGE RESOLUTION 2026-08-26 (story-6-3 <- origin/main f144ee9f = the correct-course merge).
+  # BOTH SIDES KEPT WHOLE, neither absorbed. Below: first main's correct-course handover (the build
+  # source change, D46), then this branch's own session-1/session-2 record. They are not in conflict
+  # on the merits -- main describes WHAT CHANGED for the story, the branch records WHAT THE STORY
+  # DID. The VALUE is this branch's `in-progress`, not main's `backlog`: the story is running.
   # 🔀 CORRECT-COURSE 2026-08-26 -- sprint-change-proposal-2026-08-26-cutover-candidate.md, D46.
   # THE BUILD SOURCE CHANGED. Story 6.3 builds a99ccd44c5a39345fa65eb74e87343b187e129e9 -- the last
   # validated PRE-PROD candidate -- NOT the running PROD commit. Oleg, verbatim: "Берем тот коммит,
@@ -1523,7 +1528,186 @@ development_status:
   # 🔴 6.3 RESUMES ONLY AFTER THIS LANDS, and re-runs Task 2 against the NEW source commit: its own
   # AC1/AC4 were rewritten underneath it, and evidence gathered against superseded criteria is waste.
   # Its retro-E5 matrix (§9) is untouched and stays OPEN -- no run ids exist yet.
-  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
+  # Contexted 2026-08-26 (story 6.3, branch story-6-3/pr-1-context) from a SCRATCHPAD WORKTREE off
+  # origin/main at cfbad179 -- the primary checkout is Story 4.9's dev agent's. Epic 6's SECOND story
+  # (6.1 cancelled, 6.2 done/merged 1cdb0f35). UNLIKE 6.2 THIS STORY DISPATCHES AND MINTS PERMANENT
+  # TAGS. Floor 7 / ceiling 20 (13 CI push+PR+merge rows, 7 dispatch rows), OPEN.
+  # 🔴 ORDERING, checked against epics.md across ALL of 6.3-6.10 rather than taken on the plan's word.
+  # (a) 6.3 does NOT depend on 6.10. Identification happens on s2 (epics.md's own 2026-08-18 note:
+  # "identification ... still happens on s2 ... The ACs stand as written"); the build runs on the
+  # node-20 CI runner on s1; the push goes to the registry over the path build.yml already uses.
+  # NOTHING IS DEPLOYED BY THIS STORY, so the s10 contour is irrelevant to it.
+  # (b) 🔴 THE DEPENDENCY THE PLAN NEVER WROTE DOWN: nothing in this repository can write prod-current
+  # or prod-<sha>. build.yml emits exactly sha-<12hex>-prod and <sanitized-ref>-prod and never has
+  # emitted either marker; record-preprod-candidate.yml is hard-wired to -preprod in G2/G3 and its G5
+  # requires a PRE-PROD stand. The plan assigned prod-current/prod-<sha> to Story 6.6, whose recording
+  # step lives inside 6.4's deploy-prod.yml, which MUST NOT run before 6.10 -- i.e. 6.3 -> 6.6 -> 6.4
+  # -> 6.10 -> 6.3 is circular. The amended FR31 (2026-08-13) already broke the loop by moving the tag
+  # creation into 6.3; what it did NOT say is that this makes 6.3 the story that INTRODUCES A NEW
+  # GUARD-BEARING WORKFLOW and therefore owes a full retro-E5 live matrix. It does; see the story's S9.
+  # (c) 🔴 ONE HARD PRECONDITION NOBODY OWNS: the commit s2 runs may not exist in the Forgejo repo at
+  # all. 6.1 is cancelled, GitHub keeps merging to its own main and deploying to s2, and there is NO
+  # MIRROR IN EITHER DIRECTION -- so actions/checkout may be unable to fetch it and the story halts at
+  # its first dispatch. Task 2.4 is a HARD GATE; on "absent" the story STOPS and escalates (OQ6).
+  # 🔴 THE ONE-SHOT TRAP, and it is the reason this story is written the way it is. build.yml's Story
+  # 3.6 AC2 guard REFUSES to repoint sha-<12>-<env>, and vite.config.ts:8 bakes a fresh Date.now() on
+  # every cache-missing build, so two builds of one commit are not byte-identical. sha-<12hex>-prod is
+  # PERMANENT under keep_pattern and removing one "has twice required the operator in person". THE
+  # environment=prod DISPATCH CANNOT BE RE-RUN. Mitigation: every prod-specific fail-closed guard in
+  # build.yml (OpenBao/_check_url, the phone-URL prod arm, the keep_pattern permanence guard) runs
+  # BEFORE any push, and the build step pushes only the 14-day sanitized tag -- the permanent one is
+  # attached afterwards under the AC2 guard.
+  # 🔴 FIRST prod BUILD THIS PROJECT HAS EVER RUN. deferred-work.md, still open: "No prod build has
+  # EVER run under the current build configuration" and "secret/fe/prod/app has never been read by
+  # anything". Its own recommended mitigation (one preprod dispatch first) is SPENT -- 5.6 exercised
+  # the preprod path, and the prod delta is exactly the arms a preprod run does not touch. It CANNOT
+  # be rehearsed: OPENBAO_PROD_SECRET_ID is write-only in Forgejo, so fe/prod/app cannot be pre-read.
+  # 🔴 WHAT 6.3 BREAKS IN 6.2's FRESHLY-SHIPPED ARTIFACTS -- tasks, not discoveries.
+  #   • The regulation's dated census "ls .forgejo/workflows/ -- 11 entries" becomes 12. ("no PROD
+  #     deploy caller" stays true.)
+  #   • 🔴 THE REAL ONE: the regulation's rollback rule keys on a tag being in docs/prod-releases.md's
+  #     prod_tag column. 6.3 creates prod-<sha>/prod-current with NO ledger row (nothing was approved;
+  #     D42 shipped the ledger empty on purpose). FR32/Story 6.9 then validate the cutover by a
+  #     rollback:true dispatch against exactly that tag -- which the shipped rule classifies as "a
+  #     rollback to a tag not in the ledger", i.e. A RELEASE NEEDING OLEG, and the same document
+  #     records that THERE IS NO DELEGATE. 6.3 must resolve this by a dated amendment (S12-priced
+  #     exception against a frozen 6.2 artifact), not hand it to 6.9 as a surprise. OQ5.
+  #   • The PROD freeze window does not bind a story that appends no row and deploys nothing -- state
+  #     it rather than leave it ambiguous.
+  #   • prod_tag's "which form a rollback targets is Story 6.4/6.6's to settle" now has FACTS to settle
+  #     against: three -prod forms will exist (sha-<12hex>-prod and prod-<12hex> permanent,
+  #     <sanitized-ref>-prod expiring at 14 days). 6.3 records them; it does NOT settle the question.
+  #   • Retention becomes load-bearing for the first time: #d38 S9 is UNPROVEN by execution, first
+  #     observable 2026-08-29, and that dated item still has NO OWNER. Compile keep_pattern; do not
+  #     claim protection by execution.
+  # 🔴 prod-current WILL NAME AN IMAGE NOTHING SERVES until the external traffic switch (6.9's
+  # 2026-08-18 amendment). Same trap #d19 had to disclaim for the prod branch ("это точка отсчёта, а
+  # не утверждение"). The disclaimer is written AT CREATION TIME, in docs/prod-releases.md prose and in
+  # D43 -- and NO ROW is added to that ledger.
+  # 🔴 retro-E5 IS OWED HERE (unlike 6.2): the new recorder's G1/G2/G3/404 rows are all discriminable
+  # by ordinary dispatches, the G4/G6 equivalents are force-test only, and THERE IS NO G5-EQUIVALENT
+  # because there is no PROD stand until 6.10 -- named as absent, not papered over. And the one row the
+  # story must NOT claim: "the rebuild is not byte-identical to what prod serves" CANNOT FAIL (ghcr is
+  # unreachable BY DECISION so there is no digest to compare, and Date.now() fixes the answer anyway).
+  # Commit identity IS measurable -- compare org.opencontainers.image.revision on both sides.
+  # 🔴 SUPERSEDED 2026-08-26 -- THE NUMBER IS D45, NOT D43 (Oleg, OQ10 option (a)). Left standing
+  # rather than rewritten because the measurement below was taken and was not wrong -- it was BLIND:
+  # the ref sweep cannot see a decision authored locally and never pushed, which is exactly how D43
+  # was written. See the session-2 block further down for the finding and the resolution.
+  # Decision number is D43 (main holds D42; story-4-9 still holds D35 unmerged) -- re-verify across
+  # every open story-* branch at Task 1.5, not just main.
+  # Blast radius: build.yml, record-preprod-candidate.yml, deploy-stand.yml, deploy-preprod.yml,
+  # deploy-dev.yml, dev-reset.yml, ci.yml, build-main.yml, RVC-v1.1, docs/preprod-candidates.md and
+  # docs/release-regulation.md are ALL READ-ONLY. s2 is READ-ONLY over the NFR7 admin SSH path and
+  # never through a Forgejo job (NFR5 amended: Forgejo never deploys to s2 at all). s10 is untouched.
+  # OQ1-5 GATE Task 4's dispatch: the two one-shot acts wait for confirmation instead of proceeding on
+  # the absence of a veto -- #d38 S7's "announce, don't ask twice" is written for reversible acts.
+  # STATUS MAPPING FOR A HALT (the enum has no `blocked` value): if Task 2.4 finds the commit absent
+  # from Forgejo, or a one-shot act is still awaiting Oleg, this row STAYS `in-progress` with the
+  # blocking condition named in the comment immediately above it.
+  # 🔴 PAUSED, 2026-08-26, on Oleg's own explicit instruction -- do not resume until he signals.
+  # Task 2.4's gate worked exactly as designed (a successful precondition check, not a story
+  # failure): the commit s2 is running (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39, read from
+  # org.opencontainers.image.revision on the running container's image, root@175.110.122.17 via the
+  # NFR7 admin path) was confirmed absent from the Forgejo repository -- fresh git fetch --all
+  # across all 1429 remote refs, zero hits, zero near-matches. This is the project's first direct
+  # proof of the GitHub/Forgejo divergence and outlives this story (relevant to 6.9 and the epic
+  # retrospective). The gate stopped this story before the one-shot, irreversible
+  # environment=prod dispatch -- no permanent tag was minted against an unconfirmed commit.
+  # RESOLVED by Oleg, verbatim, 2026-08-26: "Занесу коммиты в Forgejo" -- option (a), import from a
+  # local clone, chosen; options (b) nearest-present-ancestor and (c) unblock-GitHub-transition-first
+  # explicitly DECLINED (not defaulted past) -- Oleg's own stated reason: the cutover image must be
+  # the exact running commit, not an approximation. OWNER: Oleg -- he is importing the commit
+  # himself and has set up his own watch for its arrival in Forgejo; this is a named owner with a
+  # decision already in progress, not an open-ended wait. Row stays in-progress, not review, not
+  # backlog. On resume: RE-VERIFY Task 2.4, do not resume from where it stopped -- confirm the
+  # commit is now a complete, reachable object in Forgejo (not a dangling blob), and confirm s2 is
+  # STILL serving this exact revision (GitHub keeps merging throughout the wait; a changed label is
+  # a new commit and a new gate). Separately, Open Questions 1-5, 7, 8 arrived pre-answered and
+  # ratified (OQ8's owner reassigned by Oleg from Story 6.8 to Story 6.3 itself); a ninth item
+  # (one-shot dispatch authorised "by readiness", price raised accordingly) is recorded but not yet
+  # exercised -- both moot until OQ6's import completes.
+  # 📌 SESSION 2, 2026-08-26 -- Tasks 3, 5.1-5.2 and 7.3 DONE; STILL BLOCKED, same blocker.
+  # Gate re-verified FIRST, not assumed: `git cat-file -e 41ab0470...^{commit}` -> not a valid object;
+  # `git rev-list --all | grep ^41ab0470` -> 0; and NEW this session, `git ls-remote origin` -> 0, which
+  # asks the SERVER rather than the local object store. Task 4 stays gated.
+  # ✅ The resume instruction's OTHER half closed WITHOUT touching s2 -- public HTTP only: the live
+  # bundle's VITE_BUILD_TS (1787428120913 = 2026-08-22 19:48:40Z) and asset Last-Modified (19:49:08Z)
+  # sit in one 2.5-min window with session 1's s2 timestamps (label created 19:47:22.014Z, image
+  # Created 19:49:53Z). PRODUCTION HAS NOT MOVED, via an independent channel. 🔴 Stated at true
+  # strength: this corroborates the BUILD, not the LABEL -- OQ4's accepted single-source position on
+  # the commit identity is unchanged and this is NOT a second source for it.
+  # ✅ Task 3.4: `package_cleanup_rule` read from the Forgejo DB itself (ssh s1 -> psql), row pasted;
+  # matches the docs transcription character for character. Compiled: sha-<12>-prod / prod-<12> /
+  # prod-current -> KEEP; the 40-hex sanitized-ref tag -> NOT kept, expires at 14 days. Free
+  # non-vacuous control (sha-a99ccd44c5a3-preprod) also KEEP. Disposition stays UNPROVEN by execution
+  # (#d38 §9); first observable 2026-08-29; owner Story 6.3 per Oleg's OQ8 reassignment.
+  # ✅ `.forgejo/workflows/record-prod-image.yml` SHIPPED -- the story's only code artifact. G1 (exact
+  # literal, first step, zero network) / G2 (-prod, with an explicit -preprod arm) / G3 (exactly 12
+  # hex) / G4 (keep_pattern compile) / classified-404 probe / G6 (labels). NO G5-equivalent, reason in
+  # the header in those words: there is no PROD stand until 6.10 and a guard without a referent is not
+  # a guard. prod-<sha> before prod-current; --prefer-index=false; read-back after every write; a
+  # prod-current MOVE is refused by default (recorded divergence from 5.4 -- 6.3 is the FIRST write, so
+  # the tag must not exist; 6.6 sets its own policy). 15/15 run bodies free of the expression syntax
+  # (Prohibition 12, checked mechanically) and bash -n clean.
+  # 🔴 SHIPPED BUT UNEXERCISED, and the distinction is its whole disposition. Four pure-shell guards
+  # were run LOCALLY against pass + discriminating inputs, 15/15 as specified -- that is verification
+  # of shell logic, NOT retro-E5's outcome matrix. §9's MATRIX HAS NO RUN IDS AND IS `OPEN`. Six of its
+  # seven rows need a dispatch that cannot happen yet; the seventh (G5) is a permanent named absence.
+  # ✅ Workflow census 11 -> 12 (the number 6.2's regulation dates; "no PROD deploy caller" stays TRUE).
+  # Every frozen path in §12 byte-identical to origin/main; `git status` shows exactly one new file.
+  # 🔴 NEW, OPEN QUESTION 10 -- `D43` IS NOT FREE. Task 1.5's sweep across every origin/* ref is
+  # reproducible and still says "next free D43", but it is blind to the operator's own local checkout:
+  # branch `docs/prod-temporary-hostname` (bd4e4b83, 1c54f32d, NEVER PUSHED) already carries a full
+  # `## D43.` for the temporary PROD hostname. First genuinely free number is D45 (D35 -> story-4-9,
+  # D43 -> the unpushed local branch, D44 -> story-4-10).
+  # ✅ RESOLVED SAME SESSION -- Oleg chose option (a): THIS STORY RENUMBERS TO D45. D43 stays the
+  # PROD-hostname record's. Reason recorded: the hostname record is written and dated, this story has
+  # not written its decision yet -- moving text that does not exist is cheaper. Applied to every
+  # forward-looking reference in the story file; the HISTORICAL entries that record "next free: D43"
+  # (Task 1.5, session 1's Debug Log, Change Log 0.2/0.4) are left standing and superseded, NOT
+  # rewritten -- the amend-don't-rewrite rule 6.2's own review enforced.
+  # 🔴 THE PROCESS HALF STAYS OPEN and is NOT closed by the renumber: the sweep itself is unchanged,
+  # so the next locally-authored, unpushed decision reopens the same hole. Owner Oleg.
+  # Generalisable half, filed with it: this project's ref-based D-number sweep is UNSOUND for any
+  # decision authored locally and not yet pushed. Not urgent (Task 6.3 is gated) but must not surface
+  # at merge time, which is exactly when a duplicate anchor gets expensive.
+  # STILL PENDING (owner: Oleg): the commit import. Nothing downstream of Task 4 can start without it.
+  # ✅ CLOSED TO `review` 2026-08-26. DELIVERED AND EVIDENCED: the first PROD image this project has
+  # ever built (run 598, build.yml environment=prod on a99ccd44c5a39345fa65eb74e87343b187e129e9,
+  # 14/14 green, 384s) and the first PROD markers it has ever written (run 600, record-prod-image.yml,
+  # 17/17). Three names, ONE manifest sha256:f30c794123ba...a3f3, read back from the registry
+  # independently of both runs: sha-a99ccd44c5a3-prod (deployable, 6.9's target), prod-a99ccd44c5a3
+  # (history, 11:17:09Z), prod-current (pointer, 11:17:10Z) -- history before pointer.
+  # 🔴 6 of 10 ACs MET. FOUR NOT MET, every one by Oleg's explicit decision, none by oversight:
+  #   AC4 (EPIC criterion) -- Task 6 cancelled: no commit-identity write-up, and NO D45 AT ALL, so
+  #     this story ships with no decision record. #d46 covers the build-source change and nothing else.
+  #   AC6 -- Task 5.4 cancelled: record-prod-image.yml ships with SIX GUARDS whose refusal path has
+  #     never been observed live. The local 15/15 shell exercise is NOT substituted for it.
+  #   AC8 -- both halves cancelled. 🔴 OPERATIONALLY LIVE: prod-current exists from 11:17:10Z naming an
+  #     image NO HOST SERVES (s2 still serves ghcr:main until the external switch), and the only
+  #     statements of that are the workflow's own header and run 600's printed output -- best-effort.
+  #   AC9 -- Task 7 cancelled. 🔴 LEAVES A LIVE BLOCKER ON STORY 6.9: the shipped rollback rule makes
+  #     6.9's own FR32 `rollback: true` dispatch "a rollback to a tag not in the ledger" -> a release
+  #     -> needs Oleg, while the same regulation records NO DELEGATE. OQ5 was ANSWERED ("Поправить
+  #     регламент в 6.3") and is now UNEXECUTED. AC9's own never-drop fallback (file it against 6.9 in
+  #     deferred-work.md) was OFFERED AND NOT TAKEN -- so the contradiction lives ONLY in the story
+  #     file, which 6.9 has no reason to open. Owner: Oleg.
+  # ✅ LEDGER CLOSED BY QUERY (retro-D4), not self-report: 14 runs measured vs declared ceiling 20 --
+  # UNDER BUDGET. 12 push rows attributed by commit_sha across all 13 branch commits, + run 600, + run
+  # 598 NAMED SEPARATELY because its commit_sha is the DISPATCH REF (f144ee9f), not what it built -- a
+  # commit_sha attribution alone would have MISSED the story's most consequential run. Not all green:
+  # 5 success, 7 CANCELLED by ordinary concurrency eviction (not failures), 1 running at query time.
+  # One budgeted line cost ZERO (the origin/main integration merge shared a push with 5f30f3a1).
+  # ⚠️ STILL OPEN, owner Story 6.3 by Oleg's own OQ8 reassignment: the retention rule is UNPROVEN by
+  # execution, first observable 2026-08-29 -- AFTER this story closes. The observation is NOT made and
+  # the ownership is NOT reset to nothing.
+  # ⚠️ WHAT 6.9 INHERITS: dispatch sha-a99ccd44c5a3-prod with rollback: true -- NOT because the guard
+  # would refuse (it would now PASS, the commit carries preprod-a99ccd44c5a3) but because the release
+  # path rebuilds and Enforce AC2 refuses the repoint (#d24 §2b). Plus the approval blocker above, and
+  # #d46's new AC gating the traffic switch on the product-code import (owner Oleg).
+  # Oleg merges the PR; the row goes `done` only after that.
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: review
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
