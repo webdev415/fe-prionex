@@ -517,12 +517,85 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
       exactly these two and its AC6 was recorded UNMET; this story states the distinction instead.
 
 ### Task 4 — 🔴 The rollback path, first (AC: 3, 6) — **1 dispatch**
-- [ ] 4.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: true` with
+
+🛑 **HALT AT 4.1, 2026-08-26 — RUN 629 FAILED, and the cause is architectural, not a defect in this
+story's own file.**
+
+**What DID pass, and it is the finding this task existed to produce.** §2's trap is cleared,
+by observation:
+
+```
+Derive the commit and the PROD tag …            success
+Rebuild the commit at environment: prod         (its "Build and Push" child: SKIPPED)   ← rollback path
+Deploy to the PROD stand on s10                 EXECUTED, not skipped                   ← the trap, passed
+```
+
+**The build was skipped and the deploy still ran.** `always()` plus the explicit
+success-or-skipped test does what §2 required, and the silent-no-op failure mode this story was most
+afraid of **does not exist in this file.** That is AC6's core, earned on the first dispatch.
+
+🔴 **Where it failed — `deploy-stand.yml`'s own preflight, pasted:**
+
+```
+REGISTRY_USER_RO length: 12       OK: both secrets are non-empty …
+GET https://git.crm-prionex.com/v2/ -> HTTP 401 (401 expected: reachable, unauthenticated)
+OK: registry is reachable and answering correctly from this runner's own execution.
+error: no such object: e1-rung3
+FAIL: could not self-identify this job container's own image via 'docker inspect $(hostname)'
+      — cannot smoke-test the lock mechanism without knowing which image it will run in.
+```
+
+**Secrets and registry reachability both passed from s10.** The failure is the self-identification.
+
+### 🔴 THE ROOT CAUSE: `deploy-stand.yml` REQUIRES A CONTAINER EXECUTOR; s10's RUNNER IS A HOST EXECUTOR
+
+Measured, both runners' declared labels:
+
+```
+s1  (DEV / PRE-PROD, id 14):  deploy-dev-preprod:docker://deploy-base-dev-preprod:2026-08-07
+s10 (PROD,           id 23):  e1-rung3-prod-deploy:host
+```
+
+`deploy-stand.yml` derives `SELF_IMAGE` from **its own job container** in order to launch the Story 4.4
+lock holder as a **sibling container** through the `docker.sock` it holds. Under a **`:host`** executor
+the steps run **directly on the machine** — there is no own container, `$(hostname)` is the machine name
+`e1-rung3`, and `docker inspect` correctly reports `no such object`.
+
+⚠️ **`deploy-stand.yml`'s own comment at that step does not contemplate this.** It attributes the
+failure to *"a runner started with a non-default `--hostname`, or the docker daemon itself is
+unreachable"*. **Neither is the cause here.** A host executor is a third case the file never
+anticipated, and it fails closed with a message that points at the wrong two.
+
+🔴 **This qualifies Story 6.10's AC1, which I confirmed as "met in full" hours ago.** AC1 asked for a
+runner **on s10** whose jobs execute against the **host Docker daemon, not dind** — and `:host` with
+`docker_host: unix:///var/run/docker.sock` satisfies exactly that, so the confirmation was true **of
+AC1's text**. **AC1 never asked which EXECUTOR the runner uses**, and nobody — including me — checked
+whether the runner it accepted is compatible with the shared deploy definition it exists to run.
+**That is an under-specified AC, not a false measurement**, and it is worth more than this story: an AC
+can be fully met and still leave the thing it was written to enable impossible.
+
+**Three ways out. None is inside this story's blast radius (`deploy-stand.yml` is FROZEN,
+Prohibition 1), so this is Oleg's call:**
+1. ✅ **Register OUR OWN deploy runner on s10 with a `docker://` executor**, mirroring s1's. **This is
+   the plan's own model** — `#d23` decided *«деплой-раннер на s10 провижним мы сами»*, and Story 6.10
+   departed from it by adopting the neighbours'. It needs the `deploy-base-dev-preprod` image (or an
+   equivalent) reachable from s10, and it touches no shipped file. **Recommended.**
+2. **Ask `CRM/api-prionex` to add a container-executor label** to their runner. Cheapest in effort,
+   but it makes the frontend's production deploy depend on another team's runner config a second time.
+3. **Change `deploy-stand.yml`** to work under a host executor. 🔴 **Frozen here, and it would touch the
+   shipped DEV and PRE-PROD deploy path** — the blast radius is every stand, not just PROD.
+
+**Tasks 4.2-4.3, 5 and 6 do not run until this is settled.** No further dispatch is useful: every one
+would fail at the same step.
+
+- [»] 4.1 🛑 **DISPATCHED, run 629, FAILED at the callee's preflight — see the HALT above.** Dispatch
+      was `rollback: true` with
       `image_tag: sha-a99ccd44c5a3-prod`. **This path first, deliberately:** it builds nothing, it is
       the one the cutover needs, and it exercises §2's trap where a mistake is cheapest.
-- [ ] 4.2 **`PENDING (owner: coordinator)`** — paste the run's **full job list and step table**
-      (Prohibition 10). Show the build job **skipped** and the deploy job **executed**.
-- [ ] 4.3 Read the stand back **from s10 itself**: container name, image digest, and
+- [»] 4.2 ✅ **Done — job list pasted in the HALT above.** Build **skipped**, deploy **executed**:
+      §2's trap is cleared by observation, which is AC6's core and the one thing this dispatch bought.
+- [ ] 4.3 🛑 **BLOCKED by the HALT — nothing was deployed, so there is nothing to read back.**
+      When it unblocks: read the stand back **from s10 itself**: container name, image digest, and
       🔴 `docker exec fe-prionex-prod getent hosts crm-kong-gateway` — **empty is a STOP**, and *"it
       started" is not evidence* (Story 4.1 Task 6.2).
 
