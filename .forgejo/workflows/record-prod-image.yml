@@ -158,6 +158,13 @@ jobs:
     # `record-preprod-candidate.yml`'s own `record` job makes the same choice.
     runs-on: node-20
     timeout-minutes: 10
+    # Finding #11 (Story 6.3 review, owner 6.6). G2 below tests for whitespace with ANSI-C
+    # quoting (`$'\n'`), which is bash, NOT POSIX. Every step also opens `set -o pipefail`,
+    # itself non-POSIX, so under `dash` a step would die loudly on line 1 rather than
+    # mis-parse -- but "fails loudly by accident" is not the same as "declared".
+    defaults:
+      run:
+        shell: bash
     steps:
       # No checkout: this job reads nothing from the repository.
 
@@ -335,14 +342,33 @@ jobs:
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
           set -euo pipefail
+                    # Finding #13 (Story 6.3 review, owner 6.6): an EMPTY credential used to become an
+          # unauthenticated request reported as AMBIGUOUS -- fail-closed, but the operator was
+          # told the wrong thing. Checked before the call, so the message names the real cause.
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. This is a"
+            echo "  MISSING CREDENTIAL, not an absent tag and not an ambiguous read. Refusing"
+            echo "  before the request, so the failure names its own cause."
+            exit 1
+          fi
           HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
-            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+            | curl -sS -L --proto-redir '=https' \
+                --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
                 -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
                 -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
                 "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${IMAGE_TAG}" || true)"
           case "$HTTP_CODE" in
             200)
               echo "OK: candidate ${IMAGE_TAG} is present (HTTP 200)."
+              ;;
+            401|403)
+              echo "FAIL: probing '${IMAGE_TAG}' returned HTTP ${HTTP_CODE} -- the registry"
+              echo "  REFUSED THE CREDENTIAL. This is neither presence nor absence, and it must"
+              echo "  never be reported as absence (finding #13)."
+              exit 1
               ;;
             404)
               echo "FAIL: candidate tag '${IMAGE_TAG}' is ABSENT from the registry (HTTP 404)."
@@ -381,18 +407,32 @@ jobs:
       # suffix from the same shell variables -- so this does not independently establish the
       # commit; that limitation is the same one record-preprod-candidate.yml records for its
       # own G6, and it is stated rather than hidden.
+      # 🔴 FINDING #2 (Story 6.3 review, owner 6.6 -- reported INDEPENDENTLY BY TWO LAYERS, and
+      # AC5 forbids deferring it). This step used to inspect `$SHA_TAG`, re-resolving the tag a
+      # SECOND time, while the write steps below use `${IMAGE}@${CANDIDATE_DIGEST}` pinned one
+      # step earlier. The labels checked and the manifest written were only ASSUMED to be the
+      # same object -- under two PERMANENT names. It now inspects the pinned digest.
+      # ⚠️ The finding's own suggested fix -- "the sibling avoids the split by taking the digest
+      # from Docker-Content-Digest" -- was checked against `record-preprod-candidate.yml` and is
+      # FALSE: its `record` job has the identical split, and its `Docker-Content-Digest` read is
+      # in the OTHER job, which by that file's own header design never hands the digest over.
+      # There was no sibling pattern to copy. This is written, not copied.
       - name: "G6 -- the artifact's own labels must agree with the derived commit and environment"
         env:
           SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
           DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
         run: |
           set -euo pipefail
+          IMAGE="${SHA_TAG%%:*}"
+          PINNED="${IMAGE}@${CANDIDATE_DIGEST}"
+          echo "G6 inspects the PINNED DIGEST, not the tag: ${PINNED}"
           ERR_FILE="$(mktemp)"
           trap 'rm -f "$ERR_FILE"' EXIT
-          IMAGE_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "$SHA_TAG" 2>"$ERR_FILE")" \
+          IMAGE_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "$PINNED" 2>"$ERR_FILE")" \
             || { ERR="$(cat "$ERR_FILE")"; \
                  echo "FAIL(G6, tool failure): 'imagetools inspect --format {{json .Image}}' itself"; \
-                 echo "  failed for ${SHA_TAG}. Not a label-mismatch verdict -- a command failure."; \
+                 echo "  failed for ${PINNED}. Not a label-mismatch verdict -- a command failure."; \
                  echo "  stderr: ${ERR}"; exit 1; }
 
           VERSION_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.opencontainers.image.version"] // empty' 2>/dev/null || true)"
@@ -402,7 +442,7 @@ jobs:
           if [ -z "$VERSION_LABEL" ] || [ -z "$REVISION_LABEL" ] || [ -z "$ENV_LABEL" ]; then
             echo "FAIL(G6, tool failure): could not read one or more of"
             echo "  org.opencontainers.image.version / .revision / org.prionex.environment from"
-            echo "  ${SHA_TAG}'s own config via jq '.config.Labels'. This is a PARSE failure, not a"
+            echo "  ${PINNED}'s own config via jq '.config.Labels'. This is a PARSE failure, not a"
             echo "  label-mismatch verdict -- the field path here may be wrong and needs fixing,"
             echo "  not the guard weakened to a substring grep. Raw image config:"
             printf '%s\n' "$IMAGE_JSON"
@@ -455,14 +495,33 @@ jobs:
         run: |
           set -euo pipefail
           MARKER="${HISTORY_TAG#*:}"
+                    # Finding #13 (Story 6.3 review, owner 6.6): an EMPTY credential used to become an
+          # unauthenticated request reported as AMBIGUOUS -- fail-closed, but the operator was
+          # told the wrong thing. Checked before the call, so the message names the real cause.
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. This is a"
+            echo "  MISSING CREDENTIAL, not an absent tag and not an ambiguous read. Refusing"
+            echo "  before the request, so the failure names its own cause."
+            exit 1
+          fi
           HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
-            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+            | curl -sS -L --proto-redir '=https' \
+                --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
                 -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
                 -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
                 "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
           case "$HTTP_CODE" in
             200) echo "exists=true"  >> "$GITHUB_OUTPUT" ;;
             404) echo "exists=false" >> "$GITHUB_OUTPUT" ;;
+            401|403)
+              echo "FAIL: probing ${HISTORY_TAG} returned HTTP ${HTTP_CODE} -- the registry REFUSED"
+              echo "  THE CREDENTIAL. Not presence, not absence, and never to be reported as"
+              echo "  absence: absence here unlocks a WRITE (finding #13)."
+              exit 1
+              ;;
             *)
               echo "FAIL: probing ${HISTORY_TAG} returned HTTP ${HTTP_CODE}, neither 200 nor 404."
               echo "  Refusing to guess whether it exists."
@@ -479,6 +538,24 @@ jobs:
           EXISTS: ${{ steps.probe-history.outputs.exists }}
         run: |
           set -euo pipefail
+          # 🔴 THE FOURTEENTH DEFECT -- found by Story 6.6's own code review, MISSED by all
+          # thirteen, and the only guard in this file that used to fail in the UNSAFE direction.
+          # `EXISTS` is a raw step output consumed as `[ "$EXISTS" = "true" ]`. ANY other value --
+          # a dropped $GITHUB_OUTPUT write, a step-id rename, a false 404, or A workflow_call
+          # REFACTOR OF EXACTLY THE KIND STORY 6.6 PERFORMS -- left PRE_DIGEST empty, and EVERY
+          # protective branch below is gated on `[ -n "$PRE_DIGEST" ]`. The repoint refusal and
+          # the allow_current_move refusal both silently became a WRITE, while the log printed
+          # "for the first time". Fixing finding #1's Accept headers narrows ONE trigger and
+          # leaves the mechanism. Fail closed on anything not literally `true` or `false`.
+          case "${EXISTS:-}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: the existence probe reported '${EXISTS:-<empty>}', which is neither"
+              echo "  'true' nor 'false'. That is a BROKEN PROBE, not an absent tag -- and"
+              echo "  absence here unlocks a permanent registry write. Refusing to guess."
+              exit 1
+              ;;
+          esac
           PRE_DIGEST=""
           if [ "$EXISTS" = "true" ]; then
             OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$HISTORY_TAG")"
@@ -538,14 +615,33 @@ jobs:
         run: |
           set -euo pipefail
           MARKER="${CURRENT_TAG#*:}"
+                    # Finding #13 (Story 6.3 review, owner 6.6): an EMPTY credential used to become an
+          # unauthenticated request reported as AMBIGUOUS -- fail-closed, but the operator was
+          # told the wrong thing. Checked before the call, so the message names the real cause.
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. This is a"
+            echo "  MISSING CREDENTIAL, not an absent tag and not an ambiguous read. Refusing"
+            echo "  before the request, so the failure names its own cause."
+            exit 1
+          fi
           HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
-            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+            | curl -sS -L --proto-redir '=https' \
+                --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
                 -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
                 -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
                 "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
           case "$HTTP_CODE" in
             200) echo "exists=true"  >> "$GITHUB_OUTPUT" ;;
             404) echo "exists=false" >> "$GITHUB_OUTPUT" ;;
+            401|403)
+              echo "FAIL: probing ${CURRENT_TAG} returned HTTP ${HTTP_CODE} -- the registry REFUSED"
+              echo "  THE CREDENTIAL. Not presence, not absence, and never to be reported as"
+              echo "  absence: absence here unlocks a WRITE (finding #13)."
+              exit 1
+              ;;
             *)
               echo "FAIL: probing ${CURRENT_TAG} returned HTTP ${HTTP_CODE}, neither 200 nor 404."
               echo "  Refusing to guess whether it exists."
@@ -570,6 +666,24 @@ jobs:
           ALLOW_MOVE: ${{ inputs.allow_current_move }}
         run: |
           set -euo pipefail
+          # 🔴 THE FOURTEENTH DEFECT -- found by Story 6.6's own code review, MISSED by all
+          # thirteen, and the only guard in this file that used to fail in the UNSAFE direction.
+          # `EXISTS` is a raw step output consumed as `[ "$EXISTS" = "true" ]`. ANY other value --
+          # a dropped $GITHUB_OUTPUT write, a step-id rename, a false 404, or A workflow_call
+          # REFACTOR OF EXACTLY THE KIND STORY 6.6 PERFORMS -- left PRE_DIGEST empty, and EVERY
+          # protective branch below is gated on `[ -n "$PRE_DIGEST" ]`. The repoint refusal and
+          # the allow_current_move refusal both silently became a WRITE, while the log printed
+          # "for the first time". Fixing finding #1's Accept headers narrows ONE trigger and
+          # leaves the mechanism. Fail closed on anything not literally `true` or `false`.
+          case "${EXISTS:-}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: the existence probe reported '${EXISTS:-<empty>}', which is neither"
+              echo "  'true' nor 'false'. That is a BROKEN PROBE, not an absent tag -- and"
+              echo "  absence here unlocks a permanent registry write. Refusing to guess."
+              exit 1
+              ;;
+          esac
           PRE_DIGEST=""
           if [ "$EXISTS" = "true" ]; then
             OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$CURRENT_TAG")"
