@@ -10809,6 +10809,32 @@
           "issueLineMismatch": "Картка звужена до однієї лінії, а шкала вказує на іншу — така шкала не спрацює жодного разу"
         }
       }
+    },
+    "employeeCard": {
+      "chronology": {
+        "title": "Хронологія",
+        "filterLabel": "Фільтр хронології",
+        "loadMore": "Показати раніші",
+        "empty": "Для цього співробітника ще нічого не записано.",
+        "failed": "Не вдалося завантажити хронологію.",
+        "filters": {
+          "all": "Усі",
+          "personnel": "Кадрові",
+          "evaluation": "Оцінки",
+          "training": "Навчання"
+        },
+        "events": {
+          "hired": "Прийнято - {{department}}, {{role}}",
+          "role_changed": "Змінено посаду - {{from}} на {{to}}",
+          "department_changed": "Змінено відділ - {{from}} на {{to}}",
+          "evaluation_completed": "Оцінка якості - {{score}}",
+          "evaluation_updated": "Оцінку якості змінено - {{score}}",
+          "feedback_given": "Зворотний звязок - {{kind}}",
+          "training_assigned": "Призначено курс - {{course}}",
+          "training_completed": "Завершено курс - {{course}}",
+          "survey_completed": "Опитування - {{name}} ({{score}})"
+        }
+      }
     }
   },
   "contactTypes": {
