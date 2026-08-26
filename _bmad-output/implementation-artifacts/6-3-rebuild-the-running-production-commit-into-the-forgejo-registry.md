@@ -433,6 +433,16 @@ ordinary dispatch — no stubs, no force-tests, no `PATH` tricks, for the rows m
 | G4-equivalent — both markers compile against `keep_pattern` | same run (both match) | **force-test only** — a non-matching derived name is not reachable through this file's own inputs, exactly as 5.4 recorded for its own G4 |
 | **G5-equivalent — the stand serves this digest** | — | — | ❌ **DOES NOT EXIST. There is no PROD stand until Story 6.10.** §5. **This is a named absence, not a gap to paper over.** |
 
+🚫 **STATUS 2026-08-26: THIS MATRIX IS `OPEN` AND WILL NOT BE COMPLETED BY THIS STORY.** Oleg
+cancelled Task 5.4 (*«отмена Task 5.4»*). **Earned: exactly one row** — the pass row, run 600, which
+carried the real record dispatch through every guard to both writes. **Not earned and not claimed:
+all four discriminating rows.** The `G4`-equivalent stays **force-test only** and the
+`G6`-equivalent **unexercised**, both exactly as predicted above. The `G5`-equivalent remains a
+**named absence** and was never earnable here. **AC6 is UNMET** and says so in its own section.
+🔴 **The local 15/15 shell exercise at Task 5.2 is not this matrix and is not offered as it** — it
+never reached Forgejo, never proved the guards are reached in the real step order, and produced no
+run id. **Owner: Oleg.**
+
 **🔴 The check this story must NOT claim, stated here so the trap is sprung on paper instead of in the
 Dev Agent Record.** It is tempting to present *"the rebuilt image is not byte-identical to what
 production serves"* as a measured finding. **It cannot be measured and it cannot fail.** The ghcr image
@@ -697,6 +707,13 @@ matches by name; **`<sanitized-ref>-prod`, which the build step also pushes, mat
 expires at 14 days** — say so rather than letting a reader assume every `-prod` tag survives.**
 
 ### AC6 — 🔴 ADDED: the new workflow ships with a live outcome matrix including discriminating runs
+
+🚫 **NOT MET. Cancelled by Oleg 2026-08-26 (*«отмена Task 5.4»*), and recorded as UNMET rather than
+softened, reinterpreted, or marked partially satisfied.** §9's matrix carries **one** row — the pass
+row, run 600 — and **no discriminating row**. `record-prod-image.yml` therefore ships in breach of
+**retro-E5**, the rule this project adopted at Epic 3's retrospective. The local 15/15 shell exercise
+recorded at Task 5.2 is **not** offered in its place; see 5.4 for why the two are different claims.
+**There is no fourth, softer word: this AC is unmet, the decision was Oleg's, and the owner is Oleg.**
 **Given** **retro-E5** — *"every new guard ships with a live outcome matrix (one run per branch incl. a
 discriminating run)"* — and that this story, unlike 6.2, introduces guards
 **When** `record-prod-image.yml` is delivered
@@ -1161,17 +1178,34 @@ against a query, or closed with the literal word **OPEN**.
       PRE-PROD artifact** — Option C's rebuild, visible as two digests for one commit (NFR11), which
       is a measured fact rather than the vacuous byte-comparison Prohibition 7 forbids.
       **AC3 is met.**
-- [ ] 5.4 **`PENDING (owner: coordinator)`** — the discriminating runs (§9): acknowledgement input wrong;
-      a real `-preprod` tag (`sha-a99ccd44c5a3-preprod` already exists — free); the 40-hex form of this
-      story's own commit; `sha-000000000000-prod` for the classified 404. **Each must refuse, and each
-      refusal message must name what was wrong** — a length, a suffix, an absence — not a generic failure.
-- [ ] 5.5 **After every refusal, re-read both markers from the registry directly** and confirm they are
-      unmoved — 5.4's own discipline, because *"most of the `record` job's logs had not archived yet"*
-      at verification time.
-- [ ] 5.6 Fill §9's matrix with real run ids. **Label every unearnable row honestly**: the
-      G4-equivalent as **force-test only**, the G6-equivalent as live-or-force-test depending on whether a
-      suitable artifact exists **without minting one**, and the G5-equivalent as **absent, no PROD stand
-      until 6.10**. **Do not invent a row** (Prohibition 7).
+- [~] 5.4 🚫 **CANCELLED BY OLEG, 2026-08-26 — *«отмена Task 5.4»*. Recorded as a decision with its
+      cost named, not as a skipped subtask.** The four discriminating dispatches (wrong
+      `acknowledgement`; a real `sha-a99ccd44c5a3-preprod`; the 40-hex form; `sha-000000000000-prod`
+      for the classified 404) were **not made**.
+      🔴 **What this costs, stated plainly: `record-prod-image.yml` ships with SIX GUARDS WHOSE
+      REFUSAL PATH HAS NEVER BEEN OBSERVED LIVE.** One dispatch (run 600) has exercised the **pass**
+      path end to end. Nothing has ever watched G1, G2, G3, the 404 classifier or G6 actually refuse
+      anything on this instance.
+      🔴 **What must NOT be substituted for it, and the distinction is the whole point.** Task 5.2
+      exercised all four pure-shell guards **locally**, 15/15, against pass and discriminating inputs
+      — extracted from the shipped YAML and run under `bash`. That is genuine verification of the
+      **shell logic** and it is recorded as such. It is **not** a live outcome matrix: it never
+      touched Forgejo, never proved the guard is reached in the real step order, never proved the
+      workflow parses and schedules the way the run does, and never produced a run id. **Relabelling
+      the local run as the matrix would be exactly the defect retro-E5 exists to prevent**, and this
+      project has caught that shape before (5.6's §9 "negative control" that could not have failed on
+      either axis). It is not done here.
+      **Owner: Oleg**, whose decision this is. **Inherited by whoever next dispatches this file** —
+      Story 6.6, which the file's own header says may adopt, extend or supersede it.
+- [~] 5.5 🚫 **CANCELLED — falls away with 5.4.** It exists to re-read both markers after each refusal
+      and confirm they are unmoved; with no refusals dispatched there is nothing to confirm. **The
+      markers were nonetheless read back independently after the one dispatch that did happen** — see
+      5.3 — so the state of the registry is evidenced, just not against a refusal.
+- [~] 5.6 🚫 **CANCELLED — §9's matrix is NOT filled and its status is `OPEN`.** One row is earned
+      (the pass row, run 600). Four discriminating rows are **not earned and are not claimed**. The
+      G4-equivalent remains **force-test only** and the G6-equivalent **unexercised**, both as
+      predicted at context time. The G5-equivalent remains a **named absence** — there is no PROD
+      stand until Story 6.10 — which is unaffected by this cancellation and was never earnable here.
 
 ### Task 6 — Record the decision and the commit-identity comparison (AC: 4, 8) — **0 runs**
 - [ ] 6.1 Perform AC4's **measurable** half: read `org.opencontainers.image.revision` from the s2 image
@@ -1810,6 +1844,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.7 | **Task 4 and Task 5.3 executed; Task 5.4/5.5/5.6 CANCELLED by Oleg; AC6 recorded UNMET.** Run 598 (384 s, 14/14 green) built `a99ccd44c5a3…` at `environment: prod` — **step 7 is the project's first ever read of `secret/fe/prod/app`**, and the `fe-prod` AppRole's first real login. Run 600 (17/17 green) minted `prod-a99ccd44c5a3` then `prod-current`, history before pointer, one second apart. All three PROD names resolve to one manifest `sha256:f30c794123ba…a3f3`; the control — both PRE-PROD names of the same commit — resolves to a **different** manifest `sha256:a62e8687…`, so Option C's rebuild is visible as two digests for one commit, measured rather than asserted. **AC2 and AC3 met.** 🔴 **A defect of mine, found and corrected in the same session:** Task 4.5 first reported digests read from `package_property.container.digest`, which is **not** the manifest digest; the subtask's conclusion held but its value came from the wrong instrument, settled by a free control where the registry and this project's own ledger agree against the column. Standing rule recorded: manifest digests come from the registry, never from `package_property`. 🚫 **Task 5.4 cancelled** — the four discriminating dispatches were not made, so `record-prod-image.yml` ships with six guards whose **refusal path has never been observed live**; the local shell exercise is explicitly NOT substituted for it; §9's matrix stays `OPEN` with one row; **AC6 UNMET, owner Oleg**. | dev-story |
 | 2026-08-26 | 0.6 | **Correct-course applied; the build source changed and the story's own stale claims were corrected.** `origin/main` @ `f144ee9f` merged in (conflict in `sprint-status.yaml` resolved keeping BOTH sides whole, per this project's precedent). **OQ6 marked SUPERSEDED with both of Oleg's decisions kept verbatim** — the commit was never imported; what changed is what the story builds. §3's blocker note records the resolution and states plainly that the one-shot property, the `Enforce AC2` refusal and the `Date.now()` reason all **still stand and are now live rather than hypothetical**. 🔴 **Four places in this file and ONE IN SHIPPED CODE claimed the image "will fail Story 6.5's guard by construction" — all now false, all corrected**: §7(f) (inverted, with the old text quoted), §13 item 6 (struck through), Task 6.3's instruction, Task 5.2's description, and `record-prod-image.yml`'s own header clause (b), which was a claim about one particular image baked into a general-purpose file and is now written as the general truth it should always have been. Task 4.2 re-pointed at `a99ccd44c5a3…` with both produced tags named, and its "wait for confirmation" superseded by OQ item 9. Gate 4.1 evidence gathered: commit present/complete/reachable, `short12 = a99ccd44c5a3` matching the preprod tag; `vars.VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online` (prod fails closed without it); all 7 OpenBao secrets and all 4 org registry secrets present; **OpenBao UNSEALED** (`sealed:false`, Shamir 3/5); **no `prod-*` version exists in the registry at all**, so the one-shot is unfired. | dev-story |
 | 2026-08-26 | 0.5 | **OQ10 resolved by Oleg — option (a): this story's decision renumbers `D43` → `D45`.** Applied to every forward-looking reference; historical records of the original measurement (Task 1.5, session 1 Debug Log, Change Log 0.2/0.4) left standing and superseded rather than rewritten, per the amend-don't-rewrite rule. `D43` stays the PROD-hostname record's number. 🔴 The **process** half of OQ10 remains OPEN and is explicitly not closed by the renumber: the project's ref-based D-number sweep is still blind to any decision authored locally and not yet pushed, and the next one reopens the same hole. | dev-story |
 | 2026-08-26 | 0.4 | **Dev-story session 2: Tasks 3, 5.1-5.2 and 7.3 executed. Task 4 still gated — the commit is still absent, re-verified this time against the server (`git ls-remote`) as well as locally.** The other half of the resume instruction was closed WITHOUT touching s2: the live production bundle's `VITE_BUILD_TS` (`2026-08-22 19:48:40Z`) and asset `Last-Modified` (`19:49:08Z`), read over public HTTP, sit inside one 2.5-minute window with session 1's two s2 timestamps — production has not moved, corroborated by an independent channel (of the BUILD, not the label; OQ4's single-source position on the commit stands). Task 3.4 read `package_cleanup_rule` from the Forgejo DB directly and compiled all four tag shapes against it: the three markers KEEP, the 40-hex sanitized-ref tag does not, plus a free non-vacuous control. **`.forgejo/workflows/record-prod-image.yml` shipped** — G1/G2/G3/G4/404/G6, no G5-equivalent with the reason in the header, `prod-<sha>` before `prod-current`, `--prefer-index=false`, read-back after every write, move-refused-by-default as a recorded divergence from 5.4; 15/15 run bodies clean of the expression syntax and `bash -n`-valid; all four pure-shell guards exercised locally 15/15 — **local shell verification, NOT §9's matrix, which stays OPEN with no run ids**. Workflow census 11 → 12; every frozen path byte-identical to `origin/main`. 🔴 **New blocker-adjacent finding, Open Question 10: `D43` is NOT free** — an unpushed local branch already uses it for the PROD hostname record, so the project's ref-based D-number sweep is blind to locally-authored decisions; first free is `D45`; owner Oleg, not taken unilaterally. | dev-story |
