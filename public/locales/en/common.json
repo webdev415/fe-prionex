@@ -153,7 +153,9 @@
       "loadError": "Failed to load queues.",
       "deleteTitle": "Delete '{{name}}'?",
       "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
-      "deleted": "Queue deleted"
+      "deleted": "Queue deleted",
+      "notSynced": "Not synced",
+      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry."
     },
     "queueForm": {
       "createTitle": "Add a new queue",
@@ -169,7 +171,19 @@
       "create": "Create queue",
       "save": "Save changes",
       "created": "Queue created",
-      "updated": "Queue updated"
+      "updated": "Queue updated",
+      "dialingSettings": "Dialing settings",
+      "telephonyType": "Telephony type",
+      "telephonyTypeHint": "Must match the SIM pool for this department. Cannot be changed later.",
+      "immutable": "(cannot be changed after creation)",
+      "priority": "Priority",
+      "priorityHint": "1–5. Higher wins when SIMs are scarce.",
+      "simCardLimit": "SIM card limit",
+      "simCardLimitHint": "Capped at the department's own SIM limit.",
+      "maxAttempts": "Attempts per number",
+      "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
+      "retryDelayFailed": "Retry delay (seconds)",
+      "retryDelayFailedHint": "0 disables retrying failures."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -250,6 +264,10 @@
       "simActive": "Active",
       "simDisabled": "Disabled",
       "noSims": "No SIM data."
+    },
+    "telephonyType": {
+      "white": "White",
+      "grey": "Grey"
     }
   },
   "search": {

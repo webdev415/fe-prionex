@@ -6,10 +6,23 @@
  * several departments / groups). An empty selection means "All departments" /
  * "All groups" (unrestricted), matching the backend's empty-array sentinel.
  *
- * NOTE: the ticket's richer preset config (§4.1 — telephony type, aggressiveness,
- * SIM limits, wait/hold timings, calling hours, answer mode) is not part of this
- * modal in the current design and is deferred to a dedicated configuration
- * surface (see KAN-379-aggressive-dialer-frontend-plan.md §7 open decisions).
+ * The design deferred the ticket's richer preset config (§4.1) to a dedicated
+ * configuration surface. Three of those fields turned out to be load-bearing
+ * once the CRM drove the real gateway, so they live here under "Dialing
+ * settings" until that surface exists:
+ *
+ *  - telephony_type is IMMUTABLE after creation, both here and on the gateway,
+ *    and the default (white) does not match every deployment's SIM pool. Create
+ *    is the only chance to get it right, so it is an explicit choice, not a
+ *    hidden default.
+ *  - priority and sim_card_limit are validated upstream against ranges and the
+ *    department's SIM ceiling; a queue that trips either cannot sync a campaign.
+ *  - the retry policy decides whether a transient line failure re-attempts or
+ *    permanently exhausts the number. Line failures are periodic and accepted,
+ *    so this is the mitigation, not a tuning knob.
+ *
+ * Aggressiveness, wait/hold timings and calling hours remain deferred — their
+ * defaults are safe.
  *
  * Cloned from DocumentTypeFormModal (react-hook-form + zod + Modal composition).
  */
@@ -25,6 +38,13 @@ import { Button } from '@/components/ui/Button'
 import { CheckboxMultiSelect } from '@/components/ui/CheckboxMultiSelect'
 import { Input } from '@/components/ui/Input'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { useDepartments } from '@/features/departments'
 import {
   ACCESS_GROUP_LABELS,
@@ -41,6 +61,13 @@ const schema = z.object({
   // Empty arrays are valid — they mean "All departments" / "All groups".
   department_ids: z.array(z.number().int()),
   access_groups: z.array(z.string()),
+  telephony_type: z.enum(['white', 'grey']),
+  // Mirrors the gateway's campaign range; 0 is rejected upstream.
+  priority: z.number().int().min(1).max(5),
+  sim_card_limit: z.number().int().min(1),
+  // Total attempts, not retries. Never 0 — upstream that means dial-once.
+  max_attempts: z.number().int().min(1),
+  retry_delay_failed_seconds: z.number().int().min(0),
 })
 
 type FormData = z.infer<typeof schema>
@@ -93,6 +120,11 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
       name: queue?.name ?? '',
       department_ids: queue?.department_ids ?? [],
       access_groups: queue?.access_groups ?? [],
+      telephony_type: queue?.telephony_type ?? 'white',
+      priority: queue?.priority ?? 3,
+      sim_card_limit: queue?.sim_card_limit ?? 4,
+      max_attempts: queue?.max_attempts ?? 3,
+      retry_delay_failed_seconds: queue?.retry_delay_failed_seconds ?? 60,
     },
   })
 
@@ -102,6 +134,11 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
         name: queue?.name ?? '',
         department_ids: queue?.department_ids ?? [],
         access_groups: queue?.access_groups ?? [],
+        telephony_type: queue?.telephony_type ?? 'white',
+        priority: queue?.priority ?? 3,
+        sim_card_limit: queue?.sim_card_limit ?? 4,
+        max_attempts: queue?.max_attempts ?? 3,
+        retry_delay_failed_seconds: queue?.retry_delay_failed_seconds ?? 60,
       })
     }
   }, [open, queue, reset])
@@ -111,7 +148,14 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
     const department_names = departments
       .filter((d) => data.department_ids.includes(d.id))
       .map((d) => d.name)
-    const payload = { ...data, department_names }
+    const payload: Partial<DialerQueue> & { department_names: string[] } = {
+      ...data,
+      department_names,
+    }
+    // telephony_type is immutable after creation — the backend drops it from
+    // QueueUpdate and the gateway rejects a change outright. Sending it on edit
+    // would look like it took effect.
+    if (isEdit) delete payload.telephony_type
     try {
       if (isEdit && queue) {
         await updateMutation.mutateAsync({ id: queue.id, payload })
@@ -203,6 +247,155 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                   />
                 )}
               />
+            </div>
+
+            {/* --- Dialing settings ------------------------------------------
+                Deferred by the design, but load-bearing: see the module note. */}
+            <div className="border-border mt-2 border-t pt-4">
+              <p className="text-foreground mb-3 text-sm font-medium">
+                {t('dialer.queueForm.dialingSettings', 'Dialing settings')}
+              </p>
+
+              <div className="flex flex-col gap-4">
+                {/* Telephony type — create only (immutable afterwards) */}
+                <div>
+                  <label className="text-foreground mb-1 block text-sm font-medium">
+                    {t('dialer.queueForm.telephonyType', 'Telephony type')}
+                  </label>
+                  {isEdit ? (
+                    <p className="text-muted-foreground text-sm">
+                      {t(
+                        `dialer.telephonyType.${queue?.telephony_type ?? 'white'}`,
+                        queue?.telephony_type ?? 'white'
+                      )}{' '}
+                      <span className="text-xs">
+                        {t('dialer.queueForm.immutable', '(cannot be changed after creation)')}
+                      </span>
+                    </p>
+                  ) : (
+                    <Controller
+                      control={control}
+                      name="telephony_type"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger
+                            aria-label={t('dialer.queueForm.telephonyType', 'Telephony type')}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="white">
+                              {t('dialer.telephonyType.white', 'White')}
+                            </SelectItem>
+                            <SelectItem value="grey">
+                              {t('dialer.telephonyType.grey', 'Grey')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  )}
+                  {!isEdit && (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t(
+                        'dialer.queueForm.telephonyTypeHint',
+                        'Must match the SIM pool for this department. Cannot be changed later.'
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  {/* Priority */}
+                  <div className="flex-1">
+                    <label
+                      htmlFor="queue-priority"
+                      className="text-foreground mb-1 block text-sm font-medium"
+                    >
+                      {t('dialer.queueForm.priority', 'Priority')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      id="queue-priority"
+                      {...register('priority', { valueAsNumber: true })}
+                      variant={errors.priority ? 'error' : 'default'}
+                    />
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t('dialer.queueForm.priorityHint', '1–5. Higher wins when SIMs are scarce.')}
+                    </p>
+                  </div>
+
+                  {/* SIM card limit */}
+                  <div className="flex-1">
+                    <label
+                      htmlFor="queue-sim_card_limit"
+                      className="text-foreground mb-1 block text-sm font-medium"
+                    >
+                      {t('dialer.queueForm.simCardLimit', 'SIM card limit')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      id="queue-sim_card_limit"
+                      {...register('sim_card_limit', { valueAsNumber: true })}
+                      variant={errors.sim_card_limit ? 'error' : 'default'}
+                    />
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t(
+                        'dialer.queueForm.simCardLimitHint',
+                        "Capped at the department's own SIM limit."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  {/* Attempts */}
+                  <div className="flex-1">
+                    <label
+                      htmlFor="queue-max_attempts"
+                      className="text-foreground mb-1 block text-sm font-medium"
+                    >
+                      {t('dialer.queueForm.maxAttempts', 'Attempts per number')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      id="queue-max_attempts"
+                      {...register('max_attempts', { valueAsNumber: true })}
+                      variant={errors.max_attempts ? 'error' : 'default'}
+                    />
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t(
+                        'dialer.queueForm.maxAttemptsHint',
+                        'Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.'
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Retry delay after a failure */}
+                  <div className="flex-1">
+                    <label
+                      htmlFor="queue-retry_delay_failed_seconds"
+                      className="text-foreground mb-1 block text-sm font-medium"
+                    >
+                      {t('dialer.queueForm.retryDelayFailed', 'Retry delay (seconds)')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      id="queue-retry_delay_failed_seconds"
+                      {...register('retry_delay_failed_seconds', { valueAsNumber: true })}
+                      variant={errors.retry_delay_failed_seconds ? 'error' : 'default'}
+                    />
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t('dialer.queueForm.retryDelayFailedHint', '0 disables retrying failures.')}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </ModalContent>

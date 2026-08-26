@@ -56,8 +56,27 @@ export interface DialerQueue {
   /** Allowed calling hours, "HH:MM" 24h. */
   calling_hours_start?: string
   calling_hours_end?: string
+  /**
+   * Total dial attempts per number, not retries: 3 = one dial plus two re-dials.
+   * The gateway treats 0 as dial-once, so this is never 0. Changing it re-caps
+   * entries already loaded upstream, so the create-time value is the one that
+   * counts.
+   */
+  max_attempts: number
+  /** Seconds before retrying a line/originate failure. 0 disables retrying it. */
+  retry_delay_failed_seconds: number
+  /** 0 = do not retry. Re-dialing an unanswered line is a deliberate choice. */
+  retry_delay_no_answer_seconds: number
+  /** 0 = do not retry a busy line. */
+  retry_delay_busy_seconds: number
   status: QueueStatus
   is_active: boolean
+  /**
+   * False when the queue has no campaign on the external dialer. Campaign sync
+   * is fail-soft, so an unsynced queue otherwise looks completely healthy while
+   * being unable to place a single call.
+   */
+  telephony_synced?: boolean
   // Live counters shown on cards / list.
   total_in_queue?: number
   remaining?: number
