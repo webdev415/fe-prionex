@@ -1,0 +1,348 @@
+name: Deploy PROD Stand
+
+# Story 6.4, FR15/FR17/FR24. The production deploy caller: dispatch-only, two paths, and the
+# first caller in this repository that is NOT a single `uses:`.
+#
+# ── The two paths ───────────────────────────────────────────────────────────────────────
+#   rollback: true   -> pull an existing sha-<12hex>-prod and start it. NO BUILD RUNS.
+#   rollback: false  -> rebuild the commit at `environment: prod` FIRST, then deploy. Option C
+#                       bakes the production VITE_* values into the bundle, so a PRE-PROD
+#                       artifact cannot be promoted -- it has the wrong URLs baked in (NFR11).
+#
+# ── 🔴 WHY THIS FILE HAS THREE JOBS AND NOT TWO ─────────────────────────────────────────
+# `deploy-dev.yml` and `deploy-preprod.yml` are each ONE job, one `uses:`. This file cannot be,
+# for two independent reasons:
+#
+#  (1) `deploy-stand.yml` BUILDS NOTHING. It deploys an image that already exists. The release
+#      path therefore needs `build.yml` as a second callee.
+#  (2) 🔴 A `uses:` job's `with:` accepts EXPRESSIONS ONLY, and this expression language has no
+#      substring operation. The commit cannot be sliced out of `image_tag` inside `with:`. So a
+#      plain job has to do it in shell and publish it as an output -- hence `derive`.
+#
+# Order: derive -> build (skipped on rollback) -> deploy.
+#
+# ── 🔴 THE `needs:` + `if:` TRAP, AND WHY THE DEPLOY JOB'S `if:` LOOKS LIKE THAT ────────
+# A skipped `needs:` dependency normally makes the dependent job skip too. The deploy job MUST
+# run on BOTH paths, so its `if:` admits "build succeeded OR build was skipped" explicitly, and
+# is wrapped in `always()` so the expression is evaluated at all after a skip.
+# Get this wrong and the ROLLBACK PATH SILENTLY DOES NOTHING while the run reports green -- the
+# worst outcome available to a production workflow, because nothing fails.
+# ⚠️ `#d21` established that a `uses:` job's `if:` is copied down into the callee and
+# re-evaluated there. This is verified by observation (Story 6.4 AC6), not by reasoning.
+#
+# ── 🔴 THE TAG IS DERIVED TWICE, AND THE TWO MUST AGREE BYTE FOR BYTE ───────────────────
+# `build.yml` declares NO `workflow_call` outputs -- measured. A caller cannot learn which tag
+# the build published. So `derive` below computes `sha-<12hex>-prod` independently, and
+# `build.yml` computes its own from `git rev-parse HEAD`. If the two ever diverge the failure
+# surfaces as a 404 on the pull, which reads as "the image was never built" rather than "you
+# asked for the wrong name". `deploy-stand.yml`'s own `image_env` input documents the same
+# hazard for its own sanitizer.
+# The short SHA is TWELVE characters. `#d18` §3 binds Stories 5.4, 6.3, 6.5 and 6.6 to that
+# number: "если любая выведет тег из полного 40-символьного SHA, цель отката и гейт разойдутся
+# молча". Do not "simplify" it.
+#
+# ── The dispatch contract ───────────────────────────────────────────────────────────────
+# `image_tag` NAMES THE COMMIT, in `sha-<12hex>-<env>` form, on both paths:
+#   release path : the validated PRE-PROD candidate, e.g. sha-28f7fd36b75e-preprod
+#   rollback path: an existing PROD tag,             e.g. sha-a99ccd44c5a3-prod
+# `derive` extracts the twelve hex characters and always hands `deploy-stand.yml` the `-prod`
+# form. `deploy-stand.yml` refuses any tag that does not end in `-prod` (its own
+# tag<->environment guard), which is why the `-prod` form is derived rather than passed through.
+#
+# 🔴 `prod-current` and `prod-<12hex>` are NOT accepted here and never will be. They are records,
+# not deployable references, and that same guard refuses them. Story 6.9 dispatches
+# `sha-<12hex>-prod`.
+#
+# ── 🔴 WHERE STORY 6.5's PROMOTION GUARD LANDS, AND WHY IT IS NOT HERE ──────────────────
+# `derive` is the seam: it already extracts the commit, which is exactly what 6.5's guard needs
+# in order to require `preprod-<sha>` in the registry and refuse otherwise -- and to SKIP that
+# check entirely when `rollback` is true. **This story builds none of it** (Story 6.4 §12).
+# The extraction is a separate named step precisely so 6.5 has somewhere obvious to land.
+#
+# ── `secrets: inherit`, decided rather than inherited by habit (Story 6.4 AC8) ──────────
+# `deploy-stand.yml` CANNOT declare `on.workflow_call.secrets` -- the parser rejects it (`#d21`)
+# -- so a caller passes `inherit` or the callee gets nothing. Both shipped callers use it.
+# The cost, named: `inherit` hands the callee EVERY org secret, including REGISTRY_TOKEN_RW, a
+# write:package credential over a namespace that holds another team's production packages.
+#   build  : needs it -- the OpenBao AppRole pair and the RW push credential are both required.
+#   deploy : its callee references only the RO pair, but the same parser limitation applies, and
+#            a narrower block cannot be expressed on the callee side. `inherit` on both, with the
+#            RW exposure recorded as accepted, matching deploy-dev.yml and deploy-preprod.yml.
+#
+# ── Values, and the two that would be copied WRONG from the siblings ────────────────────
+# 🔴 frontend_port is `0.0.0.0:8080`, and BOTH halves of that value are load-bearing.
+#    NOT `127.0.0.1:8080`: DEV and PRE-PROD bind loopback because nothing outside their host
+#    reaches them, but PROD traffic arrives FROM THE HYPERVISOR, so a loopback binding makes the
+#    stand unreachable by construction -- and the health check, which probes the container itself,
+#    would still report `healthy` and serve 200.
+#    NOT a bare `8080` either: `deploy-stand.yml` asserts a host prefix and refuses without one --
+#    "a bare port would parse wrong here (host and port would both become the port number)". Run
+#    632 hit exactly that, AFTER the container was already up and healthy.
+#    `0.0.0.0` satisfies the parser and binds every interface, which is what the hypervisor
+#    forward needs.
+# 🔴 runner_label is `fe-prionex-prod-deploy` — OUR OWN runner, provisioned on s10 by Story 6.4
+#    after run 629. NEVER `s10`/`e1-rung3` (the CI-shaped runner, jobs in dind, cannot reach the
+#    host stand) and NEVER `e1-rung3-prod-deploy` either: that is the NEIGHBOURING team's runner,
+#    and its label is declared `:host`. Under a host executor there is no own job container, so
+#    `deploy-stand.yml`'s `docker inspect $(hostname)` — which it needs to launch the Story 4.4
+#    lock holder as a sibling container — fails with "no such object: e1-rung3". Run 629 proved
+#    exactly that. Ours is declared
+#    `fe-prionex-prod-deploy:docker://deploy-base-dev-preprod:2026-08-07`, mirroring s1's own
+#    deploy runner: jobs run IN A CONTAINER, and that container holds the HOST docker.sock, so the
+#    deploy acts on the host daemon where the stand actually lives.
+# ⚠️ frontend_network is `crm-prod-network`, and this is the axis where a wrong value fails
+#    SILENTLY: nginx resolves Kong lazily and the healthcheck probes itself, so a stand on the
+#    wrong network reports `healthy` and serves 200. `crm-prod-kong-gateway` carries the alias
+#    `crm-kong-gateway` that the image's nginx.conf actually resolves -- verified on the host.
+#
+# ── Not here, deliberately ──────────────────────────────────────────────────────────────
+#   Story 6.5 the promotion guard · 6.6 the prod-current/prod-<sha> retag after deploy ·
+#   6.7 the smoke check (the callee's health and Kong probes are NOT it) · 6.8 rollback proven
+#   with measured timing · 6.9 the cutover · 4.5 Slack, deferred 2026-08-14 and explicitly NOT
+#   gating this story: "the production deploy must work, and must be provable, without any
+#   notification".
+#
+# ── 🔴 THE DISPATCH INPUT IS `tag`, NOT `image_tag`, AND THE RENAME IS THE FIX ─────────
+# Runs 637 and 640 both built correctly and then failed at the deploy with the callee reporting
+# the tag THIS WORKFLOW WAS DISPATCHED WITH (`sha-…-preprod`) rather than the `-prod` tag passed
+# in `with:`. `deploy-stand.yml` reads `${{ inputs.image_tag }}` — the ordinary, correct way — so
+# the callee is not at fault: on this instance the callee's `inputs` were populated from the
+# DISPATCH's inputs, not from the caller's `with:`, for a key present in both.
+#
+# 🔴 WHY NOBODY HAS EVER HIT THIS. Both shipped callers pass `image_tag: ${{ inputs.image_tag }}`
+# — caller value and dispatch value are the SAME STRING, so the substitution is invisible and
+# harmless there. This is the first caller whose `with:` value DIFFERS from its own dispatch
+# input, and it is what made the behaviour observable at all. Same family as `#d21`'s expression
+# and context surprises.
+#
+# Naming the dispatch input `tag` means there is no `image_tag` in the dispatch to shadow the
+# callee's, so `with: image_tag:` is the only source and reaches it intact.
+# ⚠️ Story 6.4's epic AC1 says the workflow "accepts a required `image_tag` input". The input is
+# required and it is the image tag; only the NAME differs, and it differs because the epic's name
+# cannot work here. Recorded as a deviation with its reason, not taken silently.
+#
+# ── Every input reaches a `run:` body through `env:`, never through an expression (`#d21`) ──
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "🔴 NAMED `tag`, NOT `image_tag`, and that is a FIX not a preference — see the header. The image tag naming the commit, in sha-<12hex>-<env> form. RELEASE: the validated PRE-PROD candidate (e.g. sha-28f7fd36b75e-preprod). ROLLBACK: an existing PROD tag (e.g. sha-a99ccd44c5a3-prod). NOT prod-current and NOT prod-<hex> — those are records, not deployable references."
+        required: true
+        type: string
+      rollback:
+        description: "true = pull the existing PROD tag and start it, NO build. false = rebuild the commit at environment=prod first (Option C), then deploy."
+        required: false
+        type: boolean
+        default: false
+
+# Its own literal group, shared with no other stand and containing no expression.
+# Story 5.3's Prohibition 7: never copy another stand's group. DEV's and PRE-PROD's groups guard
+# THEIR stands; this one guards the production stand on s10.
+concurrency:
+  group: deploy-prod-fe-prionex-prod
+  cancel-in-progress: false
+
+jobs:
+  # ── derive ────────────────────────────────────────────────────────────────────────────
+  # Shape-checks the dispatch and produces the two values the callees need. Does no network
+  # I/O, touches no host, and is the seam Story 6.5's guard lands on.
+  derive:
+    name: "Derive the commit and the PROD tag, and refuse anything else"
+    runs-on: node-20
+    timeout-minutes: 5
+    outputs:
+      hex: ${{ steps.d.outputs.hex }}
+      full_sha: ${{ steps.d.outputs.full_sha }}
+      deploy_tag: ${{ steps.d.outputs.deploy_tag }}
+      is_rollback: ${{ steps.d.outputs.is_rollback }}
+    steps:
+      # 🔴 THIS CHECKOUT MUST COME FIRST, AND THAT ORDER IS LOAD-BEARING.
+      # `actions/checkout` CLEANS THE WORKSPACE — and on this instance `$GITHUB_OUTPUT` lives
+      # inside it. Run 637 put this step AFTER the derive step and the checkout silently DESTROYED
+      # every output written before it: `deploy_tag`, `hex` and `is_rollback` all arrived empty at
+      # the callees, while `full_sha` — written after the checkout — survived. The deploy then
+      # fell back to the DISPATCH's own `image_tag` (`sha-…-preprod`) and was correctly refused by
+      # `deploy-stand.yml`'s tag<->environment guard. Nothing warned; the outputs were simply gone.
+      # Same family as `#d21`'s expression/context surprises. **Never write a job output before a
+      # checkout in this job.**
+      #
+      # Its `if:` reads the RAW dispatch input rather than a step output, because it now runs
+      # BEFORE any step that could normalise one. The rollback path checks out nothing: it rebuilds
+      # nothing, so it needs no commit.
+      - name: "Check out, so the short SHA can be expanded and the commit's existence proven"
+        if: ${{ inputs.rollback != true && inputs.rollback != 'true' }}
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Derive and validate"
+        id: d
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ROLLBACK: ${{ inputs.rollback }}
+        run: |
+          set -euo pipefail
+
+          # A dispatch boolean can arrive as a real boolean or as the string "true" depending on
+          # how the dispatch was made. Normalise ONCE, here, and let every later decision read
+          # this single output instead of re-deciding it in an expression.
+          case "$ROLLBACK" in
+            true|True|TRUE) IS_ROLLBACK=true ;;
+            *)              IS_ROLLBACK=false ;;
+          esac
+
+          case "$IMAGE_TAG" in
+            *$'\n'*|*$'\r'*|*' '*|*$'\t'*)
+              echo "FAIL: image_tag contains whitespace or a newline. Refusing before any shape check."
+              exit 1 ;;
+          esac
+
+          # prod-current / prod-<hex> are records, not deployable references, and
+          # deploy-stand.yml's own tag<->environment guard would refuse them anyway. Refusing
+          # here means the operator gets a message that explains WHY instead of a suffix
+          # mismatch four jobs later.
+          case "$IMAGE_TAG" in
+            prod-current|prod-*)
+              echo "FAIL: image_tag='${IMAGE_TAG}' is a RECORD, not a deployable reference."
+              echo "  prod-current names what production is meant to be running and prod-<12hex> is"
+              echo "  history. Neither ends in '-prod', so deploy-stand.yml refuses both by design."
+              echo "  Dispatch the sha-<12hex>-prod tag instead."
+              exit 1 ;;
+          esac
+
+          if ! printf '%s' "$IMAGE_TAG" | grep -qE '^sha-[0-9a-f]{7,64}-(prod|preprod)$'; then
+            echo "FAIL: image_tag='${IMAGE_TAG}' does not match ^sha-<hex>-(prod|preprod)\$."
+            echo "  This workflow names the commit through the tag; see the file header."
+            exit 1
+          fi
+
+          HEX="${IMAGE_TAG#sha-}"
+          HEX="${HEX%-prod}"
+          HEX="${HEX%-preprod}"
+
+          # EXACTLY twelve. build.yml pins its short SHA at 12 and Story 6.5's guard compares
+          # these strings byte for byte. A 40-character SHA here would derive sha-<40hex>-prod,
+          # which build.yml never publishes -- the pull would 404 and read as "never built",
+          # and the rollback target and the gate would diverge silently (#d18 §3).
+          if ! printf '%s' "$HEX" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the hex part of '${IMAGE_TAG}' is '${HEX}' (${#HEX} characters), not exactly 12."
+            echo "  build.yml pins the short SHA at 12; deriving any other length produces a tag"
+            echo "  nothing ever published. Refusing (#d18 §3)."
+            exit 1
+          fi
+
+          # On the ROLLBACK path the operator must name a PROD tag. Accepting a -preprod tag
+          # here would mean 'rolling back' to an artifact production never ran, whose bundle
+          # carries the PRE-PROD API URLs baked in at build time (Option C, NFR11) -- green
+          # everywhere and dead in the browser.
+          if [ "$IS_ROLLBACK" = true ]; then
+            case "$IMAGE_TAG" in
+              *-preprod)
+                echo "FAIL: rollback=true but image_tag='${IMAGE_TAG}' names the PRE-PROD environment."
+                echo "  A rollback restores something production actually ran. A -preprod artifact"
+                echo "  has PRE-PROD's API URLs baked into its bundle and was never a PROD image."
+                exit 1 ;;
+            esac
+          fi
+
+          DEPLOY_TAG="sha-${HEX}-prod"
+          {
+            echo "hex=${HEX}"
+            echo "deploy_tag=${DEPLOY_TAG}"
+            echo "is_rollback=${IS_ROLLBACK}"
+          } >> "$GITHUB_OUTPUT"
+
+          # 🔴 The 12-hex short SHA names the TAG, but it is NOT a safe `ref` for
+          # `actions/checkout`: an abbreviated SHA is not fetchable and a shallow fetch has no
+          # object to resolve it against. `build.yml` feeds `inputs.ref` straight to checkout, and
+          # Story 6.3's own prod build used the FULL 40-hex form. Expand it here -- after the
+          # checkout above, which is why that checkout comes first.
+          # This also buys a real guard for free: it PROVES the commit exists in this repository.
+          # Story 6.3 halted for two sessions on exactly that question, for a commit that had
+          # never been imported, and had no mechanical check for it. This is that check.
+          if [ "$IS_ROLLBACK" != true ]; then
+            if ! FULL="$(git rev-parse --verify "${HEX}^{commit}" 2>/dev/null)"; then
+              echo "FAIL: commit '${HEX}' does not exist in this repository."
+              echo "  The release path rebuilds that commit, so it must be checkoutable here. A tag"
+              echo "  can name a commit this repository never received -- Story 6.3 halted on"
+              echo "  exactly that. Refusing before anything is built."
+              exit 1
+            fi
+            echo "full_sha=${FULL}" >> "$GITHUB_OUTPUT"
+            echo "full sha:        ${FULL}"
+          fi
+
+          echo "commit (12 hex): ${HEX}"
+          echo "deploy tag:      ${DEPLOY_TAG}"
+          echo "rollback:        ${IS_ROLLBACK}"
+
+      - name: "State which path this run takes, and what that means"
+        env:
+          IS_ROLLBACK: ${{ steps.d.outputs.is_rollback }}
+          DEPLOY_TAG: ${{ steps.d.outputs.deploy_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            if [ "$IS_ROLLBACK" = true ]; then
+              echo "### ROLLBACK — no build will run"
+              echo
+              echo "Pulling the existing \`${DEPLOY_TAG}\` and starting it. **No image is produced by"
+              echo "this run.** The build job is skipped; the deploy job still runs."
+            else
+              echo "### RELEASE — this is a REBUILD, not a promotion"
+              echo
+              echo "🔴 The image deployed by this run is **built here**, from the commit named by"
+              echo "\`${IMAGE_TAG}\`. It is **NOT** the artifact validated on PRE-PROD and is **not"
+              echo "byte-identical** to it: under Option C the production \`VITE_API_BASE_URL\` and"
+              echo "\`VITE_WS_URL\` are baked into the bundle at build time, so a PRE-PROD artifact"
+              echo "cannot be promoted — it carries the wrong URLs (NFR11, \`#d2\`)."
+              echo
+              echo "What PRE-PROD validation proves is that **this commit** passed. It proves nothing"
+              echo "about **these bytes**. Nobody attests to the bytes."
+              echo
+              echo "Deploying \`${DEPLOY_TAG}\`."
+            fi
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+  # ── build ─────────────────────────────────────────────────────────────────────────────
+  # Release path only. Publishes sha-<12hex>-prod (permanent) and <sanitized-ref>-prod (14 days).
+  # 🔴 build.yml's own "Enforce AC2" refuses to repoint an existing sha-<12hex>-prod, and
+  # vite.config.ts's Date.now() makes every rebuild differ -- so a release dispatch of a commit
+  # ALREADY built at prod goes red, by construction and not by defect (#d24 §2b, #d46).
+  build:
+    name: "Rebuild the commit at environment: prod"
+    needs: derive
+    if: needs.derive.outputs.is_rollback != 'true'
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      ref: ${{ needs.derive.outputs.full_sha }}
+      environment: prod
+    secrets: inherit
+
+  # ── deploy ────────────────────────────────────────────────────────────────────────────
+  # Runs on BOTH paths. See the header: `always()` plus an explicit success-or-skipped test is
+  # what keeps the rollback path from silently doing nothing.
+  deploy:
+    name: "Deploy to the PROD stand on s10"
+    needs: [derive, build]
+    if: >-
+      always() &&
+      needs.derive.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    uses: ./.forgejo/workflows/deploy-stand.yml
+    with:
+      runner_label: fe-prionex-prod-deploy
+      compose_project_name: fe-prionex-prod
+      container_name: fe-prionex-prod
+      frontend_port: "0.0.0.0:8080"
+      frontend_network: crm-prod-network
+      stand_dir: /root/crm-prionex/fe-prionex-prod
+      image_env: prod
+      image_tag: ${{ needs.derive.outputs.deploy_tag }}
+      lock_wait_seconds: "240"
+      lock_ttl_seconds: "720"
+      health_timeout_seconds: "120"
+      expect_unrouted_api: "false"
+    secrets: inherit
