@@ -288,7 +288,7 @@ about what users are being served.** Two ways to hold that honestly:
 
 | Option | Verdict |
 |---|---|
-| Set both tags now, and **state in writing what `prod-current` means before the cutover** | ✅ **CHOSEN.** FR31 as amended requires both; the retention argument for `prod-<sha>` is real; and the misreading is closed by a dated sentence rather than by withholding a tag the plan requires. The sentence lands in `docs/prod-releases.md` and in `D43`, and the regulation gets its own amendment (§7). |
+| Set both tags now, and **state in writing what `prod-current` means before the cutover** | ✅ **CHOSEN.** FR31 as amended requires both; the retention argument for `prod-<sha>` is real; and the misreading is closed by a dated sentence rather than by withholding a tag the plan requires. The sentence lands in `docs/prod-releases.md` and in `D45`, and the regulation gets its own amendment (§7). |
 | Set `prod-<sha>` only, defer `prod-current` to 6.6/6.9 | ❌ Contradicts the amended FR31 and this story's own epic AC3, and reintroduces exactly the window the 2026-08-13 amendment closed. **Recorded as Open Question 2 for Oleg, not taken unilaterally**, because it is the one alternative a reviewer will raise. |
 
 **And the misreading has a precedent in this very project.** `#d19` created the `prod` branch at `main`
@@ -356,7 +356,7 @@ before writing them (§5); do not claim they are protected by execution** (Prohi
 builds is a **PROD** image and was never a PRE-PROD candidate; it has no `preprod-<sha>` and — because
 it is built from a commit that never went through Epic 5's cycle — **it will fail Story 6.5's
 promotion guard by construction, which is exactly why 6.9's cutover uses `rollback: true`.** Say that
-once, in `D43`, so 6.5 does not have to rediscover it.
+once, in `D45`, so 6.5 does not have to rediscover it.
 
 ### 8. Previous story intelligence — what this story inherits, verified 2026-08-26
 
@@ -529,7 +529,7 @@ from a scratchpad worktree; the primary checkout is 4.9's and must not be touche
 - 🔴 **s10.** Not touched, not probed, not prepared. Story 6.10's.
 
 **Files this story is expected to change:** `.forgejo/workflows/record-prod-image.yml` (**new**),
-`docs/migration-decisions.md` (**append `D43`**, plus a dated forward note where §7 requires one),
+`docs/migration-decisions.md` (**append `D45`**, plus a dated forward note where §7 requires one),
 `docs/production-approval-regulation.md` (**§7's dated amendment — a §12-priced exception, see below**),
 `docs/prod-releases.md` (**§7(d)'s record of which `-prod` forms now exist — prose only, NO ROW**),
 `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions), `deferred-work.md`
@@ -631,7 +631,7 @@ wording implies** — `build.yml` appends the environment discriminator, `#d18` 
 **exactly 12** characters, and `#d18` §3 binds Stories 5.4, 6.3, 6.5 and 6.6 to the same 12. **The bare
 `sha-<commit>` form matches no `keep_pattern` alternative and expires at 14 days; it is not a rollback
 target and this story does not create one.** The discrepancy between the epic's wording and the
-shipped tag scheme is recorded in `D43`, not silently reconciled.
+shipped tag scheme is recorded in `D45`, not silently reconciled.
 **And** 🔴 **the build is dispatched exactly once** (§3, Prohibition 1/2), after AC7's gate.
 
 ### AC3 — The current production state is recorded under the protected tags *(epic AC3, amended FR31)*
@@ -702,7 +702,7 @@ reversible acts and these are not (§11).
 **Given** s2 keeps serving `ghcr.io/…:main` until an external traffic switch this repository does not
 own (Story 6.9's 2026-08-18 amendment)
 **When** `prod-current` is created
-**Then** it is stated in writing — in `docs/prod-releases.md`'s prose and in `D43` — that between this
+**Then** it is stated in writing — in `docs/prod-releases.md`'s prose and in `D45` — that between this
 story and the cutover, **`prod-current` names the Forgejo-side cutover image and NOT what users are
 being served**
 **And** the precedent is cited rather than re-argued: `#d19` had to write the same disclaimer for the
@@ -761,6 +761,14 @@ against a query, or closed with the literal word **OPEN**.
       '^## D[0-9]+'` over every `origin/story-*` and `origin/main` ref → highest hit **D42**
       (`main`, Story 6.2). `story-4-9/pr-1-context` holds `D35`, confirmed unmerged (Task 1.2), no
       collision. **Next free: D43.** Matches context-time prediction.
+      🔴 **SUPERSEDED 2026-08-26 (session 2): the number is `D45`, not `D43`** — Oleg's OQ10 decision,
+      option (a). **The measurement above is left exactly as taken and is not rewritten, because it was
+      not wrong — it was BLIND.** `git grep` over refs cannot see a decision authored in the operator's
+      own checkout and never pushed, and `D43` was written exactly that way (branch
+      `docs/prod-temporary-hostname`, commits `bd4e4b83`/`1c54f32d`, not on the remote). *"Matches
+      context-time prediction"* is therefore true and reassuring and was **both**, which is the part
+      worth remembering: two independent runs of an unsound check agreeing is not corroboration.
+      **The check itself is unchanged and the process half of OQ10 stays OPEN.**
 
 ### Task 2 — Identify the running production commit, and prove the commit is buildable here (AC: 1) — **0 runs**
 - [x] 2.1 **Done.** Reached s2 (`root@175.110.122.17`) over the NFR7 administrative SSH path —
@@ -1044,7 +1052,7 @@ against a query, or closed with the literal word **OPEN**.
       Quote `#d2` — *«зелёная валидация на PRE-PROD — это свидетельство об исходном коде, а не о байтах,
       которые поедут в прод»* — and state the consequence for Story 6.9 in its own AC's terms:
       **validated by behaviour, never by digest.**
-- [ ] 6.3 Append **`D43`** to `docs/migration-decisions.md` (never at EOF — the file's own placement
+- [ ] 6.3 Append **`D45`** to `docs/migration-decisions.md` (never at EOF — the file's own placement
       convention), carrying: the identified commit and how it was evidenced; the epic-AC-vs-shipped-tag
       discrepancy (`sha-<commit>` vs `sha-<12hex>-prod`, Task 3.3); the §5 mechanism decision with its
       three rejected alternatives; §6's `prod-current` semantics before the cutover; the §12 exception
@@ -1059,7 +1067,7 @@ against a query, or closed with the literal word **OPEN**.
 - [ ] 7.1 Amend `docs/production-approval-regulation.md` by **dated addition**: the workflow census
       (11 → 12; *"no PROD deploy caller"* unchanged); §7(b)'s rollback-authority gap and its resolution;
       and the one line stating the freeze window does not bind this story. **Price the §12 exception in
-      the story and in `D43` before the edit** (§12). **If Oleg declines the amendment (Open Question 5),
+      the story and in `D45` before the edit** (§12). **If Oleg declines the amendment (Open Question 5),
       file the contradiction against Story 6.9 by name in `deferred-work.md` with the full argument.**
 - [ ] 7.2 Add prose to `docs/prod-releases.md` recording the three `-prod` forms that now exist and which
       survive retention, plus AC8's `prod-current` disclaimer. **NO ROW** (Prohibition 9). Explicitly
@@ -1113,7 +1121,7 @@ where this story contradicts documents Story 6.2 shipped eight days ago.
 | Fact | Value | Source, verified 2026-08-26 |
 |---|---|---|
 | `origin/main` at context time | `cfbad179` (Story 6.2's ledger-closeout, PR #89) | `git log origin/main` |
-| Next free decision number | **D43** (`main` holds D42; `story-4-9` holds D35 unmerged) | scan of every `origin/*` ref |
+| Next free decision number | ~~**D43**~~ → 🔴 **D45** (Oleg, 2026-08-26, OQ10 option (a)). `main` holds D42; `story-4-9` holds D35; **`D43` is held by an UNPUSHED local branch** the ref scan cannot see; `story-4-10` holds D44 | scan of every `origin/*` ref, **corrected** by including the operator's own checkout |
 | `.forgejo/workflows/` census | **11** files, no `deploy-prod.yml`, no prod recorder | `ls` |
 | Legacy production image reference on s2 | `ghcr.io/crm-prionex/fe-prionex:main` — a **moving branch tag** | `.github/workflows/CD.yml`, the deploy job's `docker pull` |
 | Commit label written on the legacy path | `org.opencontainers.image.revision` (via `docker/metadata-action@v5`) | `.github/workflows/CD.yml` |
@@ -1181,8 +1189,8 @@ them (AC7, §11), because the acts they govern are not reversible by this team.
 | 7 | 🔴 **The two one-shot acts wait for confirmation instead of proceeding on the absence of a veto.** | §11. `#d38` §7's "announce, don't ask twice" is written for reversible acts; a permanent tag removable only by Oleg in person is not one. | Revert to the standing convention and accept that a mis-dispatch is unrecoverable without an in-person DELETE. |
 | 8 | **No `preprod` smoke dispatch of the identified commit.** | §4: 5.6 already exercised the preprod path, and the prod delta — the OpenBao `prod` arm, `fe/prod/app`, the phone-URL `prod` arm — is untouched by a preprod run. It would cost a permanent tag for nothing. | Run one and accept the extra permanent `-preprod` tag. |
 | 9 | **No G5-equivalent stand check in `record-prod-image.yml`, with the absence stated in the file and in the matrix.** | §5, §9. There is no PROD stand until 6.10, and a check pointed at s2 would be false. | Defer the whole recorder until after 6.10 — which blocks the cutover image behind a moving host (§2's rejected re-order). |
-| 10 | **The epic's `sha-<commit>` wording is read as the shipped `sha-<12hex>-prod`, and the discrepancy is recorded in `D43` rather than reconciled silently.** | AC2; `#d18` §2/§3 fix the length at 12 and bind four stories to it; the bare form matches no `keep_pattern` alternative. | Produce a bare `sha-<commit>` tag as well and accept a 14-day tag that is not a rollback target. |
-| 11 | **Decision number D43, re-verified across all refs at Task 1.5 rather than trusted from here.** | Story 4.9 holds D35 unmerged; that is exactly how a collision happens. | — |
+| 10 | **The epic's `sha-<commit>` wording is read as the shipped `sha-<12hex>-prod`, and the discrepancy is recorded in `D45` rather than reconciled silently.** | AC2; `#d18` §2/§3 fix the length at 12 and bind four stories to it; the bare form matches no `keep_pattern` alternative. | Produce a bare `sha-<commit>` tag as well and accept a 14-day tag that is not a rollback target. |
+| 11 | ~~**Decision number D43**~~ → 🔴 **D45** — and the re-verification that was supposed to prevent a collision **did not**, because it scans refs and the colliding record was never pushed. Resolved by Oleg 2026-08-26 (OQ10, option (a)). | Story 4.9 holds D35 unmerged; that is exactly how a collision happens — **and one happened anyway, by the route the check does not cover.** | Push-before-claiming, or a sweep that includes the operator's working checkout. |
 
 ### 6. Non-goals — absences that are decisions, not omissions
 
@@ -1254,7 +1262,7 @@ None of these blocks this story except where marked. All are named so they are n
 - `.forgejo/workflows/record-prod-image.yml` — new, dispatch-only, guard-bearing (AC3, AC6).
 
 **Files this story appends to (append-only, never rewritten):**
-- `docs/migration-decisions.md` — **D43**, plus dated forward notes under `#d18` and `#d19` (Task 6.4).
+- `docs/migration-decisions.md` — **D45** (renumbered from D43 by Oleg's OQ10 decision, 2026-08-26), plus dated forward notes under `#d18` and `#d19` (Task 6.4).
 - `docs/prod-releases.md` — **prose only, no row** (AC8, AC9).
 - `_bmad-output/implementation-artifacts/deferred-work.md` — only if something is genuinely left open,
   and specifically if Open Question 5 is answered "leave the regulation alone".
@@ -1504,6 +1512,14 @@ code-review Opus.)_
    one source**, exactly as Open Question 4 accepted. The corroboration is of the build, not the label,
    and it is not offered as a second source for the commit.
 
+13. ✅ **OQ10 resolved by Oleg the same session — option (a), this story renumbers to `D45`.** Applied
+   across every forward-looking reference in this file (§6's table, §7(f), §12's expected-changes list,
+   AC5, AC8, Task 6.3, Task 7.1, Dev Notes §2 and §5, the File List). **Historical entries are left
+   standing and superseded, not rewritten**: Task 1.5's own record, session 1's Debug Log and Change Log
+   rows 0.2/0.4 all still read *"next free: D43"*, because that is what was measured at the time and the
+   measurement was not wrong — it was blind, and the blindness is the finding. 🔴 **The process half of
+   OQ10 stays OPEN**: choosing (a) fixes this collision, not the sweep that missed it.
+
 ### File List
 
 - `_bmad-output/implementation-artifacts/6-3-rebuild-the-running-production-commit-into-the-forgejo-registry.md` — this story file (Tasks 1-3, 5.1-5.2, 7.3, Dev Agent Record, Open Questions)
@@ -1587,21 +1603,31 @@ own gate result is the dev agent's own direct observation (Task 2.4).
    per the same convention Oleg just invoked (owners are names or story numbers, never trigger
    conditions, and never silently dropped).
 
-10. 🔴 **OPEN — raised 2026-08-26 (session 2), needs Oleg. `D43` is not free after all, and this
-   story planned to take it.** Task 1.5's sweep across every `origin/*` ref is reproducible and still
+10. ✅ **RESOLVED, 2026-08-26 — Oleg chose option (a): this story renumbers to `D45`.** Raised in
+   session 2. `D43` is not free after all, and this story planned to take it. Task 1.5's sweep across every `origin/*` ref is reproducible and still
    returns *"highest D42, next free D43"*. **It is blind to one place**: the operator's own local
    checkout, where branch `docs/prod-temporary-hostname` (commits `bd4e4b83`, `1c54f32d`, **never
    pushed**) already carries a full `## D43.` section recording the temporary PROD hostname
    `crm.prod.crm-prionex.online`. Re-run with that branch included, the first free number is **`D45`**
    (`D35` → `origin/story-4-9/pr-1-context`, `D43` → the unpushed local branch, `D44` →
-   `origin/story-4-10/pr-1-context`). **Two options, neither taken unilaterally:** (a) this story
+   `origin/story-4-10/pr-1-context`). **Two options were put to Oleg, neither taken unilaterally:** (a) this story
    renumbers to `D45`; (b) the hostname branch is pushed first and whichever record lands second
-   renumbers. **Not urgent** — Task 6.3 cannot run while Task 4 is gated — **but it must not be
-   discovered at merge time**, which is precisely when a duplicate anchor becomes expensive.
+   renumbers. **Oleg chose (a).** Reason recorded rather than inferred: the hostname record is already
+   written and dated, while this story has not written a line of its own decision yet — moving text
+   that does not exist is cheaper than moving text that does. **Applied the same session**: every
+   forward-looking `D43` in this file now reads `D45`; the **historical** entries that record
+   *"next free: D43"* as a measurement taken at the time (Task 1.5, session 1's Debug Log, Change Log
+   0.2/0.4) are **left exactly as written and superseded by this entry, not rewritten** — the same
+   amend-don't-rewrite rule Story 6.2's own review enforced after a closure silently dropped the
+   decision that routed it. **`D43` remains the PROD-hostname record's number and is not this
+   story's.**
    ⚠️ **The generalisable finding, which outlives this story:** the D-number sweep this project has used
    since `#d43`'s own record is **unsound for any decision authored locally and not yet pushed**. Either
    the sweep includes the operator's working checkout, or a number is not treated as claimed until it is
-   pushed. **Owner: Oleg** (both the decision and the unpushed branch are his).
+   pushed. **Owner: Oleg** (both the decision and the unpushed branch are his). **Still OPEN as a
+   process item** — Oleg's choice of (a) settles *this* collision; it does not change the sweep, and the
+   next locally-authored decision reopens the same hole. Carried so it is not read as closed by the
+   renumber.
 
 **Item 9 — not one of the original eight, and not a policy alternative: the one-shot dispatch
 mechanism itself (§11/AC7) is amended by Oleg's own direct authorisation, 2026-08-26, verbatim via
@@ -1634,6 +1660,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.5 | **OQ10 resolved by Oleg — option (a): this story's decision renumbers `D43` → `D45`.** Applied to every forward-looking reference; historical records of the original measurement (Task 1.5, session 1 Debug Log, Change Log 0.2/0.4) left standing and superseded rather than rewritten, per the amend-don't-rewrite rule. `D43` stays the PROD-hostname record's number. 🔴 The **process** half of OQ10 remains OPEN and is explicitly not closed by the renumber: the project's ref-based D-number sweep is still blind to any decision authored locally and not yet pushed, and the next one reopens the same hole. | dev-story |
 | 2026-08-26 | 0.4 | **Dev-story session 2: Tasks 3, 5.1-5.2 and 7.3 executed. Task 4 still gated — the commit is still absent, re-verified this time against the server (`git ls-remote`) as well as locally.** The other half of the resume instruction was closed WITHOUT touching s2: the live production bundle's `VITE_BUILD_TS` (`2026-08-22 19:48:40Z`) and asset `Last-Modified` (`19:49:08Z`), read over public HTTP, sit inside one 2.5-minute window with session 1's two s2 timestamps — production has not moved, corroborated by an independent channel (of the BUILD, not the label; OQ4's single-source position on the commit stands). Task 3.4 read `package_cleanup_rule` from the Forgejo DB directly and compiled all four tag shapes against it: the three markers KEEP, the 40-hex sanitized-ref tag does not, plus a free non-vacuous control. **`.forgejo/workflows/record-prod-image.yml` shipped** — G1/G2/G3/G4/404/G6, no G5-equivalent with the reason in the header, `prod-<sha>` before `prod-current`, `--prefer-index=false`, read-back after every write, move-refused-by-default as a recorded divergence from 5.4; 15/15 run bodies clean of the expression syntax and `bash -n`-valid; all four pure-shell guards exercised locally 15/15 — **local shell verification, NOT §9's matrix, which stays OPEN with no run ids**. Workflow census 11 → 12; every frozen path byte-identical to `origin/main`. 🔴 **New blocker-adjacent finding, Open Question 10: `D43` is NOT free** — an unpushed local branch already uses it for the PROD hostname record, so the project's ref-based D-number sweep is blind to locally-authored decisions; first free is `D45`; owner Oleg, not taken unilaterally. | dev-story |
 | 2026-08-26 | 0.3 | **OQ6 resolved by Oleg, verbatim: "Занесу коммиты в Forgejo"** -- option (a), import from a local clone, chosen; options (b) nearest-ancestor and (c) unblock-GitHub-first explicitly declined, recorded as refusals (the cutover image must be the exact running commit). Task 2.4's finding reframed, on the coordinator's instruction, as a permanent record and a positive outcome -- the gate worked exactly as designed, stopping the story before the one-shot dispatch; this is the project's first direct proof of the GitHub/Forgejo divergence and outlives this story. Work explicitly paused on Oleg's own instruction until he signals the commit has landed (he is watching for it himself). sprint-status.yaml's blocking comment updated: owner Oleg, decision in progress, not "waiting". Standing instruction recorded for resume: RE-VERIFY Task 2.4 (commit reachable as a complete object, s2 still serving the same revision), do not resume from where it stopped. | dev-story (Sonnet) |
 | 2026-08-26 | 0.2 | **Dev-story Tasks 1-2 executed; HALT at Task 2.4.** Ledger/D-number re-verified (D43 free). s2 read over the NFR7 admin path: running commit identified as `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` from `org.opencontainers.image.revision`, container/image/label state pasted verbatim. **Task 2.4's gate FAILED: the commit is absent from the Forgejo repository** (fresh fetch, 1429 refs, zero near-matches) -- exactly the risk Sec.2(c)/Open Question 6 named at context time. Task 4 (the one-shot prod build) and everything downstream do not run. Open Questions 1-5, 7, 8 arrived pre-answered from Oleg via the coordinator (all ratified as recommended except OQ8, whose owner Oleg reassigned from Story 6.8 to Story 6.3 itself); a ninth item -- Oleg's direct authorisation of the one-shot dispatch mechanism ("Запускай по готовности"), with its raised pre-push bar -- recorded but not yet exercised. sprint-status.yaml's `6-3-...` row stays `in-progress` per the story's own HALT mapping, with the blocking condition (OQ6) named in the comment immediately above it. | dev-story (Sonnet) |

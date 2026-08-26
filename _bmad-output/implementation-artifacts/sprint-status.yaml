@@ -1509,6 +1509,10 @@ development_status:
   # story must NOT claim: "the rebuild is not byte-identical to what prod serves" CANNOT FAIL (ghcr is
   # unreachable BY DECISION so there is no digest to compare, and Date.now() fixes the answer anyway).
   # Commit identity IS measurable -- compare org.opencontainers.image.revision on both sides.
+  # 🔴 SUPERSEDED 2026-08-26 -- THE NUMBER IS D45, NOT D43 (Oleg, OQ10 option (a)). Left standing
+  # rather than rewritten because the measurement below was taken and was not wrong -- it was BLIND:
+  # the ref sweep cannot see a decision authored locally and never pushed, which is exactly how D43
+  # was written. See the session-2 block further down for the finding and the resolution.
   # Decision number is D43 (main holds D42; story-4-9 still holds D35 unmerged) -- re-verify across
   # every open story-* branch at Task 1.5, not just main.
   # Blast radius: build.yml, record-preprod-candidate.yml, deploy-stand.yml, deploy-preprod.yml,
@@ -1575,7 +1579,15 @@ development_status:
   # reproducible and still says "next free D43", but it is blind to the operator's own local checkout:
   # branch `docs/prod-temporary-hostname` (bd4e4b83, 1c54f32d, NEVER PUSHED) already carries a full
   # `## D43.` for the temporary PROD hostname. First genuinely free number is D45 (D35 -> story-4-9,
-  # D43 -> the unpushed local branch, D44 -> story-4-10). NOT taken unilaterally -- owner Oleg.
+  # D43 -> the unpushed local branch, D44 -> story-4-10).
+  # ✅ RESOLVED SAME SESSION -- Oleg chose option (a): THIS STORY RENUMBERS TO D45. D43 stays the
+  # PROD-hostname record's. Reason recorded: the hostname record is written and dated, this story has
+  # not written its decision yet -- moving text that does not exist is cheaper. Applied to every
+  # forward-looking reference in the story file; the HISTORICAL entries that record "next free: D43"
+  # (Task 1.5, session 1's Debug Log, Change Log 0.2/0.4) are left standing and superseded, NOT
+  # rewritten -- the amend-don't-rewrite rule 6.2's own review enforced.
+  # 🔴 THE PROCESS HALF STAYS OPEN and is NOT closed by the renumber: the sweep itself is unchanged,
+  # so the next locally-authored, unpushed decision reopens the same hole. Owner Oleg.
   # Generalisable half, filed with it: this project's ref-based D-number sweep is UNSOUND for any
   # decision authored locally and not yet pushed. Not urgent (Task 6.3 is gated) but must not surface
   # at merge time, which is exactly when a duplicate anchor gets expensive.
