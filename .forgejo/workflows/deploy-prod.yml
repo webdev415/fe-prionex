@@ -70,10 +70,16 @@ name: Deploy PROD Stand
 #            RW exposure recorded as accepted, matching deploy-dev.yml and deploy-preprod.yml.
 #
 # ── Values, and the two that would be copied WRONG from the siblings ────────────────────
-# 🔴 frontend_port is BARE `8080`, not `127.0.0.1:8080`. DEV and PRE-PROD bind loopback because
-#    nothing outside their host reaches them. PROD traffic arrives FROM THE HYPERVISOR, so a
-#    loopback binding makes the stand unreachable by construction -- and the health check, which
-#    probes the container itself, would still report success.
+# 🔴 frontend_port is `0.0.0.0:8080`, and BOTH halves of that value are load-bearing.
+#    NOT `127.0.0.1:8080`: DEV and PRE-PROD bind loopback because nothing outside their host
+#    reaches them, but PROD traffic arrives FROM THE HYPERVISOR, so a loopback binding makes the
+#    stand unreachable by construction -- and the health check, which probes the container itself,
+#    would still report `healthy` and serve 200.
+#    NOT a bare `8080` either: `deploy-stand.yml` asserts a host prefix and refuses without one --
+#    "a bare port would parse wrong here (host and port would both become the port number)". Run
+#    632 hit exactly that, AFTER the container was already up and healthy.
+#    `0.0.0.0` satisfies the parser and binds every interface, which is what the hypervisor
+#    forward needs.
 # 🔴 runner_label is `fe-prionex-prod-deploy` — OUR OWN runner, provisioned on s10 by Story 6.4
 #    after run 629. NEVER `s10`/`e1-rung3` (the CI-shaped runner, jobs in dind, cannot reach the
 #    host stand) and NEVER `e1-rung3-prod-deploy` either: that is the NEIGHBOURING team's runner,
@@ -271,7 +277,7 @@ jobs:
       runner_label: fe-prionex-prod-deploy
       compose_project_name: fe-prionex-prod
       container_name: fe-prionex-prod
-      frontend_port: "8080"
+      frontend_port: "0.0.0.0:8080"
       frontend_network: crm-prod-network
       stand_dir: /root/crm-prionex/fe-prionex-prod
       image_env: prod
