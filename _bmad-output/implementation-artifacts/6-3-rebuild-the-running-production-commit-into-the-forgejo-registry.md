@@ -13,12 +13,17 @@
 # Story 6.3: Rebuild the Running Production Commit into the Forgejo Registry
 
 Status: in-progress
-<!-- HALT: Task 2.4's gate FAILED, 2026-08-26 -- the commit s2 is running
-     (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39) does not exist in the Forgejo repository (fresh
-     fetch, all 1429 refs). This is Open Question 6, escalated to Oleg via the coordinator; none of
-     its three resolution options may be chosen by the dev agent. Task 4 (the one-shot prod build)
-     and everything downstream do not run until this resolves. See Dev Agent Record and Open
-     Questions item 6. -->
+<!-- PAUSED, 2026-08-26, on Oleg's own explicit instruction -- do not resume until he signals.
+     Task 2.4's gate worked exactly as designed: the commit s2 is running
+     (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39) was confirmed absent from the Forgejo repository
+     (fresh fetch, all 1429 refs) -- the project's first direct proof of the GitHub/Forgejo
+     divergence, and a successful precondition check, not a story failure. Resolved by Oleg,
+     verbatim: "Занесу коммиты в Forgejo" (option a -- import from a local clone; options b/c
+     explicitly declined, not defaulted past). PENDING (owner: Oleg) -- he is importing the commit
+     himself and watching for its arrival; not an open-ended wait. On resume: RE-VERIFY, do not
+     resume from where it stopped -- confirm the commit is a complete reachable object in Forgejo,
+     and confirm s2 is still serving the same revision (a changed label is a new gate). See Dev
+     Agent Record and Open Questions item 6. -->
 
 ## Story
 
@@ -789,9 +794,13 @@ against a query, or closed with the literal word **OPEN**.
       **Commit: `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`** (full 40-hex, counted: 40 characters).
       **First 12: `41ab0470ab6b`.** Label present and non-empty — no escalation needed on this
       subtask's own trigger.
-- [x] 2.4 🚨 **GATE — FAILED. The commit is ABSENT from the Forgejo repository.** Fresh
-      `git fetch --all` (1429 remote branches fetched, including a full
-      `+refs/pull/*/head:refs/remotes/origin/pr/*` sweep, not just `origin/main`):
+- [x] 2.4 ✅ 🔴 **PERMANENT RECORD — the gate worked exactly as designed, and this measurement
+      outlives the story.** 2026-08-26, `root@175.110.122.17` (NFR7 admin path) and a fresh
+      `git fetch --all` (1429 remote refs, branches and every open PR head, not just
+      `origin/main`): the container `fe-prionex` runs `ghcr.io/crm-prionex/fe-prionex:main` (the
+      moving branch tag, confirmed not assumed — Task 2.2), whose
+      `org.opencontainers.image.revision` label reads `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`
+      (Task 2.3). Checked against Forgejo:
       ```
       $ git cat-file -e 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
       fatal: Not a valid object name 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
@@ -799,14 +808,34 @@ against a query, or closed with the literal word **OPEN**.
       $ git log -1 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39
       fatal: bad object 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39
       ```
-      Also checked for a near-match / truncation error against every ref (`git rev-list --all |
-      grep -i '^41ab'`) — **zero hits**, ruling out a typo or ambiguous-prefix explanation.
-      **This is exactly the risk §2(c)/Open Question 6 named**: Story 6.1 is cancelled, GitHub
-      keeps merging to its own `main`, there is no mirror in either direction, and this commit was
-      evidently merged on GitHub after the Forgejo import (or on a path that never reached Forgejo)
-      and so was never fetched here. **STOP, per this subtask's own instruction. Task 4 does not
-      run.** Escalated as Open Question 6, relayed to the coordinator for Oleg — this is an
-      Oleg-level blocker per his own instruction, not something the dev agent routes around.
+      Prefix sweep against every ref (`git rev-list --all | grep -i '^41ab'`) — **zero hits**,
+      ruling out a truncation or typo explanation. **This is the project's first direct proof that
+      the GitHub and Forgejo repositories have diverged** — not a hypothetical from `#d7`/`#d19`
+      but a named commit, confirmed absent by exhaustive search. **The gate did exactly its job**:
+      it stopped this story before the one-shot, irreversible `environment: prod` dispatch (§3),
+      and no permanent tag was minted against a commit whose presence was never confirmed. **This
+      is a successful precondition check, not a story failure — read it as the gate working, not as
+      6.3 stalling.** Escalated as Open Question 6.
+
+      ✅ **RESOLVED, 2026-08-26 — Oleg's decision, verbatim, via the coordinator:** *"Занесу коммиты
+      в Forgejo."* **Option (a) chosen** (import the missing history from a local clone).
+      **Options (b) and (c) — accepting the nearest present ancestor, or unblocking the
+      GitHub→Forgejo transition first — were explicitly declined, recorded as refusals, not as
+      silence:** the consequence Oleg named directly is that Story 6.3 will build **the exact
+      running commit**, not an approximate one — *"компромисс «образ катовера — не тот коммит, что
+      крутится» в проект не входит."* **Work paused per Oleg's explicit instruction — do not
+      resume until he signals the commit has landed** (he has set up his own watch for
+      `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` appearing in Forgejo). `PENDING (owner: Oleg)` —
+      not "waiting on nothing", a named owner with a named resolution in progress.
+
+      🔴 **When work resumes: this subtask is RE-VERIFIED, not resumed from where it stopped.**
+      Two facts, both potentially stale by the time Oleg signals: (1) confirm
+      `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is now a **complete, reachable** commit object in
+      Forgejo (`git cat-file -e …^{commit}` plus `git log -1`, not merely present as a dangling
+      blob); (2) confirm s2 is **still** serving this same commit — GitHub keeps merging to its own
+      `main` throughout the wait, so production may have moved. If the label now reads a different
+      revision, **that is a new commit and a new gate, not a continuation of this one** — Task 2.1-
+      2.3 are re-run in full, not assumed unchanged.
 - [x] 2.5 **Recorded — what the identification does not prove, named rather than overclaimed:**
       this does not prove s2 has not been deployed to by hand since this image was built (only that
       *this* container's current image carries this label); it does not prove the image was built
@@ -1233,6 +1262,29 @@ code-review Opus.)_
    3.5 not reached); no byte-difference claim has been made (Task 6 not reached); no G5-equivalent
    stand check exists or was claimed (Task 5 not reached). **The only claims made this session are
    Task 2's own s2 read and the Task 2.4 registry-absence finding, both directly evidenced above.**
+6. ✅ **Task 2.4's finding reframed, on the coordinator's own instruction, as a permanent record and
+   a positive outcome — not a failed-attempt note.** The commit/image/label state (Task 2.2/2.3) and
+   the absence finding (Task 2.4) are the project's first direct proof that the GitHub and Forgejo
+   repositories have diverged — this measurement outlives this story and will matter to Story 6.9
+   and the epic retrospective regardless of how OQ6 itself resolves. **The gate worked exactly as
+   designed**: it stopped this story before the one-shot, irreversible `environment: prod` dispatch,
+   and no permanent tag was minted against an unconfirmed commit. Framed explicitly as a successful
+   precondition check, not as this story stalling.
+7. ✅ **OQ6 resolved, 2026-08-26 — Oleg's decision recorded verbatim: *"Занесу коммиты в Forgejo."***
+   Option (a) (import from a local clone) chosen; options (b) (nearest ancestor) and (c) (unblock
+   the GitHub transition first) **explicitly declined** — recorded as refusals, with Oleg's own
+   stated reason (the cutover image must be the exact running commit, not an approximation), not as
+   silence or a default. **Work paused on Oleg's own explicit instruction** — he is importing the
+   commit and has set up his own watch for its arrival in Forgejo; this session does not resume
+   until he signals. `sprint-status.yaml`'s blocking comment updated to name the owner (Oleg) and
+   the decision in progress, not "waiting" in the abstract.
+8. 🔴 **Standing instruction for whenever work resumes, recorded here so it is not missed:**
+   Task 2.4 is **re-verified**, not resumed from where it stopped. Two facts may have changed during
+   the wait: whether `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is now a complete, reachable commit
+   object in Forgejo (not a dangling blob), and whether s2 is **still** serving this exact commit —
+   GitHub keeps merging to its own `main` throughout the wait, so production may have moved. **A
+   changed `org.opencontainers.image.revision` label on re-read is a new commit and a new gate, not
+   a continuation of this one** — Tasks 2.1-2.3 are re-run in full.
 
 ### File List
 
@@ -1281,19 +1333,24 @@ own gate result is the dev agent's own direct observation (Task 2.4).
    *"«прод-каллера нет» остаётся верным"*). **Deferred to a future task**, since Task 4/5/7 cannot run
    while OQ6 is unresolved (below) — the amendment itself still needs the actual tag name, which does
    not exist until Task 4 runs.
-6. 🚨 **NOT a policy question anymore — RESOLVED AS A LIVE FACT, THIS SESSION, AND IT IS THE BLOCKING
-   ONE.** Task 2.4 (own SSH read, own `git fetch --all` across 1429 refs): the commit s2 is running,
-   `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`, **is absent from the Forgejo repository.**
-   **STOPPED, exactly as this question's own recommendation required** — Task 4 does not run, and
-   nothing downstream that depends on a confirmed, buildable commit runs either. **The three options
-   named at context time remain exactly as scoped — none may be chosen by the dev agent, this is
-   escalated to Oleg via the coordinator, verbatim, this session:**
-   (a) import the commit from a developer's local clone into Forgejo;
-   (b) accept the nearest ancestor commit that **is** present in Forgejo, and record explicitly that
-       the resulting cutover image is then **not** the exact commit s2 is currently running;
-   (c) unblock the GitHub→Forgejo transition (Story 6.1's own cancelled scope) so this class of gap
-       stops recurring.
-   **`PENDING (owner: Oleg, via coordinator)` — this is now the story's single blocking condition.**
+6. ✅ **RESOLVED, 2026-08-26 — Oleg's decision, verbatim, via the coordinator.** Task 2.4 (own
+   SSH read, own `git fetch --all` across 1429 refs) found the commit s2 is running,
+   `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`, **absent from the Forgejo repository** — the
+   project's first direct proof of the GitHub/Forgejo divergence `#d7`/`#d19` had only theorised
+   about. **The gate stopped the story exactly as designed, before the one-shot dispatch — a
+   successful precondition check, not a story failure.** Of the three options named at context
+   time, Oleg's answer: *"Занесу коммиты в Forgejo."* **Option (a) — import from a local
+   clone — chosen.** **Options (b) (nearest present ancestor) and (c) (unblock the GitHub→Forgejo
+   transition first) are explicitly declined, recorded as refusals rather than silence**: Oleg's
+   own stated consequence is that 6.3 builds **the exact running commit**, not an approximation —
+   *"компромисс «образ катовера — не тот коммит, что крутится» в проект не входит."*
+   **`PENDING (owner: Oleg)`** — a named owner with a decision already made and in progress
+   (he is importing the commit himself and watching for its arrival), not an open-ended wait.
+   **Work is explicitly paused on Oleg's own instruction** until he signals the commit has landed.
+   **On resume: Task 2.4 is re-verified, not resumed from where it stopped** — confirm the commit
+   is a complete, reachable object (not a dangling blob), and confirm s2 is still serving the same
+   revision (GitHub keeps merging throughout the wait; a changed label is a new commit and a new
+   gate, not a continuation).
 7. ✅ **RESOLVED — ratified as recommended, no veto.** No `preprod` smoke build precedes the `prod`
    build. Coordinator's own words: *"preprod-смоук перед prod-сборкой не делаем (рекомендация
    спеки)"*.
@@ -1342,5 +1399,6 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.3 | **OQ6 resolved by Oleg, verbatim: "Занесу коммиты в Forgejo"** -- option (a), import from a local clone, chosen; options (b) nearest-ancestor and (c) unblock-GitHub-first explicitly declined, recorded as refusals (the cutover image must be the exact running commit). Task 2.4's finding reframed, on the coordinator's instruction, as a permanent record and a positive outcome -- the gate worked exactly as designed, stopping the story before the one-shot dispatch; this is the project's first direct proof of the GitHub/Forgejo divergence and outlives this story. Work explicitly paused on Oleg's own instruction until he signals the commit has landed (he is watching for it himself). sprint-status.yaml's blocking comment updated: owner Oleg, decision in progress, not "waiting". Standing instruction recorded for resume: RE-VERIFY Task 2.4 (commit reachable as a complete object, s2 still serving the same revision), do not resume from where it stopped. | dev-story (Sonnet) |
 | 2026-08-26 | 0.2 | **Dev-story Tasks 1-2 executed; HALT at Task 2.4.** Ledger/D-number re-verified (D43 free). s2 read over the NFR7 admin path: running commit identified as `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` from `org.opencontainers.image.revision`, container/image/label state pasted verbatim. **Task 2.4's gate FAILED: the commit is absent from the Forgejo repository** (fresh fetch, 1429 refs, zero near-matches) -- exactly the risk Sec.2(c)/Open Question 6 named at context time. Task 4 (the one-shot prod build) and everything downstream do not run. Open Questions 1-5, 7, 8 arrived pre-answered from Oleg via the coordinator (all ratified as recommended except OQ8, whose owner Oleg reassigned from Story 6.8 to Story 6.3 itself); a ninth item -- Oleg's direct authorisation of the one-shot dispatch mechanism ("Запускай по готовности"), with its raised pre-push bar -- recorded but not yet exercised. sprint-status.yaml's `6-3-...` row stays `in-progress` per the story's own HALT mapping, with the blocking condition (OQ6) named in the comment immediately above it. | dev-story (Sonnet) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `cfbad179`, branch `story-6-3/pr-1-context`. Ordering checked against `epics.md` for all of 6.3-6.10 (§2): 6.3 does **not** depend on Story 6.10; it does depend on a tag-writing mechanism the plan assigned to 6.6, which cannot run first — and on one external precondition (the commit's presence in Forgejo) that no story owns. Five epic ACs carried, five added. Eight Open Questions, five of which gate the story's one-shot dispatch. | create-story context engine (Opus) |
