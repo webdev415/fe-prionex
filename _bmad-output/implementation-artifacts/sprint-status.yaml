@@ -1487,6 +1487,42 @@ development_status:
   # query time (11947 on 7eabd41e, 11950 on 1cdb0f35) -- no terminal verdict claimed; a final figure
   # needs a re-query.
   6-2-publish-the-production-approval-regulation: done
+  # 🔀 CORRECT-COURSE 2026-08-26 -- sprint-change-proposal-2026-08-26-cutover-candidate.md, D46.
+  # THE BUILD SOURCE CHANGED. Story 6.3 builds a99ccd44c5a39345fa65eb74e87343b187e129e9 -- the last
+  # validated PRE-PROD candidate -- NOT the running PROD commit. Oleg, verbatim: "Берем тот коммит,
+  # который последний в pre-prod", reversing his own earlier "Занесу коммиты в Forgejo" of the same
+  # day. Both recorded verbatim; the second is a change of course, not a clarification of the first.
+  # WHY, measured not assumed: 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39 (what s2 runs, from its own
+  # image label) is ABSENT from Forgejo -- 549 remote heads plus `git ls-remote` to the server. First
+  # DIRECT proof of the GitHub/Forgejo divergence #d7/#d19 had only theorised. Corroborated without
+  # touching s2: the live bundle's VITE_BUILD_TS and Last-Modified land in one 2.5-min window with
+  # the s2 labels -- prod has not moved (corroborates the BUILD, not the LABEL; OQ4 stands).
+  # 🟢 WHAT IT FIXES, and it is a real contradiction: 41ab0470 has no preprod-<sha> and never could,
+  # so the cutover image failed FR16/Story 6.5's own guard BY CONSTRUCTION. a99ccd44c5a3 carries
+  # preprod-a99ccd44c5a3 (measured in package_version; NO prod-* version exists at all, so 6.3's
+  # write is genuinely the first). build -> PRE-PROD -> validation -> PROD is whole for the first time.
+  # 🔴 WHAT IT COSTS -- FR32: the word "no-op" is WITHDRAWN and not replaced by a synonym. The cutover
+  # is now THE FIRST REAL RELEASE, and Story 6.9's stated purpose -- "so that cutover risk is
+  # separated from release risk" -- IS NO LONGER ACHIEVED. Not recoverable without importing the
+  # running commit, which is the option Oleg declined.
+  # 🔴 INVERTED TRAP, written down before 6.9 walks into it: `rollback: true` is STILL mandatory, but
+  # NOT because the guard would refuse -- it would now pass. Because the release path REBUILDS (6.4
+  # AC2) and build.yml's Enforce AC2 refuses to repoint an existing sha-<12hex>-prod (#d24 §2b). A
+  # release-path dispatch of a commit 6.3 already built GOES RED.
+  # 🔴 LOAD-BEARING RISK, new: the last team-authored src/ commit in Forgejo is 2026-08-04; prod was
+  # built 2026-08-22. HOW MUCH OF THAT DELTA IS PRODUCT CODE IS **UNMEASURED** and cannot be measured
+  # -- reading GitHub is forbidden (#d7). One inference is strict: had GitHub's main not moved, its
+  # HEAD would be a commit Forgejo has; 41ab0470 is not, so it moved. THE IMPORT PROBLEM IS NOT
+  # SOLVED, IT MOVED -- from 6.3 to 6.9, where users are attached to the outcome. Story 6.9 therefore
+  # gained a NEW AC GATE: measure the delta BEFORE the switch, and if it contains team work absent
+  # from Forgejo the switch DOES NOT HAPPEN until that work is in Forgejo. Owner: Oleg.
+  # WHAT DID NOT CHANGE: Option C / NFR11, NFR5, NFR3, FR17/18/24, epics 1-5 and 7, ACs of
+  # 6.4/6.5/6.6/6.7/6.8/6.10, both regulations, RVC-v1.1, preprod-candidates.md, every frozen
+  # workflow. record-prod-image.yml (shipped by 6.3 session 2) is COMMIT-AGNOSTIC and needs no edit
+  # -- that is why this is Moderate and not Major.
+  # 🔴 6.3 RESUMES ONLY AFTER THIS LANDS, and re-runs Task 2 against the NEW source commit: its own
+  # AC1/AC4 were rewritten underneath it, and evidence gathered against superseded criteria is waste.
+  # Its retro-E5 matrix (§9) is untouched and stays OPEN -- no run ids exist yet.
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
