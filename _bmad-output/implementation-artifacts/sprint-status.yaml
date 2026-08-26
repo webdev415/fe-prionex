@@ -1987,7 +1987,21 @@ development_status:
   # written: (1) §7's prod_tag settlement is correct against shipped code but reverses #d18 §3 and
   # deferred-work.md:2324 with no dated banner, while AC2 still carries the old words; (2) §10's
   # tautology -- drop it, build the real stand-side guard, or keep the read and grade nothing on it.
-  6-6-record-the-deployed-production-image: ready-for-dev
+  # 🚧 DEV STARTED 2026-08-26, branch `story-6-6/impl`, baseline `13a60eca` (the merge of PR #100 --
+  # this story's own code review, so the dev session starts from the REVIEWED spec, not the drafted
+  # one). 🔴 origin/main moved SEVEN times today; Task 1.1's re-fetch is not ceremonial.
+  # D-SWEEP RUN AGAINST OQ10's HOLE, not only against refs: highest `## D<n>` is D47 in all THREE
+  # scopes -- every origin ref, every LOCAL branch, and the operator's own WORKING TREE including
+  # staged uncommitted work. Next free D48, confirming AC9. D45 exists nowhere (6.3's Task 6 was
+  # cancelled and never spent it) and is deliberately NOT reused. The process half of OQ10 stays OPEN
+  # -- nothing forces the next session to check the working tree; this one chose to.
+  # ⚠️ SIXTEEN [Review][Patch] ACTION ITEMS ARE OPEN in the story's own Review Findings and are part
+  # of the work, not commentary. Two of them change what the dev does before touching code: three of
+  # the thirteen inherited findings are DESCRIBED WRONGLY (the sibling comparison does not survive
+  # counting), and a FOURTEENTH defect the thirteen missed is the one that actually arms -- `EXISTS`
+  # is a tri-state consumed as a bi-state, and a workflow_call refactor of exactly the kind this
+  # story performs bypasses both refusals.
+  6-6-record-the-deployed-production-image: in-progress
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog
