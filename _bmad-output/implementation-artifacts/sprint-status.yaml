@@ -1520,6 +1520,21 @@ development_status:
   # STATUS MAPPING FOR A HALT (the enum has no `blocked` value): if Task 2.4 finds the commit absent
   # from Forgejo, or a one-shot act is still awaiting Oleg, this row STAYS `in-progress` with the
   # blocking condition named in the comment immediately above it.
+  # 🔴 HALT, 2026-08-26 -- Task 2.4's gate FAILED. The commit s2 is currently running
+  # (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39, read from org.opencontainers.image.revision on the
+  # running container's image, root@175.110.122.17 via the NFR7 admin path) does NOT exist in the
+  # Forgejo repository -- fresh git fetch --all across all 1429 remote refs, zero hits, zero
+  # near-matches. This is Open Question 6 (named at context time as the single most likely way this
+  # story stops) now confirmed as a live fact. Task 4 (the one-shot environment=prod build) and
+  # everything downstream (Tasks 5-8) do not run until Oleg picks one of three options, none
+  # choosable by the dev agent: (a) import the commit into Forgejo from a developer's local clone;
+  # (b) accept the nearest present ancestor and record that the cutover image is then not the exact
+  # running commit; (c) unblock the GitHub->Forgejo transition. PENDING (owner: Oleg, via
+  # coordinator). Row stays in-progress, not review, not backlog, per the story's own HALT mapping.
+  # Separately, Open Questions 1-5, 7, 8 arrived pre-answered and ratified (OQ8's owner reassigned
+  # by Oleg from Story 6.8 to Story 6.3 itself); a ninth item (one-shot dispatch authorised "by
+  # readiness", price raised accordingly) is recorded but not yet exercised -- both moot until OQ6
+  # resolves.
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: in-progress
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog

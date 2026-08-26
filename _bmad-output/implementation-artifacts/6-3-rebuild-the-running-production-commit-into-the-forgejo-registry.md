@@ -12,7 +12,13 @@
 
 # Story 6.3: Rebuild the Running Production Commit into the Forgejo Registry
 
-Status: backlog
+Status: in-progress
+<!-- HALT: Task 2.4's gate FAILED, 2026-08-26 -- the commit s2 is running
+     (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39) does not exist in the Forgejo repository (fresh
+     fetch, all 1429 refs). This is Open Question 6, escalated to Oleg via the coordinator; none of
+     its three resolution options may be chosen by the dev agent. Task 4 (the one-shot prod build)
+     and everything downstream do not run until this resolves. See Dev Agent Record and Open
+     Questions item 6. -->
 
 ## Story
 
@@ -731,44 +737,86 @@ against a query, or closed with the literal word **OPEN**.
 ## Tasks / Subtasks
 
 ### Task 1 — Open the story, declare the budget, and re-verify the decision number (AC: 7, 10) — **costs 1 push row**
-- [ ] 1.1 Flip `sprint-status.yaml`'s `6-3-rebuild-the-running-production-commit-into-the-forgejo-registry`
-      from `backlog` to `in-progress` **on its own commit, before any content edit** — Story 5.2's Task
-      1.1 lesson, applied not repeated. `epic-6` is already `in-progress`; do not touch it.
-- [ ] 1.2 `git fetch --all`; confirm `origin/main` is still `cfbad179`. If it has moved, take it by
-      **merge** if a PR is already open on this branch, by **rebase** otherwise, and record which in the
-      Change Log. Confirm Story 4.9's branch is still unmerged and still holds **D35**.
-- [ ] 1.3 **`PENDING (owner: coordinator)`** — declare the run-budget ledger from §10 (floor **7**,
-      ceiling **20**, disposition **OPEN**) and hand over the no-touch window (**next tick 2026-08-30**,
-      **01:45–02:30 UTC**, and note that unlike 6.2 this story's *dispatches* are also bound by it).
-- [ ] 1.4 **`PENDING (owner: Oleg, via coordinator)`** — send Open Questions **1–5** as one consolidated
-      message, verbatim, on day one. **These are not "announce and proceed": Task 4 is gated on the
-      answers** (AC7, §11).
-- [ ] 1.5 Re-verify the next free decision number across **every** ref, not just `main`:
-      `git fetch --all` then `git grep -hoE '^## D[0-9]+'` over each `origin/story-*` and `origin/main`.
-      Context-time scan gives **D42** as the highest (`main`, Story 6.2), `story-4-9/pr-1-context` holds
-      **D35** unmerged. **Next free: D43.** Confirm; do not trust this line.
+- [x] 1.1 **Done.** `sprint-status.yaml`'s `6-3-…` flipped `backlog` → `in-progress`, own commit
+      (`7df02eca`), pushed before any content edit. `epic-6` already `in-progress`, untouched.
+- [x] 1.2 **Confirmed.** `git fetch --all` → `origin/main` still `cfbad179` (unchanged from context
+      time — it is itself Story 6.2's ledger-closeout merge, PR #89). No rebase/merge needed.
+      `story-4-9/pr-1-context` confirmed still unmerged, still holds `D35`
+      (`## D35. Cutover DEV на новый стенд…`, read directly from that ref).
+- [x] 1.3 **Declared.** `PENDING (owner: coordinator)` — run-budget ledger floor **7**, ceiling
+      **20**, disposition **OPEN** (§10). No-touch window handed over: next tick **2026-08-30**,
+      **01:45–02:30 UTC**, binding both this story's dispatches and its merge.
+- [x] 1.4 **Answers received before this task even opened — the coordinator's own message carried
+      them.** Open Questions 1–5 (plus 7 and, with an explicit override, 8) arrived pre-answered;
+      quoted verbatim and reconciled at Open Questions for Review, below. **New, not one of the
+      original five:** Oleg's explicit authorisation for the one-shot dispatch mechanism itself
+      (*"Запускай по готовности"*) — recorded as its own item, since it amends AC7/§11's own "wait
+      for confirmation" procedure rather than answering OQ1-5 as originally framed. See Debug Log.
+- [x] 1.5 **Re-verified, not trusted from context.** `git fetch --all`; `git grep -hoE
+      '^## D[0-9]+'` over every `origin/story-*` and `origin/main` ref → highest hit **D42**
+      (`main`, Story 6.2). `story-4-9/pr-1-context` holds `D35`, confirmed unmerged (Task 1.2), no
+      collision. **Next free: D43.** Matches context-time prediction.
 
 ### Task 2 — Identify the running production commit, and prove the commit is buildable here (AC: 1) — **0 runs**
-- [ ] 2.1 Reach s2 over the **NFR7 administrative SSH path only** (Open Question 3; Prohibition 10).
-      **Read only.** No `docker rmi`, no restart, no compose verb, no Forgejo job on `s2-prod-deploy`.
-- [ ] 2.2 Read the running container's state and **paste it**: the container name, its `.Config.Image`
-      (expected to be the moving branch reference `ghcr.io/crm-prionex/fe-prionex:main`, per
-      `.github/workflows/CD.yml` — **state it, do not assume it**), its `.Image` digest, and the image's
-      `.RepoDigests`.
-- [ ] 2.3 Read the image's labels and **paste them verbatim**. The commit is
-      `org.opencontainers.image.revision`, written by `docker/metadata-action@v5` on the legacy path.
-      Record the full 40-hex value **and** its first 12 characters, because `#d18` §2/§3 bind every tag
-      in this story to exactly 12. **If the label is absent or empty, STOP and escalate (Open Question
-      6) — do not infer the commit from `main` HEAD, from the `prod` branch, or from GitHub.**
-- [ ] 2.4 🔴 **GATE — the commit must exist in the Forgejo repository.** `git cat-file -e <sha>^{commit}`
-      against a fresh fetch of `origin`, and `git log -1 <sha>` pasted. §2(c): GitHub keeps merging to its
-      own `main` and there is **no mirror in either direction**, so a post-import production commit may
-      simply not be here. **If absent: STOP. Task 4 does not run.** Escalate as Open Question 6; the
-      story cannot proceed on an inference.
-- [ ] 2.5 Record what the identification does **not** prove: that s2 has not been deployed to by hand;
-      that the image was built from that commit rather than merely labelled with it (the label is written
-      by the same pipeline that resolved the ref — an identity on that path, the same limitation
-      `record-preprod-candidate.yml`'s header records for its own **G6**). **Name it; do not overclaim.**
+- [x] 2.1 **Done.** Reached s2 (`root@175.110.122.17`) over the NFR7 administrative SSH path —
+      the same key-based, workstation-only access this project has used for s1 throughout, key-based,
+      **not** a Forgejo-held credential (`S2_SSH_*` secrets were removed from Forgejo entirely by
+      the 2026-08-11 deploy-runner change). **Read only**: `docker ps` and `docker inspect` alone —
+      no `rmi`, no restart, no compose verb, and no Forgejo job of any kind was involved.
+- [x] 2.2 **Done — pasted verbatim.** `docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' |
+      grep fe-prionex`:
+      ```
+      fe-prionex   ghcr.io/crm-prionex/fe-prionex:main   Up 3 days (healthy)
+      ```
+      Confirms the moving branch reference, exactly as `.github/workflows/CD.yml` predicts — **stated
+      as read, not assumed.** `docker inspect fe-prionex`:
+      ```
+      Config.Image: ghcr.io/crm-prionex/fe-prionex:main
+      Image (config digest): sha256:d14cb7daba589a911f7d04bee2f009be78e71205a7dff5abf94f8995c5105318
+      Created: 2026-08-22T19:49:53.147612208Z
+      ```
+      `.RepoDigests` (via `docker image inspect` on that config digest):
+      ```
+      ghcr.io/crm-prionex/fe-prionex@sha256:d14cb7daba589a911f7d04bee2f009be78e71205a7dff5abf94f8995c5105318
+      ```
+- [x] 2.3 **Done — labels pasted verbatim** (`docker inspect fe-prionex --format
+      '{{json .Config.Labels}}'`, relevant keys):
+      ```
+      "org.opencontainers.image.revision": "41ab0470ab6b3df3bc332fc90f8bccaaba44dc39",
+      "org.opencontainers.image.version": "main",
+      "org.opencontainers.image.created": "2026-08-22T19:47:22.014Z"
+      ```
+      **Commit: `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`** (full 40-hex, counted: 40 characters).
+      **First 12: `41ab0470ab6b`.** Label present and non-empty — no escalation needed on this
+      subtask's own trigger.
+- [x] 2.4 🚨 **GATE — FAILED. The commit is ABSENT from the Forgejo repository.** Fresh
+      `git fetch --all` (1429 remote branches fetched, including a full
+      `+refs/pull/*/head:refs/remotes/origin/pr/*` sweep, not just `origin/main`):
+      ```
+      $ git cat-file -e 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
+      fatal: Not a valid object name 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
+
+      $ git log -1 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39
+      fatal: bad object 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39
+      ```
+      Also checked for a near-match / truncation error against every ref (`git rev-list --all |
+      grep -i '^41ab'`) — **zero hits**, ruling out a typo or ambiguous-prefix explanation.
+      **This is exactly the risk §2(c)/Open Question 6 named**: Story 6.1 is cancelled, GitHub
+      keeps merging to its own `main`, there is no mirror in either direction, and this commit was
+      evidently merged on GitHub after the Forgejo import (or on a path that never reached Forgejo)
+      and so was never fetched here. **STOP, per this subtask's own instruction. Task 4 does not
+      run.** Escalated as Open Question 6, relayed to the coordinator for Oleg — this is an
+      Oleg-level blocker per his own instruction, not something the dev agent routes around.
+- [x] 2.5 **Recorded — what the identification does not prove, named rather than overclaimed:**
+      this does not prove s2 has not been deployed to by hand since this image was built (only that
+      *this* container's current image carries this label); it does not prove the image was built
+      **from** this commit rather than merely **labelled** with it — the label is written by the
+      same `docker/metadata-action@v5` step that resolved the ref on the legacy GitHub pipeline, an
+      identity on that path, the same limitation `record-preprod-candidate.yml`'s own header
+      records for its G6. **Moot for this session in one sense and not in another**: Task 2.4's
+      gate failure means this evidence is not being acted on by a dispatch right now, but the
+      identification itself stands as-is, ready to be re-used if Oleg's resolution of Open Question
+      6 confirms this exact commit (e.g. "import it") rather than substituting a different one.
 
 ### Task 3 — Zero-dispatch preconditions, pasted rather than characterised (AC: 2, 5, 10) — **0 runs**
 - [ ] 3.1 Paste `ls .forgejo/workflows/` **before** any file is added — the count Story 6.2's regulation
@@ -1126,20 +1174,70 @@ code-review Opus.)_
 
 ### Debug Log References
 
-_(To be filled by the dev agent. Every registry claim needs a read-back; every run claim needs a run
-id; every s2 claim needs a pasted `docker inspect`. Job logs are best-effort on this instance —
-`log_in_storage='f'` on seven consecutive checks — so read state from the registry and the API, not
-from the log.)_
+- **Task 1.2, `origin/main` re-check:** `git fetch --all` → `cfbad179` unchanged.
+  `story-4-9/pr-1-context` re-fetched and grepped directly for `^## D35\.` → present, confirmed
+  still unmerged.
+- **Task 1.5, D-number re-check:** `git grep -hoE '^## D[0-9]+' docs/migration-decisions.md` across
+  every `origin/story-*` and `origin/main` ref → highest `D42`. **Next free: D43.**
+- **Task 2.1-2.3, s2 read, 2026-08-26, `root@175.110.122.17` (NFR7 admin path, key-based, not a
+  Forgejo secret):** `docker ps`, `docker inspect fe-prionex`, `docker image inspect` on the
+  resolved config digest for `.RepoDigests`, `docker inspect --format '{{json .Config.Labels}}'`
+  for the label set. All outputs pasted verbatim at Task 2.2/2.3 in the story's own Tasks section
+  (not duplicated here — see there for the full text). **Commit found: `41ab0470ab6b…44dc39`**
+  (40-hex, counted), first 12: `41ab0470ab6b`.
+- **Task 2.4, the gate, 2026-08-26:** `git fetch --all` (all branches + all open PR heads, 1429
+  refs total) then `git cat-file -e 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}` →
+  `fatal: Not a valid object name`; `git log -1` on the same sha → `fatal: bad object`; a
+  prefix-sweep `git rev-list --all | grep -i '^41ab'` → zero hits, ruling out a truncation/typo
+  explanation. **Commit confirmed absent from the Forgejo repository, across every ref.** This is
+  Task 4's hard gate; it fails; Task 4 (and everything downstream of it — Tasks 5, 6, 7, most of 8)
+  is not attempted this session.
+- **Coordinator's dispatch message, 2026-08-26, contained pre-answered Open Questions 1-5, 7, 8 and
+  a ninth item (the one-shot-dispatch authorisation) before Task 1.4 was even executed** — recorded
+  in full at "Open Questions for Review" rather than duplicated here. Not an artifact this dev agent
+  observed independently; attested with date and channel (coordinator relay of Oleg's own words),
+  in the same register this project holds for every attested-not-observed acknowledgement.
 
 ### Completion Notes List
 
-_(To be filled by the dev agent. AC10 requires the "not earned" list to be written explicitly:
-byte-difference as a measurement; `secret/fe/prod/app` pre-verification; retention protection by
-execution; a G5-equivalent stand check.)_
+1. **Tasks 1 and 2 executed in full this session; Tasks 3-8 not started — correctly, not by
+   oversight.** Task 2.4's gate failed: the commit s2 is running
+   (`41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`) does not exist anywhere in the Forgejo repository,
+   across a fresh fetch of all 1429 remote refs. This is exactly the risk the story's own §2(c) and
+   Open Question 6 named at context time, now confirmed as a live fact rather than a hypothetical.
+   Per Task 2.4's own instruction and the coordinator's explicit "проверь фактически до всего
+   остального" priority, work stopped here rather than continuing into Task 3's zero-run
+   documentary work or any dispatch-adjacent task — the entire point of Tasks 3 onward is to prepare
+   for and execute Task 4's one-shot build, which cannot happen until this blocker resolves.
+2. **All eight of the story's own Open Questions, plus a ninth item, arrived pre-answered from Oleg
+   via the coordinator** — recorded in full, verbatim where given, at "Open Questions for Review".
+   Seven of the eight (1-5, 7, and 8 with an explicit override of the story's own recommended owner)
+   are genuinely resolved and will apply once Task 2.4's blocker clears. **The eighth — Open
+   Question 6 itself — is not resolved by policy; it is now a confirmed live fact requiring a
+   further decision from Oleg** (one of three options, none choosable by the dev agent), and it is
+   the story's sole blocking condition.
+3. **The one-shot dispatch mechanism (AC7/§11) is amended by Oleg's direct authorisation**
+   (*"Запускай по готовности"*) **but this has not been exercised** — Task 4 has not run and cannot
+   run until Open Question 6 resolves. Recorded in full at Open Questions item 9 so it is not lost
+   between now and whenever Task 4 becomes reachable.
+4. **No dispatch, no workflow write, no document amendment, no `D43` entry has been made this
+   session.** Everything downstream of Task 2.4 (the `record-prod-image.yml` workflow, `D43`, the
+   §12-priced amendment to `docs/production-approval-regulation.md`, the `docs/prod-releases.md`
+   prose, the forward notes under `#d18`/`#d19`) depends on either the identified commit being
+   confirmed buildable (Task 4 needs it) or, in a few cases, is independent of it but was
+   deliberately not started ahead of the blocker being resolved, since Oleg's OQ6 decision could
+   change which commit this story ultimately builds and thus what `D43` needs to say about it.
+5. 🚨 **AC10's "not earned" list, stated now even though most of the story has not run:** nothing
+   about the retention rule's execution-proof status has been claimed (AC5 untouched — no tags
+   exist yet); nothing about `secret/fe/prod/app`'s contents has been claimed as pre-verified (Task
+   3.5 not reached); no byte-difference claim has been made (Task 6 not reached); no G5-equivalent
+   stand check exists or was claimed (Task 5 not reached). **The only claims made this session are
+   Task 2's own s2 read and the Task 2.4 registry-absence finding, both directly evidenced above.**
 
 ### File List
 
-_(To be filled by the dev agent.)_
+- `_bmad-output/implementation-artifacts/6-3-rebuild-the-running-production-commit-into-the-forgejo-registry.md` — this story file (Tasks 1-2, Dev Agent Record, Open Questions)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `6-3-…` flipped `backlog` → `in-progress`, HALT comment recorded
 
 ### Review Findings
 
@@ -1149,54 +1247,94 @@ _(To be filled by code review.)_
 
 ## Open Questions for Review
 
-🔴 **Questions 1-5 gate Task 4.** They are sent on day one as one consolidated message (Task 1.4), and
-the two one-shot acts do not proceed on silence (AC7, §11).
+🔴 **Questions 1-5 gate Task 4.** Answers below arrived from Oleg via the coordinator on 2026-08-26,
+**before** Task 1.4's own send even completed this session — the coordinator relayed them as part of
+the dispatch instruction itself. Attested with the date and the coordinator as relay channel; not
+independently observed by the dev agent for the ones that are pure decisions (1-5, 7, 8) — only OQ6's
+own gate result is the dev agent's own direct observation (Task 2.4).
 
-1. 🔴 **Who writes `prod-current` and `prod-<sha>`?** Nothing in this repository can, and Story 6.6's
-   mechanism lives inside Story 6.4's `deploy-prod.yml`, which cannot run before Story 6.10 (§2b).
-   **Recommendation: a new dispatch-only `record-prod-image.yml`** modelled on
-   `record-preprod-candidate.yml`'s write half (§5). Alternatives: a manual `imagetools create` with no
-   run id and no guard, or deferring `prod-current` (see Q2).
-2. 🔴 **May `prod-current` be created now at all?** It will name an image that **no host serves** until
-   the external traffic switch — s2 keeps serving `ghcr.io/…:main` — while Story 6.6 will later define
-   `prod-current` as "what production is running" (§6). **Recommendation: create it, and write the
-   disclaimer at creation time** (AC8), because the amended FR31 and this story's epic AC3 both require
-   it and the retention argument for `prod-<sha>` is real. Alternative: `prod-<sha>` only, and accept
-   reopening the moving-name window the 2026-08-13 amendment closed.
-3. 🔴 **How is s2 read?** **Recommendation: the NFR7 administrative SSH path only** — read-only, no
-   `docker` write verb of any kind, and **no Forgejo job on the `s2-prod-deploy` runner**, because NFR5
-   as amended says *"Forgejo never deploys to s2 at all"* and a job on that runner reads as exactly the
-   contact that guarantee excludes (§12).
-4. 🔴 **Is any GitHub read permitted to corroborate the commit** — the Actions run history, ghcr
-   metadata, the API? **Recommendation: NO.** `#d7` and Epic 6's preamble treat "no action on GitHub" as
-   including its registry, and a read is an action. The consequence, stated so it is accepted rather
-   than discovered: **the identification rests on a single source — the image labels on s2** — and there
-   is no second, independent confirmation (Task 2.5).
-5. 🔴 **Story 6.2's regulation contradicts Story 6.9's own FR32 dispatch (§7b).** The cutover tag this
-   story creates is in no `docs/prod-releases.md` row, so under the shipped rollback rule restoring it
-   is *"a rollback to a tag not in the ledger"* — a release, needing Oleg, with **no delegate**.
-   **Recommendation: amend the regulation by dated addition, under the §12 exception priced in §12**,
-   naming the cutover image as a third case that needs no approval because approving it would approve
-   nothing. Alternative: leave the regulation untouched and file the contradiction against Story 6.9 by
-   name in `deferred-work.md`, with the full argument.
-6. 🔴 **What happens if the identified commit is not in the Forgejo repository?** GitHub keeps merging to
-   its own `main` and there is no mirror in either direction (§2c), so a post-import production commit
-   may simply not be here — in which case `actions/checkout` cannot fetch it and **the story cannot
-   proceed**. **Recommendation: Task 2.4 is a hard gate; on "absent", STOP and escalate.** The options
-   at that point are all outside this story: import the commit from a developer's local clone, accept
-   the nearest ancestor that **is** present (and record that the cutover image is then not the running
-   commit), or unblock the GitHub transition. **None of them may be chosen by the dev agent.**
-7. **Should a `preprod` smoke build of the identified commit precede the `prod` build?**
-   `deferred-work.md` recommended exactly that, but its recommendation predates Story 5.6, which
-   exercised the preprod path live. **Recommendation: NO** — the prod delta (the OpenBao `prod` arm,
-   `fe/prod/app`, the phone-URL `prod` arm) is untouched by a preprod run, so it would cost a permanent
-   `-preprod` tag for no coverage (§4). Recorded as a question because the entry names it as the
-   cheapest close and a reviewer will reach for it.
-8. **Does the retention rule's first observable date (2026-08-29) get an owner now?** This story is the
-   first to make a rollback depend on `keep_pattern`, and the dated item still has **no owner**
-   (`#d38` §9's own escalation clause says *"Escalate rather than record"*). **Recommendation: name an
-   owner — Story 6.8, which must prove rollback works before the first real release — rather than
-   letting the date pass unobserved.** Not this story's to observe.
+1. ✅ **RESOLVED — ratified as recommended, no veto.** A new dispatch-only `record-prod-image.yml`
+   writes `prod-current`/`prod-<sha>` (§5). Coordinator's own framing: *"это делает 6.3 стори,
+   отгружающей workflow, — значит полная матрица исходов retro-E5 обязательна"* — ratifying the
+   workflow decision **and** confirming the full retro-E5 matrix obligation (§9, AC6) is not optional.
+2. ✅ **RESOLVED — ratified as recommended, no veto.** `prod-current` is created now, with the
+   disclaimer written at creation time (AC8) — coordinator's own words: *"с дисклеймером в момент
+   создания: он именует образ, который ни один хост не обслуживает до внешнего переключения
+   трафика."*
+3. ✅ **RESOLVED — ratified, with "never" underlined.** s2 is read **only** via the NFR7
+   administrative SSH path. Coordinator's own words: *"Никогда джобой Forgejo на `s2-prod-deploy`:
+   NFR5 в поправленной редакции — Forgejo на s2 не ходит вообще."* Matches Task 2.1's own execution
+   exactly (this session's SSH read, `root@175.110.122.17`, no Forgejo job involved).
+4. ✅ **RESOLVED — ratified, consequence accepted explicitly.** No GitHub read of any kind, even to
+   corroborate. Coordinator's own words: *"Читать GitHub для перепроверки коммита не будем. Записать
+   принятое следствие: идентификация однoисточниковая."* **Recorded as accepted, not discovered**:
+   the commit identification (Task 2.3) rests on one source — the image labels on s2 — with no second,
+   independent confirmation, and that is now Oleg's own accepted position, not a limitation the story
+   apologises for.
+5. ✅ **RESOLVED — ratified as recommended, narrowed further.** Coordinator's own words: *"Поправить
+   регламент в 6.3"* — a dated amendment to `docs/production-approval-regulation.md` under the §12
+   exception, with the price recorded (§12). **Sharper than the story's own recommendation**: the
+   coordinator requires the exception be **narrow and named by tag** — *"формулируй исключение узко и
+   по имени тега, а не общей лазейкой: расширять его на будущие теги нельзя"* — i.e. the cutover tag
+   this story mints is named explicitly as the one exception; the clause must not read as a general
+   carve-out future stories could reuse. Also folds in §7(a)'s workflow-census amendment (11 → 12,
+   *"«прод-каллера нет» остаётся верным"*). **Deferred to a future task**, since Task 4/5/7 cannot run
+   while OQ6 is unresolved (below) — the amendment itself still needs the actual tag name, which does
+   not exist until Task 4 runs.
+6. 🚨 **NOT a policy question anymore — RESOLVED AS A LIVE FACT, THIS SESSION, AND IT IS THE BLOCKING
+   ONE.** Task 2.4 (own SSH read, own `git fetch --all` across 1429 refs): the commit s2 is running,
+   `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`, **is absent from the Forgejo repository.**
+   **STOPPED, exactly as this question's own recommendation required** — Task 4 does not run, and
+   nothing downstream that depends on a confirmed, buildable commit runs either. **The three options
+   named at context time remain exactly as scoped — none may be chosen by the dev agent, this is
+   escalated to Oleg via the coordinator, verbatim, this session:**
+   (a) import the commit from a developer's local clone into Forgejo;
+   (b) accept the nearest ancestor commit that **is** present in Forgejo, and record explicitly that
+       the resulting cutover image is then **not** the exact commit s2 is currently running;
+   (c) unblock the GitHub→Forgejo transition (Story 6.1's own cancelled scope) so this class of gap
+       stops recurring.
+   **`PENDING (owner: Oleg, via coordinator)` — this is now the story's single blocking condition.**
+7. ✅ **RESOLVED — ratified as recommended, no veto.** No `preprod` smoke build precedes the `prod`
+   build. Coordinator's own words: *"preprod-смоук перед prod-сборкой не делаем (рекомендация
+   спеки)"*.
+8. 🔄 **RESOLVED — but NOT as recommended; Oleg overrode the story's own suggestion.** The story
+   recommended owner **Story 6.8**; Oleg assigned owner **Story 6.3 — this story itself.**
+   Coordinator's own words: *"Владелец — номер стори 6.3, не условие и не имя-заглушка (правило
+   deferred-work: владелец есть ИМЯ или НОМЕР СТОРИ). 6.3 наблюдает ретенцию, раз именно её теги от
+   неё зависят."* **Rationale beyond the story's own framing**: it is this story's own tags whose
+   survival the retention rule governs, so this story is the natural observer, not merely the next
+   convenient one. `#d38` §9's own status (**UNPROVEN by execution**, first observable
+   **2026-08-29**, three days from context date) is unchanged; if this story closes before that date
+   (a live possibility, given the OQ6 blocker above), **the observation is recorded as not completed
+   within the story, with the date named, and the ownership is NOT reset to nothing** — Story 6.3
+   remains the owner of record for that observation until it is either made or explicitly re-owned,
+   per the same convention Oleg just invoked (owners are names or story numbers, never trigger
+   conditions, and never silently dropped).
+
+**Item 9 — not one of the original eight, and not a policy alternative: the one-shot dispatch
+mechanism itself (§11/AC7) is amended by Oleg's own direct authorisation, 2026-08-26, verbatim via
+the coordinator:** *"Запускай по готовности."* **What this changes and what it does not:**
+- The story's own AC7/§11 wrote the two one-shot acts (§3's build, §5's record) as waiting for an
+  **explicit confirmation reply** rather than the standing "announce, don't ask twice" convention
+  (`#d38` §7) — described by the coordinator as a deviation the spec itself flagged, since it
+  proposed waiting for confirmation before an irreversible act **against** `#d38` §7's own default.
+  **Oleg chose not to wait**: once every fail-closed guard is green, dispatch — no separate "may I?"
+  is asked at that point.
+- **The price does not disappear — it is raised, and the coordinator's own formulation is recorded
+  verbatim rather than paraphrased**: *"сборка нерепетируема, `OPENBAO_PROD_SECRET_ID` write-only
+  (пресверить `secret/fe/prod/app` нельзя), AC2-гард `build.yml` откажется перенаправить
+  `sha-<12>-prod`, а снятие тега «дважды требовало оператора лично». Поэтому авторизация «по
+  готовности» повышает требования к тому, что стоит перед пушем: все prod-специфичные гарды и
+  сверка коммита обязаны отработать до любого пуша в реестр, а шаг сборки пушит только 14-дневный
+  санитизированный тег. Если хоть один гард не может отработать до пуша — HALT, это уже не
+  «готовность»."* **Translated into this story's own terms: Task 4.1's gate (§3 mitigation 3, AC1
+  complete, Task 2.4 green, OQ1-5 answered, no-touch window clear) is not softened by this
+  authorisation — it is exactly what "ready" now means, verified before the dispatch message is
+  even sent, not confirmed interactively after.** Task 4.2's own "wait for confirmation" instruction
+  is superseded by this: the coordinator still sends the exact dispatch verbatim before making it
+  (transparency unchanged), but does not wait for a live reply once the gate is green — matching the
+  standing convention Oleg just restored. **Currently moot**: Task 4 cannot run until OQ6 (item 6
+  above) is resolved, so this authorisation has not yet been exercised.
 
 ---
 
@@ -1204,4 +1342,5 @@ the two one-shot acts do not proceed on silence (AC7, §11).
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.2 | **Dev-story Tasks 1-2 executed; HALT at Task 2.4.** Ledger/D-number re-verified (D43 free). s2 read over the NFR7 admin path: running commit identified as `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` from `org.opencontainers.image.revision`, container/image/label state pasted verbatim. **Task 2.4's gate FAILED: the commit is absent from the Forgejo repository** (fresh fetch, 1429 refs, zero near-matches) -- exactly the risk Sec.2(c)/Open Question 6 named at context time. Task 4 (the one-shot prod build) and everything downstream do not run. Open Questions 1-5, 7, 8 arrived pre-answered from Oleg via the coordinator (all ratified as recommended except OQ8, whose owner Oleg reassigned from Story 6.8 to Story 6.3 itself); a ninth item -- Oleg's direct authorisation of the one-shot dispatch mechanism ("Запускай по готовности"), with its raised pre-push bar -- recorded but not yet exercised. sprint-status.yaml's `6-3-...` row stays `in-progress` per the story's own HALT mapping, with the blocking condition (OQ6) named in the comment immediately above it. | dev-story (Sonnet) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `cfbad179`, branch `story-6-3/pr-1-context`. Ordering checked against `epics.md` for all of 6.3-6.10 (§2): 6.3 does **not** depend on Story 6.10; it does depend on a tag-writing mechanism the plan assigned to 6.6, which cannot run first — and on one external precondition (the commit's presence in Forgejo) that no story owns. Five epic ACs carried, five added. Eight Open Questions, five of which gate the story's one-shot dispatch. | create-story context engine (Opus) |
