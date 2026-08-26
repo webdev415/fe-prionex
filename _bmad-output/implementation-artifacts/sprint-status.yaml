@@ -2112,7 +2112,15 @@ development_status:
   # data point, and this time the re-review is what caught it.
   6-6-record-the-deployed-production-image: review
   6-7-smoke-check-production-after-deploy: backlog
-  6-8-roll-back-production-to-a-previous-release: backlog
+  # 6.8 CANCELLED 2026-08-26 by Oleg (sprint-change-proposal-2026-08-26-story-6-8-cancelled.md).
+  # It was a rehearsal of a path Story 6.4 had already built AND dispatched live against the
+  # production stand twice -- runs 634 and 642, build job skipped, stand healthy. FR24 is met by
+  # 6.4; the smoke-check-after-rollback clause is 6.7's; the `prod-current` clause is 6.6's, whose
+  # ledger writes run on both paths by its own AC. 🔴 ONE CLAUSE IS ORPHANED, not absorbed: NFR3's
+  # MEASURED rollback duration. 6.4 §"not in scope" item 4 deferred it here by name and nothing
+  # else claims it -- filed in deferred-work.md, owner Oleg. Cheapest capture if he wants it: read
+  # the elapsed time off 6.6's §8 rollback dispatches, which are already budgeted.
+  6-8-roll-back-production-to-a-previous-release: cancelled
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
   # preserve numbering but MUST complete before 6.4 — same precedent as 1.13 before 1.12.

@@ -4800,3 +4800,42 @@ reading the file rather than by re-reading that list.
   removes the **package version**, i.e. every tag on it. So cleaning the residue later would also remove
   the deployable tag and re-break epic AC2's *"remains addressable"*. Named as permanent in §8, not as
   entangled. **Owner: unassigned.** **Removal trigger:** anyone proposing to delete a `prod-*` marker.
+---
+
+## Deferred from: cancellation of Story 6.8 (2026-08-26)
+
+> Oleg cancelled Story 6.8 on 2026-08-26 (`sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`).
+> Four of its five AC clauses were already met or already belong to another story — the proposal
+> tabulates all five. **One clause is orphaned rather than absorbed, and it is filed here.**
+
+- ⚠️ **NFR3's MEASURED HALF NOW HAS NO OWNER STORY.** NFR3 reads *"Rollback time equals `docker pull`
+  + container restart — no rebuild on the rollback path."* The **no-rebuild** half is proven live: runs
+  634 and 642 show the `build` job skipped and the deploy job executed. **The duration was never
+  measured or recorded**, and Story 6.4 §"not in scope" item 4 deferred exactly that — *"proving
+  rollback as a rehearsal with measured timing. Story 6.8"* — to a story that no longer exists.
+  Story 6.6 §"not in scope" item 3 repeats the same deferral and adds *"this story does not claim
+  6.8's ACs."* So two stories pointed at 6.8 and 6.8 points nowhere.
+  **Nothing is broken by this and nothing is blocked by it** — it is a number the plan promised to
+  write down and now will not, unless someone chooses to.
+  **Cheapest capture, if it is wanted.** 🔴 **Updated 2026-08-27, on rebase onto merged Story 6.6:
+  the three dispatches this entry called "budgeted" HAVE NOW HAPPENED — runs 662, 667 and 668, all
+  `rollback: true` against the production stand, two of them moving `prod-current` and back. The
+  live rollback count is FIVE (634, 642, 662, 667, 668) and not one of them has a recorded
+  duration.** The reading is still free and still costs no dispatch and no permanent tag: run
+  metadata (start/finish) survives on the runs API even though this instance's **job logs** do not
+  (both routes 404, recorded since Story 3.6) — so 662/667/668 can be timed retrospectively, from a
+  laptop, today. Story 6.9's cutover is a `rollback: true` deploy as well (amended FR32) and is a
+  sixth, later reading. **The opportunity is not closing; it is just being passed each time.**
+  **Owner: Oleg** — whether to attach the measurement to 6.6, to 6.9, or to accept NFR3 as
+  half-verified is a plan decision, and this entry deliberately does not take it.
+  **Removal trigger:** a recorded rollback duration in any story's completion notes, or an explicit
+  decision that NFR3 closes on the no-rebuild half alone.
+
+- ⚠️ **The written rollback procedure was never written.** 6.8's last clause asked for *"the procedure
+  documented with the observed timing"*. The operational instruction does exist in two places —
+  `docs/production-approval-regulation.md` keys the rollback rule on the ledger's `prod_tag`, and
+  Story 6.7's final AC points a failing operator at *"the `rollback: true` dispatch path already
+  available from Story 6.4"* — so an operator is not left without a route. **What does not exist is a
+  single page that says: here is the tag to dispatch, here is the flag, here is how long it takes.**
+  **Owner: Oleg**, same decision as the entry above and cheapest to satisfy in the same stroke.
+  **Removal trigger:** such a section landing in the regulation, or in Story 6.9's closeout.
