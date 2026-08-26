@@ -108,6 +108,8 @@ const CLIENT_LINK_ACTIONS = new Set<string>([
   'client.rr.disconnected',
   'client.rr.status_changed',
   'client.rr.overpayment_recorded',
+  'client.rr.draft_created',
+  'client.rr.draft_auto_deleted',
   // client.task.* — resource_id = the client
   'client.task.created',
   'client.task.updated',

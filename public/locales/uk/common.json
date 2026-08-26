@@ -8081,6 +8081,7 @@
         "title": "Деталі журналу аудиту",
         "eventInformation": "Інформація про подію",
         "changes": "Зміни",
+        "details": "Деталі",
         "requestInformation": "Інформація про запит",
         "timestamp": "Часова мітка",
         "user": "Користувач",
