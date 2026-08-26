@@ -48,7 +48,7 @@
  * would be a lie the operator has no way to catch.
  */
 
-import type { ContactTagFeedRow } from '../api/types'
+import type { ContactTagFeedRow } from '../types'
 
 /**
  * The tabs, in display order: the aggregate first, then the two tags. Ids are

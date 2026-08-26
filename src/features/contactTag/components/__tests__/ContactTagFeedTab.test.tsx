@@ -350,6 +350,27 @@ describe('ContactTagFeedTab — the required view date', () => {
     expect(viewDateInput().value).toBe('')
   })
 
+  it('blocks an EMPTY ?kd= rather than quietly answering for today', async () => {
+    // `?kd=` is a key that states no day — a truncated link, a half-edited one,
+    // a picker cleared by hand in a URL bar. The reference day has no "unset"
+    // state (the thresholds and the promise gate are measured against it), so
+    // folding empty into absent — which is what the SHARED bound reader does,
+    // rightly, for every optional bound on this page — would answer for TODAY
+    // under a URL naming no day at all, with nothing on screen to distrust.
+    // Same treatment as 2026-02-31 instead: hint, empty field, no request.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?kd='])
+
+    expect(await screen.findByText('pages.reports.contactTag.invalidViewDate')).toBeInTheDocument()
+    expect(mockGetFeed).not.toHaveBeenCalled()
+    expect(viewDateInput()).toHaveAttribute('aria-invalid', 'true')
+    expect(viewDateInput().value).toBe('')
+    // ...and the URL is left saying what it said: the tab does not rewrite a
+    // deep link behind the operator's back.
+    expect(urlParams().get('kd')).toBe('')
+  })
+
   it('has no "×" — the reference day is mandatory, so an empty one is not a state', async () => {
     mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
 
@@ -522,6 +543,57 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     ).toBeInTheDocument()
   })
 
+  it('DEFAULT: keeps the hint standing through a page turn — the applied bound has not moved', async () => {
+    // The counterpart of the test above, and the reason it cannot simply be
+    // "hide the hint whenever a request is in flight". Paging is THE interaction
+    // of this feed (~880 pages), it changes the query key on every click, and
+    // the defaulted window it re-asks for is the same one the line already
+    // names. A hint gated on `isPlaceholderData` blinks out and back on every
+    // page turn — and, being a full-width line in the filter strip, takes the
+    // strip's height (and everything below it) with it.
+    let resolveSecond: (value: ContactTagFeedResponse) => void = () => {}
+    mockGetFeed
+      .mockResolvedValueOnce(
+        makeResponse([makeRow()], {
+          sell_to: '2026-04-30',
+          total: 130,
+          page: 1,
+          total_pages: 3,
+        })
+      )
+      .mockImplementationOnce(
+        () => new Promise<ContactTagFeedResponse>((resolve) => (resolveSecond = resolve))
+      )
+
+    renderTab()
+    expect(
+      await screen.findByText('pages.reports.contactTag.sellToDefaultHint:04/30/2026')
+    ).toBeInTheDocument()
+
+    await userEvent.click(screen.getByTitle('2'))
+
+    // The transitional frame: the previous page's rows under the busy overlay,
+    // the very same defaulted window still in force.
+    expect(await screen.findByTestId('contact-tag-refreshing')).toBeInTheDocument()
+    expect(
+      screen.getByText('pages.reports.contactTag.sellToDefaultHint:04/30/2026')
+    ).toBeInTheDocument()
+
+    resolveSecond(
+      makeResponse([makeRow({ client_id: 5, employee_name: 'Оновленко Олег' })], {
+        sell_to: '2026-04-30',
+        total: 130,
+        page: 2,
+        total_pages: 3,
+      })
+    )
+
+    expect(await screen.findByText('Оновленко Олег')).toBeInTheDocument()
+    expect(
+      screen.getByText('pages.reports.contactTag.sellToDefaultHint:04/30/2026')
+    ).toBeInTheDocument()
+  })
+
   it('DEFAULT → OFF: the "switch off" button writes an EMPTY ?kt= and sends sell_to=""', async () => {
     // The picker's "×" cannot serve this edge — the field is empty in the
     // default state, so the shared DateSelect renders no "×" at all.
@@ -586,6 +658,30 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     // The key is still THERE — an absent key is the third, different state.
     expect(urlParams().has('kt')).toBe(true)
     expect(await screen.findByText('pages.reports.contactTag.sellToOffHint')).toBeInTheDocument()
+  })
+
+  it('OFF: claims nothing about the portfolio while a filter error blocks the request', async () => {
+    // The off hint is a statement about what is ON SCREEN — "no upper bound,
+    // so this is the whole portfolio". With an unusable date anywhere in the
+    // strip nothing was ever asked for, so the screen holds an inline hint and
+    // no rows at all: the sentence would describe a feed that does not exist,
+    // and would read as a reason to trust an empty screen.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()], { sell_to: null }))
+
+    renderTab(['/?kd=2026-02-31&kt='])
+
+    expect(await screen.findByText('pages.reports.contactTag.invalidViewDate')).toBeInTheDocument()
+    expect(mockGetFeed).not.toHaveBeenCalled()
+    expect(screen.queryByText('pages.reports.contactTag.sellToOffHint')).not.toBeInTheDocument()
+  })
+
+  it('OFF: says nothing before the first answer lands either — same rule as the default hint', async () => {
+    mockGetFeed.mockImplementation(() => new Promise<ContactTagFeedResponse>(() => {}))
+
+    renderTab(['/?kt='])
+
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalled())
+    expect(screen.queryByText('pages.reports.contactTag.sellToOffHint')).not.toBeInTheDocument()
   })
 
   it.each([
@@ -852,7 +948,12 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
     expect(screen.getAllByRole('link')).toHaveLength(3)
     // The counts are page-scoped and the strip says so — this feed is ~880
     // pages long, so a client-side count can never speak for the whole feed.
+    // ONCE, though: a line under the strip that every reader gets, not also a
+    // per-tab `title` that repeats it on hover for mouse users alone.
     expect(screen.getByText('pages.reports.contactTag.subtabCountTitle')).toBeInTheDocument()
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab).not.toHaveAttribute('title')
+    }
   })
 
   it('appends no count until there is a page to count', async () => {

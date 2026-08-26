@@ -6,7 +6,7 @@
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getContactTagFeed } from '../api/contactTagFeedApi'
-import type { ContactTagFeedParams, ContactTagFeedResponse } from '../api/types'
+import type { ContactTagFeedParams, ContactTagFeedResponse } from '../types'
 import { sellToRequestParam, type SellToState } from '../utils/sellWindow'
 
 /**

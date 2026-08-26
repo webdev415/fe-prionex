@@ -30,7 +30,10 @@
  *    so a tab left open across midnight rolls to the new day when the operator
  *    comes back to it, and deliberately NOT written into the URL: an
  *    auto-derived value in a shared link would pin "today" to the day the link
- *    was made.
+ *    was made. An ABSENT `?kd=` is what that default fills in for — a PRESENT
+ *    but empty one is not: the key would then be stating no day at all for a
+ *    parameter that has no "unset", so it is refused exactly like `2026-02-31`
+ *    (see `utils/viewDate.ts`).
  *
  * 2. **The sell window is OPTIONAL and asymmetric.** `sell_from` behaves like
  *    every other optional bound on the page. `sell_to` has THREE states, and
@@ -43,8 +46,10 @@
  *      deliberately does not recompute the month arithmetic (a month offset
  *      with a day clamp and a leap February — 2024-06-01 → 2024-02-29 — is not
  *      a rule worth having two implementations of), so before the first answer
- *      lands — and while a keepPreviousData frame is still showing the previous
- *      one — there is simply nothing to state;
+ *      lands there is simply nothing to state. An echo keeps speaking for the
+ *      screen until the sell MODE moves away from the one it was fetched under
+ *      — paging the same defaulted window does not, switching to an explicit
+ *      bound does;
  *    - **off** (`?kt=`, present and empty) — `sell_to=` goes on the wire and
  *      the upper bound is switched off. Reached by the picker's "×" when a date
  *      is set, or by the explicit "switch off" button when the default is in
@@ -101,7 +106,8 @@ import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useContactTagFeed } from '../hooks'
-import { readSellToState } from '../utils/sellWindow'
+import { readSellToState, type SellToMode } from '../utils/sellWindow'
+import { readViewDateBound } from '../utils/viewDate'
 import {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,
@@ -189,11 +195,18 @@ export function ContactTagFeedTab() {
   // URL would then disagree with both the field and the request. It goes down
   // the same path as an inverted range — inline hint, no request (below).
   // Tracked per bound so the hint sits on the field holding the bad value.
-  const viewDateBound = readUrlDateBound(searchParams, VIEW_DATE_KEY)
+  //
+  // TWO of this tab's three dates need their own reader, and for the same
+  // reason: `readUrlDateBound` folds "absent" and "empty" together, which is
+  // right for an OPTIONAL bound (both mean "no bound") and wrong for either
+  // date here that has a meaning for the absent case. The required reference
+  // day is one of them — a bare `?kd=` states no day, and folding it into
+  // "absent" would quietly answer for TODAY under a URL that says nothing (see
+  // `utils/viewDate.ts`); the upper sell bound is the other, and its third
+  // state is the whole contract (see `utils/sellWindow.ts`). Only `sell_from`,
+  // a plain optional bound, reads through the shared helper.
+  const viewDateBound = readViewDateBound(searchParams, VIEW_DATE_KEY)
   const sellFromBound = readUrlDateBound(searchParams, SELL_FROM_KEY)
-  // ...and the upper bound gets its own reader, because `readUrlDateBound`
-  // folds "absent" and "empty" together — right for every other bound on the
-  // page, and the exact distinction this one is built on.
   const sellToState = readSellToState(searchParams, SELL_TO_KEY)
 
   const isViewDateInvalid = viewDateBound.isInvalid
@@ -256,28 +269,35 @@ export function ContactTagFeedTab() {
   const visibleRows = useMemo(() => filterRowsByTagTab(rows, activeTab), [rows, activeTab])
   const tabCounts = useMemo(() => countRowsByTagTab(rows), [rows])
 
+  // Is there an ANSWER this screen may speak for? Both hints under the filters
+  // and the counts in the tab strip state facts about data, so all three wait
+  // for data to exist — and none of them may speak while a filter error keeps
+  // the query from asking at all. (`query.data` alone would not do: an
+  // unusable `?kd=` leaves the view date at today, i.e. on a query key that may
+  // still hold a cached answer, which React Query hands back even with the
+  // query disabled.)
+  const hasAnswer = !hasFilterError && !!query.data
+
   // The counts belong to the PAGE, not the feed — this list is ~880 pages long,
   // so a client-side filter can only ever see the 50 rows on screen. Saying so
-  // in the label (and once more under the strip) is what keeps "Контакт (12)"
-  // from reading as "12 in the whole feed".
+  // once under the strip is what keeps "Контакт (12)" from reading as "12 in
+  // the whole feed"; it is said ONCE, in a line every reader gets, rather than
+  // also as a per-tab `title` only a mouse can find (a tooltip repeating a
+  // caveat the paragraph below already carries is noise on hover and reaches
+  // neither keyboard nor touch).
   //
   // ...and they are only appended once a page EXISTS to count. Before the first
   // answer (and while a filter error keeps the query from asking for one) there
   // are no rows, and "Всі (0)" would state a fact about the feed — zero tagged
   // clients — that nothing has established. The bare label says the same thing
   // the empty strip does: nothing yet.
-  const hasCountedPage = !hasFilterError && !!query.data
   const tabItems: SegmentedTabItem<ContactTagTabId>[] = useMemo(
     () =>
       CONTACT_TAG_TAB_IDS.map((id) => {
         const name = t(`pages.reports.contactTag.subtabs.${id}`)
-        return {
-          id,
-          label: hasCountedPage ? `${name} (${tabCounts[id]})` : name,
-          title: hasCountedPage ? t('pages.reports.contactTag.subtabCountTitle') : undefined,
-        }
+        return { id, label: hasAnswer ? `${name} (${tabCounts[id]})` : name }
       }),
-    [t, tabCounts, hasCountedPage]
+    [t, tabCounts, hasAnswer]
   )
 
   // "The page produced rows, but none of them carry this tag" — a different
@@ -289,6 +309,40 @@ export function ContactTagFeedTab() {
   // (see the module docblock). `undefined` until the first response: the hint
   // states a fact about the data, so it has nothing to say before there is any.
   const appliedSellTo = query.data?.sell_to
+
+  // WHICH sell-window state the answer on screen was fetched under.
+  //
+  // Under keepPreviousData `query.data` is the PREVIOUS answer while a new one
+  // flies, so an echo can outlive the state that produced it: on an explicit →
+  // default switch the previous echo is the date the operator just stopped
+  // asking for, and a hint reading it would announce "the default is
+  // 30.06.2026" about a bound they had picked by hand. What makes that echo
+  // stale, though, is the MODE having moved on — not the request being in
+  // flight. Remembering the mode each answer arrived under, and hiding the hint
+  // only when the two disagree, says exactly that: the line goes quiet across a
+  // switch it no longer speaks for, and holds still while merely paging through
+  // the SAME defaulted window — which is the most frequent interaction this tab
+  // has (~880 pages), and a hint that blinked out and back on every page turn
+  // moved the whole filter strip's layout with it.
+  //
+  // The mode is captured from the frames where the data is NOT placeholder:
+  // there — and only there — the answer on screen belongs to the query key
+  // currently being asked, so the mode in this render is by construction the
+  // mode it was fetched under. Every placeholder frame afterwards keeps that
+  // memory, which is what lets a page turn (a new key, same sell state) go on
+  // showing the hint while a mode switch (a new key, different sell state)
+  // silences it.
+  //
+  // Adjusted during render rather than in an effect — React's own "storing
+  // information from previous renders" pattern: the re-render happens before
+  // the browser paints, so no frame ever shows a fresh answer paired with the
+  // mode of the previous one.
+  const [answeredSellToMode, setAnsweredSellToMode] = useState<SellToMode | null>(null)
+  const settledSellToMode = query.data && !query.isPlaceholderData ? sellToState.mode : null
+  if (settledSellToMode !== null && settledSellToMode !== answeredSellToMode) {
+    setAnsweredSellToMode(settledSellToMode)
+  }
+  const isSellToEchoCurrent = answeredSellToMode === sellToState.mode
 
   // keepPreviousData shows the previous page's rows while a new one loads —
   // they must not look final, hence the busy overlay. Placeholder only: a
@@ -436,27 +490,30 @@ export function ContactTagFeedTab() {
         {/* What upper bound is ACTUALLY in force, told in the state's own
             words. The defaulted date is the backend's echo, so this line cannot
             drift out of step with the arithmetic that produced it — and it
-            appears only once there IS an answer (an empty feed is one), because
-            before that there is no applied window to name.
+            appears only once there IS an answer it belongs to (an empty feed is
+            one): before the first response there is no applied window to name,
+            a blocked request never asked for one, and an echo left over from a
+            sell mode the operator has since walked away from would name a bound
+            that is no longer in force (see `isSellToEchoCurrent` above).
 
-            `!isRefreshing` is the same rule one step further: under
-            keepPreviousData `query.data` is the PREVIOUS answer while a new one
-            flies, and on an explicit → default switch that previous echo is the
-            date the operator just stopped asking for — the hint would announce
-            "the default is 30.06.2026" about a bound they had picked by hand.
-            An echo that does not belong to the state on screen is worse than
-            silence, so the line waits for the answer that matches. The cost is
-            that it also blinks out while a mere page change reloads the same
-            defaulted window; a moment of nothing is the honest half of that
-            trade. */}
-        {sellToState.mode === 'default' && appliedSellTo && !isRefreshing && (
+            Note what is deliberately NOT a condition: being mid-flight.
+            `isPlaceholderData` is true on every page turn of this ~880-page
+            feed, and gating on it made the line — and with it the height of the
+            whole filter strip — flicker on the tab's commonest interaction,
+            about a default that had not changed at all. */}
+        {sellToState.mode === 'default' && hasAnswer && appliedSellTo && isSellToEchoCurrent && (
           <p className="text-muted-foreground w-full text-xs">
             {t('pages.reports.contactTag.sellToDefaultHint', {
               date: formatCalendarDay(appliedSellTo, language),
             })}
           </p>
         )}
-        {sellToState.mode === 'off' && (
+        {/* The other half of the same rule. "The upper bound is off — you are
+            looking at the whole portfolio" is a claim about rows on screen, and
+            a blocked request (an unusable date anywhere in the strip) has put
+            none there: the tab is showing hints, not a portfolio. Same before
+            the first answer. */}
+        {sellToState.mode === 'off' && hasAnswer && (
           <p className="text-muted-foreground w-full text-xs">
             {t('pages.reports.contactTag.sellToOffHint')}
           </p>

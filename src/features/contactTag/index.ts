@@ -17,6 +17,7 @@ export {
   type SellToMode,
   type SellToState,
 } from './utils/sellWindow'
+export { readViewDateBound, type ViewDateBound } from './utils/viewDate'
 export {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,

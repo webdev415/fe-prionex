@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ContactTagFeedRow } from '../../api/types'
+import type { ContactTagFeedRow } from '../../types'
 import {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,
