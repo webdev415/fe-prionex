@@ -1812,7 +1812,24 @@ development_status:
   # lock contention, which `capacity: 1` makes undiscriminating: it would prove the runner, not the lock.
   # ✅ All three inherited deferred-work items discharged or re-owned BY NAME (the M7 bundle -> 6.6).
   # Oleg merges; the row goes `done` only after that.
-  6-4-deploy-to-production-by-dispatch: review
+  # ✅ MERGED AND CLOSED 2026-08-26. PR #97 merged by Oleg as `584cc886`; this row is flipped in its own
+  # chore commit rather than inside another story's PR -- the precedent is PR #96 (Story 6.10's own
+  # flip), and the row was still reading `review` while its PR was already on `main`. Caught by Story
+  # 6.6's contexting session, which had to read this file to find its own dependencies and found one of
+  # them mis-stated.
+  # 🔴 `done` MEANS CLOSED, NOT CLEAN -- the same sentence Story 6.3's row carries, and for the same
+  # reason. Nothing above is softened by this flip: 5 ACs met, 4 partial, 1 met-with-deviation (the
+  # dispatch input named `tag`, not `image_tag`, because the epic's own name cannot work here -- #d47(3)).
+  # 🔴 THE ONE THAT MATTERS STAYS OPEN: THE END-TO-END RELEASE PATH WAS NEVER GREEN. The build leg is
+  # proven twice (runs 637, 640), the deploy leg never. By Oleg's decision (option (в)) no fourth
+  # permanent tag was spent, so STORY 6.9's REAL CUTOVER IS THE FIRST RUN OF THE RELEASE DEPLOY LEG --
+  # and Epic 6's own preamble calls that a one-way door. The rollback path 6.9 actually dispatches IS
+  # proven twice (634, 642). Owner: Story 6.9.
+  # Also still standing, unchanged by the flip: three permanent PROD images exist and TWO ARE PROOFS OF
+  # THE PATH, NOT RELEASES (no ledger row, prod-current never moved to them, the recorder never
+  # dispatched for them); the four platform findings that were in no document (#d47); and the M7 bundle
+  # re-owned BY NAME to Story 6.6.
+  6-4-deploy-to-production-by-dispatch: done
   6-5-guard-promotion-by-commit-identity: backlog
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
