@@ -1810,9 +1810,58 @@ code-review Opus.)_
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `6-3-…` flipped `backlog` → `in-progress`, HALT comment recorded
 - `.forgejo/workflows/record-prod-image.yml` — **NEW** (Task 5.1/5.2). The story's only code artifact. Dispatch-only recorder for `prod-<12hex>` / `prod-current`; ships unexercised — no dispatch has been made against it
 
-### Review Findings
+### Review Findings 
 
-_(To be filled by code review.)_
+🔴 **Code review, 2026-08-26 — three adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance
+Auditor), run as independent agents with no access to this session's reasoning, because the same
+author wrote the spec, the code and the evidence.** **32 findings survived triage: 3 decision-needed,
+26 patch, 3 deferred; 1 dismissed as noise.** Two layers independently found the same G6 defect.
+
+#### Decision-needed
+
+- [ ] [Review][Decision] **Prohibition 11 says coordinator subtasks are marked `PENDING (owner: coordinator)`, "never `[x]`" — five are `[x]`** — 4.2, 4.3, 5.3, 8.3, 8.4. Every one carries a run id, so Story 5.2's M14 harm (a checked box with no artifact) does not apply, but the prohibition's words are literal and a prohibition cannot be overridden by a subtask. Options: (a) re-mark with a distinct symbol keeping the run ids; (b) amend the prohibition by dated note, since coordinator and dev agent collapsed into one session here; (c) record as a knowing breach. **Not the dev agent's call.**
+- [ ] [Review][Decision] **AC8 is recorded NOT MET while the shipped file and Task 5.2 present the same content as delivered against it** — `.forgejo/workflows/record-prod-image.yml` header is titled "(Story 6.3 Task 5.2, AC8)" and 5.2 is `[x] Done`. The AC8 block's own prose is honest (best-effort tier). Pick one direction: drop the AC8 tag from the header, or restate AC8 as partially delivered.
+- [ ] [Review][Decision] **The retention observation Oleg reassigned to Story 6.3 is recorded nowhere durable** — first observable 2026-08-29, after this story closes; `deferred-work.md` is untouched and still reads "no owner". Same class as AC9's un-filed contradiction, which was already declined. One append closes both.
+
+#### Patch — shipped code
+
+- [ ] [Review][Patch] **Probes send ONE `Accept` media type where the sibling sends FOUR; a false 404 bypasses every `PRE_DIGEST`-gated protection including `allow_current_move`** [.forgejo/workflows/record-prod-image.yml:~324, ~443, ~526]
+- [ ] [Review][Patch] **G6 inspects `$SHA_TAG` instead of `${{IMAGE}}@${{CANDIDATE_DIGEST}}` — the labels checked and the manifest written are only assumed to be the same object** [.forgejo/workflows/record-prod-image.yml:386] *(found independently by two layers)*
+- [ ] [Review][Patch] **No `if: always()` anywhere — a failure after the first write suppresses both the listing and the disclaimer, which is AC8's only executing sink** [.forgejo/workflows/record-prod-image.yml:626, 652]
+- [ ] [Review][Patch] **The check-to-write window is not disclosed; `imagetools create` offers no compare-and-swap and the sibling says so in its own header** [.forgejo/workflows/record-prod-image.yml header]
+- [ ] [Review][Patch] **`grep -Eqi` inverts its safety direction: `build.yml` uses `-i` in a REJECT test, G4 uses it in an ACCEPT test — and the comment transplants `build.yml`'s justification verbatim** [.forgejo/workflows/record-prod-image.yml:~266]
+- [ ] [Review][Patch] **No `--proto-redir '=https'` on credentialed `curl -L`; a redirect could replay registry basic-auth in cleartext** [.forgejo/workflows/record-prod-image.yml:~324, ~443, ~526, ~630]
+- [ ] [Review][Patch] **"Assert every write target is this literal repository" cannot fail — all three tags are built from `${{IMAGE_REPO}}:` in G3 — and unlike G4 it is not disclosed as construction-fixed, while Prohibition 7 is quoted repeatedly** [.forgejo/workflows/record-prod-image.yml:~278 vs :238-240]
+- [ ] [Review][Patch] **A stale example ships in the dispatch UI: `image_tag` description reads "e.g. sha-41ab0470ab6b-prod", the superseded commit** [.forgejo/workflows/record-prod-image.yml:123] — Change Log 0.6 claimed the fix pass caught "ONE IN SHIPPED CODE"; it caught clause (b) and left this
+- [ ] [Review][Patch] **The header asserts a `build.yml` outcome its own quoted decision table contradicts** — "goes red" is stated as mechanical certainty where identical digests take the no-op branch [.forgejo/workflows/record-prod-image.yml:55]
+- [ ] [Review][Patch] **Read-back has no retry; a transient 5xx/429 after a successful `create` reports failure while the permanent tag is written and correct** [.forgejo/workflows/record-prod-image.yml:~511, ~612]
+- [ ] [Review][Patch] **No `defaults.run.shell: bash` while G2 depends on ANSI-C quoting (`$'\n'`), which is not POSIX** [.forgejo/workflows/record-prod-image.yml:~187]
+- [ ] [Review][Patch] **The `tags/list` step degrades to a green WARN on 401 or transport failure, and handles no pagination — its own header calls its output "the state a later reader should trust"** [.forgejo/workflows/record-prod-image.yml:~630]
+- [ ] [Review][Patch] **Probes drop the sibling's empty-credential pre-check and its 401 classification; an empty secret becomes an unauthenticated request reported as AMBIGUOUS** [.forgejo/workflows/record-prod-image.yml:~324]
+
+#### Patch — the record
+
+- [ ] [Review][Patch] **The run-budget ledger is declared CLOSED while its own subtask lists rows still to come, and its arithmetic does not reconcile** — total claims 14, the status breakdown sums to 13 (run 598 is in the total and absent from the breakdown); retro-D4 requires closure after the merge lands. By the story's own four-word vocabulary this is `OPEN` [Task 8.4, Change Log 1.0, `sprint-status.yaml`]
+- [ ] [Review][Patch] **File List states the workflow "ships unexercised — no dispatch has been made against it"; run 600 dispatched it** [File List]
+- [ ] [Review][Patch] **AC2 graded MET though its final clause — record the epic-wording-vs-shipped-tag discrepancy in `D45` — was cancelled with `D45` itself** [AC2 vs Task 6.3]
+- [ ] [Review][Patch] **AC5 graded MET on a compile pasted against the SUPERSEDED commit's tag names** — Task 3.4 was never re-run after `#d46`; only `prod-current` appears in both sets [Task 3.4]
+- [ ] [Review][Patch] **AC7 graded MET though its final clause was explicitly not performed, and §11 and Dev Notes §5 still assert the superseded wait-for-confirmation rule** [AC7, §11, Dev Notes §5]
+- [ ] [Review][Patch] **The title, the Story statement and §1 still describe building the running production commit** — the `#d46` fix pass corrected §7(f), §13, Task 5.2 and the workflow header, and left the headline ones [title, Story, §1]
+- [ ] [Review][Patch] **The `Status:` header comment still declares the story PAUSED with "do not resume until he signals"** [lines 16-26]
+- [ ] [Review][Patch] **Completion Notes end at session 2 and note 9 still reads "Task 4 ... remain not started ... no dispatch"** — no note covers runs 598 and 600 [Completion Notes 9-13]
+- [ ] [Review][Patch] **Dev Notes §2 and §7 record the retention item as having "no owner" after Oleg assigned it to Story 6.3 in OQ8** [Dev Notes §2, §7 item 3]
+- [ ] [Review][Patch] **§9 mis-cites the AC it defines: commit identity is AC4's content, not AC5's** [§9]
+- [ ] [Review][Patch] **The "two digests for one commit" claim is ALSO fixed by construction and is presented as the non-vacuous alternative** — a `prod` and a `preprod` build of one commit differ in build args and in `org.prionex.environment`, so the digests cannot be equal; Prohibition 7 applies to it too [Task 5.3, Task 8.2 item 2]
+- [ ] [Review][Patch] **Run 600's step table is characterised, not pasted, while run 598's was pasted** — the "guard order actually executed" claim rests on logs Dev Notes §2 itself calls unreliable [Task 5.3]
+- [ ] [Review][Patch] **Dev Notes §2 records the census as "11 files"; the `ls` shows 11 entries of which one is `README.md`, i.e. 10 workflows, and 12 entries after this story** [Dev Notes §2]
+
+#### Deferred — real, not actionable now
+
+- [x] [Review][Defer] **`IMAGE="${{HISTORY_TAG%%:*}}"` and `MARKER="${{FULL_TAG#*:}}"` disagree about which colon delimits; both break on a registry with a port** [.forgejo/workflows/record-prod-image.yml:~508, ~599] — deferred, latent only if `IMAGE_REPO` gains a port
+- [x] [Review][Defer] **A multi-platform OCI index candidate fails G6 as a parse failure** [.forgejo/workflows/record-prod-image.yml:~392] — deferred, fail-closed and no multi-arch image exists in this registry
+- [x] [Review][Defer] **On the authorised-move path the displaced `prod-current` digest survives only in the run log** [.forgejo/workflows/record-prod-image.yml:~587] — deferred, Story 6.6 owns moves
+
+**Dismissed as noise (1):** `history_written` / `current_written` step outputs are produced and never consumed — diagnostic breadcrumbs, no consequence.
 
 ---
 

@@ -4479,3 +4479,30 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   Oleg. Accepted 2026-08-25.** Filed here as an accepted risk with an owner and a date, and stated on
   the regulation's own page under "Who approves" — not left as an omission for someone to discover
   mid-incident. Revisit if a second person ever holds release authority.
+
+## Deferred from: code review of story-6.3 (2026-08-26)
+
+Three adversarial layers run as independent agents (Blind Hunter, Edge Case Hunter, Acceptance
+Auditor), deliberately without this session's reasoning — the same author wrote the spec, the code and
+the evidence, and this project's own Story 3.2 review records why that configuration proves nothing on
+its own. 33 findings raised, 32 survived triage. The three below are real and are **not** actionable
+now; everything else was routed to patch or decision.
+
+- ⚠️ **`IMAGE="${HISTORY_TAG%%:*}"` and `MARKER="${FULL_TAG#*:}"` disagree about which colon
+  delimits, and both break on a registry with a port.** `.forgejo/workflows/record-prod-image.yml`
+  (write steps vs G4/probes). `%%:*` takes everything before the FIRST colon; if `IMAGE_REPO` ever
+  became `host:5000/crm/fe-prionex`, `IMAGE` would collapse to `host` while `MARKER` would become
+  `5000/crm/fe-prionex:prod-…`. Harmless against today's literal constant — and the file's own
+  argument for its write-target assertion is that the constant is the thing being defended.
+  **Owner: whoever changes `IMAGE_REPO`.** **Removal trigger:** the registry gaining a port.
+- ⚠️ **A multi-platform OCI index candidate fails G6 as a parse failure rather than as a verdict.**
+  `.forgejo/workflows/record-prod-image.yml`, G6. `.Image` is a per-platform map for an index, so the
+  `jq` path returns empty and G6 reports the tool-failure branch. Fail-closed, and no multi-arch image
+  exists in this registry today (`provenance: false` in `build.yml` deliberately emits a single
+  manifest). **Owner: unassigned — it becomes real the day this project builds multi-arch.**
+- ⚠️ **On the authorised-move path the displaced `prod-current` digest survives only in the run log.**
+  `.forgejo/workflows/record-prod-image.yml`, `write-current`. With `allow_current_move: true` the
+  previous production pointer target is overwritten and its digest is printed nowhere durable — and
+  this instance's logs are the tier this project classifies as best-effort. Story 6.3 itself never
+  takes that path (it refuses a move by default, and `prod-current` did not exist). **Owner: Story
+  6.6**, which moves the pointer on every deploy by design and must decide what it records.
