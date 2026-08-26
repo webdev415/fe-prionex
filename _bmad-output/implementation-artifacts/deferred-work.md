@@ -2322,7 +2322,12 @@ attestation, a security rebuild of a released commit, or a dispute about what a 
 
 **Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
 refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
-rollback target. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
+rollback target. 🔴 **CLARIFIED 2026-08-26 (code review of Story 6.6):** *"the rollback target"*
+conflated two things that Story 6.4's shipped `deploy-prod.yml` has since forced apart — its `derive`
+job **refuses** `prod-*` outright (*"a RECORD, not a deployable reference"*). **`prod-<12hex>` is what
+keeps the artifact alive and protected** by `keep_pattern`; **`sha-<12hex>-prod` is what a rollback
+actually dispatches**, and is the `prod_tag` value in `docs/prod-releases.md`. Both are real; the
+sentence above names only the first. See `#d18` §3. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
 that changed underneath it.
 
 **Side effect, live now:** the shared `:buildcache` tag was overwritten at 14:48:02 by `ci.yml` on the
@@ -4689,3 +4694,56 @@ and its deploy leg never. Oleg's decision (option (в), 2026-08-26) was to stop 
 fourth permanent `sha-<12hex>-prod`. **So Story 6.9's real cutover will be the FIRST time the release
 deploy leg ever runs.** Epic 6's own preamble calls that arrangement a one-way door. **Owner: Story
 6.9.** The rollback path, which 6.9 actually dispatches, **is** proven twice (634, 642).
+
+## Deferred from: code review of story-6.6 (2026-08-26)
+
+Four layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor, plus an independent re-verification of
+Story 6.3's thirteen inherited findings), run as independent agents against `origin/main` `9992057a`.
+🔴 **The review ran BEFORE implementation** — Story 6.6 is `ready-for-dev` and the artifact reviewed was
+the specification. The five below are real, are **not** caused by that specification, and are not
+actionable inside it. Everything else was routed to patch or to a decision.
+
+All five live in `.forgejo/workflows/record-prod-image.yml`, Story 6.3's shipped file. **They are
+distinct from the thirteen already carried under "Carried from: Story 6.3"** — the review found them by
+reading the file rather than by re-reading that list.
+
+- ⚠️ **`apt-get install -y --no-install-recommends docker.io jq`, unpinned, on the critical path of every
+  production deploy** (`:305`). Today it runs on a deliberate human dispatch; Story 6.6 makes it run
+  inside every production deploy. No retry, no pin, and the file's own header records that buildx
+  behaviour differs by version (v0.33.0 measured; `build.yml:1520` records v0.35.0 flipping
+  `--prefer-index`'s default). The explicit `--prefer-index=false` protects against that specific flip
+  and nothing protects against the next. **Owner: unassigned.** **Removal trigger:** the first time an
+  apt or buildx version change breaks a production deploy — or a decision to pin.
+- ⚠️ **The `tags/list` report is O(n) registry round-trips with no bound, inside `timeout-minutes: 10`**
+  (`:648`). `prod-<hex>` tags are permanent by the retention rule, so the set grows by one per
+  production deploy and the loop grows with it. A timeout here reds the run **after** both permanent
+  writes have landed — the same expensive-false-negative class as carried finding #10, with a trigger
+  that gets worse every release. Also `^(prod-|…)` is unanchored on its first alternative.
+  **Owner: unassigned.** **Removal trigger:** the first timeout, or the tag count passing ~50.
+- ⚠️ **The final step's `| tee` can red a fully-successful run** (`:684`). Under `set -euo pipefail`
+  `tee` is the last pipeline element, so its status is the step's: an unwritable
+  `$GITHUB_STEP_SUMMARY` fails the job after both permanent writes are correct. **Owner: unassigned.**
+- ⚠️ **No `G-backwards` equivalent — the displaced commit is named nowhere.** The PRE-PROD sibling reads
+  the displaced image's `org.opencontainers.image.version` and prints the **commit hex** it is moving
+  away from (`record-preprod-candidate.yml:833`, `:845`), loudly. `record-prod-image.yml` prints digests
+  only (`:609`). Under Story 6.6 — which moves `prod-current` on every deploy — a redeploy of an older
+  commit rolls the production pointer **backwards** with nothing anywhere naming the commit it left.
+  The existing "displaced digest survives only in the run log" item covers half of this; the absence of
+  the direction guard itself was not flagged. **Owner: Story 6.6** if it adopts the guard, otherwise
+  **Oleg.**
+  🔴 **CORRECTED WITHIN THE HOUR IT WAS WRITTEN, 2026-08-26.** The fallback owner first written here
+  was *"Story 6.8, which is the story that will actually roll backwards on purpose"*. **Story 6.8 is
+  being cancelled** — the change is authored and staged in the operator's own checkout and is **not
+  pushed**, so no ref-based sweep can see it and this entry cited a story that is about to stop
+  existing. Naming a cancelled story is naming nobody, which is the exact failure this ledger exists
+  to prevent. Re-owned to **Oleg** rather than to the next plausible story, and deliberately **without
+  citing the unpushed proposal by filename** — Story 6.3's Open Question 10 recorded that a
+  locally-authored, unpushed record is invisible to this project's own sweeps, and that process hole
+  is still OPEN. When the cancellation lands, this line can point at it; until then it must not.
+- ⚠️ **A later authorised `DELETE` of a junk marker also unmakes the deployable tag.** Story 6.6's §8
+  exercise mints `prod-308ea1520c59` permanently and names it a proof, not a release. But that marker,
+  `sha-308ea1520c59-prod` and (transiently) `prod-current` all name **one manifest**, and the recovery
+  path this project uses — `DELETE /packages/{owner}/{type}/{name}/{version}`, `#d24`'s own policy —
+  removes the **package version**, i.e. every tag on it. So cleaning the residue later would also remove
+  the deployable tag and re-break epic AC2's *"remains addressable"*. Named as permanent in §8, not as
+  entangled. **Owner: unassigned.** **Removal trigger:** anyone proposing to delete a `prod-*` marker.
