@@ -179,22 +179,42 @@ sha-308ea1520c59-prod   PROOF OF PATH, NOT A RELEASE       <- no ledger row, rec
 preprod-00ef3be4743d · preprod-28f7fd36b75e · preprod-a99ccd44c5a3 · preprod-current
 ```
 
-🔴 **`prod-current` names the cutover image and must keep naming it until Story 6.9 runs.** Story 6.4's
-own handover says so in those words. **Moving it onto a proof tag to earn a matrix row would break
-Story 6.9's premise** — and 6.9's release-deploy leg has never been green, so 6.9 is already the
-riskiest run in the epic (`#d47`, Oleg's option (в)).
+`prod-current` names the cutover image, and Story 6.4's handover says it *"must keep naming it"* until
+Story 6.9 runs. **That is a statement about where the pointer must END, and it was written when the only
+way to move it was to hand it away.** It is not a prohibition on moving it and moving it back.
 
-**Consequence for this story's evidence, stated before any work starts:**
+🔴 **RESOLVED 2026-08-26 — Oleg, verbatim: *"move ok"*.** Open Question 1 asked whether this story spends
+anything to observe a real `prod-current` MOVE. It does. **Option (b): there and back.**
 
-- ✅ **The no-op path is FREE and REAL.** Dispatch `deploy-prod.yml` with
-  `tag: sha-a99ccd44c5a3-prod`, `rollback: true` — a genuine rollback deploy of the image s10 is
-  **already running** — and let the new `record` job run. `prod-a99ccd44c5a3` no-ops (identical
-  digest), `prod-current` no-ops (identical digest). **This proves the wiring end to end, on the real
-  production stand, and changes nothing in the registry.** It is also the second live exercise of the
-  rollback path, which Story 6.8 will want.
-- 🔴 **The MOVE path cannot be earned without spending something.** See **Open Question 1**. Do not
-  grade an AC on it until Oleg answers, and **do not repeat Story 6.3's AC6** — a matrix row with no run
-  id is `OPEN`, not met.
+**Why the price is low, stated so the decision is legible later and not re-litigated:** s10 serves **no
+users**. The traffic switch is external, owned outside this repository, and has not happened — s2 keeps
+serving until it does (`#d23`, Story 6.9 as amended 2026-08-18). So a deploy that changes what s10 serves
+for the length of two dispatches has **zero user blast radius**. That is the whole of why this is cheap
+here and would not be cheap after the switch.
+
+**The exercise, in order:**
+
+| # | Dispatch | Registry effect | Proves |
+|---|---|---|---|
+| 1 | `tag: sha-a99ccd44c5a3-prod`, `rollback: true` | **nothing changes** — both writes take their no-op branches | the wiring, end to end, on the real stand |
+| 2 | `tag: sha-308ea1520c59-prod`, `rollback: true` | `prod-308ea1520c59` **created**; `prod-current` **MOVES** | epic AC2's move clause, live |
+| 3 | `tag: sha-a99ccd44c5a3-prod`, `rollback: true` | `prod-a99ccd44c5a3` no-ops; `prod-current` **MOVES BACK** | the move a **second** time, **and restores the state 6.9 requires** |
+
+Dispatch 3 is not cleanup — it is the second discriminating observation, in the opposite direction, and
+`record-preprod-candidate.yml`'s own `G-backwards` note is the precedent for treating direction as
+something to notice rather than to forbid.
+
+🔴 **THE RESIDUE, named before it is created rather than found later.** Dispatch 2 mints
+`prod-308ea1520c59` **permanently** — `keep_pattern` protects it by shape and only an authorised `DELETE`
+with a `write:package` token removes it. **It is a PROOF MARKER, not a release.** Story 6.4 already had
+to write that sentence for `sha-28f7fd36b75e-prod` and `sha-308ea1520c59-prod`; this is the first time a
+`prod-<12hex>` **history** marker gets it too, and that is a genuinely new class — see **AC4**, which it
+directly complicates.
+
+⚠️ **Rejected alternative, recorded because a reviewer will raise it:** exercising the move by dispatching
+`record-prod-image.yml` directly with `allow_current_move: true`, touching no stand. Cheaper, and it would
+prove the **recorder's** move branch — but **not the automatic path**, which is the only thing this story
+ships. AC2 is about what a deploy causes, so the evidence has to come from a deploy.
 
 ### 9. 🔴 retro-E5 — this story inherits an unmet AC and is the only story that can pay it
 
@@ -216,7 +236,7 @@ discriminating run); review a foundation story before writing the story that bui
 | G5 equivalent | — | — | ❌ **permanent named absence** in 6.3's design (no PROD stand at write time). 🔴 **Re-open it: s10 IS now live.** See §10. |
 | `record` on rollback | §8's free dispatch | — | ✅ **free** |
 | `record` on release | — | — | ⚠️ the release deploy leg has **never been green** (`#d47`); **Story 6.9 owns its first run.** Label UNEARNED with that reason. |
-| `prod-current` MOVE | — | — | 🔴 **Open Question 1** |
+| `prod-current` MOVE | §8 dispatch 2 | §8 dispatch 3 (the opposite direction) | ✅ **AUTHORISED 2026-08-26** — *"move ok"*. **Two** rows, not one |
 
 ### 10. 🔴 A G5-EQUIVALENT IS NOW POSSIBLE, AND THAT IS NEW SINCE STORY 6.3
 
@@ -333,8 +353,12 @@ packages.** Every write target is composed from the file's own literal `IMAGE_RE
 4. **Never drop `--prefer-index=false`** from an `imagetools create`.
 5. **Never report a write as successful without reading the tag back**, and never treat a read-back
    failure as a write failure without saying which one it was (finding #10).
-6. **Never move `prod-current` off `sha-a99ccd44c5a3-prod` without Oleg's answer to Open Question 1.**
-   It is Story 6.9's cutover target.
+6. 🔴 **AMENDED 2026-08-26 — the move is AUTHORISED (Oleg, verbatim: *"move ok"*).** What replaces the
+   old prohibition is where the pointer must **end**: **this story may not close, and no AC may be
+   graded, with `prod-current` naming anything other than `sha-a99ccd44c5a3-prod`.** §8's exercise is
+   there-and-back, not a handover. 🔴 **If the return dispatch (§8, 3) fails, the row goes/stays
+   `in-progress` with the blocking condition named** — the enum has no `blocked` value and this project
+   does not close over a wrong pointer.
 7. **Never delete or repoint an existing `prod-<12hex>`.** Removing one needs an authorised `DELETE`
    with a `write:package` token, which on this project has twice required the operator in person.
 8. **Never claim a guard was observed refusing without a run id.** A matrix row without one is `OPEN`.
@@ -346,6 +370,11 @@ packages.** Every write target is composed from the file's own literal `IMAGE_RE
 11. **Do not edit a frozen file** (§12). If one appears to need a change, that is a finding for
     `deferred-work.md` with an owner.
 12. **Do not read GitHub** (`#d7`), and **do not touch s2** (NFR5).
+13. **Never present `prod-308ea1520c59` as a release.** It is a proof marker minted by §8's exercise. It
+    gets **no row in `docs/prod-releases.md`** — no release was approved — and it is named as a proof in
+    the decision record, the same sentence Story 6.4 had to write for its two proof images.
+14. **Never leave the residue implicit.** A later reader who lists `prod-*` and finds four markers must be
+    able to tell which is a release **from a document this repository holds**, not from memory.
 
 ---
 
@@ -370,7 +399,12 @@ packages.** Every write target is composed from the file's own literal `IMAGE_RE
 **And** on a move, the **displaced digest and the tag it belonged to** are recorded (§7), not left in a
 log this project classifies best-effort
 **And** the `allow_current_move` policy difference between the dispatch path and the call path is
-written into the file with its reason (§5).
+written into the file with its reason (§5)
+**And** 🔴 **the move is proven LIVE, with run ids, in both directions** (§8 dispatches 2 and 3;
+authorised by Oleg 2026-08-26, *"move ok"*) — **not** graded on code review, and **not** left to Story
+6.9
+**And** the story does not close with `prod-current` naming anything other than `sha-a99ccd44c5a3-prod`
+(Prohibition 6 as amended).
 
 ### AC3 — Retention protection, stated at the strength it actually has *(epic AC3)*
 
@@ -392,7 +426,14 @@ failure and not one that silently truncates on pagination (finding #12)
 **And** ⚠️ **AC wording amended 2026-08-26:** the epic says *"without connecting to s2"*. s2 is the
 **legacy** host; the Forgejo production stand is s10 (`sprint-change-proposal-2026-08-18-prod-target.md`).
 Read as *"without connecting to the production host"* — the epic's intent, in the epic's own amended
-topology.
+topology
+**And** 🔴 **the registry alone is NOT sufficient, and this story is what makes that concrete.** After
+§8's authorised move exercise the registry holds `prod-308ea1520c59` — a `prod-<12hex>` marker for a
+commit that **was never a release**. Nothing in the tag distinguishes it from one. **The discriminator is
+`docs/prod-releases.md`**, exactly the three-tier model `#d38` §D1 states: the registry carries identity
+and permanence, the file in this repository is the authoritative human-readable record. **Write this into
+the decision record and into the workflow's own disclaimer step.** Do not let AC4 be graded as *"the
+registry is the history"* — after this story it demonstrably is not.
 
 ### AC5 — 🔴 ADDED: the thirteen inherited findings are each fixed, or deferred with a named owner
 
@@ -529,27 +570,55 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 - [ ] 6.4 404 classifier: a well-formed `sha-<12hex>-prod` that does not exist. Expect **classified
       absence**, not an ambiguous read.
 - [ ] 6.5 G4 and G6: record **UNEARNED with the reason** (§9), or earn G6 if an artifact exists by then.
-      **Do not leave a row blank.**
+      **Do not leave a row blank.** (The `prod-current` MOVE row is **not** here — it is Task 7, because
+      it is neither free nor write-less.)
 
-### Task 7 — Record (AC: 3, 4, 7, 8, 9) — **0 runs**
+### Task 7 — 🔴 The move, there and back (AC: 2, 6) — **2 dispatches, and they are NOT free**
 
-- [ ] 7.1 `docs/prod-releases.md`: the `prod_tag` column amendment, dated. **No row touched.**
-- [ ] 7.2 `docs/migration-decisions.md`: the decision record (AC9), number re-verified per Task 1.3.
-- [ ] 7.3 `deferred-work.md`: the thirteen findings' dispositions; M7's PRE-PROD-only remainder re-owned
+**Authorised by Oleg 2026-08-26, verbatim: *"move ok"*.** §8 has the table, the reason the price is low,
+and the residue this creates. **Run Task 5 first** — a move exercise on wiring that has never taken its
+no-op branch is two unknowns at once.
+
+- [ ] 7.1 🔴 **Pre-flight, before dispatching anything.** Read all four names back independently and
+      paste them: `sha-a99ccd44c5a3-prod`, `prod-a99ccd44c5a3`, `prod-current`, `sha-308ea1520c59-prod`.
+      Confirm `prod-current` is still on `sha256:f30c794123ba…a3f3`. **If it is not, STOP** — something
+      outside this story wrote the production pointer, and finding #4's check-to-write window is exactly
+      the disclosure saying nothing here can serialize against that.
+- [ ] 7.2 **Dispatch 2** (§8): `tag: sha-308ea1520c59-prod`, `rollback: true`. Expect `build` skipped,
+      `deploy` green, `record` green, `write-history` **created**, `write-current` **moved**.
+      🔴 **The displaced digest must appear in the step summary and as a job output** — that is AC2's new
+      clause and §7's settlement of the triage item, and this dispatch is the only chance to observe it.
+      **Paste the run id and the step table.**
+- [ ] 7.3 Read back independently: `prod-308ea1520c59` and `prod-current` both on
+      `sha-308ea1520c59-prod`'s manifest; `prod-a99ccd44c5a3` **unchanged**. **History does not move when
+      the pointer does** — that is the property, and this is where it is observed.
+- [ ] 7.4 **Dispatch 3** (§8): `tag: sha-a99ccd44c5a3-prod`, `rollback: true`. Expect `write-history`
+      **noop**, `write-current` **moved** — the second move, in the opposite direction.
+- [ ] 7.5 🔴 **Close the loop and prove it, do not assert it.** Read all five names back independently:
+      `prod-current` **must** be on `sha256:f30c794123ba…a3f3` again. Paste it. **If it is not, the row
+      stays `in-progress` with the blocking condition named** (Prohibition 6).
+- [ ] 7.6 Record the residue: `prod-308ea1520c59` is permanent and is a **PROOF, NOT A RELEASE** —
+      decision record + the workflow's disclaimer step, no ledger row (Prohibitions 13/14, AC4).
+
+### Task 8 — Record (AC: 3, 4, 7, 8, 9) — **0 runs**
+
+- [ ] 8.1 `docs/prod-releases.md`: the `prod_tag` column amendment, dated. **No row touched.**
+- [ ] 8.2 `docs/migration-decisions.md`: the decision record (AC9), number re-verified per Task 1.3.
+- [ ] 8.3 `deferred-work.md`: the thirteen findings' dispositions; M7's PRE-PROD-only remainder re-owned
       **by name**; the retention item left with **Story 6.3**.
-- [ ] 7.4 AC3's protection claim written as **compiled, not observed**, with `#d38` §9 cited.
+- [ ] 8.4 AC3's protection claim written as **compiled, not observed**, with `#d38` §9 cited.
 
-### Task 8 — Close (AC: all) — **1 push + PR + merge rows**
+### Task 9 — Close (AC: all) — **1 push + PR + merge rows**
 
-- [ ] 8.1 Grade every AC against **pasted evidence**, not intention. An AC whose final clause was not
+- [ ] 9.1 Grade every AC against **pasted evidence**, not intention. An AC whose final clause was not
       performed is **not met** — Story 6.3's review caught three of exactly that shape.
-- [ ] 8.2 🔴 **Re-review the fix-pass.** *"A fix-pass that is not itself re-reviewed is just a second
+- [ ] 9.2 🔴 **Re-review the fix-pass.** *"A fix-pass that is not itself re-reviewed is just a second
       draft"* — 6.2 recorded it, 6.3 reproduced it, and it is now Epic 6 retrospective material. **Do not
       make it three.** Check that the title, the Status header and §1 still describe what shipped.
-- [ ] 8.3 Close the run ledger **by query** (retro-D4): `action_run` grouped by `run_number`, attributed
+- [ ] 9.3 Close the run ledger **by query** (retro-D4): `action_run` grouped by `run_number`, attributed
       by `commit_sha`. 🔴 **Dispatch runs carry the DISPATCH REF as `commit_sha`, not what they built** —
       name such rows separately or lose the story's most consequential run.
-- [ ] 8.4 `sprint-status.yaml` → `review`. **Oleg merges; the row goes `done` only after that.**
+- [ ] 9.4 `sprint-status.yaml` → `review`. **Oleg merges; the row goes `done` only after that.**
 
 ---
 
@@ -562,10 +631,17 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 | PR rows (`pull_request`) | 2 | 2 |
 | Merge row (`build-main.yml`) | 1 | 1 |
 | **Task 5 — the free rollback dispatch** | **1** | **2** |
-| **Task 6 — discriminating dispatches** | **4** | **5** |
+| **Task 6 — discriminating dispatches** (write nothing) | **4** | **5** |
+| 🔴 **Task 7 — the move** (`sha-308ea1520c59-prod`) | **1** | **2** |
+| 🔴 **Task 7 — the return** (`sha-a99ccd44c5a3-prod`) | **1** | **2** |
 | Review fix-pass push | 0 | 2 |
 | Closeout PR | 0 | 3 |
-| **Total** | **11** | **20** |
+| **Total** | **13** | **24** |
+
+🔴 **Ceiling raised 20 → 24 on 2026-08-26, with its own reason rather than silently:** Open Question 1
+was answered *"move ok"*, converting a matrix row that would have shipped UNEARNED into **two real
+dispatches** (§8, Task 7). Floor 11 → 13. This is the raise-with-a-recorded-reason discipline Story 6.2
+applied three times to its own AC8 ceiling.
 
 🔴 **Story 6.2 declared 8 and measured 10**, overrunning because it budgeted *"dev-story = 1 push"* and
 carried no line for a decision commit or an integration merge. **Both are budgeted above.** An overrun is
@@ -617,6 +693,11 @@ and earn the outcome matrix Story 6.3 could not. **Write no new registry mechani
 | 5 | `prod_tag` = `sha-<12hex>-prod` (§7) | Reopen the column; name who settles it instead |
 | 6 | G5's **digest half** only (§10) | Full G5 with a host job, or no G5 and a corrected justification |
 
+🔴 **Not in this table, because it is not autonomous: the `prod-current` move.** It was Open Question 1
+and Oleg answered *"move ok"* on 2026-08-26. §8 and Task 7 execute that answer; they do not re-decide it
+and they do not widen it — the authorisation is for a **there-and-back exercise**, not for leaving the
+pointer anywhere else.
+
 ### Project Structure Notes
 
 `deploy-prod.yml` gains one job and header lines; its `derive` job is **Story 6.5's seam and stays
@@ -655,7 +736,15 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 
 ## Open Questions for Review
 
-1. 🔴 **GATES Task 6.5 and AC2's move clause. Does this story spend anything to observe a real
+1. ✅ **RESOLVED 2026-08-26 — Oleg, verbatim: *"move ok"*. Option (b) is taken.** Executed as a
+   **there-and-back** exercise: §8's table, Task 7's six subtasks, Prohibition 6 as amended (the pointer
+   must END on `sha-a99ccd44c5a3-prod`), Prohibitions 13/14 (the `prod-308ea1520c59` residue is a proof,
+   never a release), and AC4's new clause (the registry alone stops being sufficient the moment that
+   marker exists). Ceiling raised 20 → 24 with that reason recorded. 🔴 **The recommendation below was
+   (a) and was NOT taken** — kept and superseded, not rewritten, so the decision stays legible against
+   what was actually put to him. *The question as asked:*
+
+   🔴 **GATES Task 6.5 and AC2's move clause. Does this story spend anything to observe a real
    `prod-current` MOVE?** Today the pointer names the cutover image and Story 6.4's handover says it
    *"must keep naming it"*. Options: **(a)** do not move it — AC2's move clause is graded on code review
    plus the no-op run, and recorded UNEARNED with the reason, leaving Story 6.9's cutover as its first
@@ -684,4 +773,5 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.2 | 🔴 **Open Question 1 answered by Oleg — *"move ok"* — and applied rather than absorbed.** The `prod-current` MOVE goes from a row that would have shipped UNEARNED to **two live dispatches in opposite directions** (§8's table, new Task 7). Applied to: §8 (the hazard becomes a bounded exercise, with the zero-user-blast-radius reason stated so it is not re-litigated after the traffic switch, when it stops being true); §9's matrix (one row → two); AC2 (the move must carry run ids, and the story may not close with the pointer elsewhere); **AC4 — the consequence the answer creates: `prod-308ea1520c59` is minted permanently, a `prod-<12hex>` marker for a commit that was never a release, so the registry alone stops being a sufficient release history and `docs/prod-releases.md` becomes the discriminator**; Prohibition 6 amended from "never move" to "must END on the cutover image, and a failed return is `in-progress`, not `done`"; Prohibitions 13/14 added for the residue; ceiling 20 → 24 with its own recorded reason. The rejected alternative (dispatch the recorder directly, touch no stand) is recorded — it would prove the recorder's branch, not the automatic path AC2 is about. | create-story context engine (Opus) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `584cc886`, branch `story-6-6/pr-1-context`. 🔴 `origin/main` moved **three times** during contexting (`cfbad179` → `308ea152` → `584cc886`): Stories 6.3 and 6.10 closed `done`, and Story 6.4 shipped `deploy-prod.yml` and reached `review` — so this story's two dependencies both landed mid-analysis and the first draft of §3 was written against a repository that no longer existed. Four epic ACs carried (AC4 amended for the s10 re-target), five added. Thirteen inherited code findings enumerated with dispositions required by AC5. Five Open Questions, one gating. | create-story context engine (Opus) |

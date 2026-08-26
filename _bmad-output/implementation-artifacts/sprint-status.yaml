@@ -1854,13 +1854,32 @@ development_status:
   # fe-prionex-prod healthy). Correcting the sentence is MANDATORY (AC8); implementing the digest half
   # (prod-current's new target must equal what deploy-stand.yml actually deployed) is recommended, the
   # health half is recorded as deliberately not built.
-  # 🔴 THE LIVE-PROOF HAZARD, and it gates the story's own matrix: prod-current NAMES THE CUTOVER IMAGE
-  # (sha-a99ccd44c5a3-prod @ sha256:f30c7941...a3f3) and 6.4's handover says it must keep naming it
-  # until 6.9. So the NO-OP path is free and real -- dispatch deploy-prod.yml with that tag and
-  # rollback:true, a genuine redeploy of what s10 already runs, and both writes take their no-op
-  # branches -- but THE MOVE CANNOT BE OBSERVED WITHOUT SPENDING SOMETHING. OPEN QUESTION 1, Oleg
-  # decides; recommendation is to record the move UNEARNED with its reason rather than churn the
-  # pointer ahead of 6.9, whose release-deploy leg has never been green (#d47, Oleg's option (в)).
+  # ✅ OPEN QUESTION 1 ANSWERED BY OLEG 2026-08-26, verbatim "move ok" -- APPLIED, NOT ABSORBED. The
+  # question was whether this story spends anything to observe a real prod-current MOVE. It does:
+  # option (b), THERE AND BACK, three dispatches of deploy-prod.yml, all rollback:true --
+  #   (1) sha-a99ccd44c5a3-prod  -> both writes NO-OP; proves the wiring on the real stand, free
+  #   (2) sha-308ea1520c59-prod  -> prod-308ea1520c59 CREATED, prod-current MOVES; epic AC2 live
+  #   (3) sha-a99ccd44c5a3-prod  -> prod-current MOVES BACK; the move a SECOND time, opposite
+  #       direction, AND restores the state Story 6.9 requires.
+  # WHY THE PRICE IS LOW, recorded so it is not re-litigated later: s10 SERVES NO USERS -- the traffic
+  # switch is external and has not happened, s2 keeps serving (#d23). Zero user blast radius. That is
+  # the whole reason this is cheap NOW and would not be cheap after the switch.
+  # 🔴 THE RECOMMENDATION WAS (a) "do not move" AND WAS NOT TAKEN. Kept and superseded in the story
+  # file, not rewritten, so the decision stays legible against what was actually put to him.
+  # 🔴 THE RESIDUE, named before it is created: dispatch (2) mints prod-308ea1520c59 PERMANENTLY --
+  # keep_pattern protects it by shape, only an authorised DELETE removes it -- and it is a PROOF
+  # MARKER, NOT A RELEASE. This is the FIRST prod-<12hex> HISTORY marker for a non-release (6.4
+  # already had to write that sentence for two sha-*-prod proof images), and it lands directly on
+  # epic AC4: after this story THE REGISTRY ALONE IS NO LONGER A SUFFICIENT RELEASE HISTORY, because
+  # nothing in the tag distinguishes a proof from a release. The discriminator is docs/prod-releases.md
+  # -- #d38 S-D1's three-tier model, now demonstrated rather than asserted. NO LEDGER ROW is added.
+  # 🔴 PROHIBITION 6 IS AMENDED, NOT LIFTED: the story may not close, and no AC may be graded, with
+  # prod-current naming anything other than sha-a99ccd44c5a3-prod. If dispatch (3) fails, the row
+  # STAYS in-progress with the blocking condition named -- the enum has no `blocked` value and this
+  # project does not close over a wrong production pointer.
+  # ⚠️ REJECTED ALTERNATIVE, recorded because a reviewer will raise it: dispatch record-prod-image.yml
+  # directly with allow_current_move:true and touch no stand. Cheaper, and it would prove the
+  # RECORDER's move branch -- but not the AUTOMATIC path, which is the only thing this story ships.
   # 🔴 INHERITS AN UNMET AC AND IS THE ONLY STORY THAT CAN PAY IT: 6.3's AC6 (retro-E5's live outcome
   # matrix) is UNMET -- "NO guard here has ever been watched REFUSING anything on this instance...
   # Whoever next dispatches this file -- Story 6.6 -- inherits it." Four discriminating rows are FREE
@@ -1878,8 +1897,12 @@ development_status:
   # and never used). 🔴 RE-VERIFY ACROSS LOCAL UNPUSHED BRANCHES TOO -- 6.3's OQ10 found a full ## D43
   # on an unpushed local branch the origin/* sweep could not see, and the PROCESS half of that hole is
   # OPEN and owned by no fix.
-  # Floor 11 / ceiling 20 runs (5 of them dispatches, 4 free), OPEN. Ceiling budgets a decision commit
-  # and an integration merge -- the two lines Story 6.2's model omitted and overran on.
+  # Floor 13 / ceiling 24 runs (7 of them dispatches; 5 write nothing, 2 do), OPEN. 🔴 CEILING RAISED
+  # 20 -> 24 THE SAME DAY IT WAS DECLARED, with its own reason rather than silently: OQ1's "move ok"
+  # converts a matrix row that would have shipped UNEARNED into two real dispatches. Same
+  # raise-with-a-recorded-reason discipline Story 6.2 applied three times to its own AC8 ceiling.
+  # The ceiling also budgets a decision commit and an integration merge -- the two lines Story 6.2's
+  # own model omitted and overran on.
   6-6-record-the-deployed-production-image: ready-for-dev
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
