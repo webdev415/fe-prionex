@@ -1780,7 +1780,7 @@ development_status:
   # FROZEN: deploy-stand.yml and build.yml above all -- editing either to make this story easier is the
   # worst available move. record-prod-image.yml is 6.6's, with 26 open findings. Slack is 4.5's and
   # explicitly does NOT gate. Floor 8 / ceiling 20 runs, OPEN.
-  6-4-deploy-to-production-by-dispatch: ready-for-dev
+  6-4-deploy-to-production-by-dispatch: in-progress
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
   6-7-smoke-check-production-after-deploy: backlog

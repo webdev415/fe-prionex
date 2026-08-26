@@ -1,6 +1,10 @@
 # Story 6.4: Deploy to Production by Dispatch
 
-Status: ready-for-dev
+---
+baseline_commit: 48bd6a78ade57ee06be1a25639e87691b807f999
+---
+
+Status: in-progress
 
 <!-- Epic 6, FR15/FR17/FR24. Contexted 2026-08-26 off origin/main @ 308ea152.
      Prerequisite Story 6.10 is `done`; Story 6.3 is `done` and left the image this story deploys.
@@ -42,9 +46,17 @@ jobs:
 the project's **first two-callee caller**:
 
 ```
-job build   → uses: ./.forgejo/workflows/build.yml        if: rollback is not true
-job deploy  → uses: ./.forgejo/workflows/deploy-stand.yml  needs: build (but must run when build is skipped)
+job derive  → plain job: extracts the commit, derives the PROD tag, normalises the boolean
+job build   → uses: ./.forgejo/workflows/build.yml         if: not rollback
+job deploy  → uses: ./.forgejo/workflows/deploy-stand.yml  needs: [derive, build], must run when build is skipped
 ```
+
+🔴 **CORRECTED at execution, 2026-08-26 — it is THREE jobs, not two, and the reason is a second
+independent constraint this section missed.** A `uses:` job's `with:` accepts **expressions only**, and
+this expression language has **no substring operation**. The commit therefore **cannot be sliced out of
+`image_tag` inside `with:`** — a plain job has to do it in shell and publish it as an output. So
+`derive` exists for a reason unrelated to the build/deploy split, and it is also where Story 6.5's guard
+lands (§7). **Two callees, three jobs.**
 
 🔴 **The `needs:` + `if:` interaction is the trap, and D21 already bit this project once.** A skipped
 `needs:` dependency normally makes the dependent job **skip too**. The deploy job must run on **both**
@@ -100,22 +112,44 @@ preprod-a99ccd44c5a3       -> sha256:a62e868786cd…2086b2      ← the SAME dig
 sha-a99ccd44c5a3-preprod   -> sha256:a62e868786cd…2086b2
 ```
 
-**`preprod-current` points at `a99ccd44c5a3` — the very commit already built at prod.** There is **no
-validated PRE-PROD candidate that has not been built at `environment: prod`**, so the release path
-cannot be exercised against one.
+**`preprod-current` points at `a99ccd44c5a3` — the very commit already built at prod.**
 
-**It can still be exercised — but only by minting a SECOND permanent `sha-<12hex>-prod` tag for a
-commit that is not a release candidate**, and that is an irreversible act with a real price:
-`keep_pattern` protects the shape forever, and removal needs an authorised `DELETE` with a
-`write:package` token, which on this project has twice required the operator in person.
+🔴 **CORRECTED at execution, 2026-08-26 — the sentence that stood here was WRONG, and it was wrong in a
+way that changed a decision.** It read: *"There is no validated PRE-PROD candidate that has not been
+built at `environment: prod`."* **That was inferred from `preprod-current` alone.** Listing every
+`preprod-*` version instead of the pointer gives:
+
+```
+preprod-00ef3be4743d     candidate #1, 2026-08-17, verdict pass   ← NOT built at prod
+preprod-28f7fd36b75e     candidate #2, 2026-08-24, verdict pass   ← NOT built at prod
+preprod-a99ccd44c5a3     candidate #3, 2026-08-25, verdict pass   ← IS the cutover image
+preprod-current       -> a99ccd44c5a3
+```
+
+**Two validated candidates are available and unbuilt at prod.** Both are real commits in this
+repository, both carry a `pass` row in `docs/preprod-candidates.md`.
+
+🔴 **The method error, named because it is the second of its kind in one session:** a *"does any X
+exist"* question was answered by reading **one** place — the moving pointer — and the negative was then
+stated at full strength. The runner-location claim in Story 6.10 failed the same way hours earlier
+(containers enumerated, "no agent exists" published). **A negative claim is only as strong as the
+search behind it.**
+
+**What this changes:** the release path no longer needs a **non-candidate** commit. It can run against
+`28f7fd36b75e` — a genuinely validated candidate — so the permanent `sha-<12hex>-prod` it mints is
+**exactly the kind a real release produces**, and the commit carries a `preprod-<sha>`, meaning Story
+6.5's future guard would have admitted it too. **Oleg's option-2 decision still stands and is still
+required — a permanent tag is spent — but it is spent on a legitimate release candidate rather than on
+a throwaway commit, which is strictly cheaper and leaves nothing anomalous in the registry.**
 
 ✅ **RESOLVED 2026-08-26 by Oleg: option 2.** *"1. не ждать. 2. да. 3. нет."* — waiting is rejected,
 recording AC2 unearnable is rejected, **a permanent tag is spent deliberately to prove the release path
 now.**
 
-**What that commits this story to:** dispatch the release path against a commit that is **not** a
-release candidate — `main`'s head at dispatch time — which mints a **second permanent
-`sha-<12hex>-prod`** in the registry. `keep_pattern` protects that shape forever; removal needs an
+**What that commits this story to — as corrected above:** dispatch the release path against
+**`28f7fd36b75e`, validated candidate #2**, which mints a **second permanent `sha-<12hex>-prod`** in
+the registry. **Not** a throwaway commit: the correction above removed that need, so the decision is
+honoured at a lower price than it was taken at. `keep_pattern` protects that shape forever; removal needs an
 authorised `DELETE` with a `write:package` token, which on this project has twice required the operator
 in person. **The cost is named, accepted, and paid once.**
 
@@ -416,9 +450,10 @@ recorded UNMET)
 coordinator did, and the run id is the proof.** Coordinator-owned subtasks are **never** `[x]`.
 
 ### Task 1 — Open the story and secure §4's precondition (AC: 2) — **1 push row**
-- [ ] 1.1 Branch `story-6-4/pr-1-context` off a fresh `origin/main`. Verify the decision number across
-      **every** branch **and** the operator's own checkout — the ref-only sweep was wrong once already
-      (Story 6.3, OQ10).
+- [x] 1.1 **Done.** Branch `story-6-4/pr-1-context` off `origin/main` @ `308ea152`; baseline commit
+      `48bd6a78`. **Decision number: `D47`** — swept across every `origin/*` ref (max in `main` is
+      `D46`); `D47` and `D48` both free. ⚠️ Re-verify at write time including the operator's own
+      checkout — the ref-only sweep was wrong once already (Story 6.3, OQ10).
 - [»] 1.2 ✅ **ANSWERED AT CONTEXT TIME, and Oleg has since decided.** Measurement pasted in §4:
       exactly one `sha-*-prod` tag exists (`sha-a99ccd44c5a3-prod`) and `preprod-current` resolves to
       the **same** commit — no validated candidate is unbuilt at prod. **Oleg chose option 2: spend a
@@ -426,29 +461,60 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
       **At execution:** re-verify the `sha-*-prod` set — a new candidate may exist by then, and if one
       does, **prefer it and spend nothing.** Otherwise use `main`'s head, and **paste the commit and
       the resulting tag name before dispatching**, not after.
-- [ ] 1.3 Declare the §10 budget as `OPEN`.
+- [x] 1.3 **Declared `OPEN`** — floor 8, ceiling 20 (§10).
 
 ### Task 2 — Read the contract, do not infer it (AC: 4, 5) — **0 runs**
-- [ ] 2.1 Read `deploy-stand.yml`'s `workflow_call` block in full and record every input this story
-      passes, with its declared `required`/`default`.
-- [ ] 2.2 Read `deploy-preprod.yml` end to end — it is the closest sibling and its header carries the
-      reasoning. Record what this story **must** differ on: `frontend_port` **not** loopback,
-      `runner_label`, `frontend_network`, and the two-callee shape.
-- [ ] 2.3 Confirm from `build.yml` that `workflow_call` declares **no `outputs:`** — paste the block.
+- [x] 2.1 **Done.** Every input read from `deploy-stand.yml`'s own `workflow_call` block; the seven
+      required ones and the four tuning constants this story sets are tabulated in §5 with their
+      sources. **`ref` and `image_tag` are mutually exclusive — exactly one**; this story passes
+      `image_tag`.
+- [x] 2.2 **Done.** `deploy-preprod.yml` is ~40 lines of body under ~136 of header — the house ratio.
+      Confirmed the three points this story must differ on: **`frontend_port` bare, not loopback**;
+      **`runner_label: e1-rung3-prod-deploy`**; and the job shape, which turned out to be **three**
+      jobs rather than two (§2, corrected).
+- [x] 2.3 **Confirmed by reading the block:** `build.yml`'s `workflow_call` declares `ref` and
+      `environment` **and nothing else — no `outputs:`**. The tag is therefore derived twice (§3).
 
 ### Task 3 — Write `deploy-prod.yml` (AC: 1, 2, 3, 4, 5, 6, 7, 8) — **0 runs**
-- [ ] 3.1 Triggers and inputs per AC1; own literal `concurrency` group.
-- [ ] 3.2 The **build** job: `uses: ./.forgejo/workflows/build.yml`, `environment: prod`, gated
-      `if:` on `rollback` not being true.
-- [ ] 3.3 The **deploy** job: `uses: ./.forgejo/workflows/deploy-stand.yml`, `needs:` the build job,
-      with an `if:` that admits **success OR skipped** (§2). Every `with:` value from §5.
-- [ ] 3.4 A **named step or job output** that states, on the release path, that this is a **rebuild,
-      not a promotion** (AC2), and on the rollback path that no build ran.
-- [ ] 3.5 The commit extraction from `image_tag` as a **distinct named step** — the seam Story 6.5
-      lands on (§7). **Build no guard.**
-- [ ] 3.6 `secrets:` on each job, with the reason in a comment (AC8).
-- [ ] 3.7 Mechanical checks **before** any dispatch: `yaml.safe_load`; **zero** `${{` in any `run:`
-      body including comments; `bash -n` on every `run:` body. Paste the results.
+- [x] 3.1 **Done.** `workflow_dispatch` only; required `image_tag`, optional `rollback` boolean
+      (default `false`); own literal group `deploy-prod-fe-prionex-prod`, no expression.
+- [x] 3.2 **Done.** `build` → `uses: ./.forgejo/workflows/build.yml`, `environment: prod`,
+      `ref: needs.derive.outputs.hex`, gated `if: needs.derive.outputs.is_rollback != 'true'`.
+- [x] 3.3 **Done.** `deploy` → `uses: ./.forgejo/workflows/deploy-stand.yml`,
+      `needs: [derive, build]`, and the `if:` is
+      `always() && needs.derive.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')`.
+      🔴 **`always()` is load-bearing**: without it the expression is not evaluated at all after a
+      skip, and the rollback path would silently deploy nothing while reporting green. Every `with:`
+      value taken from §5.
+- [x] 3.4 **Done — a named step, and it prints to both stdout and the step summary.** On the release
+      path it states the image is **built here, NOT the artifact validated on PRE-PROD, and not
+      byte-identical to it**, with the Option C reason and `#d2`'s own sentence that validation is
+      evidence about the source, not about the bytes. On the rollback path it states no image is
+      produced and the build job is skipped.
+- [x] 3.5 **Done.** Extraction lives in `derive`, a distinct named job — **the seam, and no guard is
+      built on it.** The header says in those words where Story 6.5's check lands and that this story
+      does not build it.
+- [x] 3.6 **Done.** `secrets: inherit` on **both** callee jobs, with the reason and the cost in the
+      header: the parser rejects `on.workflow_call.secrets`, so a caller passes `inherit` or the
+      callee gets nothing; `inherit` hands over **every** org secret including `REGISTRY_TOKEN_RW`.
+      Recorded as **accepted**, matching both shipped callers.
+- [x] 3.7 **Done — pasted.** `yaml.safe_load` parses: 3 jobs, 2 `run:` bodies, triggers
+      `['workflow_dispatch']`. **Zero `${{` in any `run:` body**, comments included (Prohibition 6).
+      `bash -n` clean on both.
+      ✅ **And `derive` was exercised locally before any dispatch — 8/8 as specified:**
+      ```
+      PASS   sha-28f7fd36b75e-preprod + rollback=false -> hex=28f7fd36b75e, deploy_tag=sha-28f7fd36b75e-prod
+      PASS   sha-a99ccd44c5a3-prod    + rollback=true  -> deploy_tag=sha-a99ccd44c5a3-prod
+      PASS   ROLLBACK="True" (string) -> normalised to is_rollback=true
+      REFUSE sha-a99ccd44c5a3-preprod + rollback=true  -> "names the PRE-PROD environment"
+      REFUSE prod-current              -> "is a RECORD, not a deployable reference"
+      REFUSE prod-a99ccd44c5a3         -> same
+      REFUSE 40-hex form               -> "is '28f7…915b' (40 characters), not exactly 12"
+      REFUSE main-dev                  -> "does not match ^sha-<hex>-(prod|preprod)$"
+      ```
+      🔴 **This is local shell verification, NOT retro-E5's live matrix** — no run id, and it never
+      reached Forgejo. §9's matrix stays `OPEN` until Tasks 4-6 supply run ids. Story 6.3 conflated
+      exactly these two and its AC6 was recorded UNMET; this story states the distinction instead.
 
 ### Task 4 — 🔴 The rollback path, first (AC: 3, 6) — **1 dispatch**
 - [ ] 4.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: true` with
@@ -461,11 +527,19 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
       started" is not evidence* (Story 4.1 Task 6.2).
 
 ### Task 5 — The release path (AC: 2, 6, 7) — **1 dispatch, ceiling 3**
-- [ ] 5.0 🔴 **GATE, and it is one-shot in the same sense §4 is.** State, before dispatching: the exact
-      commit, the `sha-<12hex>-prod` tag it will mint, and that this tag is a **PROOF, not a release**.
-      **Re-check first whether a validated candidate now exists** — if one does, use it and spend
-      nothing. Confirm no `sha-<12hex>-prod` already exists for the chosen commit; if one does, the
-      build goes red at `Enforce AC2` and the dispatch is wasted.
+- [»] 5.0 ✅ **GATE CLOSED AT EXECUTION, 2026-08-26 — and the re-check it demanded changed the answer.**
+      Listing every `preprod-*` version (not the `preprod-current` pointer) found **two validated
+      candidates unbuilt at prod**: `00ef3be4743d` (#1) and `28f7fd36b75e` (#2), both `pass` in
+      `docs/preprod-candidates.md`. **Chosen: `28f7fd36b75e`** — the newer of the two, and `main`'s own
+      head when it was minted. It will produce **`sha-28f7fd36b75e-prod`**, permanent.
+      Confirmed no `sha-28f7fd36b75e-prod` exists, so `Enforce AC2` has nothing to refuse.
+      🔴 **It is a proof of the release path AND a legitimate candidate build** — the distinction that
+      matters is that **no release was approved**, so it gets no `docs/prod-releases.md` row and
+      `prod-current` is not moved to it.
+      ⚠️ **Ordering consequence, decided here rather than discovered:** the release path **deploys**, so
+      after Task 5 the s10 stand runs `28f7fd36b75e`, not the cutover image. **Task 4's rollback runs
+      FIRST** (it already did), and the stand is **returned to `sha-a99ccd44c5a3-prod` at the end of
+      Task 6** so Story 6.9 finds the contour where it expects it.
 - [ ] 5.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: false` against Task 5.0's commit.
 - [ ] 5.2 **`PENDING (owner: coordinator)`** — paste the full job list: **both** jobs executed, in order.
 - [ ] 5.3 **AC7:** read the tag `build.yml` published **from the registry**, and the tag this caller
