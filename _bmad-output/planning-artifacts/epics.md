@@ -493,8 +493,8 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
 | FR30 | Epic 4 | `concurrency` (literal stand-identity key, not `cd-${{ github.ref }}`) plus a sibling-container `flock` on a stand-directory file, version-independent (amended 20.08, [D30](../../docs/migration-decisions.md#d30)) |
-| FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08) |
-| FR32 | Epic 6 | Cutover validated by a no-op `rollback: true` deploy |
+| FR31 | Epic 6 | `[C]` Rebuild ~~the running PROD commit~~ **the last validated PRE-PROD candidate** into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08). 🔴 **AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). The running PROD commit `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is **absent from the Forgejo repository** — measured across 549 remote heads and against the server itself (`git ls-remote`) — so it cannot be checked out and cannot be built. The cutover image is built from `a99ccd44c5a39345fa65eb74e87343b187e129e9` instead, which **has** `preprod-a99ccd44c5a3` (measured in `package_version`) and therefore **satisfies FR16 rather than requiring an exception to it**. The cost is FR32 below and the product-code gap gated by Story 6.9's new AC. |
+| FR32 | Epic 6 | Cutover validated by a ~~no-op~~ **`rollback: true`** deploy. 🔴 **AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). The word **no-op is withdrawn and is not replaced by a synonym**: under the amended FR31 the cutover image is built from a **different commit** than the one legacy production serves, so the deploy changes what the new stand serves and **the cutover is the first real release**. `rollback: true` is still required, but for a **mechanical** reason unrelated to the promotion guard — the release path rebuilds (Story 6.4 AC2), and `build.yml`'s `Enforce AC2` refuses to repoint an existing `sha-<12hex>-prod` because `vite.config.ts`'s `Date.now()` makes every rebuild differ ([#d24](../../docs/migration-decisions.md#d24) §2b). A release-path dispatch of a commit Story 6.3 already built **goes red**. |
 | FR33 | — | **Cancelled** — no action on GitHub. File deletion only, via Story 7.2 |
 | FR34 | — | **Cancelled** — no action on GitHub. Server-side key rotation only, via Story 7.5 |
 
@@ -586,6 +586,15 @@ technical approval gate — organizational control), NFR11 (`[C]` promotion prin
 **Implementation notes:** `[C]` This is where the Option C compromise becomes visible: the
 PROD image is rebuilt rather than promoted, the guard degrades from image identity to commit
 identity, and the deviation is recorded as tracked technical debt.
+
+🔴 **Amended 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). This epic's preamble records that *"the first Forgejo
+release is a one-way door"* and that rollback depth starts at zero. **That is now sharper, not
+softer.** Under the amended FR31 the cutover image is built from a **different commit** than the one
+production serves, so after the traffic switch **no Forgejo-side artifact carries the code users are
+being served today at all**. The legacy pipeline remains the only route back to it, and stays so until
+the team's product work is in Forgejo — gated by Story 6.9's new final AC. **Do not read the
+now-passing promotion guard as a safety net it is not:** it proves the built commit was validated on
+PRE-PROD, not that it is what production was running.
 
 ### Epic 7: Forgejo as the Single Source of Delivery
 
@@ -2499,13 +2508,32 @@ So that the cutover can be rehearsed against the code already in production.
 > serves from until the traffic switch. Only the *deploy destination* of the rebuilt image
 > changed (s10, per Story 6.4 as amended). The ACs stand as written.
 
+> 🔴 **SCOPE AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). **The build source is no longer the
+> running production commit.** It is `a99ccd44c5a39345fa65eb74e87343b187e129e9` — the last validated
+> PRE-PROD candidate — because the running commit `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is
+> **absent from this repository** and cannot be checked out. Decision: Oleg, 2026-08-26,
+> *«Берем тот коммит, который последний в pre-prod»*, reversing his own earlier
+> *«Занесу коммиты в Forgejo»* of the same day. **The 2026-08-18 note above no longer holds in one
+> respect** — the s2 identification still happens, but it is now the story's **reference
+> measurement**, not its build source. **The ACs no longer stand as written**: AC1 and AC4 are
+> amended below.
+>
+> **The title and the story key
+> (`6-3-rebuild-the-running-production-commit-into-the-forgejo-registry`) are deliberately left
+> unchanged** — the key names a branch, a story file and a `sprint-status.yaml` row that are all in
+> flight, and renaming them costs more than the mismatch does. **Read the ACs, not the title.**
+
 **Acceptance Criteria:**
 
 **Given** production currently runs an image from ghcr.io
 **When** the running commit is identified
 **Then** it is determined from the running container on s2 — via its image labels or the
 recorded deployment — not assumed from a branch name
-**And** the identification is evidenced rather than asserted.
+**And** the identification is evidenced rather than asserted
+**And** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`): this identification is the story's
+REFERENCE MEASUREMENT, not its build source.** It is recorded so the distance between what
+production serves and what the cutover image contains is **visible and dated** rather than implicit.
+The build source is the last validated PRE-PROD candidate (FR31 as amended).
 
 **Given** the identified commit
 **When** it is built
@@ -2520,12 +2548,22 @@ previously created `prod-<sha>` nowhere, leaving the rebuilt cutover image prote
 a moving name. `prod-<sha>` is created here, at rebuild time, rather than waited for from the
 next deploy.
 
-**Given** the rebuilt image
+**Given** the built image
 **When** it is compared with what production serves
-**Then** it is confirmed to originate from the same commit
-**And** it is recorded that it is **not** byte-identical, because it was rebuilt — so Story
-6.9's "no-op deploy" is a no-op in code, not in bytes, and must be validated by behaviour
-rather than by digest comparison.
+**Then** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`), and the direction is reversed:** it is
+recorded that the image originates from a **DIFFERENT COMMIT** — `a99ccd44c5a3…` against s2's
+`41ab0470…`, both values pasted — together with the reason the running commit could not be used
+(absent from Forgejo, measured)
+**And** the **product-code distance** is stated with its measured and unmeasured halves both named:
+Forgejo's newest team-authored `src/` commit is **2026-08-04**, production was built **2026-08-22**,
+and **how much of that delta is product code is UNMEASURED**, because reading GitHub is forbidden
+(`#d7`)
+**And** it is recorded that the image is **not** byte-identical to anything production has served —
+true **by construction** (`vite.config.ts`'s `Date.now()`, [#d24](../../docs/migration-decisions.md#d24)
+§2b) and **never to be presented as a measured comparison**; the plan has rejected that vacuous claim
+five times
+**And** ~~Story 6.9's "no-op deploy" is a no-op in code, not in bytes~~ — **withdrawn: under the
+amended FR32 there is no no-op deploy at all.**
 
 **Given** the retention policy from Story 1.11
 **When** it runs
@@ -2735,12 +2773,27 @@ So that cutover risk is separated from release risk.
 > cutover is complete only when the traffic switch has happened and the smoke check passes
 > against the public name.
 
+> 🔴 **PREMISE WITHDRAWN 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). This story's own purpose line reads
+> *"so that cutover risk is separated from release risk"*. **Under the amended FR31 that separation
+> no longer exists.** The image Story 6.3 produces is built from a **different commit** than the one
+> legacy production serves, so the cutover deploy carries a commit change with it and **is the first
+> real release**; both risks land together. **The separation is not recoverable** without importing
+> the running commit — the alternative Oleg considered and declined on 2026-08-26. Stated here rather
+> than left for this story to discover, and the final AC below is the gate that contains what it
+> costs.
+
 **Acceptance Criteria:**
 
-**Given** the image imported in Story 6.3
-**When** `deploy-prod.yml` is dispatched against it with `rollback` true
-**Then** the deploy pulls that image from the Forgejo registry and restarts the stand
-**And** the content served before and after the deploy is identical.
+**Given** the image **built** in Story 6.3 from the validated PRE-PROD candidate
+**When** `deploy-prod.yml` is dispatched against `sha-<12hex>-prod` with `rollback` **true**
+**Then** the deploy pulls that image from the Forgejo registry and starts the s10 stand
+**And** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`): the identity comparison is WITHDRAWN.**
+~~the content served before and after the deploy is identical~~ — s10 and s2 serve **different
+commits**, so they are **expected to differ, and a difference is not a defect**. What is asserted
+instead: **s10 serves the exact image Story 6.3 recorded**, verified by digest against `prod-<12hex>`
+**And** `rollback: true` is used for the **mechanical** reason in FR32 as amended — **not** because
+the promotion guard would refuse this commit. It would now pass: the built commit carries
+`preprod-a99ccd44c5a3`.
 
 **Given** the no-op deploy
 **When** it completes
@@ -2757,6 +2810,19 @@ So that cutover risk is separated from release risk.
 **Then** it states that production is now delivered by Forgejo
 **And** the Option C deviation from the promotion principle is restated in the release
 documentation so it is not forgotten.
+
+**Given** 🔴 **NEW AC, added 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`) — the traffic switch will point
+users at a stand serving a **different commit** than the one they are served today, and Forgejo's
+newest team-authored `src/` commit is **2026-08-04** while production was built **2026-08-22**
+**When** the switch is planned
+**Then** the product-code delta between what s2 serves and what s10 serves is **measured and written
+down before the switch, not after**
+**And** if that delta contains team work absent from Forgejo, **the switch does not happen until that
+work is in Forgejo** — this is a gate on the action, not a note
+**And** the owner of that import is named — **Oleg** — with its state recorded as `PENDING (owner:
+Oleg)`, `OPEN`, or the work done; **there is no fourth, softer word**
+**And** it is stated that this precondition **did not exist before 2026-08-26** and was created by the
+change to FR31, so it is not misread as an oversight in the original plan.
 
 ### Story 6.10: Provision the PROD Deploy Contour on s10
 
