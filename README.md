@@ -137,7 +137,7 @@ The app will be available at `http://localhost:3000` with hot reload enabled.
 | DEV stand | s1 · 185.185.49.127 | 8082 | `crm.dev.crm-prionex.online` | live; deployed by `.forgejo/workflows/deploy-dev.yml`. Its own vhost/TLS is still an open external ask |
 | PRE-PROD stand | s1 · 185.185.49.127 | 8083 | `crm.preprod.crm-prionex.online` | live; deployed by `.forgejo/workflows/deploy-preprod.yml` (port allocations: `.env.stand.example`) |
 | PRODUCTION — legacy | s2 · 175.110.122.17 | 8080 | `crm-prionex.online` | **live, serves users.** Never a Forgejo deploy target, and stays that way until the traffic switch (Story 6.9) |
-| PRODUCTION — new | s10 · 192.168.122.11, via jump `62.112.10.55` | decided by Story 6.10 | `crm.prod.crm-prionex.online` — **temporary** | not built yet. 🔴 **The name did not resolve as of 2026-08-26** (NXDOMAIN, measured authoritatively) — see [`docs/migration-decisions.md#d43`](docs/migration-decisions.md#d43) |
+| PRODUCTION — new | s10 · 192.168.122.11, via jump `62.112.10.55` | decided by Story 6.10 | `crm.prod.crm-prionex.online` — **temporary** | not built yet. The name was pointed at the hypervisor on 2026-08-26 (`A → 62.112.10.55`, TTL 14400), but 🔴 **it resolves and refuses the connection** — 80/443 there answer `refused`, there is no web front yet. Route, port, vhost and certificate are Story 6.10's — see [`docs/migration-decisions.md#d43`](docs/migration-decisions.md#d43) §8 |
 
 Two productions exist in parallel until the traffic switch: users are served by s2, while s10 is
 brought up and validated under its own temporary name. The API hostname for the new production is

@@ -1308,12 +1308,28 @@ development_status:
   #   • `crm.prod.crm-prionex.online` — the NEW prod stand's own address on s10, and explicitly
   #     TEMPORARY. It exists so s10 can be brought up and validated under its own name while s2
   #     keeps serving users: the "two productions in parallel" state D23 put in the risk register.
-  #   • 🔴 IT DOES NOT RESOLVE YET. NXDOMAIN on 2026-08-26 at 8.8.8.8, at 1.1.1.1, AND
-  #     authoritatively at ns1.dns-parking.com. Not a cache artefact — the zone's SOA serial is
-  #     2026082601 (edited that same day) and there is no wildcard on the zone. `crm.prod.` appeared
-  #     in ZERO files of this repository before D43: the exact signature that preceded Story 1.6's
-  #     NXDOMAIN pair. Re-measure before acting on it; do not treat the name as live because it is
-  #     written down.
+  #   • 🔴 IT RESOLVES AND REFUSES THE CONNECTION — the worst of the three states, and it is
+  #     new as of 2026-08-26 08:38Z. Oleg created the record that day: `crm.prod.crm-prionex.online.
+  #     14400 IN A 62.112.10.55`, confirmed authoritatively and at 8.8.8.8/1.1.1.1/9.9.9.9, with the
+  #     zone's SOA serial moving 2026082601 -> 2026082602. But 80 and 443 on 62.112.10.55 answer
+  #     `refused` in 62 ms — there is NO web front on the hypervisor yet (controls answer: s1 ->
+  #     404/200, s2 -> 404, so the refusal is the host's property, not the channel's). Until a front
+  #     exists the name looks like a broken application rather than an unconfigured environment.
+  #     Nothing depends on it yet, so the cost is zero today — but it is open, not closed.
+  #     (Until 08:38Z it was NXDOMAIN on all three resolvers, and `crm.prod.` appeared in ZERO files
+  #     of this repository before D43 — the exact signature that preceded Story 1.6's NXDOMAIN pair.)
+  #   • 🔴 TTL IS 14400, NOT 300 — Hostinger's default, taken silently, and wrong for a name
+  #     that is declared TEMPORARY: up to four hours of stale answers at switch time. Lowering it is
+  #     cheap right now, before the name is widely cached. The same zone already carries the
+  #     deliberate counter-example: legacy prod `crm-prionex.online` sits at TTL 300.
+  #   • THE PATH IS CHOSEN, and it is a fact now rather than a decision: public traffic enters
+  #     through the HYPERVISOR, not through the hub. That preserves D23's network model (the contour
+  #     polls the hub outbound; the hub never reaches into the contour) — the rejected alternative
+  #     (a vhost on s1 proxying over wg-private) would have inverted it and made s1 a single point of
+  #     failure for production. What 6.10 must now measure, in order: the hypervisor->VM route (D23
+  #     measured `ssh root@192.168.122.11` from the hypervisor shell as "No route to host" and left
+  #     the mechanism "не проверено" — the forward lives in exactly that route), the stand's
+  #     FRONTEND_PORT, then the vhost and certificate on 62.112.10.55.
   #   • 🔴 DO NOT DERIVE THE API NAME FROM IT. `api.crm.prod.crm-prionex.online` is NXDOMAIN too,
   #     and TWO conventions are live at once — flat `api.crm-prionex.online` on legacy s2 versus
   #     `api.crm.<env>.crm-prionex.online` on DEV/PRE-PROD. `_check_url` in build.yml tests shape
