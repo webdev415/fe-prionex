@@ -1775,7 +1775,84 @@ development_status:
   # 6.3 is PAUSED and does not know its number is taken. 6.10 takes **D45** (D35 -> story-4-9,
   # D43 -> docs/prod-temporary-hostname, D44 -> story-4-10; verified across all refs 2026-08-26)
   # and re-verifies at execution time. Open Question 2, owner Oleg.
-  6-10-provision-the-prod-deploy-contour-on-s10: ready-for-dev
+  # 📌 ACTUALIZED 2026-08-26 by live measurement (ssh -J via the hypervisor, plus the Forgejo DB),
+  # after the contour was reported done. STATUS STAYS ready-for-dev: 3 of 6 ACs unmet, 1 met in the
+  # WRONG PLACE, 1 partial. Full table in the story file's own ACTUALIZATION section.
+  # ✅ REAL PROGRESS, measured not reported: deploy runner REGISTERED -- action_runner id 23,
+  # labels ["e1-rung3-prod-deploy"], org-scoped (crm), online 12:36:06Z, label correctly distinct from
+  # s10/e1-rung3; /etc/hosts on s10 carries 10.70.0.1 git.crm-prionex.com (split-horizon done);
+  # ports 8080-8085 all free.
+  # 🟢 AND THE BIGGEST RISK REDUCTION CAME FROM OUTSIDE THIS STORY: the backend team's PRODUCTION
+  # stack is already LIVE on s10 (crm-prod-* services, network crm-prod-network, crm-prod-kong-gateway
+  # at 10.70.0.11:8330->8000) -- AND KONG ALREADY CARRIES THE ALIAS `crm-kong-gateway`
+  # (aliases=[crm-prod-kong-gateway kong crm-kong-gateway]). nginx.conf resolves exactly that name
+  # lazily, so Story 1.6's failure class is PRE-EMPTED HERE, measured. The stand must join
+  # crm-prod-network for it to hold.
+  # ❌ NOT IN PLACE: no registry credential on s10 at all (/root/.docker/config.json absent), so AC2's
+  # host-level `docker pull` CANNOT succeed and AC3 has nothing to prove a push-refusal against; the
+  # stand directory ~/crm-prionex/fe-prionex-prod does not exist (no .env, no FRONTEND_PORT);
+  # #d23 not updated.
+  # ✅ AC1 IS MET IN FULL -- and the "blocker" first recorded here was MY ERROR, retracted the same
+  # session. I enumerated CONTAINERS on s10 and s1, found no `e1-rung3-prod-deploy`, and published
+  # "proven not on s10" at full strength. The agent is a HOST PROCESS, which is exactly what AC1 asks
+  # for, so the search method excluded the very thing that satisfies the AC:
+  #   forgejo+ /usr/local/bin/forgejo-runner daemon --config /opt/forgejo-runner/s4/config.yml (Aug 19)
+  # `s4` is the neighbouring team's CONFIG DIRECTORY name (its own comments read "s4: путь /s2/ ->
+  # /s4/"), NOT a fourth host. I read a directory name as a location.
+  # Measured against that config: labels ["e1-rung3-prod-deploy:host"] -- the `:host` executor runs
+  # steps directly on the machine -- and container.docker_host "unix:///var/run/docker.sock", the HOST
+  # socket. Contrast forgejo-runner-e1-rung3, whose DOCKER_HOST=tcp://dind:2375 is what AC1 excludes.
+  # WHOSE IT IS, and it is reassuring: action_task shows runner 23 running CRM/api-prionex jobs, last
+  # at 12:10:58Z today, success -- it is the runner that put the live crm-prod-* stack on this host.
+  # The mechanism is in daily production use on this exact machine.
+  # ⚠️ TWO THINGS THE RETRACTION DOES NOT SETTLE: (1) capacity: 1 -- the runner serializes by itself,
+  # but that is a config value another team can raise without telling us; DO NOT drop Story 4.4's lock
+  # on the strength of it. (2) Nothing in the deploy path asserts WHICH HOST it runs on -- that
+  # observation survives intact, and a shared org-scoped label is just a string.
+  # 🔴 REUSABLE LESSON: a negative claim is only as strong as the search behind it. "No container has
+  # this label" is not "no agent has this label", and I published the second having measured the first.
+  # WHAT REMAINS, all small, none blocking another: a READ-ONLY registry credential on s10 plus a
+  # host-level docker pull proof (AC2/AC3); ~/crm-prionex/fe-prionex-prod/ with its .env on a free port
+  # (AC4 -- 8080-8085 all free); #d23 updated (AC6). NO BLOCKER. Story 6.4 may target
+  # e1-rung3-prod-deploy once the credential and the stand directory exist.
+  # ✅ CLOSED TO `review` 2026-08-26. AC1 ✅ AC2 ✅ AC4 ✅ AC5 ✅ AC6 ✅ -- five of six. AC3 stands as
+  # written and therefore UNMET, deliberately: see below.
+  # WHAT THIS STORY ACTUALLY DID vs what it found already done -- the distinction is the point:
+  #   FOUND DONE (by CRM/api-prionex, not by us): the deploy runner on s10, /etc/hosts split-horizon,
+  #     and -- unasked -- the crm-kong-gateway ALIAS on crm-prod-network, which pre-empts Story 1.6's
+  #     failure class that PRE-PROD had to beg for.
+  #   DID OURSELVES: /root/crm-prionex/fe-prionex-prod/ with the load-bearing docker-compose.stand.yml
+  #     and a record-only .env; port 8080 measured free HERE; `docker compose config` valid;
+  #     0 CONTAINERS STARTED (Task 5 forbids starting anything). And the #d23 amendment.
+  # 🔴 DEVIATION RECORDED, NOT ABSORBED: D23 decided 18.08 that "деплой-раннер на s10 провижним мы
+  # сами". We did not -- the neighbouring team did, for themselves, and we join it. Less work for us,
+  # and no control over a config the frontend's production deploy now depends on.
+  # 🔴 AC3 IS UNMET BY RECOMMENDATION, and needs Oleg to rule. It asks for a standing read-only
+  # registry credential ON s10. The deploy does not use one: deploy-stand.yml logs in INSIDE the job
+  # from org secrets into a workspace-scoped DOCKER_CONFIG (D28 option (e)) and never reads the host.
+  # Placing a permanent pull credential on a production host is the wrong trade -- registry tokens on
+  # this instance are unrevocable-by-admin once leaked, twice paid for. RECOMMENDED: retire the clause
+  # by dated amendment, keep its real content (a property of REGISTRY_TOKEN_RO, already exercised by
+  # every DEV and PRE-PROD deploy). NOT taken unilaterally. Until then AC3 stands and is UNMET.
+  # ⚠️ TWO RESIDUALS THE PROVISIONING DID NOT CLOSE: (1) capacity: 1 serializes deploys by itself, but
+  # it is a value in another team's config that can be raised without telling us -- NOT a reason to
+  # drop Story 4.4's flock. (2) NOTHING in the deploy path asserts WHICH HOST it runs on; an
+  # org-scoped label is a string, and the guarantee it resolves to this machine lives entirely in that
+  # same foreign config.
+  # ⚠️ AC4's own wording undercounts: it names three variables, docker-compose.stand.yml requires five,
+  # and the two it omits include FRONTEND_NETWORK -- the one axis that fails SILENTLY when wrong.
+  # 🔴 CANNOT BE VERIFIED UNTIL THE FIRST DEPLOY: that the container resolves the backend. "It
+  # started" is not evidence -- nginx resolves Kong lazily and the healthcheck probes ITSELF, so a
+  # backend-less stand reports healthy and serves 200 (Story 4.1 Task 6.2 demonstrated exactly that).
+  # The check is `docker exec fe-prionex-prod getent hosts crm-kong-gateway`; empty is a STOP, and NOT
+  # a reason to fall back to crm-network.
+  # EXTERNAL, four items with owners, now concrete in #d23: public traffic path (80/443 on the
+  # hypervisor answer `refused`, Oleg); hypervisor->VM route (D23's own "No route to host", mechanism
+  # unverified, Oleg); the PROD-API hostname (UNMEASURED and not derivable, Oleg); PROD Kong's CORS
+  # (never probed, CRM/api-prionex).
+  # UNBLOCKS: Story 6.4 may now be written against label `e1-rung3-prod-deploy`. Oleg merges; the row
+  # goes `done` only after that.
+  6-10-provision-the-prod-deploy-contour-on-s10: review
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery
