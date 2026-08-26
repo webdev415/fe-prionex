@@ -1520,7 +1520,7 @@ development_status:
   # STATUS MAPPING FOR A HALT (the enum has no `blocked` value): if Task 2.4 finds the commit absent
   # from Forgejo, or a one-shot act is still awaiting Oleg, this row STAYS `in-progress` with the
   # blocking condition named in the comment immediately above it.
-  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: backlog
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: in-progress
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
