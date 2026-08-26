@@ -811,6 +811,23 @@ against a query, or closed with the literal word **OPEN**.
 
 ## Tasks / Subtasks
 
+🔴 **Marker legend, added 2026-08-26 by Oleg's decision on code-review finding 1 (option (a)).**
+Prohibition 11 reads: *"The dev agent does not dispatch, does not touch the Forgejo API, and does not
+open the PR. Mark those subtasks `PENDING (owner: coordinator)`, **never `[x]`**."* Six subtasks were
+marked `[x]` anyway — 4.2, 4.3, 4.4, 5.3, 8.3, 8.4 — every dispatch, every API read, and the PR.
+
+**They are now marked `[»]` and prefixed `[coordinator-executed]`.** The distinction the prohibition
+protects is restored: **`[x]` means the dev agent did it; `[»]` means the coordinator did, and the run
+id is the proof.** Every run id, pasted table and digest stays exactly where it was — **nothing is
+un-evidenced by this change**, which is the whole reason option (b) (amending the prohibition) was not
+needed and option (c) (recording a breach) would have been too weak.
+
+⚠️ **The context that made the breach easy, recorded because it will recur:** §11's labour split
+assumes coordinator and dev agent are **separate sessions**. In this story they collapsed into one —
+the same session held the Forgejo API path and the git/file work. **The prohibition was written for a
+split that did not hold, and it still binds.** Story 5.2's M14 — a checked box with no artifact
+anywhere — is the harm it exists to prevent, and that harm did **not** occur here.
+
 ### Task 1 — Open the story, declare the budget, and re-verify the decision number (AC: 7, 10) — **costs 1 push row**
 - [x] 1.1 **Done.** `sprint-status.yaml`'s `6-3-…` flipped `backlog` → `in-progress`, own commit
       (`7df02eca`), pushed before any content edit. `epic-6` already `in-progress`, untouched.
@@ -1046,7 +1063,7 @@ against a query, or closed with the literal word **OPEN**.
       | OpenBao AppRole secrets | all 7 present on the repo |
       | Registry credentials | all 4 present at **org** level (`REGISTRY_USER`, `_RO`, `REGISTRY_TOKEN_RW`, `_RO`) |
       | Any pre-existing `prod` tag | **NONE** — the registry held zero `prod-*` versions, so the one-shot was genuinely unfired |
-- [x] 4.2 ✅ **Sent verbatim before it was made, then dispatched without waiting** — OQ item 9's
+- [»] 4.2 **[coordinator-executed]** ✅ **Sent verbatim before it was made, then dispatched without waiting** — OQ item 9's
       *«Запускай по готовности»*, which supersedes this subtask's original "wait for confirmation":
       ```
       POST /api/v1/repos/CRM/fe-prionex/actions/workflows/build.yml/dispatches
@@ -1058,12 +1075,12 @@ against a query, or closed with the literal word **OPEN**.
       `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` (sanitized ref, mutable, **not** in
       `keep_pattern`, expires at 14 days — compiled in Task 3.4) and `sha-a99ccd44c5a3-prod`
       (**PERMANENT**).
-- [x] 4.3 ✅ **Dispatched. `HTTP 204`. RUN 598**, event `workflow_dispatch`.
+- [»] 4.3 **[coordinator-executed]** ✅ **Dispatched. `HTTP 204`. RUN 598**, event `workflow_dispatch`.
       🔴 `commit_sha` on the run row reads `f144ee9f…` — **that is the DISPATCH ref (`main`), not what
       was built.** Recorded because a later ledger read that attributes by `commit_sha` would
       mis-attribute this run; the built commit is only visible in `inputs.ref` and in the image's own
       labels. Started `11:02:16Z`, stopped `11:08:40Z` — **384 s**.
-- [x] 4.4 ✅ **Outcome read from the run's STEP TABLE and from the registry, never from a job log.**
+- [»] 4.4 **[coordinator-executed]** ✅ **Outcome read from the run's STEP TABLE and from the registry, never from a job log.**
       All **14** steps status `1` (success), in order:
       ```
        0 Checkout code                                   ✅
@@ -1176,7 +1193,7 @@ against a query, or closed with the literal word **OPEN**.
       ```
       **This is a local exercise of the shell logic, NOT a live outcome matrix.** §9's matrix needs run
       ids and stays **OPEN** — Tasks 5.3-5.6, which cannot run until Task 4 has produced an image.
-- [x] 5.3 ✅ **Done — RUN 600, all 17 steps green.** Dispatched verbatim, then made without waiting
+- [»] 5.3 **[coordinator-executed]** ✅ **Done — RUN 600, all 17 steps green.** Dispatched verbatim, then made without waiting
       (OQ item 9):
       ```
       POST .../actions/workflows/record-prod-image.yml/dispatches
@@ -1353,8 +1370,8 @@ against a query, or closed with the literal word **OPEN**.
       5. **Six guards ship with no live refusal evidence** (AC6, Task 5.4).
       6. **The product-code delta between what s2 serves and what this image contains is UNMEASURED**
          and cannot be measured from here — reading GitHub is forbidden. Gated on Story 6.9 by `#d46`.
-- [x] 8.3 ✅ **PR opened by the coordinator. Oleg merges** — the dev agent does neither (Prohibition 11).
-- [x] 8.4 ✅ **LEDGER CLOSED BY QUERY, not self-report (retro-D4).**
+- [»] 8.3 **[coordinator-executed]** ✅ **PR opened by the coordinator. Oleg merges** — the dev agent does neither (Prohibition 11).
+- [»] 8.4 **[coordinator-executed]** ✅ **LEDGER CLOSED BY QUERY, not self-report (retro-D4).**
       `action_run` joined to `repository`, filtered by `commit_sha IN (…)` over **all 13 commits of this
       branch**, plus the one dispatch row whose `commit_sha` is not a branch commit and is named
       separately below.
@@ -1819,9 +1836,9 @@ author wrote the spec, the code and the evidence.** **32 findings survived triag
 
 #### Decision-needed
 
-- [ ] [Review][Decision] **Prohibition 11 says coordinator subtasks are marked `PENDING (owner: coordinator)`, "never `[x]`" — five are `[x]`** — 4.2, 4.3, 5.3, 8.3, 8.4. Every one carries a run id, so Story 5.2's M14 harm (a checked box with no artifact) does not apply, but the prohibition's words are literal and a prohibition cannot be overridden by a subtask. Options: (a) re-mark with a distinct symbol keeping the run ids; (b) amend the prohibition by dated note, since coordinator and dev agent collapsed into one session here; (c) record as a knowing breach. **Not the dev agent's call.**
-- [ ] [Review][Decision] **AC8 is recorded NOT MET while the shipped file and Task 5.2 present the same content as delivered against it** — `.forgejo/workflows/record-prod-image.yml` header is titled "(Story 6.3 Task 5.2, AC8)" and 5.2 is `[x] Done`. The AC8 block's own prose is honest (best-effort tier). Pick one direction: drop the AC8 tag from the header, or restate AC8 as partially delivered.
-- [ ] [Review][Decision] **The retention observation Oleg reassigned to Story 6.3 is recorded nowhere durable** — first observable 2026-08-29, after this story closes; `deferred-work.md` is untouched and still reads "no owner". Same class as AC9's un-filed contradiction, which was already declined. One append closes both.
+- [x] [Review][Decision] ✅ **RESOLVED (a), Oleg 2026-08-26 — re-marked `[»]`.** **Prohibition 11 says coordinator subtasks are marked `PENDING (owner: coordinator)`, "never `[x]`" — five are `[x]`** — 4.2, 4.3, 5.3, 8.3, 8.4. Every one carries a run id, so Story 5.2's M14 harm (a checked box with no artifact) does not apply, but the prohibition's words are literal and a prohibition cannot be overridden by a subtask. Options: (a) re-mark with a distinct symbol keeping the run ids; (b) amend the prohibition by dated note, since coordinator and dev agent collapsed into one session here; (c) record as a knowing breach. **Not the dev agent's call.**
+- [x] [Review][Decision] ✅ **RESOLVED (a), Oleg 2026-08-26 — the AC8 tag is dropped from the workflow header.** **AC8 is recorded NOT MET while the shipped file and Task 5.2 present the same content as delivered against it** — `.forgejo/workflows/record-prod-image.yml` header is titled "(Story 6.3 Task 5.2, AC8)" and 5.2 is `[x] Done`. The AC8 block's own prose is honest (best-effort tier). Pick one direction: drop the AC8 tag from the header, or restate AC8 as partially delivered.
+- [x] [Review][Decision] 🔀 **RESOLVED (b), Oleg 2026-08-26 — the RETENTION item is filed in `deferred-work.md`; AC9's regulation contradiction is NOT, declined a second time and recorded as declined rather than dropped.** **The retention observation Oleg reassigned to Story 6.3 is recorded nowhere durable** — first observable 2026-08-29, after this story closes; `deferred-work.md` is untouched and still reads "no owner". Same class as AC9's un-filed contradiction, which was already declined. One append closes both.
 
 #### Patch — shipped code
 
@@ -2011,6 +2028,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 1.1 | **Three code-review `decision-needed` items resolved by Oleg: 1(a), 2(a), 3(b).** (1a) The six coordinator-executed subtasks — 4.2, 4.3, 4.4, 5.3, 8.3, 8.4 — are re-marked `[»] [coordinator-executed]` instead of `[x]`, restoring the distinction Prohibition 11 protects; every run id and pasted artifact is retained, so nothing is un-evidenced. A marker legend is added above Tasks/Subtasks, and it records the context that made the breach easy: §11's split assumes two sessions and they collapsed into one. (2a) The `AC8` reference is dropped from `record-prod-image.yml`'s header — the text stays, it simply stops claiming to close an AC the story records as **UNMET**. (3b) The retention observation (`UNPROVEN` by execution, first observable **2026-08-29**, owner **Story 6.3** by Oleg's own OQ8 reassignment, and the story closes before that date) is filed in `deferred-work.md`. 🔴 AC9's regulation contradiction is **NOT** filed — declined a second time, and recorded as **declined rather than dropped**, so it does not read as forgotten. | code-review |
 | 2026-08-26 | 1.0 | **Task 8 — story closed and moved to `review`. 6 of 10 ACs met; four (AC4, AC6, AC8, AC9) NOT MET, every one by an explicit decision of Oleg's, none by oversight and none softened — AC4 is an epic criterion and says so.** Delivered and evidenced: the first PROD image this project has ever built (run 598, 14/14, 384 s) and the first PROD markers it has ever written (run 600, 17/17), all three names on one manifest `sha256:f30c794123ba…a3f3`, read back from the registry independently of the runs. **Ledger CLOSED BY QUERY: 14 runs measured against a declared ceiling of 20 — under budget.** 🔴 Run 598 had to be named on its own line: its `commit_sha` is the dispatch ref, so a `commit_sha` attribution would have missed the story's most consequential run. Not all green — 5 success, 7 cancelled by ordinary concurrency eviction, 1 running; counted because they consumed rows. One budgeted line cost zero (the integration merge shared a push). AC10's not-earned list written in the required words, including that the retention rule stays `UNPROVEN` by execution with first observation **2026-08-29**, after this story closes, and that **ownership is not reset to nothing**. | dev-story |
 | 2026-08-26 | 0.9 | **Task 7 CANCELLED by Oleg (*«Task 7 отменить»*). AC9 recorded UNMET.** Neither of Story 6.2's artifacts is reconciled. The regulation's dated census stays wrong (11 → **12** measured today; *"no PROD deploy caller"* stays true), and 🔴 **a live contradiction is left standing that blocks Story 6.9**: the shipped rollback rule makes 6.9's own FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release, therefore needing Oleg — while the same document records **no delegate**. Open Question 5 had been **answered** (*«Поправить регламент в 6.3»*, narrowed to by-tag-name); that answer is now **unexecuted**. `docs/prod-releases.md` records nothing about the three `-prod` forms that now exist, nor what `prod-current` means before the switch — **the durable half of AC8**, which stays unmet in both halves. AC9's own never-drop fallback (file the contradiction against Story 6.9 in `deferred-work.md`) is **also not done** — offered, not taken, since the instruction was to cancel. 7.3 remains **done**: every frozen path verified byte-identical to `origin/main`. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.8 | **Task 6 CANCELLED by Oleg (*«Task 6 - отменить»*). `D45` is not written — this story ships with no decision record at all.** AC4 (**an EPIC acceptance criterion**) and AC8 recorded **UNMET**, not counted as satisfied by evidence scattered elsewhere. No forward notes under `#d18`/`#d19`; `deferred-work.md`'s *"identifying which is Story 6.3, and nobody has done it"* item is **in fact discharged** by session 1's s2 read but **is not marked so anywhere**, and will read as open. 🔴 **AC8's gap is operationally live rather than documentary:** `prod-current` exists in the registry from `11:17:10Z` and names an image **no host serves**, while the only statements of that fact are `record-prod-image.yml`'s header and the disclaimer its last step printed in run 600 — the tier this project classifies as best-effort. Everything `D45` was to carry now lives only in this story file and this branch's commit messages; `#d46` covers the build-source change and none of the rest. Owner of all of it: Oleg. | dev-story |
