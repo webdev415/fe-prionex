@@ -74,10 +74,16 @@ name: Deploy PROD Stand
 #    nothing outside their host reaches them. PROD traffic arrives FROM THE HYPERVISOR, so a
 #    loopback binding makes the stand unreachable by construction -- and the health check, which
 #    probes the container itself, would still report success.
-# 🔴 runner_label is `e1-rung3-prod-deploy`, NEVER `s10`/`e1-rung3`. Those belong to the
-#    CI-shaped runner on the same host whose jobs execute in its dind and can never reach the
-#    host's stand. The deploy runner is a HOST PROCESS with the `:host` executor and
-#    `docker_host: unix:///var/run/docker.sock` (Story 6.10).
+# 🔴 runner_label is `fe-prionex-prod-deploy` — OUR OWN runner, provisioned on s10 by Story 6.4
+#    after run 629. NEVER `s10`/`e1-rung3` (the CI-shaped runner, jobs in dind, cannot reach the
+#    host stand) and NEVER `e1-rung3-prod-deploy` either: that is the NEIGHBOURING team's runner,
+#    and its label is declared `:host`. Under a host executor there is no own job container, so
+#    `deploy-stand.yml`'s `docker inspect $(hostname)` — which it needs to launch the Story 4.4
+#    lock holder as a sibling container — fails with "no such object: e1-rung3". Run 629 proved
+#    exactly that. Ours is declared
+#    `fe-prionex-prod-deploy:docker://deploy-base-dev-preprod:2026-08-07`, mirroring s1's own
+#    deploy runner: jobs run IN A CONTAINER, and that container holds the HOST docker.sock, so the
+#    deploy acts on the host daemon where the stand actually lives.
 # ⚠️ frontend_network is `crm-prod-network`, and this is the axis where a wrong value fails
 #    SILENTLY: nginx resolves Kong lazily and the healthcheck probes itself, so a stand on the
 #    wrong network reports `healthy` and serves 200. `crm-prod-kong-gateway` carries the alias
@@ -262,7 +268,7 @@ jobs:
       (needs.build.result == 'success' || needs.build.result == 'skipped')
     uses: ./.forgejo/workflows/deploy-stand.yml
     with:
-      runner_label: e1-rung3-prod-deploy
+      runner_label: fe-prionex-prod-deploy
       compose_project_name: fe-prionex-prod
       container_name: fe-prionex-prod
       frontend_port: "8080"
