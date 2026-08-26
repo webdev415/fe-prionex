@@ -1941,6 +1941,52 @@ development_status:
   # raise-with-a-recorded-reason discipline Story 6.2 applied three times to its own AC8 ceiling.
   # The ceiling also budgets a decision commit and an integration merge -- the two lines Story 6.2's
   # own model omitted and overran on.
+  # 🔬 CODE REVIEW 2026-08-26 (Opus, four layers), run BEFORE implementation -- the artifact reviewed
+  # was the SPECIFICATION, so every finding is a defect of TRUTH or of GRADEABILITY, not a logic bug.
+  # 2 decision-needed / 16 patch / 5 deferred / 1 dismissed. ROW STAYS `ready-for-dev`: the workflow's
+  # own status mapping (in-progress or done) fits a review of code, and neither is true here.
+  # 🔴 THREE LAYERS INDEPENDENTLY REPORTED THE SAME TWO -- the strongest signal in the set:
+  #   (1) §10's G5 "digest half" is a COMPARISON THAT CANNOT FAIL. The recorder is handed the same
+  #       deploy_tag, resolves it, writes prod-current from it, and already refuses unless the
+  #       read-back matches -- both sides are one resolution of one tag, and s10 is never touched.
+  #       Prohibition 9's own shape, in a document that says the project has caught it five times.
+  #       Compounded: deploy-stand.yml declares NO workflow_call outputs (verified) and is frozen, so
+  #       the caller genuinely cannot learn what was deployed -- and NO AC covers §10 at all.
+  #   (2) §7 routes the displaced digest into EXACTLY the tier AC2 forbids. AC2 says "not left in a log
+  #       this project classifies best-effort"; Task 4.4 prescribes the step summary and a job output,
+  #       which #d38 §8a puts in tier 3. The authoritative sink is the ledger row -- but Prohibition 13
+  #       forbids a row for prod-308ea1520c59, so on dispatch 3 the settlement collapses to the
+  #       forbidden tier by construction.
+  # 🔴 THE SHARPEST ONE NOBODY HAD: three of the thirteen inherited findings rest on a sibling
+  # comparison THAT DOES NOT SURVIVE COUNTING. record-preprod-candidate.yml has THREE probes; only the
+  # verify-on-stand digest step (:328) sends four Accept headers -- its two EXISTENCE probes (:707,
+  # :793) send ONE, exactly like prod's. And "the sibling avoids the split by taking the digest from
+  # Docker-Content-Digest" is FALSE: its record job has the identical G6 tag-vs-digest split (:563 vs
+  # :590). Finding 13 fails the same way. Each error points the fix at a pattern that is not there.
+  # 🔴 A FOURTEENTH DEFECT THE THIRTEEN MISSED, and it is the one that actually arms: `EXISTS` is
+  # produced as a tri-state and consumed as `[ "$EXISTS" = "true" ]` (:479, :569). ANY non-`true` value
+  # -- a false 404, a dropped $GITHUB_OUTPUT write, a step rename, A workflow_call REFACTOR OF EXACTLY
+  # THE KIND THIS STORY PERFORMS -- leaves PRE_DIGEST empty, and BOTH `-n`-gated refusals fall through
+  # to the write while the log prints "for the first time". The only guard in the file that fails in
+  # the UNSAFE direction, and fixing finding 1's Accept headers does not touch it.
+  # 🔴 The recorder's own `concurrency` group is SILENTLY LOST on workflow_call (#d21 verbatim;
+  # #d33 closed D21's central question positively only for the CALLER's block). So the automatic
+  # record runs under deploy-prod-fe-prionex-prod and the recovery dispatch the story deliberately
+  # keeps open runs under record-prod-fe-prionex-prod -- disjoint groups, two permanent registry
+  # writes, no compare-and-swap. The story never mentioned it.
+  # ✅ ONE DISMISSED, WITH ITS REBUTTAL KEPT because it will be raised again: gating G1 on
+  # `github.event_name` does NOT break the automatic path -- #d21, run 631, MEASURED event_name as
+  # `workflow_call` inside the expanded callee.
+  # ⚠️ 5 DEFERRED to deferred-work.md with owners/triggers, all in Story 6.3's shipped file and all
+  # DISTINCT from the thirteen already carried: the unpinned apt-get on every prod deploy's critical
+  # path; the unbounded O(n) tags/list inside timeout-minutes 10; the final `| tee` that can red a
+  # fully-successful run; NO G-backwards equivalent (the sibling prints the displaced COMMIT, prod
+  # prints digests only -- and 6.6 moves the pointer every deploy); and the DELETE entanglement (one
+  # manifest, three tags -- cleaning the residue would unmake the deployable tag).
+  # 🔴 TWO DECISIONS OPEN, both gating the dev session because each reverses something already
+  # written: (1) §7's prod_tag settlement is correct against shipped code but reverses #d18 §3 and
+  # deferred-work.md:2324 with no dated banner, while AC2 still carries the old words; (2) §10's
+  # tautology -- drop it, build the real stand-side guard, or keep the read and grade nothing on it.
   6-6-record-the-deployed-production-image: ready-for-dev
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog

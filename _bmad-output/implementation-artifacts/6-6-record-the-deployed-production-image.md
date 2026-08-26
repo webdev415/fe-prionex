@@ -765,6 +765,14 @@ story stays `ready-for-dev`; findings are folded into the spec rather than fixed
 🔴 **Three layers independently reported the same two defects** (§10's tautology, §7's best-effort
 sink). That is the strongest signal in the set.
 
+🔴 **DISPOSITION 2026-08-26, Oleg: the sixteen patches are LEFT AS ACTION ITEMS, not applied.** They
+stay unchecked below and the **dev session owns them** — each one is a correction to this specification
+that must land before or alongside the work it describes, not a code fix. **The row stays
+`ready-for-dev`**: this review ran before implementation, so neither `in-progress` nor `done` would be
+true, and the code-review workflow's own status mapping does not fit a review of a spec. 🔴 **Two
+`decision-needed` items remain OPEN and gate the dev session** — they cannot be resolved by the dev
+agent, because both reverse or retire something already written down.
+
 #### Decision needed
 
 - [ ] [Review][Decision] **The `prod_tag` settlement reverses a plan-level statement, and AC2 still carries the old words** — §7's table says `prod-<12hex>` is **not** deployable and `sha-<12hex>-prod` is what a rollback dispatches. That is CORRECT against shipped code (`deploy-prod.yml`'s `derive` refuses `prod-*`: *"a RECORD, not a deployable reference"*). But two written sources say the opposite: `docs/migration-decisions.md:1721` (`#d18` §3) — *"6.6 делает `prod-<sha>` целью отката"* — and `deferred-work.md:2324` — *"Story 6.6 keeps `prod-<sha>` as the rollback target."* AC4's `s2` rewrite got a dated amendment banner; §7's reversal got none, and AC2 still reads *"addressable by its own `prod-<12hex>` tag as a rollback target"*. So AC2 can be ticked while a rollback by that tag is impossible by construction. **Options: (a)** amend `#d18` §3, `deferred-work.md` and AC2 with a dated banner separating *"keeps the artifact alive and protected"* from *"what a rollback dispatches"* — both senses are real and the plan conflated them; **(b)** reword §7 only and leave the decision records; **(c)** raise a correct-course, since this is a plan-level settlement. Severity: **high**.
