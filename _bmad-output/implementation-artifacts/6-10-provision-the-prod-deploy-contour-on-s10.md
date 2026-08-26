@@ -866,7 +866,7 @@ the last row.
 
 | AC | State | Measurement |
 |---|---|---|
-| **AC1** — a deploy runner with a dedicated label | 🟡 **registered, but see the blocker** | `action_runner` id **23**, name `s4-prod-deploy`, labels `["e1-rung3-prod-deploy"]`, owner `crm` (org-scoped → reachable from `CRM/fe-prionex`), last online `2026-08-26 12:36:06Z`. The label **is** distinct from `s10`/`e1-rung3` as AC1 requires. Runners **21** (`e1-rung3`) and **22** (`e1-snp2`) are present and untouched |
+| **AC1** — a deploy runner with a dedicated label | ✅ **MET IN FULL** (see the retraction below) | `action_runner` id **23**, name `s4-prod-deploy`, labels `["e1-rung3-prod-deploy"]`, owner `crm` (org-scoped → reachable from `CRM/fe-prionex`), last online `2026-08-26 12:36:06Z`. The label **is** distinct from `s10`/`e1-rung3` as AC1 requires. Runners **21** (`e1-rung3`) and **22** (`e1-snp2`) are present and untouched |
 | **AC2**, first half — split-horizon | ✅ **done** | `/etc/hosts` on s10 carries `10.70.0.1 git.crm-prionex.com` |
 | **AC4**, port half | ✅ **measured free** | `8080`–`8085` all free on s10 (`ss -ltn`) |
 
@@ -900,52 +900,62 @@ got easier.**
 | **AC5** — the traffic path named with owner and state | 🟡 **partially, by `#d43` rather than by this story** | `crm.prod.crm-prionex.online` → `62.112.10.55`, but 80/443 there still answer `refused`. The hypervisor→VM route `#d23` measured as "No route to host" is still unverified |
 | **AC6** — `#d23` updated with what was provisioned | ❌ **not done** | `docs/migration-decisions.md` untouched by any 6.10 work |
 
-### 🔴 THE BLOCKER, and it is worse than an unmet AC — AC1 is met in the WRONG PLACE
+### ✅ AC1 — MET IN FULL. **The blocker recorded here first was MY ERROR, and it is retracted.**
 
-AC1 requires *"a runner registration **on s10** whose jobs execute against the **host** Docker daemon
-(not dind)"*. The registration exists and the label is correct. **The agent that answers to it is not
-on s10.**
+🔴 **What I wrote, and it was false:** *"There is no container on s10 carrying `e1-rung3-prod-deploy`
+… an agent is answering from a **third host**, and its registration name says **`s4`** … proven **not
+on s10** and **not on s1**."*
 
-Measured on s10 — the complete set of runner containers:
+**How it was wrong:** I enumerated **containers** (`docker ps -a`) on s10 and on s1, found nothing,
+and stated the conclusion at full strength. The agent is a **host process**, not a container — which
+is precisely what AC1 asks for, so my search method excluded the very thing that satisfies the AC:
 
 ```
-forgejo-runner-e1-rung3        code.forgejo.org/forgejo/runner:13.0.0   Up 8 days
-  GITEA_RUNNER_LABELS=s10,e1-rung3
-  DOCKER_HOST=tcp://dind:2375          ← CI-shaped: jobs land in its dind, not the host daemon
-forgejo-runner-e1-rung3-dind   docker:27.5.1-dind                       Up 8 days (healthy)
+forgejo+  /usr/local/bin/forgejo-runner daemon --config /opt/forgejo-runner/s4/config.yml   (since Aug 19)
+/opt/forgejo-runner/s4/.runner
 ```
 
-**There is no container on s10 carrying `e1-rung3-prod-deploy`.** Swept s1 as well — every
-`forgejo-runner*` container's labels — and it is **not there either**. Yet id 23 reported online at
-12:36:06Z, so an agent is answering from a **third host**, and its registration name says **`s4`**.
+**`s4` is the config directory the neighbouring team used** (its own comments read *"s4: путь /s2/ ->
+/s4/"*, i.e. copied from their s2 deploy runner) — **not a fourth host.** The registration name
+`s4-prod-deploy` inherits that, and I read a directory name as a location.
 
-**Stated at exactly its strength:** it is proven **not on s10** and **not on s1**; that it is on s4 is
-what the name says, not what was measured. **The host it actually runs on has never been measured by
-this plan at all.**
+**AC1's requirements, each measured against `/opt/forgejo-runner/s4/config.yml`:**
 
-🔴 **Why this is the most dangerous condition in Epic 6 right now.** Story 6.4's `runs-on` targets
-**this label**. A production deploy dispatched against it would execute on that unmeasured host, with
-that host's `docker.sock` and root-equivalent control of its daemon — the accepted risk `#d23` scoped
-deliberately *"to a dedicated VM"*, now silently un-scoped. It would `scp`/compose the production
-frontend onto the wrong machine, and every guard in the deploy path would pass, because none of them
-asserts **which host** they are running on.
+| AC1 clause | Evidence |
+|---|---|
+| a runner registration **on s10** | the daemon process and its `.runner` are on s10 |
+| jobs execute against the **host** daemon, **not dind** | `labels: - "e1-rung3-prod-deploy:host"` — the `:host` executor runs steps directly on the machine; and `container.docker_host: "unix:///var/run/docker.sock"` is the host socket. Contrast `forgejo-runner-e1-rung3`, whose `DOCKER_HOST=tcp://dind:2375` is exactly what AC1 excludes |
+| a dedicated deploy label distinct from `s10`/`e1-rung3` | `e1-rung3-prod-deploy`, and runners 21/22 keep `s10`/`e1-rung3` untouched |
+| scope reachable from `CRM/fe-prionex` | `owner=crm`, org-scoped |
 
-**Required before Story 6.4 may target this label — and none of it is optional:**
-1. Identify the host answering as runner **23** and record it by name and address.
-2. If it is not s10: either move the registration to an agent **on s10**, or delete id 23 and register
-   a new one there. The name/label mismatch (`s4-prod-deploy` ↔ `e1-rung3-prod-deploy`) must not be
-   left as the only signal of where it lives.
-3. Prove the agent executes against the **host** daemon — `DOCKER_HOST` unset or pointed at
-   `/var/run/docker.sock`, **not** a dind — the way `forgejo-runner-e1-rung3` demonstrably does not.
-4. Add a host-identity assertion to the deploy path, so a job that lands on the wrong machine
-   **fails** instead of deploying. Nothing in `deploy-stand.yml` does this today.
+**Whose runner it is, and why that is reassuring rather than alarming:** `action_task` shows runner 23
+executing jobs for **`CRM/api-prionex`** — most recently 12:10:58Z today, status success. It is the
+neighbouring team's production deploy runner, the one that put the live `crm-prod-*` stack on this
+host. So the mechanism AC1 asks for is not merely configured, it is **in daily production use on this
+exact machine.**
+
+⚠️ **Two things this does NOT settle, kept because they are real:**
+1. **`capacity: 1`.** One job at a time on the production deploy runner. Story 4.4's `flock` reasoning
+   was written for `capacity > 1`; here the runner itself serializes. **Do not read that as a reason to
+   drop the lock** — capacity is a runner-config value someone can raise without telling this project.
+2. **Nothing in the deploy path asserts WHICH HOST it is running on.** That observation survives the
+   retraction intact. It was not the reason for the blocker, and it is still worth doing — a shared,
+   org-scoped label is a string, and the guarantee that it resolves to this machine lives entirely in a
+   config file owned by another team.
+
+🔴 **The lesson, recorded because it is the reusable part:** a negative claim is only as strong as the
+search that produced it. *"No container has this label"* is not *"no agent has this label"*, and I
+published the second while having measured only the first. **State the method inside the claim, or do
+not state the claim at full strength.**
 
 ### Verdict
 
-**3 of 6 ACs unmet, 1 met in the wrong place, 1 partial.** The genuine progress is real — the runner
-registration, the split-horizon mapping, and the backend stack with its Kong alias — and the story is
-**closer than it was**, but it is **not done**, and the runner-location finding must be resolved before
-Story 6.4 is written, not during it.
+**AC1 ✅ met in full. AC5 🟡 partial. AC2 (pull half), AC3, AC4 (directory half) and AC6 ❌ unmet — four
+items, all of them small and none of them blocking each other.** What is left is: put a **read-only**
+registry credential on s10 and prove a host-level `docker pull` with it (AC2/AC3), create
+`~/crm-prionex/fe-prionex-prod/` with its `.env` on a free port — 8080-8085 are all free (AC4), and
+update `#d23` (AC6). **There is no blocker.** Story 6.4 may be written against label
+`e1-rung3-prod-deploy` once the credential and the stand directory exist.
 
 ---
 

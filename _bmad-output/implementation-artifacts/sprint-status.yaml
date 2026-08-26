@@ -1792,22 +1792,29 @@ development_status:
   # host-level `docker pull` CANNOT succeed and AC3 has nothing to prove a push-refusal against; the
   # stand directory ~/crm-prionex/fe-prionex-prod does not exist (no .env, no FRONTEND_PORT);
   # #d23 not updated.
-  # 🔴 THE BLOCKER, and it is worse than an unmet AC -- AC1 IS MET IN THE WRONG PLACE. s10 carries
-  # ONLY forgejo-runner-e1-rung3 (labels s10,e1-rung3, DOCKER_HOST=tcp://dind:2375 -- CI-shaped, jobs
-  # land in dind, NOT the host daemon) and its dind. NO container on s10 answers to
-  # e1-rung3-prod-deploy. Swept s1 too -- not there either. Yet id 23 is ONLINE, so its agent runs on
-  # a THIRD host, and its registration name says `s4`. Stated at its strength: proven NOT s10 and NOT
-  # s1; "s4" is what the name says, not what was measured. That host has never been measured by this
-  # plan.
-  # 🔴 WHY IT MATTERS MORE THAN ANYTHING ELSE IN EPIC 6: Story 6.4's `runs-on` targets THIS LABEL. A
-  # production deploy would execute on that unmeasured host with its docker.sock -- the root-equivalent
-  # risk #d23 deliberately scoped "to a dedicated VM", silently un-scoped -- and would put the
-  # production frontend on the wrong machine while every guard passed, because NOTHING in
-  # deploy-stand.yml asserts which host it is running on.
-  # REQUIRED BEFORE 6.4 IS WRITTEN: (1) identify the host answering as runner 23 by name and address;
-  # (2) if it is not s10, move or re-register on s10 -- the name/label mismatch must not be the only
-  # signal of location; (3) prove the agent uses the HOST daemon, not a dind; (4) add a host-identity
-  # assertion to the deploy path so a job on the wrong machine FAILS instead of deploying.
+  # ✅ AC1 IS MET IN FULL -- and the "blocker" first recorded here was MY ERROR, retracted the same
+  # session. I enumerated CONTAINERS on s10 and s1, found no `e1-rung3-prod-deploy`, and published
+  # "proven not on s10" at full strength. The agent is a HOST PROCESS, which is exactly what AC1 asks
+  # for, so the search method excluded the very thing that satisfies the AC:
+  #   forgejo+ /usr/local/bin/forgejo-runner daemon --config /opt/forgejo-runner/s4/config.yml (Aug 19)
+  # `s4` is the neighbouring team's CONFIG DIRECTORY name (its own comments read "s4: путь /s2/ ->
+  # /s4/"), NOT a fourth host. I read a directory name as a location.
+  # Measured against that config: labels ["e1-rung3-prod-deploy:host"] -- the `:host` executor runs
+  # steps directly on the machine -- and container.docker_host "unix:///var/run/docker.sock", the HOST
+  # socket. Contrast forgejo-runner-e1-rung3, whose DOCKER_HOST=tcp://dind:2375 is what AC1 excludes.
+  # WHOSE IT IS, and it is reassuring: action_task shows runner 23 running CRM/api-prionex jobs, last
+  # at 12:10:58Z today, success -- it is the runner that put the live crm-prod-* stack on this host.
+  # The mechanism is in daily production use on this exact machine.
+  # ⚠️ TWO THINGS THE RETRACTION DOES NOT SETTLE: (1) capacity: 1 -- the runner serializes by itself,
+  # but that is a config value another team can raise without telling us; DO NOT drop Story 4.4's lock
+  # on the strength of it. (2) Nothing in the deploy path asserts WHICH HOST it runs on -- that
+  # observation survives intact, and a shared org-scoped label is just a string.
+  # 🔴 REUSABLE LESSON: a negative claim is only as strong as the search behind it. "No container has
+  # this label" is not "no agent has this label", and I published the second having measured the first.
+  # WHAT REMAINS, all small, none blocking another: a READ-ONLY registry credential on s10 plus a
+  # host-level docker pull proof (AC2/AC3); ~/crm-prionex/fe-prionex-prod/ with its .env on a free port
+  # (AC4 -- 8080-8085 all free); #d23 updated (AC6). NO BLOCKER. Story 6.4 may target
+  # e1-rung3-prod-deploy once the credential and the stand directory exist.
   6-10-provision-the-prod-deploy-contour-on-s10: ready-for-dev
   epic-6-retrospective: optional
 
