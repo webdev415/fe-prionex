@@ -134,6 +134,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       hex: ${{ steps.d.outputs.hex }}
+      full_sha: ${{ steps.fullsha.outputs.full_sha }}
       deploy_tag: ${{ steps.d.outputs.deploy_tag }}
       is_rollback: ${{ steps.d.outputs.is_rollback }}
     steps:
@@ -218,6 +219,37 @@ jobs:
           echo "deploy tag:      ${DEPLOY_TAG}"
           echo "rollback:        ${IS_ROLLBACK}"
 
+      # 🔴 The 12-hex short SHA is what the TAG is built from, but it is NOT a safe `ref` for
+      # `actions/checkout`: an abbreviated SHA is not fetchable, and the default shallow fetch has
+      # no object to resolve it against. `build.yml` feeds `inputs.ref` straight to checkout, and
+      # Story 6.3's own prod build was dispatched with the FULL 40-hex form. So expand it here.
+      # This also does something AC-worthy for free: it PROVES the commit exists in this
+      # repository. Story 6.3 halted for two sessions on precisely that question, for a commit
+      # that turned out never to have been imported — and it had no mechanical check for it.
+      - name: "Expand the short SHA to the full one, and prove the commit exists here"
+        id: full
+        if: steps.d.outputs.is_rollback != 'true'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Resolve the full SHA"
+        id: fullsha
+        if: steps.d.outputs.is_rollback != 'true'
+        env:
+          HEX: ${{ steps.d.outputs.hex }}
+        run: |
+          set -euo pipefail
+          if ! FULL="$(git rev-parse --verify "${HEX}^{commit}" 2>/dev/null)"; then
+            echo "FAIL: commit '${HEX}' does not exist in this repository."
+            echo "  The release path rebuilds that commit, so it must be checkoutable here. A tag"
+            echo "  can name a commit this repository has never received -- Story 6.3 halted on"
+            echo "  exactly that, for two sessions, and had no mechanical check for it. This is it."
+            exit 1
+          fi
+          echo "full_sha=${FULL}" >> "$GITHUB_OUTPUT"
+          echo "OK: ${HEX} -> ${FULL}"
+
       - name: "State which path this run takes, and what that means"
         env:
           IS_ROLLBACK: ${{ steps.d.outputs.is_rollback }}
@@ -258,7 +290,7 @@ jobs:
     if: needs.derive.outputs.is_rollback != 'true'
     uses: ./.forgejo/workflows/build.yml
     with:
-      ref: ${{ needs.derive.outputs.hex }}
+      ref: ${{ needs.derive.outputs.full_sha }}
       environment: prod
     secrets: inherit
 
