@@ -771,6 +771,16 @@ being served**
 an approval record (Prohibition 9).
 
 ### AC9 — 🔴 ADDED: Story 6.2's shipped artifacts are reconciled, not left to go stale
+
+🚫 **NOT MET. Cancelled by Oleg 2026-08-26 (*«Task 7 отменить»*).** Neither
+`docs/production-approval-regulation.md` nor `docs/prod-releases.md` is amended. 🔴 **This AC's own
+final clause specified the fallback for exactly this case** — *"if Oleg prefers the regulation left
+untouched (Open Question 5), the contradiction is filed against Story 6.9 by name in
+`deferred-work.md` with its full argument — never dropped"* — **and that filing has NOT been made
+either.** It is a separate, cheap action (one append to a ledger file, no frozen artifact touched, no
+§12 exception), and it is offered rather than taken, because the instruction was to cancel Task 7.
+**As things stand the contradiction is recorded ONLY in this story file, which Story 6.9 has no
+reason to open.** Owner: Oleg.
 **Given** `docs/production-approval-regulation.md` and `docs/prod-releases.md` were written in dated
 future tense and this story changes some of the facts they date (§7)
 **When** the story closes
@@ -1250,15 +1260,34 @@ against a query, or closed with the literal word **OPEN**.
       that commit), but **it is not marked discharged anywhere**, so it will read as open.
 
 ### Task 7 — Reconcile Story 6.2's artifacts (AC: 9) — **0 runs**
-- [ ] 7.1 Amend `docs/production-approval-regulation.md` by **dated addition**: the workflow census
-      (11 → 12; *"no PROD deploy caller"* unchanged); §7(b)'s rollback-authority gap and its resolution;
-      and the one line stating the freeze window does not bind this story. **Price the §12 exception in
-      the story and in `D45` before the edit** (§12). **If Oleg declines the amendment (Open Question 5),
-      file the contradiction against Story 6.9 by name in `deferred-work.md` with the full argument.**
-- [ ] 7.2 Add prose to `docs/prod-releases.md` recording the three `-prod` forms that now exist and which
-      survive retention, plus AC8's `prod-current` disclaimer. **NO ROW** (Prohibition 9). Explicitly
-      leave *"which form a rollback targets"* to Stories 6.4/6.6, as that file's own column definition
-      already says.
+- [~] 7.1 🚫 **CANCELLED BY OLEG, 2026-08-26 — *«Task 7 отменить»*.** The regulation is **not**
+      amended. Three things therefore stand unreconciled:
+      **(a)** its dated census *"`ls .forgejo/workflows/` — 11 entries"* is now **wrong** — measured
+      today: 11 before this story, **12** after. Its other clause, *"no PROD deploy caller"*, remains
+      **true**.
+      **(b)** 🔴 **A LIVE CONTRADICTION IS LEFT STANDING, AND IT BLOCKS STORY 6.9.** The shipped rule
+      reads: *"Restoring a tag already in `docs/prod-releases.md`'s `prod_tag` column is not a new
+      release and needs no new approval … A rollback to a tag not in the ledger is a release and needs
+      Oleg."* This story minted `prod-a99ccd44c5a3` / `prod-current` and appended **no ledger row**
+      (Prohibition 9 — no approval was sought and none was given). Story 6.9's FR32 dispatch is
+      `rollback: true` against exactly this tag. Under the rule as written that dispatch is *a rollback
+      to a tag not in the ledger*, therefore **a release**, therefore **it needs Oleg** — and the same
+      document records **no delegate** (`«Оставить как есть»`, 2026-08-25). **While Oleg is
+      unavailable, the cutover cannot proceed at all.** This is not a wording quibble; it is a
+      precondition Story 6.9 will hit.
+      **(c)** the one line stating the PROD freeze window does not bind a story that appends no row and
+      deploys nothing is not written; whether a build counts is left ambiguous.
+      🔴 **Open Question 5 was ANSWERED — *«Поправить регламент в 6.3»*, narrowed to "by tag name, not
+      a general carve-out" — and that answer is now UNEXECUTED.** Recorded here so the reversal is
+      visible rather than looking like the question was never asked. **Owner: Oleg.**
+- [~] 7.2 🚫 **CANCELLED. This is the subtask that carried the durable half of AC8, and its absence is
+      operationally live.** `docs/prod-releases.md` records **nothing** about the three `-prod` forms
+      that now exist —
+      `sha-a99ccd44c5a3-prod` (permanent, deployable, Story 6.9's target), `prod-a99ccd44c5a3`
+      (permanent, history) and `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` (**not** protected,
+      expires ~2026-09-09) — and **nothing about what `prod-current` means before the traffic switch**.
+      **No row was added either, which is correct** (Prohibition 9); the omission here is the *prose*,
+      not the row. **Owner: Oleg.**
 - [x] 7.3 **Done — confirmed by diff, and the check was widened beyond the three files named.**
       `git diff --stat origin/main --` over every frozen path in §12 — `build.yml`,
       `record-preprod-candidate.yml`, `deploy-stand.yml`, `deploy-preprod.yml`, `deploy-dev.yml`,
@@ -1864,6 +1893,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.9 | **Task 7 CANCELLED by Oleg (*«Task 7 отменить»*). AC9 recorded UNMET.** Neither of Story 6.2's artifacts is reconciled. The regulation's dated census stays wrong (11 → **12** measured today; *"no PROD deploy caller"* stays true), and 🔴 **a live contradiction is left standing that blocks Story 6.9**: the shipped rollback rule makes 6.9's own FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release, therefore needing Oleg — while the same document records **no delegate**. Open Question 5 had been **answered** (*«Поправить регламент в 6.3»*, narrowed to by-tag-name); that answer is now **unexecuted**. `docs/prod-releases.md` records nothing about the three `-prod` forms that now exist, nor what `prod-current` means before the switch — **the durable half of AC8**, which stays unmet in both halves. AC9's own never-drop fallback (file the contradiction against Story 6.9 in `deferred-work.md`) is **also not done** — offered, not taken, since the instruction was to cancel. 7.3 remains **done**: every frozen path verified byte-identical to `origin/main`. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.8 | **Task 6 CANCELLED by Oleg (*«Task 6 - отменить»*). `D45` is not written — this story ships with no decision record at all.** AC4 (**an EPIC acceptance criterion**) and AC8 recorded **UNMET**, not counted as satisfied by evidence scattered elsewhere. No forward notes under `#d18`/`#d19`; `deferred-work.md`'s *"identifying which is Story 6.3, and nobody has done it"* item is **in fact discharged** by session 1's s2 read but **is not marked so anywhere**, and will read as open. 🔴 **AC8's gap is operationally live rather than documentary:** `prod-current` exists in the registry from `11:17:10Z` and names an image **no host serves**, while the only statements of that fact are `record-prod-image.yml`'s header and the disclaimer its last step printed in run 600 — the tier this project classifies as best-effort. Everything `D45` was to carry now lives only in this story file and this branch's commit messages; `#d46` covers the build-source change and none of the rest. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.7 | **Task 4 and Task 5.3 executed; Task 5.4/5.5/5.6 CANCELLED by Oleg; AC6 recorded UNMET.** Run 598 (384 s, 14/14 green) built `a99ccd44c5a3…` at `environment: prod` — **step 7 is the project's first ever read of `secret/fe/prod/app`**, and the `fe-prod` AppRole's first real login. Run 600 (17/17 green) minted `prod-a99ccd44c5a3` then `prod-current`, history before pointer, one second apart. All three PROD names resolve to one manifest `sha256:f30c794123ba…a3f3`; the control — both PRE-PROD names of the same commit — resolves to a **different** manifest `sha256:a62e8687…`, so Option C's rebuild is visible as two digests for one commit, measured rather than asserted. **AC2 and AC3 met.** 🔴 **A defect of mine, found and corrected in the same session:** Task 4.5 first reported digests read from `package_property.container.digest`, which is **not** the manifest digest; the subtask's conclusion held but its value came from the wrong instrument, settled by a free control where the registry and this project's own ledger agree against the column. Standing rule recorded: manifest digests come from the registry, never from `package_property`. 🚫 **Task 5.4 cancelled** — the four discriminating dispatches were not made, so `record-prod-image.yml` ships with six guards whose **refusal path has never been observed live**; the local shell exercise is explicitly NOT substituted for it; §9's matrix stays `OPEN` with one row; **AC6 UNMET, owner Oleg**. | dev-story |
 | 2026-08-26 | 0.6 | **Correct-course applied; the build source changed and the story's own stale claims were corrected.** `origin/main` @ `f144ee9f` merged in (conflict in `sprint-status.yaml` resolved keeping BOTH sides whole, per this project's precedent). **OQ6 marked SUPERSEDED with both of Oleg's decisions kept verbatim** — the commit was never imported; what changed is what the story builds. §3's blocker note records the resolution and states plainly that the one-shot property, the `Enforce AC2` refusal and the `Date.now()` reason all **still stand and are now live rather than hypothetical**. 🔴 **Four places in this file and ONE IN SHIPPED CODE claimed the image "will fail Story 6.5's guard by construction" — all now false, all corrected**: §7(f) (inverted, with the old text quoted), §13 item 6 (struck through), Task 6.3's instruction, Task 5.2's description, and `record-prod-image.yml`'s own header clause (b), which was a claim about one particular image baked into a general-purpose file and is now written as the general truth it should always have been. Task 4.2 re-pointed at `a99ccd44c5a3…` with both produced tags named, and its "wait for confirmation" superseded by OQ item 9. Gate 4.1 evidence gathered: commit present/complete/reachable, `short12 = a99ccd44c5a3` matching the preprod tag; `vars.VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online` (prod fails closed without it); all 7 OpenBao secrets and all 4 org registry secrets present; **OpenBao UNSEALED** (`sealed:false`, Shamir 3/5); **no `prod-*` version exists in the registry at all**, so the one-shot is unfired. | dev-story |
