@@ -1520,6 +1520,19 @@ development_status:
   #     **This can block Story 6.4 outright.** Four possibilities are written out in the story's §3;
   #     Open Question 3, owner Oleg. Second-order: `deploy-stand.yml`'s `expect_unrouted_api` input
   #     is where 6.4 would have to declare it, and nobody should discover that mid-`with:`-block.
+  #     ✅ **ANSWERED by Oleg the same day, verbatim: «возьми из s2».** No ask goes to
+  #     `CRM/api-prionex`. The network is READ from s2 over the NFR7 administrative SSH path (Task
+  #     2.13 -- `docker network ls/inspect`, `docker ps`, `docker inspect` of the running frontend
+  #     and of Kong incl. its network ALIASES) and reproduced on s10 exactly, announced verbatim
+  #     before creation. Prohibition 3 narrowed from "never create" to "create only as an exact
+  #     reproduction of what s2 shows". §12's s2 clause widened from an API read to an API read PLUS
+  #     an SSH READ -- still no write, no compose verb, no job on `s2-prod-deploy` (NFR5 intact).
+  #     Free by-product (Task 2.14): the PROD API hostname gets MEASURED, which is what `#d43` §4
+  #     demands and forbids deriving. NOT settled by the answer, and not asked by 6.10: whether the
+  #     PROD backend eventually moves to s10 or stays on s2. If the reproduced network turns out
+  #     backend-less, AC7 requires that recorded as DELIBERATE with its reason (the browser never
+  #     uses the container's /api/ proxy -- `src/lib/api.ts` bakes an absolute VITE_API_BASE_URL),
+  #     not left to be filed as a bug.
   #   • THE LABEL->IMAGE BINDING. A label is bound to a job image AT REGISTRATION (Trap 5); a bare
   #     `--labels` silently binds the default image and reports success (Trap 1, Story 1.7).
   #     `deploy-stand.yml` states its requirements of that image in its own code -- docker CLI,
@@ -1528,7 +1541,10 @@ development_status:
   #     `deploy-base-dev-preprod:2026-08-07`, a host-local image built by the hub admin and NOT
   #     available to us. s10 needs its own, and whether it may come from a public registry depends on
   #     the host daemon's public egress -- which #d23 never measured (the CI runner's pulls go
-  #     through its dind, a different path). The story measures it before choosing.
+  #     through its dind, a different path). ✅ **ANSWERED by Oleg the same day: egress is
+  #     «доступен».** The job image may come from a public registry; Task 2.7 is demoted from a
+  #     decision gate to a confirmation that STOPS AND REPORTS on contradiction rather than
+  #     silently falling back to a locally-built image.
   #   • WHERE "REGISTERED" IS READ FROM. `.runner` on disk and `action_runner.agent_labels` in the DB
   #     have disagreed on this instance twice, on the same runner (4 labels vs 1). The DB is the
   #     scheduler's source (#d33) and an unmatched `runs-on` QUEUES SILENTLY. `deferred-work.md`

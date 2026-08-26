@@ -154,10 +154,43 @@ the four live possibilities, in the order this story must distinguish them, are:
    `src/lib/api.ts` bakes an ABSOLUTE `VITE_API_BASE_URL` and every call goes straight there.
 
 🔴 **Do not resolve (4) by reasoning.** It is exactly the shape of claim this project has been wrong
-about twice — and `epics.md:783`'s failure class (green build, dead image) is the cost. **Measure
-what is on s10, name the owner of what is not, and hand the gap to Oleg with the four options
-written out.** Whether the PROD stand needs a local backend network at all is an **architecture
-question this story surfaces and does not answer** — Open Question 3.
+about twice — and `epics.md:783`'s failure class (green build, dead image) is the cost.
+
+#### 🔴 ANSWERED by Oleg, 2026-08-26, verbatim: **«возьми из s2»**
+
+**Open Question 3 is closed as an escalation and reopened as a measurement.** The instruction is
+literal and it is the right one: **the answer is already on s2 — go and read it there.** This is
+Story 1.6's own lesson applied (*measure the neighbour's convention before writing the ask*), and it
+is the method `#d23` used for s10 itself.
+
+**What it changes, concretely:**
+
+- The ask to `CRM/api-prionex` is **not written**. Nothing is escalated to them by this story.
+- **s2 becomes a read target for this story** (it already was one for AC3's credential pattern). The
+  read is over the **NFR7 administrative SSH path only** — `root@175.110.122.17` — and it is a read
+  in the strict sense: `docker network ls`, `docker network inspect`, `docker ps`, `docker inspect`.
+  🔴 **No write of any kind, and no Forgejo job on `s2-prod-deploy` — NFR5 is untouched by this**
+  (§12 already permits exactly this shape of contact and nothing wider).
+- **Prohibition 3 becomes conditional, not lifted.** `docker network create` on s10 is permitted
+  **only** as an exact reproduction of what was measured on s2, announced verbatim first (§11), and
+  recorded as a deliberate act with its measurement attached. It stays forbidden as an invention, as
+  a "so the `.env` is complete" convenience, and **absolutely** as anything a deploy path does
+  automatically — `CD.yml:185`'s anti-pattern is still the anti-pattern.
+- **The silent-failure warning does not go away, it gets an owner.** If s10's reproduction is an
+  empty, backend-less network (§3 possibility 3), the stand will come up `healthy` and serve 200
+  while resolving nothing. **That is acceptable only if it is written down as deliberate**, with the
+  reason: the browser never traverses the container's own `/api/` proxy — `src/lib/api.ts` bakes an
+  absolute `VITE_API_BASE_URL` and every call goes straight there. **Write that sentence into the
+  `.env` header and into D45**, or a future reader will file it as a bug.
+- 🔴 **The same read answers a second, unrelated open item, and it is free.** `#d43` §4 says the PROD
+  API name **must be measured, not derived** — and s2 is where the running production's API name
+  actually lives. The read of s2's Kong and legacy stand yields it. **Record it; do not act on it.**
+  Choosing what `VITE_API_BASE_URL` will be for the s10 stand is Story 6.4's, not this story's.
+
+**What remains genuinely undecided after this** is smaller and belongs elsewhere: whether the PROD
+backend eventually moves to s10 or stays on s2 permanently is an architecture question owned by Oleg
+and `CRM/api-prionex`, not by this story. 6.10 measures, reproduces, and records — AC7 and Tasks
+2.13–2.14.
 
 🔴 **And the gap has a second, already-parameterized consequence that makes it cheap to name now.**
 `deploy-stand.yml` carries an input `expect_unrouted_api` (`:159`) — PRE-PROD must pass `false`
@@ -201,14 +234,25 @@ image directly in its own code, not in prose:
 host-local image on s1, built by the hub's administrator; this project has never seen its Dockerfile
 and does not own it. **s10 needs its own answer.**
 
-🔴 **And there is a second-order constraint that decides between the candidates: can the s10 host
+#### 🔴 ANSWERED by Oleg, 2026-08-26: public egress from s10 is **available** («доступен»)
+
+**The job image may come from a public registry.** That removes the hard branch below — but it does
+**not** remove the measurement, and Task 2.7 stays as written. The reason is not pedantry: `#d23`
+measured that the *registry* answers only over wg-private and that the host has no `/etc/hosts`
+entry, so *"the host has egress"* and *"the host daemon can pull image X"* are two different
+statements on this box. **Oleg's answer turns Task 2.7 from a decision gate into a confirmation:** if
+it fails, that is a live contradiction with a stated fact, and the story stops and reports it rather
+than quietly falling back.
+
+🔴 **The constraint itself, kept because it is what the measurement is for: can the s10 host
 daemon pull from a public registry at all?** `#d23` measured that the **registry** answers only over
 wg-private, and that the host has no `/etc/hosts` entry for it. It measured **nothing** about the
 host's public egress for other registries. The CI runner id 21 runs
 `ghcr.io/catthehacker/ubuntu:act-22.04`, but that image is pulled by its **dind sidecar**, not by the
 host daemon — different network path, and one does not prove the other. **Measure it. Do not infer
-it.** If public egress is closed, the job image must be built locally on s10 from a base that is
-already present, or pulled through the wg-private registry.
+it.** Per Oleg's answer the expected result is success; if it nonetheless fails, the job image must be
+built locally on s10 from a base that is already present, or pulled through the wg-private registry —
+**and the contradiction is reported, not absorbed.**
 
 **Recommendation, to be announced and then executed unless vetoed** (§11): choose the smallest image
 that provably carries the tool set, **prove the tool set with a single command before registering**,
@@ -217,6 +261,16 @@ and record the exact `label:docker://image` string in three places — the regis
 optional.**
 
 ### 5. 🔴 Where "registered" is actually read from — and the two sources disagree, live
+
+**In plain terms first, because this one reads as pedantry until it costs a day.** When a runner
+registers, its labels are written to **two independent places**: the **`.runner` file on the runner's
+own host** — what the runner thinks about itself — and the row
+**`action_runner.agent_labels` in Forgejo's database on the hub** — what the **scheduler** reads when
+it decides which runner takes a job. **The scheduler only ever consults the second one** (`#d33`).
+So if Story 6.4 writes `runs-on: deploy-prod` and `deploy-prod` is in `.runner` but missing from the
+DB, **the job does not fail. It queues, and it hangs there, silently, with no error.** Checking
+`.runner` and seeing the label present does not catch that case at all. That is why AC1 requires both
+reads.
 
 The epic's first Given requires *"the registration scope (instance/org) is verified to make it
 reachable from `CRM/fe-prionex`"*. Verifying that means reading the registration back. **There are
@@ -511,10 +565,15 @@ checkout is not this story's and must not be touched.**
 - **`.github/workflows/CD.yml` / `CI.yml`** — read as evidence only, never edited, never triggered.
 - **Story 6.3's file or any `story-6-3/*` branch**, and likewise `story-4-9/*` and `story-4-10/*`.
   §0's D43 collision is **reported**, not fixed.
-- 🔴 **s2, entirely.** Not written, not deployed to, and **no Forgejo job on the `s2-prod-deploy`
-  runner**. NFR5 as amended is absolute: *"Forgejo never deploys to s2 at all."* This story's only
-  contact with s2 is **reading its runner's registration through the API** (AC6) — no SSH to s2 is
-  required and none is taken.
+- 🔴 **s2 — read only, and the read is now wider than this file first said.** 🔴 **AMENDED 2026-08-26
+  by Oleg's «возьми из s2» (§3).** Permitted contact, and nothing beyond it: (a) reading its runner's
+  registration through the **API** (AC6), and (b) an **administrative SSH read over the NFR7 path**
+  (`root@175.110.122.17`) of its Docker state for AC7 and Task 2.13 — `docker network ls`,
+  `docker network inspect`, `docker ps`, `docker inspect`. **Forbidden, unchanged and absolute:** any
+  write, any `compose` verb, any restart, any `docker run`/`rm`/`rmi`, and **any Forgejo job on the
+  `s2-prod-deploy` runner**. NFR5 as amended stands word for word: *"Forgejo never deploys to s2 at
+  all."* Story 6.3 takes the same shape of read for its own AC1; this story's is the same path, a
+  different subject, and equally read-only.
 - 🔴 **The CI runner id 21 on s10, and its dind sidecar.** Confirmed untouched is an AC (AC1); making
   it true means not restarting it, not editing its compose file, not changing its labels, and not
   reusing its registration token.
@@ -554,8 +613,11 @@ exception for a comment is exactly the trade this project's §12 procedure exist
    failure available on that axis and this story does not convert it into a silent one.
 4. **It does not build a vhost, a certificate, a port-forward, or a DNS record**, and does not change
    the TTL. §7.
-5. **It does not probe PROD's Kong or measure `KONG_PORT`.** Stories 6.4/6.7 — and `#d43` §7 assigns
-   the CORS ask to them explicitly, now that an origin exists to put in it.
+5. **It does not probe PROD's Kong, does not measure `KONG_PORT`, and does not send the CORS ask.**
+   Stories 6.4/6.7 — `#d43` §7 assigns the CORS ask to them explicitly, now that an origin exists to
+   put in it. 🔴 **Task 2.13 reads s2's Kong container and Task 2.14 reads the API hostname — that is
+   a `docker inspect`, not a probe**, and neither concludes anything about routing, CORS or
+   `KONG_PORT`. Pasting what s2 runs is inside this story; deciding what s10 will point at is not.
 6. **It does not mint any `-prod` image or tag, and does not unblock Story 6.3.** 6.3 is paused on
    Oleg's own instruction and resumes on his signal, not on this story's completion.
 7. **It does not generalize `dev-reset.yml`'s sweep to PROD.** `deferred-work.md:3983-3995` names
@@ -574,8 +636,12 @@ exception for a comment is exactly the trade this project's §12 procedure exist
    action incompatibility. **Full `label:docker://image` specification, always.** §4.
 2. 🔴 **Never register before the job image's tool set is proven** by the command in Task 3. Trap 5:
    the binding is fixed at registration.
-3. 🔴 **Never run `docker network create` on s10.** §3, and `.env.stand.example:99-109`,
-   `CD.yml:185`'s anti-pattern by name.
+3. 🔴 **`docker network create` on s10 is permitted for exactly one thing and forbidden for
+   everything else.** 🔴 **AMENDED 2026-08-26 by Oleg's «возьми из s2» (§3).** Permitted: an **exact
+   reproduction of the network measured on s2**, announced verbatim first (§11), recorded in D45
+   with the s2 measurement attached. Forbidden, unchanged: inventing a network, creating one so the
+   `.env` looks complete, creating one before s2 has been read, and **any** creation performed by a
+   deploy path — `.env.stand.example:99-109` and `CD.yml:185`'s anti-pattern by name.
 4. 🔴 **Never bring the PROD stand up.** No `docker compose up`, no `up -d`, no `--force-recreate`.
    The first deploy is Story 6.4's, through the pipeline, and going around it would be exactly the
    hand-deploy this whole migration exists to abolish.
@@ -715,21 +781,34 @@ the instance, by comparison against that same inventory
 **And** runner id 21's registration scope — recorded as *"не проверено"* in `#d23` — is now read and
 recorded, which is the second half of what the epic's first Given asks for.
 
-### AC7 — 🔴 ADDED: `FRONTEND_NETWORK` is measured on s10 and its gap is escalated, not papered over
+### AC7 — 🔴 ADDED: `FRONTEND_NETWORK` is taken from s2 by measurement, and reproduced deliberately
+
+> **Given by Oleg's answer of 2026-08-26 — «возьми из s2» (§3).** The gap is not escalated to
+> `CRM/api-prionex`; it is closed by reading the host that already has the answer.
 
 **Given** §3: the compose file requires a **pre-existing external** network, the named PROD value is
 `crm-prod-network`, and the neighbour's PROD plan (`docs/forgejo-prod-s2-plan.md:69`) puts that
 network on **s2**
 **When** the stand directory is prepared
-**Then** `docker network ls` on s10 is pasted, and the presence or absence of `crm-prod-network` — and
-of any Kong container — is stated as a measurement
-**And** if it is absent, that is recorded as an **external dependency with a named owner
-(`CRM/api-prionex`)** and as a **blocker on Story 6.4**, with §3's four possibilities written out so
-Oleg chooses rather than the story guessing
-**And** if it is present, `docker network inspect` is pasted and the presence of a container answering
-to the alias `crm-kong-gateway` is measured — because an empty, backend-less network is the silent
-failure this axis is famous for (Story 4.1 Task 6.2)
-**And** `docker network create` is **not run**, under any circumstance (Prohibition 3).
+**Then** the PROD backend network is **read from s2** over the NFR7 administrative SSH path —
+`docker network ls`, `docker network inspect` on the network the running production frontend is
+actually attached to, `docker ps`, and `docker inspect` of the Kong container — and every output is
+pasted, including its **real name**, its driver and subnet, Kong's `container_name`, its **network
+aliases** (specifically whether `crm-kong-gateway` is among them), and its published-port mapping
+**And** the read is **read-only**: no write, no `compose` verb, no restart, and **no Forgejo job on
+`s2-prod-deploy`** — NFR5 is untouched (§12)
+**And** `docker network ls` on **s10** is pasted alongside it, so the two hosts are compared rather
+than one of them assumed
+**And** the network is reproduced on s10 **only** as an exact match of what was measured on s2 —
+same name, same driver, and the same subnet unless it collides on s10 — **announced verbatim before
+it is created** (§11) and recorded in D45 with the s2 measurement attached
+**And** 🔴 if the reproduction is (or must be) an **empty, backend-less** network, that is written
+down in the `.env` header and in D45 **as a deliberate state with its reason** — the browser never
+traverses the container's own `/api/` proxy, because `src/lib/api.ts` bakes an absolute
+`VITE_API_BASE_URL` — because otherwise the next reader files a `healthy`-and-serving-200 stand with
+an unresolvable `crm-kong-gateway` as a bug (Story 4.1 Task 6.2 is that exact shape)
+**And** `docker network create` is run **nowhere else and for no other reason** — not invented, not
+for convenience, and never by a deploy path (Prohibition 3 as amended).
 
 ### AC8 — 🔴 ADDED: the capacity consequences of a third stand on the smallest host are recorded
 
@@ -817,10 +896,11 @@ story that will prove it
       reply/`000` public, `401` over wg-private. **If either differs, stop and report before
       proceeding** — the network model changed under us.
 - [ ] **2.6** Route check: `ip route get 10.70.0.1`. Paste.
-- [ ] **2.7** 🔴 **Public egress test for the job image decision (§4).** Attempt a small public pull
-      on the **host** daemon (e.g. `docker pull alpine:3.20`) and paste the result, success or
-      failure. Remove it immediately either way. **This single measurement decides whether the job
-      image can come from a public registry or must be built locally.**
+- [ ] **2.7** **Confirm public egress on the host daemon (§4).** Oleg stated 2026-08-26 that egress
+      is **available**, so this is a confirmation, not a decision gate. Attempt a small public pull on
+      the **host** daemon (e.g. `docker pull alpine:3.20`), paste the result, and remove the image
+      immediately. 🔴 **If it fails, stop and report the contradiction** — do not silently fall back
+      to a locally-built image.
 - [ ] **2.8** Port census: `ss -lntp`. Paste in full. Note the UTC timestamp of the reading — AC4
       requires it.
 - [ ] **2.9** Credential baseline: `cat /root/.docker/config.json` (or its absence), and
@@ -836,6 +916,27 @@ story that will prove it
       crm.prod.crm-prionex.online @ns1.dns-parking.com` (and 8.8.8.8), the TTL, and
       `curl -sS -o /dev/null -w '%{http_code}' http(s)://crm.prod.crm-prionex.online/`. Paste with
       timestamps. Confirm or update `#d43` §8's rows m/n/p/q.
+- [ ] **2.13** 🔴 **Read the PROD backend network from s2 (AC7) — «возьми из s2», Oleg 2026-08-26.**
+      Over the NFR7 administrative SSH path only (`root@175.110.122.17`). 🔴 **READ ONLY: no write, no
+      `compose` verb, no restart, no `docker run`, and no Forgejo job on `s2-prod-deploy`** (§12,
+      Prohibition 6). Paste, in this order:
+      - `docker network ls`
+      - `docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}'`
+      - `docker inspect <the running production frontend container>` — specifically its
+        `NetworkSettings.Networks` keys, which name the network **actually in use** rather than the
+        one a plan document predicts
+      - `docker network inspect <that network>` — name, driver, subnet, attached containers
+      - `docker inspect <the Kong container>` — its `container_name`, and 🔴 its **network aliases**:
+        does `crm-kong-gateway` appear? (`preprod-infrastructure-requirement.md` §2.2 asked
+        `CRM/api-prionex` for exactly that alias; commit `517e6975` in their repo answered it for the
+        new stands — s2 is the **legacy** stand and may predate it.)
+      - Kong's published port mapping — the `KONG_PORT` question (`deferred-work.md:934-937`) is
+        **Story 6.4's to settle**; this task only pastes what s2 shows and does not conclude.
+- [ ] **2.14** 🔴 **Free by-product of 2.13, and `#d43` §4 asks for it by name: measure the PROD API
+      hostname, do not derive it.** From the same read — the running production frontend's baked
+      `VITE_API_BASE_URL` (readable from the served bundle or the image), and/or the public name s2's
+      Kong answers on. Paste it. **Record only.** Choosing what the s10 stand will use is Story 6.4's
+      (Prohibition 12 still forbids inventing `api.crm.prod.…`).
 - [ ] **2.12 PENDING (owner: coordinator)** — full runner inventory for AC6: `GET
       /api/v1/orgs/CRM/actions/runners` and `GET /api/v1/repos/CRM/fe-prionex/actions/runners`, plus
       runner id 21's **scope**. Paste. Also `select id, name, agent_labels, scope from action_runner`
@@ -931,11 +1032,20 @@ story that will prove it
 - [ ] **5.5** Put a header comment in the `.env` naming it for what it is — **a record and DR copy;
       nothing on the deploy path reads it** — and naming which values are blocked and by whom. Story
       5.2's Task 4.5, and the measured DEV drift behind it.
-- [ ] **5.6** 🔴 **`FRONTEND_NETWORK` (AC7).** From Task 2.3: if `crm-prod-network` exists on s10,
-      paste `docker network inspect` and check for a container answering the alias
-      `crm-kong-gateway`; write the real name into the `.env`. If it does **not** exist, write the
-      blocked non-value, and escalate per AC7 with §3's four possibilities. **`docker network create`
-      is never run** (Prohibition 3).
+- [ ] **5.6** 🔴 **`FRONTEND_NETWORK` (AC7) — from s2's measurement, not from a plan document.**
+      Inputs: Task 2.13 (what s2 actually runs) and Task 2.3 (what s10 already has).
+      - If the network already exists on s10 with a Kong answering to `crm-kong-gateway`: paste
+        `docker network inspect`, write the real name into the `.env`, done.
+      - Otherwise: **announce the exact `docker network create` command verbatim** with 2.13's
+        measurement attached (§11), wait, then create it as an exact reproduction — same name, same
+        driver, same subnet unless it collides on s10 — and paste `docker network ls` and
+        `docker network inspect` afterwards.
+      - 🔴 If the result is a **backend-less** network, write that into the `.env` header and D45 **as
+        a deliberate state with its reason** (§3): the browser never uses the container's `/api/`
+        proxy; `src/lib/api.ts` bakes an absolute `VITE_API_BASE_URL`. Do **not** leave it to be
+        rediscovered as a bug.
+      - 🔴 Never invent a name, never create before 2.13 has been read, never let a deploy path create
+        anything (Prohibition 3 as amended).
 - [ ] **5.7** Verify the directory is usable as `stand_dir` by a **sibling container** the way
       `deploy-stand.yml` will use it — `docker run --rm -v /root/crm-prionex/fe-prionex-prod:/lockdir
       <job image> sh -c 'touch /lockdir/.probe && ls -l /lockdir && rm /lockdir/.probe'` — and paste
@@ -1023,7 +1133,9 @@ workflow file is touched.**
 | Deploy callee | `.forgejo/workflows/deploy-stand.yml`, `workflow_call`, `runs-on: ${{ inputs.runner_label }}` (R1, live) | Story 4.8 |
 | Deploy auth | workspace-scoped `DOCKER_CONFIG` from org secrets `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO` — **not the host file** | `deploy-stand.yml:66-70` |
 | Repo clone in the job | `github.token`, `GIT_CONFIG_COUNT` env form (never in `argv`) | `deploy-stand.yml:611-620` |
-| PROD network (named) | `crm-prod-network` — 🔴 **planned on s2 by `CRM/api-prionex`**, `docs/forgejo-prod-s2-plan.md:69` | `preprod-infrastructure-requirement.md:226` |
+| PROD network (named) | `crm-prod-network` — 🔴 **planned on s2 by `CRM/api-prionex`**, `docs/forgejo-prod-s2-plan.md:69`. 🔴 **The real name is MEASURED on s2 by Task 2.13, not taken from this plan document** (Oleg, 2026-08-26: «возьми из s2») | `preprod-infrastructure-requirement.md:226` |
+| s10 host public egress | **available** — stated by Oleg 2026-08-26; confirmed, not assumed, by Task 2.7 | Oleg |
+| s2, legacy PROD | `root@175.110.122.17` — 🔴 **read-only target of Tasks 2.13/2.14** over the NFR7 admin SSH path. Never written, never deployed to | §12 |
 | `KONG_PORT` on PROD | `8330` — published host port or in-network listener, **still OPEN**, owner Story 6.4 | `deferred-work.md:934-937` |
 
 ### 3. Anti-patterns for this story
@@ -1060,8 +1172,11 @@ reversible; that is why §11's confirmation exception is narrow.
 3. **Registration scope: repo, not org** (recommendation; Open Question 4).
 4. **`FRONTEND_PORT` value and bind form** — value from the census, form from Task 2.10 (Open
    Question 5 if that task is `PENDING`).
-5. **`DOCKER_IMAGE` and possibly `FRONTEND_NETWORK` written as explicit blocked non-values** naming
-   their owners, rather than borrowed values or omissions.
+5. **`DOCKER_IMAGE` written as an explicit blocked non-value** naming Story 6.3 as its owner, rather
+   than a borrowed `-dev`/`-preprod` value or an omission.
+5b. **`FRONTEND_NETWORK` reproduced on s10 from Task 2.13's s2 measurement** (Oleg's «возьми из s2»),
+   with the exact `docker network create` announced verbatim before it runs, and a backend-less
+   result recorded as deliberate rather than left to be filed as a bug.
 6. **The `dev-reset.yml` sweep generalization is DECLINED** with its reason recorded (§13(7)).
 7. **`deploy-stand.yml:216`'s skeleton comment is left wrong**, deliberately (§12).
 8. **D45** as this story's decision number, re-verified at execution time.
@@ -1072,7 +1187,8 @@ reversible; that is why §11's confirmation exception is narrow.
 - **No dispatch.** §10 — a non-zero dispatch count is a defect here, not an overrun.
 - **No durability/crash test of the new runner** unless it is run Story 1.9's way. §9(4).
 - **No vhost, certificate, forward, DNS or TTL change.** §7, AC5.
-- **No Kong probe, no `KONG_PORT` measurement.** §13(5).
+- **No Kong probe, no `KONG_PORT` measurement, no CORS ask.** §13(5). Reading s2's Kong container
+  with `docker inspect` (Task 2.13) is not a probe and concludes nothing.
 - **No contact with s2 beyond an API read of its runner.** §12.
 
 ### 7. Things pending on Oleg — do not depend on them silently
@@ -1080,8 +1196,11 @@ reversible; that is why §11's confirmation exception is narrow.
 - **Open Question 1** — whether `docs/prod-temporary-hostname` merges on its own first (§0).
 - **Open Question 2** — Story 6.3's D43 collision (§0). 6.3 is paused; it will need the answer on
   resume.
-- **Open Question 3** — the `FRONTEND_NETWORK` / PROD-backend architecture gap (§3). **This is the
-  one that can block Story 6.4 outright.**
+- ✅ **Open Question 3 — ANSWERED 2026-08-26, «возьми из s2».** No longer a blocker and no longer an
+  escalation: it is Tasks 2.13/2.14 and AC7. What genuinely stays with Oleg is the smaller,
+  longer-range question the answer does not settle — whether the PROD backend eventually moves to s10
+  or stays on s2 permanently. Not this story's, and 6.10 does not wait on it.
+- ✅ **s10 public egress — ANSWERED 2026-08-26, «доступен».** Task 2.7 confirms rather than decides.
 - **Open Question 4** — registration scope, repo vs org (Task 3.3).
 - **Open Question 5** — `FRONTEND_PORT` bind form, if Task 2.10 could not be measured (Task 5.2).
 - **Story 6.3's resume signal** — not this story's to give, and this story does not wait on it.
@@ -1204,12 +1323,19 @@ reversible; that is why §11's confirmation exception is narrow.
    2026-08-26 03:22Z) declares it will append **D43**; Oleg minted D43 himself at 08:21Z the same day.
    6.3 is paused and does not know. **Owner: Oleg** — this story reports it and files it, and touches
    nothing of 6.3's.
-3. 🔴 **`FRONTEND_NETWORK` — the PROD backend's location (§3).** `crm-prod-network` is created by the
-   `CRM/api-prionex` stack, and their PROD plan is a **s2** plan. The frontend's PROD stand is on s10.
-   Four possibilities are written out in §3. **This can block Story 6.4 outright.** Should the ask go
-   to `CRM/api-prionex` now (as `docs/preprod-infrastructure-requirement.md` did for PRE-PROD), or is
-   the intended architecture (4) — PROD backend stays where it is, the browser reaches it by its
-   public API name? **Owner: Oleg.** Do not answer this by reasoning inside the story.
+3. ✅ **`FRONTEND_NETWORK` — ANSWERED 2026-08-26 by Oleg, verbatim: «возьми из s2».** No ask goes to
+   `CRM/api-prionex`; the network is read from s2 over the NFR7 admin SSH path and reproduced on s10
+   exactly (Tasks 2.13/2.14, AC7, Prohibition 3 as amended). **Not a blocker on Story 6.4 any more.**
+   🔴 **What the answer deliberately does not settle, and nobody should read into it:** whether the
+   PROD backend eventually moves to s10 or stays on s2 permanently. That stays with Oleg and
+   `CRM/api-prionex`, and 6.10 neither asks it nor waits on it.
+   ⚠️ **One thing for a reviewer to sanity-check:** the reading taken here is *"read s2 and reproduce
+   what it actually runs"*. The other available reading — *"the backend stays on s2 and the s10
+   frontend reaches it cross-host by its public API name"* — is **not contradicted** by this plan;
+   both converge on Task 2.13 being the first action, and 2.14 records the API hostname either way.
+   If the second reading is what was meant, the only change is that the reproduced network on s10 is
+   expected to be backend-less — which AC7's last-but-one clause already requires to be written down
+   as deliberate. **One line to correct, if it needs correcting.**
 4. **Registration scope: repo or org?** (Task 3.3). Recommendation: **repo (`CRM/fe-prionex`)** — it
    confines root-equivalent jobs on the production VM to this repository, which is `#d23`'s own
    blast-radius argument. Precedent points the other way (`s1-deploy-dev-preprod` and `s2-prod-deploy`
@@ -1230,3 +1356,4 @@ reversible; that is why §11's confirmation exception is narrow.
 | Date | Change | By |
 |---|---|---|
 | 2026-08-26 | Story contexted from `docs/prod-temporary-hostname @ 1c54f32d` (§0). Five epic Givens carried as AC1–AC5/AC9; AC6–AC8 and AC10 added from §3–§8's findings. | create-story |
+| 2026-08-26 | 🔴 **Oleg's answers applied, same day, before any dev work.** (1) `FRONTEND_NETWORK`: **«возьми из s2»** — Open Question 3 closes as an escalation and reopens as a measurement; AC7 rewritten around a read of s2, Tasks **2.13**/**2.14** added, Prohibition 3 narrowed from "never create" to "create only as an exact reproduction of what s2 shows, announced first", §12's s2 clause widened from an API read to an API read **plus** an NFR7 administrative SSH **read** (still no write, still no job on `s2-prod-deploy`). (2) s10 public egress: **«доступен»** — §4's hard branch removed, Task 2.7 demoted from decision gate to confirmation that reports a contradiction rather than falling back. (3) The DB-vs-disk label finding (§5) was queried and explained; no change to the story was required — AC1 already closes on both reads. | create-story |
