@@ -982,29 +982,78 @@ against a query, or closed with the literal word **OPEN**.
       ⚠️ `OPENBAO_PROD_SECRET_ID` expires **2027-06-09** and nothing rotates it (Story 7.6).
 
 ### Task 4 — 🔴 THE ONE-SHOT BUILD (AC: 2, 7) — **1 dispatch, and it cannot be taken back**
-- [ ] 4.1 🔴 **GATE.** Confirm in writing: Task 2 complete and evidenced; Task 2.4 green; Open Questions
-      1–5 answered by Oleg; the no-touch window clear. **Any one missing → do not dispatch.**
-- [ ] 4.2 **`PENDING (owner: coordinator)`** — send the exact dispatch verbatim before making it:
-      workflow `build.yml`, `ref=a99ccd44c5a39345fa65eb74e87343b187e129e9`, `environment=prod`.
-      🔴 **Re-pointed 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`): the ref is the last validated PRE-PROD
-      candidate, not the running production commit.** Tags it will produce:
-      `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` (sanitized ref, mutable, **expires at 14 days**,
-      compiled as NOT protected in Task 3.4) pushed by the build step, then `sha-a99ccd44c5a3-prod`
-      (**PERMANENT**) attached by `Enforce AC2`.
-      ~~**Wait for confirmation** (AC7 — not "announce and proceed").~~ **Superseded by Oleg's Open
-      Questions item 9, *«Запускай по готовности»***: send verbatim, then dispatch once the 4.1 gate is
-      green — no separate live confirmation. The price does not vanish, it raises the bar on 4.1.
-- [ ] 4.3 **`PENDING (owner: coordinator)`** — dispatch. Record the run id.
-- [ ] 4.4 Read the run's outcome from the API and from the registry, **never from the job log alone**
-      (`log_in_storage='f'` on seven consecutive checks; `$GITHUB_STEP_SUMMARY` persistence **UNPROVEN**).
-      Record: the OpenBao step's verdict, the phone-URL step's verdict, the resolved `short_sha`, the
-      `predigest` branch taken (expected: absent → attach), the build digest, and the attach step's
-      **read-back** line.
-- [ ] 4.5 Read both produced tags back from the registry independently and paste the digests.
-- [ ] 4.6 🔴 **If the run fails: STOP and report. Do not re-dispatch.** Classify first — a failure
-      *before* the build step costs nothing and may be re-dispatched once the cause is fixed; a failure at
-      or after the attach means §3 is now live and a second dispatch of the same commit will be refused by
-      the AC2 guard. **That classification is a decision for Oleg, not for the dev agent.**
+- [x] 4.1 ✅ **GATE CLOSED IN WRITING, 2026-08-26, every clause evidenced before the dispatch was sent.**
+      **Task 2 complete and re-evidenced against the NEW source commit** (correct-course `#d46`):
+      `git cat-file -e a99ccd44c5a39345fa65eb74e87343b187e129e9^{commit}` → present as a complete
+      commit object; `git log -1` → `2026-08-25 13:12:39 +0200`, Story 5.5 closeout merge (#85);
+      reachable from `origin/main`; `git rev-parse --short=12` → **`a99ccd44c5a3`, byte-identical to
+      the existing `preprod-a99ccd44c5a3` marker**. **Task 2.4 green** — the gate that halted session 1
+      passes for this commit. **Open Questions 1-5, 7, 8 answered** (session 1); **OQ6 superseded**;
+      **OQ item 9 authorises dispatch-on-readiness**. **The amended ACs landed first** — `origin/main`
+      @ `f144ee9f`, merged into this branch before any evidence was gathered, so nothing here is
+      recorded against a superseded criterion.
+      **Pre-push preconditions, all measured, none assumed:**
+      | Check | Result |
+      |---|---|
+      | `vars.VITE_OPERATOR_PHONE_URL_PROD` | `https://phone.crm-prionex.online` — https, dotted host; `build.yml` fails a prod build closed without it |
+      | OpenBao seal status | **`"sealed":false`**, Shamir `t:3 n:5`, v2.6.1 — the single most likely pre-push failure, cleared |
+      | OpenBao AppRole secrets | all 7 present on the repo |
+      | Registry credentials | all 4 present at **org** level (`REGISTRY_USER`, `_RO`, `REGISTRY_TOKEN_RW`, `_RO`) |
+      | Any pre-existing `prod` tag | **NONE** — the registry held zero `prod-*` versions, so the one-shot was genuinely unfired |
+- [x] 4.2 ✅ **Sent verbatim before it was made, then dispatched without waiting** — OQ item 9's
+      *«Запускай по готовности»*, which supersedes this subtask's original "wait for confirmation":
+      ```
+      POST /api/v1/repos/CRM/fe-prionex/actions/workflows/build.yml/dispatches
+      {"ref":"main","inputs":{"ref":"a99ccd44c5a39345fa65eb74e87343b187e129e9","environment":"prod"}}
+      ```
+      🔴 **The two `ref`s are different things and this is the trap `build.yml`'s own comments warn
+      about:** the outer `ref` is the branch the WORKFLOW FILE is read from (`main`); the inner
+      `inputs.ref` is what gets CHECKED OUT AND BUILT. Predicted tags, both stated before the run:
+      `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` (sanitized ref, mutable, **not** in
+      `keep_pattern`, expires at 14 days — compiled in Task 3.4) and `sha-a99ccd44c5a3-prod`
+      (**PERMANENT**).
+- [x] 4.3 ✅ **Dispatched. `HTTP 204`. RUN 598**, event `workflow_dispatch`.
+      🔴 `commit_sha` on the run row reads `f144ee9f…` — **that is the DISPATCH ref (`main`), not what
+      was built.** Recorded because a later ledger read that attributes by `commit_sha` would
+      mis-attribute this run; the built commit is only visible in `inputs.ref` and in the image's own
+      labels. Started `11:02:16Z`, stopped `11:08:40Z` — **384 s**.
+- [x] 4.4 ✅ **Outcome read from the run's STEP TABLE and from the registry, never from a job log.**
+      All **14** steps status `1` (success), in order:
+      ```
+       0 Checkout code                                   ✅
+       1 Install docker CLI                              ✅
+       2 Verify docker CLI reaches the nested daemon     ✅
+       3 Create the build network                        ✅
+       4 Log in to git.crm-prionex.com                   ✅
+       5 Set up Docker Buildx                            ✅
+       6 Assert RUN-step netns isolation                 ✅
+       7 Read the environment's URLs from OpenBao        ✅  ← FIRST EVER read of secret/fe/prod/app
+       8 Select the operator phone URL                   ✅  ← the prod-only fail-closed arm
+       9 Compute tags from the checked-out commit        ✅
+      10 Query the pre-existing digest (3.6 AC2)         ✅  ← absent → attach branch taken
+      11 Build and push image                            ✅  ← the point of no return
+      12 Enforce AC2 — attach or refuse                  ✅
+      13 Assert every tag resolves to this run's digest  ✅
+      ```
+      🔴 **Step 7 is a project first.** `secret/fe/prod/app` had *"never been read by anything"*
+      (`deferred-work.md`), and the `fe-prod` AppRole had never logged in outside Story 1.12's own
+      probe. Both are now exercised **by execution**, which is a stronger claim than any document
+      about that path — and it was obtained without violating Prohibition 6, because it is the build's
+      own read, not a substitute pre-check constructed for the gate.
+- [x] 4.5 ✅ **Both tags read back from the registry independently of the run** (`package_version`
+      joined to `package_property`, not the run's own output):
+      | Tag | Created | Digest |
+      |---|---|---|
+      | `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` | `11:07:59Z` | `sha256:334daaa5462d69f007662851e3852fde539932c364e6285a5b392067f2e8ee6d` |
+      | `sha-a99ccd44c5a3-prod` | `11:08:10Z` | `sha256:334daaa5462d69f007662851e3852fde539932c364e6285a5b392067f2e8ee6d` |
+
+      **Identical digests, 11 seconds apart** — exactly the shape D24 specifies: the build step pushes
+      only the mutable branch tag, then `Enforce AC2` attaches the permanent name to **the same
+      manifest** by registry-side retag, and step 13 asserts it. **A single manifest, not an OCI
+      index** — `provenance: false` and the absence of a wrapping index both hold.
+      **This digest is the only input Task 5.3 may use.**
+- [x] 4.6 ✅ **Not triggered — the run did not fail.** The classification rule stands unused and is
+      left in place for whoever needs it next. **AC2 is met.**
 
 ### Task 5 — Ship `record-prod-image.yml` and its live outcome matrix (AC: 3, 6) — **~5-6 dispatches**
 - [x] 5.1 **Done — `.forgejo/workflows/record-prod-image.yml` shipped.** Dispatch-only; inputs
