@@ -4,7 +4,7 @@
 baseline_commit: 48bd6a78ade57ee06be1a25639e87691b807f999
 ---
 
-Status: in-progress
+Status: review
 
 <!-- Epic 6, FR15/FR17/FR24. Contexted 2026-08-26 off origin/main @ 308ea152.
      Prerequisite Story 6.10 is `done`; Story 6.3 is `done` and left the image this story deploys.
@@ -657,53 +657,129 @@ erase why the runner exists.
       🔴 `docker exec fe-prionex-prod getent hosts crm-kong-gateway` — **empty is a STOP**, and *"it
       started" is not evidence* (Story 4.1 Task 6.2).
 
-### Task 5 — The release path (AC: 2, 6, 7) — **1 dispatch, ceiling 3**
-- [»] 5.0 ✅ **GATE CLOSED AT EXECUTION, 2026-08-26 — and the re-check it demanded changed the answer.**
-      Listing every `preprod-*` version (not the `preprod-current` pointer) found **two validated
-      candidates unbuilt at prod**: `00ef3be4743d` (#1) and `28f7fd36b75e` (#2), both `pass` in
-      `docs/preprod-candidates.md`. **Chosen: `28f7fd36b75e`** — the newer of the two, and `main`'s own
-      head when it was minted. It will produce **`sha-28f7fd36b75e-prod`**, permanent.
-      Confirmed no `sha-28f7fd36b75e-prod` exists, so `Enforce AC2` has nothing to refuse.
-      🔴 **It is a proof of the release path AND a legitimate candidate build** — the distinction that
-      matters is that **no release was approved**, so it gets no `docs/prod-releases.md` row and
-      `prod-current` is not moved to it.
-      ⚠️ **Ordering consequence, decided here rather than discovered:** the release path **deploys**, so
-      after Task 5 the s10 stand runs `28f7fd36b75e`, not the cutover image. **Task 4's rollback runs
-      FIRST** (it already did), and the stand is **returned to `sha-a99ccd44c5a3-prod` at the end of
-      Task 6** so Story 6.9 finds the contour where it expects it.
-- [ ] 5.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: false` against Task 5.0's commit.
-- [ ] 5.2 **`PENDING (owner: coordinator)`** — paste the full job list: **both** jobs executed, in order.
-- [ ] 5.3 **AC7:** read the tag `build.yml` published **from the registry**, and the tag this caller
-      passed, and show they are the same string. 🔴 Read manifest digests from the **registry**, never
-      from `package_property.container.digest` — Story 6.3 got that wrong and corrected it.
-- [ ] 5.4 Confirm the run states **rebuild, not promotion** (AC2).
-- [ ] 5.5 🔴 **Do NOT dispatch `record-prod-image.yml` against the proof image**, and do **not** move
-      `prod-current`. It names the cutover image and must keep naming it. Record the proof tag in the
-      decision record with its commit and the sentence *"this is a proof of the release path, not a
-      release, and not a rollback target"*. **No row in `docs/prod-releases.md`** — no release was
-      approved.
+### Task 5 — The release path (AC: 2, 6, 7) — 🔀 **BUILD LEG PROVEN, DEPLOY LEG DEFERRED TO 6.9**
 
-### Task 6 — The discriminating runs (AC: 9) — **1 dispatch, ceiling 3**
-- [ ] 6.1 **`PENDING (owner: coordinator)`** — dispatch `image_tag: sha-a99ccd44c5a3-preprod` and show
-      the callee's tag↔environment guard **refusing**. **Free — that tag already exists.**
-- [ ] 6.2 Decide and record whether the lock-contention row is earned or labelled unearned **with its
-      reason** (§9). **Do not leave it blank.**
-- [ ] 6.3 Fill §9's matrix with real run ids. Label every unearnable row.
+- [»] 5.0 ✅ Gate closed three times, and each attempt burned its candidate — see 5.1.
+- [»] 5.1 🔀 **THREE ATTEMPTS. The build leg is proven twice; the deploy leg of the release path was
+      never green, and Oleg's decision (option (в)) is to stop rather than spend a fourth permanent
+      tag.**
+
+      | Run | Build | Deploy | What it found |
+      |---|---|---|---|
+      | **637** `28f7fd36b75e` | ✅ | ❌ | The callee received the **dispatch's** tag, not `with:`. My first explanation — `actions/checkout` destroying `$GITHUB_OUTPUT` — was **incomplete**: the ordering fix landed and the symptom survived |
+      | **639** `00ef3be4743d` | ❌ | — | 🔴 **`build.yml` cannot rebuild a commit older than 2026-08-19** — see below. **No tag was minted**: it failed before the push |
+      | **640** `308ea1520c59` | ✅ | ❌ | Same input shadowing, now isolated: `deploy-stand.yml` reads its input the ordinary way, so the **callee's `inputs` were populated from the DISPATCH, not from `with:`** |
+
+      🔴 **`build.yml` HAS AN UNDOCUMENTED FLOOR ON COMMIT AGE, and this is the finding worth most.**
+      Its netns-isolation step builds `Dockerfile.netns-isolation-check`, added by `4534b6c6` on
+      **2026-08-19**. Any older tree fails with `no such file or directory`. Measured:
+      ```
+      00ef3be4743d (2026-08-17)  NO   <- validated candidate #1, physically unbuildable
+      28f7fd36b75e (2026-08-24)  yes
+      a99ccd44c5a3 (2026-08-25)  yes
+      ```
+      **The release path can only rebuild commits from 2026-08-19 onward.** Rollback is unaffected —
+      it builds nothing — but any future rebuild of an older release is impossible, and nothing
+      anywhere said so.
+
+      🔴 **THE INPUT-SHADOWING FINDING, and why this project could not have found it before.** Both
+      shipped callers pass the dispatch input straight through under the **same name**, so caller
+      value and dispatch value are the **same string** and the substitution is invisible and
+      harmless. **This is the first caller whose `with:` value differs from its own dispatch input**,
+      and that difference is the only reason the behaviour is observable at all. Fixed by naming the
+      dispatch input **`tag`**, leaving nothing in the dispatch to shadow the callee's `image_tag`.
+      ⚠️ **Epic AC1 says "a required `image_tag` input".** It is required and it is the image tag;
+      only the NAME differs, because the epic's name cannot work here. **A deviation with its reason,
+      not a silent change.**
+
+- [»] 5.2 🔀 **Both callee jobs executed in runs 637 and 640** — `derive → build → deploy`, in order,
+      with `Build and Push` **succeeding**. The deploy leg failed both times for the shadowing reason.
+      **AC6's release half is therefore PARTIALLY earned and is recorded as such.**
+- [»] 5.3 ✅ **AC7 earned by construction of the outcome, not by a green run.** `derive` computed
+      `sha-28f7fd36b75e-prod` / `sha-308ea1520c59-prod` independently, and `build.yml` — which
+      publishes no outputs — computed its own from `git rev-parse HEAD`. **Both tags exist in the
+      registry under exactly the names `derive` predicted**, which is the agreement AC7 asks for:
+      ```
+      sha-28f7fd36b75e-prod          <- run 637
+      sha-308ea1520c59-prod          <- run 640
+      28f7fd36b75ee773…d915b-prod    <- the sanitized 40-hex side-effect tag, 14 days, unprotected
+      308ea1520c594d13…d0a26f-prod   <- same
+      ```
+      Also proven here: the **full-SHA expansion works** — `build.yml` received the 40-hex form, which
+      is why the sanitized side-effect tags carry it.
+- [x] 5.4 ✅ **The rebuild-not-promotion statement is emitted** by `derive`'s own step to stdout and
+      `$GITHUB_STEP_SUMMARY`, quoting `#d2`: validation is evidence about the source, not about the
+      bytes. **AC2's statement half is met; its end-to-end half is not.**
+- [x] 5.5 ✅ **`record-prod-image.yml` was NOT dispatched for any proof image, and `prod-current` was
+      NOT moved.** It still names the cutover image. **No row was added to `docs/prod-releases.md`** —
+      no release was approved.
+
+🔀 **DECISION, Oleg 2026-08-26, option (в): stop here.** A green end-to-end release run costs **one
+permanent tag, always** — the release path builds, and building mints the tag. Three are already
+spent (one by Story 6.3, two by this story's failures). **Waiting or forcing a fourth was declined;
+the release path's first end-to-end run will be Story 6.9's real cutover.**
+🔴 **The cost, named rather than implied:** Epic 6's own preamble calls that arrangement a **one-way
+door**. Story 6.9 will exercise the release deploy leg for the first time **on the real cutover**.
+**Story 6.9 owns this.**
+
+### Task 6 — The discriminating runs (AC: 9) — **2 dispatches, both free**
+
+- [»] 6.1 ✅ **Two live refusals, both in `derive`, both BEFORE any callee ran** — zero builds, zero
+      deploys, zero permanent tags:
+      ```
+      run 643  tag=sha-a99ccd44c5a39345fa65eb74e87343b187e129e9-prod
+               FAIL: the hex part is 'a99ccd…129e9' (40 characters), not exactly 12
+               ^ #d18 §3's silent-divergence failure, MADE TO FIRE
+      run 644  tag=prod-current
+               FAIL: image_tag='prod-current' is a RECORD, not a deployable reference
+      ```
+- [»] 6.2 ⚠️ **The lock-contention row is NOT earned, and the reason is that it could not have
+      discriminated.** The s10 runner has `capacity: 1`, so two dispatches serialize **at the runner**
+      before the lock is ever consulted. A naive contention test would have proven the runner, not
+      Story 4.4's lock. **Labelled unearned with its reason rather than run for a green tick.**
+- [»] 6.3 ✅ **§9's matrix, with real run ids:**
+
+      | Guard / branch | Pass | Discriminating | State |
+      |---|---|---|---|
+      | `rollback: true`, pull, no build | **634, 642** | — | ✅ **earned twice** |
+      | build skipped, deploy still runs | **629, 634, 642** | 629 showed it under a *failing* callee | ✅ **earned** — §2's trap is clear |
+      | `rollback: false`, rebuild then deploy | build leg **637, 640** | — | 🔀 **partial** — deploy leg deferred to 6.9 |
+      | G3 exactly-12-hex | 634, 642 | **643** | ✅ **earned live** |
+      | record-tag refusal (`prod-current`) | — | **644** | ✅ **earned live** |
+      | G2 `-preprod` on rollback | — | — | ⚠️ **force-tested locally only** (8/8), never dispatched |
+      | commit-existence check | 637, 640 | — | ⚠️ **pass side only**; no dispatch named a missing commit |
+      | lock contention | 634, 642 acquire it | — | ❌ **not earned** — `capacity: 1` makes it undiscriminating (6.2) |
 
 ### Task 7 — Record and discharge (AC: 8, 10) — **0 runs**
-- [ ] 7.1 Write the decision record: the two-callee shape and its `if:`/`needs:` resolution; the
-      double tag derivation; the `secrets: inherit` decision with its cost; and §4's constraint on the
-      release path.
-- [ ] 7.2 **AC10** — in the same edit, add the missing `<a id="d33"></a>` and `<a id="d37"></a>`
-      anchors; re-verify `vars.VITE_OPERATOR_PHONE_URL_PROD`; discharge or re-own the M7 bundle **by
-      name**.
+- [x] 7.1 ✅ **`D47` written** — the three-job shape and its `if:`/`needs:` resolution, the double tag
+      derivation, `secrets: inherit` with its cost, the commit-age floor, the input shadowing, and the
+      three permanent proof tags with what they are and are not.
+- [x] 7.2 ✅ **AC10's three inherited items discharged or re-owned by name** — see `deferred-work.md`.
 
 ### Task 8 — Close (AC: all) — **1 push + PR + merge rows**
-- [ ] 8.1 Grade every AC against pasted evidence, not intention.
-- [ ] 8.2 **`PENDING (owner: coordinator)`** — open the PR; **Oleg merges**.
-- [ ] 8.3 **`PENDING (owner: coordinator)`** — close the ledger **by query**, attributing by
-      `commit_sha`, and 🔴 **name dispatch runs separately** — their `commit_sha` is the dispatch ref,
-      not what they built.
+- [x] 8.1 ✅ **Graded below.**
+- [»] 8.2 **`PENDING (owner: coordinator)`** — PR opened; **Oleg merges**.
+- [»] 8.3 **`PENDING (owner: coordinator)`** — ledger closed by query at closeout. 🔴 **Dispatch runs
+      carry the DISPATCH REF as `commit_sha`, not what they built** — name them separately.
+
+---
+
+## AC grading — against pasted evidence, not intention
+
+| AC | Verdict | Evidence |
+|---|---|---|
+| **AC1** *(epic)* | 🔀 **MET with a named deviation** | `workflow_dispatch` only; required tag input; optional `rollback`; own literal concurrency group. **The input is named `tag`, not `image_tag`** — forced, see Task 5.1 |
+| **AC2** *(epic)* | 🔀 **PARTIAL** | Rebuild proven twice (637, 640) and the rebuild-not-promotion statement is emitted. **The end-to-end release path was never green**; deferred to 6.9 by Oleg's option (в) |
+| **AC3** *(epic)* | ✅ **MET** | Runs 634 and 642: pull, no build job, deploy executed, stand healthy, backend resolves |
+| **AC4** *(epic)* | ✅ **MET** | `runner_label: fe-prionex-prod-deploy`; **no SSH credential anywhere** |
+| **AC5** *(epic)* | ✅ **MET** | `deploy-stand.yml` consumed unmodified; Story 4.4's lock acquired on the production stand — pasted from run 634's own log. Slack clause deferred and non-gating |
+| **AC6** | 🔀 **PARTIAL** | Skip-and-still-run proven three times. Both-executed proven in 637/640, but the release run was never green end to end |
+| **AC7** | ✅ **MET** | Both derived tags exist in the registry under exactly the names `derive` predicted |
+| **AC8** | ✅ **MET** | `secrets: inherit` on both callee jobs, with the parser constraint and the `REGISTRY_TOKEN_RW` exposure named in the header as accepted |
+| **AC9** | 🔀 **PARTIAL** | Matrix carries real run ids; **three rows are labelled unearned with their reasons** rather than left blank |
+| **AC10** | ✅ **MET** | All three inherited items discharged or re-owned by name |
+
+**5 met, 4 partial, 1 met-with-deviation. Every partial names what is missing and who owns it.**
 
 ---
 

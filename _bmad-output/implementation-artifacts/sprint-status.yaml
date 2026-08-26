@@ -1780,7 +1780,39 @@ development_status:
   # FROZEN: deploy-stand.yml and build.yml above all -- editing either to make this story easier is the
   # worst available move. record-prod-image.yml is 6.6's, with 26 open findings. Slack is 4.5's and
   # explicitly does NOT gate. Floor 8 / ceiling 20 runs, OPEN.
-  6-4-deploy-to-production-by-dispatch: in-progress
+  # ✅ -> `review` 2026-08-26. deploy-prod.yml SHIPPED. 5 ACs met, 4 partial, 1 met-with-deviation.
+  # 🎉 THE PROD STAND IS LIVE ON s10, put there by the Forgejo pipeline for the first time: runs 634
+  # and 642, fe-prionex-prod healthy on 0.0.0.0:8080, revision a99ccd44c5a3...129e9, digest
+  # f30c7941...a3f3, on crm-prod-network, and `getent hosts crm-kong-gateway` ANSWERS 172.18.0.49 --
+  # the check where an empty answer is a STOP, because a backend-less stand reports healthy and
+  # serves 200 (Story 4.1 Task 6.2). Story 4.4's lock was taken on the production stand for the
+  # first time.
+  # 🔴 FOUR FINDINGS THAT WERE IN NO DOCUMENT, each measured with a run id -- full text in #d47:
+  #   (1) deploy-stand.yml REQUIRES A CONTAINER EXECUTOR (run 629). The neighbours' s10 runner is
+  #       `:host` and can NEVER deploy. 🔴 Story 6.10's AC1 asked about the host DAEMON, never about
+  #       the EXECUTOR -- an AC fully met that left its own purpose impossible. Our own runner was
+  #       provisioned (Oleg's option 1): /opt/forgejo-runner-fe-prod, repo-scoped, docker:// executor,
+  #       mirror of s1, image moved by docker save|load, gid 988 for the socket.
+  #   (2) A DISPATCH INPUT SHADOWS THE CALLEE'S INPUT OF THE SAME NAME (runs 637, 640). Invisible in
+  #       both shipped callers because they pass it through under the same name. Worked around by
+  #       naming this caller's input `tag` -- a NAMED DEVIATION from epic AC1's `image_tag`.
+  #   (3) build.yml CANNOT REBUILD A COMMIT OLDER THAN 2026-08-19 (run 639): the netns step builds a
+  #       Dockerfile added that day. Candidate 00ef3be4743d is physically unbuildable.
+  #   (4) actions/checkout DESTROYS $GITHUB_OUTPUT written earlier in the same job.
+  # 🔴 NOT PROVEN, and it is the one that matters: THE END-TO-END RELEASE PATH WAS NEVER GREEN. Build
+  # leg proven twice (637, 640), deploy leg never. Oleg's decision (option (в)): do NOT spend a fourth
+  # permanent tag -- so STORY 6.9's REAL CUTOVER WILL BE THE FIRST RUN OF THE RELEASE DEPLOY LEG.
+  # Epic 6's own preamble calls that a one-way door. OWNER: Story 6.9. The rollback path 6.9 actually
+  # dispatches IS proven twice.
+  # ⚠️ THREE PERMANENT PROD IMAGES NOW EXIST. sha-a99ccd44c5a3-prod is the CUTOVER image (prod-current
+  # points at it). sha-28f7fd36b75e-prod and sha-308ea1520c59-prod are PROOFS OF THE PATH, NOT
+  # RELEASES: no ledger row (none was approved), prod-current never moved to them, the recorder was
+  # never dispatched for them. Without that sentence a later reader finds three and cannot tell which.
+  # ⚠️ AC9's matrix labels three rows UNEARNED with reasons rather than leaving them blank -- notably
+  # lock contention, which `capacity: 1` makes undiscriminating: it would prove the runner, not the lock.
+  # ✅ All three inherited deferred-work items discharged or re-owned BY NAME (the M7 bundle -> 6.6).
+  # Oleg merges; the row goes `done` only after that.
+  6-4-deploy-to-production-by-dispatch: review
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
   6-7-smoke-check-production-after-deploy: backlog

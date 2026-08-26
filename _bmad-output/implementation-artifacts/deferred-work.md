@@ -4634,3 +4634,58 @@ this after its own fix-pass introduced five new defects; Story 6.3 then reproduc
 Already filed above under *"Deferred from: code review of story-6.3 (2026-08-26)"*: the colon-splitting
 disagreement, the multi-arch OCI index parse failure, and the displaced `prod-current` on the
 authorised-move path.
+
+## From: Story 6.4 (2026-08-26) — three inherited items discharged, and four findings carried
+
+### The three items that named Story 6.4 as owner (AC10)
+
+- ✅ **DISCHARGED — `vars.VITE_OPERATOR_PHONE_URL_PROD` re-verified, not assumed.** Read at execution:
+  `https://phone.crm-prionex.online`, present and valid. The entry asked this story to re-check rather
+  than trust the 2026-08-17 measurement, "since URLs and Kong routes have drifted before". It had not
+  drifted. **Every `environment: prod` build in this story consumed it and passed the fail-closed
+  check**, so this is now proven by execution rather than by reading a variable.
+- ✅ **DISCHARGED — the missing `<a id="d33"></a>` and `<a id="d37"></a>` anchors were added**, in the
+  same edit as `D47`, exactly as the entry asked. The index rows `[D33](#d33)` and `[D37](#d37)`
+  resolved to nothing before this.
+- 🔀 **RE-OWNED BY NAME, not dropped — the M7 bundle (`record-preprod-candidate.yml`'s unexercised
+  branches and the unusable "Rejected candidates" table).** **Story 6.4 never dispatched the recorder**,
+  so it forced none of those branches and produced no refusal to fill that table with. The entry
+  anticipated this ("if it doesn't force them either"). **Re-owned: Story 6.6**, which inherits
+  `record-prod-image.yml`, and is the next story that must dispatch a recorder.
+
+### Findings this story carries out
+
+- 🔴 **`deploy-stand.yml` REQUIRES A CONTAINER EXECUTOR, and nothing says so.** Run 629:
+  `docker inspect $(hostname)` → `no such object: e1-rung3`. The file self-identifies its own job
+  container in order to launch Story 4.4's lock holder as a sibling; under a `:host` executor there is
+  no own container. Its own comment at that step blames "a non-default `--hostname`, or the docker
+  daemon itself is unreachable" — **a host executor is a third case it never contemplated, and it fails
+  closed pointing at the wrong two.** Worked around by provisioning our own `docker://` runner rather
+  than editing the frozen file. **Owner: Story 4.8** (the file's own), if that message is ever to name
+  the real cause. **Removal trigger:** any future runner declared `:host` for a deploy label.
+- 🔴 **A DISPATCH INPUT SHADOWS THE CALLEE'S INPUT OF THE SAME NAME.** Runs 637 and 640: the callee
+  reported the tag the CALLER was dispatched with, not the one passed in `with:`. `deploy-stand.yml`
+  reads its input the ordinary way — the callee is not at fault. **Invisible in both shipped callers**,
+  which pass the dispatch input through under the same name so the values coincide. Worked around by
+  naming this caller's input `tag`. **Owner: unassigned — it is a platform behaviour, not a file's
+  defect**, and the safe rule until someone characterises it properly is: **a caller's `with:` key must
+  not share a name with its own dispatch input unless the values are meant to be identical.**
+- 🔴 **`build.yml` CANNOT REBUILD A COMMIT OLDER THAN 2026-08-19.** Run 639:
+  `open Dockerfile.netns-isolation-check: no such file or directory`. That file was added by `4534b6c6`
+  on 2026-08-19; any older tree fails. **Validated PRE-PROD candidate `00ef3be4743d` (2026-08-17) is
+  physically unbuildable.** Rollback is unaffected (it builds nothing). **Owner: unassigned. It bites
+  the day anyone tries to rebuild an old release** — and the plan currently assumes that is always
+  possible.
+- ⚠️ **`actions/checkout` destroys `$GITHUB_OUTPUT` written by earlier steps in the same job**, because
+  the output file lives inside the workspace the checkout cleans. No warning; the outputs are simply
+  gone. Found while diagnosing run 637 (it was not that run's cause, but it is real). **Rule: never
+  write a job output before a checkout in the same job.** **Owner: unassigned — a platform behaviour
+  worth knowing, cheap to avoid.**
+
+### 🔴 What Story 6.9 inherits, and it is not small
+
+**The release path's end-to-end run was never green.** Its build leg is proven twice (runs 637, 640)
+and its deploy leg never. Oleg's decision (option (в), 2026-08-26) was to stop rather than spend a
+fourth permanent `sha-<12hex>-prod`. **So Story 6.9's real cutover will be the FIRST time the release
+deploy leg ever runs.** Epic 6's own preamble calls that arrangement a one-way door. **Owner: Story
+6.9.** The rollback path, which 6.9 actually dispatches, **is** proven twice (634, 642).
