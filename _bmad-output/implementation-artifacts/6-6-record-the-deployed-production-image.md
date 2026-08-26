@@ -837,6 +837,10 @@ agent, because both reverse or retire something already written down.
 - [x] [Review][Defer] **The `tags/list` report is O(n) registry round-trips with no bound, inside `timeout-minutes: 10`** [.forgejo/workflows/record-prod-image.yml:648] — deferred, pre-existing. `prod-<hex>` tags are permanent, so the loop grows one per deploy; a timeout reds the run *after* both permanent writes have landed.
 - [x] [Review][Defer] **The final step's `| tee` can red a fully-successful run** [.forgejo/workflows/record-prod-image.yml:684] — deferred, pre-existing. Under `set -o pipefail` `tee` is last, so an unwritable summary file fails the job after both writes are correct.
 - [x] [Review][Defer] **No `G-backwards` equivalent: the displaced commit is named nowhere** [.forgejo/workflows/record-prod-image.yml, `write-current`] — deferred, pre-existing. The sibling reads and prints the displaced commit hex (`record-preprod-candidate.yml:833`, :845); prod prints digests only. Under per-deploy operation a redeploy of an older commit rolls the pointer backwards silently.
+  🔴 **Fallback owner corrected 2026-08-26:** first written as *"Story 6.8"*, which **is being
+  cancelled** in an unpushed local change. Re-owned to **Oleg**; the proposal is deliberately not
+  cited by filename until it lands (Story 6.3's OQ10 — a locally-authored record is invisible to this
+  project's ref sweeps, and that hole is still open).
 - [x] [Review][Defer] **A later `DELETE` of the junk marker also unmakes the deployable tag** [story §8 residue, Prohibition 7] — deferred, pre-existing shape. `prod-308ea1520c59`, `sha-308ea1520c59-prod` and transiently `prod-current` name **one manifest**; a package-version DELETE removes all tags on it, so cleaning the residue would break epic AC2's "remains addressable" again. Named as permanent in §8 but not as entangled.
 
 #### Dismissed (1)

@@ -4730,7 +4730,16 @@ reading the file rather than by re-reading that list.
   commit rolls the production pointer **backwards** with nothing anywhere naming the commit it left.
   The existing "displaced digest survives only in the run log" item covers half of this; the absence of
   the direction guard itself was not flagged. **Owner: Story 6.6** if it adopts the guard, otherwise
-  **Story 6.8**, which is the story that will actually roll backwards on purpose.
+  **Oleg.**
+  🔴 **CORRECTED WITHIN THE HOUR IT WAS WRITTEN, 2026-08-26.** The fallback owner first written here
+  was *"Story 6.8, which is the story that will actually roll backwards on purpose"*. **Story 6.8 is
+  being cancelled** — the change is authored and staged in the operator's own checkout and is **not
+  pushed**, so no ref-based sweep can see it and this entry cited a story that is about to stop
+  existing. Naming a cancelled story is naming nobody, which is the exact failure this ledger exists
+  to prevent. Re-owned to **Oleg** rather than to the next plausible story, and deliberately **without
+  citing the unpushed proposal by filename** — Story 6.3's Open Question 10 recorded that a
+  locally-authored, unpushed record is invisible to this project's own sweeps, and that process hole
+  is still OPEN. When the cancellation lands, this line can point at it; until then it must not.
 - ⚠️ **A later authorised `DELETE` of a junk marker also unmakes the deployable tag.** Story 6.6's §8
   exercise mints `prod-308ea1520c59` permanently and names it a proof, not a release. But that marker,
   `sha-308ea1520c59-prod` and (transiently) `prod-current` all name **one manifest**, and the recovery
