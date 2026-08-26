@@ -896,7 +896,7 @@ got easier.**
 |---|---|---|
 | **AC2**, second half — a host-level `docker pull` succeeds | ✅ **MET by observation** (see below) | the live `crm-prod-*` stack on s10 runs images pulled from `git.crm-prionex.com` |
 | **AC3** — a read-only pull credential, push refused with `401` | 🟡 **wording stale, content already satisfied elsewhere** | the deploy authenticates per-job from org secrets into a workspace-scoped `DOCKER_CONFIG`; no standing host credential is used, or wanted |
-| **AC4**, directory half | ❌ **absent** | `ls -d ~/crm-prionex/fe-prionex-prod` → `No such file or directory`. No `.env`, no `COMPOSE_PROJECT_NAME`, no `CONTAINER_NAME`, no `FRONTEND_PORT` |
+| **AC4** — the stand directory and its `.env` | ✅ **DONE 2026-08-26** (see below) | directory, load-bearing `docker-compose.stand.yml` and `.env` created; `docker compose config` validates; **0 containers started** |
 | **AC5** — the traffic path named with owner and state | 🟡 **partially, by `#d43` rather than by this story** | `crm.prod.crm-prionex.online` → `62.112.10.55`, but 80/443 there still answer `refused`. The hypervisor→VM route `#d23` measured as "No route to host" is still unverified |
 | **AC6** — `#d23` updated with what was provisioned | ❌ **not done** | `docs/migration-decisions.md` untouched by any 6.10 work |
 
@@ -991,18 +991,68 @@ with no `:latest` fallback (FR19), so a wrong assumption here is a red run, not 
   — registry tokens on this instance are unrevocable-by-admin once leaked, which this project has paid
   for twice.
 
+### ✅ AC4 — DONE, 2026-08-26. The stand directory exists and validates; **nothing was started.**
+
+Created on s10 at `/root/crm-prionex/fe-prionex-prod/`, on a host that runs the neighbouring team's
+live production backend — so the operation was **create-only in a new path**, touching nothing
+existing. Pre-flight, all measured before writing: `8080` free; no container named
+`fe-prionex-prod`; no compose project of that name; `crm-prod-network` present; the directory absent.
+
+**Two files, and the distinction between them matters:**
+
+| File | Role |
+|---|---|
+| `docker-compose.stand.yml` | 🔴 **LOAD-BEARING.** `deploy-stand.yml:333-342` bind-mounts the stand directory and refuses to take the lock unless this file is in it — *"Refusing to take a lock somewhere that is not provably the stand."* Copied verbatim from the repository at `a9f7cd25` |
+| `.env` | **RECORD / DR ONLY.** `deploy-stand.yml` renders its own compose and `.env.deploy` in the job workspace (D28 option (e)) and never reads this. It exists so a human can bring the stand up if Forgejo is down, and so the intended values are written down. **It will drift** — the DEV stand's already has (Story 5.2 §2(f)) |
+
+**Values, each measured on this host rather than copied from another stand:**
+
+```
+COMPOSE_PROJECT_NAME=fe-prionex-prod
+CONTAINER_NAME=fe-prionex-prod        # never "fe-prionex" — CD.yml:201 force-removes that literal
+FRONTEND_PORT=8080                    # measured free here; s1's allocations do NOT apply to s10
+DOCKER_IMAGE=git.crm-prionex.com/crm/fe-prionex:sha-a99ccd44c5a3-prod
+FRONTEND_NETWORK=crm-prod-network     # the silent-failure axis; verified present, Kong aliased
+```
+
+**Validated with `docker compose config`, which resolves without starting anything:**
+
+```
+name: fe-prionex-prod
+container_name: fe-prionex-prod
+image: git.crm-prionex.com/crm/fe-prionex:sha-a99ccd44c5a3-prod
+ports:    - published: "8080"  target: 80
+networks: stand-network:  name: crm-prod-network  external: true
+```
+
+**Containers in project `fe-prionex-prod` after the operation: `0`.** Task 5's *"0 runs, and nothing
+is started"* is honoured — the first thing to bring this stand up will be a Forgejo deploy
+(Story 6.4), not a hand-run compose.
+
+⚠️ **AC4's own wording undercounts.** It names three variables — `COMPOSE_PROJECT_NAME`,
+`CONTAINER_NAME`, `FRONTEND_PORT`. `docker-compose.stand.yml` requires **five**: `DOCKER_IMAGE` and
+`FRONTEND_NETWORK` are equally mandatory and have no defaults, and `FRONTEND_NETWORK` is the one axis
+`.env.stand.example` marks as failing **silently** when wrong. Both are set. Recorded because the AC
+would read as satisfied by three.
+
+🔴 **Still to verify AFTER the first deploy, and it cannot be verified before one:** that the
+container actually resolves the backend. *"It started" is not evidence* — nginx resolves Kong lazily
+and the healthcheck probes itself, so a stand on a backend-less network reports `healthy` and serves
+`200` (Story 4.1 Task 6.2 demonstrated exactly that). The check is
+`docker exec fe-prionex-prod getent hosts crm-kong-gateway`, and an empty result is a **STOP**, not a
+reason to fall back to `crm-network`.
+
 ### Verdict
 
 **AC1 ✅ met in full. AC2 ✅ met by observation. AC3 🟡 stale wording, content satisfied elsewhere.
 AC5 🟡 partial and external. Only AC4 and AC6 are genuinely outstanding, and both are small.**
 
 What is actually left:
-1. **AC4** — create `~/crm-prionex/fe-prionex-prod/` with its `.env` (`COMPOSE_PROJECT_NAME`,
-   `CONTAINER_NAME`, `FRONTEND_PORT`). Ports 8080-8085 are measured free. **The stand must join
-   `crm-prod-network`**, where Kong already answers to the alias `crm-kong-gateway` the image expects.
-2. **AC6** — update `#d23` with what was provisioned, by whom, and what remains external.
+1. ~~**AC4** — the stand directory~~ ✅ **DONE 2026-08-26.**
+2. **AC6** — update `#d23` with what was provisioned, by whom, and what remains external. **The only
+   remaining work item.**
 3. **AC3's wording** — retire the standing-credential clause by dated amendment rather than leaving an
-   AC that describes a retired model.
+   AC that describes a retired model. A spec change, not a task.
 
 **There is no blocker, and no credential needs to be created anywhere.** Story 6.4 may be written
 against `e1-rung3-prod-deploy` as soon as the stand directory exists.
