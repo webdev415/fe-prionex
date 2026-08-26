@@ -1,5 +1,9 @@
 # Story 6.6: Record the Deployed Production Image
 
+---
+baseline_commit: 13a60eca40a46d8e147a6cb29fe04c5f12441651
+---
+
 Status: ready-for-dev
 
 Epic: 6 — Production Release and Verified Rollback
@@ -538,14 +542,14 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 
 ### Task 1 — Open the story (AC: —) — **1 push row**
 
-- [ ] 1.1 Branch `story-6-6/pr-1-context` off `origin/main`. **Re-fetch first**: `origin/main` moved
+- [x] 1.1 Branch `story-6-6/pr-1-context` off `origin/main`. **Re-fetch first**: `origin/main` moved
       three times during this story's own contexting (`cfbad179` → `308ea152` → `584cc886`). Confirm
       `deploy-prod.yml` is present before assuming §3.
-- [ ] 1.2 Flip `sprint-status.yaml` `6-6-…` → `in-progress` in its **own commit** (Task 1.1's lesson,
+- [x] 1.2 Flip `sprint-status.yaml` `6-6-…` → `in-progress` in its **own commit** (Task 1.1's lesson,
       Story 6.2).
-- [ ] 1.3 Re-verify the D-number (AC9) across `git ls-remote origin` **and** every local branch —
+- [x] 1.3 Re-verify the D-number (AC9) across `git ls-remote origin` **and** every local branch —
       `git branch --all`, not just `origin/*`. Record the sweep.
-- [ ] 1.4 Confirm Story 6.4's row: it says `review` but PR #97 is merged. **Ask, do not edit another
+- [x] 1.4 Confirm Story 6.4's row: it says `review` but PR #97 is merged. **Ask, do not edit another
       story's row.**
 
 ### Task 2 — Read the contract, do not infer it (AC: 1, 5) — **0 runs**
@@ -783,6 +787,37 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 1 — 2026-08-26.** Worktree `story-6-6/impl` off `origin/main` @ `13a60eca` (the merge of PR #100,
+this story's own code review). `baseline_commit` recorded in frontmatter, matching Story 6.4's shape.
+
+**1.1 — the re-fetch was not ceremonial.** `origin/main` moved **seven times** on 2026-08-26:
+`cfbad179 → 308ea152 → 584cc886 → 9992057a → 13a60eca` across this story's own contexting, review and
+two chore merges. `deploy-prod.yml` — which §3 builds on and which did not exist when the first draft
+of this story was written — is present and confirmed by `ls` (13 entries, 12 workflows + README).
+
+**1.3 — D-number sweep, run against the hole Story 6.3's OQ10 opened, not only against refs.**
+
+| Scope | Highest `## D<n>` |
+|---|---|
+| every `refs/remotes/origin/*` | **D47** |
+| every `refs/heads/*` (local branches — OQ10's blind spot) | **D47** |
+| the operator's own WORKING TREE, including staged uncommitted work | **D47** |
+
+**Next free: `D48`.** ✅ Confirms the number §AC9 predicted. `D44` is real and pushed
+(`story-4-10`); **`D45` exists nowhere** — Story 6.3's Task 6 was cancelled and its number was never
+spent — so D45 is technically free and is deliberately **not** reused: a number that was allocated,
+announced and abandoned is worse than a fresh one.
+🔴 **The third row is the one that matters, and it is the first time this project has run it.** OQ10
+recorded that a ref-only sweep cannot see a locally-authored, unpushed record — it missed a full
+`## D43` once. This sweep read the working tree as well and found nothing above D47 there either.
+**The process hole is still OPEN** (nothing forces the next session to check), but it did not bite here.
+
+**1.4 — discharged before it was reached.** The task reads *"Confirm Story 6.4's row: it says `review`
+but PR #97 is merged. **Ask, do not edit another story's row.**"* It was asked and answered: the row was
+flipped to `done` in its own chore commit (PR #99, `9992057a`) before this task ran. Nothing to do here.
+The story's own review caught the same staleness in §11 (which warned against reading it as `backlog`,
+a value it never held).
 
 ### Completion Notes List
 
