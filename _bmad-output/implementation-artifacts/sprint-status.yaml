@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-25
+# last_updated: 2026-08-26
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -67,7 +67,7 @@
 # taken here. Until then: for what an AC actually requires today, read the story file, not the epic.
 
 generated: 2026-08-07
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -1303,6 +1303,46 @@ development_status:
   # (the approval ledger, empty, ten defined columns), and D42. Story 6.5 owns updating #d2 AND the
   # regulation's corresponding section when the promotion guard ships -- a forward note sits under
   # #d2 itself so the dated citation cannot go stale silently.
+  # 📌 PROD FINALLY HAS A PUBLIC NAME — 2026-08-26, Oleg, outside any story. Recorded as
+  # `docs/migration-decisions.md#d43`. This is the one value Epic 6 could not name until now.
+  #   • `crm.prod.crm-prionex.online` — the NEW prod stand's own address on s10, and explicitly
+  #     TEMPORARY. It exists so s10 can be brought up and validated under its own name while s2
+  #     keeps serving users: the "two productions in parallel" state D23 put in the risk register.
+  #   • 🔴 IT RESOLVES AND REFUSES THE CONNECTION — the worst of the three states, and it is
+  #     new as of 2026-08-26 08:38Z. Oleg created the record that day: `crm.prod.crm-prionex.online.
+  #     14400 IN A 62.112.10.55`, confirmed authoritatively and at 8.8.8.8/1.1.1.1/9.9.9.9, with the
+  #     zone's SOA serial moving 2026082601 -> 2026082602. But 80 and 443 on 62.112.10.55 answer
+  #     `refused` in 62 ms — there is NO web front on the hypervisor yet (controls answer: s1 ->
+  #     404/200, s2 -> 404, so the refusal is the host's property, not the channel's). Until a front
+  #     exists the name looks like a broken application rather than an unconfigured environment.
+  #     Nothing depends on it yet, so the cost is zero today — but it is open, not closed.
+  #     (Until 08:38Z it was NXDOMAIN on all three resolvers, and `crm.prod.` appeared in ZERO files
+  #     of this repository before D43 — the exact signature that preceded Story 1.6's NXDOMAIN pair.)
+  #   • 🔴 TTL IS 14400, NOT 300 — Hostinger's default, taken silently, and wrong for a name
+  #     that is declared TEMPORARY: up to four hours of stale answers at switch time. Lowering it is
+  #     cheap right now, before the name is widely cached. The same zone already carries the
+  #     deliberate counter-example: legacy prod `crm-prionex.online` sits at TTL 300.
+  #   • THE PATH IS CHOSEN, and it is a fact now rather than a decision: public traffic enters
+  #     through the HYPERVISOR, not through the hub. That preserves D23's network model (the contour
+  #     polls the hub outbound; the hub never reaches into the contour) — the rejected alternative
+  #     (a vhost on s1 proxying over wg-private) would have inverted it and made s1 a single point of
+  #     failure for production. What 6.10 must now measure, in order: the hypervisor->VM route (D23
+  #     measured `ssh root@192.168.122.11` from the hypervisor shell as "No route to host" and left
+  #     the mechanism "не проверено" — the forward lives in exactly that route), the stand's
+  #     FRONTEND_PORT, then the vhost and certificate on 62.112.10.55.
+  #   • 🔴 DO NOT DERIVE THE API NAME FROM IT. `api.crm.prod.crm-prionex.online` is NXDOMAIN too,
+  #     and TWO conventions are live at once — flat `api.crm-prionex.online` on legacy s2 versus
+  #     `api.crm.<env>.crm-prionex.online` on DEV/PRE-PROD. `_check_url` in build.yml tests shape
+  #     only (scheme, no whitespace, a dot in the host), so a wrong-but-valid host builds GREEN and
+  #     is dead in the browser — epics.md:783's failure class, exactly. Measure it, do not infer it.
+  #   • WHAT IT UNBLOCKS: 6.4 and 6.7 no longer wait on the traffic switch — the stand becomes
+  #     reachable under its OWN address. The switch itself remains Story 6.9's and remains outside
+  #     this repository. 6.10's last AC ("name the traffic path with its owner and current state")
+  #     now has a concrete value to close against, and D43 §5 carries the four-row owner table.
+  #   • WHAT IT DOES NOT CLOSE: the A record, the vhost + TLS certificate, the measured PROD-API
+  #     hostname, and the exact `Access-Control-Allow-Origin: https://crm.prod.crm-prionex.online`
+  #     on PROD's Kong — which has still never been probed. The CORS ask to `CRM/api-prionex` is
+  #     FORMULABLE for the first time: before this there was no origin to put in it.
   epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
   # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
@@ -1456,7 +1496,66 @@ development_status:
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
   # preserve numbering but MUST complete before 6.4 — same precedent as 1.13 before 1.12.
-  6-10-provision-the-prod-deploy-contour-on-s10: backlog
+  # Contexted 2026-08-26 (branch `story-6-10/pr-1-context`) from a SCRATCHPAD WORKTREE branched off
+  # `docs/prod-temporary-hostname` at 1c54f32d -- NOT off origin/main (cfbad179), deliberately:
+  # `docs/migration-decisions.md#d43` is this story's primary input and is NOT ON MAIN. It lives on
+  # Oleg's own unmerged, unpushed local branch. A context branch off main would cite an anchor that
+  # resolves to nothing. Whether that branch merges as its own PR first is Open Question 1 (Oleg).
+  # Story 6.3's dev agent is working in parallel on `story-6-3/pr-1-context`; the two stories are
+  # INDEPENDENT (6.3 is registry work, 6.10 is host work; 6.3's own §12 says of s10 "Not touched,
+  # not probed, not prepared. Story 6.10's."). They share exactly two files -- this one and
+  # `docs/migration-decisions.md` -- and 6.10's §12 prices that collision.
+  # Zero dispatches by construction: floor 5 / ceiling 13 CI rows, all caused by pushes. OPEN.
+  # 🔴 THREE FINDINGS THIS STORY CARRIES THAT THE PLAN DID NOT, recorded here so they are visible
+  # without opening the story file:
+  #   • THE FIFTH VARIABLE. The epic's AC names three `.env` variables; `docker-compose.stand.yml`
+  #     requires FIVE, every one `${VAR:?...}` with no default (#d27) -- Story 5.2 already paid for
+  #     this correction on PRE-PROD. Of the two the epic omits, `DOCKER_IMAGE` is merely blocked
+  #     (Story 6.3 is paused, no `-prod` image exists), but 🔴 **`FRONTEND_NETWORK` HAS NO OWNER ON
+  #     s10.** The named value `crm-prod-network` is created by the `CRM/api-prionex` stack, and
+  #     THEIR PROD PLAN IS AN s2 PLAN (`docs/forgejo-prod-s2-plan.md:69`, cited at
+  #     `preprod-infrastructure-requirement.md:226`). The frontend's PROD stand moved to s10 on
+  #     2026-08-18; the backend's did not, and nobody has asked it to. `external: true` refusing to
+  #     start is the ONLY loud failure on that axis and nothing in this repo may create the network.
+  #     **This can block Story 6.4 outright.** Four possibilities are written out in the story's §3;
+  #     Open Question 3, owner Oleg. Second-order: `deploy-stand.yml`'s `expect_unrouted_api` input
+  #     is where 6.4 would have to declare it, and nobody should discover that mid-`with:`-block.
+  #     ✅ **ANSWERED by Oleg the same day, verbatim: «возьми из s2».** No ask goes to
+  #     `CRM/api-prionex`. The network is READ from s2 over the NFR7 administrative SSH path (Task
+  #     2.13 -- `docker network ls/inspect`, `docker ps`, `docker inspect` of the running frontend
+  #     and of Kong incl. its network ALIASES) and reproduced on s10 exactly, announced verbatim
+  #     before creation. Prohibition 3 narrowed from "never create" to "create only as an exact
+  #     reproduction of what s2 shows". §12's s2 clause widened from an API read to an API read PLUS
+  #     an SSH READ -- still no write, no compose verb, no job on `s2-prod-deploy` (NFR5 intact).
+  #     Free by-product (Task 2.14): the PROD API hostname gets MEASURED, which is what `#d43` §4
+  #     demands and forbids deriving. NOT settled by the answer, and not asked by 6.10: whether the
+  #     PROD backend eventually moves to s10 or stays on s2. If the reproduced network turns out
+  #     backend-less, AC7 requires that recorded as DELIBERATE with its reason (the browser never
+  #     uses the container's /api/ proxy -- `src/lib/api.ts` bakes an absolute VITE_API_BASE_URL),
+  #     not left to be filed as a bug.
+  #   • THE LABEL->IMAGE BINDING. A label is bound to a job image AT REGISTRATION (Trap 5); a bare
+  #     `--labels` silently binds the default image and reports success (Trap 1, Story 1.7).
+  #     `deploy-stand.yml` states its requirements of that image in its own code -- docker CLI,
+  #     `flock` AND `timeout` (an explicit preflight that fails the job), `git` for an AUTHENTICATED
+  #     clone, `curl`, and a `date` that busybox's cannot always satisfy. s1's answer is
+  #     `deploy-base-dev-preprod:2026-08-07`, a host-local image built by the hub admin and NOT
+  #     available to us. s10 needs its own, and whether it may come from a public registry depends on
+  #     the host daemon's public egress -- which #d23 never measured (the CI runner's pulls go
+  #     through its dind, a different path). ✅ **ANSWERED by Oleg the same day: egress is
+  #     «доступен».** The job image may come from a public registry; Task 2.7 is demoted from a
+  #     decision gate to a confirmation that STOPS AND REPORTS on contradiction rather than
+  #     silently falling back to a locally-built image.
+  #   • WHERE "REGISTERED" IS READ FROM. `.runner` on disk and `action_runner.agent_labels` in the DB
+  #     have disagreed on this instance twice, on the same runner (4 labels vs 1). The DB is the
+  #     scheduler's source (#d33) and an unmatched `runs-on` QUEUES SILENTLY. `deferred-work.md`
+  #     hands this forward by name, saying to resolve or re-measure it "before picking an s10 label
+  #     for PROD by the same method". AC1 is therefore not closed by `.runner` alone.
+  # 🔴 REPORTED, NOT FIXED -- it belongs to another story: Story 6.3's context file (2026-08-26
+  # 03:22Z) declares it will append **D43**. Oleg minted D43 himself ~5 hours later at 08:21Z.
+  # 6.3 is PAUSED and does not know its number is taken. 6.10 takes **D45** (D35 -> story-4-9,
+  # D43 -> docs/prod-temporary-hostname, D44 -> story-4-10; verified across all refs 2026-08-26)
+  # and re-verifies at execution time. Open Question 2, owner Oleg.
+  6-10-provision-the-prod-deploy-contour-on-s10: ready-for-dev
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery
