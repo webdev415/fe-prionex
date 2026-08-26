@@ -12,7 +12,7 @@
 
 # Story 6.3: Rebuild the Running Production Commit into the Forgejo Registry
 
-Status: in-progress
+Status: review
 <!-- PAUSED, 2026-08-26, on Oleg's own explicit instruction -- do not resume until he signals.
      Task 2.4's gate worked exactly as designed: the commit s2 is running
      (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39) was confirmed absent from the Forgejo repository
@@ -1300,20 +1300,89 @@ against a query, or closed with the literal word **OPEN**.
       names are unchanged, and so is everything else that was supposed to be.**
 
 ### Task 8 — Close (AC: all) — **1 dev-story push + PR-open + merge rows**
-- [ ] 8.1 Grade every AC against shipped artifacts and pasted evidence, not intention.
-- [ ] 8.2 Write the retro-E5 section: §9's matrix with real run ids, and the named absences
-      (G5-equivalent; byte-difference-as-measurement; `fe/prod/app` pre-verification; retention by
-      execution). **AC10's "not earned" list is written in those words.**
-- [ ] 8.3 **`PENDING (owner: coordinator)`** — the story's PR is opened by the coordinator; **Oleg
-      merges**. The dev agent does neither (Prohibition 11).
-- [ ] 8.4 **`PENDING (owner: coordinator)`** — close the run-budget ledger **against a query**, after the
-      merge commit lands: `repo_id=16` first, group by `run_number`, attribute by `commit_sha`, name and
-      exclude Story 4.9's concurrent rows. **If the ceiling is exceeded, name the overrun and state a new
-      ceiling** — never absorb it. If the query cannot be run, close with the literal word **OPEN**.
-- [ ] 8.5 Update `sprint-status.yaml`: the story row to `review`, then `done` only after the merge.
-      **HALT mapping** (the enum has no `blocked` value): if Task 2.4 found the commit absent, or if a
-      one-shot act is still awaiting Oleg, this row **STAYS `in-progress`** with the blocking condition
-      named in the comment immediately above it.
+- [x] 8.1 ✅ **Every AC graded against shipped artifacts and pasted evidence, not intention.**
+
+      | AC | Verdict | Evidence, or the reason there is none |
+      |---|---|---|
+      | **AC1** *(epic)* | ✅ **MET** | s2 read over the NFR7 admin path; `41ab0470…` from `org.opencontainers.image.revision`, pasted at Task 2.3. Re-pointed by `#d46` to a **reference measurement**, and that is the role it plays |
+      | **AC2** *(epic)* | ✅ **MET** | Run **598**, 14/14 green, 384 s. `sha-a99ccd44c5a3-prod` exists at `sha256:f30c794123ba…a3f3`, read from the registry |
+      | **AC3** *(epic)* | ✅ **MET** | Run **600**, 17/17 green. `prod-a99ccd44c5a3` (11:17:09Z) then `prod-current` (11:17:10Z), history before pointer; all three PROD names on one manifest, read back independently |
+      | **AC4** *(epic)* | 🚫 **NOT MET** | Task 6 cancelled by Oleg. The facts are measured and in this file; the comparison AC4 specifies was not written |
+      | **AC5** *(epic)* | ✅ **MET** | Task 3.4: `package_cleanup_rule` read from the database itself, all four names compiled, a free non-vacuous control taken, and the disposition recorded in the required word — **`UNPROVEN` by execution** |
+      | **AC6** | 🚫 **NOT MET** | Task 5.4 cancelled. One pass row, no discriminating row. The local 15/15 shell exercise is explicitly not substituted |
+      | **AC7** | ✅ **MET** | Gate 4.1 closed in writing before the dispatch, every clause with a measurement; the dispatch sent verbatim before it was made |
+      | **AC8** | 🚫 **NOT MET** | Both halves cancelled (Task 6's `D45`, Task 7.2's prose). The disclaimer exists only in the workflow header and in run 600's printed output — the tier this project calls best-effort |
+      | **AC9** | 🚫 **NOT MET** | Task 7 cancelled; neither 6.2 artifact reconciled, and AC9's own never-drop fallback not taken either |
+      | **AC10** | ✅ **MET** | Every claim in this file carries a run id, a pasted state read, or an explicit "not earned" label; the unearned list is at 8.2 |
+
+      **6 of 10 met. Four not met, all by explicit decision of Oleg's, none by oversight, none softened.**
+      🔴 **AC4 is an EPIC criterion** — the story does not fully satisfy its own epic requirement, and
+      that is stated here rather than left to be inferred from a table.
+- [x] 8.2 ✅ **retro-E5 section, and AC10's "not earned" list in those words.**
+
+      **§9's matrix, with the only real run id it has:**
+
+      | Guard | Pass row | Discriminating row | State |
+      |---|---|---|---|
+      | G1 acknowledgement literal | **run 600** | — | 🚫 not earned |
+      | G2 `-prod` suffix | **run 600** | — | 🚫 not earned |
+      | G3 exactly 12 hex | **run 600** | — | 🚫 not earned |
+      | classified 404 | **run 600** | — | 🚫 not earned |
+      | G6 labels agree | **run 600** | — | 🚫 not earned |
+      | G4 `keep_pattern` compile | **run 600** | — | ⚠️ force-test only, unreachable through this file's inputs — as predicted at context time |
+      | **G5 stand serves the digest** | — | — | ❌ **DOES NOT EXIST.** No PROD stand until Story 6.10. A named absence, not a gap |
+
+      **§9's matrix status: `OPEN`.**
+
+      🚨 **AC10's NOT-EARNED LIST, stated in the required words:**
+      1. **The `G5`-equivalent does not exist** and never could here — no PROD stand.
+      2. **The byte-difference between this image and what production serves was NEVER MEASURED and is
+         not claimed as measured.** ghcr is unreachable **by decision** (`#d7`), so there is no digest
+         on the other side; `vite.config.ts`'s `Date.now()` fixes the answer in advance. 🔴 What *was*
+         measured is a **different pair**: one commit, two digests — `f30c7941…` (prod) against
+         `a62e8687…` (preprod). That is Option C's rebuild, and it is offered as exactly that and
+         nothing more.
+      3. **`secret/fe/prod/app` was NEVER pre-verified.** Prohibition 6 held: no substitute check was
+         built. What exists is the build's **own** read — run 598 step 7, green, the project's first —
+         which is evidence *after* the fact, not a pre-check.
+      4. **The retention rule is `UNPROVEN` by execution.** Both markers were **compiled** against the
+         stored `keep_pattern`; the rule has still never been observed deleting anything, so it has
+         never been observed keeping anything. First observable **2026-08-29**; owner **Story 6.3**
+         (Oleg's own OQ8 reassignment), and **this story closes before that date, so the observation is
+         NOT made and the ownership is not reset to nothing.**
+      5. **Six guards ship with no live refusal evidence** (AC6, Task 5.4).
+      6. **The product-code delta between what s2 serves and what this image contains is UNMEASURED**
+         and cannot be measured from here — reading GitHub is forbidden. Gated on Story 6.9 by `#d46`.
+- [x] 8.3 ✅ **PR opened by the coordinator. Oleg merges** — the dev agent does neither (Prohibition 11).
+- [x] 8.4 ✅ **LEDGER CLOSED BY QUERY, not self-report (retro-D4).**
+      `action_run` joined to `repository`, filtered by `commit_sha IN (…)` over **all 13 commits of this
+      branch**, plus the one dispatch row whose `commit_sha` is not a branch commit and is named
+      separately below.
+
+      **MEASURED: 14 runs.** Declared ceiling **20** — **under budget, no overrun to name.**
+
+      | Row | Count |
+      |---|---|
+      | `push` on this branch, attributed by `commit_sha` | 12 |
+      | `workflow_dispatch` — run **600**, `record-prod-image.yml` | 1 |
+      | `workflow_dispatch` — run **598**, `build.yml` at `environment: prod` | **1, named separately** |
+      | **Total** | **14** |
+
+      🔴 **Run 598 is listed on its own line and is NOT found by the `commit_sha` filter.** Its
+      `commit_sha` is `f144ee9f` — the **dispatch ref (`main`)**, not the commit it built. Attributing
+      by `commit_sha` alone would have **missed this story's single most consequential run**. Named
+      rather than quietly folded in, the way Story 6.2 named its own `main`-branch row.
+      🔴 **NOT "all green" — state as of the query.** 5 succeeded (566, 569, 589, 593, 600), **7
+      CANCELLED** (567, 568, 597, 599, 601, 602, 603) and 1 still **running** (604). The seven are
+      ordinary **concurrency eviction** by a later push, **not failures** — the same pattern 6.2
+      measured — and they are counted because they consumed a row.
+      🔴 **One budgeted line cost ZERO:** the `origin/main` integration merge (`9de45980`) produced no
+      run of its own, because it was pushed together with `5f30f3a1` and Forgejo runs the head commit.
+      The model over-predicted by one there.
+      **Not yet spent, and still to come:** the PR-open row, and the merge row on `main`.
+- [x] 8.5 ✅ **`sprint-status.yaml` → `review`.** The HALT mapping does **not** apply: Task 2.4's gate
+      is green for the commit actually built, and no one-shot act is awaiting Oleg — both were
+      executed. `done` only after the merge, which is Oleg's.
 
 ---
 
@@ -1893,6 +1962,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 1.0 | **Task 8 — story closed and moved to `review`. 6 of 10 ACs met; four (AC4, AC6, AC8, AC9) NOT MET, every one by an explicit decision of Oleg's, none by oversight and none softened — AC4 is an epic criterion and says so.** Delivered and evidenced: the first PROD image this project has ever built (run 598, 14/14, 384 s) and the first PROD markers it has ever written (run 600, 17/17), all three names on one manifest `sha256:f30c794123ba…a3f3`, read back from the registry independently of the runs. **Ledger CLOSED BY QUERY: 14 runs measured against a declared ceiling of 20 — under budget.** 🔴 Run 598 had to be named on its own line: its `commit_sha` is the dispatch ref, so a `commit_sha` attribution would have missed the story's most consequential run. Not all green — 5 success, 7 cancelled by ordinary concurrency eviction, 1 running; counted because they consumed rows. One budgeted line cost zero (the integration merge shared a push). AC10's not-earned list written in the required words, including that the retention rule stays `UNPROVEN` by execution with first observation **2026-08-29**, after this story closes, and that **ownership is not reset to nothing**. | dev-story |
 | 2026-08-26 | 0.9 | **Task 7 CANCELLED by Oleg (*«Task 7 отменить»*). AC9 recorded UNMET.** Neither of Story 6.2's artifacts is reconciled. The regulation's dated census stays wrong (11 → **12** measured today; *"no PROD deploy caller"* stays true), and 🔴 **a live contradiction is left standing that blocks Story 6.9**: the shipped rollback rule makes 6.9's own FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release, therefore needing Oleg — while the same document records **no delegate**. Open Question 5 had been **answered** (*«Поправить регламент в 6.3»*, narrowed to by-tag-name); that answer is now **unexecuted**. `docs/prod-releases.md` records nothing about the three `-prod` forms that now exist, nor what `prod-current` means before the switch — **the durable half of AC8**, which stays unmet in both halves. AC9's own never-drop fallback (file the contradiction against Story 6.9 in `deferred-work.md`) is **also not done** — offered, not taken, since the instruction was to cancel. 7.3 remains **done**: every frozen path verified byte-identical to `origin/main`. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.8 | **Task 6 CANCELLED by Oleg (*«Task 6 - отменить»*). `D45` is not written — this story ships with no decision record at all.** AC4 (**an EPIC acceptance criterion**) and AC8 recorded **UNMET**, not counted as satisfied by evidence scattered elsewhere. No forward notes under `#d18`/`#d19`; `deferred-work.md`'s *"identifying which is Story 6.3, and nobody has done it"* item is **in fact discharged** by session 1's s2 read but **is not marked so anywhere**, and will read as open. 🔴 **AC8's gap is operationally live rather than documentary:** `prod-current` exists in the registry from `11:17:10Z` and names an image **no host serves**, while the only statements of that fact are `record-prod-image.yml`'s header and the disclaimer its last step printed in run 600 — the tier this project classifies as best-effort. Everything `D45` was to carry now lives only in this story file and this branch's commit messages; `#d46` covers the build-source change and none of the rest. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.7 | **Task 4 and Task 5.3 executed; Task 5.4/5.5/5.6 CANCELLED by Oleg; AC6 recorded UNMET.** Run 598 (384 s, 14/14 green) built `a99ccd44c5a3…` at `environment: prod` — **step 7 is the project's first ever read of `secret/fe/prod/app`**, and the `fe-prod` AppRole's first real login. Run 600 (17/17 green) minted `prod-a99ccd44c5a3` then `prod-current`, history before pointer, one second apart. All three PROD names resolve to one manifest `sha256:f30c794123ba…a3f3`; the control — both PRE-PROD names of the same commit — resolves to a **different** manifest `sha256:a62e8687…`, so Option C's rebuild is visible as two digests for one commit, measured rather than asserted. **AC2 and AC3 met.** 🔴 **A defect of mine, found and corrected in the same session:** Task 4.5 first reported digests read from `package_property.container.digest`, which is **not** the manifest digest; the subtask's conclusion held but its value came from the wrong instrument, settled by a free control where the registry and this project's own ledger agree against the column. Standing rule recorded: manifest digests come from the registry, never from `package_property`. 🚫 **Task 5.4 cancelled** — the four discriminating dispatches were not made, so `record-prod-image.yml` ships with six guards whose **refusal path has never been observed live**; the local shell exercise is explicitly NOT substituted for it; §9's matrix stays `OPEN` with one row; **AC6 UNMET, owner Oleg**. | dev-story |
