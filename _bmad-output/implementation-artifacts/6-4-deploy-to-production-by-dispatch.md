@@ -518,6 +518,10 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
 
 ### Task 4 — 🔴 The rollback path, first (AC: 3, 6) — **1 dispatch**
 
+✅ **HALT RESOLVED 2026-08-26 — Oleg chose option 1, our own runner was provisioned, and RUN 634 is
+GREEN.** The account of runs 629 and 632 is kept below unedited, because three failures each moved
+the frontier and the sequence is the evidence. **Resolution and final state at the end of Task 4.3.**
+
 🛑 **HALT AT 4.1, 2026-08-26 — RUN 629 FAILED, and the cause is architectural, not a defect in this
 story's own file.**
 
@@ -594,8 +598,62 @@ would fail at the same step.
       the one the cutover needs, and it exercises §2's trap where a mistake is cheapest.
 - [»] 4.2 ✅ **Done — job list pasted in the HALT above.** Build **skipped**, deploy **executed**:
       §2's trap is cleared by observation, which is AC6's core and the one thing this dispatch bought.
-- [ ] 4.3 🛑 **BLOCKED by the HALT — nothing was deployed, so there is nothing to read back.**
-      When it unblocks: read the stand back **from s10 itself**: container name, image digest, and
+- [»] 4.3 ✅ **DONE — read back from s10 itself, after RUN 634.**
+
+      ```
+      fe-prionex-prod   Up (healthy)   0.0.0.0:8080->80/tcp
+      revision = a99ccd44c5a39345fa65eb74e87343b187e129e9        ← the cutover commit
+      digest   = sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3
+      network  = crm-prod-network
+      getent hosts crm-kong-gateway -> 172.18.0.49               ← 🔴 THE BACKEND RESOLVES
+      curl 127.0.0.1:8080 -> HTTP 200
+      ```
+
+      🔴 **The Kong resolve is the check that matters, and it passed.** *"It started" is not
+      evidence*: nginx resolves Kong lazily and the healthcheck probes the container itself, so a
+      stand on a backend-less network reports `healthy` and serves 200 — Story 4.1 Task 6.2
+      demonstrated exactly that. **An empty answer here was a STOP. It is not empty.**
+      The digest matches `sha-a99ccd44c5a3-prod` and the revision label matches the commit Story 6.3
+      built. **AC3 is met, and AC6's rollback half with it.**
+
+### ✅ RESOLUTION — what it took, and what each failure bought
+
+**Three dispatches, three different failures, each one further along than the last. The sequence is
+the evidence and is not collapsed into "it works now".**
+
+| Run | Failed at | What it bought |
+|---|---|---|
+| **629** | callee preflight, `docker inspect $(hostname)` | Exposed the executor incompatibility — **and proved §2's trap is clear**: build **skipped**, deploy **executed** |
+| **632** | `frontend_port` format assertion, **after** `up -d` | Preflight passed on our own runner; **the stand came up healthy and the backend resolved** |
+| **634** | — **SUCCESS** | Every job green; rollback path complete end to end |
+
+**What was provisioned to get there** (Oleg's option 1, *«1 этот вариант»*): our own deploy runner on
+s10 at `/opt/forgejo-runner-fe-prod`, **repository-scoped** (Story 1.7's precedent), label
+`fe-prionex-prod-deploy:docker://deploy-base-dev-preprod:2026-08-07` — jobs run **in a container**
+that holds the **host** `docker.sock`, mirroring s1's own deploy runner line for line.
+- The executor image was moved from s1 by `docker save | docker load`; it is in **no registry**, so
+  `force_pull: false`. Pinning the date tag also **decouples us** from the hub rebuilding their copy,
+  which `deploy-stand.yml` itself calls volatile. All five binaries it smoke-tests — `docker`, `git`,
+  `curl`, `flock`, `timeout` — verified present on this host.
+- **`docker` is gid 988 on both hosts** and s1's runner runs `1501:988`, so ours runs `1000:988`.
+  Without the group the daemon answers `permission denied` and the container restart-loops with a
+  message that reads like the daemon is down.
+- The first `register` failed to write `.runner` **after** the server had already created the
+  registration; that orphan (id 25) was **deleted**, not left behind.
+
+🔴 **And a value in this story's own §5 was wrong in FORM while right in INTENT.** §5 argued at length
+that `frontend_port` must not be loopback — true, and it stands: PROD traffic arrives from the
+hypervisor, and a `127.0.0.1` binding would leave the stand unreachable while the health check, which
+probes the container itself, still reported `healthy` and served 200. **But from "not loopback" it
+concluded "bare port", and `deploy-stand.yml` refuses a value with no host prefix.** `0.0.0.0:8080`
+satisfies both. **Both halves are now in the workflow header with run 632 cited**, so the next reader
+cannot re-derive one and lose the other.
+
+⚠️ **Left standing, not swept up:** the earlier subtask text below still reads as though it were
+about to dispatch. It is kept because the HALT it records is the finding, and rewriting it would
+erase why the runner exists.
+
+- [ ] 4.3-old 🛑 *(superseded by 4.3 above)* read the stand back **from s10 itself**: container name, image digest, and
       🔴 `docker exec fe-prionex-prod getent hosts crm-kong-gateway` — **empty is a STOP**, and *"it
       started" is not evidence* (Story 4.1 Task 6.2).
 
