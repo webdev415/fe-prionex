@@ -1814,7 +1814,117 @@ development_status:
   # Oleg merges; the row goes `done` only after that.
   6-4-deploy-to-production-by-dispatch: review
   6-5-guard-promotion-by-commit-identity: backlog
-  6-6-record-the-deployed-production-image: backlog
+  # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
+  # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
+  # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:
+  # 6.3 and 6.10 closed `done`, and 6.4 SHIPPED deploy-prod.yml and reached `review`. The first draft
+  # was written against a repository that no longer existed. Re-fetch before Task 1.
+  # WHAT THIS STORY IS: the JOIN. 6.3 shipped `record-prod-image.yml` (dispatch-only; its own header
+  # says 6.6 "may adopt, extend or replace it"); 6.4 shipped `deploy-prod.yml` (derive -> build ->
+  # deploy) and its §12 hands the retag to 6.6 by name. 6.6 adds a FOURTH job that calls the recorder,
+  # so recording becomes a consequence of a successful deploy instead of a separate human act -- on
+  # BOTH paths, because Story 6.8's own AC ("prod-current points at the restored image") has no other
+  # mechanism. NO NEW REGISTRY MECHANISM IS WRITTEN: the retag logic is proven live once (run 600,
+  # 17/17) and is to be fixed, not replaced.
+  # 🔴 THE INHERITANCE IS THE STORY -- THIRTEEN code-review findings from 6.3, owner Story 6.6 by name
+  # in deferred-work.md, carried because Oleg closed 6.3 `done` with them unfixed. NONE FIRES TODAY
+  # (nothing dispatches the file); ALL ARM THE MOMENT THIS STORY DOES. AC5 forbids deferring the two
+  # worst: (1) the probes send ONE Accept media type where the sibling sends FOUR, so a false 404
+  # leaves PRE_DIGEST empty and every protective branch is gated on it -- including the very
+  # comparison that tells a move from a no-op; (2) G6 inspects the TAG, not the resolved digest, so
+  # the labels checked and the manifest written are only ASSUMED to be the same object, under two
+  # PERMANENT names. Two independent adversarial layers reported (2) separately.
+  # 🔴 TWO HUMAN-SHAPED INPUTS DO NOT SURVIVE AUTOMATION UNCHANGED, and the story decides rather than
+  # inherits: G1's `acknowledgement` is kept but GATED ON THE EVENT (a caller passing the literal is a
+  # constant, not a guard; the call path is authorised by the deploy that already succeeded), and
+  # `allow_current_move` defaults TRUE on the call path / FALSE on dispatch -- 6.3's own comment says
+  # "Story 6.6 sets its own policy; it does not inherit this default". A deploy that succeeds and then
+  # refuses to record itself leaves prod-current naming the PREVIOUS release: worse than no marker.
+  # 🔴 THE SHADOWING TRAP IS FIVE DAYS OLD AND THIS STORY IS SAFE FROM IT BY ONE RENAME (#d47(3), runs
+  # 637/640). deploy-prod.yml's dispatch inputs are `tag`/`rollback`; the recorder's are `image_tag`/
+  # `acknowledgement`/`allow_current_move` -- NO COLLISION, so `with: image_tag:` reaches the callee
+  # intact. PROHIBITED: renaming `tag` back to `image_tag` for tidiness, or adding any of the
+  # recorder's three input names to deploy-prod.yml's own dispatch block.
+  # ✅ SETTLES AN EXPLICITLY OPEN QUESTION the ledger points at: docs/prod-releases.md's `prod_tag`
+  # column says the form a rollback targets is "Story 6.4/6.6's to settle". 6.4 settled the deploy half
+  # by construction (derive REFUSES prod-current/prod-* as records). 6.6 records it: prod_tag =
+  # `sha-<12hex>-prod`, the only deployable form. ONE DATED COLUMN AMENDMENT, NO ROW TOUCHED.
+  # 🔴 A G5-EQUIVALENT IS NOW POSSIBLE and the recorder's header is STALE: it says "THERE IS NO PROD
+  # STAND", true on the morning of 2026-08-26 and false by that evening (6.4: runs 634/642, s10 live,
+  # fe-prionex-prod healthy). Correcting the sentence is MANDATORY (AC8); implementing the digest half
+  # (prod-current's new target must equal what deploy-stand.yml actually deployed) is recommended, the
+  # health half is recorded as deliberately not built.
+  # ✅ OPEN QUESTION 1 ANSWERED BY OLEG 2026-08-26, verbatim "move ok" -- APPLIED, NOT ABSORBED. The
+  # question was whether this story spends anything to observe a real prod-current MOVE. It does:
+  # option (b), THERE AND BACK, three dispatches of deploy-prod.yml, all rollback:true --
+  #   (1) sha-a99ccd44c5a3-prod  -> both writes NO-OP; proves the wiring on the real stand, free
+  #   (2) sha-308ea1520c59-prod  -> prod-308ea1520c59 CREATED, prod-current MOVES; epic AC2 live
+  #   (3) sha-a99ccd44c5a3-prod  -> prod-current MOVES BACK; the move a SECOND time, opposite
+  #       direction, AND restores the state Story 6.9 requires.
+  # WHY THE PRICE IS LOW, recorded so it is not re-litigated later: s10 SERVES NO USERS -- the traffic
+  # switch is external and has not happened, s2 keeps serving (#d23). Zero user blast radius. That is
+  # the whole reason this is cheap NOW and would not be cheap after the switch.
+  # 🔴 THE RECOMMENDATION WAS (a) "do not move" AND WAS NOT TAKEN. Kept and superseded in the story
+  # file, not rewritten, so the decision stays legible against what was actually put to him.
+  # 🔴 THE RESIDUE, named before it is created: dispatch (2) mints prod-308ea1520c59 PERMANENTLY --
+  # keep_pattern protects it by shape, only an authorised DELETE removes it -- and it is a PROOF
+  # MARKER, NOT A RELEASE. This is the FIRST prod-<12hex> HISTORY marker for a non-release (6.4
+  # already had to write that sentence for two sha-*-prod proof images), and it lands directly on
+  # epic AC4: after this story THE REGISTRY ALONE IS NO LONGER A SUFFICIENT RELEASE HISTORY, because
+  # nothing in the tag distinguishes a proof from a release. The discriminator is docs/prod-releases.md
+  # -- #d38 S-D1's three-tier model, now demonstrated rather than asserted. NO LEDGER ROW is added.
+  # 🔴 PROHIBITION 6 IS AMENDED, NOT LIFTED: the story may not close, and no AC may be graded, with
+  # prod-current naming anything other than sha-a99ccd44c5a3-prod. If dispatch (3) fails, the row
+  # STAYS in-progress with the blocking condition named -- the enum has no `blocked` value and this
+  # project does not close over a wrong production pointer.
+  # ⚠️ REJECTED ALTERNATIVE, recorded because a reviewer will raise it: dispatch record-prod-image.yml
+  # directly with allow_current_move:true and touch no stand. Cheaper, and it would prove the
+  # RECORDER's move branch -- but not the AUTOMATIC path, which is the only thing this story ships.
+  # 🔴 INHERITS AN UNMET AC AND IS THE ONLY STORY THAT CAN PAY IT: 6.3's AC6 (retro-E5's live outcome
+  # matrix) is UNMET -- "NO guard here has ever been watched REFUSING anything on this instance...
+  # Whoever next dispatches this file -- Story 6.6 -- inherits it." Four discriminating rows are FREE
+  # (G1 wrong literal, G2 an existing -preprod tag, G3 a 40-hex tag, the 404 classifier) and write
+  # nothing; G4 is unreachable through the file's own inputs and G6 needs an artifact build.yml cannot
+  # produce -- both LABELLED, never left blank. AC6 forbids grading on 6.3's local 15/15 shell exercise.
+  # M7's PRE-PROD-only remainder is re-owned BY NAME rather than claimed: this story dispatches the
+  # PROD recorder, not record-preprod-candidate.yml, and a branch is not exercised in a file you never ran.
+  # ⚠️ NOT ADOPTED, deliberately: the retention observation (first observable 2026-08-29) stays with
+  # STORY 6.3 by Oleg's own reassignment. AC3 states protection as COMPILED, not observed (#d38 §9).
+  # FROZEN: deploy-stand.yml, build.yml, record-preprod-candidate.yml, and deploy-prod.yml's `derive`
+  # job -- that is STORY 6.5's SEAM and a fourth job after `deploy` does not touch it. s2 untouched
+  # (NFR5 absolute); s10 written only by deploy-stand.yml through the runner.
+  # Decision number: D48 apparent-next on 584cc886 (D44 -> story-4-10, D45 cancelled with 6.3's Task 6
+  # and never used). 🔴 RE-VERIFY ACROSS LOCAL UNPUSHED BRANCHES TOO -- 6.3's OQ10 found a full ## D43
+  # on an unpushed local branch the origin/* sweep could not see, and the PROCESS half of that hole is
+  # OPEN and owned by no fix.
+  # ✅ OPEN QUESTIONS 2-5 ANSWERED BY OLEG 2026-08-26, all as recommended -- THE STORY HAS NO OPEN GATE.
+  #   (2) THE DEPLOY IS THE AUTHORISATION: `record` runs unconditionally on a green deploy, nothing
+  #       further gates the call path. Declined alternative recorded, not silently dropped -- gating
+  #       `record` on a matching docs/prod-releases.md row would make the regulation technically
+  #       enforced, but it is a NEW gate NFR9/#d5 say does not exist, it needs a checkout plus a read
+  #       credential in the write job, and it would have REFUSED THIS STORY'S OWN MOVE EXERCISE
+  #       (dispatches 2 and 3 are deliberately not releases and correctly have no ledger row).
+  #   (3) 6.6 LANDS FIRST; 6.5 REBASES ONTO IT. Textually disjoint (6.5 at `derive`, 6.6 after
+  #       `deploy`) and 6.6's whole exercise is rollback:true, on which 6.5's guard is skipped BY ITS
+  #       OWN AC -- so there is no interaction, only a merge order. 🔴 The obligation this creates:
+  #       LEAVE `derive` BYTE-IDENTICAL. A tidy-up there turns a clean rebase into a conflict in the
+  #       one job 6.6 has no business in.
+  #   (4) G6's discriminating row: UNEARNED WITH THE REASON. No force-test, no hand-crafted artifact.
+  #       None exists and build.yml CANNOT make one (it derives the label and the tag suffix from the
+  #       same shell variable). The rejected option would have minted a permanent junk sha-<12hex>-prod
+  #       -- keep_pattern protects it by shape -- in a namespace holding another team's production.
+  #       6.3's local 15/15 shell exercise is the precedent for what force-testing reads like after:
+  #       verified logic, no run id, and its own story had to record it is NOT a substitute.
+  #   (5) AC4's wording amended and CONFIRMED: "without connecting to the production host", not "s2".
+  #       Kept literal the AC is satisfied by construction -- NFR5 already forbids touching s2 -- and
+  #       checks nothing. That is the vacuous-check class this project has now caught five times.
+  # Floor 13 / ceiling 24 runs (7 of them dispatches; 5 write nothing, 2 do), OPEN. 🔴 CEILING RAISED
+  # 20 -> 24 THE SAME DAY IT WAS DECLARED, with its own reason rather than silently: OQ1's "move ok"
+  # converts a matrix row that would have shipped UNEARNED into two real dispatches. Same
+  # raise-with-a-recorded-reason discipline Story 6.2 applied three times to its own AC8 ceiling.
+  # The ceiling also budgets a decision commit and an integration merge -- the two lines Story 6.2's
+  # own model omitted and overran on.
+  6-6-record-the-deployed-production-image: ready-for-dev
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog
