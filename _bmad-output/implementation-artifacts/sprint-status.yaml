@@ -1496,7 +1496,50 @@ development_status:
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
   # preserve numbering but MUST complete before 6.4 — same precedent as 1.13 before 1.12.
-  6-10-provision-the-prod-deploy-contour-on-s10: backlog
+  # Contexted 2026-08-26 (branch `story-6-10/pr-1-context`) from a SCRATCHPAD WORKTREE branched off
+  # `docs/prod-temporary-hostname` at 1c54f32d -- NOT off origin/main (cfbad179), deliberately:
+  # `docs/migration-decisions.md#d43` is this story's primary input and is NOT ON MAIN. It lives on
+  # Oleg's own unmerged, unpushed local branch. A context branch off main would cite an anchor that
+  # resolves to nothing. Whether that branch merges as its own PR first is Open Question 1 (Oleg).
+  # Story 6.3's dev agent is working in parallel on `story-6-3/pr-1-context`; the two stories are
+  # INDEPENDENT (6.3 is registry work, 6.10 is host work; 6.3's own §12 says of s10 "Not touched,
+  # not probed, not prepared. Story 6.10's."). They share exactly two files -- this one and
+  # `docs/migration-decisions.md` -- and 6.10's §12 prices that collision.
+  # Zero dispatches by construction: floor 5 / ceiling 13 CI rows, all caused by pushes. OPEN.
+  # 🔴 THREE FINDINGS THIS STORY CARRIES THAT THE PLAN DID NOT, recorded here so they are visible
+  # without opening the story file:
+  #   • THE FIFTH VARIABLE. The epic's AC names three `.env` variables; `docker-compose.stand.yml`
+  #     requires FIVE, every one `${VAR:?...}` with no default (#d27) -- Story 5.2 already paid for
+  #     this correction on PRE-PROD. Of the two the epic omits, `DOCKER_IMAGE` is merely blocked
+  #     (Story 6.3 is paused, no `-prod` image exists), but 🔴 **`FRONTEND_NETWORK` HAS NO OWNER ON
+  #     s10.** The named value `crm-prod-network` is created by the `CRM/api-prionex` stack, and
+  #     THEIR PROD PLAN IS AN s2 PLAN (`docs/forgejo-prod-s2-plan.md:69`, cited at
+  #     `preprod-infrastructure-requirement.md:226`). The frontend's PROD stand moved to s10 on
+  #     2026-08-18; the backend's did not, and nobody has asked it to. `external: true` refusing to
+  #     start is the ONLY loud failure on that axis and nothing in this repo may create the network.
+  #     **This can block Story 6.4 outright.** Four possibilities are written out in the story's §3;
+  #     Open Question 3, owner Oleg. Second-order: `deploy-stand.yml`'s `expect_unrouted_api` input
+  #     is where 6.4 would have to declare it, and nobody should discover that mid-`with:`-block.
+  #   • THE LABEL->IMAGE BINDING. A label is bound to a job image AT REGISTRATION (Trap 5); a bare
+  #     `--labels` silently binds the default image and reports success (Trap 1, Story 1.7).
+  #     `deploy-stand.yml` states its requirements of that image in its own code -- docker CLI,
+  #     `flock` AND `timeout` (an explicit preflight that fails the job), `git` for an AUTHENTICATED
+  #     clone, `curl`, and a `date` that busybox's cannot always satisfy. s1's answer is
+  #     `deploy-base-dev-preprod:2026-08-07`, a host-local image built by the hub admin and NOT
+  #     available to us. s10 needs its own, and whether it may come from a public registry depends on
+  #     the host daemon's public egress -- which #d23 never measured (the CI runner's pulls go
+  #     through its dind, a different path). The story measures it before choosing.
+  #   • WHERE "REGISTERED" IS READ FROM. `.runner` on disk and `action_runner.agent_labels` in the DB
+  #     have disagreed on this instance twice, on the same runner (4 labels vs 1). The DB is the
+  #     scheduler's source (#d33) and an unmatched `runs-on` QUEUES SILENTLY. `deferred-work.md`
+  #     hands this forward by name, saying to resolve or re-measure it "before picking an s10 label
+  #     for PROD by the same method". AC1 is therefore not closed by `.runner` alone.
+  # 🔴 REPORTED, NOT FIXED -- it belongs to another story: Story 6.3's context file (2026-08-26
+  # 03:22Z) declares it will append **D43**. Oleg minted D43 himself ~5 hours later at 08:21Z.
+  # 6.3 is PAUSED and does not know its number is taken. 6.10 takes **D45** (D35 -> story-4-9,
+  # D43 -> docs/prod-temporary-hostname, D44 -> story-4-10; verified across all refs 2026-08-26)
+  # and re-verifies at execution time. Open Question 2, owner Oleg.
+  6-10-provision-the-prod-deploy-contour-on-s10: ready-for-dev
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery
