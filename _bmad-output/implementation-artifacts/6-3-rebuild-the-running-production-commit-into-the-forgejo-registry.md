@@ -12,7 +12,7 @@
 
 # Story 6.3: Rebuild the Running Production Commit into the Forgejo Registry
 
-Status: review
+Status: done
 <!-- PAUSED, 2026-08-26, on Oleg's own explicit instruction -- do not resume until he signals.
      Task 2.4's gate worked exactly as designed: the commit s2 is running
      (41ab0470ab6b3df3bc332fc90f8bccaaba44dc39) was confirmed absent from the Forgejo repository
@@ -1827,7 +1827,25 @@ code-review Opus.)_
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `6-3-…` flipped `backlog` → `in-progress`, HALT comment recorded
 - `.forgejo/workflows/record-prod-image.yml` — **NEW** (Task 5.1/5.2). The story's only code artifact. Dispatch-only recorder for `prod-<12hex>` / `prod-current`; ships unexercised — no dispatch has been made against it
 
-### Review Findings 
+### Review Findings
+
+🔴 **CLOSED WITH THESE UNFIXED, 2026-08-26, by Oleg's decision — *«сохрани на потом и закрой стори»*.**
+**`done` here means the story is closed, NOT that it is clean.** Of 32 findings that survived triage,
+**3 decision-needed were resolved** (1(a), 2(a), 3(b), merged as PR #95) and **3 were deferred at
+triage**. The remaining **26 `patch` findings are NOT fixed**, and two of them are defects in shipped
+code that weaken guards this story's own text advertises as strict.
+
+**They are carried into `deferred-work.md` with owners, and that is the point of the close:** a finding
+that lives only inside a closed story file is precisely the failure this project hit earlier the same
+day, when Oleg's own reassignment of the retention observation existed only in a closed story while the
+ledger still read *"no owner"*. **Owners assigned:** the thirteen code findings to **Story 6.6**, which
+inherits `record-prod-image.yml` and moves `prod-current` on every deploy; the thirteen record findings
+to the **Epic 6 retrospective**, because the pattern in them is worth more than the individual fixes now.
+
+**Four ACs remain UNMET** — AC4 (an **epic** criterion), AC6, AC8, AC9 — each by an explicit decision of
+Oleg's, none by oversight, and none softened. **Closing the story does not convert them to met.**
+
+ 
 
 🔴 **Code review, 2026-08-26 — three adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance
 Auditor), run as independent agents with no access to this session's reasoning, because the same
@@ -2028,6 +2046,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 1.2 | **Story CLOSED `done` by Oleg with 26 `patch` findings UNFIXED — *«сохрани на потом и закрой стори»*.** `done` means closed, not clean, and the file says so in those words. All 26 are carried into `deferred-work.md` **with owners** rather than left inside a closing story: the **thirteen code findings to Story 6.6**, which inherits `record-prod-image.yml` and moves `prod-current` on every deploy — including the two worst, the single-`Accept` probe that makes the `allow_current_move` refusal bypassable and G6 validating by tag rather than by the resolved digest; and the **thirteen record findings to the Epic 6 retrospective**, catalogued rather than corrected, because their shared pattern — *a fix-pass that is not itself re-reviewed is just a second draft* — is retrospective material and this project has now reproduced it twice. Four ACs stay UNMET (AC4 epic, AC6, AC8, AC9); the close does not convert them. | dev-story |
 | 2026-08-26 | 1.1 | **Three code-review `decision-needed` items resolved by Oleg: 1(a), 2(a), 3(b).** (1a) The six coordinator-executed subtasks — 4.2, 4.3, 4.4, 5.3, 8.3, 8.4 — are re-marked `[»] [coordinator-executed]` instead of `[x]`, restoring the distinction Prohibition 11 protects; every run id and pasted artifact is retained, so nothing is un-evidenced. A marker legend is added above Tasks/Subtasks, and it records the context that made the breach easy: §11's split assumes two sessions and they collapsed into one. (2a) The `AC8` reference is dropped from `record-prod-image.yml`'s header — the text stays, it simply stops claiming to close an AC the story records as **UNMET**. (3b) The retention observation (`UNPROVEN` by execution, first observable **2026-08-29**, owner **Story 6.3** by Oleg's own OQ8 reassignment, and the story closes before that date) is filed in `deferred-work.md`. 🔴 AC9's regulation contradiction is **NOT** filed — declined a second time, and recorded as **declined rather than dropped**, so it does not read as forgotten. | code-review |
 | 2026-08-26 | 1.0 | **Task 8 — story closed and moved to `review`. 6 of 10 ACs met; four (AC4, AC6, AC8, AC9) NOT MET, every one by an explicit decision of Oleg's, none by oversight and none softened — AC4 is an epic criterion and says so.** Delivered and evidenced: the first PROD image this project has ever built (run 598, 14/14, 384 s) and the first PROD markers it has ever written (run 600, 17/17), all three names on one manifest `sha256:f30c794123ba…a3f3`, read back from the registry independently of the runs. **Ledger CLOSED BY QUERY: 14 runs measured against a declared ceiling of 20 — under budget.** 🔴 Run 598 had to be named on its own line: its `commit_sha` is the dispatch ref, so a `commit_sha` attribution would have missed the story's most consequential run. Not all green — 5 success, 7 cancelled by ordinary concurrency eviction, 1 running; counted because they consumed rows. One budgeted line cost zero (the integration merge shared a push). AC10's not-earned list written in the required words, including that the retention rule stays `UNPROVEN` by execution with first observation **2026-08-29**, after this story closes, and that **ownership is not reset to nothing**. | dev-story |
 | 2026-08-26 | 0.9 | **Task 7 CANCELLED by Oleg (*«Task 7 отменить»*). AC9 recorded UNMET.** Neither of Story 6.2's artifacts is reconciled. The regulation's dated census stays wrong (11 → **12** measured today; *"no PROD deploy caller"* stays true), and 🔴 **a live contradiction is left standing that blocks Story 6.9**: the shipped rollback rule makes 6.9's own FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release, therefore needing Oleg — while the same document records **no delegate**. Open Question 5 had been **answered** (*«Поправить регламент в 6.3»*, narrowed to by-tag-name); that answer is now **unexecuted**. `docs/prod-releases.md` records nothing about the three `-prod` forms that now exist, nor what `prod-current` means before the switch — **the durable half of AC8**, which stays unmet in both halves. AC9's own never-drop fallback (file the contradiction against Story 6.9 in `deferred-work.md`) is **also not done** — offered, not taken, since the instruction was to cancel. 7.3 remains **done**: every frozen path verified byte-identical to `origin/main`. Owner of all of it: Oleg. | dev-story |

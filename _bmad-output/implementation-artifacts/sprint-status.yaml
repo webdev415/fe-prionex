@@ -1707,7 +1707,36 @@ development_status:
   # path rebuilds and Enforce AC2 refuses the repoint (#d24 §2b). Plus the approval blocker above, and
   # #d46's new AC gating the traffic switch on the product-code import (owner Oleg).
   # Oleg merges the PR; the row goes `done` only after that.
-  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: review
+  # ✅ CLOSED `done` 2026-08-26 by Oleg -- and `done` means CLOSED, NOT CLEAN. Recorded plainly so the
+  # tracker does not imply something the story does not claim.
+  # DELIVERED AND EVIDENCED: the first PROD image this project ever built (run 598) and the first PROD
+  # markers it ever wrote (run 600); three names on one manifest sha256:f30c794123ba...a3f3, read back
+  # from the registry independently of both runs; the first-ever read of secret/fe/prod/app.
+  # 🔴 FOUR ACs REMAIN UNMET, each by Oleg's explicit decision, none by oversight, none softened:
+  #   AC4 -- an EPIC criterion. No D45 at all: the story shipped with NO decision record.
+  #   AC6 -- record-prod-image.yml ships with six guards whose refusal path was never observed live.
+  #   AC8 -- prod-current names an image NO HOST SERVES; the only statements of that are the workflow
+  #          header and a job log, the tier this project calls best-effort.
+  #   AC9 -- the regulation contradiction that makes Story 6.9's own FR32 dispatch need an approver
+  #          the same document says has no delegate. Story 6.9 WILL meet it at the cutover.
+  # 🔴 26 CODE-REVIEW `patch` FINDINGS ARE UNFIXED, and are CARRIED with owners rather than closed with
+  # the story -- a finding living only inside a closed story file is the exact failure this project hit
+  # the same day with the retention item. See deferred-work.md, "Carried from: Story 6.3".
+  #   -> 13 code findings, OWNER STORY 6.6 (it inherits record-prod-image.yml and moves prod-current on
+  #      every deploy). The two worst: the probes send ONE Accept media type where the sibling sends
+  #      FOUR, so a false 404 leaves PRE_DIGEST empty and BYPASSES the allow_current_move refusal this
+  #      file advertises as stricter than its sibling's; and G6 inspects the TAG instead of the
+  #      resolved digest, so the labels checked and the manifest written are only assumed to be the
+  #      same object -- under two permanent names. NEITHER FIRES TODAY (nothing dispatches the file);
+  #      both arm the moment 6.6 does.
+  #   -> 13 record findings, OWNER EPIC 6 RETROSPECTIVE, catalogued not corrected. Shared pattern, and
+  #      the reason they belong in a retro: A FIX-PASS THAT IS NOT ITSELF RE-REVIEWED IS JUST A SECOND
+  #      DRAFT -- 6.2's review recorded it after its own fix-pass introduced five new defects, and 6.3
+  #      reproduced it (title, Story statement and §1 still describe the superseded build source; the
+  #      Status header still says PAUSED; the ledger declared itself CLOSED while listing outstanding
+  #      rows, with 14 in the total and 13 in the breakdown).
+  # ✅ 3 decision-needed resolved 1(a)/2(a)/3(b) (PR #95); 3 deferred at triage with owners.
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: done
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
@@ -1852,7 +1881,25 @@ development_status:
   # (never probed, CRM/api-prionex).
   # UNBLOCKS: Story 6.4 may now be written against label `e1-rung3-prod-deploy`. Oleg merges; the row
   # goes `done` only after that.
-  6-10-provision-the-prod-deploy-contour-on-s10: review
+  # ✅ DONE 2026-08-26 (Oleg). PR #93 merged as 01cf8e01. Five of six ACs met.
+  # 🔴 AC3 REMAINS UNMET AND THIS ROW DOES NOT PRETEND OTHERWISE. It asks for a standing read-only
+  # registry credential ON s10. The deploy never uses one -- deploy-stand.yml logs in inside the job
+  # from org secrets into a workspace-scoped DOCKER_CONFIG (D28 option (e)) and never reads the host.
+  # A permanent pull credential on a production host is the wrong trade: registry tokens on this
+  # instance are unrevocable-by-admin once leaked, twice paid for. The story RECOMMENDS retiring the
+  # clause by dated amendment, keeping its real content (a property of REGISTRY_TOKEN_RO, already
+  # exercised by every DEV and PRE-PROD deploy). Marking the story `done` closes the STORY, not that
+  # recommendation -- it is still open and still Oleg's.
+  # ⚠️ THREE RESIDUALS THAT SURVIVE THE CLOSE: (1) capacity: 1 is another team's config value and is
+  # NOT a reason to drop Story 4.4's flock; (2) nothing in the deploy path asserts WHICH HOST it runs
+  # on -- an org-scoped label is a string, and the guarantee lives in a foreign config; (3) the
+  # backend resolve CANNOT be verified until the first deploy -- "it started" is not evidence, since
+  # nginx resolves Kong lazily and the healthcheck probes itself. Check:
+  # `docker exec fe-prionex-prod getent hosts crm-kong-gateway`; empty is a STOP.
+  # EXTERNAL, four items with owners, concrete in #d23: traffic path (80/443 on the hypervisor answer
+  # `refused`, Oleg); hypervisor->VM route (D23's own "No route to host", unverified, Oleg); the
+  # PROD-API hostname (UNMEASURED, not derivable, Oleg); PROD Kong's CORS (never probed, api-prionex).
+  6-10-provision-the-prod-deploy-contour-on-s10: done
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery

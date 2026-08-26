@@ -4541,3 +4541,96 @@ itself stands and lives in `6-3-…md`: `docs/production-approval-regulation.md`
 FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release,
 therefore needing Oleg — while the same document records **no delegate**. **Story 6.9 will meet it at
 the cutover.** Owner: Oleg.
+
+## Carried from: Story 6.3, closed 2026-08-26 with its code-review findings UNFIXED
+
+**Story 6.3 was closed `done` by Oleg with 26 `patch` findings outstanding.** They are carried here so
+they survive the close — a finding that lives only inside a closed story file is the exact failure this
+ledger exists to prevent, and this project hit it once already the same day (the retention item, whose
+owner Oleg had assigned while `deferred-work.md` still read "no owner"). **Full text of all 26, with
+locations and evidence, is in the `### Review Findings` section of
+`6-3-rebuild-the-running-production-commit-into-the-forgejo-registry.md`.** Below is what an owner
+needs to act.
+
+**How they were found, because it bears on how much weight to give them:** three adversarial layers run
+as **independent agents** with no access to the authoring session's reasoning — the same author wrote
+the spec, the code and the evidence. **Two layers independently reported the same G6 defect.**
+
+### 🔴 In shipped code — `.forgejo/workflows/record-prod-image.yml`. **Owner: Story 6.6.**
+
+That story inherits this file — its own header says 6.6 *"may adopt it, extend it, or replace it"* — and
+6.6 **moves `prod-current` on every production deploy**, which is precisely what the two worst findings
+weaken. **None of these fires today**, because nothing dispatches the file; they arm the moment 6.6 does.
+
+1. 🔴 **The probes send ONE `Accept` media type where `record-preprod-candidate.yml` sends FOUR.** A
+   false 404 sets `exists=false`, leaving `PRE_DIGEST=""` — and **every** protective branch is gated on
+   `[ -n "$PRE_DIGEST" ]`, **including the `allow_current_move` refusal**. The default-refuse this file
+   advertises as stricter than its sibling's would not fire. This is Story 5.4's own **M4** failure
+   mode, reintroduced by a different route in a file whose header claims to have closed it.
+2. 🔴 **G6 inspects `$SHA_TAG`, not `${IMAGE}@${CANDIDATE_DIGEST}`.** The digest is resolved one step
+   earlier; G6 then re-resolves by tag. **The labels checked and the manifest written are only assumed
+   to be the same object** — under two permanent names. One-line fix; the sibling avoids the split
+   entirely by taking the digest from the probe's own `Docker-Content-Digest`.
+3. **No `if: always()` anywhere.** A failure after the first write suppresses both the tag listing and
+   the disclaimer — and the disclaimer is **AC8's only executing sink**. The write order explicitly
+   plans for a death between the two writes; that is exactly the state in which the disclaimer is lost.
+4. **The check-to-write window is not disclosed.** `imagetools create` offers no compare-and-swap. The
+   sibling says so in its own header; this file copied the write pattern and not the disclosure.
+5. **`grep -Eqi` inverts its safety direction in G4.** `build.yml` uses `-i` in a **reject** test, where
+   a broader match means more refusal. G4 uses it in an **accept** test, where a broader match means
+   more acceptance — and the comment transplants `build.yml`'s justification verbatim.
+6. **No `--proto-redir '=https'` on credentialed `curl -L`** — a redirect could replay registry
+   basic-auth in cleartext.
+7. **"Assert every write target is this literal repository" cannot fail** — all three tags are built
+   from `${IMAGE_REPO}:` in G3. G4's equivalent unreachability **is** disclosed; this step's is not,
+   while Prohibition 7 is quoted repeatedly in the same file.
+8. **A stale example ships in the dispatch UI:** `image_tag`'s description reads
+   *"e.g. sha-41ab0470ab6b-prod"* — the **superseded** commit.
+9. **The header asserts a `build.yml` outcome its own quoted decision table contradicts** — *"goes red"*
+   as mechanical certainty, where identical digests take the documented no-op branch.
+10. **Read-back has no retry** — a transient 5xx/429 after a successful `create` reports failure while
+    the permanent tag is written and correct, which is the most expensive false negative this file has.
+11. **No `defaults.run.shell: bash`** while G2 depends on ANSI-C quoting (`$'\n'`), not POSIX.
+12. **The `tags/list` step degrades to a green WARN** on 401 or transport failure and handles no
+    pagination — while its own header calls that output *"the state a later reader should trust"*.
+13. **The probes dropped the sibling's empty-credential pre-check and 401 classification** — an empty
+    secret becomes an unauthenticated request reported as AMBIGUOUS. Fail-closed, so the loss is
+    diagnostic.
+
+### ⚠️ In the record — the story file's own text. **Owner: Epic 6 retrospective.**
+
+**These are NOT being corrected.** The story is closed; the defects are catalogued instead, because the
+pattern in them is worth more to the retrospective than the individual fixes are worth now.
+
+- **The ledger closed itself early and its arithmetic does not reconcile** — declared `CLOSED` while the
+  same subtask lists rows still to come (against retro-D4's own rule), total says **14**, the status
+  breakdown sums to **13**. Run 598 is in one and not the other. **Same class as the arithmetic error
+  Story 6.2's review caught in itself.**
+- **A fix-pass corrected the obscure places and left the headline ones.** After `#d46` changed the build
+  source, `§7(f)`, `§13`, Task 5.2 and the workflow header were corrected — while **the title, the
+  Story statement and `§1` still describe building the running production commit**, the `Status:`
+  header still says **PAUSED**, and Completion Notes still end at session 2 with a note reading *"Task 4
+  … remain not started … no dispatch"*.
+- **Three ACs graded MET whose final clauses were not performed** — AC2 (its `D45` clause was cancelled
+  with `D45`), AC5 (its compile is pasted against the **superseded** commit's tag names; Task 3.4 was
+  never re-run after `#d46`), AC7 (its wait-for-confirmation clause was explicitly superseded, and `§11`
+  and Dev Notes `§5` still assert it).
+- **A claim presented as the non-vacuous alternative is also fixed by construction** — *"two digests for
+  one commit"*. A `prod` and a `preprod` build differ in build args **and** in
+  `org.prionex.environment`, so the digests could never have been equal. **Prohibition 7 applies to it
+  too.** This is the fifth time this project has caught this exact shape.
+- **Run 600's step table is characterised, not pasted**, while run 598's was pasted — and the
+  guard-order claim rests on logs Dev Notes `§2` itself calls unreliable (Prohibition 15).
+- Smaller: `§9` mis-cites AC5 where it means AC4; Dev Notes `§2` says "11 **files**" where the `ls`
+  shows 11 **entries** including `README.md`; the File List still reads *"ships unexercised"* after run
+  600 dispatched it.
+
+**The reusable lesson, and the reason this belongs in a retrospective rather than a patch queue: a
+fix-pass that is not itself re-reviewed is just a second draft.** Story 6.2's review recorded exactly
+this after its own fix-pass introduced five new defects; Story 6.3 then reproduced it.
+
+### Deferred at triage — real, not actionable now
+
+Already filed above under *"Deferred from: code review of story-6.3 (2026-08-26)"*: the colon-splitting
+disagreement, the multi-arch OCI index parse failure, and the displaced `prod-current` on the
+authorised-move path.
