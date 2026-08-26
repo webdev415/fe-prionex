@@ -16,7 +16,7 @@
 
 # Story 6.10: Provision the PROD Deploy Contour on s10
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -1042,6 +1042,20 @@ and the healthcheck probes itself, so a stand on a backend-less network reports 
 `docker exec fe-prionex-prod getent hosts crm-kong-gateway`, and an empty result is a **STOP**, not a
 reason to fall back to `crm-network`.
 
+### ✅ AC5 and AC6 — DONE 2026-08-26
+
+**AC6** — `#d23` amended by dated addition (never a rewrite): what was provisioned, **by whom**, and
+what remains external. 🔴 The "by whom" is the part worth reading: **the neighbouring team provisioned
+the deploy runner, not us** — a deviation from D23's own 2026-08-18 decision (*"деплой-раннер на s10
+провижним мы сами"*), recorded rather than absorbed. It removes work from us and removes our control
+over a config the frontend's production deploy now depends on.
+
+**AC5** — the traffic path is named with its owner and current state, as an external dependency, in
+the same amendment: four rows, each with an owner. Public path (`refused` on the hypervisor, Oleg),
+hypervisor→VM route (D23's own *"No route to host"*, unverified, Oleg), the **unmeasured** PROD-API
+hostname (Oleg), and PROD Kong's CORS (`CRM/api-prionex`). **Nothing about any of them was built or
+changed by this story**, which is what AC5 requires.
+
 ### Verdict
 
 **AC1 ✅ met in full. AC2 ✅ met by observation. AC3 🟡 stale wording, content satisfied elsewhere.
@@ -1049,10 +1063,13 @@ AC5 🟡 partial and external. Only AC4 and AC6 are genuinely outstanding, and b
 
 What is actually left:
 1. ~~**AC4** — the stand directory~~ ✅ **DONE 2026-08-26.**
-2. **AC6** — update `#d23` with what was provisioned, by whom, and what remains external. **The only
-   remaining work item.**
-3. **AC3's wording** — retire the standing-credential clause by dated amendment rather than leaving an
-   AC that describes a retired model. A spec change, not a task.
+2. ~~**AC6** — update `#d23`~~ ✅ **DONE 2026-08-26.**
+3. **AC3's wording** — 🔴 **the one thing left, and it is a SPEC CHANGE, not a task.** The clause asks
+   for a standing read-only credential on s10. The deploy does not use one, does not want one, and
+   this project has twice paid for a leaked registry token that no admin can revoke. **Recommended:
+   retire the clause by dated amendment; keep its real content, which is a property of
+   `REGISTRY_TOKEN_RO` and is already exercised by every DEV and PRE-PROD deploy.** Not taken
+   unilaterally. **Until Oleg rules, AC3 stands as written and therefore UNMET.**
 
 **There is no blocker, and no credential needs to be created anywhere.** Story 6.4 may be written
 against `e1-rung3-prod-deploy` as soon as the stand directory exists.
