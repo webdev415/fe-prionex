@@ -2322,7 +2322,12 @@ attestation, a security rebuild of a released commit, or a dispute about what a 
 
 **Why it matters beyond Story 3.6:** Story 5.4 mints `preprod-<sha>` on commit identity, Story 6.5
 refuses a production deploy unless `preprod-<sha>` exists, and Story 6.6 keeps `prod-<sha>` as the
-rollback target. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
+rollback target. 🔴 **CLARIFIED 2026-08-26 (code review of Story 6.6):** *"the rollback target"*
+conflated two things that Story 6.4's shipped `deploy-prod.yml` has since forced apart — its `derive`
+job **refuses** `prod-*` outright (*"a RECORD, not a deployable reference"*). **`prod-<12hex>` is what
+keeps the artifact alive and protected** by `keep_pattern`; **`sha-<12hex>-prod` is what a rollback
+actually dispatches**, and is the `prod_tag` value in `docs/prod-releases.md`. Both are real; the
+sentence above names only the first. See `#d18` §3. A `sha-` tag that can quietly name a different artifact makes 6.5 a check on a claim
 that changed underneath it.
 
 **Side effect, live now:** the shared `:buildcache` tag was overwritten at 14:48:02 by `ci.yml` on the

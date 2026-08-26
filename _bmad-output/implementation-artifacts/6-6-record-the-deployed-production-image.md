@@ -167,6 +167,14 @@ failure that header describes, one job further down.**
 | `prod-<12hex>` | permanent per-commit history; the shape Story 6.5's guard mirrors | ❌ | ✅ `(pre)?prod-[0-9a-f]{7,64}` |
 | `prod-current` | the Forgejo-side production pointer | ❌ | ✅ by literal name |
 
+🔴 **THIS REVERSES TWO WRITTEN SOURCES, and gets the same dated banner AC4's rewrite got** (code
+review 2026-08-26; Oleg's decision). `#d18` §3 says *"6.6 делает `prod-<sha>` целью отката"* and
+`deferred-work.md` says *"Story 6.6 keeps `prod-<sha>` as the rollback target"*. **Neither is wrong —
+both name the (a) sense above and the plan never separated it from (b).** Story 6.4's shipped `derive`
+forced the separation by refusing `prod-*`. **Both records are amended in this story's own change, not
+left to contradict it** — the failure mode this project has hit twice is a correction that lives only
+inside a story file.
+
 ➡️ **`docs/prod-releases.md`'s `prod_tag` column gets one dated amendment naming `sha-<12hex>-prod`.**
 The file's append-only rule governs its **rows**; this is column prose, and amend-don't-rewrite is the
 project's standing convention for that. **No row is added, edited or removed by this story.**
@@ -243,7 +251,7 @@ discriminating run); review a foundation story before writing the story that bui
 | G4 `keep_pattern` compile | run 600 | — | ❌ unreachable through this file's inputs (force-test only) — **label it, do not leave it blank** |
 | classified-404 probe | run 600 | a `sha-<12hex>-prod` that does not exist | ✅ **free** |
 | G6 labels | run 600 | — | ❌ **UNEARNED, decided by Oleg 2026-08-26.** Needs a `-prod`-shaped tag whose `org.prionex.environment` is not `prod`; none exists and `build.yml` **cannot** produce one — it derives the label and the tag suffix from the same shell variable. **Label the row with that sentence.** |
-| G5 equivalent | — | — | ❌ **permanent named absence** in 6.3's design (no PROD stand at write time). 🔴 **Re-open it: s10 IS now live.** See §10. |
+| G5 equivalent | — | — | ❌ **STILL ABSENT, decided 2026-08-26 — for a NEW reason.** Not 6.3's *"there is no PROD stand"* (false: s10 is live, runs 634/642) but *"the caller cannot see the stand"* — `deploy-stand.yml` publishes no `workflow_call` outputs and is frozen. The "digest half" is **withdrawn** as a comparison that cannot fail. See §10. |
 | `record` on rollback | §8's free dispatch | — | ✅ **free** |
 | `record` on release | — | — | ⚠️ the release deploy leg has **never been green** (`#d47`); **Story 6.9 owns its first run.** Label UNEARNED with that reason. |
 | `prod-current` MOVE | §8 dispatch 2 | §8 dispatch 3 (the opposite direction) | ✅ **AUTHORISED 2026-08-26** — *"move ok"*. **Two** rows, not one |
@@ -264,12 +272,29 @@ demonstrably serving this exact digest** — which is the difference between *"a
 promises and a weaker one. `deploy-stand.yml` has just run and reported healthy; the digest is
 `derive`'s `deploy_tag` resolved in the registry.
 
-⚠️ **Scope judgement, made here rather than left open:** a full G5 needs a `runs-on:
-fe-prionex-prod-deploy` job with host access. **Recommended: implement the digest half only** — assert
-that `prod-current`'s new target equals the digest `deploy-stand.yml` actually deployed — and **record
-the health half as deliberately not built, with the reason**. Do not silently leave the stale
-"there is no PROD stand" sentence in the header: **correcting it is mandatory**, implementing the full
-guard is not.
+🔴 **DECIDED 2026-08-26 (code review, three layers independently; Oleg's call): THERE IS STILL NO
+G5-EQUIVALENT — BUT THE REASON IS NOT 6.3's, AND THAT IS THE WHOLE POINT.**
+
+The "digest half" this section originally recommended — *assert that `prod-current`'s new target equals
+the digest `deploy-stand.yml` actually deployed* — **is a comparison that cannot fail, and it is
+withdrawn.** The recorder is handed that same `deploy_tag`, resolves it, writes `prod-current` from it,
+and `write-current` already refuses unless the read-back matches. Both sides are one resolution of one
+tag; **nothing in it touches s10.** That is Prohibition 9's own shape, in a story that lists it as an
+anti-pattern — the project has now caught it six times.
+
+**Why the real guard is not available either, measured:** `deploy-stand.yml` declares **no**
+`workflow_call` outputs — the same limitation `deploy-prod.yml`'s own header records for `build.yml`
+(*"A caller cannot learn which tag the build published"*) — and §12 freezes it. **So the caller
+physically cannot learn what was deployed.** Building the real thing needs a `runs-on:
+fe-prionex-prod-deploy` job reading the running container's digest on s10; that was offered and **not
+taken** — it widens this story into host territory Story 6.7's smoke check owns.
+
+➡️ **Required: record the absence with the CORRECTED reason, and do not reuse 6.3's.** 6.3 wrote *"there
+is no PROD stand"*. That is now false — s10 is live (runs 634/642). The true statement is: **the stand
+exists, and the caller cannot see it.** Leaving 6.3's dead reason in a file that now runs inside a
+production deploy would be exactly the stale-justification defect AC8 exists to fix.
+🔴 **Correcting the header sentence is MANDATORY (AC8). Asserting anything about s10 is FORBIDDEN
+here** — that is Story 6.7's, and a digest read dressed as a health guard is worse than no guard.
 
 ### 11. Previous story intelligence — what Epic 6 has already paid for
 
@@ -411,7 +436,14 @@ packages.** Every write target is composed from the file's own literal `IMAGE_RE
 **Given** a subsequent production deploy
 **When** the recording step runs again
 **Then** `prod-current` moves to the new image
-**And** the previous image remains addressable by its own `prod-<12hex>` tag as a rollback target
+**And** the previous image remains addressable by its own `prod-<12hex>` tag — 🔴 **AMENDED
+2026-08-26 (code review; Oleg's decision), and the amendment is the point:** `prod-<12hex>` is what
+**keeps the artifact alive and protected** by `keep_pattern`, **not** what a rollback dispatches.
+`deploy-prod.yml`'s `derive` refuses `prod-*` outright (*"a RECORD, not a deployable reference"*), so
+the deployable form is **`sha-<12hex>-prod`** — §7's settlement and the ledger's `prod_tag`. The epic's
+own words *"as a rollback target"* named only the first sense; `#d18` §3 and `deferred-work.md` carried
+the same conflation and are amended in the same change. **Both forms must survive retention for a
+rollback to be possible at all** — see AC3
 **And** on a move, the **displaced digest and the tag it belonged to** are recorded (§7), not left in a
 log this project classifies best-effort
 **And** the `allow_current_move` policy difference between the dispatch path and the call path is
@@ -556,9 +588,11 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
       🔴 **Verify by observation that `with:` reaches the callee** — `#d47`(3) is five days old.
 - [ ] 4.4 On a move, emit the displaced digest and its tag as a job output **and** to the step summary
       (§7, AC2).
-- [ ] 4.5 §10: correct the G5 justification; implement the **digest half** — `prod-current`'s new target
-      must equal `derive.outputs.deploy_tag`'s resolved digest — and record the health half as
-      deliberately not built.
+- [ ] 4.5 §10: correct the G5 justification to the TRUE reason — **the stand exists and the caller
+      cannot see it** (`deploy-stand.yml` publishes no `workflow_call` outputs and is frozen) — **not**
+      6.3's *"there is no PROD stand"*, which is now false. 🔴 **Do not implement the "digest half"**:
+      it compares one resolution of one tag with itself and cannot fail (Prohibition 9). Assert nothing
+      about s10 — that is Story 6.7's.
 - [ ] 4.6 Header work in **both** files, at the house ratio (§11). `deploy-prod.yml` gets the
       *"Not here, deliberately"* list updated: 6.6 leaves it.
 - [ ] 4.7 Mechanical checks before any dispatch: `bash -n` on every `run:` body; **zero `${{ }}` inside a
@@ -775,8 +809,8 @@ agent, because both reverse or retire something already written down.
 
 #### Decision needed
 
-- [ ] [Review][Decision] **The `prod_tag` settlement reverses a plan-level statement, and AC2 still carries the old words** — §7's table says `prod-<12hex>` is **not** deployable and `sha-<12hex>-prod` is what a rollback dispatches. That is CORRECT against shipped code (`deploy-prod.yml`'s `derive` refuses `prod-*`: *"a RECORD, not a deployable reference"*). But two written sources say the opposite: `docs/migration-decisions.md:1721` (`#d18` §3) — *"6.6 делает `prod-<sha>` целью отката"* — and `deferred-work.md:2324` — *"Story 6.6 keeps `prod-<sha>` as the rollback target."* AC4's `s2` rewrite got a dated amendment banner; §7's reversal got none, and AC2 still reads *"addressable by its own `prod-<12hex>` tag as a rollback target"*. So AC2 can be ticked while a rollback by that tag is impossible by construction. **Options: (a)** amend `#d18` §3, `deferred-work.md` and AC2 with a dated banner separating *"keeps the artifact alive and protected"* from *"what a rollback dispatches"* — both senses are real and the plan conflated them; **(b)** reword §7 only and leave the decision records; **(c)** raise a correct-course, since this is a plan-level settlement. Severity: **high**.
-- [ ] [Review][Decision] **§10's G5 "digest half" is a comparison that cannot fail** — reported independently by three layers. §10 sells it as *"the difference between 'an image exists' and 'production is running it'"*, and Task 4.5 words it as *"`prod-current`'s new target must equal `derive.outputs.deploy_tag`'s resolved digest"*. But the recorder is handed that same `deploy_tag`, resolves it, writes `prod-current` from it, and `write-current` already refuses unless the read-back matches — both sides are the same resolution of the same tag. Nothing touches s10. That is Prohibition 9's own shape, in a document that says the project has caught it five times. Compounding: `deploy-stand.yml` declares **no** `workflow_call` outputs (verified) and is frozen, so the caller genuinely cannot learn what was deployed; and **no AC covers §10 at all** — AC8 covers only correcting the stale sentence. **Options: (a)** drop the assertion, record "no G5-equivalent" with the corrected reason (s10 exists now, but the caller cannot see it); **(b)** build the real thing — a stand-side step on `fe-prionex-prod-deploy` asserting the running container's digest, which costs a host-touching job; **(c)** keep the digest read but stop calling it a G5-equivalent and grade nothing on it. Severity: **high**.
+- [x] [Review][Decision] ✅ **RESOLVED 2026-08-26 — Oleg chose (a): date the amendment everywhere.** Applied in this change to `#d18` §3, `deferred-work.md`, story AC2 and story §7, separating *"keeps the artifact alive and protected"* (`prod-<12hex>`) from *"what a rollback dispatches"* (`sha-<12hex>-prod`). Both senses are real; the plan conflated them and 6.4's shipped `derive` forced them apart. *The finding as raised:* **The `prod_tag` settlement reverses a plan-level statement, and AC2 still carries the old words** — §7's table says `prod-<12hex>` is **not** deployable and `sha-<12hex>-prod` is what a rollback dispatches. That is CORRECT against shipped code (`deploy-prod.yml`'s `derive` refuses `prod-*`: *"a RECORD, not a deployable reference"*). But two written sources say the opposite: `docs/migration-decisions.md:1721` (`#d18` §3) — *"6.6 делает `prod-<sha>` целью отката"* — and `deferred-work.md:2324` — *"Story 6.6 keeps `prod-<sha>` as the rollback target."* AC4's `s2` rewrite got a dated amendment banner; §7's reversal got none, and AC2 still reads *"addressable by its own `prod-<12hex>` tag as a rollback target"*. So AC2 can be ticked while a rollback by that tag is impossible by construction. **Options: (a)** amend `#d18` §3, `deferred-work.md` and AC2 with a dated banner separating *"keeps the artifact alive and protected"* from *"what a rollback dispatches"* — both senses are real and the plan conflated them; **(b)** reword §7 only and leave the decision records; **(c)** raise a correct-course, since this is a plan-level settlement. Severity: **high**.
+- [x] [Review][Decision] ✅ **RESOLVED 2026-08-26 — Oleg chose (a): drop it and record the absence.** Applied to §10, Task 4.5 and §9's matrix row. 🔴 **The correction that matters is the REASON**: 6.3's *"there is no PROD stand"* is now false (s10 is live), so the absence is re-justified as *"the caller cannot see the stand"* — `deploy-stand.yml` publishes no `workflow_call` outputs and is frozen. Reusing 6.3's dead reason would have been the stale-justification defect AC8 exists to fix. *The finding as raised:* **§10's G5 "digest half" is a comparison that cannot fail** — reported independently by three layers. §10 sells it as *"the difference between 'an image exists' and 'production is running it'"*, and Task 4.5 words it as *"`prod-current`'s new target must equal `derive.outputs.deploy_tag`'s resolved digest"*. But the recorder is handed that same `deploy_tag`, resolves it, writes `prod-current` from it, and `write-current` already refuses unless the read-back matches — both sides are the same resolution of the same tag. Nothing touches s10. That is Prohibition 9's own shape, in a document that says the project has caught it five times. Compounding: `deploy-stand.yml` declares **no** `workflow_call` outputs (verified) and is frozen, so the caller genuinely cannot learn what was deployed; and **no AC covers §10 at all** — AC8 covers only correcting the stale sentence. **Options: (a)** drop the assertion, record "no G5-equivalent" with the corrected reason (s10 exists now, but the caller cannot see it); **(b)** build the real thing — a stand-side step on `fe-prionex-prod-deploy` asserting the running container's digest, which costs a host-touching job; **(c)** keep the digest read but stop calling it a G5-equivalent and grade nothing on it. Severity: **high**.
 
 #### Patch
 
@@ -874,6 +908,7 @@ Dev Agent Record, not here.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.4 | 🔬 **Code review (Opus, four layers) — 2 decisions, 16 patches, 5 deferred, 1 dismissed.** Both decisions answered by Oleg and **applied**; the sixteen patches stay as action items owned by the dev session; the row stays `ready-for-dev` because the review ran before implementation and neither status the workflow offers is true. **Three layers independently reported the same two defects** — §10's tautology and §7's best-effort sink. Applied here: §7's `prod_tag` reversal now carries a dated banner and `#d18` §3 + `deferred-work.md` are amended in the same change (a correction that lives only inside a story file is the failure this project has hit twice); §10's "digest half" is **withdrawn** as a comparison that cannot fail, and the G5 absence is re-justified — 6.3's *"there is no PROD stand"* is false now, the true reason is *"the caller cannot see the stand"*. Also found and left as action items: **three of the thirteen inherited findings rest on a sibling comparison that does not survive counting**, and a **fourteenth defect the thirteen missed** — `EXISTS` is a tri-state consumed as a bi-state, so a `workflow_call` refactor of exactly the kind this story performs bypasses both refusals. One finding dismissed with its rebuttal kept (`#d21`, run 631: `github.event_name` is `workflow_call` inside the expansion). | code-review (Opus, 4 layers) |
 | 2026-08-26 | 0.3 | ✅ **Open Questions 2–5 answered by Oleg, all as recommended; the story now has NO open gate.** (2) The deploy is the authorisation — `record` runs unconditionally on a green deploy, and the declined alternative (gate it on a `docs/prod-releases.md` row) is recorded in §5 with its three grounds, the sharpest being that it would have **refused §8's own move exercise**. (3) **6.6 lands first, 6.5 rebases onto it** — the two are textually disjoint and 6.6's whole exercise runs `rollback: true`, on which 6.5's guard is skipped by its own AC; the obligation that creates is **leave `derive` byte-identical**, now stated in §12. (4) G6's discriminating row is **UNEARNED with its reason**, no force-test and no hand-crafted artifact — the rejected option would have minted a permanent junk `sha-<12hex>-prod` in a namespace holding another team's production packages. (5) AC4's amendment confirmed: *"without connecting to the production host"* — kept literal it would be satisfied by construction and check nothing, the vacuous-check class Prohibition 9 names. §4's veto rows 2 and 3 marked spent. | create-story context engine (Opus) |
 | 2026-08-26 | 0.2 | 🔴 **Open Question 1 answered by Oleg — *"move ok"* — and applied rather than absorbed.** The `prod-current` MOVE goes from a row that would have shipped UNEARNED to **two live dispatches in opposite directions** (§8's table, new Task 7). Applied to: §8 (the hazard becomes a bounded exercise, with the zero-user-blast-radius reason stated so it is not re-litigated after the traffic switch, when it stops being true); §9's matrix (one row → two); AC2 (the move must carry run ids, and the story may not close with the pointer elsewhere); **AC4 — the consequence the answer creates: `prod-308ea1520c59` is minted permanently, a `prod-<12hex>` marker for a commit that was never a release, so the registry alone stops being a sufficient release history and `docs/prod-releases.md` becomes the discriminator**; Prohibition 6 amended from "never move" to "must END on the cutover image, and a failed return is `in-progress`, not `done`"; Prohibitions 13/14 added for the residue; ceiling 20 → 24 with its own recorded reason. The rejected alternative (dispatch the recorder directly, touch no stand) is recorded — it would prove the recorder's branch, not the automatic path AC2 is about. | create-story context engine (Opus) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `584cc886`, branch `story-6-6/pr-1-context`. 🔴 `origin/main` moved **three times** during contexting (`cfbad179` → `308ea152` → `584cc886`): Stories 6.3 and 6.10 closed `done`, and Story 6.4 shipped `deploy-prod.yml` and reached `review` — so this story's two dependencies both landed mid-analysis and the first draft of §3 was written against a repository that no longer existed. Four epic ACs carried (AC4 amended for the s10 re-target), five added. Thirteen inherited code findings enumerated with dispositions required by AC5. Five Open Questions, one gating. | create-story context engine (Opus) |
