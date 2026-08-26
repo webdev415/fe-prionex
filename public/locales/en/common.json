@@ -8579,6 +8579,7 @@
         "low-verification": "Low verifications",
         "searcher-followup": "Unworked searcher finds",
         "inbound-followup": "Inbound without follow-up",
+        "contact-tag": "Contact / No contact",
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises"
       },
@@ -8725,6 +8726,47 @@
         "empty": "No unworked inbound requests in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "contactTag": {
+        "viewDate": "As-of date",
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Switch the sale date upper bound off",
+        "disableSellTo": "Switch the upper bound off",
+        "restoreSellToDefault": "Use the default bound",
+        "sellToDefaultHint": "Default sale-date upper bound: {{date}}. Switch it off to see the whole portfolio.",
+        "sellToOffHint": "The sale-date upper bound is off — the whole portfolio is shown.",
+        "subtabs": {
+          "all": "All",
+          "kontakt": "Contact",
+          "nekontakt": "No contact"
+        },
+        "subtabCountTitle": "The counts cover the current page — the feed is paginated",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "tag": "Tag",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "lastPlanned": "Promise date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No unworked «Contact»/«No contact» clients for the selected filters",
+        "emptyTag": "No clients with this tag on this page — every row is visible on the «All» tab",
+        "invalidViewDate": "The as-of date is not a valid calendar date — pick a date to replace it",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Tag or employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"
