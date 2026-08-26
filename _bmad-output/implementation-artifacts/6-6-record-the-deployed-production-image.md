@@ -554,13 +554,13 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 
 ### Task 2 — Read the contract, do not infer it (AC: 1, 5) — **0 runs**
 
-- [ ] 2.1 Read `record-prod-image.yml` end to end (41 KB, one job, 17 steps -- run 600 reported 17/17).
-- [ ] 2.2 Read `### Review Findings` in `6-3-…md` — **the full text of all thirteen**, with locations.
-- [ ] 2.3 Read `record-preprod-candidate.yml`'s probe steps: the **four** `Accept` media types
+- [x] 2.1 Read `record-prod-image.yml` end to end (41 KB, one job, 17 steps -- run 600 reported 17/17).
+- [x] 2.2 Read `### Review Findings` in `6-3-…md` — **the full text of all thirteen**, with locations.
+- [x] 2.3 Read `record-preprod-candidate.yml`'s probe steps: the **four** `Accept` media types
       (finding #1), the empty-credential pre-check and the 401 classification (finding #13). **Copy the
       pattern; the file is frozen.**
-- [ ] 2.4 Read `deploy-prod.yml`'s `deploy` job's `if:` and its header's `always()` paragraph (§6).
-- [ ] 2.5 Measure the registry: every `prod-*` and `sha-*-prod` tag with its digest. **Paste it.** §8's
+- [x] 2.4 Read `deploy-prod.yml`'s `deploy` job's `if:` and its header's `always()` paragraph (§6).
+- [x] 2.5 Measure the registry: every `prod-*` and `sha-*-prod` tag with its digest. **Paste it.** §8's
       table is from the record, not from a live read — confirm it.
 
 ### Task 3 — Fix the thirteen (AC: 5) — **0 runs**
@@ -787,6 +787,53 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 2 — 2026-08-26. The contract read, and finding #12 proven live BY REPRODUCING IT TWICE.**
+
+🔴 **The headline is a defect I walked into myself, twice, before getting it right — and it is exactly
+inherited finding #12.** The registry inventory (2.5) was read three times:
+
+| Attempt | Query | fe-prionex rows | Verdict |
+|---|---|---|---|
+| 1 | `?limit=500` | **37** | 🔴 silently truncated — the API caps at 50 regardless of `limit` |
+| 2 | paginated, `[ $PG -gt 40 ] && break` | **72** | 🔴 truncated again — by **my own** page cap |
+| 3 | paginated to natural termination (empty page) | **381** over **118 pages** | ✅ complete |
+
+**Attempt 1 made `prod-current`, `prod-a99ccd44c5a3` and every `preprod-*` marker appear to be MISSING
+from the registry** — which, taken at face value, would have meant Story 5.4's entire output had been
+deleted and Story 6.5's future guard could never pass. That conclusion was false and was produced by an
+unpaginated read. **This is finding #12's failure mode, arrived at independently, on the first live use
+of that endpoint in this story.** It is no longer a theoretical robustness note: the fix in Task 3.5
+must handle pagination, and a `WARN`-and-exit-0 on a short read is not acceptable.
+
+**2.5 — the measured state, complete (three names, one manifest — §8 CONFIRMED):**
+
+```
+sha-a99ccd44c5a3-prod   13:08:10   sha256:f30c794123ba…a3f3   deployable, Story 6.9's target
+prod-a99ccd44c5a3       13:17:09   sha256:f30c794123ba…a3f3   history   ← written FIRST
+prod-current            13:17:10   sha256:f30c794123ba…a3f3   pointer   ← written SECOND, +1s
+sha-28f7fd36b75e-prod   16:28:02   sha256:1e6d9cfb2b80…67ca   PROOF, not a release
+sha-308ea1520c59-prod   16:45:31   sha256:01855d1b50fc…d577   PROOF, not a release
+sha-a99ccd44c5a3-preprod           sha256:a62e868786cd…86b2
+preprod-a99ccd44c5a3               sha256:a62e868786cd…86b2
+preprod-current                    sha256:a62e868786cd…86b2
+```
+
+✅ **Write order proven from the registry's own timestamps**, not from a run log: history at 13:17:09,
+pointer at 13:17:10. Prohibition 3 is observed behaviour here, not a rule on paper.
+✅ **A free non-vacuous confirmation of Option C / NFR11:** commit `a99ccd44c5a3` resolves to
+`f30c7941…` under `-prod` and `a62e8687…` under `-preprod`. **Same commit, different bytes, measured** —
+and unlike the comparison §10 withdrew, this one *could* have come out equal and did not.
+✅ `preprod-a99ccd44c5a3` is present, so Story 6.5's guard has a passing case for this commit.
+⚠️ Two 40-hex `<sha40>-prod` tags also exist (`a99ccd…129e9-prod`, `28f7fd…915b-prod`,
+`308ea1…0a26f-prod`) — `build.yml`'s sanitized-ref form. They match **no** `keep_pattern` alternative
+and expire at 14 days. Not rollback targets; noted so a later reader does not count five prod artifacts.
+
+**2.1** `record-prod-image.yml` read end to end (684 lines, one job, 17 steps). **2.2** all thirteen
+read in full from `6-3-…md`'s `### Review Findings`. **2.3** the sibling's probes read and **counted** —
+this is where the review's correction is confirmed at the source: three probes, four `Accept` headers at
+`:328` only (the `verify-on-stand` digest step), **one** each at `:707`/`:793`, the two that actually
+gate its writes. **2.4** `deploy-prod.yml`'s `deploy` job `if:` and the `always()` paragraph read.
 
 **Task 1 — 2026-08-26.** Worktree `story-6-6/impl` off `origin/main` @ `13a60eca` (the merge of PR #100,
 this story's own code review). `baseline_commit` recorded in frontmatter, matching Story 6.4's shape.
