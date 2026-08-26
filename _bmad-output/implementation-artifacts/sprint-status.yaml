@@ -1,5 +1,5 @@
 # generated: 2026-08-07
-# last_updated: 2026-08-25
+# last_updated: 2026-08-26
 # project: fe-prionex
 # project_key: NOKEY
 # tracking_system: file-system
@@ -67,7 +67,7 @@
 # taken here. Until then: for what an AC actually requires today, read the story file, not the epic.
 
 generated: 2026-08-07
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 project: fe-prionex
 project_key: NOKEY
 tracking_system: file-system
@@ -1303,6 +1303,30 @@ development_status:
   # (the approval ledger, empty, ten defined columns), and D42. Story 6.5 owns updating #d2 AND the
   # regulation's corresponding section when the promotion guard ships -- a forward note sits under
   # #d2 itself so the dated citation cannot go stale silently.
+  # 📌 PROD FINALLY HAS A PUBLIC NAME — 2026-08-26, Oleg, outside any story. Recorded as
+  # `docs/migration-decisions.md#d43`. This is the one value Epic 6 could not name until now.
+  #   • `crm.prod.crm-prionex.online` — the NEW prod stand's own address on s10, and explicitly
+  #     TEMPORARY. It exists so s10 can be brought up and validated under its own name while s2
+  #     keeps serving users: the "two productions in parallel" state D23 put in the risk register.
+  #   • 🔴 IT DOES NOT RESOLVE YET. NXDOMAIN on 2026-08-26 at 8.8.8.8, at 1.1.1.1, AND
+  #     authoritatively at ns1.dns-parking.com. Not a cache artefact — the zone's SOA serial is
+  #     2026082601 (edited that same day) and there is no wildcard on the zone. `crm.prod.` appeared
+  #     in ZERO files of this repository before D43: the exact signature that preceded Story 1.6's
+  #     NXDOMAIN pair. Re-measure before acting on it; do not treat the name as live because it is
+  #     written down.
+  #   • 🔴 DO NOT DERIVE THE API NAME FROM IT. `api.crm.prod.crm-prionex.online` is NXDOMAIN too,
+  #     and TWO conventions are live at once — flat `api.crm-prionex.online` on legacy s2 versus
+  #     `api.crm.<env>.crm-prionex.online` on DEV/PRE-PROD. `_check_url` in build.yml tests shape
+  #     only (scheme, no whitespace, a dot in the host), so a wrong-but-valid host builds GREEN and
+  #     is dead in the browser — epics.md:783's failure class, exactly. Measure it, do not infer it.
+  #   • WHAT IT UNBLOCKS: 6.4 and 6.7 no longer wait on the traffic switch — the stand becomes
+  #     reachable under its OWN address. The switch itself remains Story 6.9's and remains outside
+  #     this repository. 6.10's last AC ("name the traffic path with its owner and current state")
+  #     now has a concrete value to close against, and D43 §5 carries the four-row owner table.
+  #   • WHAT IT DOES NOT CLOSE: the A record, the vhost + TLS certificate, the measured PROD-API
+  #     hostname, and the exact `Access-Control-Allow-Origin: https://crm.prod.crm-prionex.online`
+  #     on PROD's Kong — which has still never been probed. The CORS ask to `CRM/api-prionex` is
+  #     FORMULABLE for the first time: before this there was no origin to put in it.
   epic-6: in-progress
   6-1-disable-the-github-cd-deploy-job: cancelled
   # Contexted 2026-08-25 (story 6.2, branch story-6-2/pr-1-context) from a SCRATCHPAD WORKTREE off
