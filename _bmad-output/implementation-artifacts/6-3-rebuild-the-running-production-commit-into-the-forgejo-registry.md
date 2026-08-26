@@ -187,6 +187,18 @@ to be the wrong one — **you cannot overwrite it and you cannot delete it witho
    override input is added, on purpose … adding one would only give that bug a bypass."* And `build.yml`
    is frozen here (§12).
 
+> 🔴 **BLOCKER RESOLVED 2026-08-26 — by changing the build source, not by clearing the blocker.**
+> The commit this section was written about, `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`, is **still
+> absent from Forgejo** (re-verified 2026-08-26 against 549 remote heads and against the server itself
+> with `git ls-remote`). It was never imported. Instead, Oleg changed what this story builds —
+> *«Берем тот коммит, который последний в pre-prod»* — reversing his own earlier
+> *«Занесу коммиты в Forgejo»* of the same day. **The build source is now
+> `a99ccd44c5a39345fa65eb74e87343b187e129e9`**, short-12 `a99ccd44c5a3`, present and reachable from
+> `origin/main`, carrying `preprod-a99ccd44c5a3`.
+> **Everything else in §3 stands unchanged and is now live rather than hypothetical**: the one-shot
+> property, the `Enforce AC2` refusal, the `Date.now()` reason, the permanence of the tag. Full
+> analysis and price: `sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`.
+
 ### 4. 🔴 THE FIRST `prod` BUILD THIS PROJECT HAS EVER RUN — and it cannot be rehearsed
 
 `deferred-work.md`, verbatim, still open:
@@ -352,11 +364,20 @@ a rollback depends.** The first date the rule can be observed is **2026-08-29**,
 `deferred-work.md` still has **no owner**. **Name it; compile `keep_pattern` against both markers
 before writing them (§5); do not claim they are protected by execution** (Prohibition 5).
 
-**(f) `docs/preprod-candidates.md` is untouched.** This story records nothing there. The image it
-builds is a **PROD** image and was never a PRE-PROD candidate; it has no `preprod-<sha>` and — because
-it is built from a commit that never went through Epic 5's cycle — **it will fail Story 6.5's
-promotion guard by construction, which is exactly why 6.9's cutover uses `rollback: true`.** Say that
-once, in `D45`, so 6.5 does not have to rediscover it.
+**(f) `docs/preprod-candidates.md` is untouched.** This story records nothing there — it neither
+validates a candidate nor appends a row.
+
+🔴 **CORRECTED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`), and the correction inverts the paragraph.** As
+written this read: *"it has no `preprod-<sha>` and — because it is built from a commit that never went
+through Epic 5's cycle — it will fail Story 6.5's promotion guard by construction, which is exactly why
+6.9's cutover uses `rollback: true`."* **Every clause of that is now false.** The build source is
+`a99ccd44c5a3…`, the last validated PRE-PROD candidate; it **went through Epic 5's cycle**, it **has**
+`preprod-a99ccd44c5a3` (measured in `package_version`), and it would therefore **PASS** Story 6.5's
+guard. The exception this story was carrying is gone.
+🔴 **`rollback: true` is still required for Story 6.9, for an INVERTED reason** — the release path
+rebuilds (6.4 AC2) and `build.yml`'s `Enforce AC2` refuses to repoint an existing `sha-<12hex>-prod`
+(`#d24` §2b), so a release-path dispatch of a commit this story already built **goes red**. Mechanical,
+not a guard bypass. Recorded in `#d46` and in the amended FR32 so 6.9 does not rediscover either half.
 
 ### 8. Previous story intelligence — what this story inherits, verified 2026-08-26
 
@@ -557,8 +578,11 @@ it.** It is a procedure, not a permission.
 4. **It does not measure `KONG_PORT`, probe PROD's Kong, or touch s10.** Stories 6.4 / 6.10.
 5. **It does not settle which `-prod` tag form a rollback targets.** 6.4/6.6's. §7(d) records the
    three forms that now exist; that is all.
-6. **It does not validate anything.** No `RVC-v1.1` run, no waiver, no candidate row. The image this
-   story builds has **no** `preprod-<sha>` and will fail Story 6.5's guard by construction — §7(f).
+6. **It does not validate anything.** No `RVC-v1.1` run, no waiver, no candidate row. ~~The image this
+   story builds has **no** `preprod-<sha>` and will fail Story 6.5's guard by construction~~ — 🔴
+   **corrected 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`): the image is built from the last validated candidate,
+   carries `preprod-a99ccd44c5a3`, and would PASS 6.5's guard.** This story still validates nothing
+   **itself** — it consumes a verdict Story 5.6 already recorded, waiver `#d40`/`#d41` and all. See §7(f).
 
 ### Prohibitions
 
@@ -961,8 +985,15 @@ against a query, or closed with the literal word **OPEN**.
 - [ ] 4.1 🔴 **GATE.** Confirm in writing: Task 2 complete and evidenced; Task 2.4 green; Open Questions
       1–5 answered by Oleg; the no-touch window clear. **Any one missing → do not dispatch.**
 - [ ] 4.2 **`PENDING (owner: coordinator)`** — send the exact dispatch verbatim before making it:
-      workflow `build.yml`, `ref=<full 40-hex commit>`, `environment=prod`, and the two tags it will
-      produce. **Wait for confirmation** (AC7 — not "announce and proceed").
+      workflow `build.yml`, `ref=a99ccd44c5a39345fa65eb74e87343b187e129e9`, `environment=prod`.
+      🔴 **Re-pointed 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`): the ref is the last validated PRE-PROD
+      candidate, not the running production commit.** Tags it will produce:
+      `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` (sanitized ref, mutable, **expires at 14 days**,
+      compiled as NOT protected in Task 3.4) pushed by the build step, then `sha-a99ccd44c5a3-prod`
+      (**PERMANENT**) attached by `Enforce AC2`.
+      ~~**Wait for confirmation** (AC7 — not "announce and proceed").~~ **Superseded by Oleg's Open
+      Questions item 9, *«Запускай по готовности»***: send verbatim, then dispatch once the 4.1 gate is
+      green — no separate live confirmation. The price does not vanish, it raises the bar on 4.1.
 - [ ] 4.3 **`PENDING (owner: coordinator)`** — dispatch. Record the run id.
 - [ ] 4.4 Read the run's outcome from the API and from the registry, **never from the job log alone**
       (`log_in_storage='f'` on seven consecutive checks; `$GITHUB_STEP_SUMMARY` persistence **UNPROVEN**).
@@ -1006,7 +1037,9 @@ against a query, or closed with the literal word **OPEN**.
       assert and what they do not, in four numbered clauses: (a) **no host is serving this image** — s2
       serves `ghcr.io/crm-prionex/fe-prionex:main` until the external traffic switch, so `prod-current`
       is a Forgejo-side cutover pointer, with `#d19`'s own precedent cited; (b) the image is **not
-      validated** and will fail Story 6.5's guard by construction; (c) it is **not byte-identical** and
+      validated** by this record — 🔴 **clause (b) rewritten 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46`): validation
+      is not something these markers assert either way, and for THIS story's image the commit **is**
+      validated and would pass 6.5's guard; (c) it is **not byte-identical** and
       why (`vite.config.ts`, `Date.now()`, D24 §2b); (d) protection is **compiled, not observed**.
       **The last step of the job emits the same statement to stdout and `$GITHUB_STEP_SUMMARY`** — this
       is the H3 defect from `record-preprod-candidate.yml`'s own review, where a paragraph claimed to be
@@ -1056,8 +1089,9 @@ against a query, or closed with the literal word **OPEN**.
       convention), carrying: the identified commit and how it was evidenced; the epic-AC-vs-shipped-tag
       discrepancy (`sha-<commit>` vs `sha-<12hex>-prod`, Task 3.3); the §5 mechanism decision with its
       three rejected alternatives; §6's `prod-current` semantics before the cutover; the §12 exception
-      taken against 6.2's regulation with its price; and §7(f) — that this image has **no** `preprod-<sha>`
-      and will fail Story 6.5's guard by construction, which is why 6.9 uses `rollback: true`.
+      taken against 6.2's regulation with its price; and §7(f) **as corrected 2026-08-26** — the image
+      **carries** `preprod-a99ccd44c5a3` and would **pass** 6.5's guard, while 6.9 must still use
+      `rollback: true` for the inverted, mechanical reason (`Enforce AC2` refuses the rebuild's repoint).
 - [ ] 6.4 Add a **dated forward note** under `#d18` recording that Story 6.3 has now consumed its
       12-hex rule live, and under `#d19`'s own "what `prod` points at" section recording that this story
       has discharged the *"identifying which is Story 6.3, and nobody has done it"* item. **Notes, not
@@ -1568,7 +1602,25 @@ own gate result is the dev agent's own direct observation (Task 2.4).
    *"«прод-каллера нет» остаётся верным"*). **Deferred to a future task**, since Task 4/5/7 cannot run
    while OQ6 is unresolved (below) — the amendment itself still needs the actual tag name, which does
    not exist until Task 4 runs.
-6. ✅ **RESOLVED, 2026-08-26 — Oleg's decision, verbatim, via the coordinator.** Task 2.4 (own
+6. 🔀 **SUPERSEDED 2026-08-26 — the decision below was REVERSED the same day, and both halves are
+   kept verbatim rather than the second overwriting the first.** Oleg's later instruction:
+   ***«Берем тот коммит, который последний в pre-prod»***. The commit `41ab0470…` was **never
+   imported** — it is still absent from Forgejo, re-verified 2026-08-26 against 549 remote heads and
+   against the server itself. **What changed is not the blocker but what this story builds**: the
+   source is now `a99ccd44c5a39345fa65eb74e87343b187e129e9`, the last validated PRE-PROD candidate.
+   Taken through `correct-course` rather than absorbed here —
+   `sprint-change-proposal-2026-08-26-cutover-candidate.md`, `#d46` — because it changes FR31, FR32,
+   this story's own AC1/AC4 and Story 6.9's ACs, which a story file may not do to itself.
+   **What the reversal buys:** the cutover image now carries `preprod-a99ccd44c5a3` and would **pass**
+   Story 6.5's guard; the exception this story was carrying disappears (§7(f), corrected).
+   **What it costs, and it is not small:** FR32 loses the word *no-op*, the cutover becomes the first
+   real release, Story 6.9's purpose — separating cutover risk from release risk — is **no longer
+   achieved**, and the product-code import moves from this story to Story 6.9 as a new AC gate with
+   owner Oleg. **The original resolution is preserved below, unedited**, because the reasoning that
+   produced it — including the two options it explicitly declined — is the reasoning the reversal
+   overturned, and a record that hides the first decision cannot show what the second one cost.
+
+   ~~✅ **RESOLVED, 2026-08-26 — Oleg's decision, verbatim, via the coordinator.**~~ Task 2.4 (own
    SSH read, own `git fetch --all` across 1429 refs) found the commit s2 is running,
    `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`, **absent from the Forgejo repository** — the
    project's first direct proof of the GitHub/Forgejo divergence `#d7`/`#d19` had only theorised
@@ -1660,6 +1712,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.6 | **Correct-course applied; the build source changed and the story's own stale claims were corrected.** `origin/main` @ `f144ee9f` merged in (conflict in `sprint-status.yaml` resolved keeping BOTH sides whole, per this project's precedent). **OQ6 marked SUPERSEDED with both of Oleg's decisions kept verbatim** — the commit was never imported; what changed is what the story builds. §3's blocker note records the resolution and states plainly that the one-shot property, the `Enforce AC2` refusal and the `Date.now()` reason all **still stand and are now live rather than hypothetical**. 🔴 **Four places in this file and ONE IN SHIPPED CODE claimed the image "will fail Story 6.5's guard by construction" — all now false, all corrected**: §7(f) (inverted, with the old text quoted), §13 item 6 (struck through), Task 6.3's instruction, Task 5.2's description, and `record-prod-image.yml`'s own header clause (b), which was a claim about one particular image baked into a general-purpose file and is now written as the general truth it should always have been. Task 4.2 re-pointed at `a99ccd44c5a3…` with both produced tags named, and its "wait for confirmation" superseded by OQ item 9. Gate 4.1 evidence gathered: commit present/complete/reachable, `short12 = a99ccd44c5a3` matching the preprod tag; `vars.VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online` (prod fails closed without it); all 7 OpenBao secrets and all 4 org registry secrets present; **OpenBao UNSEALED** (`sealed:false`, Shamir 3/5); **no `prod-*` version exists in the registry at all**, so the one-shot is unfired. | dev-story |
 | 2026-08-26 | 0.5 | **OQ10 resolved by Oleg — option (a): this story's decision renumbers `D43` → `D45`.** Applied to every forward-looking reference; historical records of the original measurement (Task 1.5, session 1 Debug Log, Change Log 0.2/0.4) left standing and superseded rather than rewritten, per the amend-don't-rewrite rule. `D43` stays the PROD-hostname record's number. 🔴 The **process** half of OQ10 remains OPEN and is explicitly not closed by the renumber: the project's ref-based D-number sweep is still blind to any decision authored locally and not yet pushed, and the next one reopens the same hole. | dev-story |
 | 2026-08-26 | 0.4 | **Dev-story session 2: Tasks 3, 5.1-5.2 and 7.3 executed. Task 4 still gated — the commit is still absent, re-verified this time against the server (`git ls-remote`) as well as locally.** The other half of the resume instruction was closed WITHOUT touching s2: the live production bundle's `VITE_BUILD_TS` (`2026-08-22 19:48:40Z`) and asset `Last-Modified` (`19:49:08Z`), read over public HTTP, sit inside one 2.5-minute window with session 1's two s2 timestamps — production has not moved, corroborated by an independent channel (of the BUILD, not the label; OQ4's single-source position on the commit stands). Task 3.4 read `package_cleanup_rule` from the Forgejo DB directly and compiled all four tag shapes against it: the three markers KEEP, the 40-hex sanitized-ref tag does not, plus a free non-vacuous control. **`.forgejo/workflows/record-prod-image.yml` shipped** — G1/G2/G3/G4/404/G6, no G5-equivalent with the reason in the header, `prod-<sha>` before `prod-current`, `--prefer-index=false`, read-back after every write, move-refused-by-default as a recorded divergence from 5.4; 15/15 run bodies clean of the expression syntax and `bash -n`-valid; all four pure-shell guards exercised locally 15/15 — **local shell verification, NOT §9's matrix, which stays OPEN with no run ids**. Workflow census 11 → 12; every frozen path byte-identical to `origin/main`. 🔴 **New blocker-adjacent finding, Open Question 10: `D43` is NOT free** — an unpushed local branch already uses it for the PROD hostname record, so the project's ref-based D-number sweep is blind to locally-authored decisions; first free is `D45`; owner Oleg, not taken unilaterally. | dev-story |
 | 2026-08-26 | 0.3 | **OQ6 resolved by Oleg, verbatim: "Занесу коммиты в Forgejo"** -- option (a), import from a local clone, chosen; options (b) nearest-ancestor and (c) unblock-GitHub-first explicitly declined, recorded as refusals (the cutover image must be the exact running commit). Task 2.4's finding reframed, on the coordinator's instruction, as a permanent record and a positive outcome -- the gate worked exactly as designed, stopping the story before the one-shot dispatch; this is the project's first direct proof of the GitHub/Forgejo divergence and outlives this story. Work explicitly paused on Oleg's own instruction until he signals the commit has landed (he is watching for it himself). sprint-status.yaml's blocking comment updated: owner Oleg, decision in progress, not "waiting". Standing instruction recorded for resume: RE-VERIFY Task 2.4 (commit reachable as a complete object, s2 still serving the same revision), do not resume from where it stopped. | dev-story (Sonnet) |

@@ -37,9 +37,22 @@ name: Record PROD Image
 #       branch ("это точка отсчёта, а не утверждение"); this is that trap with a shorter
 #       fuse, because this marker is protected by name and Story 6.6 will later define it
 #       as authoritative.
-#   (b) THAT THE IMAGE WAS VALIDATED. It carries no `preprod-<sha>` and never went through
-#       Epic 5's cycle. It will therefore FAIL Story 6.5's promotion guard by construction
-#       -- which is exactly why Story 6.9's cutover dispatch uses `rollback: true`.
+#   (b) THAT THE IMAGE WAS VALIDATED. Validation is not something these markers carry in
+#       either direction, and this file does not check it: it never reads
+#       `preprod-<sha>`, `docs/preprod-candidates.md` or any verdict. Whether the commit
+#       behind a `prod` marker passed PRE-PROD is Story 6.5's guard's question, not this
+#       record's. 🔴 CORRECTED 2026-08-26 (sprint-change-proposal-2026-08-26-cutover-
+#       candidate.md, #d46): this clause previously asserted the image "carries no
+#       preprod-<sha>" and "will therefore FAIL Story 6.5's promotion guard by
+#       construction". That was written when Story 6.3 built the RUNNING production commit.
+#       It no longer builds that commit -- it builds the last validated PRE-PROD candidate,
+#       which DOES carry `preprod-<sha>` and WOULD PASS the guard. The old text was a claim
+#       about one particular image baked into a general-purpose file; the clause is now
+#       written as the general truth it should always have been.
+#       🔴 Story 6.9 must still dispatch with `rollback: true`, for an INVERTED and purely
+#       MECHANICAL reason: the release path rebuilds (Story 6.4 AC2) and `build.yml`'s
+#       `Enforce AC2` refuses to repoint an existing `sha-<12hex>-prod` (#d24 §2b), so a
+#       release-path dispatch of a commit already built here goes red. Not a guard bypass.
 #   (c) THAT THE IMAGE IS BYTE-IDENTICAL TO WHAT PRODUCTION SERVES. It is not, and cannot
 #       be: `vite.config.ts` bakes `Date.now()` into every build via `define` (D24 §2b), so
 #       two builds of one commit are never byte-identical. What IS comparable, and what
