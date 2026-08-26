@@ -21,7 +21,13 @@ name: Record PROD Image
 # guard. Inventing one that checked s2 would be FALSE, not conservative. The cost of the
 # absence is priced in the story's own retro-E5 matrix rather than papered over here.
 #
-# ── 🔴 What the two markers assert, and what they do NOT (Story 6.3 Task 5.2, AC8) ───────
+# ── 🔴 What the two markers assert, and what they do NOT (Story 6.3, Task 5.2) ──────────
+# ⚠️ The reference to AC8 was REMOVED from this heading on 2026-08-26 (Oleg's decision on
+# code-review finding 2, option (a)). Story 6.3's AC8 requires this statement to live in
+# `docs/prod-releases.md` and in a decision record; both were cancelled, and AC8 is recorded
+# **UNMET** in the story. What follows is real and is printed at run time -- but the job log
+# and the step summary are the tier this project calls BEST-EFFORT, so this text does NOT
+# close that AC and no longer claims to.
 # THEY ASSERT: that this registry holds an image built by `build.yml` at
 # `environment: prod` from the commit named in its own `org.opencontainers.image.revision`
 # label, and that the image is addressable under a name the retention rule protects.

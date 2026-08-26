@@ -4506,3 +4506,38 @@ now; everything else was routed to patch or decision.
   this instance's logs are the tier this project classifies as best-effort. Story 6.3 itself never
   takes that path (it refuses a move by default, and `prod-current` did not exist). **Owner: Story
   6.6**, which moves the pointer on every deploy by design and must decide what it records.
+
+## Deferred from: code review of story-6.3 (2026-08-26) — decision 3(b)
+
+- 🔴 **The registry retention rule is `UNPROVEN` by execution, and the production rollback target now
+  depends on it.** `#d38` §9: the rule has never been observed deleting anything, and therefore has
+  never been observed **keeping** anything either — it is verified by **compilation against the stored
+  `package_cleanup_rule` row**, not by execution. Story 6.3 compiled all four of its tag shapes against
+  that row (its Task 3.4, read from the database rather than from `build.yml`'s copy) and minted two
+  permanent markers on the strength of it: **`prod-a99ccd44c5a3`** and **`prod-current`**, plus
+  `sha-a99ccd44c5a3-prod`.
+  **First date the rule can be observed at all: 2026-08-29** — 14 days after the first `-dev` tags.
+  **Owner: Story 6.3**, by Oleg's own reassignment at that story's Open Question 8 (*"6.3 наблюдает
+  ретенцию, раз именно её теги от неё зависят"*), overriding the story's own suggestion of 6.8.
+  🔴 **Story 6.3 closed on 2026-08-26, three days before that date. The observation was NOT made, and
+  the ownership is NOT reset to nothing** — it stays with 6.3 until it is made or explicitly re-owned,
+  per the same convention Oleg invoked (owners are names or story numbers, never trigger conditions).
+  **This entry exists because that assignment previously lived only inside a closed story file, while
+  this ledger still read "no owner".**
+  **Concrete harm if it goes unwatched:** Epic 6's rollback depth already starts at zero — every
+  pre-migration image is in ghcr and unreachable **by decision** (`#d7`). If the rule ever removes
+  `prod-a99ccd44c5a3`, production's only rollback target disappears and nobody was watching.
+  **What "observing" means here, so it is not re-derived:** on or after 2026-08-29, read
+  `package_version` for `fe-prionex` and confirm the four protected shapes are still present while
+  something matching `remove_pattern` and older than 14 days has actually gone. **An empty result is
+  not evidence of safety** — that is Story 1.11's own lesson.
+
+⚠️ **NOT filed, and declined rather than forgotten: AC9's regulation contradiction.** Story 6.3's AC9
+specified its own never-drop fallback — *"if Oleg prefers the regulation left untouched, the
+contradiction is filed against Story 6.9 by name here with its full argument"*. **It was offered twice
+and declined twice** (2026-08-26, Task 7 cancelled; and again at the code-review decision, option (b)
+chosen over (a)). **Recorded as a decision so it does not read as an oversight.** The contradiction
+itself stands and lives in `6-3-…md`: `docs/production-approval-regulation.md` makes Story 6.9's own
+FR32 `rollback: true` dispatch *"a rollback to a tag not in the ledger"* — therefore a release,
+therefore needing Oleg — while the same document records **no delegate**. **Story 6.9 will meet it at
+the cutover.** Owner: Oleg.
