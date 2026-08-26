@@ -1707,7 +1707,36 @@ development_status:
   # path rebuilds and Enforce AC2 refuses the repoint (#d24 §2b). Plus the approval blocker above, and
   # #d46's new AC gating the traffic switch on the product-code import (owner Oleg).
   # Oleg merges the PR; the row goes `done` only after that.
-  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: review
+  # ✅ CLOSED `done` 2026-08-26 by Oleg -- and `done` means CLOSED, NOT CLEAN. Recorded plainly so the
+  # tracker does not imply something the story does not claim.
+  # DELIVERED AND EVIDENCED: the first PROD image this project ever built (run 598) and the first PROD
+  # markers it ever wrote (run 600); three names on one manifest sha256:f30c794123ba...a3f3, read back
+  # from the registry independently of both runs; the first-ever read of secret/fe/prod/app.
+  # 🔴 FOUR ACs REMAIN UNMET, each by Oleg's explicit decision, none by oversight, none softened:
+  #   AC4 -- an EPIC criterion. No D45 at all: the story shipped with NO decision record.
+  #   AC6 -- record-prod-image.yml ships with six guards whose refusal path was never observed live.
+  #   AC8 -- prod-current names an image NO HOST SERVES; the only statements of that are the workflow
+  #          header and a job log, the tier this project calls best-effort.
+  #   AC9 -- the regulation contradiction that makes Story 6.9's own FR32 dispatch need an approver
+  #          the same document says has no delegate. Story 6.9 WILL meet it at the cutover.
+  # 🔴 26 CODE-REVIEW `patch` FINDINGS ARE UNFIXED, and are CARRIED with owners rather than closed with
+  # the story -- a finding living only inside a closed story file is the exact failure this project hit
+  # the same day with the retention item. See deferred-work.md, "Carried from: Story 6.3".
+  #   -> 13 code findings, OWNER STORY 6.6 (it inherits record-prod-image.yml and moves prod-current on
+  #      every deploy). The two worst: the probes send ONE Accept media type where the sibling sends
+  #      FOUR, so a false 404 leaves PRE_DIGEST empty and BYPASSES the allow_current_move refusal this
+  #      file advertises as stricter than its sibling's; and G6 inspects the TAG instead of the
+  #      resolved digest, so the labels checked and the manifest written are only assumed to be the
+  #      same object -- under two permanent names. NEITHER FIRES TODAY (nothing dispatches the file);
+  #      both arm the moment 6.6 does.
+  #   -> 13 record findings, OWNER EPIC 6 RETROSPECTIVE, catalogued not corrected. Shared pattern, and
+  #      the reason they belong in a retro: A FIX-PASS THAT IS NOT ITSELF RE-REVIEWED IS JUST A SECOND
+  #      DRAFT -- 6.2's review recorded it after its own fix-pass introduced five new defects, and 6.3
+  #      reproduced it (title, Story statement and §1 still describe the superseded build source; the
+  #      Status header still says PAUSED; the ledger declared itself CLOSED while listing outstanding
+  #      rows, with 14 in the total and 13 in the breakdown).
+  # ✅ 3 decision-needed resolved 1(a)/2(a)/3(b) (PR #95); 3 deferred at triage with owners.
+  6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: done
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog
   6-6-record-the-deployed-production-image: backlog
