@@ -1542,6 +1542,44 @@ development_status:
   # ratified (OQ8's owner reassigned by Oleg from Story 6.8 to Story 6.3 itself); a ninth item
   # (one-shot dispatch authorised "by readiness", price raised accordingly) is recorded but not yet
   # exercised -- both moot until OQ6's import completes.
+  # 📌 SESSION 2, 2026-08-26 -- Tasks 3, 5.1-5.2 and 7.3 DONE; STILL BLOCKED, same blocker.
+  # Gate re-verified FIRST, not assumed: `git cat-file -e 41ab0470...^{commit}` -> not a valid object;
+  # `git rev-list --all | grep ^41ab0470` -> 0; and NEW this session, `git ls-remote origin` -> 0, which
+  # asks the SERVER rather than the local object store. Task 4 stays gated.
+  # ✅ The resume instruction's OTHER half closed WITHOUT touching s2 -- public HTTP only: the live
+  # bundle's VITE_BUILD_TS (1787428120913 = 2026-08-22 19:48:40Z) and asset Last-Modified (19:49:08Z)
+  # sit in one 2.5-min window with session 1's s2 timestamps (label created 19:47:22.014Z, image
+  # Created 19:49:53Z). PRODUCTION HAS NOT MOVED, via an independent channel. 🔴 Stated at true
+  # strength: this corroborates the BUILD, not the LABEL -- OQ4's accepted single-source position on
+  # the commit identity is unchanged and this is NOT a second source for it.
+  # ✅ Task 3.4: `package_cleanup_rule` read from the Forgejo DB itself (ssh s1 -> psql), row pasted;
+  # matches the docs transcription character for character. Compiled: sha-<12>-prod / prod-<12> /
+  # prod-current -> KEEP; the 40-hex sanitized-ref tag -> NOT kept, expires at 14 days. Free
+  # non-vacuous control (sha-a99ccd44c5a3-preprod) also KEEP. Disposition stays UNPROVEN by execution
+  # (#d38 §9); first observable 2026-08-29; owner Story 6.3 per Oleg's OQ8 reassignment.
+  # ✅ `.forgejo/workflows/record-prod-image.yml` SHIPPED -- the story's only code artifact. G1 (exact
+  # literal, first step, zero network) / G2 (-prod, with an explicit -preprod arm) / G3 (exactly 12
+  # hex) / G4 (keep_pattern compile) / classified-404 probe / G6 (labels). NO G5-equivalent, reason in
+  # the header in those words: there is no PROD stand until 6.10 and a guard without a referent is not
+  # a guard. prod-<sha> before prod-current; --prefer-index=false; read-back after every write; a
+  # prod-current MOVE is refused by default (recorded divergence from 5.4 -- 6.3 is the FIRST write, so
+  # the tag must not exist; 6.6 sets its own policy). 15/15 run bodies free of the expression syntax
+  # (Prohibition 12, checked mechanically) and bash -n clean.
+  # 🔴 SHIPPED BUT UNEXERCISED, and the distinction is its whole disposition. Four pure-shell guards
+  # were run LOCALLY against pass + discriminating inputs, 15/15 as specified -- that is verification
+  # of shell logic, NOT retro-E5's outcome matrix. §9's MATRIX HAS NO RUN IDS AND IS `OPEN`. Six of its
+  # seven rows need a dispatch that cannot happen yet; the seventh (G5) is a permanent named absence.
+  # ✅ Workflow census 11 -> 12 (the number 6.2's regulation dates; "no PROD deploy caller" stays TRUE).
+  # Every frozen path in §12 byte-identical to origin/main; `git status` shows exactly one new file.
+  # 🔴 NEW, OPEN QUESTION 10 -- `D43` IS NOT FREE. Task 1.5's sweep across every origin/* ref is
+  # reproducible and still says "next free D43", but it is blind to the operator's own local checkout:
+  # branch `docs/prod-temporary-hostname` (bd4e4b83, 1c54f32d, NEVER PUSHED) already carries a full
+  # `## D43.` for the temporary PROD hostname. First genuinely free number is D45 (D35 -> story-4-9,
+  # D43 -> the unpushed local branch, D44 -> story-4-10). NOT taken unilaterally -- owner Oleg.
+  # Generalisable half, filed with it: this project's ref-based D-number sweep is UNSOUND for any
+  # decision authored locally and not yet pushed. Not urgent (Task 6.3 is gated) but must not surface
+  # at merge time, which is exactly when a duplicate anchor gets expensive.
+  # STILL PENDING (owner: Oleg): the commit import. Nothing downstream of Task 4 can start without it.
   6-3-rebuild-the-running-production-commit-into-the-forgejo-registry: in-progress
   6-4-deploy-to-production-by-dispatch: backlog
   6-5-guard-promotion-by-commit-identity: backlog

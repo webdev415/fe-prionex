@@ -848,25 +848,106 @@ against a query, or closed with the literal word **OPEN**.
       6 confirms this exact commit (e.g. "import it") rather than substituting a different one.
 
 ### Task 3 — Zero-dispatch preconditions, pasted rather than characterised (AC: 2, 5, 10) — **0 runs**
-- [ ] 3.1 Paste `ls .forgejo/workflows/` **before** any file is added — the count Story 6.2's regulation
-      dates at 11 (§7a). This is the baseline the amendment moves.
-- [ ] 3.2 Read `build.yml` and record, as a **documentary observation with line-anchored search strings**
-      (not line numbers — this project's rule), the order in which the prod-specific fail-closed guards
-      run relative to the first registry write: OpenBao AppRole/KV + `_check_url`, then the phone-URL
-      `prod` arm, then the tag/`keep_pattern` guard, then `predigest`, then the build, then the attach.
-      **This is §3's mitigation 1 and it is the only pre-dispatch de-risk that exists.**
-- [ ] 3.3 Record, from `build.yml` itself, exactly which tags an `environment: prod` dispatch produces —
-      `steps.tags.outputs.push_tags` (the sanitized-ref tag, pushed by the build step) and
-      `steps.tags.outputs.sha_tag` (attached afterwards under the AC2 guard). **AC2's epic wording says
-      `sha-<commit>`; the file produces `sha-<12hex>-prod`. Record the discrepancy for `D43`.**
-- [ ] 3.4 **`PENDING (owner: coordinator)`** — read `keep_pattern` from `package_cleanup_rule`
-      **directly** (not `build.yml`'s copy) and paste it. Compile it against every tag this story will
-      create: `sha-<12hex>-prod`, `prod-<12hex>`, `prod-current`, `<sanitized-ref>-prod`. **Expected: the
-      first three match, the fourth does not.** Record `#d38` §9's **UNPROVEN by execution** status in the
-      same breath (AC5).
-- [ ] 3.5 Record the §4 table's dated prerequisites and state plainly that **`secret/fe/prod/app` cannot
-      be pre-read** because `OPENBAO_PROD_SECRET_ID` is write-only in Forgejo. **Do not construct a
-      substitute check** (Prohibition 6).
+- [x] 3.1 **Done — pasted, taken before the new file was added.** `ls .forgejo/workflows/` in this
+      worktree at `bb4ea59b`:
+      ```
+      README.md                        deploy-preprod.yml
+      build-buildkit-cni-image.yml     deploy-stand.yml
+      build-main.yml                   dev-reset.yml
+      build.yml                        record-preprod-candidate.yml
+      ci.yml                           verify-cni-netns-isolation.yml
+      deploy-dev.yml
+      ```
+      **11 entries — the exact count `docs/production-approval-regulation.md` dates at 2026-08-25.**
+      After Task 5.1 adds `record-prod-image.yml` the count is **12**, re-measured: `ls | wc -l` → `12`.
+      The regulation's other clause, *"no PROD deploy caller"*, **stays true** — the new file records
+      registry markers and dispatches no deploy. This is the baseline §7(a)'s amendment moves.
+- [x] 3.2 **Done — documentary observation, cited by search string per this project's rule.** Order of
+      execution inside `build.yml`'s single `build-and-push` job, established by reading the file:
+
+      | # | Step / clause (search string) | Kind |
+      |---|---|---|
+      | 1 | `Read the environment's URLs from OpenBao` → `_check_url VITE_API_BASE_URL` | prod-specific, fail-closed |
+      | 2 | `Select the operator phone URL for this environment` → `a prod build must carry an operator phone URL` | **prod-only**, fail-closed |
+      | 3 | `Compute tags from the checked-out commit` → `KEEP_RE=` | fail-closed |
+      | 4 | `Query the pre-existing digest of sha-` | predigest read (D24) |
+      | 5 | `Build and push image` — pushes `steps.tags.outputs.push_tags` | 🔴 **FIRST REGISTRY WRITE** |
+      | 6 | `Enforce AC2 — attach or refuse` | attaches `sha_tag` |
+      | 7 | `Assert every tag resolves to this run's digest` | fail-closed |
+
+      **Every prod-specific fail-closed guard runs strictly BEFORE the first registry write.** That is
+      §3's mitigation 1, confirmed by reading rather than assumed — and it is exactly the bar Open
+      Questions item 9 raised: *"все prod-специфичные гарды и сверка коммита обязаны отработать до
+      любого пуша в реестр, а шаг сборки пушит только 14-дневный санитизированный тег."*
+      **Both halves of that sentence are now verified against the file.**
+- [x] 3.3 **Done — and the epic's wording is confirmed stale.** `build.yml` splits the two names
+      deliberately (search string `push_tags` / `sha_tag`):
+      ```
+      echo "push_tags=${IMAGE}:${SANITIZED}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
+      echo "sha_tag=${IMAGE}:sha-${SHORT_SHA}-${ENV_SUFFIX}" >> "$GITHUB_OUTPUT"
+      ```
+      and the build step consumes **only the first** (`tags: steps.tags.outputs.push_tags`). So an
+      `environment: prod` dispatch produces, in order:
+      1. `<sanitized-ref>-prod` — pushed by the build step. **MUTABLE, and NOT protected** (Task 3.4's
+         compile below). Expires at 14 days.
+      2. `sha-<12hex>-prod` — attached afterwards by `Enforce AC2` via `imagetools create`. **PERMANENT.**
+      3. `buildcache` — written by `cache-to`, outside the tags step, `ignore-error=true`.
+
+      🔴 **Discrepancy for the decision record:** epic AC2 says the image is *"pushed to
+      `git.crm-prionex.com/crm/fe-prionex` tagged `sha-<commit>`"*. **The bare `sha-<commit>` shape no
+      longer exists** — Story 3.3's environment discriminator replaced it with `sha-<12hex>-<env>`, and
+      the epic text was never amended. Recorded here so it is carried into the decision record rather
+      than discovered as a mismatch at grading time.
+- [x] 3.4 **Done — read from the STORED rule, not from any copy.** Channel named rather than implied:
+      `ssh root@10.67.0.1` → `docker exec forgejo-postgres psql -U forgejo -d forgejo`. This is a
+      **read-only DB query over the administrative SSH path, not a Forgejo API call**, so it sits on the
+      dev-agent side of the labour split (§11); the subtask's original `PENDING (owner: coordinator)`
+      marking anticipated the API route, which was not the one used. Row pasted verbatim:
+      ```
+      id|enabled|type|keep_count|keep_pattern|remove_days|remove_pattern|match_full_name
+      1|t|container|0|fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64})|14|fe-prionex/.+|t
+      (1 row)
+      ```
+      **It matches the transcription in `docs/migration-decisions.md` ("Восстановление правила очистки
+      реестра") character for character**, including the `sha256:` clause being INSIDE the group — the
+      placement that record warns is invisible to the eye. Compiled against every name this story will
+      create (`match_full_name = t`, so the compile is against `fe-prionex/<tag>`):
+
+      | Full name | `keep_pattern` | Verdict |
+      |---|---|---|
+      | `fe-prionex/sha-41ab0470ab6b-prod` | matches `sha-[0-9a-f]{7,64}-(pre)?prod` | **KEEP** |
+      | `fe-prionex/prod-41ab0470ab6b` | matches `(pre)?prod-[0-9a-f]{7,64}` | **KEEP** |
+      | `fe-prionex/prod-current` | literal alternative | **KEEP** |
+      | `fe-prionex/41ab0470ab6b3df3bc332fc90f8bccaaba44dc39-prod` | no alternative matches | **not kept — expires at 14 days** |
+
+      **Expected three-of-four confirmed exactly**, including the fourth's non-protection. Control, free
+      and taken: `fe-prionex/sha-a99ccd44c5a3-preprod` — the real PRE-PROD candidate — also compiles
+      **KEEP**, so the compile is not vacuously matching everything.
+      🔴 **AC5's disposition, in the required word: the rule is `UNPROVEN` by execution** (`#d38` §9).
+      It has never been observed deleting anything and therefore has never been observed **keeping**
+      anything. **COMPILED is the claim. Protected-by-execution is not available and is not made.**
+      First observable date **2026-08-29**; owner **Story 6.3** (Open Question 8, Oleg's own reassignment).
+- [x] 3.5 **Done — recorded, and no substitute constructed.** `secret/fe/prod/app` **cannot be
+      pre-read by this story**: its AppRole credentials exist only as Forgejo repository secrets
+      (`OPENBAO_PROD_ROLE_ID` / `OPENBAO_PROD_SECRET_ID`), and Forgejo secret values are write-only —
+      they cannot be read back through the API or the UI. **Prohibition 6 is honoured: no substitute
+      check is built, and no "prerequisites verified" claim is made.** What exists instead is a **dated
+      citation**, and it is labelled as one: `docs/forgejo-migration.md` and `3-3-…md` both record the
+      path as holding `https://api.crm-prionex.online` / `wss://api.crm-prionex.online`;
+      `deferred-work.md` records that the path *"has never been read by anything"*.
+      ✅ **What CAN be measured, was — and it is a different claim from the one Prohibition 6 forbids.**
+      The **live production bundle** was read over public HTTP, touching no host and no credential:
+      ```
+      $ curl -s https://crm-prionex.online/assets/index-D8ZYo8qY.js | grep -oE '(https|wss)://api[^"]*'
+      https://api.crm-prionex.online
+      wss://api.crm-prionex.online
+      ```
+      This does **not** verify the OpenBao secret — it verifies **what production actually serves**,
+      which is the value the secret is supposed to reproduce. It is the same evidence class Story 5.2
+      used (test the artifact, not the input it was fed) and it gives Task 4 a target to compare the
+      built bundle against. **The gap Prohibition 6 names stays open and stays named**: the first true
+      read of `secret/fe/prod/app` is the prod dispatch itself.
+      ⚠️ `OPENBAO_PROD_SECRET_ID` expires **2027-06-09** and nothing rotates it (Story 7.6).
 
 ### Task 4 — 🔴 THE ONE-SHOT BUILD (AC: 2, 7) — **1 dispatch, and it cannot be taken back**
 - [ ] 4.1 🔴 **GATE.** Confirm in writing: Task 2 complete and evidenced; Task 2.4 green; Open Questions
@@ -887,16 +968,58 @@ against a query, or closed with the literal word **OPEN**.
       the AC2 guard. **That classification is a decision for Oleg, not for the dev agent.**
 
 ### Task 5 — Ship `record-prod-image.yml` and its live outcome matrix (AC: 3, 6) — **~5-6 dispatches**
-- [ ] 5.1 Write `.forgejo/workflows/record-prod-image.yml` per §5: dispatch-only; `image_tag` +
-      an exact-literal acknowledgement input; the G1/G2/G3/404/G6/G4-equivalent guards; **no
-      G5-equivalent, with the reason in the file's own header**; `prod-<sha>` written before
-      `prod-current`; `--prefer-index=false` on every `imagetools create`; a read-back after every write;
-      **no `${{ }}` inside any `run:` body, including its comments** (`#d21`); `secrets.REGISTRY_TOKEN_RW`
-      named directly, **no `secrets: inherit`**.
-- [ ] 5.2 Declare, in the file's own header, what the markers assert and what they do **not** — the shape
-      `record-preprod-candidate.yml` uses, and make the workflow **print it** at run time. That file's
-      code review (**H3**) found the same paragraph claiming to be printed while living only in a YAML
-      comment no execution emits. **Do not repeat it.**
+- [x] 5.1 **Done — `.forgejo/workflows/record-prod-image.yml` shipped.** Dispatch-only; inputs
+      `image_tag`, `acknowledgement` (exact literal `MOVE-PROD-CURRENT`) and `allow_current_move`
+      (default `false`). Guards in execution order, mirroring 5.4's numbering so the two files read as
+      siblings: **G1** acknowledgement (first step of the only job, **zero network calls**), **G2**
+      `-prod` suffix with an explicit `-preprod` rejection arm, **G3** exactly-12-hex derivation,
+      **G4** `keep_pattern` compile for both markers, write-target-is-this-literal-repository assertion,
+      then login → buildx → classified-404 candidate probe → digest resolve → **G6** label agreement.
+      `prod-<sha>` is written **before** `prod-current`; `--prefer-index=false` on every
+      `imagetools create`; **every write is read back** and the run fails on mismatch.
+      **No `G5`-equivalent, with the reason in the file's own header in those words** — there is no PROD
+      stand, and a guard whose referent does not exist is not a guard.
+      **Verified mechanically before any dispatch was contemplated:**
+      - `yaml.safe_load` parses the file; 17 steps, `runs-on: node-20`, own literal concurrency group
+        `record-prod-fe-prionex-prod` (**not** copied from any deploy workflow — Story 5.3's
+        Prohibition 7).
+      - **Prohibition 12 checked mechanically, not by eye**: all **15** `run:` bodies scanned for the
+        expression syntax — **zero occurrences**, comments included.
+      - `bash -n` on all **15** `run:` bodies — **all clean**.
+      - **`secrets.REGISTRY_TOKEN_RW` / `REGISTRY_USER` named directly; no `secrets: inherit`**, so this
+        file does not pre-empt Story 6.4's decision (§13 item 3).
+      🔴 **One deliberate divergence from 5.4's shape, recorded rather than absorbed:** a `prod-current`
+      **move is refused by default** and needs `allow_current_move: true`. 5.4's `preprod-current` step
+      moves freely. The reason is dated and specific: this story is the **first** write of `prod-current`,
+      so on its own real dispatch the tag must not exist at all — a move on that run would mean something
+      outside this project's knowledge wrote the production pointer first, and the correct answer to that
+      is to stop. **Story 6.6 sets its own policy and does not inherit this default**; the file says so.
+- [x] 5.2 **Done — and it is PRINTED, not only commented.** The file's header states what the markers
+      assert and what they do not, in four numbered clauses: (a) **no host is serving this image** — s2
+      serves `ghcr.io/crm-prionex/fe-prionex:main` until the external traffic switch, so `prod-current`
+      is a Forgejo-side cutover pointer, with `#d19`'s own precedent cited; (b) the image is **not
+      validated** and will fail Story 6.5's guard by construction; (c) it is **not byte-identical** and
+      why (`vite.config.ts`, `Date.now()`, D24 §2b); (d) protection is **compiled, not observed**.
+      **The last step of the job emits the same statement to stdout and `$GITHUB_STEP_SUMMARY`** — this
+      is the H3 defect from `record-preprod-candidate.yml`'s own review, where a paragraph claimed to be
+      printed while living only in a YAML comment no execution emits. **It is not repeated here.**
+      🔴 The header additionally records what a reader would otherwise file as a bug: **neither marker is
+      deployable** — `deploy-stand.yml` refuses any `image_tag` not ending in the environment suffix, and
+      `prod-<12hex>` / `prod-current` end in neither. **Story 6.9 dispatches `sha-<12hex>-prod`.**
+      ✅ **All four pure-shell guards exercised locally before any dispatch**, extracted from the shipped
+      YAML and run against pass and discriminating inputs — 15/15 as specified:
+      ```
+      G1  MOVE-PROD-CURRENT -> PASS   | 'yes' / '' / lowercase        -> REFUSE
+      G2  sha-41ab0470ab6b-prod -> PASS | sha-a99ccd44c5a3-preprod    -> REFUSE (names PRE-PROD)
+                                        | main-dev / prod-current     -> REFUSE (no -prod suffix)
+      G3  12-hex -> PASS, derives prod-41ab0470ab6b + prod-current
+          40-hex -> REFUSE, message names the length (#d18 §3's failure, made to fire)
+          7-hex / uppercase -> REFUSE
+      G4  prod-41ab0470ab6b + prod-current -> PASS (both compile)
+          40-hex marker / 'production-<hex>' -> REFUSE
+      ```
+      **This is a local exercise of the shell logic, NOT a live outcome matrix.** §9's matrix needs run
+      ids and stays **OPEN** — Tasks 5.3-5.6, which cannot run until Task 4 has produced an image.
 - [ ] 5.3 **`PENDING (owner: coordinator)`** — the real record dispatch against this story's
       `sha-<12hex>-prod`. Read both markers back from the registry. Record the run id.
 - [ ] 5.4 **`PENDING (owner: coordinator)`** — the discriminating runs (§9): acknowledgement input wrong;
@@ -942,8 +1065,16 @@ against a query, or closed with the literal word **OPEN**.
       survive retention, plus AC8's `prod-current` disclaimer. **NO ROW** (Prohibition 9). Explicitly
       leave *"which form a rollback targets"* to Stories 6.4/6.6, as that file's own column definition
       already says.
-- [ ] 7.3 Confirm, and state, that `docs/preprod-candidates.md`, `docs/release-validation-checklist.md`
-      and `docs/release-regulation.md` are **unchanged** — `git diff --stat` pasted.
+- [x] 7.3 **Done — confirmed by diff, and the check was widened beyond the three files named.**
+      `git diff --stat origin/main --` over every frozen path in §12 — `build.yml`,
+      `record-preprod-candidate.yml`, `deploy-stand.yml`, `deploy-preprod.yml`, `deploy-dev.yml`,
+      `dev-reset.yml`, `ci.yml`, `build-main.yml`, `docs/release-validation-checklist.md`,
+      `docs/preprod-candidates.md`, `docs/release-regulation.md`,
+      `docs/production-approval-regulation.md`, `docs/prod-releases.md`, `docs/migration-decisions.md`,
+      `README.md`, `Dockerfile.prod`, `vite.config.ts`, `src/`, `.github/` — returned **empty output**:
+      every one is byte-identical to `origin/main`. `git status --porcelain` in the worktree shows
+      exactly one entry, `?? .forgejo/workflows/record-prod-image.yml`. **The three files this subtask
+      names are unchanged, and so is everything else that was supposed to be.**
 
 ### Task 8 — Close (AC: all) — **1 dev-story push + PR-open + merge rows**
 - [ ] 8.1 Grade every AC against shipped artifacts and pasted evidence, not intention.
@@ -1227,6 +1358,65 @@ code-review Opus.)_
   observed independently; attested with date and channel (coordinator relay of Oleg's own words),
   in the same register this project holds for every attested-not-observed acknowledgement.
 
+- **Session 2, 2026-08-26 — Tasks 3, 5.1-5.2, 7.3 executed; Task 4 still gated.** Work resumed on
+  Oleg's instruction (*"dev остальных tasks"*). Task 2.4's gate **re-verified first, not assumed**, per
+  Completion Note 8's standing instruction:
+  ```
+  $ git fetch --all                       # 549 remote heads, 550 refs under refs/remotes/origin
+  $ git cat-file -e 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
+  fatal: Not a valid object name 41ab0470ab6b3df3bc332fc90f8bccaaba44dc39^{commit}
+  $ git rev-list --all | grep -ci '^41ab0470'      -> 0
+  $ git ls-remote origin | grep -ci '41ab0470'     -> 0
+  ```
+  **Still ABSENT.** The `ls-remote` check is new this session and is the stronger form: it asks the
+  server directly rather than trusting the local object store. **Task 4 remains gated.**
+- **Session 2 — the OTHER half of Completion Note 8's re-verification, closed WITHOUT touching s2.**
+  The standing instruction also required confirming s2 is still serving the same revision. Done over
+  **public HTTP only** — no SSH, no credential, no host contact, therefore no exposure under
+  Prohibition 10 at all:
+  ```
+  $ curl -sI https://crm-prionex.online/assets/index-D8ZYo8qY.js | grep -i last-modified
+  Last-Modified: Sat, 22 Aug 2026 19:49:08 GMT
+  $ curl -s  https://crm-prionex.online/assets/index-D8ZYo8qY.js | grep -oE '"1[78][0-9]{11}"'
+  "1787428120913"        # = 2026-08-22 19:48:40Z, the VITE_BUILD_TS define from vite.config.ts:8
+  ```
+  Placed beside session 1's own s2 read, four timestamps from **two independent channels** fall inside
+  one 2.5-minute window: `org.opencontainers.image.created` **19:47:22.014Z** (s2 label) →
+  `VITE_BUILD_TS` **19:48:40Z** (public bundle) → asset `Last-Modified` **19:49:08Z** (public) →
+  image `Created` **19:49:53Z** (s2). **Production has not moved.** 🔴 Stated at its true strength and
+  no higher: this corroborates the **build**, not the label — Open Question 4's accepted
+  single-source position on the commit identity is unchanged, and this is not a second source for it.
+- **Session 2, Task 3.4 — the stored retention rule, read over the admin SSH path.** `ssh root@10.67.0.1`
+  → `docker exec forgejo-postgres psql -U forgejo -d forgejo -c "SELECT … FROM package_cleanup_rule"`.
+  Row pasted verbatim at Task 3.4. DB name/user obtained with `env | grep -E '^POSTGRES_(USER|DB)='` —
+  **scoped to exclude `POSTGRES_PASSWORD`**; no credential file was read or printed anywhere this
+  session (Prohibition 13).
+- **Session 2, Task 5.1/5.2 — mechanical checks run before the file was reported done.** `yaml.safe_load`
+  parse; **all 15 `run:` bodies** scanned for the expression syntax (**zero hits**, Prohibition 12) and
+  `bash -n`-checked (**all clean**); all four pure-shell guards extracted from the shipped YAML and
+  exercised against pass + discriminating inputs (**15/15 as specified**, table at Task 5.2).
+  **These are local exercises of shell logic. They are NOT §9's outcome matrix**, which needs run ids
+  and stays OPEN.
+- 🔴 **Session 2 — DECISION-NUMBER COLLISION FOUND. `D43` is NOT free, and Task 1.5's finding is
+  correct-but-incomplete rather than wrong.** Task 1.5 swept `origin/*` refs and concluded *"highest
+  D42, next free D43"* — and re-running that sweep this session reproduces it exactly: `D43` appears in
+  **zero** remote branches. **But `docs/migration-decisions.md` in the operator's own local checkout
+  carries a full `## D43.` section** — the temporary PROD hostname `crm.prod.crm-prionex.online` — on
+  branch `docs/prod-temporary-hostname`, **two commits (`bd4e4b83`, `1c54f32d`) that have never been
+  pushed** (`git ls-remote --heads origin 'docs/prod-temporary-hostname'` → empty). A ref-based sweep
+  cannot see it; that is the sweep's blind spot, not its error.
+  **Consequence if unaddressed: two different `D43` sections, one of them this story's.** Re-run with
+  the local branch included, the first genuinely free number is **`D45`** — `D35` is held by
+  `origin/story-4-9/pr-1-context`, `D43` by the unpushed local branch, `D44` by
+  `origin/story-4-10/pr-1-context`. **Not taken unilaterally**: Task 6.3 is unreachable while Task 4 is
+  gated, and the choice (renumber this story to `D45`, or push the hostname branch first and renumber
+  that one) is Oleg's. **Filed as Open Question 10.**
+  ⚠️ **Second-order finding, recorded because it outlives this story:** the D-number sweep this project
+  has used since `#d43`'s own record — *"`git fetch --all` + grep the anchor across every branch"* — is
+  **unsound whenever a decision is authored locally and not yet pushed**, which is exactly how the
+  hostname record was written. The sweep needs to include the operator's own working checkout, or
+  decisions must be pushed before their number is treated as claimed.
+
 ### Completion Notes List
 
 1. **Tasks 1 and 2 executed in full this session; Tasks 3-8 not started — correctly, not by
@@ -1286,10 +1476,39 @@ code-review Opus.)_
    changed `org.opencontainers.image.revision` label on re-read is a new commit and a new gate, not
    a continuation of this one** — Tasks 2.1-2.3 are re-run in full.
 
+9. **Session 2 (2026-08-26) executed Tasks 3, 5.1, 5.2 and 7.3. Task 4 and everything that depends on
+   an image — Tasks 5.3-5.6, 6, 7.1, 7.2, 8 — remain not started, and correctly so.** The gate was
+   re-verified rather than assumed: the commit is still absent from Forgejo, confirmed this time by
+   `git ls-remote` against the server as well as by the local object store. **This session made no
+   dispatch, wrote no registry tag, edited no frozen file and appended no ledger row.**
+10. ✅ **`record-prod-image.yml` is shipped but UNEXERCISED, and the distinction is the whole of its
+   disposition.** Its four pure-shell guards were run locally against pass and discriminating inputs
+   and behaved exactly as specified (15/15), which is genuine verification of the shell logic and is
+   **not** a live outcome matrix. **§9's matrix has no run ids in it and its state is `OPEN`.** Six of
+   its seven rows need a dispatch that cannot happen yet; the seventh — the `G5`-equivalent — is a
+   **named absence** that will never be earnable in this story, because there is no PROD stand until
+   Story 6.10. **Nothing in this session claims a guard has fired in production conditions.**
+11. 🔴 **A decision-number collision was found and is NOT resolved here — Open Question 10.** `D43`,
+   which Task 1.5 correctly measured as free across every *remote* ref, is already used by an
+   **unpushed local branch** for the PROD hostname record. Taking `D43` here would create two. The
+   first genuinely free number is `D45`. **The choice is Oleg's**, and Task 6.3 is unreachable in any
+   case while Task 4 is gated. The generalisable half is filed with it: **this project's standing
+   D-number sweep is blind to locally-authored, unpushed decisions.**
+12. 🚨 **AC10's "not earned" list, restated for this session and no larger than last time.** Still not
+   claimed: anything about the retention rule by execution (`UNPROVEN`, first observable 2026-08-29,
+   owner Story 6.3); anything about `secret/fe/prod/app`'s contents (Prohibition 6 honoured — what was
+   measured is the **live production bundle's** API origins, which is a different claim and is labelled
+   as one); any byte-difference finding (Task 6 not reached); any `G5`-equivalent stand check (does not
+   exist). **New this session and stated at its true strength:** the production build's *identity* is
+   corroborated by a second, independent, zero-touch channel — **but the commit *label* still rests on
+   one source**, exactly as Open Question 4 accepted. The corroboration is of the build, not the label,
+   and it is not offered as a second source for the commit.
+
 ### File List
 
-- `_bmad-output/implementation-artifacts/6-3-rebuild-the-running-production-commit-into-the-forgejo-registry.md` — this story file (Tasks 1-2, Dev Agent Record, Open Questions)
+- `_bmad-output/implementation-artifacts/6-3-rebuild-the-running-production-commit-into-the-forgejo-registry.md` — this story file (Tasks 1-3, 5.1-5.2, 7.3, Dev Agent Record, Open Questions)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `6-3-…` flipped `backlog` → `in-progress`, HALT comment recorded
+- `.forgejo/workflows/record-prod-image.yml` — **NEW** (Task 5.1/5.2). The story's only code artifact. Dispatch-only recorder for `prod-<12hex>` / `prod-current`; ships unexercised — no dispatch has been made against it
 
 ### Review Findings
 
@@ -1368,6 +1587,22 @@ own gate result is the dev agent's own direct observation (Task 2.4).
    per the same convention Oleg just invoked (owners are names or story numbers, never trigger
    conditions, and never silently dropped).
 
+10. 🔴 **OPEN — raised 2026-08-26 (session 2), needs Oleg. `D43` is not free after all, and this
+   story planned to take it.** Task 1.5's sweep across every `origin/*` ref is reproducible and still
+   returns *"highest D42, next free D43"*. **It is blind to one place**: the operator's own local
+   checkout, where branch `docs/prod-temporary-hostname` (commits `bd4e4b83`, `1c54f32d`, **never
+   pushed**) already carries a full `## D43.` section recording the temporary PROD hostname
+   `crm.prod.crm-prionex.online`. Re-run with that branch included, the first free number is **`D45`**
+   (`D35` → `origin/story-4-9/pr-1-context`, `D43` → the unpushed local branch, `D44` →
+   `origin/story-4-10/pr-1-context`). **Two options, neither taken unilaterally:** (a) this story
+   renumbers to `D45`; (b) the hostname branch is pushed first and whichever record lands second
+   renumbers. **Not urgent** — Task 6.3 cannot run while Task 4 is gated — **but it must not be
+   discovered at merge time**, which is precisely when a duplicate anchor becomes expensive.
+   ⚠️ **The generalisable finding, which outlives this story:** the D-number sweep this project has used
+   since `#d43`'s own record is **unsound for any decision authored locally and not yet pushed**. Either
+   the sweep includes the operator's working checkout, or a number is not treated as claimed until it is
+   pushed. **Owner: Oleg** (both the decision and the unpushed branch are his).
+
 **Item 9 — not one of the original eight, and not a policy alternative: the one-shot dispatch
 mechanism itself (§11/AC7) is amended by Oleg's own direct authorisation, 2026-08-26, verbatim via
 the coordinator:** *"Запускай по готовности."* **What this changes and what it does not:**
@@ -1399,6 +1634,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.4 | **Dev-story session 2: Tasks 3, 5.1-5.2 and 7.3 executed. Task 4 still gated — the commit is still absent, re-verified this time against the server (`git ls-remote`) as well as locally.** The other half of the resume instruction was closed WITHOUT touching s2: the live production bundle's `VITE_BUILD_TS` (`2026-08-22 19:48:40Z`) and asset `Last-Modified` (`19:49:08Z`), read over public HTTP, sit inside one 2.5-minute window with session 1's two s2 timestamps — production has not moved, corroborated by an independent channel (of the BUILD, not the label; OQ4's single-source position on the commit stands). Task 3.4 read `package_cleanup_rule` from the Forgejo DB directly and compiled all four tag shapes against it: the three markers KEEP, the 40-hex sanitized-ref tag does not, plus a free non-vacuous control. **`.forgejo/workflows/record-prod-image.yml` shipped** — G1/G2/G3/G4/404/G6, no G5-equivalent with the reason in the header, `prod-<sha>` before `prod-current`, `--prefer-index=false`, read-back after every write, move-refused-by-default as a recorded divergence from 5.4; 15/15 run bodies clean of the expression syntax and `bash -n`-valid; all four pure-shell guards exercised locally 15/15 — **local shell verification, NOT §9's matrix, which stays OPEN with no run ids**. Workflow census 11 → 12; every frozen path byte-identical to `origin/main`. 🔴 **New blocker-adjacent finding, Open Question 10: `D43` is NOT free** — an unpushed local branch already uses it for the PROD hostname record, so the project's ref-based D-number sweep is blind to locally-authored decisions; first free is `D45`; owner Oleg, not taken unilaterally. | dev-story |
 | 2026-08-26 | 0.3 | **OQ6 resolved by Oleg, verbatim: "Занесу коммиты в Forgejo"** -- option (a), import from a local clone, chosen; options (b) nearest-ancestor and (c) unblock-GitHub-first explicitly declined, recorded as refusals (the cutover image must be the exact running commit). Task 2.4's finding reframed, on the coordinator's instruction, as a permanent record and a positive outcome -- the gate worked exactly as designed, stopping the story before the one-shot dispatch; this is the project's first direct proof of the GitHub/Forgejo divergence and outlives this story. Work explicitly paused on Oleg's own instruction until he signals the commit has landed (he is watching for it himself). sprint-status.yaml's blocking comment updated: owner Oleg, decision in progress, not "waiting". Standing instruction recorded for resume: RE-VERIFY Task 2.4 (commit reachable as a complete object, s2 still serving the same revision), do not resume from where it stopped. | dev-story (Sonnet) |
 | 2026-08-26 | 0.2 | **Dev-story Tasks 1-2 executed; HALT at Task 2.4.** Ledger/D-number re-verified (D43 free). s2 read over the NFR7 admin path: running commit identified as `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` from `org.opencontainers.image.revision`, container/image/label state pasted verbatim. **Task 2.4's gate FAILED: the commit is absent from the Forgejo repository** (fresh fetch, 1429 refs, zero near-matches) -- exactly the risk Sec.2(c)/Open Question 6 named at context time. Task 4 (the one-shot prod build) and everything downstream do not run. Open Questions 1-5, 7, 8 arrived pre-answered from Oleg via the coordinator (all ratified as recommended except OQ8, whose owner Oleg reassigned from Story 6.8 to Story 6.3 itself); a ninth item -- Oleg's direct authorisation of the one-shot dispatch mechanism ("Запускай по готовности"), with its raised pre-push bar -- recorded but not yet exercised. sprint-status.yaml's `6-3-...` row stays `in-progress` per the story's own HALT mapping, with the blocking condition (OQ6) named in the comment immediately above it. | dev-story (Sonnet) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `cfbad179`, branch `story-6-3/pr-1-context`. Ordering checked against `epics.md` for all of 6.3-6.10 (§2): 6.3 does **not** depend on Story 6.10; it does depend on a tag-writing mechanism the plan assigned to 6.6, which cannot run first — and on one external precondition (the commit's presence in Forgejo) that no story owns. Five epic ACs carried, five added. Eight Open Questions, five of which gate the story's one-shot dispatch. | create-story context engine (Opus) |
