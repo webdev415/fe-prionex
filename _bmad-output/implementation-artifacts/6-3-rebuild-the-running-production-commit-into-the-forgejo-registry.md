@@ -1042,10 +1042,30 @@ against a query, or closed with the literal word **OPEN**.
       own read, not a substitute pre-check constructed for the gate.
 - [x] 4.5 ✅ **Both tags read back from the registry independently of the run** (`package_version`
       joined to `package_property`, not the run's own output):
-      | Tag | Created | Digest |
+      🔴 **CORRECTED 2026-08-26, and the correction is mine: the first version of this subtask read
+      the digests from the WRONG INSTRUMENT.** It reported
+      `sha256:334daaa5462d69f007662851e3852fde539932c364e6285a5b392067f2e8ee6d`, taken from
+      `package_property.container.digest` in Forgejo's database. **That column is not the manifest
+      digest.** Measured against the registry itself with the same client the workflows use:
+
+      | Tag | Created | Manifest digest (registry, authoritative) |
       |---|---|---|
-      | `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` | `11:07:59Z` | `sha256:334daaa5462d69f007662851e3852fde539932c364e6285a5b392067f2e8ee6d` |
-      | `sha-a99ccd44c5a3-prod` | `11:08:10Z` | `sha256:334daaa5462d69f007662851e3852fde539932c364e6285a5b392067f2e8ee6d` |
+      | `a99ccd44c5a39345fa65eb74e87343b187e129e9-prod` | `11:07:59Z` | `sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3` |
+      | `sha-a99ccd44c5a3-prod` | `11:08:10Z` | `sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3` |
+
+      **The CONCLUSION of this subtask was right and is unchanged** — both names resolve to one
+      manifest, and `Enforce AC2` therefore did not rebuild or re-wrap anything. **Only the value was
+      wrong, and it was wrong because it came from a database column rather than from the registry.**
+      🔴 **Control that settles which instrument to trust**, and it is free: `preprod-a99ccd44c5a3`'s
+      `container.digest` reads `sha256:58f7c60199e9…`, while the registry and
+      `docs/preprod-candidates.md` **agree with each other** on
+      `sha256:a62e868786cd42811141590f919c632cf559b06ef6045dc44b0b2607bf2086b2`. The ledger this
+      project already keeps was written from the registry; the database column is some other quantity
+      and several tag rows do not carry it at all.
+      **Standing rule this produces: read manifest digests from the registry
+      (`docker buildx imagetools inspect --format '{{.Manifest.Digest}}'`), never from
+      `package_property`.** The database is fine for *which versions exist*; it is not the authority
+      for *what they point at*.
 
       **Identical digests, 11 seconds apart** — exactly the shape D24 specifies: the build step pushes
       only the mutable branch tag, then `Enforce AC2` attaches the permanent name to **the same
@@ -1110,8 +1130,37 @@ against a query, or closed with the literal word **OPEN**.
       ```
       **This is a local exercise of the shell logic, NOT a live outcome matrix.** §9's matrix needs run
       ids and stays **OPEN** — Tasks 5.3-5.6, which cannot run until Task 4 has produced an image.
-- [ ] 5.3 **`PENDING (owner: coordinator)`** — the real record dispatch against this story's
-      `sha-<12hex>-prod`. Read both markers back from the registry. Record the run id.
+- [x] 5.3 ✅ **Done — RUN 600, all 17 steps green.** Dispatched verbatim, then made without waiting
+      (OQ item 9):
+      ```
+      POST .../actions/workflows/record-prod-image.yml/dispatches
+      {"ref":"story-6-3/pr-1-context","inputs":{"image_tag":"sha-a99ccd44c5a3-prod",
+       "acknowledgement":"MOVE-PROD-CURRENT","allow_current_move":"false"}}
+      ```
+      🔴 The outer `ref` is `story-6-3/pr-1-context`, not `main`: **this workflow does not exist on
+      `main` yet** — it lands there only when this story's PR merges. Recorded because a reader who
+      assumes every dispatch reads its workflow from `main` will not be able to reproduce this run.
+      **Guard order actually executed** — every fail-closed guard before any network call, exactly as
+      designed: `G1` acknowledgement → `G2` `-prod` suffix → `G3` twelve hex → `G4` `keep_pattern`
+      compile → write-target assertion → *then* login, buildx, classified-404 probe, digest resolve,
+      `G6` labels → probe/write/read-back `prod-<sha>` → probe/write/read-back `prod-current`.
+      **Markers read back from the registry, independently of the run**, with the authoritative client
+      rather than the database column (see 4.5's correction):
+      | Tag | Manifest digest |
+      |---|---|
+      | `sha-a99ccd44c5a3-prod` | `sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3` |
+      | `prod-a99ccd44c5a3` | `sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3` |
+      | `prod-current` | `sha256:f30c794123bafbdefc5cf4ec5815e1aaf0739e6b6819117d56d495ac8efea3f3` |
+
+      **All three resolve to one manifest.** Written in the specified order — `prod-a99ccd44c5a3` at
+      `11:17:09Z`, `prod-current` at `11:17:10Z`: history before pointer, one second apart.
+      **Control, taken because a compile that matches everything proves nothing:**
+      `sha-a99ccd44c5a3-preprod` and `preprod-a99ccd44c5a3` both resolve to
+      `sha256:a62e868786cd…2086b2` — a different manifest, and the one
+      `docs/preprod-candidates.md` records. **The PROD image is therefore demonstrably NOT the
+      PRE-PROD artifact** — Option C's rebuild, visible as two digests for one commit (NFR11), which
+      is a measured fact rather than the vacuous byte-comparison Prohibition 7 forbids.
+      **AC3 is met.**
 - [ ] 5.4 **`PENDING (owner: coordinator)`** — the discriminating runs (§9): acknowledgement input wrong;
       a real `-preprod` tag (`sha-a99ccd44c5a3-preprod` already exists — free); the 40-hex form of this
       story's own commit; `sha-000000000000-prod` for the classified 404. **Each must refuse, and each
