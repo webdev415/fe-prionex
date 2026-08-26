@@ -1852,7 +1852,25 @@ development_status:
   # (never probed, CRM/api-prionex).
   # UNBLOCKS: Story 6.4 may now be written against label `e1-rung3-prod-deploy`. Oleg merges; the row
   # goes `done` only after that.
-  6-10-provision-the-prod-deploy-contour-on-s10: review
+  # ✅ DONE 2026-08-26 (Oleg). PR #93 merged as 01cf8e01. Five of six ACs met.
+  # 🔴 AC3 REMAINS UNMET AND THIS ROW DOES NOT PRETEND OTHERWISE. It asks for a standing read-only
+  # registry credential ON s10. The deploy never uses one -- deploy-stand.yml logs in inside the job
+  # from org secrets into a workspace-scoped DOCKER_CONFIG (D28 option (e)) and never reads the host.
+  # A permanent pull credential on a production host is the wrong trade: registry tokens on this
+  # instance are unrevocable-by-admin once leaked, twice paid for. The story RECOMMENDS retiring the
+  # clause by dated amendment, keeping its real content (a property of REGISTRY_TOKEN_RO, already
+  # exercised by every DEV and PRE-PROD deploy). Marking the story `done` closes the STORY, not that
+  # recommendation -- it is still open and still Oleg's.
+  # ⚠️ THREE RESIDUALS THAT SURVIVE THE CLOSE: (1) capacity: 1 is another team's config value and is
+  # NOT a reason to drop Story 4.4's flock; (2) nothing in the deploy path asserts WHICH HOST it runs
+  # on -- an org-scoped label is a string, and the guarantee lives in a foreign config; (3) the
+  # backend resolve CANNOT be verified until the first deploy -- "it started" is not evidence, since
+  # nginx resolves Kong lazily and the healthcheck probes itself. Check:
+  # `docker exec fe-prionex-prod getent hosts crm-kong-gateway`; empty is a STOP.
+  # EXTERNAL, four items with owners, concrete in #d23: traffic path (80/443 on the hypervisor answer
+  # `refused`, Oleg); hypervisor->VM route (D23's own "No route to host", unverified, Oleg); the
+  # PROD-API hostname (UNMEASURED, not derivable, Oleg); PROD Kong's CORS (never probed, api-prionex).
+  6-10-provision-the-prod-deploy-contour-on-s10: done
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery
