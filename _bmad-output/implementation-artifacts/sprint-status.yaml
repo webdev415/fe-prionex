@@ -1897,6 +1897,27 @@ development_status:
   # and never used). 🔴 RE-VERIFY ACROSS LOCAL UNPUSHED BRANCHES TOO -- 6.3's OQ10 found a full ## D43
   # on an unpushed local branch the origin/* sweep could not see, and the PROCESS half of that hole is
   # OPEN and owned by no fix.
+  # ✅ OPEN QUESTIONS 2-5 ANSWERED BY OLEG 2026-08-26, all as recommended -- THE STORY HAS NO OPEN GATE.
+  #   (2) THE DEPLOY IS THE AUTHORISATION: `record` runs unconditionally on a green deploy, nothing
+  #       further gates the call path. Declined alternative recorded, not silently dropped -- gating
+  #       `record` on a matching docs/prod-releases.md row would make the regulation technically
+  #       enforced, but it is a NEW gate NFR9/#d5 say does not exist, it needs a checkout plus a read
+  #       credential in the write job, and it would have REFUSED THIS STORY'S OWN MOVE EXERCISE
+  #       (dispatches 2 and 3 are deliberately not releases and correctly have no ledger row).
+  #   (3) 6.6 LANDS FIRST; 6.5 REBASES ONTO IT. Textually disjoint (6.5 at `derive`, 6.6 after
+  #       `deploy`) and 6.6's whole exercise is rollback:true, on which 6.5's guard is skipped BY ITS
+  #       OWN AC -- so there is no interaction, only a merge order. 🔴 The obligation this creates:
+  #       LEAVE `derive` BYTE-IDENTICAL. A tidy-up there turns a clean rebase into a conflict in the
+  #       one job 6.6 has no business in.
+  #   (4) G6's discriminating row: UNEARNED WITH THE REASON. No force-test, no hand-crafted artifact.
+  #       None exists and build.yml CANNOT make one (it derives the label and the tag suffix from the
+  #       same shell variable). The rejected option would have minted a permanent junk sha-<12hex>-prod
+  #       -- keep_pattern protects it by shape -- in a namespace holding another team's production.
+  #       6.3's local 15/15 shell exercise is the precedent for what force-testing reads like after:
+  #       verified logic, no run id, and its own story had to record it is NOT a substitute.
+  #   (5) AC4's wording amended and CONFIRMED: "without connecting to the production host", not "s2".
+  #       Kept literal the AC is satisfied by construction -- NFR5 already forbids touching s2 -- and
+  #       checks nothing. That is the vacuous-check class this project has now caught five times.
   # Floor 13 / ceiling 24 runs (7 of them dispatches; 5 write nothing, 2 do), OPEN. 🔴 CEILING RAISED
   # 20 -> 24 THE SAME DAY IT WAS DECLARED, with its own reason rather than silently: OQ1's "move ok"
   # converts a matrix row that would have shipped UNEARNED into two real dispatches. Same

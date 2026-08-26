@@ -113,6 +113,16 @@ through it while pretending it still guards.
 **`allow_current_move` — default `false` (REFUSE).** Story 6.3 chose refuse-by-default because *"6.3 is
 the FIRST write, so the tag must not exist"*, and its own comment closes: *"Story 6.6, which moves the
 pointer on every deploy by design, sets its own policy; **it does not inherit this default**."*
+✅ **RATIFIED by Oleg 2026-08-26 (Open Question 2): the deploy IS the authorisation, and nothing
+additional gates the call path.**
+
+⚠️ **The alternative that was put to him and declined, recorded because a reviewer will raise it:** gate
+`record` on a matching row already existing in `docs/prod-releases.md`, which would make the approval
+regulation technically enforced. Declined on three grounds — it is a **NEW technical gate**, and NFR9 /
+`#d5` state there is none and that its absence is *accepted, not deferred*; it would need a repository
+checkout and a read credential in the write job; and it would have **refused §8's own move exercise**,
+whose dispatches 2 and 3 are deliberately not releases and correctly have no ledger row.
+
 ➡️ **Required shape: on the `workflow_call` path a move is the normal outcome and is permitted.**
 A deploy that succeeded and then refused to record itself leaves `prod-current` naming the *previous*
 release — the single worst state this marker can be in, and worse than not having the marker at all.
@@ -232,7 +242,7 @@ discriminating run); review a foundation story before writing the story that bui
 | G3 exactly-12 hex | run 600 | a 40-hex tag | ✅ **free**, and it closes M7's own G3 clause |
 | G4 `keep_pattern` compile | run 600 | — | ❌ unreachable through this file's inputs (force-test only) — **label it, do not leave it blank** |
 | classified-404 probe | run 600 | a `sha-<12hex>-prod` that does not exist | ✅ **free** |
-| G6 labels | run 600 | a `-prod`-shaped tag whose `org.prionex.environment` is not `prod` | ⚠️ needs an artifact that does not exist; **decide, do not skip silently** |
+| G6 labels | run 600 | — | ❌ **UNEARNED, decided by Oleg 2026-08-26.** Needs a `-prod`-shaped tag whose `org.prionex.environment` is not `prod`; none exists and `build.yml` **cannot** produce one — it derives the label and the tag suffix from the same shell variable. **Label the row with that sentence.** |
 | G5 equivalent | — | — | ❌ **permanent named absence** in 6.3's design (no PROD stand at write time). 🔴 **Re-open it: s10 IS now live.** See §10. |
 | `record` on rollback | §8's free dispatch | — | ✅ **free** |
 | `record` on release | — | — | ⚠️ the release deploy leg has **never been green** (`#d47`); **Story 6.9 owns its first run.** Label UNEARNED with that reason. |
@@ -310,6 +320,12 @@ is where the reasoning lives.**
   the file is not edited.** M7's PRE-PROD-only branches are **not** earned by dispatching it (§13).
 - **`deploy-prod.yml`'s `derive` job** — it is **Story 6.5's seam** (*"`derive` is the seam… This story
   builds none of it"*). Adding a job after `deploy` does not touch it. **Keep it that way.**
+  ✅ **Ordering settled by Oleg 2026-08-26 (Open Question 3): 6.6 lands FIRST; 6.5 has not landed and
+  rebases onto this.** The two are textually disjoint — 6.5 at `derive`, 6.6 after `deploy` — and 6.6's
+  entire exercise runs `rollback: true`, on which 6.5's guard is skipped **by its own AC**. So there is
+  no interaction to manage, only a merge order, and it is this one. 🔴 **The obligation that creates:
+  leave `derive` byte-identical.** A tidy-up there turns a clean rebase into a conflict in the one job
+  6.6 has no business in.
 - `deploy-preprod.yml`, `deploy-dev.yml`, `dev-reset.yml`, `ci.yml`, `build-main.yml`,
   `build-buildkit-cni-image.yml`; `Dockerfile*`, `vite.config.ts`, `nginx.conf`, `docker-compose*.yml`,
   `src/`; `docs/production-approval-regulation.md`, `docs/release-regulation.md`,
@@ -423,7 +439,7 @@ and not silently re-owned.
 **Then** the production release history is reconstructable **without connecting to the production host**
 **And** the listing step is a **guard-grade** read, not a step that goes green on a 401 or a transport
 failure and not one that silently truncates on pagination (finding #12)
-**And** ⚠️ **AC wording amended 2026-08-26:** the epic says *"without connecting to s2"*. s2 is the
+**And** ✅ **AC wording amended 2026-08-26, confirmed by Oleg (Open Question 5):** the epic says *"without connecting to s2"*. s2 is the
 **legacy** host; the Forgejo production stand is s10 (`sprint-change-proposal-2026-08-18-prod-target.md`).
 Read as *"without connecting to the production host"* — the epic's intent, in the epic's own amended
 topology
@@ -569,9 +585,13 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
       clause** for this file (§13.6).
 - [ ] 6.4 404 classifier: a well-formed `sha-<12hex>-prod` that does not exist. Expect **classified
       absence**, not an ambiguous read.
-- [ ] 6.5 G4 and G6: record **UNEARNED with the reason** (§9), or earn G6 if an artifact exists by then.
-      **Do not leave a row blank.** (The `prod-current` MOVE row is **not** here — it is Task 7, because
-      it is neither free nor write-less.)
+- [ ] 6.5 G4 and G6: record **UNEARNED with the reason** (§9) — ✅ **decided 2026-08-26, both rows.**
+      G4 is unreachable through this file's own inputs; G6 needs an artifact `build.yml` cannot produce.
+      🔴 **Do not force-test either into looking earned.** Story 6.3's local 15/15 shell exercise is the
+      precedent for what that reads like afterwards: it verifies shell logic, carries no run id, and its
+      own story had to record that it is **not** a substitute. A labelled UNEARNED row is worth more than
+      a row with a footnote. (The `prod-current` MOVE row is **not** here — it is Task 7, because it is
+      neither free nor write-less.)
 
 ### Task 7 — 🔴 The move, there and back (AC: 2, 6) — **2 dispatches, and they are NOT free**
 
@@ -693,6 +713,10 @@ and earn the outcome matrix Story 6.3 could not. **Write no new registry mechani
 | 5 | `prod_tag` = `sha-<12hex>-prod` (§7) | Reopen the column; name who settles it instead |
 | 6 | G5's **digest half** only (§10) | Full G5 with a host job, or no G5 and a corrected justification |
 
+✅ **Rows 2 and 3 are no longer autonomous either — Oleg ratified both on 2026-08-26** (Open Question 2:
+the deploy is the authorisation, nothing further gates the call path). The veto column stays for the
+record; it is spent.
+
 🔴 **Not in this table, because it is not autonomous: the `prod-current` move.** It was Open Question 1
 and Oleg answered *"move ok"* on 2026-08-26. §8 and Task 7 execute that answer; they do not re-decide it
 and they do not widen it — the authorisation is for a **there-and-back exercise**, not for leaving the
@@ -753,19 +777,43 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
    **(c)** wait for the next validated candidate. **Recommendation: (a)** — 6.9's release-deploy leg has
    never been green and is already the epic's riskiest run; adding pointer churn ahead of it buys a
    matrix row at the cost of the thing the row is about. **Oleg decides.**
-2. **Is the whole `record` job acceptable as an unconditional consequence of a green deploy, with no
+2. ✅ **RESOLVED 2026-08-26 — Oleg: the deploy IS the authorisation. `record` runs unconditionally on a
+   green deploy, nothing further gates the call path.** The declined alternative — gate `record` on a
+   matching `docs/prod-releases.md` row — is recorded in §5 with its three grounds, the sharpest being
+   that it would have refused §8's own move exercise. *The question as asked:*
+
+   **Is the whole `record` job acceptable as an unconditional consequence of a green deploy, with no
    human confirmation anywhere on the call path?** §5 argues the deploy *is* the authorisation. The
    counter-case: `docs/production-approval-regulation.md` puts the approval **before** the dispatch, so
    by then it has already happened. Recorded because the regulation is Oleg's document.
-3. **Does Story 6.5 land before or after this story?** Both edit `deploy-prod.yml` — 6.5 at `derive`,
+3. ✅ **RESOLVED 2026-08-26 — Oleg: 6.6 lands FIRST, 6.5 rebases onto it.** The assumption this story
+   was written under is now the decision. **Its obligation: leave `derive` byte-identical** (§12). *The
+   question as asked:*
+
+   **Does Story 6.5 land before or after this story?** Both edit `deploy-prod.yml` — 6.5 at `derive`,
    6.6 after `deploy`. They do not overlap textually, but a merge order still exists. 6.5 is `backlog`;
    this story assumes it has not landed.
-4. **G6's discriminating row (§9) needs a `-prod`-shaped tag whose `org.prionex.environment` is not
+4. ✅ **RESOLVED 2026-08-26 — Oleg: record UNEARNED with the reason.** No force-test, no hand-crafted
+   artifact. **The rejected option is worth remembering: pushing a mislabelled `sha-<12hex>-prod` would
+   mint a permanent junk tag** — `keep_pattern` protects it by shape and only an authorised `DELETE`
+   removes it — **in a namespace holding another team's production packages.** *The question as asked:*
+
+   **G6's discriminating row (§9) needs a `-prod`-shaped tag whose `org.prionex.environment` is not
    `prod`.** No such artifact exists and `build.yml` cannot produce one. Force-test, record unearned, or
    spend a hand-crafted push? **Recommendation: record unearned with that sentence.**
-5. **AC4's amended wording (§AC4).** The epic says *"without connecting to s2"*; s2 is legacy and NFR5
+5. ✅ **RESOLVED 2026-08-26 — Oleg confirmed the amendment: read as *"without connecting to the
+   production host"*.** Kept literal, the AC would be satisfied by construction — NFR5 already forbids
+   touching s2 — and would check nothing. That is the vacuous-check class this project has now caught
+   five times (Prohibition 9). *The question as asked:*
+
+   **AC4's amended wording (§AC4).** The epic says *"without connecting to s2"*; s2 is legacy and NFR5
    forbids touching it at all. Confirm the amendment rather than let a later reader find the story
    graded an AC it quietly rewrote.
+
+---
+
+🔴 **All five Open Questions are answered. Nothing gates the dev session.** Anything new belongs in the
+Dev Agent Record, not here.
 
 ---
 
@@ -773,5 +821,6 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.3 | ✅ **Open Questions 2–5 answered by Oleg, all as recommended; the story now has NO open gate.** (2) The deploy is the authorisation — `record` runs unconditionally on a green deploy, and the declined alternative (gate it on a `docs/prod-releases.md` row) is recorded in §5 with its three grounds, the sharpest being that it would have **refused §8's own move exercise**. (3) **6.6 lands first, 6.5 rebases onto it** — the two are textually disjoint and 6.6's whole exercise runs `rollback: true`, on which 6.5's guard is skipped by its own AC; the obligation that creates is **leave `derive` byte-identical**, now stated in §12. (4) G6's discriminating row is **UNEARNED with its reason**, no force-test and no hand-crafted artifact — the rejected option would have minted a permanent junk `sha-<12hex>-prod` in a namespace holding another team's production packages. (5) AC4's amendment confirmed: *"without connecting to the production host"* — kept literal it would be satisfied by construction and check nothing, the vacuous-check class Prohibition 9 names. §4's veto rows 2 and 3 marked spent. | create-story context engine (Opus) |
 | 2026-08-26 | 0.2 | 🔴 **Open Question 1 answered by Oleg — *"move ok"* — and applied rather than absorbed.** The `prod-current` MOVE goes from a row that would have shipped UNEARNED to **two live dispatches in opposite directions** (§8's table, new Task 7). Applied to: §8 (the hazard becomes a bounded exercise, with the zero-user-blast-radius reason stated so it is not re-litigated after the traffic switch, when it stops being true); §9's matrix (one row → two); AC2 (the move must carry run ids, and the story may not close with the pointer elsewhere); **AC4 — the consequence the answer creates: `prod-308ea1520c59` is minted permanently, a `prod-<12hex>` marker for a commit that was never a release, so the registry alone stops being a sufficient release history and `docs/prod-releases.md` becomes the discriminator**; Prohibition 6 amended from "never move" to "must END on the cutover image, and a failed return is `in-progress`, not `done`"; Prohibitions 13/14 added for the residue; ceiling 20 → 24 with its own recorded reason. The rejected alternative (dispatch the recorder directly, touch no stand) is recorded — it would prove the recorder's branch, not the automatic path AC2 is about. | create-story context engine (Opus) |
 | 2026-08-26 | 0.1 | Context created from a scratchpad worktree off `origin/main` @ `584cc886`, branch `story-6-6/pr-1-context`. 🔴 `origin/main` moved **three times** during contexting (`cfbad179` → `308ea152` → `584cc886`): Stories 6.3 and 6.10 closed `done`, and Story 6.4 shipped `deploy-prod.yml` and reached `review` — so this story's two dependencies both landed mid-analysis and the first draft of §3 was written against a repository that no longer existed. Four epic ACs carried (AC4 amended for the s10 re-target), five added. Thirteen inherited code findings enumerated with dispositions required by AC5. Five Open Questions, one gating. | create-story context engine (Opus) |
