@@ -1748,6 +1748,21 @@ development_status:
   # 🔴 (2) build.yml declares NO workflow_call outputs -- measured. The caller cannot learn the tag it
   # built, so the tag is derived TWICE and must agree byte for byte; deploy-stand.yml's own image_env
   # description says so. Divergence surfaces as a 404 that reads like "never built". #d18 §3's class.
+  # ✅ OPEN QUESTION 2 RESOLVED 2026-08-26 by Oleg, verbatim: "1. не ждать. 2. да. 3. нет." -- OPTION 2.
+  # Waiting for the next validated candidate and recording AC2 unearnable were BOTH explicitly
+  # declined, so this is a choice on the record, not a default. The release path is proven NOW by
+  # deliberately spending a SECOND PERMANENT sha-<12hex>-prod on a non-candidate commit (main's head).
+  # 🔴 THE WINDOW IS CLOSING, and that is what makes the decision right rather than merely convenient:
+  # Story 6.5's guard will refuse any commit without a preprod-<sha>, and a non-candidate commit will
+  # NEVER have one -- so after 6.5 ships this proof is IMPOSSIBLE, and the only remaining alternative
+  # would have been letting production be the first place the release path ever runs.
+  # 🚨 TWO PROHIBITION-GRADE CONSTRAINTS FOLLOW: (1) prod-current MUST NOT be moved to the proof image
+  # -- it names the cutover image and must keep naming it; do NOT dispatch record-prod-image.yml for
+  # the proof at all, and never pass allow_current_move. (2) The proof tag is recorded as a PROOF, not
+  # a release -- named in the decision record with its commit and the sentence that it is not a
+  # rollback target, and NO row in docs/prod-releases.md, because no release was approved.
+  # AT EXECUTION: re-check whether a validated candidate exists by then -- if one does, USE IT AND
+  # SPEND NOTHING.
   # 🔴 (3) THE RELEASE PATH HAS NOTHING FREE TO RUN AGAINST. Measured: exactly ONE sha-*-prod tag
   # exists (sha-a99ccd44c5a3-prod), and preprod-current resolves to that SAME commit. Building it again
   # goes red -- Enforce AC2 refuses the repoint and Date.now() guarantees different bytes. Exercising

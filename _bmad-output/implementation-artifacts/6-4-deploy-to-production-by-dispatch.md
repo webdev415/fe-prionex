@@ -109,14 +109,32 @@ commit that is not a release candidate**, and that is an irreversible act with a
 `keep_pattern` protects the shape forever, and removal needs an authorised `DELETE` with a
 `write:package` token, which on this project has twice required the operator in person.
 
-**Three ways out, and the choice is Oleg's (Open Question 2):**
-1. **Wait for the next validated candidate** — AC2 is exercised on a real release, at zero extra cost,
-   whenever Epic 5's cycle produces one.
-2. **Spend a permanent tag deliberately** on `main`'s current head to prove the path now — the cost is
-   named, recorded, and paid once.
-3. **Record AC2 as unearnable in this story**, with the reason, and let Story 6.9's own release prove
-   it. 🔴 **But then the FIRST time the release path ever runs is against production**, which is
-   precisely the arrangement Epic 6's preamble calls a one-way door.
+✅ **RESOLVED 2026-08-26 by Oleg: option 2.** *"1. не ждать. 2. да. 3. нет."* — waiting is rejected,
+recording AC2 unearnable is rejected, **a permanent tag is spent deliberately to prove the release path
+now.**
+
+**What that commits this story to:** dispatch the release path against a commit that is **not** a
+release candidate — `main`'s head at dispatch time — which mints a **second permanent
+`sha-<12hex>-prod`** in the registry. `keep_pattern` protects that shape forever; removal needs an
+authorised `DELETE` with a `write:package` token, which on this project has twice required the operator
+in person. **The cost is named, accepted, and paid once.**
+
+🔴 **And the decision is better than it first looks, because the window is closing.** Story 6.5 adds the
+promotion guard: *extract the commit from `image_tag`, require `preprod-<sha>`, refuse otherwise.* A
+non-candidate commit has no `preprod-<sha>` and **never will**. **So after 6.5 ships, this proof becomes
+impossible** — the guard would refuse the very dispatch that proves the path. **Exercising AC2 now is
+not merely convenient; it is the only remaining window**, and the alternative was letting production be
+the first place the release path ever runs.
+
+🚨 **Two hard constraints that follow from spending the tag, both Prohibition-grade:**
+- 🔴 **`prod-current` MUST NOT be moved to the proof image.** It currently names the cutover image
+  (`sha-a99ccd44c5a3-prod`). The proof commit is not a release and must never become "what production
+  is running". `record-prod-image.yml` refuses a move by default — **do not pass
+  `allow_current_move`**, and do not dispatch the recorder at all for this image.
+- 🔴 **The proof image must be recorded as a PROOF, not as a release.** No row in
+  `docs/prod-releases.md`; the decision record names the tag, the commit, why it exists, and that it is
+  **not** a rollback target. Otherwise the next reader finds two permanent prod images and no way to
+  tell which one production was ever meant to run.
 
 ⚠️ **This also means the rollback path is the ONLY path that can be exercised against the existing
 cutover image** — which is exactly what `#d46` recorded for Story 6.9, for this same mechanical reason
@@ -401,11 +419,13 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
 - [ ] 1.1 Branch `story-6-4/pr-1-context` off a fresh `origin/main`. Verify the decision number across
       **every** branch **and** the operator's own checkout — the ref-only sweep was wrong once already
       (Story 6.3, OQ10).
-- [»] 1.2 🔴 **ANSWERED AT CONTEXT TIME, and the answer is the blocking one — see §4 for the pasted
-      measurement.** Exactly one `sha-*-prod` tag exists (`sha-a99ccd44c5a3-prod`), and
-      `preprod-current` resolves to the **same** commit. **No validated candidate is unbuilt at prod.**
-      Re-verify at execution — a new candidate may have been recorded since — then take Oleg's answer
-      to Open Question 2 before Task 5. **Do not dispatch the release path until that is settled.**
+- [»] 1.2 ✅ **ANSWERED AT CONTEXT TIME, and Oleg has since decided.** Measurement pasted in §4:
+      exactly one `sha-*-prod` tag exists (`sha-a99ccd44c5a3-prod`) and `preprod-current` resolves to
+      the **same** commit — no validated candidate is unbuilt at prod. **Oleg chose option 2: spend a
+      permanent tag and prove the release path now** (*"1. не ждать. 2. да. 3. нет."*).
+      **At execution:** re-verify the `sha-*-prod` set — a new candidate may exist by then, and if one
+      does, **prefer it and spend nothing.** Otherwise use `main`'s head, and **paste the commit and
+      the resulting tag name before dispatching**, not after.
 - [ ] 1.3 Declare the §10 budget as `OPEN`.
 
 ### Task 2 — Read the contract, do not infer it (AC: 4, 5) — **0 runs**
@@ -441,12 +461,22 @@ coordinator did, and the run id is the proof.** Coordinator-owned subtasks are *
       started" is not evidence* (Story 4.1 Task 6.2).
 
 ### Task 5 — The release path (AC: 2, 6, 7) — **1 dispatch, ceiling 3**
-- [ ] 5.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: false` against Task 1.2's commit.
+- [ ] 5.0 🔴 **GATE, and it is one-shot in the same sense §4 is.** State, before dispatching: the exact
+      commit, the `sha-<12hex>-prod` tag it will mint, and that this tag is a **PROOF, not a release**.
+      **Re-check first whether a validated candidate now exists** — if one does, use it and spend
+      nothing. Confirm no `sha-<12hex>-prod` already exists for the chosen commit; if one does, the
+      build goes red at `Enforce AC2` and the dispatch is wasted.
+- [ ] 5.1 **`PENDING (owner: coordinator)`** — dispatch `rollback: false` against Task 5.0's commit.
 - [ ] 5.2 **`PENDING (owner: coordinator)`** — paste the full job list: **both** jobs executed, in order.
 - [ ] 5.3 **AC7:** read the tag `build.yml` published **from the registry**, and the tag this caller
       passed, and show they are the same string. 🔴 Read manifest digests from the **registry**, never
       from `package_property.container.digest` — Story 6.3 got that wrong and corrected it.
 - [ ] 5.4 Confirm the run states **rebuild, not promotion** (AC2).
+- [ ] 5.5 🔴 **Do NOT dispatch `record-prod-image.yml` against the proof image**, and do **not** move
+      `prod-current`. It names the cutover image and must keep naming it. Record the proof tag in the
+      decision record with its commit and the sentence *"this is a proof of the release path, not a
+      release, and not a rollback target"*. **No row in `docs/prod-releases.md`** — no release was
+      approved.
 
 ### Task 6 — The discriminating runs (AC: 9) — **1 dispatch, ceiling 3**
 - [ ] 6.1 **`PENDING (owner: coordinator)`** — dispatch `image_tag: sha-a99ccd44c5a3-preprod` and show
@@ -559,14 +589,14 @@ Workflows in `.forgejo/workflows/`. `.github/workflows/` is legacy and inert —
    Both shipped callers use `inherit` on their single job. **Recommended: `inherit` on both, with the
    RW exposure recorded as accepted.** Cheap to narrow later; a mid-deploy failure on a missing secret
    is not cheap.
-2. 🔴 **MEASURED, not open as a question of fact — open as a decision.** (§4, Task 1.2) There is
-   **exactly one** `sha-*-prod` tag, and `preprod-current` points at that same commit. **No validated
-   candidate is unbuilt at prod**, so AC2's release path has nothing free to run against. **Pick one:**
-   **(1)** wait for the next validated candidate — zero extra cost, unknown delay; **(2)** spend a
-   **permanent** `sha-<12hex>-prod` on a non-candidate commit to prove the path now — irreversible,
-   removable only by an authorised `DELETE` that has twice needed you in person; **(3)** record AC2
-   unearnable and let Story 6.9's real release be the first exercise — 🔴 **which makes production the
-   first place this code path ever runs.** **This gates Task 5.**
+2. ✅ **RESOLVED 2026-08-26 by Oleg — option 2, verbatim: *"1. не ждать. 2. да. 3. нет."*** The
+   release path is proven **now**, by deliberately spending a second permanent `sha-<12hex>-prod` on a
+   non-candidate commit (`main`'s head at dispatch time). Waiting and recording-unearnable were both
+   explicitly declined, so this is a choice on the record, not a default. **The window matters:** once
+   Story 6.5's guard ships it will refuse any commit without a `preprod-<sha>`, and a non-candidate
+   commit will never have one — **so this proof is impossible after 6.5.** See §4 for the two
+   Prohibition-grade constraints that follow (never move `prod-current`; record it as a proof, never as
+   a release).
 3. **Should the lock-contention row be earned?** (§9, Task 6.2) It costs a second dispatch and proves
    the Story 4.4 lock on the production stand for the first time. ⚠️ Note `capacity: 1` on the runner
    serializes jobs anyway — **so a naive contention test may prove the runner, not the lock.**
