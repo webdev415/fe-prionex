@@ -45,7 +45,7 @@ type QueueFilter = 'all' | 'active'
  * ordinary Active queue while being unable to place a single call — the only
  * previous trace was a warning in a container log.
  */
-function QueueStatusBadge({ active, synced }: { active: boolean; synced?: boolean }) {
+export function QueueStatusBadge({ active, synced }: { active: boolean; synced?: boolean }) {
   const { t } = useTranslation('common')
 
   // Only `false` means "known unsynced". `undefined` is an older payload (or the

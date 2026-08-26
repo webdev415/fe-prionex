@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DialerQueue } from '@/features/dialer'
@@ -86,5 +86,59 @@ describe('QueueFormModal — dialing settings', () => {
     // a number on the first transient line failure. The default must retry.
     expect(screen.getByLabelText('dialer.queueForm.maxAttempts')).toHaveValue(3)
     expect(screen.getByLabelText('dialer.queueForm.retryDelayFailed')).toHaveValue(60)
+  })
+
+  it('sends only what changed, and never the immutable telephony_type', async () => {
+    render(<QueueFormModal open queue={makeQueue()} onClose={() => {}} />)
+
+    // Touch one field. Everything else must stay out of the payload: `queue` is
+    // a paged list row, so an untouched setting the DTO omitted would otherwise
+    // be written back from a client-side default.
+    fireEvent.change(screen.getByLabelText('dialer.queueForm.maxAttempts'), {
+      target: { value: '5' },
+    })
+    fireEvent.click(screen.getByText('dialer.queueForm.save'))
+
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1))
+    const { payload } = updateMutate.mock.calls[0][0]
+    expect(payload).toEqual({ max_attempts: 5 })
+    expect(payload).not.toHaveProperty('telephony_type')
+    expect(payload).not.toHaveProperty('priority')
+  })
+
+  it('sends the full configuration on create, telephony_type included', async () => {
+    render(<QueueFormModal open onClose={() => {}} />)
+
+    // The pre-existing fields have unassociated labels, so query the placeholder.
+    fireEvent.change(screen.getByPlaceholderText('dialer.queueForm.namePlaceholder'), {
+      target: { value: 'Smoke queue' },
+    })
+    fireEvent.click(screen.getByText('dialer.queueForm.create'))
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    const payload = createMutate.mock.calls[0][0]
+    expect(payload).toMatchObject({
+      name: 'Smoke queue',
+      telephony_type: 'white',
+      priority: 3,
+      sim_card_limit: 4,
+      // Never the dial-once value the gateway would otherwise apply.
+      max_attempts: 3,
+      retry_delay_failed_seconds: 60,
+    })
+  })
+
+  it('blocks submit and explains why when a numeric field is cleared', async () => {
+    render(<QueueFormModal open queue={makeQueue()} onClose={() => {}} />)
+
+    // valueAsNumber turns an empty input into NaN; without a visible message the
+    // user just sees a dead Save button.
+    fireEvent.change(screen.getByLabelText('dialer.queueForm.priority'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByText('dialer.queueForm.save'))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(updateMutate).not.toHaveBeenCalled()
   })
 })

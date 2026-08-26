@@ -63,11 +63,18 @@ const schema = z.object({
   access_groups: z.array(z.string()),
   telephony_type: z.enum(['white', 'grey']),
   // Mirrors the gateway's campaign range; 0 is rejected upstream.
-  priority: z.number().int().min(1).max(5),
-  sim_card_limit: z.number().int().min(1),
+  priority: z
+    .number({ error: 'Enter a number from 1 to 5' })
+    .int()
+    .min(1, 'Minimum is 1')
+    .max(5, 'Maximum is 5'),
+  sim_card_limit: z.number({ error: 'Enter a number' }).int().min(1, 'Minimum is 1'),
   // Total attempts, not retries. Never 0 — upstream that means dial-once.
-  max_attempts: z.number().int().min(1),
-  retry_delay_failed_seconds: z.number().int().min(0),
+  max_attempts: z.number({ error: 'Enter a number' }).int().min(1, 'At least 1 attempt'),
+  retry_delay_failed_seconds: z
+    .number({ error: 'Enter a number of seconds' })
+    .int()
+    .min(0, 'Cannot be negative'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -113,7 +120,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
     handleSubmit,
     control,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -148,20 +155,35 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
     const department_names = departments
       .filter((d) => data.department_ids.includes(d.id))
       .map((d) => d.name)
-    const payload: Partial<DialerQueue> & { department_names: string[] } = {
-      ...data,
-      department_names,
-    }
-    // telephony_type is immutable after creation — the backend drops it from
-    // QueueUpdate and the gateway rejects a change outright. Sending it on edit
-    // would look like it took effect.
-    if (isEdit) delete payload.telephony_type
     try {
       if (isEdit && queue) {
+        // Send only what the supervisor actually touched. `queue` is a row from
+        // the paged list, not a detail fetch, so any dialing setting the list
+        // DTO omits would have been seeded from the `??` defaults below and
+        // then written back — silently replacing the queue's real gateway
+        // configuration on an unrelated edit like a rename. max_attempts makes
+        // that worse: changing it re-caps dial-list entries already loaded
+        // upstream.
+        //
+        // telephony_type is never sent on update regardless: it is immutable
+        // here and on the gateway, so including it would only look like it
+        // took effect.
+        const changed = (Object.keys(dirtyFields) as (keyof FormData)[]).filter(
+          (key) => key !== 'telephony_type'
+        )
+        const payload: Partial<DialerQueue> & { department_names?: string[] } = {}
+        for (const key of changed) {
+          Object.assign(payload, { [key]: data[key] })
+        }
+        if (dirtyFields.department_ids) payload.department_names = department_names
+        if (changed.length === 0 && !dirtyFields.department_ids) {
+          onClose()
+          return
+        }
         await updateMutation.mutateAsync({ id: queue.id, payload })
         toast.success(t('dialer.queueForm.updated', 'Queue updated'))
       } else {
-        await createMutation.mutateAsync(payload)
+        await createMutation.mutateAsync({ ...data, department_names })
         toast.success(t('dialer.queueForm.created', 'Queue created'))
       }
       onClose()
@@ -320,7 +342,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       max={5}
                       id="queue-priority"
                       {...register('priority', { valueAsNumber: true })}
-                      variant={errors.priority ? 'error' : 'default'}
+                      error={errors.priority?.message}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t('dialer.queueForm.priorityHint', '1–5. Higher wins when SIMs are scarce.')}
@@ -340,7 +362,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={1}
                       id="queue-sim_card_limit"
                       {...register('sim_card_limit', { valueAsNumber: true })}
-                      variant={errors.sim_card_limit ? 'error' : 'default'}
+                      error={errors.sim_card_limit?.message}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t(
@@ -365,7 +387,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={1}
                       id="queue-max_attempts"
                       {...register('max_attempts', { valueAsNumber: true })}
-                      variant={errors.max_attempts ? 'error' : 'default'}
+                      error={errors.max_attempts?.message}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t(
@@ -388,7 +410,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={0}
                       id="queue-retry_delay_failed_seconds"
                       {...register('retry_delay_failed_seconds', { valueAsNumber: true })}
-                      variant={errors.retry_delay_failed_seconds ? 'error' : 'default'}
+                      error={errors.retry_delay_failed_seconds?.message}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t('dialer.queueForm.retryDelayFailedHint', '0 disables retrying failures.')}
