@@ -1775,6 +1775,39 @@ development_status:
   # 6.3 is PAUSED and does not know its number is taken. 6.10 takes **D45** (D35 -> story-4-9,
   # D43 -> docs/prod-temporary-hostname, D44 -> story-4-10; verified across all refs 2026-08-26)
   # and re-verifies at execution time. Open Question 2, owner Oleg.
+  # 📌 ACTUALIZED 2026-08-26 by live measurement (ssh -J via the hypervisor, plus the Forgejo DB),
+  # after the contour was reported done. STATUS STAYS ready-for-dev: 3 of 6 ACs unmet, 1 met in the
+  # WRONG PLACE, 1 partial. Full table in the story file's own ACTUALIZATION section.
+  # ✅ REAL PROGRESS, measured not reported: deploy runner REGISTERED -- action_runner id 23,
+  # labels ["e1-rung3-prod-deploy"], org-scoped (crm), online 12:36:06Z, label correctly distinct from
+  # s10/e1-rung3; /etc/hosts on s10 carries 10.70.0.1 git.crm-prionex.com (split-horizon done);
+  # ports 8080-8085 all free.
+  # 🟢 AND THE BIGGEST RISK REDUCTION CAME FROM OUTSIDE THIS STORY: the backend team's PRODUCTION
+  # stack is already LIVE on s10 (crm-prod-* services, network crm-prod-network, crm-prod-kong-gateway
+  # at 10.70.0.11:8330->8000) -- AND KONG ALREADY CARRIES THE ALIAS `crm-kong-gateway`
+  # (aliases=[crm-prod-kong-gateway kong crm-kong-gateway]). nginx.conf resolves exactly that name
+  # lazily, so Story 1.6's failure class is PRE-EMPTED HERE, measured. The stand must join
+  # crm-prod-network for it to hold.
+  # ❌ NOT IN PLACE: no registry credential on s10 at all (/root/.docker/config.json absent), so AC2's
+  # host-level `docker pull` CANNOT succeed and AC3 has nothing to prove a push-refusal against; the
+  # stand directory ~/crm-prionex/fe-prionex-prod does not exist (no .env, no FRONTEND_PORT);
+  # #d23 not updated.
+  # 🔴 THE BLOCKER, and it is worse than an unmet AC -- AC1 IS MET IN THE WRONG PLACE. s10 carries
+  # ONLY forgejo-runner-e1-rung3 (labels s10,e1-rung3, DOCKER_HOST=tcp://dind:2375 -- CI-shaped, jobs
+  # land in dind, NOT the host daemon) and its dind. NO container on s10 answers to
+  # e1-rung3-prod-deploy. Swept s1 too -- not there either. Yet id 23 is ONLINE, so its agent runs on
+  # a THIRD host, and its registration name says `s4`. Stated at its strength: proven NOT s10 and NOT
+  # s1; "s4" is what the name says, not what was measured. That host has never been measured by this
+  # plan.
+  # 🔴 WHY IT MATTERS MORE THAN ANYTHING ELSE IN EPIC 6: Story 6.4's `runs-on` targets THIS LABEL. A
+  # production deploy would execute on that unmeasured host with its docker.sock -- the root-equivalent
+  # risk #d23 deliberately scoped "to a dedicated VM", silently un-scoped -- and would put the
+  # production frontend on the wrong machine while every guard passed, because NOTHING in
+  # deploy-stand.yml asserts which host it is running on.
+  # REQUIRED BEFORE 6.4 IS WRITTEN: (1) identify the host answering as runner 23 by name and address;
+  # (2) if it is not s10, move or re-register on s10 -- the name/label mismatch must not be the only
+  # signal of location; (3) prove the agent uses the HOST daemon, not a dind; (4) add a host-identity
+  # assertion to the deploy path so a job on the wrong machine FAILS instead of deploying.
   6-10-provision-the-prod-deploy-contour-on-s10: ready-for-dev
   epic-6-retrospective: optional
 

@@ -855,6 +855,100 @@ story that will prove it
 > **Ordering is load-bearing.** Task 2 measures before Task 3 changes anything, and Task 3's
 > registration is the one act in this story that is confirmed rather than announced (§11).
 
+## 📌 ACTUALIZATION — measured 2026-08-26, after Oleg reported the contour as done
+
+**Everything below is a live measurement taken over `ssh -J root@62.112.10.55 root@192.168.122.11`
+and against the Forgejo database, read-only. Nothing here is taken from a report.** The story's
+status stays `ready-for-dev` because two of its six ACs are unmet and one is worse than unmet — see
+the last row.
+
+### What IS in place
+
+| AC | State | Measurement |
+|---|---|---|
+| **AC1** — a deploy runner with a dedicated label | 🟡 **registered, but see the blocker** | `action_runner` id **23**, name `s4-prod-deploy`, labels `["e1-rung3-prod-deploy"]`, owner `crm` (org-scoped → reachable from `CRM/fe-prionex`), last online `2026-08-26 12:36:06Z`. The label **is** distinct from `s10`/`e1-rung3` as AC1 requires. Runners **21** (`e1-rung3`) and **22** (`e1-snp2`) are present and untouched |
+| **AC2**, first half — split-horizon | ✅ **done** | `/etc/hosts` on s10 carries `10.70.0.1 git.crm-prionex.com` |
+| **AC4**, port half | ✅ **measured free** | `8080`–`8085` all free on s10 (`ss -ltn`) |
+
+### 🟢 What changed on s10 without this story, and it removes a risk
+
+**The backend team's PRODUCTION stack is already live on s10** — `crm-prod-client-service`,
+`crm-prod-payment-service`, `crm-prod-messaging-service`, `crm-prod-import-service`,
+`crm-prod-quality-service`, `crm-prod-email-service`, `crm-prod-health-monitor` and their workers, all
+`Up` and healthy, on network **`crm-prod-network`**. `crm-prod-kong-gateway` is published at
+`10.70.0.11:8330->8000`.
+
+🟢 **And Kong already carries the alias this project had to ask for on PRE-PROD:**
+
+```
+docker inspect crm-prod-kong-gateway → crm-prod-network aliases=[crm-prod-kong-gateway kong crm-kong-gateway]
+```
+
+`nginx.conf` in the frontend image resolves `http://crm-kong-gateway:8000` lazily (its own lines 39
+and 50). **So the Story 1.6 failure class — the frontend resolving Kong to the wrong backend, or not
+at all — is pre-empted here, measured rather than assumed.** The stand must join `crm-prod-network`
+for it to hold. **This was not true when this story was written and is the single biggest thing that
+got easier.**
+
+### What is NOT in place
+
+| AC | State | Measurement |
+|---|---|---|
+| **AC2**, second half — a host-level `docker pull` succeeds | ❌ **cannot succeed** | there is **no registry credential on s10**: `/root/.docker/config.json` does not exist |
+| **AC3** — a read-only pull credential, push refused with `401` | ❌ **not started** | same absence; nothing to test a refusal against |
+| **AC4**, directory half | ❌ **absent** | `ls -d ~/crm-prionex/fe-prionex-prod` → `No such file or directory`. No `.env`, no `COMPOSE_PROJECT_NAME`, no `CONTAINER_NAME`, no `FRONTEND_PORT` |
+| **AC5** — the traffic path named with owner and state | 🟡 **partially, by `#d43` rather than by this story** | `crm.prod.crm-prionex.online` → `62.112.10.55`, but 80/443 there still answer `refused`. The hypervisor→VM route `#d23` measured as "No route to host" is still unverified |
+| **AC6** — `#d23` updated with what was provisioned | ❌ **not done** | `docs/migration-decisions.md` untouched by any 6.10 work |
+
+### 🔴 THE BLOCKER, and it is worse than an unmet AC — AC1 is met in the WRONG PLACE
+
+AC1 requires *"a runner registration **on s10** whose jobs execute against the **host** Docker daemon
+(not dind)"*. The registration exists and the label is correct. **The agent that answers to it is not
+on s10.**
+
+Measured on s10 — the complete set of runner containers:
+
+```
+forgejo-runner-e1-rung3        code.forgejo.org/forgejo/runner:13.0.0   Up 8 days
+  GITEA_RUNNER_LABELS=s10,e1-rung3
+  DOCKER_HOST=tcp://dind:2375          ← CI-shaped: jobs land in its dind, not the host daemon
+forgejo-runner-e1-rung3-dind   docker:27.5.1-dind                       Up 8 days (healthy)
+```
+
+**There is no container on s10 carrying `e1-rung3-prod-deploy`.** Swept s1 as well — every
+`forgejo-runner*` container's labels — and it is **not there either**. Yet id 23 reported online at
+12:36:06Z, so an agent is answering from a **third host**, and its registration name says **`s4`**.
+
+**Stated at exactly its strength:** it is proven **not on s10** and **not on s1**; that it is on s4 is
+what the name says, not what was measured. **The host it actually runs on has never been measured by
+this plan at all.**
+
+🔴 **Why this is the most dangerous condition in Epic 6 right now.** Story 6.4's `runs-on` targets
+**this label**. A production deploy dispatched against it would execute on that unmeasured host, with
+that host's `docker.sock` and root-equivalent control of its daemon — the accepted risk `#d23` scoped
+deliberately *"to a dedicated VM"*, now silently un-scoped. It would `scp`/compose the production
+frontend onto the wrong machine, and every guard in the deploy path would pass, because none of them
+asserts **which host** they are running on.
+
+**Required before Story 6.4 may target this label — and none of it is optional:**
+1. Identify the host answering as runner **23** and record it by name and address.
+2. If it is not s10: either move the registration to an agent **on s10**, or delete id 23 and register
+   a new one there. The name/label mismatch (`s4-prod-deploy` ↔ `e1-rung3-prod-deploy`) must not be
+   left as the only signal of where it lives.
+3. Prove the agent executes against the **host** daemon — `DOCKER_HOST` unset or pointed at
+   `/var/run/docker.sock`, **not** a dind — the way `forgejo-runner-e1-rung3` demonstrably does not.
+4. Add a host-identity assertion to the deploy path, so a job that lands on the wrong machine
+   **fails** instead of deploying. Nothing in `deploy-stand.yml` does this today.
+
+### Verdict
+
+**3 of 6 ACs unmet, 1 met in the wrong place, 1 partial.** The genuine progress is real — the runner
+registration, the split-horizon mapping, and the backend stack with its Kong alias — and the story is
+**closer than it was**, but it is **not done**, and the runner-location finding must be resolved before
+Story 6.4 is written, not during it.
+
+---
+
 ### Task 1 — Open the story, declare the budget, verify the decision number (AC: 9, 10) — **costs 1 push row**
 
 - [ ] **1.1** Flip `sprint-status.yaml`: `6-10-provision-the-prod-deploy-contour-on-s10: backlog →
