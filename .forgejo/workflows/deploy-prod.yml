@@ -102,13 +102,32 @@ name: Deploy PROD Stand
 #   gating this story: "the production deploy must work, and must be provable, without any
 #   notification".
 #
+# ── 🔴 THE DISPATCH INPUT IS `tag`, NOT `image_tag`, AND THE RENAME IS THE FIX ─────────
+# Runs 637 and 640 both built correctly and then failed at the deploy with the callee reporting
+# the tag THIS WORKFLOW WAS DISPATCHED WITH (`sha-…-preprod`) rather than the `-prod` tag passed
+# in `with:`. `deploy-stand.yml` reads `${{ inputs.image_tag }}` — the ordinary, correct way — so
+# the callee is not at fault: on this instance the callee's `inputs` were populated from the
+# DISPATCH's inputs, not from the caller's `with:`, for a key present in both.
+#
+# 🔴 WHY NOBODY HAS EVER HIT THIS. Both shipped callers pass `image_tag: ${{ inputs.image_tag }}`
+# — caller value and dispatch value are the SAME STRING, so the substitution is invisible and
+# harmless there. This is the first caller whose `with:` value DIFFERS from its own dispatch
+# input, and it is what made the behaviour observable at all. Same family as `#d21`'s expression
+# and context surprises.
+#
+# Naming the dispatch input `tag` means there is no `image_tag` in the dispatch to shadow the
+# callee's, so `with: image_tag:` is the only source and reaches it intact.
+# ⚠️ Story 6.4's epic AC1 says the workflow "accepts a required `image_tag` input". The input is
+# required and it is the image tag; only the NAME differs, and it differs because the epic's name
+# cannot work here. Recorded as a deviation with its reason, not taken silently.
+#
 # ── Every input reaches a `run:` body through `env:`, never through an expression (`#d21`) ──
 
 on:
   workflow_dispatch:
     inputs:
-      image_tag:
-        description: "The image tag naming the commit, in sha-<12hex>-<env> form. RELEASE: the validated PRE-PROD candidate (e.g. sha-28f7fd36b75e-preprod). ROLLBACK: an existing PROD tag (e.g. sha-a99ccd44c5a3-prod). NOT prod-current and NOT prod-<hex> — those are records, not deployable references."
+      tag:
+        description: "🔴 NAMED `tag`, NOT `image_tag`, and that is a FIX not a preference — see the header. The image tag naming the commit, in sha-<12hex>-<env> form. RELEASE: the validated PRE-PROD candidate (e.g. sha-28f7fd36b75e-preprod). ROLLBACK: an existing PROD tag (e.g. sha-a99ccd44c5a3-prod). NOT prod-current and NOT prod-<hex> — those are records, not deployable references."
         required: true
         type: string
       rollback:
@@ -160,7 +179,7 @@ jobs:
       - name: "Derive and validate"
         id: d
         env:
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
           ROLLBACK: ${{ inputs.rollback }}
         run: |
           set -euo pipefail
@@ -262,7 +281,7 @@ jobs:
         env:
           IS_ROLLBACK: ${{ steps.d.outputs.is_rollback }}
           DEPLOY_TAG: ${{ steps.d.outputs.deploy_tag }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           {
