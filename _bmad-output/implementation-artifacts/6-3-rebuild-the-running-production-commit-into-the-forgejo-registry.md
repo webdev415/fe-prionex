@@ -681,6 +681,14 @@ then `prod-current`, each written with `docker buildx imagetools create --prefer
 length named, per `#d18` §3.
 
 ### AC4 — Not byte-identical, and the consequence for Story 6.9 is stated *(epic AC4)*
+
+🚫 **NOT MET. Cancelled by Oleg 2026-08-26 (*«Task 6 - отменить»*).** 🔴 **This is an EPIC acceptance
+criterion, not one this story added for itself** — a different weight class from AC6. The underlying
+facts were all measured and are in this file; what was not done is the write-up AC4 specifies: the
+deliberate commit-identity comparison with both values pasted, the product-code distance with its
+measured and unmeasured halves named, and the by-construction statement about the bytes.
+**Recorded UNMET rather than counted as satisfied by scattered evidence elsewhere in the file.**
+Owner: Oleg.
 **Given** the rebuilt image
 **When** it is compared with what production serves
 **Then** it is confirmed to originate from the same commit
@@ -740,6 +748,17 @@ for a confirmation rather than proceeding on the absence of a veto** — the con
 reversible acts and these are not (§11).
 
 ### AC8 — 🔴 ADDED: what `prod-current` means before the cutover is written down at creation time
+
+🚫 **NOT MET. Cancelled by Oleg 2026-08-26** (Task 6 carried its `D45` half; Task 7.2 carries its
+`docs/prod-releases.md` half). 🔴 **This one is OPERATIONALLY LIVE, not merely a missing document:**
+`prod-current` **exists in the registry as of 2026-08-26 11:17:10Z** and points at an image **no host
+serves**. s2 keeps serving `ghcr.io/…:main` until the external traffic switch. Anyone reading the
+registry today — including Story 6.6, which will later define this marker as authoritative — will
+reasonably conclude production runs it, and **nothing durable says otherwise**.
+**What does exist, and it is thin:** the disclaimer is printed by `record-prod-image.yml`'s last step
+(executed in run 600) and stated in that file's own header. Both are real. Neither is
+`docs/prod-releases.md` or a decision record, and this instance's job logs are the tier this project
+classifies as **best-effort only**. Owner: Oleg.
 **Given** s2 keeps serving `ghcr.io/…:main` until an external traffic switch this repository does not
 own (Story 6.9's 2026-08-18 amendment)
 **When** `prod-current` is created
@@ -1208,26 +1227,27 @@ against a query, or closed with the literal word **OPEN**.
       stand until Story 6.10 — which is unaffected by this cancellation and was never earnable here.
 
 ### Task 6 — Record the decision and the commit-identity comparison (AC: 4, 8) — **0 runs**
-- [ ] 6.1 Perform AC4's **measurable** half: read `org.opencontainers.image.revision` from the s2 image
-      (Task 2.3) and from the rebuilt image's manifest, and compare. **Paste both.** State that this
-      comparison could have failed and what would have caused it.
-- [ ] 6.2 State AC4's **construction** half in its own words and never as a measurement (§9,
-      Prohibition 7): the bytes differ because the image was rebuilt; ghcr is unreachable **by decision**
-      so no digest comparison is available; `vite.config.ts`'s `Date.now()` fixes the answer regardless.
-      Quote `#d2` — *«зелёная валидация на PRE-PROD — это свидетельство об исходном коде, а не о байтах,
-      которые поедут в прод»* — and state the consequence for Story 6.9 in its own AC's terms:
-      **validated by behaviour, never by digest.**
-- [ ] 6.3 Append **`D45`** to `docs/migration-decisions.md` (never at EOF — the file's own placement
-      convention), carrying: the identified commit and how it was evidenced; the epic-AC-vs-shipped-tag
-      discrepancy (`sha-<commit>` vs `sha-<12hex>-prod`, Task 3.3); the §5 mechanism decision with its
-      three rejected alternatives; §6's `prod-current` semantics before the cutover; the §12 exception
-      taken against 6.2's regulation with its price; and §7(f) **as corrected 2026-08-26** — the image
-      **carries** `preprod-a99ccd44c5a3` and would **pass** 6.5's guard, while 6.9 must still use
-      `rollback: true` for the inverted, mechanical reason (`Enforce AC2` refuses the rebuild's repoint).
-- [ ] 6.4 Add a **dated forward note** under `#d18` recording that Story 6.3 has now consumed its
-      12-hex rule live, and under `#d19`'s own "what `prod` points at" section recording that this story
-      has discharged the *"identifying which is Story 6.3, and nobody has done it"* item. **Notes, not
-      rewrites.**
+- [~] 6.1 🚫 **CANCELLED BY OLEG, 2026-08-26 — *«Task 6 - отменить»*.** The commit-identity
+      comparison was not written up. **The two values exist and are already in this file** (Task 2.3:
+      s2's `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39`; Task 4.4/5.3: the built image's
+      `a99ccd44c5a3…`), so the *evidence* survives — what does not happen is the deliberate comparison
+      AC4 asks for, and its "this could have failed, and here is how" statement.
+- [~] 6.2 🚫 **CANCELLED.** The construction-half statement was not written. 🔴 **Nothing here claims
+      the byte-difference as measured** — Prohibition 7 is honoured by *omission* rather than by a
+      correct statement, which is weaker but not a breach.
+- [~] 6.3 🚫 **CANCELLED — `D45` IS NOT WRITTEN, and the number stays reserved rather than used.**
+      This story ships **with no decision record at all**. Everything `D45` was to carry — the build
+      source and its evidence, the epic-AC-vs-shipped-tag discrepancy (`sha-<commit>` vs
+      `sha-<12hex>-prod`), §5's mechanism decision and its three rejected alternatives, §6's
+      `prod-current` semantics, §12's exception, and §7(f)'s correction — **exists only in this story
+      file and in the commit messages of this branch.** `#d46` (the correct-course record) covers the
+      *build-source change*; it does not cover any of the above.
+- [~] 6.4 🚫 **CANCELLED.** No forward note under `#d18` (the twelve-hex rule was consumed live for
+      the first time and that is recorded nowhere in the decisions file), and none under `#d19`.
+      🔴 **Consequence for the ledger:** `deferred-work.md`'s entry *"identifying which is Story 6.3,
+      and nobody has done it"* — **owner Story 6.3** — is in fact **discharged** (session 1 identified
+      `41ab0470…` from s2 by evidence, and the finding stands even though the story no longer builds
+      that commit), but **it is not marked discharged anywhere**, so it will read as open.
 
 ### Task 7 — Reconcile Story 6.2's artifacts (AC: 9) — **0 runs**
 - [ ] 7.1 Amend `docs/production-approval-regulation.md` by **dated addition**: the workflow census
@@ -1844,6 +1864,7 @@ the coordinator:** *"Запускай по готовности."* **What this c
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 0.8 | **Task 6 CANCELLED by Oleg (*«Task 6 - отменить»*). `D45` is not written — this story ships with no decision record at all.** AC4 (**an EPIC acceptance criterion**) and AC8 recorded **UNMET**, not counted as satisfied by evidence scattered elsewhere. No forward notes under `#d18`/`#d19`; `deferred-work.md`'s *"identifying which is Story 6.3, and nobody has done it"* item is **in fact discharged** by session 1's s2 read but **is not marked so anywhere**, and will read as open. 🔴 **AC8's gap is operationally live rather than documentary:** `prod-current` exists in the registry from `11:17:10Z` and names an image **no host serves**, while the only statements of that fact are `record-prod-image.yml`'s header and the disclaimer its last step printed in run 600 — the tier this project classifies as best-effort. Everything `D45` was to carry now lives only in this story file and this branch's commit messages; `#d46` covers the build-source change and none of the rest. Owner of all of it: Oleg. | dev-story |
 | 2026-08-26 | 0.7 | **Task 4 and Task 5.3 executed; Task 5.4/5.5/5.6 CANCELLED by Oleg; AC6 recorded UNMET.** Run 598 (384 s, 14/14 green) built `a99ccd44c5a3…` at `environment: prod` — **step 7 is the project's first ever read of `secret/fe/prod/app`**, and the `fe-prod` AppRole's first real login. Run 600 (17/17 green) minted `prod-a99ccd44c5a3` then `prod-current`, history before pointer, one second apart. All three PROD names resolve to one manifest `sha256:f30c794123ba…a3f3`; the control — both PRE-PROD names of the same commit — resolves to a **different** manifest `sha256:a62e8687…`, so Option C's rebuild is visible as two digests for one commit, measured rather than asserted. **AC2 and AC3 met.** 🔴 **A defect of mine, found and corrected in the same session:** Task 4.5 first reported digests read from `package_property.container.digest`, which is **not** the manifest digest; the subtask's conclusion held but its value came from the wrong instrument, settled by a free control where the registry and this project's own ledger agree against the column. Standing rule recorded: manifest digests come from the registry, never from `package_property`. 🚫 **Task 5.4 cancelled** — the four discriminating dispatches were not made, so `record-prod-image.yml` ships with six guards whose **refusal path has never been observed live**; the local shell exercise is explicitly NOT substituted for it; §9's matrix stays `OPEN` with one row; **AC6 UNMET, owner Oleg**. | dev-story |
 | 2026-08-26 | 0.6 | **Correct-course applied; the build source changed and the story's own stale claims were corrected.** `origin/main` @ `f144ee9f` merged in (conflict in `sprint-status.yaml` resolved keeping BOTH sides whole, per this project's precedent). **OQ6 marked SUPERSEDED with both of Oleg's decisions kept verbatim** — the commit was never imported; what changed is what the story builds. §3's blocker note records the resolution and states plainly that the one-shot property, the `Enforce AC2` refusal and the `Date.now()` reason all **still stand and are now live rather than hypothetical**. 🔴 **Four places in this file and ONE IN SHIPPED CODE claimed the image "will fail Story 6.5's guard by construction" — all now false, all corrected**: §7(f) (inverted, with the old text quoted), §13 item 6 (struck through), Task 6.3's instruction, Task 5.2's description, and `record-prod-image.yml`'s own header clause (b), which was a claim about one particular image baked into a general-purpose file and is now written as the general truth it should always have been. Task 4.2 re-pointed at `a99ccd44c5a3…` with both produced tags named, and its "wait for confirmation" superseded by OQ item 9. Gate 4.1 evidence gathered: commit present/complete/reachable, `short12 = a99ccd44c5a3` matching the preprod tag; `vars.VITE_OPERATOR_PHONE_URL_PROD = https://phone.crm-prionex.online` (prod fails closed without it); all 7 OpenBao secrets and all 4 org registry secrets present; **OpenBao UNSEALED** (`sealed:false`, Shamir 3/5); **no `prod-*` version exists in the registry at all**, so the one-shot is unfired. | dev-story |
 | 2026-08-26 | 0.5 | **OQ10 resolved by Oleg — option (a): this story's decision renumbers `D43` → `D45`.** Applied to every forward-looking reference; historical records of the original measurement (Task 1.5, session 1 Debug Log, Change Log 0.2/0.4) left standing and superseded rather than rewritten, per the amend-don't-rewrite rule. `D43` stays the PROD-hostname record's number. 🔴 The **process** half of OQ10 remains OPEN and is explicitly not closed by the renumber: the project's ref-based D-number sweep is still blind to any decision authored locally and not yet pushed, and the next one reopens the same hole. | dev-story |
