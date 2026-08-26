@@ -894,8 +894,8 @@ got easier.**
 
 | AC | State | Measurement |
 |---|---|---|
-| **AC2**, second half — a host-level `docker pull` succeeds | ❌ **cannot succeed** | there is **no registry credential on s10**: `/root/.docker/config.json` does not exist |
-| **AC3** — a read-only pull credential, push refused with `401` | ❌ **not started** | same absence; nothing to test a refusal against |
+| **AC2**, second half — a host-level `docker pull` succeeds | ✅ **MET by observation** (see below) | the live `crm-prod-*` stack on s10 runs images pulled from `git.crm-prionex.com` |
+| **AC3** — a read-only pull credential, push refused with `401` | 🟡 **wording stale, content already satisfied elsewhere** | the deploy authenticates per-job from org secrets into a workspace-scoped `DOCKER_CONFIG`; no standing host credential is used, or wanted |
 | **AC4**, directory half | ❌ **absent** | `ls -d ~/crm-prionex/fe-prionex-prod` → `No such file or directory`. No `.env`, no `COMPOSE_PROJECT_NAME`, no `CONTAINER_NAME`, no `FRONTEND_PORT` |
 | **AC5** — the traffic path named with owner and state | 🟡 **partially, by `#d43` rather than by this story** | `crm.prod.crm-prionex.online` → `62.112.10.55`, but 80/443 there still answer `refused`. The hypervisor→VM route `#d23` measured as "No route to host" is still unverified |
 | **AC6** — `#d23` updated with what was provisioned | ❌ **not done** | `docs/migration-decisions.md` untouched by any 6.10 work |
@@ -948,14 +948,64 @@ search that produced it. *"No container has this label"* is not *"no agent has t
 published the second while having measured only the first. **State the method inside the claim, or do
 not state the claim at full strength.**
 
+### ✅ AC2 and AC3 — the substance is MET BY OBSERVATION, and their *wording* is stale
+
+**Raised by Oleg's question, not by the review:** *"why do we need a host pull?"* and *"the deploy runs
+inside root@192.168.122.11 anyway"*. Both land, and together they retire the AC as written.
+
+**1. The deploy never uses a standing host credential.** `deploy-stand.yml` — the shared definition
+DEV and PRE-PROD already run and Story 6.4 will consume — authenticates **inside the job**, from
+org secrets, into a **workspace-scoped `DOCKER_CONFIG`** that dies with the job (its own header, line
+66: *"`docker pull`/`docker login` resolve auth from THIS job's own workspace-scoped
+`DOCKER_CONFIG`"*, referencing only `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`). **So the absence of
+`/root/.docker/config.json` on s10 is not a gap in the deploy path — the deploy path does not read
+it.** AC3's *"place the pull credential on s10"* describes a model this project moved away from.
+
+**2. The chain AC2 wanted to prove is already proven, in production, daily.** The deploy runs **on
+s10 itself** via the `:host` executor against the host daemon — so the pull the deploy performs **is**
+a host-level pull. Measured on the running stack:
+
+```
+docker ps --format '{{.Image}}' | sed 's#:.*##' | sort | uniq -c
+     7 git.crm-prionex.com/crm/api-prionex/client-service
+     5 git.crm-prionex.com/crm/api-prionex/tag-service
+     3 git.crm-prionex.com/crm/api-prionex/payment-service      … and six more services
+```
+
+**The live production stack on s10 is running images pulled from `git.crm-prionex.com`.** That
+exercises `/etc/hosts` → the wg-private route → registry auth → the host daemon fetching layers —
+every link AC2 lists — and runner 23 did it as recently as **12:10:58Z today, status success**.
+**A `curl` was never going to prove this; a running production stack does.**
+
+⚠️ **The one honest caveat, stated rather than glossed:** their images are `crm/api-prionex/*` and
+ours are `crm/fe-prionex`. Same registry host, same auth realm, and `REGISTRY_TOKEN_RO` is an
+**org-level** secret at `crm` — so authorization for our namespace **follows**, but it follows by
+inference, not by measurement. **It is exercised loudly by the first deploy**, which fail-fast-pulls
+with no `:latest` fallback (FR19), so a wrong assumption here is a red run, not a silent one.
+
+**Recommended disposition — a spec change, therefore not taken unilaterally:**
+- **AC2** → **MET**, by observation of the live stack, with the namespace caveat recorded.
+- **AC3** → **retire the standing-credential requirement**; keep its real content, which is a property
+  of the **token** (`REGISTRY_TOKEN_RO` is read-only and a push with it is refused), already relied on
+  by every DEV and PRE-PROD deploy. **Do not place a persistent pull credential on a production host**
+  — registry tokens on this instance are unrevocable-by-admin once leaked, which this project has paid
+  for twice.
+
 ### Verdict
 
-**AC1 ✅ met in full. AC5 🟡 partial. AC2 (pull half), AC3, AC4 (directory half) and AC6 ❌ unmet — four
-items, all of them small and none of them blocking each other.** What is left is: put a **read-only**
-registry credential on s10 and prove a host-level `docker pull` with it (AC2/AC3), create
-`~/crm-prionex/fe-prionex-prod/` with its `.env` on a free port — 8080-8085 are all free (AC4), and
-update `#d23` (AC6). **There is no blocker.** Story 6.4 may be written against label
-`e1-rung3-prod-deploy` once the credential and the stand directory exist.
+**AC1 ✅ met in full. AC2 ✅ met by observation. AC3 🟡 stale wording, content satisfied elsewhere.
+AC5 🟡 partial and external. Only AC4 and AC6 are genuinely outstanding, and both are small.**
+
+What is actually left:
+1. **AC4** — create `~/crm-prionex/fe-prionex-prod/` with its `.env` (`COMPOSE_PROJECT_NAME`,
+   `CONTAINER_NAME`, `FRONTEND_PORT`). Ports 8080-8085 are measured free. **The stand must join
+   `crm-prod-network`**, where Kong already answers to the alias `crm-kong-gateway` the image expects.
+2. **AC6** — update `#d23` with what was provisioned, by whom, and what remains external.
+3. **AC3's wording** — retire the standing-credential clause by dated amendment rather than leaving an
+   AC that describes a retired model.
+
+**There is no blocker, and no credential needs to be created anywhere.** Story 6.4 may be written
+against `e1-rung3-prod-deploy` as soon as the stand directory exists.
 
 ---
 
