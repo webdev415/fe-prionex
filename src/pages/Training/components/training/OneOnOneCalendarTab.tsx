@@ -17,6 +17,7 @@ import type {
   CalibrationFormat,
   CalibrationSessionCard,
 } from '@/features/training/types/calibrationSessions'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
 const FORMAT_LABEL: Record<CalibrationFormat, { label: string; tone: string }> = {
@@ -441,26 +442,18 @@ function MemberPicker({ label, operators, selected, onChange }: MemberPickerProp
         <div key={i} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
           <span className="w-4 text-center text-[11px] text-[#9CA3AF]">{i + 1}</span>
           {slot === '' ? (
-            <select
-              value=""
-              onChange={(e) => {
-                const id = Number(e.target.value)
-                if (!id) return
-                const next = [...slots]
-                next[i] = id
-                commit(next)
-              }}
-              className="h-7 flex-1 rounded-md border border-[#EBECE8] bg-white px-2 text-xs focus:outline-none"
-            >
-              <option value="">{t('common.select', 'Select…')}</option>
-              {operators
-                .filter((op) => !chosen.has(op.id))
-                .map((op) => (
-                  <option key={op.id} value={op.id}>
-                    {op.full_name}
-                  </option>
-                ))}
-            </select>
+            <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-[#EBECE8] bg-white">
+              <EmployeeSearchList
+                operators={operators}
+                excludeIds={[...chosen]}
+                onSelect={(id) => {
+                  const next = [...slots]
+                  next[i] = id
+                  commit(next)
+                }}
+                listClassName="max-h-36"
+              />
+            </div>
           ) : (
             <span className="flex-1 truncate text-xs text-[#05040D]">
               {nameById.get(slot) ?? `#${slot}`}

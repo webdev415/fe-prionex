@@ -16,6 +16,7 @@ import {
   useUnregisterFromTraining,
 } from '@/features/training/hooks/useGroupTrainings'
 import type { GroupTrainingCardData } from '@/features/training/types/groupTrainings'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
 type NameById = Map<number, string>
@@ -602,20 +603,13 @@ function AssignParticipantsDialog({
             'Select operators to register for this session.'
           )}
         </p>
-        <div className="flex-1 overflow-y-auto rounded-lg border border-[#EBECE8]">
-          {operators.map((op) => (
-            <label
-              key={op.id}
-              className="flex cursor-pointer items-center gap-2 border-b border-[#F3F4F6] px-3 py-2 text-xs last:border-b-0 hover:bg-[#FAFAFA]"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(op.id)}
-                onChange={() => toggle(op.id)}
-              />
-              <span className="text-[#05040D]">{op.full_name}</span>
-            </label>
-          ))}
+        <div className="min-h-0 flex-1 rounded-lg border border-[#EBECE8]">
+          <EmployeeSearchList
+            operators={operators}
+            selectedIds={selected}
+            onSelect={toggle}
+            listClassName="max-h-[45vh]"
+          />
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button
