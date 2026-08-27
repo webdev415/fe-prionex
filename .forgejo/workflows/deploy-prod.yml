@@ -628,6 +628,48 @@ jobs:
           fi
           echo "OK: still healthy after the deploy job ended."
 
+      - name: "Error entries in the last 5 minutes of container log"
+        env:
+          CONTAINER_NAME: fe-prionex-prod
+        run: |
+          set -euo pipefail
+          # 🔴 The matcher is written against what this container ACTUALLY logs, not against the word
+          # "ERROR". The image is nginx:alpine: access lines go to stdout in the combined format and
+          # error lines to stderr as `2026/08/27 10:00:00 [error] 7#7: *1 ...`. A bare `grep ERROR`
+          # would match a URL in an access line and FAIL A CORRECT DEPLOY -- and a check that cries
+          # wolf gets disabled by the third incident. Anchored on nginx's own bracketed level field.
+          # `[warn]` is deliberately excluded: nginx emits it for benign conditions.
+          # 🔴 ORDER IS LOAD-BEARING, AND GETTING IT WRONG COST FOUR RUNS (698, 699, 702 and one
+          # more). This step used to run AFTER the serve-check, whose deliberate 404 probe makes
+          # nginx log exactly what this step greps for:
+          #   [error] ... open() ".../assets/definitely-not-a-real-bundle-6-7.js" failed (2: No such
+          #   file or directory)
+          # A 404 is an ACCESS-log event, but a missing STATIC FILE is an ERROR-log event in nginx --
+          # so the smoke check failed on a healthy stand, on a line IT HAD JUST WRITTEN ITSELF.
+          # Reproduced locally on nginx:alpine with this repo's own nginx.conf before fixing.
+          # Two things close it, and both are kept because either alone is fragile:
+          #   1. this step now runs BEFORE the serve-check, so the window predates our own probes;
+          #   2. the matcher excludes the one line our probe provably produces, by its exact path.
+          # ⚠️ (2) is written narrowly ON PURPOSE: it excludes OUR probe's filename, not "any missing
+          # file". A real missing bundle -- the failure this whole job exists to catch -- still hits.
+          LOGS="$(docker logs --since 5m "$CONTAINER_NAME" 2>&1 || true)"
+          HITS="$(printf '%s' "$LOGS" | grep -E '\[(error|crit|alert|emerg)\]' \
+            | grep -v 'definitely-not-a-real-bundle-6-7\.js' || true)"
+          if [ -n "$HITS" ]; then
+            echo "FAIL: nginx logged error-level entries in the last 5 minutes:"
+            printf '%s\n' "$HITS" | head -40
+            exit 1
+          fi
+          # 🔴 AN EMPTY WINDOW IS A PASS, DELIBERATELY. A freshly started nginx that has served only
+          # this job's own probes legitimately logs nothing at error level, and failing on silence
+          # would fail every quiet deploy. Stated here so it is a decision, not an accident.
+          if [ -z "$LOGS" ]; then
+            echo "OK: the 5-minute window is EMPTY. Treated as a PASS -- a just-started container"
+            echo "  with no traffic legitimately logs nothing. Silence is not evidence of health."
+          else
+            echo "OK: log window has content and no error-level entries."
+          fi
+
       - name: "Serve-check: the index, the asset it NAMES, a 404 that must be a 404, and our headers"
         env:
           STAND_URL: "http://0.0.0.0:8080"
@@ -701,34 +743,6 @@ jobs:
             exit 1
           fi
           echo "OK: a non-existent asset 404s -- the asset location is live and probe 2 is not vacuous."
-
-      - name: "Error entries in the last 5 minutes of container log"
-        env:
-          CONTAINER_NAME: fe-prionex-prod
-        run: |
-          set -euo pipefail
-          # 🔴 The matcher is written against what this container ACTUALLY logs, not against the word
-          # "ERROR". The image is nginx:alpine: access lines go to stdout in the combined format and
-          # error lines to stderr as `2026/08/27 10:00:00 [error] 7#7: *1 ...`. A bare `grep ERROR`
-          # would match a URL in an access line and FAIL A CORRECT DEPLOY -- and a check that cries
-          # wolf gets disabled by the third incident. Anchored on nginx's own bracketed level field.
-          # `[warn]` is deliberately excluded: nginx emits it for benign conditions.
-          LOGS="$(docker logs --since 5m "$CONTAINER_NAME" 2>&1 || true)"
-          HITS="$(printf '%s' "$LOGS" | grep -E '\[(error|crit|alert|emerg)\]' || true)"
-          if [ -n "$HITS" ]; then
-            echo "FAIL: nginx logged error-level entries in the last 5 minutes:"
-            printf '%s\n' "$HITS" | head -40
-            exit 1
-          fi
-          # 🔴 AN EMPTY WINDOW IS A PASS, DELIBERATELY. A freshly started nginx that has served only
-          # this job's own probes legitimately logs nothing at error level, and failing on silence
-          # would fail every quiet deploy. Stated here so it is a decision, not an accident.
-          if [ -z "$LOGS" ]; then
-            echo "OK: the 5-minute window is EMPTY. Treated as a PASS -- a just-started container"
-            echo "  with no traffic legitimately logs nothing. Silence is not evidence of health."
-          else
-            echo "OK: log window has content and no error-level entries."
-          fi
 
       - name: "🔴 On failure: what is true, and the exact rollback dispatch"
         if: failure()
