@@ -2481,7 +2481,7 @@ development_status:
   # MARKED not deleted in #d38 section 6); and must re-describe G5 honestly -- if the record becomes
   # a job right after the deploy, G5 is TRIVIALLY true and stops being an independent check.
   # #d47(3): a dispatch input SHADOWS a callee input of the same name. Story 6.6 hit this already.
-  6-11-record-the-preprod-candidate-automatically: review
+  6-11-record-the-preprod-candidate-automatically: in-progress
   # 6.12 -- 🟢 THE RETENTION QUESTION IS ANSWERED, measured 2026-08-27 during story creation, and
   # it does NOT gate the story: 2082 action_task rows have log_in_storage=false and ALL 2082 still
   # have a live action_run row; log_expired count is ZERO; repo_id=16 holds indexes 1->732 with NO

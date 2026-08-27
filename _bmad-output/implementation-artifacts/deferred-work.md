@@ -5007,3 +5007,17 @@ are cheap, they close the trigger `#d48` names verbatim for the fourteenth defec
 `workflow_call` refactor of exactly the kind this story performs"*), and they fail in the safe
 direction. **Recorded as permanently unearned rather than quietly counted.** No removal trigger —
 this entry exists so the gap is not rediscovered as a finding.
+
+---
+
+## Deferred from: code review of story-6.11 (2026-08-27)
+
+- **Two expression forms introduced by Story 6.11 have never been observed rendering.** The
+  `HOW_RECORDED` ternary in the summary step and the `allow_backwards_move=true` branch of
+  `G-backwards` both live in `record-preprod-candidate.yml`'s `record` job, whose run-728 logs came
+  back `log_in_storage='f'`. The **registry read-back proved the effect** (`preprod-cfbad1797d5e`
+  created, `preprod-current` moved); the **strings themselves were never seen**. Pre-existing
+  instance property — delayed archival, not a defect of that change. ⚠️ It does mean the ternary's
+  behaviour on this platform rests on `#d21`'s measurement of `github.event_name` inside a callee
+  rather than on a direct observation of this expression. **Removal trigger:** any future run of
+  that job whose log archives.
