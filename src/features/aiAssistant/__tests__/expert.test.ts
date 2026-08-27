@@ -56,7 +56,27 @@ describe('normalizeCapabilities', () => {
       models: ['claude-sonnet-5', 'claude-opus-5'],
       dailyLimitUsd: 5,
       spentTodayUsd: 1.2,
+      // При allowed=true шлюз обоих полей причины не шлёт вовсе.
+      reason: null,
+      reasonCode: null,
     })
+  })
+
+  it('carries the refusal reason and its machine code', () => {
+    const capability = normalizeCapabilities({
+      expert_mode: {
+        enabled: true,
+        allowed: false,
+        models: ['claude-sonnet-5'],
+        daily_limit_usd: 5,
+        spent_today_usd: 5,
+        reason: 'денний ліміт витрат вичерпано (5.00 з 5.00 $)',
+        reason_code: 'limit',
+      },
+    }).expert
+
+    expect(capability.reasonCode).toBe('limit')
+    expect(capability.reason).toBe('денний ліміт витрат вичерпано (5.00 з 5.00 $)')
   })
 
   it('treats a missing / unknown payload as "no expert mode"', () => {

@@ -25,6 +25,7 @@ import {
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  SOFT_DENIED_REASON_CODES,
   type AssistantCitationVerdict,
   type AssistantExpertCapability,
   type AssistantFeedbackComprehension,
@@ -538,9 +539,20 @@ function ModeDropdown({
   const rootRef = useRef<HTMLDivElement>(null)
   const isThinking = value === 'thinking'
   const isExpert = expertModel != null
+  /**
+   * Отказ, при котором пункт остаётся на виду, но выбрать нечего: дневной
+   * бюджет исчерпан либо учёт трат недоступен. Прятать здесь нельзя — у
+   * руководителя пункт молча исчез бы вместо честного «ліміт вичерпано».
+   * Отказ по роли (и выключенный режим) прячется, как и раньше.
+   */
+  const isSoftDenied =
+    !expert.allowed &&
+    expert.reasonCode != null &&
+    SOFT_DENIED_REASON_CODES.includes(expert.reasonCode)
   // Пункт экспертного режима существует только с разрешения бэкенда и только
   // при непустом списке моделей — выбирать «Експерт» без модели нечего.
-  const showExpertSection = expert.enabled && expert.allowed && expert.models.length > 0
+  const showExpertSection =
+    expert.enabled && (expert.allowed || isSoftDenied) && expert.models.length > 0
   const ActiveIcon = isExpert ? Icons.Sparkles : isThinking ? Icons.AiBrain03 : Icons.Flash
 
   useEffect(() => {
@@ -647,12 +659,18 @@ function ModeDropdown({
                     type="button"
                     role="menuitemradio"
                     aria-checked={expertModel === model}
+                    // Бюджет исчерпан / учёт трат недоступен: модель видно, но
+                    // выбрать нельзя — ход всё равно упёрся бы в 429.
+                    disabled={isSoftDenied}
                     data-testid={`assistant-expert-model-${model}`}
                     onClick={() => {
                       onSelectExpert(model)
                       setOpen(false)
                     }}
-                    className="hover:bg-muted/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
+                    className={cn(
+                      'flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+                      isSoftDenied ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/70'
+                    )}
                   >
                     <Icons.Sparkles
                       size={16}
@@ -693,6 +711,16 @@ function ModeDropdown({
                       spent: formatUsd(expert.spentTodayUsd),
                       limit: formatUsd(expert.dailyLimitUsd),
                     })}
+                  </span>
+                )}
+                {/* Почему выбрать нельзя — словами бэкенда (украинский текст
+                    уже написан для человека и несёт суммы). */}
+                {isSoftDenied && expert.reason && (
+                  <span
+                    className="text-warning-700 block font-medium"
+                    data-testid="assistant-expert-reason"
+                  >
+                    {expert.reason}
                   </span>
                 )}
               </div>
@@ -2031,16 +2059,23 @@ export function AiAssistantBetaPage() {
         // otherwise the localised batch wording stands in.
         const isOurRefusal = Boolean(errorCode)
         // Отказы экспертного хода бэкенд формулирует сам и по-украински —
-        // «немає права», «денний ліміт вичерпано», «зовнішній сервіс не
-        // відповідає». Показываем их дословно: свои выдумки здесь были бы
-        // менее точны, чем текст того, кто отказал.
+        // «немає права», «денний ліміт витрат вичерпано (X з Y $)». Показываем
+        // их дословно: свои выдумки здесь были бы менее точны, чем текст того,
+        // кто отказал.
         const isExpertRefusal = isExpertTurn && (status === 403 || status === 429 || status === 503)
+        // 503 — исключение: прокси CRM заменяет текст мозга своим, «Думающий
+        // режим сейчас недоступен. Повторите запрос в обычном режиме», потому
+        // что на этой формулировке держится откат thinking → fast
+        // (`_status_detail` в services/ai-assistant/app/routers/chat.py). Для
+        // экспертного хода она неверна вдвойне: он не «думающий», и повторять
+        // его «в обычном режиме» — это другой вопрос к другой модели. Здесь
+        // текст сервера не показываем, а говорим про внешний сервис сами.
         const showsServerText =
           status === 400 ||
           status === 415 ||
           status === 422 ||
           (status === 413 && isOurRefusal) ||
-          isExpertRefusal
+          (isExpertRefusal && status !== 503)
         const expertFallbackMessage = isExpertRefusal
           ? status === 403
             ? t('pages.aiAssistant.expertForbidden')
