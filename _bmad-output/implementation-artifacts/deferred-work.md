@@ -5012,7 +5012,26 @@ this entry exists so the gap is not rediscovered as a finding.
 
 ## Deferred from: making PROD publicly reachable (2026-08-27)
 
-### 🔴 PROD Kong returns no `Access-Control-Allow-Origin` for ANY origin tried. **Owner: `CRM/api-prionex`.**
+### ~~🔴 PROD Kong returns no `Access-Control-Allow-Origin` for ANY origin tried.~~ ✅ **WITHDRAWN 2026-08-27 — the entry was WRONG, and the wrongness is the useful part.**
+
+> 🔴 **I probed the wrong host.** `api.crm-prionex.online` is **legacy** (`175.110.122.17`). The
+> production API is **`https://api-crm.prod.crm-prionex.online`**, fronted from the hypervisor to
+> Kong at **`10.70.0.11:8330`** over `wg-private`. Oleg supplied the name; it was not guessable, and
+> `#d43` §4 deliberately never created `api.crm.prod` — a different name.
+>
+> 🟢 **Against the right host, CORS is already correct, with a real allow-list:**
+> `https://crm.prod.crm-prionex.online` → `Allow-Origin` echoed; a foreign origin → **zero** ACAO
+> headers. Not a blanket echo.
+>
+> ⚠️ **The lesson, which this project has paid for before:** a negative result against the wrong
+> target is indistinguishable from a negative result against the right one. The only thing that
+> exposed it was the third row — the PRE-PROD control origin, known-good, also failing. **The
+> control did exactly the job a control exists for.** Keep including one.
+>
+> Full record in [`#d43`](../../docs/migration-decisions.md#d43) §10. **The entry below is kept,
+> struck, as the record of what was concluded and how it was corrected.**
+
+~~The original entry:~~
 
 The last blocker of `#d43` §8. The public front now works, so this is measurable for the first
 time — and the measurement **reverses the assumption it was filed under**.
@@ -5053,3 +5072,18 @@ decides the timer is sufficient.
 `#d43` §8 already called this wrong for a temporary name and proposed `300`, with a precedent in the
 same zone. Unchanged. It matters more now that the name actually serves something: a mistake takes
 four hours to undo.
+
+
+### 🔴 PROD's frontend still calls the LEGACY API. **Owner: Oleg.**
+
+Both production names now work — but the deployed bundle has `https://api.crm-prionex.online`
+(legacy) baked in, not `https://api-crm.prod.crm-prionex.online`. Under Option C (`#d1`)
+`VITE_API_BASE_URL` is a **build-time** value: `build.yml:588` reads it from OpenBao (`#d15`) and the
+Dockerfile declares the `ARG` with no default.
+
+**Two steps, and both are decisions rather than consequences of the front being up:**
+1. change `VITE_API_BASE_URL` in the **prod** OpenBao path to `https://api-crm.prod.crm-prionex.online`;
+2. rebuild and redeploy (`deploy-prod.yml`, `rollback: false` — that path rebuilds).
+
+⚠️ **This moves production off the legacy API onto the prod contour** — a change to where production
+traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves to the prod API name.
