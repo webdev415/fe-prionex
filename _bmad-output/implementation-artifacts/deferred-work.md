@@ -5007,3 +5007,49 @@ are cheap, they close the trigger `#d48` names verbatim for the fourteenth defec
 `workflow_call` refactor of exactly the kind this story performs"*), and they fail in the safe
 direction. **Recorded as permanently unearned rather than quietly counted.** No removal trigger —
 this entry exists so the gap is not rediscovered as a finding.
+
+---
+
+## Deferred from: making PROD publicly reachable (2026-08-27)
+
+### 🔴 PROD Kong returns no `Access-Control-Allow-Origin` for ANY origin tried. **Owner: `CRM/api-prionex`.**
+
+The last blocker of `#d43` §8. The public front now works, so this is measurable for the first
+time — and the measurement **reverses the assumption it was filed under**.
+
+The live PROD bundle calls `https://api.crm-prionex.online`. Preflight (`OPTIONS`, with
+`Access-Control-Request-Method`) answers **200** with `Allow-Credentials: true`, `Allow-Headers`,
+`Allow-Methods`, `Max-Age` and `vary: Origin` — and **no `Allow-Origin`**, for:
+
+| Origin | `Allow-Origin` |
+|---|---|
+| `https://crm.prod.crm-prionex.online` | absent |
+| `https://evil.example.com` (negative control) | absent |
+| `https://crm.preprod.crm-prionex.online` — **known-good since 2026-08-25** | **absent** |
+
+🔴 **The third row is the one that matters.** The PRE-PROD origin, measured working twice, also gets
+nothing here — so **`api.crm-prionex.online` is NOT the Kong that serves PRE-PROD**, and the earlier
+CORS measurements cannot be carried over to it.
+
+**Consequence:** the production frontend loads over HTTPS and serves the correct build, but a browser
+will block its API calls. ⚠️ **What this does NOT establish:** which origin this Kong does admit, or
+whether it admits any. Both readings — "the plugin never sets `Allow-Origin` on preflight" and "the
+allow-list contains none of the three" — fit the observation. Measured with `GET`/`OPTIONS`, never
+`HEAD` (`#d51` §8 records why).
+
+**Removal trigger:** `CRM/api-prionex` confirms the allow-list, or a preflight from the prod origin
+returns `Allow-Origin`.
+
+### ⚠️ The Let's Encrypt account for the prod front has NO email. **Owner: Oleg.**
+
+`certbot --register-unsafely-without-email` was used deliberately: sending Oleg's address to an
+external service was not something he had asked for. Auto-renewal does not depend on it
+(`certbot.timer` armed, `renew --dry-run` passes), but **expiry warnings will not arrive** if
+renewal ever breaks. Cert valid to **2026-11-25**. **Removal trigger:** Oleg names an address, or
+decides the timer is sufficient.
+
+### ⚠️ The zone TTL for `crm.prod.crm-prionex.online` is still `14400`. **Owner: Oleg (Hostinger).**
+
+`#d43` §8 already called this wrong for a temporary name and proposed `300`, with a precedent in the
+same zone. Unchanged. It matters more now that the name actually serves something: a mistake takes
+four hours to undo.
