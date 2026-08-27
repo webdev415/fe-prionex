@@ -605,25 +605,25 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 
 ### Task 5 — 🔴 The free live proof (AC: 1, 6) — **1 dispatch**
 
-- [ ] 5.1 Dispatch `deploy-prod.yml`: `tag: sha-a99ccd44c5a3-prod`, `rollback: true`. This redeploys what
+- [x] 5.1 Dispatch `deploy-prod.yml`: `tag: sha-a99ccd44c5a3-prod`, `rollback: true`. This redeploys what
       s10 already runs and **must leave the registry unchanged**.
-- [ ] 5.2 Expected: `build` skipped; `deploy` green; `record` green; `write-history` **noop**;
+- [x] 5.2 Expected: `build` skipped; `deploy` green; `record` green; `write-history` **noop**;
       `write-current` **noop**. **Paste the step table and the run id.**
-- [ ] 5.3 Read all three tags back **independently of the run** and confirm one manifest, unchanged
+- [x] 5.3 Read all three tags back **independently of the run** and confirm one manifest, unchanged
       digest `sha256:f30c794123ba…a3f3`.
-- [ ] 5.4 🔴 If `record` is skipped while the run is green, **stop** — that is Prohibition 2's failure and
+- [x] 5.4 🔴 If `record` is skipped while the run is green, **stop** — that is Prohibition 2's failure and
       it is the one this story exists to avoid.
 
 ### Task 6 — The free discriminating dispatches (AC: 6) — **up to 4 dispatches, all writing nothing**
 
-- [ ] 6.1 G1: dispatch `record-prod-image.yml` with a wrong acknowledgement. Expect a refusal **before any
+- [x] 6.1 G1: dispatch `record-prod-image.yml` with a wrong acknowledgement. Expect a refusal **before any
       network call**.
-- [ ] 6.2 G2: `sha-a99ccd44c5a3-preprod` (exists). Expect the explicit `-preprod` arm.
-- [ ] 6.3 G3: a 40-hex `sha-<40hex>-prod`. Expect the exactly-12 message. **This also closes M7's own G3
+- [x] 6.2 G2: `sha-a99ccd44c5a3-preprod` (exists). Expect the explicit `-preprod` arm.
+- [x] 6.3 G3: a 40-hex `sha-<40hex>-prod`. Expect the exactly-12 message. **This also closes M7's own G3
       clause** for this file (§13.6).
-- [ ] 6.4 404 classifier: a well-formed `sha-<12hex>-prod` that does not exist. Expect **classified
+- [x] 6.4 404 classifier: a well-formed `sha-<12hex>-prod` that does not exist. Expect **classified
       absence**, not an ambiguous read.
-- [ ] 6.5 G4 and G6: record **UNEARNED with the reason** (§9) — ✅ **decided 2026-08-26, both rows.**
+- [x] 6.5 G4 and G6: record **UNEARNED with the reason** (§9) — ✅ **decided 2026-08-26, both rows.**
       G4 is unreachable through this file's own inputs; G6 needs an artifact `build.yml` cannot produce.
       🔴 **Do not force-test either into looking earned.** Story 6.3's local 15/15 shell exercise is the
       precedent for what that reads like afterwards: it verifies shell logic, carries no run id, and its
@@ -787,6 +787,62 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Tasks 5 and 6 — 2026-08-27. Five dispatches, zero bytes written to the registry.**
+
+**Task 5 — run 662, `deploy-prod.yml`, `tag: sha-a99ccd44c5a3-prod`, `rollback: true`.** A real
+production deploy of the image s10 was already running. Twelve job rows, all accounted for:
+
+```
+Derive the commit and the PROD tag                     success
+Rebuild the commit at environment: prod                success   ← the WRAPPER
+  └ Build and Push                                     skipped   ← the actual build: DID NOT RUN
+Deploy to the PROD stand on s10                        success
+  └ 0. Preflight / 1. Clone-test / 2. Digest-resolve    success
+  └ Deploy a ref or image tag to the stand             success
+  └ Hold-lock test fixture                             skipped
+Record the deployed image (prod-<12hex>, then prod-current)  success   ← the WRAPPER
+  └ Write prod-<sha> then prod-current                 success   ← the INNER job: IT RAN
+🔴 Disclose a green deploy whose record did not land   skipped   ← correct: only fires on failure
+```
+
+🔴 **`#d21`'s trap is visible in this run's own data, and it is why the inner row matters.** *"Зелёная
+`uses:`-джоба не доказывает, что вызванный воркфлоу что-то сделал."* The `build` wrapper reports
+**success** while its inner `Build and Push` is **skipped** — no build happened, correctly. If `record`
+had been skipped the same way, its wrapper would ALSO have said success. **The inner job's own
+`success` is the evidence, and Task 5.4's stop condition was checked against that row, not the
+wrapper.**
+
+**5.3 — read back independently of the run.** All three names still on
+`sha256:f30c794123ba…a3f3`: `sha-a99ccd44c5a3-prod`, `prod-a99ccd44c5a3`, `prod-current`. **The
+registry is byte-identical to its pre-dispatch state.** Both writes took their no-op branches, which is
+what a redeploy of the running image must do.
+
+**Task 6 — four discriminating dispatches of `record-prod-image.yml`, all REFUSED, all writing nothing.**
+
+| Run | Input | Result | Elapsed |
+|---|---|---|---|
+| 663 | valid tag, acknowledgement `NOPE` | ❌ refused | **2 s** |
+| 664 | `sha-a99ccd44c5a3-preprod`, correct ack | ❌ refused | **2 s** |
+| 665 | `sha-<40hex>-prod`, correct ack | ❌ refused | **2 s** |
+| 666 | `sha-000000000000-prod` (well-formed, absent) | ❌ refused | **18 s** |
+
+🔴 **What the timing proves, stated at exactly its strength.** 2 s vs 18 s is a real split: G1/G2/G3 are
+pure shell **before any network call**, while the 404 classifier can only be reached after `apt-get`,
+`docker login` and buildx setup. So the three fast runs died in the shell guards and the slow one
+reached the registry and classified its answer. **Which** guard is not read from a log — this
+instance's job logs are not retrievable (both API routes 404, recorded since Story 3.6) and the Forgejo
+hub is not on the one host this session may reach. It is established **by input construction** instead,
+and for two of the three that is exact:
+- **663** — the tag is perfectly valid; G2 and G3 both pass it. **Only G1 can refuse it.**
+- **665** — G1 passes, G2 passes (it ends `-prod`). **Only G3's exactly-12 clause can refuse it.**
+  ✅ This is `#d18` §3's failure mode — a 40-character SHA — refused live for the first time.
+- **664** — G1 passes; G2 and G3 would both reject a `-preprod` tag, and **G2 runs first**, so the
+  refusal is G2's by step order rather than by exclusion. Weaker than the other two; said so.
+
+**Registry re-read after all four: unchanged.** `prod-current`, `prod-a99ccd44c5a3` and
+`sha-a99ccd44c5a3-prod` all still `f30c7941…`, and **`prod-000000000000` returns 404** — run 666 got as
+far as the network and still created nothing.
 
 **Task 4 — 2026-08-27. The join is wired. No dispatch yet.**
 
