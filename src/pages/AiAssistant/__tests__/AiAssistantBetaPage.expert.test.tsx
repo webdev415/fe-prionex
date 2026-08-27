@@ -314,6 +314,17 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
     )
   })
 
+  it('names the expert turn in the settings summary instead of calling it "fast"', async () => {
+    renderPage()
+    await selectExpertModel('claude-sonnet-5')
+
+    fireEvent.click(screen.getByLabelText('pages.aiAssistant.settings'))
+    const summary = await screen.findByTestId('assistant-settings-mode-summary')
+
+    expect(summary).toHaveTextContent('pages.aiAssistant.expertTrigger')
+    expect(summary).not.toHaveTextContent('pages.aiAssistant.modeFastShort')
+  })
+
   it('keeps the wait readable while the external model thinks', async () => {
     // Ход, который ещё не ответил: в пузыре стоит подпись со своим таймером.
     mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))

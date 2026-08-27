@@ -1529,17 +1529,28 @@ export function AiAssistantBetaPage() {
 
           {/* Reasoning mode now lives in the dropdown next to the composer
               (single source of truth); the settings panel only points to it. */}
-          <div className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2">
-            {assistantSettings.mode === 'thinking' ? (
+          <div
+            className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2"
+            data-testid="assistant-settings-mode-summary"
+          >
+            {activeExpertModel ? (
+              <Icons.Sparkles size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            ) : assistantSettings.mode === 'thinking' ? (
               <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
             ) : (
               <Icons.Flash size={14} strokeWidth={1.5} className="text-warning-500 shrink-0" />
             )}
             <span className="text-foreground min-w-0 flex-1 text-[11px] leading-snug font-light">
               {t('pages.aiAssistant.mode')}:{' '}
-              {assistantSettings.mode === 'thinking'
-                ? t('pages.aiAssistant.modeThinkingShort')
-                : t('pages.aiAssistant.modeFastShort')}
+              {/* Экспертный ход идёт не на нашем боксе — сводка обязана
+                  называть его, а не «Швидкий», под которым он уезжает. */}
+              {activeExpertModel
+                ? t('pages.aiAssistant.expertTrigger', {
+                    model: expertModelLabel(activeExpertModel),
+                  })
+                : assistantSettings.mode === 'thinking'
+                  ? t('pages.aiAssistant.modeThinkingShort')
+                  : t('pages.aiAssistant.modeFastShort')}
             </span>
             <span className="text-muted-foreground shrink-0 text-[11px] font-light">
               {t('pages.aiAssistant.modeChangeHint')}
