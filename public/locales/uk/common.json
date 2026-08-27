@@ -812,6 +812,7 @@
       "expertComposerNotice": "Питання піде до зовнішнього Claude ({{model}}) на наших даних",
       "expertWaiting": "{{model}} аналізує… {{seconds}} с",
       "expertTokens": "Токени: {{input}} на вхід, {{output}} на вихід",
+      "expertTokensCached": "Токени: {{input}} на вхід (з них {{cached}} з кешу), {{output}} на вихід",
       "expertForbidden": "Експертний режим недоступний для вашої ролі.",
       "expertLimitReached": "Денний ліміт експертного режиму вичерпано.",
       "expertUnavailable": "Зовнішній сервіс зараз недоступний, спробуйте пізніше.",

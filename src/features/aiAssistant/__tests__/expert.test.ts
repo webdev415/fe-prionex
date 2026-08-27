@@ -126,6 +126,26 @@ describe('normalizeExpertUsage', () => {
     expect(nested).toMatchObject({ model: 'claude-sonnet-5', costUsd: 0.05, outputTokens: 120 })
   })
 
+  it('keeps the cache token counts (input alone understates the real context)', () => {
+    // Живой ход 27.08: 4 «свежих» токена входа при 32 442 из кэша.
+    const usage = normalizeExpertUsage({
+      expert: {
+        model: 'claude-sonnet-5',
+        cost_usd: 0.102624,
+        input_tokens: 4,
+        output_tokens: 945,
+        cache_read_tokens: 32442,
+        cache_write_tokens: 34671,
+      },
+    })
+
+    expect(usage).toMatchObject({
+      inputTokens: 4,
+      cacheReadTokens: 32442,
+      cacheWriteTokens: 34671,
+    })
+  })
+
   it('accepts a numeric string cost (JSON decimals arrive as strings)', () => {
     expect(normalizeExpertUsage({ model: 'claude-opus-5', cost_usd: '0.42' })?.costUsd).toBe(0.42)
   })
