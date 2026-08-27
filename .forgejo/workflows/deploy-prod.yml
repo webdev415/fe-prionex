@@ -638,20 +638,25 @@ jobs:
           SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
           fetch() { docker run --rm --network host "$SELF_IMAGE" curl -sS --max-time 15 "$@" || true; }
 
+          # 🔴 EVERY FAILURE BELOW MUST BE SELF-DESCRIBING IN A SINK THAT SURVIVES. Job logs are NOT
+          # retrievable on this instance (both API routes 404 since Story 3.6), so a failure whose
+          # evidence exists only on stdout is a failure nobody can diagnose. `diag` mirrors into the
+          # step summary. Learned the hard way on run 698: this check failed on a stand the deploy
+          # had just certified healthy, and there was no way to see WHY without changing the code.
+          diag() { printf '%s\n' "$@" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"; }
+
           # ── 1. the index, with its status and OUR headers ──────────────────────────────
           HDRS="$(fetch -D - -o /dev/null "${STAND_URL}/")"
           CODE="$(printf '%s' "$HDRS" | awk '/^HTTP\//{c=$2} END{print c+0}')"
           if [ "$CODE" != "200" ]; then
-            echo "FAIL: GET / returned '${CODE}', expected 200 (000 = could not connect at all)."
+            diag "### SMOKE FAIL — GET /" "" "Status: \`${CODE}\` (expected 200; 000 = no connection at all)" "" "Response headers as received:" "" '```' "$HDRS" '```'
             exit 1
           fi
           # Stock nginx sets NEITHER of these. Their presence is what distinguishes "our nginx.conf
           # is serving" from "a default nginx is answering 200" -- which no status code can.
           for H in "x-content-type-options: nosniff" "x-frame-options: sameorigin"; do
             if ! printf '%s' "$HDRS" | tr '[:upper:]' '[:lower:]' | tr -d '\r' | grep -q "^${H}$"; then
-              echo "FAIL: GET / did not carry '${H}'. nginx.conf sets it with 'always', so a"
-              echo "  response without it is NOT being served by this image's config."
-              printf '%s\n' "$HDRS"
+              diag "### SMOKE FAIL — missing header on GET /" "" "Expected: \`${H}\`" "" "🔴 Before concluding the wrong image is serving, check the nginx \`add_header\` inheritance rule: a location block that declares ANY \`add_header\` does NOT inherit the server-level ones. \`location ~* \\.html\$\` in this repo's nginx.conf declares two, and the SPA fallback serves /index.html through it." "" "Response headers as received:" "" '```' "$HDRS" '```'
               exit 1
             fi
           done
@@ -661,15 +666,13 @@ jobs:
           BODY="$(fetch "${STAND_URL}/")"
           ASSET="$(printf '%s' "$BODY" | grep -oE 'src="/assets/[^"]+\.js"' | head -1 | sed 's/^src="//; s/"$//')"
           if [ -z "$ASSET" ]; then
-            echo "FAIL: the served index references no /assets/*.js bundle. A 200 with no bundle is"
-            echo "  a default page or a broken build, and GET / alone cannot tell you that."
+            diag "### SMOKE FAIL — the served index names no /assets/*.js bundle" "" "A 200 with no bundle is a default page or a broken build, and GET / alone cannot tell you that." "" "First 2000 bytes of the served body:" "" '```' "$(printf '%s' "$BODY" | head -c 2000)" '```'
             exit 1
           fi
           echo "index references: ${ASSET}"
           ACODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}${ASSET}")"
           if [ "$ACODE" != "200" ]; then
-            echo "FAIL: the index names ${ASSET} but fetching it returned '${ACODE}'. The served"
-            echo "  index and the served assets are from DIFFERENT builds, or the bundle is absent."
+            diag "### SMOKE FAIL — the index names an asset that is not served" "" "Index references: \`${ASSET}\`" "Fetching it returned: \`${ACODE}\`" "" "The served index and the served assets are from DIFFERENT builds, or the bundle is absent."
             exit 1
           fi
           echo "OK: the bundle the index names is served (${ASSET})."
@@ -681,10 +684,7 @@ jobs:
           # proved nothing: the SPA fallback would have answered 200 for any asset name at all.
           NCODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}/assets/definitely-not-a-real-bundle-6-7.js")"
           if [ "$NCODE" != "404" ]; then
-            echo "FAIL: a non-existent /assets/*.js returned '${NCODE}', expected 404."
-            echo "  nginx.conf's regex asset location takes precedence over the SPA fallback and has"
-            echo "  no try_files. A 200 here means the fallback is answering for assets -- which"
-            echo "  would make the bundle check above vacuous, since ANY asset name would pass."
+            diag "### SMOKE FAIL — a non-existent asset did not 404" "" "Returned: \`${NCODE}\`, expected 404." "" "nginx.conf's regex asset location takes precedence over the SPA fallback and has no try_files. A 200 here means the fallback is answering for assets — which would make the bundle probe above **vacuous**, since any asset name would pass."
             exit 1
           fi
           echo "OK: a non-existent asset 404s -- the asset location is live and probe 2 is not vacuous."
