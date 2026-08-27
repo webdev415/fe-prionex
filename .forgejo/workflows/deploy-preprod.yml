@@ -292,6 +292,63 @@ jobs:
             echo "which on this instance has repeatedly failed to archive (log_in_storage=f)."
           fi
 
+  # ── gate ──────────────────────────────────────────────────────────────────────────────────
+  # 🔴 THIS JOB EXISTS BECAUSE THE CONDITION IT CARRIES CANNOT LIVE ON `record`, AND THAT WAS
+  # MEASURED, NOT PREDICTED. Run 725, 2026-08-27, a `hold_lock_seconds: 60` dispatch:
+  #
+  #   Deploy PRE-PROD via the shared definition ......... success   (skipped wrapper, `#d21`)
+  #     0. Preflight .................................... skipped
+  #     Deploy a ref or image tag to the stand .......... skipped
+  #   Hold-lock test fixture -- does not deploy ......... success
+  #   Record the deployed candidate ..................... 🔴 RAN
+  #   🔴 Disclose a green deploy whose record did not land  skipped
+  #
+  # BOTH of those last two jobs carried the SAME clause, `!(inputs.hold_lock_seconds > 0)`.
+  # `record-outcome` is a PLAIN job: its `if:` was evaluated HERE, in the caller, where
+  # `inputs.hold_lock_seconds` is 60 -- the clause returned false and the job skipped, correctly.
+  # `record` is a `uses:` job: `#d21` (run 631) established that a `uses:` job's `if:` is COPIED
+  # DOWN into the callee and evaluated THERE, where the caller's `inputs` do not exist. So
+  # `inputs.hold_lock_seconds` was null, `null > 0` was false, `!false` was TRUE, and the record
+  # ran on a dispatch that deployed nothing.
+  #
+  # 🟢 Nothing was written, and the reason is worth keeping: G5 refused. The stand was serving
+  # `sha256:e17c88af…` while the candidate resolved to `sha256:a62e8687…`, and G5's message was
+  # *"Recording this candidate now would be a claim, not evidence -- refusing."* Defence in depth
+  # did its job. It is NOT the design, and this gate is not optional because of it.
+  #
+  # The fix is the shape Story 6.5 already used for the promotion guard, for the same reason
+  # (`#d49`: *"Не `uses:`-джоба: `#d21` ран 631 -- пропущенная обёртка рапортует success"*): a
+  # PLAIN job whose `if:` is evaluated in this workflow's own context, which `record` then simply
+  # `needs:`. No expression on `record` at all -- a skipped dependency skips its dependents, which
+  # is dependency semantics rather than expression evaluation, and therefore not subject to the
+  # copied-down rule that broke the first attempt.
+  #
+  # ⚠️ It must SKIP, never FAIL, on the hold-lock path. `#d49` also recorded that jobs depending
+  # on a FAILED job report `failure`, not `skipped` -- a failing gate would turn every hold-lock
+  # test dispatch red and would fire `record-outcome`'s alarm over a fixture.
+  #
+  # `runs-on`: the same trade the `e2e` job above argues and then corrects itself about. See it.
+  gate:
+    name: "Gate the record on a deploy that actually deployed"
+    needs: deploy
+    if: needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0)
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      # No `${{ }}` in this body, including in its comments (`#d21`). Values arrive via `env:`.
+      - name: "Say why the record is allowed to run"
+        env:
+          HOLD_SECONDS: ${{ inputs.hold_lock_seconds }}
+          CANDIDATE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          echo "deploy succeeded and hold_lock_seconds='${HOLD_SECONDS:-<unset>}' is not > 0,"
+          echo "so this dispatch really deployed ${CANDIDATE_TAG} and the record may proceed."
+          echo
+          echo "If you are reading this on a run where nothing was deployed, THIS GATE HAS FAILED"
+          echo "and the bug is in its own condition -- not in the recorder it guards. Run 725 is"
+          echo "the recorded instance of that failure mode."
+
   # ── record ────────────────────────────────────────────────────────────────────────────────
   # Story 6.11 (`#d51`). Until 2026-08-27 this did not exist and recording a candidate was a
   # SECOND human dispatch carrying a `validated: pass|fail` verdict. `#d38` §2 argued that shape
@@ -333,8 +390,7 @@ jobs:
   # by that same group. 🔴 ARGUED FROM THE TWO FILES, NOT OBSERVED: no dispatch has raced the two.
   record:
     name: "Record the deployed candidate (preprod-<12hex>, then preprod-current)"
-    needs: deploy
-    if: needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0)
+    needs: [deploy, gate]
     uses: ./.forgejo/workflows/record-preprod-candidate.yml
     with:
       candidate_tag: ${{ inputs.image_tag }}
