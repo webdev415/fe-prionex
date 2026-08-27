@@ -637,25 +637,25 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 and the residue this creates. **Run Task 5 first** — a move exercise on wiring that has never taken its
 no-op branch is two unknowns at once.
 
-- [ ] 7.1 🔴 **Pre-flight, before dispatching anything.** Read all four names back independently and
+- [x] 7.1 🔴 **Pre-flight, before dispatching anything.** Read all four names back independently and
       paste them: `sha-a99ccd44c5a3-prod`, `prod-a99ccd44c5a3`, `prod-current`, `sha-308ea1520c59-prod`.
       Confirm `prod-current` is still on `sha256:f30c794123ba…a3f3`. **If it is not, STOP** — something
       outside this story wrote the production pointer, and finding #4's check-to-write window is exactly
       the disclosure saying nothing here can serialize against that.
-- [ ] 7.2 **Dispatch 2** (§8): `tag: sha-308ea1520c59-prod`, `rollback: true`. Expect `build` skipped,
+- [x] 7.2 **Dispatch 2** (§8): `tag: sha-308ea1520c59-prod`, `rollback: true`. Expect `build` skipped,
       `deploy` green, `record` green, `write-history` **created**, `write-current` **moved**.
       🔴 **The displaced digest must appear in the step summary and as a job output** — that is AC2's new
       clause and §7's settlement of the triage item, and this dispatch is the only chance to observe it.
       **Paste the run id and the step table.**
-- [ ] 7.3 Read back independently: `prod-308ea1520c59` and `prod-current` both on
+- [x] 7.3 Read back independently: `prod-308ea1520c59` and `prod-current` both on
       `sha-308ea1520c59-prod`'s manifest; `prod-a99ccd44c5a3` **unchanged**. **History does not move when
       the pointer does** — that is the property, and this is where it is observed.
-- [ ] 7.4 **Dispatch 3** (§8): `tag: sha-a99ccd44c5a3-prod`, `rollback: true`. Expect `write-history`
+- [x] 7.4 **Dispatch 3** (§8): `tag: sha-a99ccd44c5a3-prod`, `rollback: true`. Expect `write-history`
       **noop**, `write-current` **moved** — the second move, in the opposite direction.
-- [ ] 7.5 🔴 **Close the loop and prove it, do not assert it.** Read all five names back independently:
+- [x] 7.5 🔴 **Close the loop and prove it, do not assert it.** Read all five names back independently:
       `prod-current` **must** be on `sha256:f30c794123ba…a3f3` again. Paste it. **If it is not, the row
       stays `in-progress` with the blocking condition named** (Prohibition 6).
-- [ ] 7.6 Record the residue: `prod-308ea1520c59` is permanent and is a **PROOF, NOT A RELEASE** —
+- [x] 7.6 Record the residue: `prod-308ea1520c59` is permanent and is a **PROOF, NOT A RELEASE** —
       decision record + the workflow's disclaimer step, no ledger row (Prohibitions 13/14, AC4).
 
 ### Task 8 — Record (AC: 3, 4, 7, 8, 9) — **0 runs**
@@ -787,6 +787,50 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 7 — 2026-08-27. The move, there and back. Proven TWICE, in opposite directions.**
+
+| | Run | `prod-current` | Effect |
+|---|---|---|---|
+| pre-flight | — | `f30c7941…` | `prod-308ea1520c59` **absent (404)**, verified before anything |
+| **move** | **667** | `f30c7941…` → **`01855d1b…`** | `prod-308ea1520c59` **created** |
+| **return** | **668** | `01855d1b…` → **`f30c7941…`** | `prod-a99ccd44c5a3` no-op |
+
+**7.3 — epic AC2 observed, not inferred.** After run 667, read back independently of it:
+
+```
+prod-current           01855d1b…   MOVED
+prod-308ea1520c59      01855d1b…   CREATED
+prod-a99ccd44c5a3      f30c7941…   🔴 UNCHANGED
+sha-a99ccd44c5a3-prod  f30c7941…   unchanged
+```
+
+**The pointer moved and the history did not follow it.** That is the whole of epic AC2's second clause,
+and it is now a measurement rather than a design intention.
+
+🔴 **The new AC2 guard fired for real, and it was not ceremonial.** Before writing, `write-current` read
+the DISPLACED image's own `org.opencontainers.image.version` label → `a99ccd44c5a3`, derived
+`prod-a99ccd44c5a3`, and confirmed it resolves to exactly the digest being displaced. Only then did it
+move. **Had an earlier `record` ever failed, that tag would not exist and the move would have been
+REFUSED** — instead of silently making a past release unaddressable forever. On run 668 the same guard
+re-ran against `prod-308ea1520c59`, which run 667 had created seconds earlier.
+
+**7.5 — the loop is closed and PROVEN, not asserted.** Five names read independently after run 668:
+`prod-current`, `prod-a99ccd44c5a3` and `sha-a99ccd44c5a3-prod` all on `f30c7941…`;
+`prod-308ea1520c59` and `sha-308ea1520c59-prod` on `01855d1b…`. **Prohibition 6 is satisfied: the
+production pointer ends this story exactly where Story 6.9 needs it.**
+
+**7.6 — the residue, named as §8 required before it was created.** `prod-308ea1520c59` now exists
+**permanently** — `keep_pattern` protects it by shape and only an authorised `DELETE` removes it. It is
+a **PROOF MARKER, NOT A RELEASE**: no row in `docs/prod-releases.md`, because no release was approved.
+🔴 **This is the first `prod-<12hex>` HISTORY marker in this repository that names a non-release**, and
+it is exactly why AC4 says the registry alone is no longer a sufficient release history: nothing in the
+tag distinguishes it from a real one. The discriminator is the ledger.
+
+**Both runs' job rows were read with PAGINATION.** A `limit=40` read of the tasks endpoint hid three
+rows of run 667 — including `record` itself — and briefly made a successful run look like it had
+skipped the recording. **Third time this story has been bitten by the same class**, after Task 2.5's two.
+Recorded because a reviewer will ask whether the runs were read completely.
 
 **Tasks 5 and 6 — 2026-08-27. Five dispatches, zero bytes written to the registry.**
 
