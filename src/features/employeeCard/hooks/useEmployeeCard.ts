@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { usersKeys } from '@/features/users/hooks/useUsers'
 import * as employeeCardApi from '../api/employeeCardApi'
 import type {
   AdditionalInformationUpdate,
@@ -45,12 +46,28 @@ function useSectionMutation<TChanges>(
   })
 }
 
+/**
+ * The personal section writes the employee's own record as well as the profile
+ * beside it, so the employees list can go stale on a save: name, phone, email
+ * and work format are all columns in it. The card's own answer is authoritative
+ * and goes straight into its cache; the list is only marked for refetching,
+ * because the page behind the dialog may not even be showing it.
+ */
 export function useUpdatePersonal(userId: number, projectId?: number | null) {
-  return useSectionMutation<PersonalInformationUpdate>(
+  const queryClient = useQueryClient()
+  const mutation = useSectionMutation<PersonalInformationUpdate>(
     userId,
     projectId,
     employeeCardApi.updatePersonal
   )
+  return {
+    ...mutation,
+    mutateAsync: async (changes: PersonalInformationUpdate) => {
+      const card = await mutation.mutateAsync(changes)
+      await queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+      return card
+    },
+  }
 }
 
 export function useUpdateWork(userId: number, projectId?: number | null) {

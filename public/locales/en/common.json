@@ -10881,7 +10881,10 @@
         "institution": "Educational Institution",
         "faculty": "Faculty / Specialty",
         "graduationYear": "Year of Graduation",
-        "childName": "Child's Full Name"
+        "childName": "Child's Full Name",
+        "lastName": "Last Name",
+        "firstName": "First Name",
+        "middleName": "Middle Name"
       },
       "documents": {
         "none": "No documents attached.",

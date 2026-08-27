@@ -1,7 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
+
+// Radix Select measures and scrolls on open, and jsdom implements neither.
+beforeAll(() => {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = vi.fn(() => false)
+  }
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 const saved = vi.hoisted(() => ({
   personal: vi.fn(),
@@ -36,11 +44,14 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     header: {
       id: 7,
       full_name: 'Olena Kovalchuk',
+      last_name: 'Kovalchuk',
+      first_name: 'Olena',
+      middle_name: null,
       status: 'active',
       work_format: null,
       avatar_url: null,
       phone: null,
-      email: null,
+      email: 'olena.kovalchuk@prionex.com',
       position: null,
       department: null,
       manager: null,
@@ -128,6 +139,95 @@ describe('PersonalDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
 
     expect(onClose).toHaveBeenCalled()
+  })
+})
+
+/*
+ * The section reads from two tables and the dialog has to write both, because
+ * the section shows name, phone and email and nothing else in the app can
+ * change them for somebody else any more - the employees list dropped its
+ * Actions column and its edit modal went unreachable with it.
+ */
+describe('PersonalDialog: the fields that live on the employee record', () => {
+  beforeEach(() => {
+    saved.personal.mockReset()
+    saved.rejectWith = null
+  })
+
+  const open = () =>
+    render(<PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />)
+
+  const field = (name: string) => screen.getByLabelText(`pages.employeeCard.fields.${name}`)
+
+  it('opens with the name split the way it is stored', () => {
+    open()
+
+    expect(field('lastName')).toHaveValue('Kovalchuk')
+    expect(field('firstName')).toHaveValue('Olena')
+  })
+
+  it('offers every field the section displays', () => {
+    open()
+
+    for (const name of ['lastName', 'firstName', 'middleName', 'phone', 'email', 'workFormat']) {
+      expect(field(name)).toBeInTheDocument()
+    }
+  })
+
+  it('sends a corrected name', async () => {
+    open()
+
+    await userEvent.clear(field('lastName'))
+    await userEvent.type(field('lastName'), 'Kovalenko')
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).toHaveBeenCalledWith(
+      expect.objectContaining({ last_name: 'Kovalenko', first_name: 'Olena' })
+    )
+  })
+
+  it('sends a phone and an address alongside the profile fields', async () => {
+    open()
+
+    await userEvent.type(field('phone'), '+380 67 123 45 67')
+    await userEvent.clear(field('city'))
+    await userEvent.type(field('city'), 'Lviv')
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: '+380 67 123 45 67', city: 'Lviv' })
+    )
+  })
+
+  /*
+   * These columns are NOT NULL. Sending a null would be refused, so the form
+   * refuses first - which is the difference between a message beside the field
+   * and one at the top of the dialog after a round trip.
+   */
+  it('will not submit a name it has been asked to empty', async () => {
+    open()
+
+    await userEvent.clear(field('firstName'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).not.toHaveBeenCalled()
+  })
+
+  it('will not submit without an address', async () => {
+    open()
+
+    await userEvent.clear(field('email'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).not.toHaveBeenCalled()
+  })
+
+  it('always sends a work format rather than a null it cannot store', async () => {
+    open()
+
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).toHaveBeenCalledWith(expect.objectContaining({ work_format: 'office' }))
   })
 })
 

@@ -10902,7 +10902,10 @@
         "institution": "Навчальний заклад",
         "faculty": "Факультет / Спеціальність",
         "graduationYear": "Рік випуску",
-        "childName": "ПІБ дитини"
+        "childName": "ПІБ дитини",
+        "lastName": "Прізвище",
+        "firstName": "Ім'я",
+        "middleName": "По батькові"
       },
       "documents": {
         "none": "Документів не додано.",

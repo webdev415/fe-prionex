@@ -9,6 +9,9 @@
 export interface CardHeader {
   id: number
   full_name: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
   status: string
   work_format: string | null
   avatar_url: string | null
@@ -106,7 +109,13 @@ export interface EmployeeCard {
 }
 
 export interface PersonalInformationUpdate {
+  last_name?: string | null
+  first_name?: string | null
+  middle_name?: string | null
   date_of_birth?: string | null
+  phone?: string | null
+  email?: string | null
+  work_format?: string
   telegram?: string | null
   city?: string | null
   address?: string | null
