@@ -3625,7 +3625,7 @@
     },
     "users": {
       "title": "Employees",
-      "addNewUser": "New User",
+      "addNewUser": "New Employee",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",
       "searchPlaceholder": "Search users...",

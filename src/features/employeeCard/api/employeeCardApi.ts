@@ -1,4 +1,5 @@
 import api from '@/lib/api'
+import { listFiltersFromSearch } from '@/pages/UserManagement/lib/userFilterDefaults'
 import type {
   AdditionalInformationUpdate,
   CardNeighbours,
@@ -97,8 +98,18 @@ export async function getCardNeighbours(
   userId: number,
   listQuery: string
 ): Promise<CardNeighbours> {
+  /*
+   * The card is handed the list's own URL so it can send the reader back to
+   * it, but the endpoint speaks the list API's vocabulary rather than the
+   * controls'. Forwarding the URL as it stands drops role, project,
+   * department and group without a word, and the position comes back counted
+   * over everybody instead of over what was on screen.
+   */
+  const filters = new URLSearchParams(
+    listFiltersFromSearch(new URLSearchParams(listQuery))
+  ).toString()
   const response = await api.get<CardNeighbours>(
-    `${base(userId)}/neighbours${listQuery ? `?${listQuery}` : ''}`
+    `${base(userId)}/neighbours${filters ? `?${filters}` : ''}`
   )
   return response.data
 }
