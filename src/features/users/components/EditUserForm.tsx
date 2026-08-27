@@ -8,10 +8,14 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useUpdateUser } from '../hooks/useUpdateUser'
-import { updateUserSchema, type UpdateUserFormData } from '../schemas/userSchemas'
+import {
+  AGENT_EXTENSION_REQUIRED_MESSAGE,
+  updateUserSchema,
+  type UpdateUserFormData,
+} from '../schemas/userSchemas'
 import type { UpdateUserInput } from '../types'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
@@ -67,6 +71,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     handleSubmit,
     control,
     reset,
+    setValue,
+    setError,
     formState: { errors, dirtyFields },
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
@@ -83,6 +89,74 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       is_agent: user?.is_agent || false,
     },
   })
+
+  const isAgent = useWatch({ control, name: 'is_agent' }) === true
+
+  const loadedIsAgent = user.is_agent || false
+
+  /**
+   * Is Agent decides whether the extensions belong to this account, so a real
+   * change of that answer empties them. A toggle that ends where it started is
+   * not a change of answer, though, and two stray clicks are not a decision.
+   *
+   * Both directions matter, because the account decides which one a double
+   * click takes. An operator starts checked, so it reads as uncheck then
+   * check. An account that predates this rule starts unchecked with an
+   * extension still stored against it, so the same two clicks read as check
+   * then uncheck and end on the clear. Keying the restore on returning to the
+   * loaded state covers both; keying it on the clear covers only the first,
+   * and leaves exactly the accounts this protects losing both fields to a
+   * misclick, with nothing in the interface to get them back.
+   */
+  const handleIsAgentToggle = (next: boolean, onChange: (value: boolean) => void) => {
+    onChange(next)
+    if (!next) clearAgentExtensions()
+    if (next === loadedIsAgent) restoreAgentExtensions()
+  }
+
+  /**
+   * Called from the toggle rather than an effect watching `is_agent`. An
+   * effect also runs on mount and again on the reset() that seeds the form,
+   * and some accounts predate this rule: unchecked while an extension is still
+   * stored against them. Their values must survive an open-and-close, so
+   * emptying the fields has to be something the admin did rather than
+   * something the state is.
+   *
+   * `shouldDirty` matters as much as the value: the payload sends a cleared
+   * extension only when the field is dirty, so without it the field empties on
+   * screen and the record keeps its extension.
+   */
+  const clearAgentExtensions = () => {
+    setValue('asterisk_extension', '', { shouldDirty: true, shouldValidate: true })
+    setValue('dialer_extension', '', { shouldDirty: true, shouldValidate: true })
+  }
+
+  /**
+   * Puts back what the record holds, not what was on screen a moment ago.
+   *
+   * Reading from `user` rather than remembering the field's last value is the
+   * whole point. Remembering it meant deciding, at clear time, whether a field
+   * was worth keeping -- and a field the admin had typed into looked not worth
+   * keeping, because re-checking is not meant to bring a typed value back. But
+   * a typed field still has a stored value sitting behind it, and skipping the
+   * field threw that away too: the box ended where it started while the record
+   * lost an extension nobody chose to remove.
+   *
+   * A typed value is still not restored. The field goes back to what the
+   * record says, which is not what they entered. And since that is the form's
+   * default, the dirty flag clears with it and the payload omits the key, so a
+   * no-op toggle sends nothing at all.
+   */
+  const restoreAgentExtensions = () => {
+    setValue('asterisk_extension', user.asterisk_extension || '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    setValue('dialer_extension', user.dialer_extension || '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }
 
   // Reset form when user data changes (basic fields only)
   useEffect(() => {
@@ -108,6 +182,23 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
   }
 
   const onSubmit = (data: UpdateUserFormData) => {
+    // Enforced here rather than in the schema, and only once the admin has had
+    // a hand in it. A few accounts predate this rule and are already agents
+    // with no extension; a schema-level rule would block their form over a
+    // field nobody touched, which is the same inherited inconsistency the
+    // unchecked-but-populated case is deliberately left alone.
+    if (
+      (dirtyFields.is_agent || dirtyFields.asterisk_extension) &&
+      data.is_agent &&
+      !data.asterisk_extension
+    ) {
+      setError('asterisk_extension', {
+        type: 'manual',
+        message: AGENT_EXTENSION_REQUIRED_MESSAGE,
+      })
+      return
+    }
+
     // Build payload for update with project assignments
     const payload: UpdateUserInput = {
       email: data.email,
@@ -117,10 +208,19 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       phone: data.phone,
       language: data.language,
       timezone: data.timezone,
-      asterisk_extension: data.asterisk_extension || undefined,
-      // Send the value only when it actually changed, so an emptied field is
-      // sent as '' (which the backend clears — and deprovisions the operator),
-      // while an untouched field is omitted (no redundant re-provision).
+      // Both extensions are sent only when they actually changed, so an
+      // emptied field arrives as '' (which the backend clears — and
+      // deprovisions the operator), while an untouched field is omitted and
+      // left alone.
+      //
+      // `|| undefined` was wrong for asterisk_extension: a cleared field is
+      // '', which that turns into undefined, which the payload drops. The
+      // backend applies exclude_unset, so unchecking Is Agent emptied the box
+      // on screen, saved without complaint, and left the extension assigned to
+      // a user who is no longer an operator.
+      asterisk_extension: dirtyFields.asterisk_extension
+        ? (data.asterisk_extension ?? '')
+        : undefined,
       dialer_extension: dirtyFields.dialer_extension ? (data.dialer_extension ?? '') : undefined,
       is_agent: data.is_agent,
     }
@@ -324,6 +424,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             <Input
               id="asterisk_extension"
               placeholder="1001"
+              disabled={!isAgent}
               {...register('asterisk_extension')}
               aria-invalid={!!errors.asterisk_extension}
               variant={errors.asterisk_extension ? 'error' : 'default'}
@@ -342,6 +443,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             <Input
               id="dialer_extension"
               placeholder="9001"
+              disabled={!isAgent}
               {...register('dialer_extension')}
               aria-invalid={!!errors.dialer_extension}
               variant={errors.dialer_extension ? 'error' : 'default'}
@@ -363,7 +465,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                 <Checkbox
                   id="is_agent"
                   checked={field.value || false}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onCheckedChange={(checked) =>
+                    handleIsAgentToggle(checked === true, field.onChange)
+                  }
                 />
               )}
             />
