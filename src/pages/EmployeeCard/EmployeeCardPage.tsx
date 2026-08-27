@@ -11,7 +11,9 @@ import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
 import { AdditionalDialog } from './components/dialogs/AdditionalDialog'
 import { ContactsDialog } from './components/dialogs/ContactsDialog'
+import { DocumentsDialog } from './components/dialogs/DocumentsDialog'
 import { PersonalDialog } from './components/dialogs/PersonalDialog'
+import { WorkDialog } from './components/dialogs/WorkDialog'
 import { useScrollSpy } from './hooks/useScrollSpy'
 
 const SECTION_IDS = [
@@ -75,7 +77,7 @@ export function EmployeeCardPage() {
             />
 
             <CardSections card={data} onEdit={setEditing} />
-            <DocumentsSection card={data} />
+            <DocumentsSection card={data} onEdit={setEditing} />
             <SurveysSection card={data} />
 
             <section
@@ -104,6 +106,17 @@ export function EmployeeCardPage() {
             )}
             {editing === 'additional' && (
               <AdditionalDialog
+                card={data}
+                projectId={projectId}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
+            {editing === 'work' && (
+              <WorkDialog card={data} projectId={projectId} open onClose={() => setEditing(null)} />
+            )}
+            {editing === 'documents' && (
+              <DocumentsDialog
                 card={data}
                 projectId={projectId}
                 open

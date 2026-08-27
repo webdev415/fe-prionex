@@ -10922,7 +10922,11 @@
         "additional": "Додаткові дані",
         "add": "Додати",
         "education": "Освіта",
-        "languagesHint": "Наприклад: English (B2), Polish (A2)"
+        "languagesHint": "Наприклад: English (B2), Polish (A2)",
+        "choose": "Оберіть",
+        "noManager": "Без керівника",
+        "documents": "Документи",
+        "attachFile": "Додати документ (PDF або Word, до 10 МБ)"
       }
     }
   },
