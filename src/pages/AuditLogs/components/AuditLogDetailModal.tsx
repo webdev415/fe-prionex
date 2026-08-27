@@ -286,6 +286,25 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
             </div>
           </div>
 
+          {/* Details Section — the free-text reason behind the event.
+              Rendered above Changes because an event that carries one often
+              has no field-level diff at all: a deletion, or anything a
+              background job did. Without this the modal showed only the
+              header fields for such rows, and everything the backend recorded
+              about WHY was invisible. */}
+          {log.reason && (
+            <div className="flex flex-col gap-2 self-stretch">
+              <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {t('pages.auditLogs.detailModal.details')}
+              </span>
+              <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-1 self-stretch rounded-xl border px-3 py-3 sm:px-6 sm:py-4">
+                <span className="text-foreground text-sm leading-[155%] break-words">
+                  {log.reason}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Changes Section */}
           {log.changes && log.changes.length > 0 && (
             <div className="flex flex-col gap-2 self-stretch">

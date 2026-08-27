@@ -9181,6 +9181,7 @@
         "title": "Audit Log Details",
         "eventInformation": "Event Information",
         "changes": "Changes",
+        "details": "Details",
         "requestInformation": "Request Information",
         "timestamp": "Timestamp",
         "user": "User",
