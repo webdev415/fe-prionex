@@ -11,6 +11,10 @@ export interface SurveysSectionProps {
  *
  * An answer still being waited on carries no score, so it shows as pending
  * rather than as zero out of a hundred.
+ *
+ * The link to the details points outside this system, because the survey ran
+ * there. It opens in its own tab with the opener withheld, since nothing here
+ * chose that address - it arrived in an import.
  */
 export function SurveysSection({ card }: SurveysSectionProps) {
   const { t, i18n } = useTranslation()
@@ -31,15 +35,28 @@ export function SurveysSection({ card }: SurveysSectionProps) {
                   </p>
                 )}
               </div>
-              {survey.status === 'pending' || survey.score === null ? (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                  {t('pages.employeeCard.surveys.pending')}
-                </span>
-              ) : (
-                <span className="text-foreground text-sm tabular-nums">
-                  {survey.max_score ? `${survey.score}/${survey.max_score}` : survey.score}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {survey.status === 'pending' || survey.score === null ? (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                    {t('pages.employeeCard.surveys.pending')}
+                  </span>
+                ) : (
+                  <span className="text-foreground text-sm tabular-nums">
+                    {survey.max_score ? `${survey.score}/${survey.max_score}` : survey.score}
+                  </span>
+                )}
+
+                {survey.details_url && (
+                  <a
+                    href={survey.details_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary text-sm hover:underline"
+                  >
+                    {t('pages.employeeCard.surveys.details')}
+                  </a>
+                )}
+              </div>
             </li>
           ))}
         </ul>

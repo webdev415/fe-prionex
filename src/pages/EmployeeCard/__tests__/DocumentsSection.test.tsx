@@ -154,6 +154,54 @@ describe('SurveysSection', () => {
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
+  it('offers the link to the details when the import carried one', () => {
+    render(
+      <SurveysSection
+        card={card({
+          surveys: [
+            {
+              id: 3,
+              name: 'Onboarding Feedback',
+              completed_on: '2024-03-22',
+              status: 'completed',
+              score: 92,
+              max_score: 100,
+              details_url: 'https://forms.example/response/3',
+            },
+          ],
+        })}
+      />
+    )
+
+    const link = screen.getByRole('link', { name: 'pages.employeeCard.surveys.details' })
+    expect(link).toHaveAttribute('href', 'https://forms.example/response/3')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
+  })
+
+  it('shows no link for an answer that came without one', () => {
+    render(
+      <SurveysSection
+        card={card({
+          surveys: [
+            {
+              id: 4,
+              name: 'Q2 2024 Satisfaction Survey',
+              completed_on: '2024-06-15',
+              status: 'completed',
+              score: 87,
+              max_score: 100,
+              details_url: null,
+            },
+          ],
+        })}
+      />
+    )
+
+    // Queried by text, not by role: an anchor with no href has no link role,
+    // so a role query would pass even with the anchor rendered.
+    expect(screen.queryByText('pages.employeeCard.surveys.details')).not.toBeInTheDocument()
+  })
+
   it('says so when no surveys have been recorded', () => {
     render(<SurveysSection card={card()} />)
 
