@@ -291,3 +291,171 @@ jobs:
             echo "NOTE: GITHUB_STEP_SUMMARY is unset -- the rationale exists only in this job log,"
             echo "which on this instance has repeatedly failed to archive (log_in_storage=f)."
           fi
+
+  # ── gate ──────────────────────────────────────────────────────────────────────────────────
+  # 🔴 THIS JOB EXISTS BECAUSE THE CONDITION IT CARRIES CANNOT LIVE ON `record`, AND THAT WAS
+  # MEASURED, NOT PREDICTED. Run 725, 2026-08-27, a `hold_lock_seconds: 60` dispatch:
+  #
+  #   Deploy PRE-PROD via the shared definition ......... success   (skipped wrapper, `#d21`)
+  #     0. Preflight .................................... skipped
+  #     Deploy a ref or image tag to the stand .......... skipped
+  #   Hold-lock test fixture -- does not deploy ......... success
+  #   Record the deployed candidate ..................... 🔴 RAN
+  #   🔴 Disclose a green deploy whose record did not land  skipped
+  #
+  # BOTH of those last two jobs carried the SAME clause, `!(inputs.hold_lock_seconds > 0)`.
+  # `record-outcome` is a PLAIN job: its `if:` was evaluated HERE, in the caller, where
+  # `inputs.hold_lock_seconds` is 60 -- the clause returned false and the job skipped, correctly.
+  # `record` is a `uses:` job: `#d21` (run 631) established that a `uses:` job's `if:` is COPIED
+  # DOWN into the callee and evaluated THERE, where the caller's `inputs` do not exist. So
+  # `inputs.hold_lock_seconds` was null, `null > 0` was false, `!false` was TRUE, and the record
+  # ran on a dispatch that deployed nothing.
+  #
+  # 🟢 Nothing was written, and the reason is worth keeping: G5 refused. The stand was serving
+  # `sha256:e17c88af…` while the candidate resolved to `sha256:a62e8687…`, and G5's message was
+  # *"Recording this candidate now would be a claim, not evidence -- refusing."* Defence in depth
+  # did its job. It is NOT the design, and this gate is not optional because of it.
+  #
+  # The fix is the shape Story 6.5 already used for the promotion guard, for the same reason
+  # (`#d49`: *"Не `uses:`-джоба: `#d21` ран 631 -- пропущенная обёртка рапортует success"*): a
+  # PLAIN job whose `if:` is evaluated in this workflow's own context, which `record` then simply
+  # `needs:`. No expression on `record` at all -- a skipped dependency skips its dependents, which
+  # is dependency semantics rather than expression evaluation, and therefore not subject to the
+  # copied-down rule that broke the first attempt.
+  #
+  # ⚠️ It must SKIP, never FAIL, on the hold-lock path. `#d49` also recorded that jobs depending
+  # on a FAILED job report `failure`, not `skipped` -- a failing gate would turn every hold-lock
+  # test dispatch red and would fire `record-outcome`'s alarm over a fixture.
+  #
+  # `runs-on`: the same trade the `e2e` job above argues and then corrects itself about. See it.
+  gate:
+    name: "Gate the record on a deploy that actually deployed"
+    needs: deploy
+    if: needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0)
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      # No `${{ }}` in this body, including in its comments (`#d21`). Values arrive via `env:`.
+      - name: "Say why the record is allowed to run"
+        env:
+          HOLD_SECONDS: ${{ inputs.hold_lock_seconds }}
+          CANDIDATE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          echo "deploy succeeded and hold_lock_seconds='${HOLD_SECONDS:-<unset>}' is not > 0,"
+          echo "so this dispatch really deployed ${CANDIDATE_TAG} and the record may proceed."
+          echo
+          echo "If you are reading this on a run where nothing was deployed, THIS GATE HAS FAILED"
+          echo "and the bug is in its own condition -- not in the recorder it guards. Run 725 is"
+          echo "the recorded instance of that failure mode."
+
+  # ── record ────────────────────────────────────────────────────────────────────────────────
+  # Story 6.11 (`#d51`). Until 2026-08-27 this did not exist and recording a candidate was a
+  # SECOND human dispatch carrying a `validated: pass|fail` verdict. `#d38` §2 argued that shape
+  # was the only one in which `preprod-<sha>` could mean "validated"; Oleg's decision accepted the
+  # argument and paid its price. The marker now means "this commit REACHED PRE-PROD".
+  #
+  # 🔴 THE INPUT IS `candidate_tag`, NOT `image_tag`, AND THAT IS THE WHOLE POINT.
+  # `#d47`(3), runs 637/640: a caller's `workflow_dispatch` input SHADOWS a callee input of the
+  # same name. This file's dispatch input IS `image_tag` and cannot be renamed. Had the callee's
+  # input also been `image_tag`, the `with:` mapping below would be permanently UNPROVABLE -- the
+  # two values coincide by construction, so nothing could distinguish "the mapping works" from
+  # "the shadow supplied it". That is exactly why `#d47` records the defect as invisible in both
+  # shipped callers. The callee prints both inputs and the resolved value; that print is the proof.
+  #
+  # 🔴 `needs.deploy.result == 'success'` IS NOT A SUFFICIENT GATE ON ITS OWN, AND THE SECOND
+  # CLAUSE IS NOT DEFENSIVE PADDING. `deploy` above is a `uses:` wrapper, and `#d21` (run 631)
+  # established that a SKIPPED `uses:` job reports **success** -- Story 6.6 saw it again in run
+  # 662. `deploy-stand.yml` gates its `preflight` job, and the whole deploy chain behind it, on
+  #     if: ${{ !(inputs.hold_lock_seconds > 0) }}
+  # so a `hold_lock_seconds > 0` dispatch DEPLOYS NOTHING while this wrapper still reports
+  # success. Without the second clause below, such a dispatch would record a candidate: the stand
+  # is still serving whatever it served before, G5 finds that digest present and passes, and
+  # `preprod-current` is moved by a run that deployed nothing -- with nothing going red anywhere.
+  # The clause is written as the LITERAL COMPLEMENT of `deploy-stand.yml`'s own condition, not as
+  # `== 0`, deliberately: whatever that expression does with a given input, this one does the
+  # exact opposite of it, and no second interpretation of the input's type is introduced.
+  #
+  # ⚠️ `simulate_bad_credential` needs NO clause and none is added. It makes the deploy genuinely
+  # FAIL, so `needs.deploy.result == 'success'` already excludes it. An unnecessary condition is a
+  # claim that something was checked.
+  #
+  # ⚠️ The callee's own `concurrency:` block is NOT applied on this path (`#d21`) -- but here that
+  # lands better than it did for PROD, and the difference is worth stating rather than inheriting
+  # `#d48`'s conclusion. `record-prod-image.yml`'s own group is DISJOINT from its caller's, which
+  # is why `#d48` records an open window between a manual and an automatic record over two
+  # permanent writes. `record-preprod-candidate.yml`'s own group is ALREADY the literal group this
+  # file uses -- `deploy-preprod-fe-prionex-preprod` -- so on this path the record runs under the
+  # group it would have chosen anyway, and a hand dispatch is serialized against an automatic one
+  # by that same group. 🔴 ARGUED FROM THE TWO FILES, NOT OBSERVED: no dispatch has raced the two.
+  record:
+    name: "Record the deployed candidate (preprod-<12hex>, then preprod-current)"
+    needs: [deploy, gate]
+    uses: ./.forgejo/workflows/record-preprod-candidate.yml
+    with:
+      candidate_tag: ${{ inputs.image_tag }}
+    secrets: inherit
+
+  # ── record-outcome ────────────────────────────────────────────────────────────────────────
+  # Exists for ONE state: the deploy succeeded and the record did not. Without it the run is red,
+  # the stand is updated, `preprod-current` still names the PREVIOUS candidate, and nothing
+  # anywhere says so. Direct twin of `deploy-prod.yml`'s job of the same name (Story 6.6).
+  #
+  # ⚠️ `runs-on`, chosen knowingly -- read the `e2e` header above before changing it. That job
+  # rejects `node-20` because a job queued behind the shared CI runner keeps this run in progress
+  # and therefore HOLDS this file's PRE-PROD concurrency group at `cancel-in-progress: false`,
+  # blocking the next dispatch including a hotfix; and it then CORRECTS ITSELF, because
+  # `deploy-dev-preprod` is shared too (`deploy-dev.yml`, `dev-reset.yml`, and
+  # `record-preprod-candidate.yml`'s own verify job) and is a lower-probability queue, not a
+  # zero-probability one. The same trade is made here for the same reason, and the same residual
+  # is inherited: this job can queue, and while it queues the group is held. It is bounded by
+  # `timeout-minutes` only once SCHEDULED, never in the queue.
+  record-outcome:
+    name: "🔴 Disclose a green deploy whose record did not land"
+    needs: [deploy, record]
+    if: always() && needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0) && needs.record.result != 'success'
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      # No `${{ }}` anywhere in this body, INCLUDING inside its comments -- this instance
+      # substitutes inside shell comments too, and one empty token has rejected an entire
+      # workflow with no diagnostic beyond `action_run.pre_execution_error_details` (`#d21`).
+      # Every value arrives through the `env:` block below.
+      - name: "State what is true right now"
+        env:
+          CANDIDATE_TAG: ${{ inputs.image_tag }}
+          RECORD_RESULT: ${{ needs.record.result }}
+          HISTORY_WRITTEN: ${{ needs.record.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ needs.record.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          BT="$(printf '\140')"
+          {
+            echo "### 🔴 PRE-PROD IS UPDATED. THE REGISTRY IS NOT."
+            echo
+            echo "The deploy job SUCCEEDED and the record job did not (${BT}${RECORD_RESULT}${BT})."
+            echo "Read this before reading the red run status."
+            echo
+            echo "**True right now:**"
+            echo "- The PRE-PROD stand is running ${BT}${CANDIDATE_TAG}${BT}. The deploy is done."
+            echo "- ${BT}preprod-<12hex>${BT} for this commit: **${HISTORY_WRITTEN:-not reported}**."
+            echo "- ${BT}preprod-current${BT}: **${CURRENT_WRITTEN:-not reported}**."
+            echo "  (read from the callee's own workflow_call OUTPUTS, not from a log line --"
+            echo "   this instance's job logs are frequently unreadable when they are needed.)"
+            echo
+            echo "**The write order is history FIRST, pointer second**, so a partial state is"
+            echo "readable: if the history tag is written and the pointer is not, the pointer is"
+            echo "STALE and the history is correct. Empty means the record job died before that"
+            echo "step reported."
+            echo
+            echo "**Repair, and it is safe to repeat:** dispatch ${BT}record-preprod-candidate.yml${BT}"
+            echo "with ${BT}image_tag: ${CANDIDATE_TAG}${BT} and acknowledgement"
+            echo "${BT}RECORD-PREPROD-CANDIDATE${BT}. Every write in that file is"
+            echo "attach-if-absent / no-op-if-identical, so re-running is idempotent."
+            echo
+            echo "**Do NOT redeploy to fix this.** The stand is already correct; only the"
+            echo "registry record is missing. Redeploying would rebuild nothing and risk moving"
+            echo "the stand off an artifact that is already the right one."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Deploy succeeded but the record did not (${RECORD_RESULT}). preprod-current is stale. See the job summary."
+          exit 1

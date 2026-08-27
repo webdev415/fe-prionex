@@ -4949,3 +4949,38 @@ keeping anything, and every claim about it has had to be hedged ever since.
 against an unknown horizon is a generator whose output nobody can date.
 
 **Removal trigger:** the retention figure is measured and recorded in `#d51` §10.
+
+---
+
+## Deferred from: Story 6.11 (2026-08-27)
+
+Two unearned outcome-matrix rows. Both are labelled in the story's own matrix rather than graded as
+met; this is where they get an owner.
+
+### ⚠️ `record-outcome`'s disclosure has never fired. **Owner: Epic 6 retrospective.**
+
+`deploy-preprod.yml`'s `record-outcome` job exists for exactly one state — the deploy succeeded and
+the record did not — and none of Story 6.11's six dispatches produced it. Run 725 came closest and
+does **not** count: the record failed there while the `gate` job did not yet exist, and
+`record-outcome`'s own condition correctly excluded that run.
+
+⚠️ **Its `deploy-prod.yml` twin (Story 6.6) has never fired either.** So the shape is inherited
+rather than novel — but inherited is not proven, and the two now share an unexercised failure path
+over the one state each of them was built for.
+
+**Why it is not cheap to earn:** staging it means making a deploy succeed and then making the
+recorder fail, which on the current design means breaking a guard on purpose. The honest options are
+a force-test (a stubbed binary on `PATH`, the technique `#d38` §6 used for G4/G6) or accepting the
+label permanently. **Removal trigger:** the first real occurrence, or a deliberate force-test.
+
+### ⚠️ The three `EXISTS` guards are unreachable by any dispatch. **Owner: nobody — accepted.**
+
+Story 6.11 added a `true|false`-or-fail guard to all three consumptions of `$EXISTS` in
+`record-preprod-candidate.yml` (AC11, plus a third site the AC did not enumerate). They fire only
+when a probe step **succeeds** while its `$GITHUB_OUTPUT` write does not reach the consumer.
+
+**No dispatch can stage that**, so they have no live row and never will without a force-test. They
+are cheap, they close the trigger `#d48` names verbatim for the fourteenth defect (*"a
+`workflow_call` refactor of exactly the kind this story performs"*), and they fail in the safe
+direction. **Recorded as permanently unearned rather than quietly counted.** No removal trigger —
+this entry exists so the gap is not rediscovered as a finding.

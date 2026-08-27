@@ -383,7 +383,7 @@ jobs:
   # bypass vs our `rollback: true`. Stated plainly rather than softened -- under Option C we
   # cannot compare artifacts at all, because the PROD image is a separate build (`#d2`, NFR11).
   guard:
-    name: "Promotion guard -- refuse a commit PRE-PROD never validated"
+    name: "Promotion guard -- refuse a commit that never reached PRE-PROD"
     needs: derive
     if: needs.derive.outputs.is_rollback != 'true'
     runs-on: node-20
@@ -443,7 +443,8 @@ jobs:
               echo "FAIL: ${MARKER} is ABSENT from the registry (HTTP 404 -- a classified absence,"
               echo "  not an ambiguous read: the registry answered, and it answered 'not found')."
               echo
-              echo "  Commit ${HEX} was never recorded as validated on PRE-PROD, so this release"
+              echo "  Commit ${HEX} has no PRE-PROD marker, so it never reached PRE-PROD"
+              echo "  through the pipeline at all; this release"
               echo "  is refused before anything is built and before the production stand is"
               echo "  touched. FR16, #d2."
               echo
@@ -469,8 +470,8 @@ jobs:
               echo "  404. This is AMBIGUOUS, a different outcome from ABSENT, and it must not be"
               echo "  reported as one."
               echo "  🔴 Refusing the release. This guard admits ONLY a classified 200, because a"
-              echo "  false negative costs a re-dispatch while a false positive puts an"
-              echo "  unvalidated commit into production."
+              echo "  false negative costs a re-dispatch while a false positive puts a commit that"
+              echo "  never reached PRE-PROD into production."
               exit 1
               ;;
           esac
@@ -485,15 +486,24 @@ jobs:
             echo "| marker found | ${MARKER} |"
             echo "| will deploy | ${DEPLOY_TAG} |"
             echo
-            echo "**What this proves:** a PRE-PROD validation marker exists for this commit."
+            echo "**What this proves:** this commit was built for PRE-PROD and deployed there"
+            echo "through the pipeline. A marker exists for it."
             echo
             echo "**What it does NOT prove, and cannot:**"
+            echo "- 🔴 **Not that anyone validated it.** Since 2026-08-27 (Story 6.11, #d51) the"
+            echo "  marker is written AUTOMATICALLY by a successful PRE-PROD deploy. There is no"
+            echo "  verdict input anywhere in the pipeline and no workflow reads one. This gate"
+            echo "  proves the commit went through PRE-PROD, not that anyone looked at the result."
+            echo "  RVC-v1.1 still applies and is carried by docs/preprod-candidates.md and"
+            echo "  docs/production-approval-regulation.md alone. (#d51, #d41, #d38 section 2.)"
             echo "- **Not the artifact.** Under Option C the PROD image is a separate build,"
             echo "  byte-different from the one PRE-PROD served, so nothing here compares"
             echo "  artifacts. A build-time variable difference -- a typo in a prod-only"
             echo "  VITE_ value -- reaches production unvalidated. (#d2, NFR11.)"
-            echo "- **Not that the validation was clean.** A waiver leaves NO signal at the"
-            echo "  registry, so this gate cannot tell a waived candidate from a 12/12 one."
+            echo "- **Not that any validation was clean** -- a strictly weaker statement than"
+            echo "  the one above, kept because the waiver mechanism still exists. A waiver leaves"
+            echo "  NO signal at the registry, so this gate could not tell a waived candidate from"
+            echo "  a 12/12 one even when the marker still implied a verdict."
             echo "  The approver reads docs/preprod-candidates.md, not this marker."
             echo "  (Story 5.4 D1; #d40/#d41; docs/production-approval-regulation.md.)"
             echo
