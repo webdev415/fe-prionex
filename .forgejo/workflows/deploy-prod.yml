@@ -652,11 +652,24 @@ jobs:
             diag "### SMOKE FAIL — GET /" "" "Status: \`${CODE}\` (expected 200; 000 = no connection at all)" "" "Response headers as received:" "" '```' "$HDRS" '```'
             exit 1
           fi
-          # Stock nginx sets NEITHER of these. Their presence is what distinguishes "our nginx.conf
-          # is serving" from "a default nginx is answering 200" -- which no status code can.
-          for H in "x-content-type-options: nosniff" "x-frame-options: sameorigin"; do
+          # 🔴 THIS ASSERTION WAS WRONG ON ITS FIRST TWO RUNS (698, 699) AND IS CORRECTED HERE
+          # AGAINST A LOCAL REPRODUCTION, not a guess. It originally required
+          # `x-content-type-options: nosniff` and `x-frame-options: sameorigin` -- which nginx.conf
+          # does declare, at SERVER level, with `always`. They are NOT SERVED on `/`.
+          # Why: nginx `add_header` is inherited into a location ONLY IF that location declares no
+          # `add_header` of its own. `location ~* \.html$` declares two (Content-Type and
+          # Cache-Control), and the SPA fallback serves /index.html THROUGH that location -- so the
+          # server-level security headers are dropped for every HTML response.
+          # Reproduced on `nginx:alpine` with this exact nginx.conf: `/` returns 200 with
+          # Content-Type and Cache-Control from the .html block and NEITHER security header.
+          # ⚠️ That is a real finding about the production config and it is FILED, not fixed here --
+          # nginx.conf is frozen for this story. See deferred-work.md.
+          # What is asserted instead is a header this config DOES deliver and stock nginx does not,
+          # which preserves the property this probe exists for: telling "our config is serving" from
+          # "a default nginx is answering 200", something no status code can do.
+          for H in "cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"; do
             if ! printf '%s' "$HDRS" | tr '[:upper:]' '[:lower:]' | tr -d '\r' | grep -q "^${H}$"; then
-              diag "### SMOKE FAIL — missing header on GET /" "" "Expected: \`${H}\`" "" "🔴 Before concluding the wrong image is serving, check the nginx \`add_header\` inheritance rule: a location block that declares ANY \`add_header\` does NOT inherit the server-level ones. \`location ~* \\.html\$\` in this repo's nginx.conf declares two, and the SPA fallback serves /index.html through it." "" "Response headers as received:" "" '```' "$HDRS" '```'
+              diag "### SMOKE FAIL — missing header on GET /" "" "Expected: \`${H}\`" "" "This header comes from nginx.conf's own \`location ~* \\.html\$\` block. Stock nginx does not set it, so its absence means a different config — or a different image — is answering." "" "Response headers as received:" "" '```' "$HDRS" '```'
               exit 1
             fi
           done

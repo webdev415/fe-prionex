@@ -4817,3 +4817,27 @@ reading the file rather than by re-reading that list.
   removes the **package version**, i.e. every tag on it. So cleaning the residue later would also remove
   the deployable tag and re-break epic AC2's *"remains addressable"*. Named as permanent in §8, not as
   entangled. **Owner: unassigned.** **Removal trigger:** anyone proposing to delete a `prod-*` marker.
+
+## Deferred from: Story 6.7 (2026-08-27)
+
+- 🔴 **The three security headers `nginx.conf` declares with `always` are NOT served on any HTML
+  response — including `/`.** Found by Story 6.7's smoke check on its first live run (698), and
+  **confirmed by local reproduction** on `nginx:alpine` with this repository's exact `nginx.conf`:
+  `GET /` returns `200` carrying `Content-Type` and `Cache-Control` from the `.html` block and
+  **neither `X-Frame-Options: SAMEORIGIN` nor `X-Content-Type-Options: nosniff`** (nor
+  `X-XSS-Protection`).
+  **Mechanism, and it is a documented nginx rule rather than a bug:** `add_header` directives are
+  inherited into a location **only if that location declares none of its own**. `location ~* \.html$`
+  declares two (`Content-Type`, `Cache-Control`), and the SPA fallback (`try_files … /index.html`)
+  serves every route **through that location** — so the server-level headers are dropped for exactly
+  the response class they exist to protect. `always` does not help: it governs error responses, not
+  inheritance.
+  **What is actually at risk:** clickjacking protection and MIME-sniffing protection are absent on
+  the application's own pages. Static assets under the `~* \.(js|css|…)$` location lose them too, for
+  the same reason.
+  **Not fixed by Story 6.7** — `nginx.conf` is frozen for that story, the fix is an application-config
+  change with its own review surface (duplicating the three `add_header` lines into each location
+  that declares any, or moving to a single `map`/`include`), and it touches what every environment
+  serves, not just PROD. **Owner: unassigned — it is frontend application config, not pipeline.**
+  **Removal trigger:** the next story that may edit `nginx.conf`, or a security review of the served
+  headers. ⚠️ **Do not "fix" it inside a deploy workflow.**
