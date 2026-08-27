@@ -93,21 +93,36 @@ name: Record PROD Image
 # wrong thing to hand a deploy, and `prod-<12hex>` is history, not a live artifact
 # reference. Story 6.9 dispatches `sha-<12hex>-prod` -- the tag `build.yml` produced.
 #
-# ── 🚫 SHIPPED WITH ITS REFUSAL PATHS UNOBSERVED -- read this before trusting a guard ──
-# 2026-08-26, Oleg's decision (Story 6.3 Task 5.4 cancelled). ONE dispatch has ever run this
-# file: the real record, which took the PASS path through every guard to both writes. NO
-# guard here has ever been watched REFUSING anything on this instance. G1, G2, G3, the
-# classified-404 branch and G6 have live pass evidence and NO live failure evidence; G4's
-# refusal branch is unreachable through this file's own inputs (force-test only); there is
-# no G5 at all (see above).
-# What DOES exist, and it is a different and weaker claim: the four pure-shell guards were
-# extracted from this file and exercised locally under bash, 15/15, against pass and
-# discriminating inputs. That verifies the SHELL LOGIC. It does not verify that the guards
-# are reached in the real step order, that this file parses and schedules as expected, or
-# that a refusal actually stops a run -- and it carries no run id.
-# This breaches retro-E5 ("every new guard ships with a live outcome matrix incl. a
-# discriminating run"), knowingly and by decision, not by oversight. Story 6.3's AC6 is
-# recorded UNMET. Owner: Oleg. Whoever next dispatches this file -- Story 6.6 -- inherits it.
+# ── ✅ THE REFUSAL PATHS ARE NOW OBSERVED -- Story 6.6, 2026-08-27, with run ids ────────
+# Story 6.3 shipped this file with NO guard ever watched refusing anything, recorded its AC6
+# UNMET by Oleg's decision, and handed the debt to "whoever next dispatches this file --
+# Story 6.6". Story 6.6 dispatched it and PAID IT. Live outcome matrix:
+#
+#   G1  acknowledgement    PASS run 600/662   REFUSE run 663  (2s, before any network call)
+#   G2  -prod suffix       PASS run 600/662   REFUSE run 664  (2s)
+#   G3  exactly-12 hex     PASS run 600/662   REFUSE run 665  (2s) <- #d18 S3's 40-hex case,
+#                                                                     refused live for the
+#                                                                     FIRST time in this project
+#   404 classifier         PASS run 600/662   REFUSE run 666  (18s, reached the registry and
+#                                                                  classified absence AS absence)
+#   G6  labels             PASS run 600/662   ❌ UNEARNED -- needs a -prod-shaped tag whose
+#                                                org.prionex.environment is not prod. None
+#                                                exists and build.yml CANNOT produce one: it
+#                                                derives the label and the tag suffix from the
+#                                                same shell variable. Labelled, not force-tested.
+#   G4  keep_pattern       PASS run 600/662   ❌ UNREACHABLE through this file's own inputs.
+#   AC2 displaced-marker   PASS runs 667/668  (both moves) -- no refusal earned; it would need
+#                                                a prod-current whose target has no prod-<hex>.
+#   G5 equivalent          ❌ does not exist -- see above, and the reason is NOT 6.3's.
+#
+# 🔴 WHICH guard refused in 663-665 is NOT read from a log: this instance does not serve job
+# logs (both API routes 404 since Story 3.6) and the hub is unreachable from the dev session.
+# It is established BY INPUT CONSTRUCTION, and that is exact for two of the three: run 663's
+# tag is perfectly valid so only G1 can reject it, and run 665 passes G1 and G2 so only G3's
+# exactly-12 clause can. Run 664 is weaker -- G2 and G3 would both reject a -preprod tag and
+# G2 simply runs first. Stated unevenly because the evidence IS uneven.
+# The 2s / 18s split is the corroborating measurement: the pure-shell guards die before any
+# network call, and the 404 classifier can only be reached after apt-get, login and buildx.
 #
 # ── One-time by intent; Story 6.6 consumes or supersedes ────────────────────────────────
 # Story 6.6 retags the DEPLOYED image inside `deploy-prod.yml` (Story 6.4's file, which

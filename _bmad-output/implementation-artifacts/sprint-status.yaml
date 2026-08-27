@@ -2001,7 +2001,53 @@ development_status:
   # counting), and a FOURTEENTH defect the thirteen missed is the one that actually arms -- `EXISTS`
   # is a tri-state consumed as a bi-state, and a workflow_call refactor of exactly the kind this
   # story performs bypasses both refusals.
-  6-6-record-the-deployed-production-image: in-progress
+  # ✅ -> `review` 2026-08-27. SHIPPED: `record-prod-image.yml` gains a `workflow_call` block and
+  # `deploy-prod.yml` gains TWO jobs -- `record` (the retag, on both paths) and `record-outcome` (the
+  # one state nobody had handled: green deploy, failed record). The registry mechanism itself is NOT
+  # rewritten; 6.3's file was fixed, not replaced. `derive` is byte-identical so 6.5 rebases clean.
+  # 🔴 ALL 13 INHERITED FINDINGS FIXED, NONE DEFERRED -- plus a FOURTEENTH that was in no list:
+  # `EXISTS` was a tri-state consumed as a bi-state and failed in the UNSAFE direction; any non-`true`
+  # value emptied PRE_DIGEST, and BOTH refusals are gated on it, so both silently became a write while
+  # the log printed "for the first time". Finding #1's Accept-header fix narrows one trigger and leaves
+  # the mechanism.
+  # 🔴 THREE OF THE THIRTEEN CARRIED A WRONG FIX OR PREMISE. #1/#2/#13 all pointed at a
+  # `record-preprod-candidate.yml` pattern that does not exist -- counted at the source: its two
+  # EXISTENCE probes send ONE Accept, like this file's did, and its record job has the identical
+  # tag-vs-digest split. Checked BEFORE copying; otherwise this file would have been "fixed" toward a
+  # shape the sibling never had.
+  # ➕ ADDED BEYOND THE LIST: a refusal to move `prod-current` unless the displaced image is still
+  # addressable by its own `prod-<12hex>`. Epic AC2 requires it and NOTHING enforced it -- one failed
+  # `record` in the past would have made that release unaddressable forever.
+  # ✅ LIVE MATRIX, 7 dispatches (662-668), 5 of which write nothing. G1/663, G2/664, G3/665 (#d18 §3's
+  # 40-hex branch, refused live for the FIRST time), 404/666, MOVE/667, RETURN/668. G4 and G6 recorded
+  # UNEARNED WITH REASONS, never blank, never force-tested into looking earned. Which guard refused in
+  # 663-665 is NOT from a log (this instance serves none): established by input construction, exact for
+  # 663/665, weaker for 664 by step order -- said unevenly because the evidence is uneven.
+  # 🔴 EPIC AC2 OBSERVED IN BOTH DIRECTIONS: run 667 moved prod-current f30c7941->01855d1b and created
+  # prod-308ea1520c59 while prod-a99ccd44c5a3 DID NOT MOVE; run 668 moved it back. PROHIBITION 6
+  # SATISFIED -- prod-current ends this story on the cutover image, where Story 6.9 needs it.
+  # ⚠️ RESIDUE, named before it was created: `prod-308ea1520c59` is PERMANENT and is a PROOF, NOT A
+  # RELEASE (no ledger row; none was approved). First prod-<12hex> history marker here naming a
+  # non-release -- which is exactly why AC4 now reads "the registry alone is not sufficient".
+  # 🔴 AC1 IS PARTIALLY MET AND SAYS SO: every dispatch was rollback:true, so "runs on BOTH paths" is
+  # UNEARNED -- the release deploy leg has never been green (#d47) and Story 6.9 owns its first run.
+  # AC6 allows a labelled-unearned row; AC1 as written does not. 8 of 9 met, nothing softened.
+  # ✅ SETTLED where the ledger asked: prod_tag = `sha-<12hex>-prod`. The plan conflated two senses of
+  # "rollback target" -- prod-<12hex> KEEPS the artifact alive, sha-<12hex>-prod is what DISPATCHES --
+  # and #d18 §3 + deferred-work.md were amended in the SAME change, not left to contradict it.
+  # ⚠️ NAMED, NOT CLOSED: the recorder's own `concurrency` group does NOT apply on workflow_call
+  # (#d21), so the automatic record and a manual recovery dispatch land in DISJOINT groups over two
+  # permanent writes. Closing it needs a shared group on every caller = a frozen-file edit.
+  # ⚠️ M7 RE-OWNED TO OLEG. This story dispatched the PROD recorder 7 times and the PRE-PROD one ZERO,
+  # so it forced none of M7's branches -- the same outcome 6.4 produced. Two re-assignments under
+  # "whoever next dispatches a recorder" have now both failed, and nothing left in the plan dispatches
+  # that file again. An owner of convenience is not an owner.
+  # ✅ LEDGER CLOSED BY QUERY (retro-D4): 65 pages / 3217 task rows to natural termination, attributed
+  # by commit_sha. 19 RUNS vs floor 13 / ceiling 24 -- UNDER BUDGET. 🔴 A branch-name filter returned
+  # 14 and MISSED FIVE; the commit_sha rule earned its keep on the first try. All 7 dispatch rows carry
+  # the DISPATCH REF as commit_sha, not what they acted on -- named so it cannot mislead.
+  # Oleg merges; the row goes `done` only after that.
+  6-6-record-the-deployed-production-image: review
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog

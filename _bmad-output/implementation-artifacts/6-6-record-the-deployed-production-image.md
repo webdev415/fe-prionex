@@ -4,7 +4,7 @@
 baseline_commit: 13a60eca40a46d8e147a6cb29fe04c5f12441651
 ---
 
-Status: ready-for-dev
+Status: review
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-6-record-the-deployed-production-image`
@@ -660,23 +660,23 @@ no-op branch is two unknowns at once.
 
 ### Task 8 — Record (AC: 3, 4, 7, 8, 9) — **0 runs**
 
-- [ ] 8.1 `docs/prod-releases.md`: the `prod_tag` column amendment, dated. **No row touched.**
-- [ ] 8.2 `docs/migration-decisions.md`: the decision record (AC9), number re-verified per Task 1.3.
-- [ ] 8.3 `deferred-work.md`: the thirteen findings' dispositions; M7's PRE-PROD-only remainder re-owned
+- [x] 8.1 `docs/prod-releases.md`: the `prod_tag` column amendment, dated. **No row touched.**
+- [x] 8.2 `docs/migration-decisions.md`: the decision record (AC9), number re-verified per Task 1.3.
+- [x] 8.3 `deferred-work.md`: the thirteen findings' dispositions; M7's PRE-PROD-only remainder re-owned
       **by name**; the retention item left with **Story 6.3**.
-- [ ] 8.4 AC3's protection claim written as **compiled, not observed**, with `#d38` §9 cited.
+- [x] 8.4 AC3's protection claim written as **compiled, not observed**, with `#d38` §9 cited.
 
 ### Task 9 — Close (AC: all) — **1 push + PR + merge rows**
 
-- [ ] 9.1 Grade every AC against **pasted evidence**, not intention. An AC whose final clause was not
+- [x] 9.1 Grade every AC against **pasted evidence**, not intention. An AC whose final clause was not
       performed is **not met** — Story 6.3's review caught three of exactly that shape.
-- [ ] 9.2 🔴 **Re-review the fix-pass.** *"A fix-pass that is not itself re-reviewed is just a second
+- [x] 9.2 🔴 **Re-review the fix-pass.** *"A fix-pass that is not itself re-reviewed is just a second
       draft"* — 6.2 recorded it, 6.3 reproduced it, and it is now Epic 6 retrospective material. **Do not
       make it three.** Check that the title, the Status header and §1 still describe what shipped.
-- [ ] 9.3 Close the run ledger **by query** (retro-D4): `action_run` grouped by `run_number`, attributed
+- [x] 9.3 Close the run ledger **by query** (retro-D4): `action_run` grouped by `run_number`, attributed
       by `commit_sha`. 🔴 **Dispatch runs carry the DISPATCH REF as `commit_sha`, not what they built** —
       name such rows separately or lose the story's most consequential run.
-- [ ] 9.4 `sprint-status.yaml` → `review`. **Oleg merges; the row goes `done` only after that.**
+- [x] 9.4 `sprint-status.yaml` → `review`. **Oleg merges; the row goes `done` only after that.**
 
 ---
 
@@ -706,6 +706,23 @@ carried no line for a decision commit or an integration merge. **Both are budget
 **named, never absorbed by relabelling a row "adjacent"**.
 
 ---
+
+## AC grading — against pasted evidence, not intention
+
+| AC | Verdict | Evidence |
+|---|---|---|
+| **AC1** epic — the step runs on a successful deploy | 🔶 **PARTIALLY MET, and the gap is named** | `record` ran and its **inner** job succeeded on runs **662, 667, 668**; `record-outcome` correctly skipped on all three; write order and read-back verified. 🔴 **The "runs on BOTH paths" clause is NOT earned:** every dispatch was `rollback: true`. The release deploy leg has never been green in this project (`#d47`, Oleg's option (в)) and **Story 6.9 owns its first run**. AC6 permits a labelled-unearned row; **AC1 as written does not**, which its own code review flagged. Graded honestly rather than ticked. |
+| **AC2** epic — pointer moves, history stays | ✅ **MET, observed in both directions** | Run 667: `prod-current` `f30c7941…`→`01855d1b…`, `prod-308ea1520c59` created, **`prod-a99ccd44c5a3` unchanged**. Run 668: moved back. Read independently of both runs. `displaced_digest`/`displaced_marker` are job outputs, not log lines. |
+| **AC3** epic — retention protection at its real strength | ✅ **MET** | G4 compiles both markers against the stored `keep_pattern`; the claim is written as **COMPILED, not observed** (`#d38` §9) and the open observation stays with **Story 6.3**, not silently re-owned. |
+| **AC4** epic — history reconstructable from the registry | ✅ **MET, and stronger than asked** | The listing step is now guard-grade (status classified, `Link` pagination, parse failure ≠ empty, no-markers = FAIL) and runs `if: always()`. 🔴 And the story **demonstrated** its own AC4 caveat: `prod-308ea1520c59` is a `prod-<12hex>` marker naming a **non-release**, so the registry alone is not sufficient and `docs/prod-releases.md` is the discriminator. |
+| **AC5** the thirteen fixed or deferred with an owner | ✅ **MET, none deferred** | All 13 fixed **plus a 14th** the list did not contain. 🔴 Three of the thirteen carried a wrong fix or premise; each was checked against the sibling before being acted on. |
+| **AC6** matrix with real run ids | ✅ **MET** | G1/663, G2/664, G3/665, 404/666, move/667, return/668, rollback-record/662. G4 and G6 **UNEARNED with their reasons**, never blank, never force-tested into looking earned. |
+| **AC7** `prod_tag` settled where the ledger points | ✅ **MET** | `docs/prod-releases.md`'s column carries the dated settlement; `#d18` §3 and `deferred-work.md` amended in the same change. **No ledger row added.** |
+| **AC8** stale claims corrected | ✅ **MET** | The G5 justification (reason replaced, not reused), the `41ab0470` example, the "goes red" over-claim, **and** the "shipped with its refusal paths unobserved" block — rewritten with the live matrix, including what stayed unearned. |
+| **AC9** the decision record | ✅ **MET** | **D48**, number re-verified across origin refs, local branches **and the working tree** — the OQ10 blind spot, checked deliberately. |
+
+**8 of 9 met; AC1 partially met with its unearned clause named.** Nothing was softened, and no AC was
+graded on intention.
 
 ## Dev Notes
 
@@ -787,6 +804,39 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 9 — 2026-08-27. Ledger CLOSED BY QUERY. 19 runs, floor 13 / ceiling 24 — UNDER budget.**
+
+Read across **65 pages / 3217 task rows** to natural termination, attributed **by `commit_sha`**
+(retro-D4), not by branch name — 🔴 **and that distinction earned its keep immediately: a
+branch-name filter returned 14 and missed five**, every `pull_request` row plus the 6.4 status-flip
+chore. The same truncation family that bit Task 2.5 and Task 7, a fourth time.
+
+```
+648 push  pr-1-context     652 push  main (merge #98)     661 push  impl
+649 PR    #98              653 push  main (merge #99)     662 dispatch  deploy-prod  ← rollback proof
+650 push  chore-6-4        654 push  pr-2-review          663 dispatch  record       ← G1 refused
+651 PR    #99              655 PR    #100                 664 dispatch  record       ← G2 refused
+656 push  pr-2-review      657 PR    #100                 665 dispatch  record       ← G3 refused
+660 push  main (merge #100)                               666 dispatch  record       ← 404 refused
+                                                          667 dispatch  deploy-prod  ← THE MOVE
+                                                          668 dispatch  deploy-prod  ← THE RETURN
+```
+
+⚠️ **Runs 650/651/653 are the Story 6.4 status-flip chore.** They are counted **in**, not out: this
+story's contexting caused them, and excluding them would shrink the total by relabelling rows
+"adjacent" — the smoothing this project forbids. Excluded, the figure is 16; **both are inside the
+ceiling and the honest number is the larger one.**
+🔴 **All seven dispatch rows carry `3e04e465` as `commit_sha` — the DISPATCH REF, not what they acted
+on.** Story 6.3 nearly lost its most consequential run to exactly that; named here rather than
+allowed to mislead.
+
+**9.2 — the fix-pass was re-reviewed, because this project has produced that defect twice.** Checked
+after all edits: the Status header says `review` (not a stale `ready-for-dev`); the title, Story
+statement and §1 still describe what actually shipped (a join, not a rewrite); every task checkbox is
+ticked; **YAML parses in both files, all `run:` bodies pass `bash -n`, zero `${{ }}` inside any `run:`
+in either file, and every frozen path — including `deploy-prod.yml`'s own `derive` job — is
+byte-identical to `origin/main`.**
 
 **Task 7 — 2026-08-27. The move, there and back. Proven TWICE, in opposite directions.**
 
