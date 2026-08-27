@@ -385,10 +385,20 @@ jobs:
       # could expire at 14 days out from under it.
       - name: "G4 -- both marker names must be protected by this project's own retention rule"
         env:
+          SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
           HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
           CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
         run: |
           set -euo pipefail
+          # 🔴 RE-READ FROM THE DATABASE 2026-08-27 (Story 6.6), not inherited from 6.3's read.
+          # package_cleanup_rule id=1: enabled=t, match_full_name=t, remove_days=14, keep_count=0,
+          # remove_pattern 'fe-prionex/.+', keep_pattern
+          #   fe-prionex/(prod-current|preprod-current|latest|buildcache|v?\d+\.\d+\.\d+.*|
+          #               (pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod|sha256:[0-9a-f]{64})
+          # Compiled against it the same day, and the result is NON-VACUOUS -- it could have come out
+          # all-protected and did not: prod-current, prod-<12hex>, sha-<12hex>-prod and
+          # preprod-<12hex> are KEPT, while the 40-hex sanitized-ref form <sha40>-prod is NOT and
+          # expires at 14 days. That row is why this check exists at all.
           # Literal copy of the STORED rule's keep_pattern, minus its `fe-prionex/` prefix and
           # its `sha256:` alternative (a digest can never be a tag name). The rule lives ONLY
           # in the Forgejo database -- there is no API and no CLI for cleanup rules, and it is
@@ -405,7 +415,11 @@ jobs:
           # `[0-9a-f]{12}` and the literals are lowercase), so a case-insensitive accept buys
           # nothing and costs the direction.
           KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
-          for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
+          # 🔴 H4 (code review #2, Fable): this loop checked only the two markers this file WRITES.
+          # AC7 settled sha-<12hex>-prod as the ledger's prod_tag and the only deployable rollback
+          # target -- so if IT is unprotected, rollback dies at 14 days however well the markers are
+          # kept. It is an INPUT, not an output, which is exactly why nobody was checking it. Added.
+          for FULL_TAG in "$SHA_TAG" "$HISTORY_TAG" "$CURRENT_TAG"; do
             MARKER="${FULL_TAG#*:}"
             if ! printf '%s' "$MARKER" | grep -Eq "$KEEP_RE"; then
               echo "FAIL(G4): marker '${MARKER}' does not match this project's own retention"
@@ -987,11 +1001,15 @@ jobs:
             fi
           } >> "$GITHUB_OUTPUT"
           echo "OK: ${CURRENT_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
-          # AC2's displaced-pair clause reaches a DURABLE sink -- a job output the caller can
-          # read -- not only this log. Story 6.6's review found the original design routed it to
-          # the step summary alone, which #d38 S8a classifies best-effort, which is exactly what
-          # that AC forbids. The authoritative human record remains docs/prod-releases.md's own
-          # prod_tag column; this is the machine half of it.
+          # 🔴 H7 (code review #2, Fable), CORRECTED. The previous comment called a job output "a
+          # DURABLE sink". That is false -- a job output DIES WITH THE RUN. It is the MACHINE half,
+          # and it is worth nothing unless a caller reads it; deploy-prod.yml now does. Tiers, straight
+          # (#d38 S8a): the registry is identity and permanence; docs/prod-releases.md is the
+          # AUTHORITATIVE and only durable human record; job output / step summary / log are
+          # BEST-EFFORT, this run only.
+          # ⚠️ AC2's "not left in a log this project classifies best-effort" CANNOT be fully met for a
+          # move whose displaced image is not a release: Prohibition 13 bars it from the ledger, so
+          # the durable tier is closed to it BY DESIGN. Recorded as a known limit, not papered over.
           if [ -n "$DISPLACED_DIGEST" ]; then
             {
               echo "### prod-current MOVED"

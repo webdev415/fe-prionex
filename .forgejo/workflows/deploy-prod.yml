@@ -407,6 +407,8 @@ jobs:
         env:
           DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
           RECORD_RESULT: ${{ needs.record.result }}
+          HISTORY_WRITTEN: ${{ needs.record.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ needs.record.outputs.current_written }}
         run: |
           set -euo pipefail
           {
@@ -418,9 +420,11 @@ jobs:
             echo "**True right now:**"
             echo "- The PROD stand on s10 is running \`${DEPLOY_TAG}\`. The deploy is done."
             echo "- \`prod-current\` still names the **previous** release, or nothing."
-            echo "- \`prod-<12hex>\` for this commit may or may not exist: the recorder writes"
-            echo "  history FIRST and the pointer second, so a death between them leaves the"
-            echo "  history tag written and the pointer stale."
+            echo "- `prod-<12hex>` for this commit: **${HISTORY_WRITTEN:-not reported}**."
+            echo "- `prod-current`: **${CURRENT_WRITTEN:-not reported}**."
+            echo "  (read from the callee's own workflow_call outputs -- H7. Empty means"
+            echo "   the record job died before that step reported, which the write order"
+            echo "   makes readable: history FIRST, pointer second.)"
             echo
             echo "**Repair, and it is safe to repeat:** dispatch \`record-prod-image.yml\`"
             echo "manually with \`image_tag: ${DEPLOY_TAG}\`, acknowledgement"
